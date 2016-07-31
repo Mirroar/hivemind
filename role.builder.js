@@ -10,25 +10,25 @@ Creep.prototype.performBuild = function () {
         return false;
     }
 
-    if (!creep.memory.buildTarget) {
-        var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+    if (!this.memory.buildTarget) {
+        var targets = this.room.find(FIND_CONSTRUCTION_SITES);
         if (targets.length <= 0) {
             return false;
         }
 
-        creep.memory.buildTarget = utilities.getClosest(creep, targets);
+        this.memory.buildTarget = utilities.getClosest(this, targets);
     }
-    var best = creep.memory.buildTarget;
+    var best = this.memory.buildTarget;
     if (!best) {
         return false;
     }
     var target = Game.getObjectById(best);
     if (!target) {
-        creep.memory.buildTarget = null;
+        this.memory.buildTarget = null;
     }
 
-    if (creep.build(target) == ERR_NOT_IN_RANGE) {
-        creep.moveTo(target);
+    if (this.build(target) == ERR_NOT_IN_RANGE) {
+        this.moveTo(target);
     }
     return true;
 };
