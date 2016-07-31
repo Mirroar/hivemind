@@ -104,16 +104,16 @@ Room.prototype.enhanceData = function () {
         }
     }
 
-    this.bays = [];
+    this.bays = {};
     let flags = this.find(FIND_FLAGS, {
         filter: (flag) => flag.name.startsWith('Bay:')
     });
     for (let i in flags) {
         try {
-            this.bays.push(new Bay(flags[i].name));
+            this.bays[flags[i].name] = new Bay(flags[i].name);
         }
         catch (e) {
-            console.log('Error when initializing Bays:', e)
+            console.log('Error when initializing Bays:', e);
             console.log(e.stack);
         }
     }
