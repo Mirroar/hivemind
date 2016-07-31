@@ -32,7 +32,9 @@ StructureTower.prototype.runLogic = function () {
             return false;
         }
     });
-    var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+        filter: (creep) => creep.isDangerous()
+    });
     if (closestHostileHealer) {
         tower.attack(closestHostileHealer);
     }

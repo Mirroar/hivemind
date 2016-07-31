@@ -1,13 +1,15 @@
-/*
- * Module code goes here. Use 'module.exports' to export things:
- * module.exports.thing = 'a thing';
- *
- * You can import it from another modules like this:
- * var mod = require('creep.general');
- * mod.thing == 'a thing'; // true
- */
-
 var utilities = require('utilities');
+
+Creep.prototype.isDangerous = function () {
+    for (let j in this.body) {
+        let type = this.body[j].type;
+
+        if (type != MOVE && type != CARRY && type != TOUGH) {
+            return true;
+        }
+    }
+    return false;
+}
 
 module.exports = {
 

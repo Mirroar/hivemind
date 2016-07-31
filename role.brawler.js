@@ -20,16 +20,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                         var enemy = enemies[i];
 
                         // Check if enemy is harmless, and ignore it.
-                        let dangerous = false;
-                        for (let j in enemy.body) {
-                            let type = enemy.body[j].type;
-
-                            if (type != MOVE && type != CARRY && type != TOUGH) {
-                                dangerous = true;
-                                break;
-                            }
-                        }
-                        if (!dangerous) continue;
+                        if (!enemy.isDangerous()) continue;
 
                         var option = {
                             priority: 5,
@@ -270,17 +261,7 @@ Creep.prototype.performMilitaryAttack = function () {
             if (hostile.length > 0) {
                 for (let i in hostile) {
                     // Check if enemy is harmless, and ignore it.
-                    let dangerous = false;
-                    for (let j in hostile[i].body) {
-                        let type = hostile[i].body[j].type;
-
-                        if (type != MOVE && type != CARRY && type != TOUGH) {
-                            dangerous = true;
-                            break;
-                        }
-                    }
-                    if (!dangerous) continue;
-
+                    if (!hostile[i].isDangerous()) continue;
 
                     if (creep.attack(hostile[i]) == OK) {
                         attacked = true;
