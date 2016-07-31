@@ -37,7 +37,15 @@ Room.prototype.gatherIntel = function () {
         intel.sources.push(sources[i].id);
     }
 
-    // @todo Check for power.
+    // Check for power.
+    var powerBanks = room.find(FIND_STRUCTURES, {
+        filter: (structure) => structure.structureType == STRUCTURE_POWER_BANK
+    });
+    if (powerBanks.length > 0) {
+        // For now, send a notification!
+        console.log('Power bank found in', room.name);
+        Game.notify('Power bank found in ' + room.name + '!');
+    }
 
     // @todo Check for portals.
 
