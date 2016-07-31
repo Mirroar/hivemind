@@ -51,7 +51,7 @@ Room.prototype.gatherIntel = function () {
 
     // @todo Check for neutral terminals.
 
-    // @todo Check enemy forces.
+    // @todo Check enemy structures.
 };
 
 var intelManager = {

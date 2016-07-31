@@ -171,6 +171,8 @@ var structureManager = {
                 for (var resourceType in roomData.totalResources) {
                     if (roomData.totalResources[resourceType] > 0 && REACTIONS[resourceType]) {
                         for (var resourceType2 in REACTIONS[resourceType]) {
+                            if (roomData.totalResources[REACTIONS[resourceType][resourceType2]] > 10000) continue;
+
                             if (roomData.totalResources[resourceType2] && roomData.totalResources[resourceType2] > 0) {
                                 //console.log(resourceType, '+', resourceType2, '=', REACTIONS[resourceType][resourceType2]);
                                 var resourceAmount = Math.min(roomData.totalResources[resourceType2], roomData.totalResources[resourceType2]);
@@ -183,9 +185,7 @@ var structureManager = {
                     }
                 }
 
-                if (bestReaction) {
-                    room.memory.currentReaction = bestReaction;
-                }
+                room.memory.currentReaction = bestReaction;
             }
         }
 
