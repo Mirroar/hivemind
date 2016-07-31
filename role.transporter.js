@@ -79,6 +79,11 @@ Creep.prototype.getAvailableEnergySources = function () {
     for (var i in targets) {
         var target = targets[i];
 
+        // Don't use the controller container as a normal source.
+        if (target.id == target.room.memory.controllerContainer) {
+            continue;
+        }
+
         // Actually, don't use other containers, only those with harvesters are a valid source.
         var option = {
             priority: -1,
@@ -421,6 +426,11 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
         var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 if (structure.structureType == STRUCTURE_CONTAINER && structure.store.energy < structure.storeCapacity) {
+                    // Do deliver to controller containers, always.
+                    if (structure.id == structure.room.memory.controllerContainer) {
+                        return true;
+                    }
+
                     // Do not deliver to containers used as harvester drop off points.
                     if (structure.room.memory.sources) {
                         for (var id in structure.room.memory.sources) {
