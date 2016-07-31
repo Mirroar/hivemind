@@ -161,6 +161,8 @@ const Profiler = {
     { name: 'RoomPosition', val: RoomPosition },
     { name: 'Source', val: Source },
     { name: 'Flag', val: Flag },
+
+    // Added for hivemind.
     { name: 'Map', val: Game.map },
   ],
 

@@ -21,6 +21,7 @@ var spawnManager = require('manager.spawn');
 var structureManager = require('manager.structure');
 var utilities = require('utilities');
 
+var Bay = require('manager.bay');
 var Squad = require('manager.squad');
 
 // @todo Decide when it is a good idea to send out harvesters to adjacent unclaimend tiles.
@@ -100,6 +101,20 @@ Room.prototype.enhanceData = function () {
             for (let i in intel.sources) {
                 this.sources.push(Game.getObjectById(intel.sources[i]));
             }
+        }
+    }
+
+    this.bays = [];
+    let flags = this.find(FIND_FLAGS, {
+        filter: (flag) => flag.name.startsWith('Bay:')
+    });
+    for (let i in flags) {
+        try {
+            this.bays.push(new Bay(flags[i].name));
+        }
+        catch (e) {
+            console.log('Error when initializing Bays:', e)
+            console.log(e.stack);
         }
     }
 };
