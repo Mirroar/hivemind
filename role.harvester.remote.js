@@ -18,13 +18,13 @@ var roleRemoteHarvester = {
     buildRoad: function(creep) {
         // @todo Cache this in creep memory.
         var workParts = 0;
-        for (var j in creep.body) {
+        for (let j in creep.body) {
             if (creep.body[j].type == WORK && creep.body[j].hits > 0) {
                 workParts++;
             }
         }
 
-        if (workParts <= 1) {
+        if (workParts < 1) {
             return false;
         }
 
@@ -46,7 +46,7 @@ var roleRemoteHarvester = {
             filter: (structure) => (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - workParts * 100
         });
         if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += workParts;
+            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
             creep.repair(needsRepair);
             actionTaken = true;
             // If structure is especially damaged, stay here to keep repairing.
@@ -77,7 +77,7 @@ var roleRemoteHarvester = {
             creep.build(needsBuilding);
 
             var buildCost = Math.min(creep.carry.energy, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
-            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += buildCost;
+            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += buildCost;
             actionTaken = true;
 
             // Stay here if more building is needed.
@@ -114,7 +114,7 @@ var roleRemoteHarvester = {
             }
 
             if (creep.carry.energy >= workParts) {
-                Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += workParts;
+                Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
                 creep.repair(needsRepair);
 
                 return true;
@@ -153,13 +153,13 @@ var roleRemoteHarvester = {
 
     deliver: function (creep) {
         var sourcePos = utilities.decodePosition(creep.memory.source);
-        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePos.roomName];
-        if (harvestMemory[creep.memory.source] && harvestMemory[creep.memory.source].hasContainer) {
-            var container = Game.getObjectById(harvestMemory[creep.memory.source].containerId);
+        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
+        if (harvestMemory.hasContainer) {
+            var container = Game.getObjectById(harvestMemory.containerId);
             if (!container) {
                 //console.log('container no longer exists, removing...');
-                harvestMemory[creep.memory.source].hasContainer = false;
-                delete harvestMemory[creep.memory.source].containerId;
+                harvestMemory.hasContainer = false;
+                delete harvestMemory.containerId;
             }
             else {
                 //console.log('container found, dropping energy.');
@@ -208,29 +208,42 @@ var roleRemoteHarvester = {
         return true;
     },
 
-    setHarvesting: function (creep, harvesting) {
-        creep.memory.harvesting = harvesting;
-
-        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName];
-        if (harvesting && !creep.memory.travelTimer) {
+    startTravelTimer: function (creep) {
+        if (!creep.memory.travelTimer) {
             creep.memory.travelTimer = {
                 start: Game.time
             };
         }
-        else if (!harvesting && creep.memory.travelTimer && !creep.memory.travelTimer.end) {
-            creep.memory.travelTimer.end = Game.time;
-            if (!harvestMemory[creep.memory.source]) {
-                harvestMemory[creep.memory.source] = {};
-            }
-            if (!harvestMemory[creep.memory.source].travelTime) {
-                harvestMemory[creep.memory.source].travelTime = creep.memory.travelTimer.end - creep.memory.travelTimer.start;
-            }
-            else {
-                harvestMemory[creep.memory.source].travelTime = (harvestMemory[creep.memory.source].travelTime + creep.memory.travelTimer.end - creep.memory.travelTimer.start) / 2;
+    },
+
+    stopTravelTimer: function (creep) {
+        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
+        if (!creep.memory.travelTimer.end) {
+            // Check if we're close to our target.
+            var sourcePos = utilities.decodePosition(creep.memory.source);
+            if (creep.pos.roomName == sourcePos.roomName && creep.pos.getRangeTo(sourcePos) <= 3) {
+                creep.memory.travelTimer.end = Game.time;
+                if (!harvestMemory) {
+                    harvestMemory = {};
+                }
+                if (!harvestMemory.travelTime) {
+                    harvestMemory.travelTime = creep.memory.travelTimer.end - creep.memory.travelTimer.start;
+                }
+                else {
+                    harvestMemory.travelTime = (harvestMemory.travelTime + creep.memory.travelTimer.end - creep.memory.travelTimer.start) / 2;
+                }
             }
         }
+    },
 
-        if (!harvesting) {
+    setHarvesting: function (creep, harvesting) {
+        creep.memory.harvesting = harvesting;
+
+        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
+        if (harvesting) {
+            roleRemoteHarvester.startTravelTimer(creep);
+        }
+        else {
             //console.log('checking for container near source');
             // Check if there is a container near the source, and save it.
             var container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
@@ -238,13 +251,13 @@ var roleRemoteHarvester = {
             });
             if (container && creep.pos.getRangeTo(container) <= 3) {
                 //console.log('container found and recorded');
-                harvestMemory[creep.memory.source].hasContainer = true;
-                harvestMemory[creep.memory.source].containerId = container.id;
+                harvestMemory.hasContainer = true;
+                harvestMemory.containerId = container.id;
             }
             else {
                 //console.log('container not found');
-                harvestMemory[creep.memory.source].hasContainer = false;
-                delete harvestMemory[creep.memory.source].containerId;
+                harvestMemory.hasContainer = false;
+                delete harvestMemory.containerId;
             }
         }
     },
@@ -259,6 +272,7 @@ var roleRemoteHarvester = {
         }
 
         if (creep.memory.harvesting) {
+            roleRemoteHarvester.stopTravelTimer(creep);
             return roleRemoteHarvester.harvest(creep);
         }
         else {

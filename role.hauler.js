@@ -21,7 +21,7 @@ var roleHauler = {
         var actionTaken = false;
         if (creep.memory.source) {
             var sourcePosition = utilities.decodePosition(creep.memory.source);
-            var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePosition.roomName];
+            var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
             if (sourcePosition.roomName != creep.pos.roomName) {
                 creep.moveTo(sourcePosition);
                 return true;
@@ -39,8 +39,8 @@ var roleHauler = {
                 actionTaken = true;
             }
 
-            if (harvestMemory[creep.memory.source] && harvestMemory[creep.memory.source].hasContainer) {
-                var container = Game.getObjectById(harvestMemory[creep.memory.source].containerId);
+            if (harvestMemory.hasContainer) {
+                var container = Game.getObjectById(harvestMemory.containerId);
 
                 if (container) {
                     if (actionTaken) {
@@ -76,12 +76,13 @@ var roleHauler = {
 
     deliver: function (creep) {
         var sourcePos = utilities.decodePosition(creep.memory.source);
-        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePos.roomName];
+        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
 
         var target;
         var targetPosition = utilities.decodePosition(creep.memory.storage);
         if (targetPosition.roomName != creep.pos.roomName) {
             creep.moveTo(targetPosition);
+
             return true;
         }
         // @todo If no storage is available, use default delivery method.
@@ -89,7 +90,29 @@ var roleHauler = {
 
         if (!target || _.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
             // Container is full, drop energy instead.
-            if (creep.drop(RESOURCE_ENERGY) == OK) {
+            if (creep.room.memory.storage) {
+                if (creep.pos.x != creep.room.memory.storage.x || creep.pos.y != creep.room.memory.storage.y) {
+                    let result = creep.moveTo(creep.room.memory.storage.x, creep.room.memory.storage.y);
+                    if (result == ERR_NO_PATH) {
+                        // Cannot reach dropoff spot, just drop energy right here then.
+                        if (creep.drop(RESOURCE_ENERGY) == OK) {
+                            // If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+                            harvestMemory.revenue += creep.carry.energy;
+                            return true;
+                        }
+                    }
+                }
+                else {
+                    // Dropoff spot reached, drop energy.
+                    if (creep.drop(RESOURCE_ENERGY) == OK) {
+                        // If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+                        harvestMemory.revenue += creep.carry.energy;
+                        return true;
+                    }
+                }
+            }
+            else if (creep.drop(RESOURCE_ENERGY) == OK) {
+                // If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
                 harvestMemory.revenue += creep.carry.energy;
                 return true;
             }
@@ -121,8 +144,8 @@ var roleHauler = {
         }
 
         // Repair / build roads, even when just waiting for more energy.
-        var sourcePos = utilities.decodePosition(creep.memory.source);
-        if (sourcePos.roomName == creep.pos.roomName) {
+        var targetPosition = utilities.decodePosition(creep.memory.storage);
+        if (targetPosition.roomName != creep.pos.roomName) {
             if (roleRemoteHarvester.buildRoad(creep)) {
                 //return true;
             }

@@ -91,6 +91,7 @@ var main = {
             }
             catch (e) {
                 console.log('Error when managing creep', creep.name, ':', e);
+                console.log(e.stack);
             }
         }
     },
@@ -125,7 +126,7 @@ var main = {
                             return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
                         }
                         if (structure.structureType == STRUCTURE_RAMPART) {
-                            return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
+                            return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7 || structure.hits < 500;
                         }
                         return (structure.hits < structure.hitsMax - TOWER_POWER_REPAIR) && (structure.hits < structure.hitsMax * 0.2);
                     }
@@ -340,12 +341,12 @@ var main = {
             statsConsole.log("Tick: " + Game.time + "  CPU OVERRUN: " + Game.cpu.getUsed().toFixed(2) + "  Bucket:" + Game.cpu.bucket, 5);
         }
         if ((Game.time % 5) === 0) {
-            console.log(statsConsole.displayHistogram());
-            console.log(statsConsole.displayStats());
-            console.log(statsConsole.displayLogs());
+            //console.log(statsConsole.displayHistogram());
+            //console.log(statsConsole.displayStats());
+            //console.log(statsConsole.displayLogs());
             //console.log(statsConsole.displayMaps()); // Don't use as it will consume ~30-40 CPU
             totalTime = (Game.cpu.getUsed() - totalTime);
-            console.log("Time to Draw: " + totalTime.toFixed(2));
+            //console.log("Time to Draw: " + totalTime.toFixed(2));
         }
     }
 

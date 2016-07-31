@@ -109,7 +109,7 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
     if (result == newName) {
         // Spawning successful.
         Memory.creepCounter[memory.role]++;
-        console.log('Spawning new creep:', newName);
+        statsConsole.log('Spawning new creep: ' + newName, 0);
 
         return result;
     }
@@ -240,7 +240,7 @@ var spawnManager = {
                     maxUpgraders = 2;
                 }
             }
-            if (maxUpgraders == 0 && room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.2) {
+            if (maxUpgraders == 0 && room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5) {
                 console.log('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
                 // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
                 maxUpgraders = 1;
@@ -448,105 +448,124 @@ var spawnManager = {
                 // We've got nothing to do, how about some remote harvesting?
                 var harvestFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('HarvestRemote'));
                 for (var i in harvestFlags) {
-                    var flag = harvestFlags[i];
-                    if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) == 1) {
-                        // First of all, if it's not safe, send a bruiser.
-                        var roomMemory = Memory.rooms[flag.pos.roomName];
-                        if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
-                            var position = spawn.pos;
-                            if (spawn.room.storage) {
-                                position = spawn.room.storage.pos;
-                            }
+                    let flag = harvestFlags[i];
+                    let isSpecificFlag = false;
 
-                            var maxBrawlers = 1;
-                            var brawlers = _.filter(Game.creeps, (creep) => {
-                                if (creep.memory.role == 'brawler') {
-                                    if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            });
+                    // Make sure not to harvest from wrong rooms.
+                    if (flag.name.startsWith('HarvestRemote:')) {
+                        let parts = flag.name.split(':');
+                        if (parts[1] && parts[1] != spawn.pos.roomName) {
+                            continue;
+                        }
+                        isSpecificFlag = true;
+                    }
 
-                            if (!brawlers || brawlers.length < maxBrawlers) {
-                                //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
-                                if (spawnManager.spawnBrawler(spawn, flag.pos, 4)) {
-                                    //Game.notify('Brawler spawned to defend room ' + flag.pos.roomName);
-                                }
-                                return true;
-                            }
+                    if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
+                        continue;
+                    }
+
+                    // First of all, if it's not safe, send a bruiser.
+                    var roomMemory = Memory.rooms[flag.pos.roomName];
+                    if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
+                        var position = spawn.pos;
+                        if (spawn.room.storage) {
+                            position = spawn.room.storage.pos;
                         }
 
-                        // If it's safe or brawler is sent, start harvesting.
-                        var doSpawn = true;
-                        if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[flag.pos.roomName]) {
-                            var memory = spawn.room.memory.remoteHarvesting[flag.pos.roomName];
-                            doSpawn = false;
-
-                            memory.harvesters = [];
-                            var haulCount = 0;
-                            var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.remote');
-                            var haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
-                            var maxRemoteHarvesters = 1;
-                            var maxRemoteHaulers = 0;
-                            if (spawn.room.memory.remoteHarvesting[flag.pos.roomName].revenue > 0) {
-                                // Road has been built, can now use multiple harvesters.
-                                // maxRemoteHarvesters = flag.name.substring(13, 14) * 1;
-
-                                // @todo Calculate number of needed haulers.
-                                maxRemoteHaulers = 2;
-                            }
-
-                            var position = spawn.pos;
-                            if (spawn.room.storage) {
-                                position = spawn.room.storage.pos;
-                            }
-                            position = utilities.encodePosition(position);
-
-                            var flagPosition = utilities.encodePosition(flag.pos);
-
-                            var maxCarryParts = null;
-                            if (memory[flagPosition] && memory[flagPosition].travelTime) {
-                                maxCarryParts = Math.ceil(memory[flagPosition].travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
-                                //console.log('Need', maxCarryParts, 'carry parts when transporting remotely harvested energy from', flagPosition);
-                            }
-
-                            for (var j in harvesters) {
-                                var creep = harvesters[j];
-                                //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
-                                // @todo Move into filter function.
-                                if (creep.memory.storage == position && creep.memory.source == flagPosition) {
-                                    if (!memory[flagPosition] || creep.ticksToLive > memory[flagPosition].travelTime) {
-                                        memory.harvesters.push(creep.id);
-                                    }
-                                }
-                            }
-                            if (memory.harvesters.length < maxRemoteHarvesters) {
-                                doSpawn = true;
-                            }
-
-                            for (var j in haulers) {
-                                var creep = haulers[j];
-                                //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
-                                // @todo Move into filter function.
-                                if (creep.memory.storage == position && creep.memory.source == flagPosition) {
-                                    if (!memory[flagPosition] || creep.ticksToLive > memory[flagPosition].travelTime) {
-                                        haulCount++;
-                                    }
-                                }
-                            }
-                            if (haulCount < maxRemoteHaulers && !doSpawn) {
-                                // Spawn hauler if necessary, but not if harvester is needed first.
-                                if (spawnManager.spawnHauler(spawn, flag.pos, maxCarryParts)) {
+                        var maxBrawlers = 1;
+                        var brawlers = _.filter(Game.creeps, (creep) => {
+                            if (creep.memory.role == 'brawler') {
+                                if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
                                     return true;
                                 }
                             }
+                            return false;
+                        });
+
+                        if (!brawlers || brawlers.length < maxBrawlers) {
+                            //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
+                            if (spawnManager.spawnBrawler(spawn, flag.pos, 4)) {
+                                //Game.notify('Brawler spawned to defend room ' + flag.pos.roomName);
+                            }
+                            return true;
+                        }
+                    }
+
+                    // If it's safe or brawler is sent, start harvesting.
+                    var doSpawn = true;
+                    if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[utilities.encodePosition(flag.pos)]) {
+                        var memory = spawn.room.memory.remoteHarvesting[utilities.encodePosition(flag.pos)];
+                        doSpawn = false;
+
+                        memory.harvesters = [];
+                        var haulCount = 0;
+                        var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.remote');
+                        var haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
+                        var maxRemoteHarvesters = 1;
+                        var maxRemoteHaulers = 0;
+                        if (memory.revenue > 0 || memory.hasContainer) {
+                            // @todo Calculate number of needed haulers.
+                            maxRemoteHaulers = 1;
+
+                            if (Game.rooms[flag.pos.roomName]) {
+                                let room = Game.rooms[flag.pos.roomName];
+                                if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == 'Mirroar'))) {
+                                    maxRemoteHaulers = 2;
+                                }
+                            }
                         }
 
-                        if (doSpawn) {
-                            if (spawnManager.spawnRemoteHarvester(spawn, flag.pos)) {
+                        var position = spawn.pos;
+                        if (spawn.room.storage) {
+                            position = spawn.room.storage.pos;
+                        }
+                        position = utilities.encodePosition(position);
+
+                        var flagPosition = utilities.encodePosition(flag.pos);
+
+                        var maxCarryParts = null;
+                        if (memory.travelTime) {
+                            maxCarryParts = Math.ceil(memory.travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
+                            //console.log('Need', maxCarryParts, 'carry parts when transporting remotely harvested energy from', flagPosition);
+                        }
+
+                        for (var j in harvesters) {
+                            var creep = harvesters[j];
+                            //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
+                            // @todo Move into filter function.
+                            if (creep.memory.storage == position && creep.memory.source == flagPosition) {
+                                if (!memory.travelTime || creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500) {
+                                    memory.harvesters.push(creep.id);
+                                }
+                            }
+                        }
+                        //console.log(utilities.encodePosition(flag.pos), flag.name, memory.harvesters.length, '/', maxRemoteHarvesters);
+                        if (memory.harvesters.length < maxRemoteHarvesters) {
+                            doSpawn = true;
+                        }
+
+                        for (var j in haulers) {
+                            let creep = haulers[j];
+                            //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
+                            // @todo Move into filter function.
+                            if (creep.memory.storage == position && creep.memory.source == flagPosition) {
+                                if (creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500) {
+                                    haulCount++;
+                                }
+                            }
+                        }
+                        console.log(utilities.encodePosition(flag.pos), flag.name, haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);
+                        if (haulCount < maxRemoteHaulers && !doSpawn) {
+                            // Spawn hauler if necessary, but not if harvester is needed first.
+                            if (spawnManager.spawnHauler(spawn, flag.pos, maxCarryParts)) {
                                 return true;
                             }
+                        }
+                    }
+
+                    if (doSpawn) {
+                        if (spawnManager.spawnRemoteHarvester(spawn, flag.pos)) {
+                            return true;
                         }
                     }
                 }
@@ -555,36 +574,47 @@ var spawnManager = {
                 var reserveFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('ReserveRoom'));
                 for (var i in reserveFlags) {
                     var flag = reserveFlags[i];
-                    // @todo Allow reserving from more than just adjacent rooms.
-                    if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) == 1) {
+                    let isSpecificFlag = false;
 
+                    // Make sure not to harvest from wrong rooms.
+                    if (flag.name.startsWith('ReserveRoom:')) {
+                        let parts = flag.name.split(':');
+                        if (parts[1] && parts[1] != spawn.pos.roomName) {
+                            continue;
+                        }
+                        isSpecificFlag = true;
+                    }
+
+                    if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
+                        continue;
+                    }
+
+                    let doSpawn = false;
+
+                    var claimerIds = [];
+                    var claimers = _.filter(Game.creeps, (creep) => creep.memory.role == 'claimer' && creep.memory.mission == 'reserve');
+                    var maxClaimers = 1;
+
+                    for (var j in claimers) {
+                        var creep = claimers[j];
+
+                        if (creep.memory.target == utilities.encodePosition(flag.pos)) {
+                            claimerIds.push(creep.id);
+                        }
+                    }
+                    if (claimerIds.length < maxClaimers) {
+                        doSpawn = true;
+                    }
+                    if (Memory.rooms[flag.pos.roomName]
+                        && Memory.rooms[flag.pos.roomName].lastClaim
+                        && Memory.rooms[flag.pos.roomName].lastClaim.value + (Memory.rooms[flag.pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.8
+                    ) {
                         doSpawn = false;
+                    }
 
-                        var claimerIds = [];
-                        var claimers = _.filter(Game.creeps, (creep) => creep.memory.role == 'claimer' && creep.memory.mission == 'reserve');
-                        var maxClaimers = 1;
-
-                        for (var j in claimers) {
-                            var creep = claimers[j];
-
-                            if (creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                claimerIds.push(creep.id);
-                            }
-                        }
-                        if (claimerIds.length < maxClaimers) {
-                            doSpawn = true;
-                        }
-                        if (Memory.rooms[flag.pos.roomName]
-                            && Memory.rooms[flag.pos.roomName].lastClaim
-                            && Memory.rooms[flag.pos.roomName].lastClaim.value + (Memory.rooms[flag.pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.8
-                        ) {
-                            doSpawn = false;
-                        }
-
-                        if (doSpawn) {
-                            if (spawnManager.spawnClaimer(spawn, flag.pos, 'reserve')) {
-                                return true;
-                            }
+                    if (doSpawn) {
+                        if (spawnManager.spawnClaimer(spawn, flag.pos, 'reserve')) {
+                            return true;
                         }
                     }
                 }
@@ -631,52 +661,47 @@ var spawnManager = {
     },
 
     spawnRemoteHarvester: function (spawn, targetPosition) {
-        if ((spawn.room.energyAvailable >= spawn.room.energyCapacityAvailable * 0.9) && !spawn.spawning) {
-            var body = utilities.generateCreepBody({move: 0.5, work: 0.2, carry: 0.3}, spawn.room.energyAvailable);
-
-            // Use less move parts if a road has already been established.
-            if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[targetPosition.roomName] && spawn.room.memory.remoteHarvesting[targetPosition.roomName].revenue > 0) {
-                // @todo Use calculated max size liek normal harvesters.
-                body = utilities.generateCreepBody({move: 0.35, work: 0.55, carry: 0.1}, spawn.room.energyAvailable, {work: 6});
-            }
-
-            if (spawn.canCreateCreep(body) == OK) {
-                var storage = utilities.encodePosition(spawn.pos);
-                if (spawn.room.storage) {
-                    storage = utilities.encodePosition(spawn.room.storage.pos);
-                }
-
-                var newName = spawnManager.createCreep(spawn, body, {
-                    role: 'harvester.remote',
-                    storage: storage,
-                    source: utilities.encodePosition(targetPosition)
-                });
-
-                // Save some stats.
-                // @todo Move into a stats module.
-                if (!spawn.room.memory.remoteHarvesting) {
-                    spawn.room.memory.remoteHarvesting = {};
-                }
-                if (!spawn.room.memory.remoteHarvesting[targetPosition.roomName]) {
-                    spawn.room.memory.remoteHarvesting[targetPosition.roomName] = {
-                        creepCost: 0,
-                        buildCost: 0,
-                        revenue: 0,
-                        harvesters: [],
-                    };
-                }
-
-                var cost = 0;
-                for (var i in body) {
-                    cost += BODYPART_COST[body[i]];
-                }
-
-                spawn.room.memory.remoteHarvesting[targetPosition.roomName].creepCost += cost;
-
-                return true;
+        var bodyWeights = {move: 0.5, work: 0.2, carry: 0.3};
+        var maxParts = {work: 3};
+        // Use less work parts if room is not reserved yet.
+        if (Game.rooms[targetPosition.roomName]) {
+            let room = Game.rooms[targetPosition.roomName];
+            if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == 'Mirroar'))) {
+                maxParts.work = 6;
             }
         }
-        return false;
+
+        // Use less move parts if a road has already been established.
+        if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)] && spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].revenue > 0) {
+            // @todo Use calculated max size like normal harvesters.
+            bodyWeights = {move: 0.35, work: 0.55, carry: 0.1};
+        }
+
+        var position = spawn.pos;
+        if (spawn.room.storage) {
+            position = spawn.room.storage.pos;
+        }
+
+        var result = spawn.createManagedCreep({
+            role: 'harvester.remote',
+            bodyWeights: bodyWeights,
+            maxParts: maxParts,
+            memory: {
+                storage: utilities.encodePosition(position),
+                source: utilities.encodePosition(targetPosition),
+            },
+        });
+
+        if (result) {
+            var cost = 0;
+            for (var part in Memory.creeps[result].body) {
+                var count = Memory.creeps[result].body[part];
+                cost += BODYPART_COST[part] * count;
+            }
+            stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(targetPosition), cost);
+        }
+
+        return result;
     },
 
     spawnBrawler: function (spawn, targetPosition, maxAttackParts) {
@@ -702,16 +727,16 @@ var spawnManager = {
 
                 // Save some stats.
                 // @todo Move into a stats module.
-                if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[targetPosition.roomName]) {
+                if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)]) {
                     var cost = 0;
                     for (var i in body) {
                         cost += BODYPART_COST[body[i]];
                     }
 
-                    if (!spawn.room.memory.remoteHarvesting[targetPosition.roomName].defenseCost) {
-                        spawn.room.memory.remoteHarvesting[targetPosition.roomName].defenseCost = 0;
+                    if (!spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].defenseCost) {
+                        spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].defenseCost = 0;
                     }
-                    spawn.room.memory.remoteHarvesting[targetPosition.roomName].defenseCost += cost;
+                    spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].defenseCost += cost;
                 }
 
                 return true;
@@ -733,13 +758,13 @@ var spawnManager = {
                 });
 
                 // Save some stats.
-                if (mission == 'reserve' && spawn.room.memory.remoteHarvesting[targetPosition.roomName]) {
+                if (mission == 'reserve' && spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)]) {
                     var cost = 0;
                     for (var i in body) {
                         cost += BODYPART_COST[body[i]];
                     }
 
-                    spawn.room.memory.remoteHarvesting[targetPosition.roomName].creepCost += cost;
+                    spawn.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].creepCost += cost;
                 }
 
                 return true;

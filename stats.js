@@ -1,8 +1,6 @@
 var stats = {
 
-    addRemoteHarvestCost: function (source, target, cost) {
-        if (!Memory.rooms[source]) return;
-
+    initRemoteHarvestMemory: function (source, target) {
         var memory = Memory.rooms[source];
 
         if (!memory.remoteHarvesting) {
@@ -16,6 +14,13 @@ var stats = {
                 harvesters: [],
             };
         }
+    },
+
+    addRemoteHarvestCost: function (source, target, cost) {
+        if (!Memory.rooms[source]) return;
+
+        var memory = Memory.rooms[source];
+        stats.initRemoteHarvestMemory(source, target);
 
         memory.remoteHarvesting[target].creepCost += cost;
     },
