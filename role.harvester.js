@@ -37,23 +37,11 @@ Creep.prototype.performHarvest = function () {
         }
     }
 
-    var result = creep.harvest(source);
-    if (result == ERR_NOT_IN_RANGE) {
-        var result = creep.moveTo(source);
-        if (result == ERR_NO_PATH) {
-            // If source can't be reached for a while, find a new one.
-            if (!creep.memory.moveFailCount) {
-                creep.memory.moveFailCount = 0;
-            }
-            creep.memory.moveFailCount++;
-
-            if (creep.memory.moveFailCount > 10) {
-                creep.memory.moveFailCount = null;
-                creep.memory.resourceTarget = null;
-            }
-        } else {
-            creep.memory.moveFailCount = null;
-        }
+    if (creep.pos.getRangeTo(source) > 1) {
+        creep.moveTo(source);
+    }
+    else {
+        var result = creep.harvest(source);
     }
 
     // If there's a link or controller nearby, directly deposit energy.
@@ -83,15 +71,19 @@ Creep.prototype.performHarvesterDeliver = function () {
         var source = Game.getObjectById(creep.memory.fixedMineralSource);
         // By default, deliver to room's terminal if there's space.
         if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
-            var result = creep.transfer(creep.room.terminal, source.mineralType);
-            if (result == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(creep.room.terminal) > 1) {
                 creep.moveTo(creep.room.terminal);
+            }
+            else {
+                creep.transfer(creep.room.terminal, source.mineralType);
             }
         }
         else if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
-            var result = creep.transfer(creep.room.storage, source.mineralType);
-            if (result == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(creep.room.storage) > 1) {
                 creep.moveTo(creep.room.storage);
+            }
+            else {
+                creep.transfer(creep.room.storage, source.mineralType);
             }
         }
         else {
@@ -158,9 +150,13 @@ Creep.prototype.performHarvesterDeliver = function () {
         }
     }
 
-    if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+    if (creep.pos.getRangeTo(target) > 1) {
         creep.moveTo(target);
     }
+    else {
+        creep.transfer(target, RESOURCE_ENERGY);
+    }
+
     if (target.energy >= target.energyCapacity) {
         creep.memory.deliverTarget = null;
     }

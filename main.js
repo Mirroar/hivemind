@@ -199,35 +199,33 @@ var main = {
             var room = Game.rooms[roomName];
 
             var hostiles = room.find(FIND_HOSTILE_CREEPS);
-            if (hostiles && hostiles.length > 0) {
+            var parts = {};
+            var lastSeen = room.memory.enemies && room.memory.enemies.lastSeen || 0;
+            var safe = true;
+
+            if (hostiles.length > 0) {
                 // Count body parts for strength estimation.
-                var parts = {};
                 for (var j in hostiles) {
                     for (var k in hostiles[j].body) {
-                        if (!parts[hostiles[j].body[k].type]) {
-                            parts[hostiles[j].body[k].type] = 0;
+                        let type = hostiles[j].body[k].type;
+                        if (!parts[type]) {
+                            parts[type] = 0;
                         }
-                        parts[hostiles[j].body[k].type]++;
+                        parts[type]++;
+
+                        if (safe && type != MOVE && type != CARRY && type != TOUGH) {
+                            safe = false;
+                            lastSeen = Game.time;
+                        }
                     }
                 }
+            }
 
-                room.memory.enemies = {
-                    parts: parts,
-                    lastSeen: Game.time,
-                    safe: false,
-                };
-            }
-            else {
-                // Declare room safe again.
-                if (!room.memory.enemies) {
-                    room.memory.enemies = {
-                        parts: {},
-                        lastSeen: 0,
-                        safe: true,
-                    };
-                }
-                room.memory.enemies.safe = true;
-            }
+            room.memory.enemies = {
+                parts: parts,
+                lastSeen: lastSeen,
+                safe: safe,
+            };
         }
     },
 
@@ -312,6 +310,16 @@ var main = {
                 }
                 catch (e) {
                     console.log('error in manageResources:');
+                    console.log(e.stack);
+                }
+            }
+
+            for (let roomName in Game.rooms) {
+                try {
+                    Game.rooms[roomName].manageLabs();
+                }
+                catch (e) {
+                    console.log('error in manageLabs:');
                     console.log(e.stack);
                 }
             }

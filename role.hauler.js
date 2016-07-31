@@ -24,9 +24,12 @@ Creep.prototype.performGetHaulerEnergy = function () {
             filter: (resource) => resource.resourceType == RESOURCE_ENERGY
         });
         if (resource && creep.pos.getRangeTo(resource) <= 3) {
-            if (creep.pickup(resource) == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(resource) > 1) {
                 creep.moveTo(resource);
                 return true;
+            }
+            else {
+                creep.pickup(resource);
             }
             actionTaken = true;
         }
@@ -39,13 +42,13 @@ Creep.prototype.performGetHaulerEnergy = function () {
                     creep.moveTo(container);
                     return true;
                 }
-                else {
-                    var result = creep.withdraw(container, RESOURCE_ENERGY);
-                    if (result == ERR_NOT_IN_RANGE || result == ERR_NOT_ENOUGH_RESOURCES) {
-                        creep.moveTo(container);
-                    }
-                    actionTaken = true;
+                else if (creep.pos.getRangeTo(container) > 1) {
+                    creep.moveTo(container);
                 }
+                else {
+                    creep.withdraw(container, RESOURCE_ENERGY);
+                }
+                actionTaken = true;
             }
         }
 
@@ -54,13 +57,16 @@ Creep.prototype.performGetHaulerEnergy = function () {
             filter: (creep) => creep.my && creep.memory.role == 'harvester.remote' && creep.carry.energy > 0
         });
         if (harvester && !actionTaken) {
-            if (harvester.transfer(creep, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(harvester) > 1) {
                 creep.moveTo(harvester);
+            }
+            else {
+                harvester.transfer(creep, RESOURCE_ENERGY);
             }
         }
     }
     else if (creep.memory.sourceContainer) {
-
+        // @todo?
     }
 
     return true;

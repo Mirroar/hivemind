@@ -131,7 +131,7 @@ Creep.prototype.performRepair = function () {
         creep.calculateRepairTarget();
     }
 
-    if (creep.repair(target) == ERR_NOT_IN_RANGE) {
+    if (creep.pos.getRangeTo(target) > 3) {
         creep.moveTo(target);
 
         // Also try to repair things that are close by when appropriate.
@@ -154,6 +154,9 @@ Creep.prototype.performRepair = function () {
                 }
             }
         }
+    }
+    else {
+        creep.repair(target);
     }
     return true;
 };

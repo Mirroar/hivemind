@@ -130,6 +130,7 @@ Room.prototype.manageSpawns = function () {
     // Gather some information.
     // @todo This could be done on script startup and partially kept in room memory.
     var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder' && creep.pos.roomName == room.name);
+    var harvesters = gameState.getHarvesters(room.name);
     var numHarvesters = gameState.getNumHarvesters(room.name);
     var repairers = _.filter(Game.creeps, (creep) => creep.memory.role == 'repairer' && creep.pos.roomName == room.name);
     var numTransporters = gameState.getNumTransporters(room.name);
@@ -148,13 +149,10 @@ Room.prototype.manageSpawns = function () {
         }
     });
 
-    var numSources = 0;
-    var spawnHarvester = false;
-    var maxHarvesters = 3;
-    var maxTransporters = 2; // @todo Find a good way to gauge needed number of transporters by measuring distances.
-    var maxHarvesterSize;
-
+    var spawnerUsed = false;
     for (let spawnID in roomSpawns) {
+        if (spawnerUsed) break;
+
         var spawn = roomSpawns[spawnID];
 
         // @todo Stop spawning for a bit if creeps are queued for renewing.
@@ -162,11 +160,20 @@ Room.prototype.manageSpawns = function () {
         // If spawning was just finished, scan the room again to assign creeps.
         if (spawn.spawning) {
             spawn.memory.wasSpawning = true;
+            continue;
         }
         else if (spawn.memory.wasSpawning) {
             spawn.memory.wasSpawning = false;
             room.scan();
         }
+        spawnerUsed = true;
+
+        var numSources = 0;
+        var spawnHarvester = false;
+        var spawnHarvesterTarget = null;
+        var maxHarvesters = 3;
+        var maxTransporters = 2; // @todo Find a good way to gauge needed number of transporters by measuring distances.
+        var maxHarvesterSize;
 
         // Spawn new creeps.
 
@@ -175,22 +182,29 @@ Room.prototype.manageSpawns = function () {
             maxHarvesters = 0;
             maxTransporters = 2 + 2 * numSources;
             for (var id in room.memory.sources) {
-                maxHarvesters += room.memory.sources[id].maxHarvesters;
+                if (room.controller.level <= 3) {
+                    maxHarvesters += room.memory.sources[id].maxHarvesters;
+                }
+                else {
+                    maxHarvesters++;
+                }
 
                 if (!maxHarvesterSize || maxHarvesterSize < room.memory.sources[id].maxWorkParts) {
                     maxHarvesterSize = room.memory.sources[id].maxWorkParts;
                 }
 
+                var assignedHarvesters = _.filter(harvesters, (creep) => creep.memory.fixedSource == id);
                 var totalWork = 0;
-                for (var i in room.memory.sources[id].harvesters) {
-                    var harvester = Game.getObjectById(room.memory.sources[id].harvesters[i]);
+                for (var i in assignedHarvesters) {
+                    var harvester = assignedHarvesters[i];
                     if (harvester) {
-                        totalWork += utilities.getBodyParts(harvester).work;
+                        totalWork += harvester.memory.body.work;
                     }
                 }
 
                 if (totalWork < room.memory.sources[id].maxWorkParts && room.memory.sources[id].harvesters.length < room.memory.sources[id].maxHarvesters) {
                     spawnHarvester = true;
+                    spawnHarvesterTarget = id;
                 }
 
                 // If we have a link to beam energy around, we'll need less transporters.
@@ -207,10 +221,10 @@ Room.prototype.manageSpawns = function () {
 
         // If we have a terminal, we need more transporters.
         if (room.terminal) {
-            maxTransporters++;
+            //maxTransporters++;
         }
 
-        //console.log(room.name, spawn.pos.roomName, 'Harvesters:', numHarvesters, '/', maxHarvesters);
+        //console.log(room.name, spawn.pos.roomName, 'Harvesters:', numHarvesters, '/', maxHarvesters, 'spawn', spawnHarvester);
         //console.log(room.name, spawn.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
         var maxUpgraders = 0;
@@ -255,8 +269,8 @@ Room.prototype.manageSpawns = function () {
                 return true;
             }
         }
-        else if (spawnHarvester) {
-            if (spawn.spawnHarvester(false, maxHarvesterSize)) {
+        else if (spawnHarvester && numHarvesters < maxHarvesters) {
+            if (spawn.spawnHarvester(false, maxHarvesterSize, spawnHarvesterTarget)) {
                 return true;
             }
         }
@@ -634,6 +648,9 @@ Room.prototype.manageSpawns = function () {
                 }
             }
         }
+
+        // Let only one spawner spawn each tickt to prevent confusion.
+        break;
     }
 };
 
@@ -800,7 +817,7 @@ StructureSpawn.prototype.spawnBuilder = function () {
 /**
  * Spawns a new harvester.
  */
-StructureSpawn.prototype.spawnHarvester = function (force, maxSize) {
+StructureSpawn.prototype.spawnHarvester = function (force, maxSize, sourceID) {
     var maxCost = null;
     if (force && this.room.energyAvailable >= 200) {
         maxCost = this.room.energyAvailable;
@@ -813,6 +830,7 @@ StructureSpawn.prototype.spawnHarvester = function (force, maxSize) {
         maxParts: maxSize ? {work: maxSize} : null,
         memory: {
             singleRoom: this.pos.roomName,
+            fixedSource: sourceID,
         },
     });
 };

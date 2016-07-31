@@ -141,9 +141,12 @@ Creep.prototype.performRemoteHarvest = function () {
     if (actionTaken) {
         return true;
     }
-    var result = creep.harvest(source);
-    if (result == ERR_NOT_IN_RANGE || result == ERR_NOT_ENOUGH_RESOURCES) {
+
+    if (creep.pos.getRangeTo(source) > 1) {
         creep.moveTo(source);
+    }
+    else {
+        creep.harvest(source);
     }
     return true;
 };
@@ -164,9 +167,13 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
         }
         else {
             //console.log('container found, dropping energy.');
-            if (creep.transfer(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(container) > 1) {
                 creep.moveTo(container);
             }
+            else {
+                creep.transfer(container, RESOURCE_ENERGY);
+            }
+
             if (_.sum(container.store) >= container.storeCapacity) {
                 // Just drop energy right here, somebody will pick it up later, right?
                 creep.drop(RESOURCE_ENERGY);
@@ -197,12 +204,15 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
         }
     }
 
-    var result = creep.transfer(target, RESOURCE_ENERGY);
-    if (result == OK) {
-        harvestMemory.revenue += creep.carry.energy;
-    }
-    else if (result == ERR_NOT_IN_RANGE) {
+
+    if (creep.pos.getRangeTo(target) > 1) {
         creep.moveTo(target);
+    }
+    else {
+        var result = creep.transfer(target, RESOURCE_ENERGY);
+        if (result == OK) {
+            harvestMemory.revenue += creep.carry.energy;
+        }
     }
 
     return true;

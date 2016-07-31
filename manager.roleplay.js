@@ -111,8 +111,6 @@ var songs = {
 var roleplay = {
 
     roomSongs: function() {
-        return;
-        //foo[bar] = baz;
         for (var roomNum in Game.rooms) {
             var room = Game.rooms[roomNum];
 

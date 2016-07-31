@@ -5,8 +5,11 @@ var utilities = require('utilities');
  */
 Creep.prototype.performUpgrade = function () {
     // Upgrade controller.
-    if (this.upgradeController(this.room.controller) == ERR_NOT_IN_RANGE) {
+    if (this.pos.getRangeTo(this.room.controller) > 3) {
         this.moveTo(this.room.controller);
+    }
+    else {
+        this.upgradeController(this.room.controller);
     }
 
     // Keep syphoning energy from link or controller to ideally never stop upgrading.
@@ -42,28 +45,26 @@ Creep.prototype.performGetUpgraderEnergy = function () {
     if (creep.room.memory.controllerLink) {
         var target = Game.getObjectById(creep.room.memory.controllerLink);
         if (target) {
-            var result = creep.withdraw(target, RESOURCE_ENERGY);
-            if (result == OK) {
-                return true;
-            }
-            else if (result == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(target) > 1) {
                 creep.moveTo(target);
-                return true;
             }
+            else {
+                creep.withdraw(target, RESOURCE_ENERGY);
+            }
+            return true;
         }
     }
 
     if (creep.room.memory.controllerContainer) {
         var target = Game.getObjectById(creep.room.memory.controllerContainer);
         if (target) {
-            var result = creep.withdraw(target, RESOURCE_ENERGY);
-            if (result == OK) {
-                return true;
-            }
-            else if (result == ERR_NOT_IN_RANGE) {
+            if (creep.pos.getRangeTo(target) > 1) {
                 creep.moveTo(target);
-                return true;
             }
+            else {
+                creep.withdraw(target, RESOURCE_ENERGY);
+            }
+            return true;
         }
     }
 
@@ -72,14 +73,13 @@ Creep.prototype.performGetUpgraderEnergy = function () {
         filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
     });
     if (otherContainers && otherContainers.length > 0) {
-        var result = creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
-        if (result == OK) {
-            return true;
-        }
-        else if (result == ERR_NOT_IN_RANGE) {
+        if (creep.pos.getRangeTo(otherContainers[0]) > 1) {
             creep.moveTo(otherContainers[0]);
-            return true;
         }
+        else {
+            creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
+        }
+        return true;
     }
 
     // Otherwise, get energy from anywhere.

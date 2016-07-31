@@ -2,7 +2,7 @@
 
 var utilities = require('utilities');
 
-StructureTower.prototype.runLogic = function() {
+StructureTower.prototype.runLogic = function () {
     var tower = this;
 
     // Emergency repairs.
@@ -46,6 +46,20 @@ StructureTower.prototype.runLogic = function() {
     });
     if (damaged) {
         tower.heal(damaged);
+    }
+};
+
+Room.prototype.manageLabs = function () {
+    if (this.controller && this.controller.my && this.memory.canPerformReactions && this.memory.currentReaction) {
+        var source1 = Game.getObjectById(this.memory.labs.source1);
+        var source2 = Game.getObjectById(this.memory.labs.source2);
+        var reactor = Game.getObjectById(this.memory.labs.reactor);
+
+        if (source1 && source2 && reactor) {
+            if (reactor.cooldown <= 0) {
+                reactor.runReaction(source1, source2);
+            }
+        }
     }
 };
 
@@ -102,9 +116,8 @@ var structureManager = {
         return rooms;
     },
 
-    getAvailableTransportRoutes: function () {
+    getAvailableTransportRoutes: function (rooms) {
         var options = [];
-        var rooms = structureManager.getRoomResourceStates();
 
         for (var roomName in rooms) {
             var roomState = rooms[roomName];
@@ -142,13 +155,53 @@ var structureManager = {
         return options;
     },
 
+    getAvailableReactions: function (rooms) {
+        var options = [];
+
+        for (let roomName in rooms) {
+            let room = Game.rooms[roomName];
+            let roomData = rooms[roomName];
+
+            if (room.memory.canPerformReactions) {
+                // Try to find possible reactions where we have a good amount of resources.
+                var bestReaction = null;
+                var mostResources = null;
+                for (var resourceType in roomData.totalResources) {
+                    if (roomData.totalResources[resourceType] > 0 && REACTIONS[resourceType]) {
+                        for (var resourceType2 in REACTIONS[resourceType]) {
+                            if (roomData.totalResources[resourceType2] && roomData.totalResources[resourceType2] > 0) {
+                                //console.log(resourceType, '+', resourceType2, '=', REACTIONS[resourceType][resourceType2]);
+                                var resourceAmount = Math.min(roomData.totalResources[resourceType2], roomData.totalResources[resourceType2]);
+                                if (!mostResources || mostResources < resourceAmount) {
+                                    mostResources = resourceAmount;
+                                    bestReaction = [resourceType, resourceType2];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (bestReaction) {
+                    room.memory.currentReaction = bestReaction;
+                }
+            }
+        }
+
+        return options;
+    },
+
     manageResources: function () {
-        var best = utilities.getBestOption(structureManager.getAvailableTransportRoutes());
+        let rooms = structureManager.getRoomResourceStates();
+        let best = utilities.getBestOption(structureManager.getAvailableTransportRoutes(rooms));
 
         if (best) {
-            var terminal = Game.rooms[best.source].terminal;
-            var result = terminal.send(best.resourceType, 5000, best.target, "Resource equalizing");
+            let terminal = Game.rooms[best.source].terminal;
+            let result = terminal.send(best.resourceType, 5000, best.target, "Resource equalizing");
             console.log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
+        }
+
+        if (Game.time % 10 == 1) {
+            let best = utilities.getBestOption(structureManager.getAvailableReactions(rooms));
         }
     },
 

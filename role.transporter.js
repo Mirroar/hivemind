@@ -137,6 +137,93 @@ Creep.prototype.getAvailableSources = function () {
 
     // @todo Take resources from storage if terminal is relatively empty.
 
+    if (creep.room.memory.canPerformReactions) {
+        // Clear out reaction lab.
+        let lab = Game.getObjectById(creep.room.memory.labs.reactor);
+        if (lab && lab.mineralAmount > 0) {
+            let option = {
+                priority: 2,
+                weight: lab.mineralAmount / lab.mineralCapacity,
+                type: 'structure',
+                object: lab,
+                resourceType: lab.mineralType,
+            };
+
+            if (lab.mineralAmount > lab.mineralCapacity * 0.5) {
+                option.priority++;
+            }
+            if (lab.mineralAmount > lab.mineralCapacity * 0.8) {
+                option.priority++;
+            }
+
+            options.push(option);
+        }
+
+        // Clear out labs with wrong resources.
+        lab = Game.getObjectById(creep.room.memory.labs.source1);
+        if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType != creep.room.memory.currentReaction[0]) {
+            let option = {
+                priority: 4,
+                weight: 0,
+                type: 'structure',
+                object: lab,
+                resourceType: lab.mineralType,
+            };
+
+            options.push(option);
+        }
+        lab = Game.getObjectById(creep.room.memory.labs.source2);
+        if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType != creep.room.memory.currentReaction[1]) {
+            let option = {
+                priority: 4,
+                weight: 0,
+                type: 'structure',
+                object: lab,
+                resourceType: lab.mineralType,
+            };
+
+            options.push(option);
+        }
+
+        // Get reaction resources from terminal.
+        if (creep.room.memory.currentReaction) {
+            lab = Game.getObjectById(creep.room.memory.labs.source1);
+            if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[0]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
+                let option = {
+                    priority: 4,
+                    weight: 1 - lab.mineralAmount / lab.mineralCapacity,
+                    type: 'structure',
+                    object: terminal,
+                    resourceType: creep.room.memory.currentReaction[0],
+                };
+
+                if (lab.mineralAmount > lab.mineralCapacity * 0.2) {
+                    option.priority--;
+                }
+
+                options.push(option);
+            }
+            lab = Game.getObjectById(creep.room.memory.labs.source2);
+            if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[1]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
+                let option = {
+                    priority: 4,
+                    weight: 1 - lab.mineralAmount / lab.mineralCapacity,
+                    type: 'structure',
+                    object: terminal,
+                    resourceType: creep.room.memory.currentReaction[1],
+                };
+
+                if (lab.mineralAmount > lab.mineralCapacity * 0.2) {
+                    option.priority--;
+                }
+
+                options.push(option);
+            }
+        }
+
+        // @todo Get reaction resources from storage.
+    }
+
     return options;
 };
 
@@ -209,25 +296,29 @@ Creep.prototype.performGetEnergy = function () {
         return false;
     }
     var target = Game.getObjectById(best);
-    if (!target || (target.store && target.store[RESOURCE_ENERGY] <= 0) || (target.amount && target.amount <= 0)) {
+    if (!target || (target.store && target.store[RESOURCE_ENERGY] <= 0) || (target.amount && target.amount <= 0) || (target.mineralAmount && target.mineralAmount <= 0)) {
         creep.calculateEnergySource();
     }
     else if (target.store) {
-        let result = creep.withdraw(target, RESOURCE_ENERGY);
-        if (result == ERR_NOT_IN_RANGE) {
+        if (creep.pos.getRangeTo(target) > 1) {
             creep.moveTo(target);
         }
-        else if (result == OK) {
-            creep.calculateEnergySource();
+        else {
+            let result = creep.withdraw(target, RESOURCE_ENERGY);
+            if (result == OK) {
+                creep.calculateEnergySource();
+            }
         }
     }
     else if (target.amount) {
-        let result = creep.pickup(target);
-        if (result == ERR_NOT_IN_RANGE) {
+        if (creep.pos.getRangeTo(target) > 1) {
             creep.moveTo(target);
         }
-        else if (result == OK) {
-            creep.calculateEnergySource();
+        else {
+            let result = creep.pickup(target);
+            if (result == OK) {
+                creep.calculateEnergySource();
+            }
         }
     }
     return true;
@@ -252,25 +343,40 @@ Creep.prototype.performGetResources = function () {
         return false;
     }
     var target = Game.getObjectById(best);
-    if (!target || (target.store && _.sum(target.store) <= 0) || (target.amount && target.amount <= 0)) {
+    if (!target || (target.store && _.sum(target.store) <= 0) || (target.amount && target.amount <= 0) || (target.mineralAmount && target.mineralAmount <= 0)) {
         creep.calculateSource();
     }
     else if (target.store) {
-        let result = creep.withdraw(target, creep.memory.order.resourceType);
-        if (result == ERR_NOT_IN_RANGE) {
+        if (creep.pos.getRangeTo(target) > 1) {
             creep.moveTo(target);
         }
-        else if (result == OK) {
-            creep.calculateEnergySource();
+        else {
+            let result = creep.withdraw(target, creep.memory.order.resourceType);
+            if (result == OK) {
+                creep.calculateEnergySource();
+            }
         }
     }
     else if (target.amount) {
-        let result = creep.pickup(target);
-        if (result == ERR_NOT_IN_RANGE) {
+        if (creep.pos.getRangeTo(target) > 1) {
             creep.moveTo(target);
         }
-        else if (result == OK) {
-            creep.calculateEnergySource();
+        else {
+            let result = creep.pickup(target);
+            if (result == OK) {
+                creep.calculateEnergySource();
+            }
+        }
+    }
+    else if (target.mineralAmount) {
+        if (creep.pos.getRangeTo(target) > 1) {
+            creep.moveTo(target);
+        }
+        else {
+            let result = creep.withdraw(target, creep.memory.order.resourceType);
+            if (result == OK) {
+                creep.calculateEnergySource();
+            }
         }
     }
     return true;
@@ -464,7 +570,33 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             });
         }
 
-        // @todo Put correct resources into labs.
+        // Put correct resources into labs.
+        if (creep.room.memory.currentReaction) {
+            if (resourceType == creep.room.memory.currentReaction[0]) {
+                let lab = Game.getObjectById(creep.room.memory.labs.source1);
+                if (lab && (!lab.mineralType || lab.mineralType == resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
+                    options.push({
+                        priority: 4,
+                        weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+                        type: 'structure',
+                        object: lab,
+                        resourceType: resourceType,
+                    });
+                }
+            }
+            if (resourceType == creep.room.memory.currentReaction[1]) {
+                let lab = Game.getObjectById(creep.room.memory.labs.source2);
+                if (lab && (!lab.mineralType || lab.mineralType == resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
+                    options.push({
+                        priority: 4,
+                        weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+                        type: 'structure',
+                        object: lab,
+                        resourceType: resourceType,
+                    });
+                }
+            }
+        }
     }
 
     return options;
@@ -523,9 +655,11 @@ Creep.prototype.performDeliver = function () {
             return true;
         }
 
-        var result = creep.transfer(target, creep.memory.order.resourceType);
-        if (result == ERR_NOT_IN_RANGE) {
+        if (creep.pos.getRangeTo(target) > 1) {
             creep.moveTo(target);
+        }
+        else {
+            creep.transfer(target, creep.memory.order.resourceType);
         }
         if ((target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity)) {
             creep.calculateDeliveryTarget();

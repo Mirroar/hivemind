@@ -14,15 +14,19 @@ Creep.prototype.performClaim = function () {
     target = this.room.controller;
 
     if (target.owner && !target.my && this.memory.body && this.memory.body.claim >= 5) {
-        let result = this.claimController(target);
-        if (result == ERR_NOT_IN_RANGE) {
+        if (this.pos.getRangeTo(target) > 1) {
             this.moveTo(target);
+        }
+        else {
+            this.claimController(target);
         }
     }
     else if (!target.my) {
-        let result = this.claimController(target);
-        if (result != OK) {
+        if (this.pos.getRangeTo(target) > 1) {
             this.moveTo(target);
+        }
+        else {
+            this.claimController(target);
         }
     }
 
@@ -41,19 +45,21 @@ Creep.prototype.performReserve = function () {
     }
     target = this.room.controller;
 
-    var result = this.reserveController(target);
-    if (result == OK) {
-        var reservation = 0;
-        if (this.room.controller.reservation && this.room.controller.reservation.username == 'Mirroar') {
-            reservation = this.room.controller.reservation.ticksToEnd;
-        }
-        this.room.memory.lastClaim = {
-            time: Game.time,
-            value: reservation
-        };
-    }
-    else if (result == ERR_NOT_IN_RANGE) {
+    if (this.pos.getRangeTo(target) > 1) {
         this.moveTo(target);
+    }
+    else {
+        var result = this.reserveController(target);
+        if (result == OK) {
+            var reservation = 0;
+            if (this.room.controller.reservation && this.room.controller.reservation.username == 'Mirroar') {
+                reservation = this.room.controller.reservation.ticksToEnd;
+            }
+            this.room.memory.lastClaim = {
+                time: Game.time,
+                value: reservation,
+            };
+        }
     }
 
     return true;

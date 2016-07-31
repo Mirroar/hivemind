@@ -161,6 +161,7 @@ const Profiler = {
     { name: 'RoomPosition', val: RoomPosition },
     { name: 'Source', val: Source },
     { name: 'Flag', val: Flag },
+    { name: 'Map', val: Game.map },
   ],
 
   record(functionName, time) {

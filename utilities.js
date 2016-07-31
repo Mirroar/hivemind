@@ -176,6 +176,7 @@ Room.prototype.scan = function () {
         sourceMemory.maxHarvesters = free;
         sourceMemory.harvesters = [];
 
+        // @todo Do harvester assigning during spawning.
         // Keep harvesters which are already assigned.
         var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester' && creep.pos.roomName == source.pos.roomName);
         var totalWork = 0;
@@ -288,6 +289,33 @@ Room.prototype.scan = function () {
             for (var t in sourceMemory.harvesters) {
                 var harvester = Game.getObjectById(sourceMemory.harvesters[t]);
                 harvester.memory.fixedDropoffSpot = sourceMemory.dropoffSpot;
+            }
+        }
+    }
+
+    // Scan room for labs.
+    // @todo Find labs not used for reactions, to do creep boosts.
+    if (!room.memory.canPerformReactions) {
+        var labs = room.find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_LAB
+        });
+        if (labs.length >= 3) {
+            for (let i in labs) {
+                var lab = labs[i];
+
+                // Check if there's at least 2 labs nearby for doing reactions.
+                var closeLabs = lab.pos.findInRange(FIND_STRUCTURES, 2, {
+                    filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.id != lab.id
+                });
+                if (closeLabs.length < 2) continue;
+
+                room.memory.canPerformReactions = true;
+                room.memory.labs = {
+                    reactor: lab.id,
+                    source1: closeLabs[0].id,
+                    source2: closeLabs[1].id,
+                };
+                break;
             }
         }
     }

@@ -7,16 +7,6 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
     var creep = this;
     var options = [];
 
-    if (!creep.memory.body) {
-        creep.memory.body = {};
-        for (var i in creep.body) {
-            if (!creep.memory.body[creep.body[i].type]) {
-                creep.memory.body[creep.body[i].type] = 0;
-            }
-            creep.memory.body[creep.body[i].type]++;
-        }
-    }
-
     if (creep.memory.target) {
         var targetPosition = utilities.decodePosition(creep.memory.target);
         if (creep.pos.roomName == targetPosition.roomName) {
@@ -28,6 +18,18 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 if (enemies && enemies.length > 0) {
                     for (var i in enemies) {
                         var enemy = enemies[i];
+
+                        // Check if enemy is harmless, and ignore it.
+                        let dangerous = false;
+                        for (let j in enemy.body) {
+                            let type = enemy.body[j].type;
+
+                            if (type != MOVE && type != CARRY && type != TOUGH) {
+                                dangerous = true;
+                                break;
+                            }
+                        }
+                        if (!dangerous) continue;
 
                         var option = {
                             priority: 5,
@@ -265,9 +267,25 @@ Creep.prototype.performMilitaryAttack = function () {
         if (!attacked) {
             // See if enemies are nearby, attack one of those.
             var hostile = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
-            if (hostile && hostile.length > 0) {
-                if (creep.attack(hostile[0]) == OK) {
-                    attacked = true;
+            if (hostile.length > 0) {
+                for (let i in hostile) {
+                    // Check if enemy is harmless, and ignore it.
+                    let dangerous = false;
+                    for (let j in hostile[i].body) {
+                        let type = hostile[i].body[j].type;
+
+                        if (type != MOVE && type != CARRY && type != TOUGH) {
+                            dangerous = true;
+                            break;
+                        }
+                    }
+                    if (!dangerous) continue;
+
+
+                    if (creep.attack(hostile[i]) == OK) {
+                        attacked = true;
+                        break;
+                    }
                 }
             }
 
