@@ -9,6 +9,7 @@
 
 // @todo Try to have different targets.
 // @todo Use energy from storage.
+// @todo Walls and ramparts should be repaired to the same amount, not percentage.
 
 var roleTransporter = require('role.transporter');
 var utilities = require('utilities');

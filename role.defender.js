@@ -17,25 +17,55 @@ var roleDefender = {
         if (targets.length > 0) {
             var best = utilities.getClosest(creep, targets);
             if (!best) {
-                return false;
+                best = creep.pos.findClosestByRange(targets);
+                if (best) {
+                    best = best.id;
+                    //console.log(best);
+                }
             }
-            var target = Game.getObjectById(best);
-
-            if (creep.attack(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(target);
+            if (best) {
+                var target = Game.getObjectById(best);
+    
+                var attackType = 'attack';
+                for (var i in creep.body) {
+                    if (creep.body[i].type == RANGED_ATTACK && creep.body[i].hits > 0) {
+                        attackType = 'rangedAttack';
+                    }
+                }
+    
+                var result = creep[attackType](target);
+                if (result == OK) {
+                    return true;
+                }
+                else if (result == ERR_NOT_IN_RANGE) {
+                    var result = creep.moveTo(target);
+                    if (result == OK) {
+                        return true;
+                    }
+                }
             }
-            return true;
         }
 
         // Rally to defense flag.
-        var targets = creep.room.find(FIND_FLAGS, {
-            filter: (flag) => flag.name.startsWith('Defend')
-        });
-        if (targets.length > 0) {
-            //var best = utilities.getClosest(creep, targets);
-            //var target = Game.getObjectById(best);
-            var target = targets[0];
-            
+        var target;
+        if (creep.memory.targetFlag) {
+            target = Game.getObjectById(creep.memory.targetFlag);
+            if (!target) {
+                creep.memory.targetFlag = null;
+            }
+        }
+        if (!target) {
+            var targets = creep.room.find(FIND_FLAGS, {
+                filter: (flag) => flag.name.startsWith('Defend')
+            });
+            if (targets.length > 0) {
+                //var best = utilities.getClosest(creep, targets);
+                //target = Game.getObjectById(best);
+                target = targets[0];
+            }
+        }
+        
+        if (target) {
             creep.moveTo(target);
             return true;
         }
@@ -44,7 +74,7 @@ var roleDefender = {
     
     spawn: function (spawner) {
         if (spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.2, attack: 0.2, tough: 0.6}, spawner.room.energyAvailable);
+            var body = utilities.generateCreepBody({move: 0.1, ranged_attack: 0.5, tough: 0.4}, spawner.room.energyAvailable);
             if (spawner.canCreateCreep(body) == OK) {
                 var newName = spawner.createCreep(body, undefined, {role: 'defender'});
                 console.log('Spawning new defender: ' + newName);

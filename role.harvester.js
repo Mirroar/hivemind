@@ -6,14 +6,15 @@
  * var mod = require('role.harvester');
  * mod.thing == 'a thing'; // true
  */
- 
+
 // @todo Assign close-by container to dump resources.
 // @todo Assign harvesters to a specific resource spot and balance numbers accordingly.
- 
+
+var gameState = require('game.state');
 var utilities = require('utilities');
 
 var roleHarvester = {
-    
+
     harvest: function (creep) {
         var source;
         if (creep.memory.fixedSource) {
@@ -26,7 +27,7 @@ var roleHarvester = {
                 if (sources.length <= 0) {
                     return false;
                 }
-                
+
                 //creep.memory.resourceTarget = utilities.getClosest(creep, sources);
                 creep.memory.resourceTarget = sources[Math.floor(Math.random() * sources.length)].id;
                 creep.memory.deliverTarget = null;
@@ -40,7 +41,7 @@ var roleHarvester = {
                 creep.memory.resourceTarget = null;
             }
         }
-        
+
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             var result = creep.moveTo(source);
             if (result == ERR_NO_PATH) {
@@ -49,7 +50,7 @@ var roleHarvester = {
                     creep.memory.moveFailCount = 0;
                 }
                 creep.memory.moveFailCount++;
-                
+
                 if (creep.memory.moveFailCount > 10) {
                     creep.memory.moveFailCount = null;
                     creep.memory.resourceTarget = null;
@@ -58,13 +59,21 @@ var roleHarvester = {
                 creep.memory.moveFailCount = null;
             }
         }
-        return true;  
+        return true;
     },
-    
+
     deliver: function (creep) {
         var target;
-        if (creep.memory.fixedTarget) {
+        if (creep.memory.fixedTarget && gameState.getNumTransporters() > 0) {
             target = Game.getObjectById(creep.memory.fixedTarget);
+        }
+        else if (creep.memory.fixedDropoffSpot && gameState.getNumTransporters() > 0) {
+            if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
+                creep.drop(RESOURCE_ENERGY);
+            } else {
+                creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
+            }
+            return true;
         }
         else {
             if (!creep.memory.deliverTarget) {
@@ -132,7 +141,7 @@ var roleHarvester = {
             return roleHarvester.deliver(creep);
         }
     },
-    
+
     spawn: function (spawner, force) {
         if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 || (force && spawner.room.energyAvailable >= 250)) && !spawner.spawning) {
             var body = utilities.generateCreepBody({move: 0.1, work: 0.7, carry: 0.2}, spawner.room.energyAvailable);
