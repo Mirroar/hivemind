@@ -3,6 +3,7 @@ var gameState = require('game.state');
 var roleBuilder = require('role.builder');
 var roleDefender = require('role.defender');
 var roleHarvester = require('role.harvester');
+var roleRemoteHarvester = require('role.harvester.remote');
 var roleRepairer = require('role.repairer');
 var roleTransporter = require('role.transporter');
 var roleUpgrader = require('role.upgrader');
@@ -11,6 +12,7 @@ var utilities = require('utilities');
 
 // @todo Decide when it is a good idea to send out harvesters to adjacent unclaimend tiles.
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
+// @todo Move spawning logic into own file.
 
 var main = {
 
@@ -40,13 +42,18 @@ var main = {
             var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
 
             var maxHarvesters = 3;
-            var maxTransporters = 2;
+            var maxTransporters = 2; // @todo Find a good way to gauge needed number of transporters by measuring distances.
+            var maxHarvesterSize;
             if (spawner.room.memory && spawner.room.memory.sources) {
                 maxHarvesters = 0;
-                maxTransporters = 1;
+                maxTransporters = 2;
                 for (var id in spawner.room.memory.sources) {
                     maxHarvesters += spawner.room.memory.sources[id].maxHarvesters;
-                    maxTransporters++;
+                    maxTransporters += 2;
+
+                    if (!maxHarvesterSize || maxHarvesterSize < spawner.room.memory.sources[id].maxWorkParts) {
+                        maxHarvesterSize = spawner.room.memory.sources[id].maxWorkParts;
+                    }
                 }
             }
             //console.log('Harvesters:', numHarvesters, '/', maxHarvesters);
@@ -69,6 +76,7 @@ var main = {
                 }
             }
             if (maxUpgraders == 0 && spawner.room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[spawner.room.controller.level] * 0.2) {
+                console.log('trying to spawn upgrader because controller is close to downgrading', spawner.room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[spawner.room.controller.level]);
                 // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
                 maxUpgraders = 1;
             }
@@ -78,22 +86,22 @@ var main = {
             if (constructionSites) {
                 maxBuilders = Math.min(3, Math.ceil(constructionSites.length / 10));
             }
-            
+
             var maxDefenders = 0;
             var flags = spawner.room.find(FIND_FLAGS, {
                 filter: (flag) => flag.name.startsWith('Defend')
             });
             if (flags) {
                 maxDefenders = flags.length;
-                
+
                 for (var i in flags) {
                     var flag = flags[i];
-                    
+
                     // Check if a defender is assigned.
                     var numAssigned = 0;
                     for (var j in defenders) {
                         var defender = defenders[j];
-                        
+
                         if (defender.memory.targetFlag && defender.memory.targetFlag == flag.name) {
                             if (numAssigned >= 1) {
                                 // This one is too much, unassign.
@@ -104,12 +112,12 @@ var main = {
                             }
                         }
                     }
-                    
+
                     // Assign defenders if needed.
                     if (numAssigned < 1) {
                         for (var j in defenders) {
                             var defender = defenders[j];
-                            
+
                             if (!defender.memory.targetFlag) {
                                 numAssigned++;
                                 defender.memory.targetFlag = flag.name;
@@ -119,38 +127,93 @@ var main = {
                             }
                         }
                     }
-                    
+
                     // Unassign defenders if needed.
                 }
             }
 
             if (numHarvesters < 1) {
-                roleHarvester.spawn(spawner, true);
+                if (roleHarvester.spawn(spawner, true, maxHarvesterSize)) {
+                    return true;
+                }
             }
             else if (numTransporters < 1) {
                 // @todo Spawn only if there is at least one container / storage.
-                roleTransporter.spawn(spawner, true);
+                if (roleTransporter.spawn(spawner, true)) {
+                    return true;
+                }
             }
-            if (numHarvesters < maxHarvesters) {
-                roleHarvester.spawn(spawner);
+            else if (numHarvesters < maxHarvesters) {
+                if (roleHarvester.spawn(spawner, false, maxHarvesterSize)) {
+                    return true;
+                }
             }
             else if (numTransporters < maxTransporters) {
                 // @todo Spawn only if there is at least one container / storage.
-                roleTransporter.spawn(spawner);
+                if (roleTransporter.spawn(spawner)) {
+                    return true;
+                }
             }
             else if (upgraders.length < maxUpgraders) {
-                roleUpgrader.spawn(spawner);
+                if (roleUpgrader.spawn(spawner)) {
+                    return true;
+                }
             }
             else if (builders.length < maxBuilders) {
-                roleBuilder.spawn(spawner);
+                if (roleBuilder.spawn(spawner)) {
+                    return true;
+                }
             }
             else if (repairers.length < 3) {
                 // @todo Determine total decay in room and how many worker parts that wohle need.
-                roleRepairer.spawn(spawner);
+                if (roleRepairer.spawn(spawner)) {
+                    return true;
+                }
             }
             else if (defenders.length < maxDefenders) {
                 // @todo Decide how many defenders are needed depending on number / energy levels of towers, RCL, wall status.
-                roleDefender.spawn(spawner);
+                if (roleDefender.spawn(spawner)) {
+                    return true;
+                }
+            }
+            else {
+                // We've got nothing to do, how about some remote harvesting?
+                var harvestFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('HarvestRemote'));
+                for (var i in harvestFlags) {
+                    var flag = harvestFlags[i];
+                    if (Game.map.getRoomLinearDistance(spawner.pos.roomName, flag.pos.roomName) == 1) {
+                        var doSpawn = true;
+                        if (spawner.room.memory.remoteHarvesting && spawner.room.memory.remoteHarvesting[flag.pos.roomName]) {
+                            var memory = spawner.room.memory.remoteHarvesting[flag.pos.roomName];
+                            doSpawn = false;
+
+                            memory.harvesters = [];
+                            var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.remote');
+                            var maxRemoteHarvesters = 1;
+                            if (spawner.room.memory.remoteHarvesting[flag.pos.roomName].revenue > 0) {
+                                // Road has been built, can now use multiple harvesters.
+                                maxRemoteHarvesters = flag.name.substring(13, 14) * 1;
+                            }
+
+                            for (var j in harvesters) {
+                                var creep = harvesters[j];
+                                //console.log(creep.memory.storage, utilities.encodePosition(spawner.room.storage.pos), creep.memory.source, utilities.encodePosition(flag.pos));
+                                if (creep.memory.storage == utilities.encodePosition(spawner.room.storage.pos) && creep.memory.source == utilities.encodePosition(flag.pos)) {
+                                    memory.harvesters.push(creep.id);
+                                }
+                            }
+                            if (memory.harvesters.length < maxRemoteHarvesters) {
+                                doSpawn = true;
+                            }
+                        }
+
+                        if (doSpawn) {
+                            if (roleRemoteHarvester.spawn(spawner, flag.pos)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
             }
         }
     },
@@ -197,6 +260,9 @@ var main = {
             else if (creep.memory.role == 'transporter') {
                 roleTransporter.run(creep);
             }
+            else if (creep.memory.role == 'harvester.remote') {
+                roleRemoteHarvester.run(creep);
+            }
         }
     },
 
@@ -226,10 +292,10 @@ var main = {
                 var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (structure) => {
                         if (structure.structureType == STRUCTURE_WALL) {
-                            return structure.pos.getRangeTo(tower) <= 5 || structure.hits < 1000 && tower.energy > tower.energyCapacity * 0.7;
+                            return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
                         }
                         if (structure.structureType == STRUCTURE_RAMPART) {
-                            return (structure.pos.getRangeTo(tower) <= 5 || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
+                            return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
                         }
                         return (structure.hits < structure.hitsMax - TOWER_POWER_REPAIR) && (structure.hits < structure.hitsMax * 0.2);
                     }
@@ -265,7 +331,7 @@ var main = {
     loop: function () {
         // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
         gameState.clearCache();
-        
+
         // Always place this memory cleaning code at the very top of your main loop!
         for (var name in Memory.creeps) {
             if (!Game.creeps[name]) {

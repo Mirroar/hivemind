@@ -53,47 +53,7 @@ var roleBuilder = {
             return true;
         }
         else {
-            if (roleTransporter.getEnergy(creep)) {
-                return true;
-            }
-
-            // If all else fails, harvest own resources.
-            var sources = creep.room.find(FIND_SOURCES);
-            if (sources.length <= 0) {
-                return false;
-            }
-
-            if (!creep.memory.resourceTarget) {
-                //creep.memory.resourceTarget = utilities.getClosest(creep, sources);
-                creep.memory.resourceTarget = sources[Math.floor(Math.random() * sources.length)].id;
-                creep.memory.deliverTarget = null;
-            }
-            var best = creep.memory.resourceTarget;
-            if (!best) {
-                return false;
-            }
-            var source = Game.getObjectById(best);
-            if (!source) {
-                creep.memory.resourceTarget = null;
-            }
-
-            if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                var result = creep.moveTo(source);
-                if (result == ERR_NO_PATH) {
-                    if (!creep.memory.moveFailCount) {
-                        creep.memory.moveFailCount = 0;
-                    }
-                    creep.memory.moveFailCount++;
-
-                    if (creep.memory.moveFailCount > 10) {
-                        creep.memory.moveFailCount = null;
-                        creep.memory.resourceTarget = null;
-                    }
-                } else {
-                    creep.memory.moveFailCount = null;
-                }
-            }
-            return true;
+            return roleTransporter.getEnergy(creep);
         }
     },
 

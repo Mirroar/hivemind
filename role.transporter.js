@@ -7,12 +7,14 @@
  * mod.thing == 'a thing'; // true
  */
 
-// @todo Support energy sources other than containers.
-
+var creepGeneral = require('creep.general');
 var utilities = require('utilities');
 
 var roleTransporter = {
 
+    /**
+     * Creates a priority list of energy sources available to this creep.
+     */
     getAvailableEnergySources: function (creep) {
         var options = [];
         // Energy can be gotten at the room's storage.
@@ -26,7 +28,6 @@ var roleTransporter = {
         }
 
         // Get storage location, since that is a low priority source for transporters.
-        // @todo It will probably need to be again, if other sources are empty.
         var storagePosition = utilities.getStorageLocation(creep.room);
 
         // Look for energy on the ground.
@@ -58,6 +59,9 @@ var roleTransporter = {
                     option.priority = 5;
                 }
             }
+            else {
+                option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length;
+            }
 
             options.push(option);
         }
@@ -65,7 +69,7 @@ var roleTransporter = {
         // Look for energy in Containers.
         var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.structureType == STRUCTURE_CONTAINER) && (structure.store[RESOURCE_ENERGY] > 0);
+                return (structure.structureType == STRUCTURE_CONTAINER) && (structure.store[RESOURCE_ENERGY] > 0 && structure.id != creep.room.memory.controllerContainer);
             }
         });
 
@@ -88,127 +92,168 @@ var roleTransporter = {
                 }
             }
 
+            option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length;
+
             options.push(option);
         }
 
         return options;
     },
 
-    getBestEnergySource: function (creep) {
-        var options = roleTransporter.getAvailableEnergySources(creep);
+    /**
+     * Creates a priority list of possible delivery targets for this creep.
+     */
+    getAvailableDeliveryTargets: function (creep) {
+        var options = [];
 
-        var best = null;
+        // Primarily fill spawn and extenstions.
+        var targets = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_SPAWN) && structure.energy < structure.energyCapacity;
+            }
+        });
 
-        for (var i in options) {
-            if (!best || options[i].priority > best.priority || (options[i].priority == best.priority && options[i].weight > best.weight)) {
-                best = options[i];
+        for (var i in targets) {
+            var target = targets[i];
+            var option = {
+                priority: 5,
+                weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+                type: 'structure',
+                object: target,
+            };
+
+            option.priority -= creepGeneral.getCreepsWithOrder('deliverEnergy', target.id).length * 3;
+
+            options.push(option);
+        }
+
+        // Fill containers.
+        var targets = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                if (structure.structureType == STRUCTURE_CONTAINER && structure.store.energy < structure.storeCapacity) {
+                    // Do not deliver to containers used as harvester drop off points.
+                    if (structure.room.memory.sources) {
+                        for (var id in structure.room.memory.sources) {
+                            if (structure.room.memory.sources[id].targetContainer == structure.id) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        for (var i in targets) {
+            var target = targets[i];
+            var option = {
+                priority: 4,
+                weight: (target.storeCapacity - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
+                type: 'structure',
+                object: target,
+            };
+
+            var prioFactor = 1;
+            if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.5) {
+                prioFactor = 2;
+            }
+            else if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.75) {
+                prioFactor = 3;
+            }
+
+            option.priority -= creepGeneral.getCreepsWithOrder('deliverEnergy', target.id).length * prioFactor;
+
+            options.push(option);
+        }
+
+        // Supply towers.
+        var targets = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType == STRUCTURE_TOWER) && structure.energy < structure.energyCapacity * 0.8;
+            }
+        });
+
+        for (var i in targets) {
+            var target = targets[i];
+            var option = {
+                priority: 3,
+                weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+                type: 'structure',
+                object: target,
+            };
+
+            option.priority -= creepGeneral.getCreepsWithOrder('deliverEnergy', target.id).length * 2;
+
+            options.push(option);
+        }
+
+        // Deliver excess energy to storage.
+        if (creep.room.storage) {
+            options.push({
+                priority: 0,
+                weight: 0,
+                type: 'structure',
+                object: creep.room.storage,
+            });
+        }
+        else {
+            var storagePosition = utilities.getStorageLocation(creep.room);
+            if (storagePosition) {
+                options.push({
+                    priority: 0,
+                    weight: 0,
+                    type: 'position',
+                    object: creep.room.getPositionAt(storagePosition.x, storagePosition.y),
+                });
             }
         }
 
-        return best;
+        return options;
     },
 
+    /**
+     * Sets a good energy source target for this creep.
+     */
+    calculateEnergySource: function (creep) {
+        var best = utilities.getBestOption(roleTransporter.getAvailableEnergySources(creep));
+
+        if (best) {
+            //console.log('best energy source for this', creep.memory.role , ':', best.type, best.object.id, '@ priority', best.priority, best.weight);
+            creep.memory.sourceTarget = best.object.id;
+
+            creep.memory.order = {
+                type: 'getEnergy',
+                target: best.object.id
+            };
+        }
+        else {
+            delete creep.memory.sourceTarget;
+            delete creep.memory.order;
+        }
+    },
+
+    /**
+     * Makes this creep collect energy.
+     */
     getEnergy: function (creep) {
         //creep.memory.sourceTarget = null;
         if (!creep.memory.sourceTarget) {
-            /*var best = roleTransporter.getBestEnergySource(creep);
-
-            if (best) {
-                creep.memory.sourceTarget = best.object.id;
-            }//*/
-
-            if (creep.memory.role != 'transporter' && creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] >= creep.carryCapacity - creep.carry[RESOURCE_ENERGY]) {
-                creep.memory.sourceTarget = creep.room.storage.id;
-            }
-            else {
-                // Get storage location, since that is no valid source for transporters.
-                // @todo It will probably need to be again, if other sources are empty.
-                var storagePosition = utilities.getStorageLocation(creep.room);
-
-                // Look for energy in harvester dropoff-spots, first.
-                var targets = creep.room.find(FIND_DROPPED_ENERGY, {
-                    filter: (resource) => {
-                        // @todo Temporarily diabled. First, we need to be able to ignore energy outside our walls.
-                        return false;
-
-                        if (resource.resourceType == RESOURCE_ENERGY) {
-                            if (creep.memory.role == 'transporter' && resource.pos.x == storagePosition.x && resource.pos.y == storagePosition.y) {
-                                return false;
-                            }
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-
-                // Prefer resources used as harvester dropoff.
-                var dropOffs = _.filter(targets, (target) => {
-                    if (!target.room.memory.sources) {
-                        return false;
-                    }
-                    for (var id in target.room.memory.sources) {
-                        if (target.room.memory.sources[id].dropoffSpot.x == target.pos.x && target.room.memory.sources[id].dropoffSpot.y == target.pos.y) {
-                            return true;
-                        }
-                    }
-                    return false;
-                });
-
-                if (dropOffs && dropOffs.length > 0) {
-                    creep.memory.sourceTarget = utilities.getClosest(creep, dropOffs);
-                }
-                else {
-                    creep.memory.sourceTarget = utilities.getClosest(creep, targets);
-                }
-
-                if (targets.length <= 0) {
-                    // Look for energy in Containers, primarily.
-                    var targets = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return (structure.structureType == STRUCTURE_CONTAINER) && (structure.store[RESOURCE_ENERGY] > 0);
-                        }
-                    });
-                    if (targets.length <= 0) {
-                        if (creep.memory.role == 'transporter' && creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] > 0) {
-                            // If no other sources are available, use storage as transporter source (for refilling spawn, etc.).
-                            creep.memory.sourceTarget = creep.room.storage.id;
-                        }
-                        return false;
-                    }
-
-                    // Prefer containers used as harvester dropoff.
-                    var dropOffs = _.filter(targets, (target) => {
-                        if (!target.room.memory.sources) {
-                            return false;
-                        }
-                        for (var id in target.room.memory.sources) {
-                            if (target.room.memory.sources[id].targetContainer == target.id) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
-
-                    if (dropOffs && dropOffs.length > 0) {
-                        creep.memory.sourceTarget = utilities.getClosest(creep, dropOffs);
-                    }
-                    else {
-                        creep.memory.sourceTarget = utilities.getClosest(creep, targets);
-                    }
-                }
-            }//*/
+            roleTransporter.calculateEnergySource(creep);
         }
+
         var best = creep.memory.sourceTarget;
         if (!best) {
             if (creep.memory.role == 'transporter' && creep.carry[RESOURCE_ENERGY] > 0) {
                 // Deliver what energy we already have stored, if no more can be found for picking up.
-                creep.memory.delivering = true;
+                roleTransporter.setDelivering(creep, true);
             }
             return false;
         }
         var target = Game.getObjectById(best);
         if (!target || (target.store && target.store[RESOURCE_ENERGY] <= 0) || (target.amount && target.amount <= 0)) {
-            creep.memory.sourceTarget = null;
+            roleTransporter.calculateEnergySource(creep);
         }
         else if (target.store && target.transfer(creep, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             creep.moveTo(target);
@@ -219,57 +264,42 @@ var roleTransporter = {
         return true;
     },
 
+    /**
+     * Sets a good energy delivery target for this creep.
+     */
+    calculateEnergyTarget: function (creep) {
+        var best = utilities.getBestOption(roleTransporter.getAvailableDeliveryTargets(creep));
+
+        if (best) {
+            //console.log('energy for this', creep.memory.role , 'should be delivered to:', best.type, best.object.id, '@ priority', best.priority, best.weight);
+            if (best.type == 'position') {
+                creep.memory.deliverTarget = {x: best.object.x, y: best.object.y};
+
+                creep.memory.order = {
+                    type: 'deliverEnergy',
+                    target: utilities.encodePosition(best.object)
+                };
+            }
+            else {
+                creep.memory.deliverTarget = best.object.id;
+
+                creep.memory.order = {
+                    type: 'deliverEnergy',
+                    target: best.object.id
+                };
+            }
+        }
+        else {
+            delete creep.memory.deliverTarget;
+        }
+    },
+
+    /**
+     * Makes this creep deliver carried energy somewhere.
+     */
     deliverEnergy: function (creep) {
         if (!creep.memory.deliverTarget) {
-            var targets = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION ||
-                            structure.structureType == STRUCTURE_SPAWN) && structure.energy < structure.energyCapacity;
-                }
-            });
-            if (targets.length <= 0) {
-                var targets = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        if (structure.structureType == STRUCTURE_CONTAINER && structure.store.energy < structure.storeCapacity) {
-                            // Do not deliver to containers used as harvester drop off points.
-                            if (structure.room.memory.sources) {
-                                for (var id in structure.room.memory.sources) {
-                                    if (structure.room.memory.sources[id].targetContainer == structure.id) {
-                                        return false;
-                                    }
-                                }
-                            }
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-                if (targets.length <= 0) {
-                    var targets = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return (structure.structureType == STRUCTURE_TOWER) && structure.energy < structure.energyCapacity;
-                        }
-                    });
-                    if (targets.length <= 0) {
-                        if (creep.room.storage) {
-                            creep.memory.deliverTarget = creep.room.storage.id;
-                        }
-                        else {
-                            var storagePosition = utilities.getStorageLocation(creep.room);
-                            if (storagePosition) {
-                                creep.memory.deliverTarget = storagePosition;
-                            }
-                            else {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!creep.memory.deliverTarget) {
-                creep.memory.deliverTarget = utilities.getClosest(creep, targets);
-            }
+            roleTransporter.calculateEnergyTarget(creep);
         }
         var best = creep.memory.deliverTarget;
         if (!best) {
@@ -278,18 +308,15 @@ var roleTransporter = {
         if (typeof best == 'string') {
             var target = Game.getObjectById(best);
             if (!target) {
-                creep.memory.deliverTarget = null;
+                roleTransporter.calculateEnergyTarget(creep);
             }
 
             var result = creep.transfer(target, RESOURCE_ENERGY);
             if (result == ERR_NOT_IN_RANGE) {
                 creep.moveTo(target);
             }
-            if (target.energy >= target.energyCapacity) {
-                creep.memory.deliverTarget = null;
-            }
-            if (target.store && target.store.energy >= target.storeCapacity) {
-                creep.memory.deliverTarget = null;
+            if (target.energy >= target.energyCapacity || (target.store && target.store.energy >= target.storeCapacity)) {
+                roleTransporter.calculateEnergyTarget(creep);
             }
             return true;
         }
@@ -305,21 +332,30 @@ var roleTransporter = {
         }
         else {
             // Unknown target type, reset!
-            console.log('Unknown target type found!');
+            console.log('Unknown target type for energy delivery found!');
             console.log(creep.memory.deliverTarget);
-            creep.memory.deliverTarget = null;
+            delete creep.memory.deliverTarget;
         }
+    },
+
+    /**
+     * Puts this creep into or out of delivery mode.
+     */
+    setDelivering: function (creep, delivering) {
+        creep.memory.delivering = delivering;
+        delete creep.memory.sourceTarget;
+        delete creep.memory.order;
+        delete creep.memory.deliverTarget;
+        delete creep.memory.tempRole;
     },
 
     /** @param {Creep} creep **/
     run: function (creep) {
         if (creep.carry[RESOURCE_ENERGY] >= creep.carryCapacity && !creep.memory.delivering) {
-            creep.memory.delivering = true;
-            creep.memory.sourceTarget = null;
+            roleTransporter.setDelivering(creep, true);
         }
         else if (creep.carry[RESOURCE_ENERGY] <= 0 && creep.memory.delivering) {
-            creep.memory.delivering = false;
-            creep.memory.deliverTarget = null;
+            roleTransporter.setDelivering(creep, false);
         }
 
         if (!creep.memory.delivering) {
@@ -335,7 +371,7 @@ var roleTransporter = {
     spawn: function (spawner, force) {
         var maxSize = 600;
         if ((spawner.room.energyAvailable >= Math.min(maxSize, spawner.room.energyCapacityAvailable * 0.9) || (force && spawner.room.energyAvailable >= 250)) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.5, carry: 0.5}, Math.min(maxSize, spawner.room.energyAvailable));
+            var body = utilities.generateCreepBody({move: 0.35, carry: 0.65}, Math.min(maxSize, spawner.room.energyAvailable));
             if (spawner.canCreateCreep(body) == OK) {
                 var newName = spawner.createCreep(body, undefined, {role: 'transporter'});
                 console.log('Spawning new transporter: ' + newName);

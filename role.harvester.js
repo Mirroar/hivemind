@@ -76,6 +76,7 @@ var roleHarvester = {
             return true;
         }
         else {
+            // @todo Use transporter drop off logic.
             if (!creep.memory.deliverTarget) {
                 var targets = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
@@ -116,7 +117,17 @@ var roleHarvester = {
             creep.memory.deliverTarget = null;
         }
         if (target.store && target.store[RESOURCE_ENERGY] >= target.storeCapacity) {
-            creep.memory.deliverTarget = null;
+            if (creep.memory.fixedTarget && target.id == creep.memory.fixedTarget) {
+                // Container is full, drop energy instead.
+                if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
+                    creep.drop(RESOURCE_ENERGY);
+                } else {
+                    creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
+                }
+            }
+            else {
+                creep.memory.deliverTarget = null;
+            }
         }
         return true;
     },
@@ -126,12 +137,12 @@ var roleHarvester = {
         if (creep.memory.delivering && creep.carry.energy == 0) {
             creep.memory.delivering = false;
             creep.memory.buildTarget = null;
-            creep.memory.tempRole = null;
+            delete creep.memory.tempRole;
         }
         else if (!creep.memory.delivering && creep.carry.energy == creep.carryCapacity) {
             creep.memory.delivering = true;
             creep.memory.resourceTarget = null;
-            creep.memory.tempRole = null;
+            delete creep.memory.tempRole;
         }
 
         if (!creep.memory.delivering) {
@@ -142,9 +153,19 @@ var roleHarvester = {
         }
     },
 
-    spawn: function (spawner, force) {
-        if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 || (force && spawner.room.energyAvailable >= 250)) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.1, work: 0.7, carry: 0.2}, spawner.room.energyAvailable);
+    spawn: function (spawner, force, maxSize) {
+        var bodyWeights = {move: 0.1, work: 0.7, carry: 0.2};
+        var cost = 0;
+        if (maxSize) {
+            // With theoretically unlimites energy, check how expensive the creep can become with maxSize.
+            var tempBody = utilities.generateCreepBody(bodyWeights, spawner.room.energyCapacityAvailable, maxSize ? {work: maxSize} : undefined);
+            for (var i in tempBody) {
+                cost += BODYPART_COST[tempBody[i]];
+            }
+        }
+
+        if ((spawner.room.energyAvailable >= Math.min(spawner.room.energyCapacityAvailable * 0.9, (maxSize ? cost : 99999)) || (force && spawner.room.energyAvailable >= 250)) && !spawner.spawning) {
+            var body = utilities.generateCreepBody(bodyWeights, spawner.room.energyAvailable, maxSize ? {work: maxSize} : undefined);
             if (spawner.canCreateCreep(body) == OK) {
                 var newName = spawner.createCreep(body, undefined, {role: 'harvester'});
                 console.log('Spawning new harvester: ' + newName);

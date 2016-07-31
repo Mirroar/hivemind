@@ -104,6 +104,18 @@ module.exports = {
     },
 
     scanRoom: function (room) {
+        // Check if the controller has a container nearby.
+        var structures = room.find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.pos.getRangeTo(room.controller) <= 3
+        });
+        if (structures && structures.length > 0) {
+            room.memory.controllerContainer = structures[0].id;
+        }
+        else {
+            delete room.memory.controllerContainer;
+        }
+
+        // Scan for energy sources.
         var sources = room.find(FIND_SOURCES);
 
         room.memory.sources = {};
@@ -116,6 +128,10 @@ module.exports = {
                     room.memory.sources[id] = {};
                 }
                 var sourceMemory = room.memory.sources[id];
+
+                // Calculate number of worker modules needed to fully harvest this source in time.
+                var energyRate = source.energyCapacity / ENERGY_REGEN_TIME;
+                sourceMemory.maxWorkParts = 1.2 * energyRate / 2;
 
                 // Calculate free adjacent squares for max harvesters.
                 var free = 0;
@@ -247,6 +263,18 @@ module.exports = {
         return null;
     },
 
+    getBestOption: function (options) {
+        var best = null;
+
+        for (var i in options) {
+            if (!best || options[i].priority > best.priority || (options[i].priority == best.priority && options[i].weight > best.weight)) {
+                best = options[i];
+            }
+        }
+
+        return best;
+    },
+
     getBodyCost: function (creep) {
         var cost = 0;
         for (var i in creep.body) {
@@ -256,7 +284,7 @@ module.exports = {
         return cost;
     },
 
-    generateCreepBody: function (weights, maxCost) {
+    generateCreepBody: function (weights, maxCost, limits) {
         var newParts = {};
         var size = 0;
         var cost = 0;
@@ -282,10 +310,17 @@ module.exports = {
             for (var part in BODYPART_COST) {
                 var currentWeight = newParts[part] / size;
                 if (currentWeight <= weights[part] && cost + BODYPART_COST[part] <= maxCost) {
-                    done = false;
-                    newParts[part]++;
-                    size++;
-                    cost += BODYPART_COST[part];
+                    if (!limits || !limits[part] || newParts[part] < limits[part]) {
+                        done = false;
+                        newParts[part]++;
+                        size++;
+                        cost += BODYPART_COST[part];
+                    }
+                    else {
+                        // Limit for this bodypart has been reached, so stop adding.
+                        done = true;
+                        break;
+                    }
                 }
             }
         }
@@ -322,6 +357,19 @@ module.exports = {
         }
 
         return body;
+    },
+
+    encodePosition: function (position) {
+        return position.roomName + '@' + position.x + 'x' + position.y;
+    },
+
+    decodePosition: function (position) {
+        var parts = position.match(/^(.*)@([0-9]*)x([0-9]*)$/);
+
+        if (parts && parts.length > 0) {
+            return new RoomPosition(parts[2], parts[3], parts[1]);
+        }
+        return null;
     }
 
 };
