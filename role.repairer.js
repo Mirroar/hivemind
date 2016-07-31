@@ -151,7 +151,7 @@ var roleRepairer = {
 
     spawn: function (spawner) {
         if (spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.5, work: 0.2, carry: 0.3}, spawner.room.energyAvailable);
+            var body = utilities.generateCreepBody({move: 0.35, work: 0.35, carry: 0.3}, spawner.room.energyAvailable);
             if (spawner.canCreateCreep(body) == OK) {
                 var newName = spawner.createCreep(body, undefined, {role: 'repairer'});
                 console.log('Spawning new repairer: ' + newName);

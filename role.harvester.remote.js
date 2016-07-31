@@ -7,70 +7,109 @@
  * mod.thing == 'a thing'; // true
  */
 
-// @todo Assign close-by container to dump resources.
-// @todo Assign harvesters to a specific resource spot and balance numbers accordingly.
+// @todo When road is built, send harvester with low move _and_ carry, and let it build a container. Then, send transporters.
+// @todo Record time it takes to get to source, so a new harvester can be built in time.
+// @todo Collect energy if it's lying on the path.
 
-var gameState = require('game.state');
 var utilities = require('utilities');
 
 var roleRemoteHarvester = {
 
     buildRoad: function(creep) {
+        // @todo Cache this in creep memory.
+        var workParts = 0;
+        for (var j in creep.body) {
+            if (creep.body[j].type == WORK && creep.body[j].hits > 0) {
+                workParts++;
+            }
+        }
+
+        if (workParts <= 1) {
+            return false;
+        }
+
+        // Check if creep is travelling on a road.
+        var hasRoad = false;
+        var actionTaken = false;
         var structures = creep.pos.lookFor(LOOK_STRUCTURES);
         if (structures && structures.length > 0) {
             for (var i in structures) {
                 if (structures[i].structureType == STRUCTURE_ROAD) {
-                    var workParts = 0;
-                    for (var j in creep.body) {
-                        if (creep.body[j].type == WORK && creep.body[j].hits > 0) {
-                            workParts++;
-                        }
-                    }
-
-                    if (structures[i].hits < structures[i].hitsMax - workParts * 100) {
-                        Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += workParts;
-                        creep.repair(structures[i]);
-                        // If road is especially damaged, stay here to keep repairing.
-                        if (structures[i].hits < structures[i].hitsMax - workParts * 2 * 100) {
-                            return true;
-                        }
-                    }
-                    return false;
+                    hasRoad = true;
+                    break;
                 }
             }
         }
 
-        var constructionSites = creep.pos.lookFor(LOOK_CONSTRUCTION_SITES);
-        if (constructionSites && constructionSites.length > 0) {
-            if (constructionSites[0].structureType == STRUCTURE_ROAD) {
-                creep.build(constructionSites[0]);
-                var workParts = 0;
-                for (var i in creep.body) {
-                    if (creep.body[i].type == WORK && creep.body[i].hits > 0) {
-                        workParts++;
-                    }
-                }
-
-                var buildCost = Math.min(creep.carry.energy, workParts * 5, constructionSites[0].progressTotal - constructionSites[0].progress);
-                Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += buildCost;
+        // Also repair structures in passing.
+        var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (structure) => (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - workParts * 100
+        });
+        if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
+            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += workParts;
+            creep.repair(needsRepair);
+            actionTaken = true;
+            // If structure is especially damaged, stay here to keep repairing.
+            if (needsRepair.hits < needsRepair.hitsMax - workParts * 2 * 100) {
                 return true;
             }
         }
-        else {
-            if (creep.pos.createConstructionSite(STRUCTURE_ROAD) == OK) {
+
+        if (!hasRoad) {
+            // Make sure there is a construction site for a road on this tile.
+            var constructionSites = creep.pos.lookFor(LOOK_CONSTRUCTION_SITES);
+            _.filter(constructionSites, (site) => site.structureType == STRUCTURE_ROAD);
+            if (constructionSites.length <= 0) {
+                if (creep.pos.createConstructionSite(STRUCTURE_ROAD) != OK) {
+                    hasRoad = true;
+                }
+            }
+        }
+
+        var needsBuilding = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
+            filter: (site) => site.structureType == STRUCTURE_ROAD || site.structureType == STRUCTURE_CONTAINER
+        });
+        if (needsBuilding && creep.pos.getRangeTo(needsBuilding) <= 3) {
+            if (actionTaken) {
+                // Try again next time.
                 return true;
             }
+            creep.build(needsBuilding);
+
+            var buildCost = Math.min(creep.carry.energy, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
+            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += buildCost;
+            actionTaken = true;
+
+            // Stay here if more building is needed.
+            if (needsBuilding.progressTotal - needsBuilding.progress > workParts * 10) {
+                return true;
+            }
+        }
+
+        if (!hasRoad) {
+            return true;
         }
         return false;
     },
 
     harvest: function (creep) {
+        var actionTaken = false;
         var source;
         var sourcePosition = utilities.decodePosition(creep.memory.source);
         if (sourcePosition.roomName != creep.pos.roomName) {
             creep.moveTo(sourcePosition);
             return true;
         }
+
+        // Check if energy is on the ground nearby and pick that up.
+        /*var resource = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
+            filter: (resource) => resource.resourceType == RESOURCE_ENERGY
+        });
+        if (resource && creep.pos.getRangeTo(resource) <= 1) {
+            creep.pickup(resource);
+            actionTaken = true;
+        }//*/
+
         var sources = creep.room.find(FIND_SOURCES, {
             filter: (source) => source.pos.x == sourcePosition.x && source.pos.y == sourcePosition.y
         });
@@ -88,16 +127,46 @@ var roleRemoteHarvester = {
             roleRemoteHarvester.setHarvesting(creep, false);
         }
 
+        if (creep.pos.getRangeTo(source) > 1) {
+            creep.moveTo(source);
+        }
+        if (actionTaken) {
+            return true;
+        }
         var result = creep.harvest(source);
         if (result == ERR_NOT_IN_RANGE || result == ERR_NOT_ENOUGH_RESOURCES) {
-            var result = creep.moveTo(source);
+            creep.moveTo(source);
         }
         return true;
     },
 
     deliver: function (creep) {
-        if (roleRemoteHarvester.buildRoad(creep)) {
-            return true;
+        var sourcePos = utilities.decodePosition(creep.memory.source);
+        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePos.roomName];
+        if (harvestMemory[creep.memory.source] && harvestMemory[creep.memory.source].hasContainer) {
+            var container = Game.getObjectById(harvestMemory[creep.memory.source].containerId);
+            if (!container) {
+                //console.log('container no longer exists, removing...');
+                harvestMemory[creep.memory.source].hasContainer = false;
+                delete harvestMemory[creep.memory.source].containerId;
+            }
+            else {
+                //console.log('container found, dropping energy.');
+                if (creep.transfer(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(container);
+                }
+                if (_.sum(container.store) >= container.storeCapacity) {
+                    // Just drop energy right here, somebody will pick it up later, right?
+                    creep.drop(RESOURCE_ENERGY);
+                }
+                return true;
+            }
+        }
+
+        if (sourcePos.roomName == creep.pos.roomName) {
+            if (roleRemoteHarvester.buildRoad(creep)) {
+                return true;
+            }
         }
 
         var target;
@@ -112,14 +181,14 @@ var roleRemoteHarvester = {
         if (_.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
             // Container is full, drop energy instead.
             if (creep.drop(RESOURCE_ENERGY) == OK) {
-                creep.room.memory.remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].revenue += creep.carry.energy;
+                harvestMemory.revenue += creep.carry.energy;
                 return true;
             }
         }
 
         var result = creep.transfer(target, RESOURCE_ENERGY);
         if (result == OK) {
-            creep.room.memory.remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].revenue += creep.carry.energy;
+            harvestMemory.revenue += creep.carry.energy;
         }
         else if (result == ERR_NOT_IN_RANGE) {
             creep.moveTo(target);
@@ -130,6 +199,43 @@ var roleRemoteHarvester = {
 
     setHarvesting: function (creep, harvesting) {
         creep.memory.harvesting = harvesting;
+
+        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName];
+        if (harvesting && !creep.memory.travelTimer) {
+            creep.memory.travelTimer = {
+                start: Game.time
+            };
+        }
+        else if (!harvesting && creep.memory.travelTimer && !creep.memory.travelTimer.end) {
+            creep.memory.travelTimer.end = Game.time;
+            if (!harvestMemory[creep.memory.source]) {
+                harvestMemory[creep.memory.source] = {};
+            }
+            if (!harvestMemory[creep.memory.source].travelTime) {
+                harvestMemory[creep.memory.source].travelTime = creep.memory.travelTimer.end - creep.memory.travelTimer.start;
+            }
+            else {
+                harvestMemory[creep.memory.source].travelTime = (harvestMemory[creep.memory.source].travelTime + creep.memory.travelTimer.end - creep.memory.travelTimer.start) / 2;
+            }
+        }
+
+        if (!harvesting) {
+            //console.log('checking for container near source');
+            // Check if there is a container near the source, and save it.
+            var container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER
+            });
+            if (container && creep.pos.getRangeTo(container) <= 3) {
+                //console.log('container found and recorded');
+                harvestMemory[creep.memory.source].hasContainer = true;
+                harvestMemory[creep.memory.source].containerId = container.id;
+            }
+            else {
+                //console.log('container not found');
+                harvestMemory[creep.memory.source].hasContainer = false;
+                delete harvestMemory[creep.memory.source].containerId;
+            }
+        }
     },
 
     /** @param {Creep} creep **/
@@ -155,7 +261,8 @@ var roleRemoteHarvester = {
 
             // Use less move parts if a road has already been established.
             if (spawner.room.memory.remoteHarvesting && spawner.room.memory.remoteHarvesting[targetPosition.roomName] && spawner.room.memory.remoteHarvesting[targetPosition.roomName].revenue > 0) {
-                body = utilities.generateCreepBody({move: 0.35, work: 0.25, carry: 0.4}, spawner.room.energyAvailable);
+                // @todo Use calculated max size liek normal harvesters.
+                body = utilities.generateCreepBody({move: 0.35, work: 0.55, carry: 0.1}, spawner.room.energyAvailable, {work: 6});
             }
 
             if (spawner.canCreateCreep(body) == OK) {

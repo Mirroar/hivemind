@@ -7,6 +7,8 @@
  * mod.thing == 'a thing'; // true
  */
 
+// @todo Use artillery for permanent defenses on ramparts, more mobile creeps for patrols.
+
 var utilities = require('utilities');
 
 var roleDefender = {
@@ -25,14 +27,14 @@ var roleDefender = {
             }
             if (best) {
                 var target = Game.getObjectById(best);
-    
+
                 var attackType = 'attack';
                 for (var i in creep.body) {
                     if (creep.body[i].type == RANGED_ATTACK && creep.body[i].hits > 0) {
                         attackType = 'rangedAttack';
                     }
                 }
-    
+
                 var result = creep[attackType](target);
                 if (result == OK) {
                     return true;
@@ -64,14 +66,14 @@ var roleDefender = {
                 target = targets[0];
             }
         }
-        
+
         if (target) {
             creep.moveTo(target);
             return true;
         }
         return false;
     },
-    
+
     spawn: function (spawner) {
         if (spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 && !spawner.spawning) {
             var body = utilities.generateCreepBody({move: 0.1, ranged_attack: 0.5, tough: 0.4}, spawner.room.energyAvailable);
