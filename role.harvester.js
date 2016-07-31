@@ -64,10 +64,11 @@ var roleHarvester = {
 
     deliver: function (creep) {
         var target;
-        if (creep.memory.fixedTarget && gameState.getNumTransporters() > 0) {
+        if (creep.memory.fixedTarget && gameState.getNumTransporters(creep.pos.roomName) > 0) {
+            //console.log(gameState.getNumTransporters(creep.pos.roomName), 'transporters found...', creep.pos.roomName);
             target = Game.getObjectById(creep.memory.fixedTarget);
         }
-        else if (creep.memory.fixedDropoffSpot && gameState.getNumTransporters() > 0) {
+        else if (creep.memory.fixedDropoffSpot && gameState.getNumTransporters(creep.pos.roomName) > 0) {
             if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
                 creep.drop(RESOURCE_ENERGY);
             } else {
@@ -158,13 +159,13 @@ var roleHarvester = {
         var cost = 0;
         if (maxSize) {
             // With theoretically unlimites energy, check how expensive the creep can become with maxSize.
-            var tempBody = utilities.generateCreepBody(bodyWeights, spawner.room.energyCapacityAvailable, maxSize ? {work: maxSize} : undefined);
+            var tempBody = utilities.generateCreepBody(bodyWeights, spawner.room.energyCapacityAvailable, {work: maxSize});
             for (var i in tempBody) {
                 cost += BODYPART_COST[tempBody[i]];
             }
         }
 
-        if ((spawner.room.energyAvailable >= Math.min(spawner.room.energyCapacityAvailable * 0.9, (maxSize ? cost : 99999)) || (force && spawner.room.energyAvailable >= 250)) && !spawner.spawning) {
+        if ((spawner.room.energyAvailable >= Math.min(spawner.room.energyCapacityAvailable * 0.9, (maxSize ? cost : 99999)) || (force && spawner.room.energyAvailable >= 200)) && !spawner.spawning) {
             var body = utilities.generateCreepBody(bodyWeights, spawner.room.energyAvailable, maxSize ? {work: maxSize} : undefined);
             if (spawner.canCreateCreep(body) == OK) {
                 var newName = spawner.createCreep(body, undefined, {role: 'harvester'});

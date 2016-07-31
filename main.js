@@ -1,11 +1,12 @@
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
-var roleBuilder = require('role.builder');
 var roleBrawler = require('role.brawler');
+var roleBuilder = require('role.builder');
 var roleClaimer = require('role.claimer');
 var roleDefender = require('role.defender');
 var roleHarvester = require('role.harvester');
 var roleHauler = require('role.hauler');
+var roleRemoteBuilder = require('role.builder.remote');
 var roleRemoteHarvester = require('role.harvester.remote');
 var roleRepairer = require('role.repairer');
 var roleTransporter = require('role.transporter');
@@ -29,6 +30,7 @@ var main = {
         for (var name in Game.spawns) {
             // @todo Manage on a per-room basis, if possible.
             var spawner = Game.spawns[name];
+            var room = Game.rooms[spawner.pos.roomName];
 
             // If spawning was just finished, scan the room again to assign creeps.
             if (spawner.spawning) {
@@ -40,34 +42,48 @@ var main = {
             }
 
             // Spawn new creeps.
-            var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
-            var defenders = _.filter(Game.creeps, (creep) => creep.memory.role == 'defender');
-            var numHarvesters = gameState.getNumHarvesters();
-            var repairers = _.filter(Game.creeps, (creep) => creep.memory.role == 'repairer');
-            var numTransporters = gameState.getNumTransporters();
-            var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
+            var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder' && creep.pos.roomName == spawner.pos.roomName);
+            var defenders = _.filter(Game.creeps, (creep) => creep.memory.role == 'defender' && creep.pos.roomName == spawner.pos.roomName);
+            var numHarvesters = gameState.getNumHarvesters(spawner.pos.roomName);
+            var repairers = _.filter(Game.creeps, (creep) => creep.memory.role == 'repairer' && creep.pos.roomName == spawner.pos.roomName);
+            var numTransporters = gameState.getNumTransporters(spawner.pos.roomName);
+            var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader' && creep.pos.roomName == spawner.pos.roomName);
 
+            var numSources = 0;
+            var spawnHarvester = false;
             var maxHarvesters = 3;
             var maxTransporters = 2; // @todo Find a good way to gauge needed number of transporters by measuring distances.
             var maxHarvesterSize;
             if (spawner.room.memory && spawner.room.memory.sources) {
+                numSources = _.size(spawner.room.memory.sources);
                 maxHarvesters = 0;
-                maxTransporters = 2;
+                maxTransporters = 2 + 2 * numSources;
                 for (var id in spawner.room.memory.sources) {
                     maxHarvesters += spawner.room.memory.sources[id].maxHarvesters;
-                    maxTransporters += 2;
 
                     if (!maxHarvesterSize || maxHarvesterSize < spawner.room.memory.sources[id].maxWorkParts) {
                         maxHarvesterSize = spawner.room.memory.sources[id].maxWorkParts;
                     }
+
+                    var totalWork = 0;
+                    for (var i in spawner.room.memory.sources[id].harvesters) {
+                        var harvester = Game.getObjectById(spawner.room.memory.sources[id].harvesters[i]);
+                        if (harvester) {
+                            totalWork += utilities.getBodyParts(harvester).work;
+                        }
+                    }
+
+                    if (totalWork < spawner.room.memory.sources[id].maxWorkParts && spawner.room.memory.sources[id].harvesters.length < spawner.room.memory.sources[id].maxHarvesters) {
+                        spawnHarvester = true;
+                    }
                 }
             }
-            //console.log('Harvesters:', numHarvesters, '/', maxHarvesters);
-            //console.log('Transporters:', numTransporters, '/', maxTransporters);
+            //console.log(room.name, spawner.pos.roomName, 'Harvesters:', numHarvesters, '/', maxHarvesters);
+            //console.log(room.name, spawner.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
             var maxUpgraders = 0;
             if (spawner.room.controller.level <= 2) {
-                maxUpgraders = 3;
+                maxUpgraders = 1 + numSources;
             }
             else {
                 if (gameState.getStoredEnergy(spawner.room) < 5000) {
@@ -79,7 +95,7 @@ var main = {
                 else {
                     // @todo Have maximum depend on number of work parts.
                     // @todo Make sure enough energy is brought by.
-                    maxUpgraders = 1;
+                    maxUpgraders = 2;
                 }
             }
             if (maxUpgraders == 0 && spawner.room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[spawner.room.controller.level] * 0.2) {
@@ -92,7 +108,7 @@ var main = {
             var maxBuilders = 0;
             var constructionSites = spawner.room.find(FIND_MY_CONSTRUCTION_SITES);
             if (constructionSites) {
-                maxBuilders = Math.min(3, Math.ceil(constructionSites.length / 10));
+                maxBuilders = Math.min(1 + numSources, Math.ceil(constructionSites.length / 5));
             }
 
             var maxDefenders = 0;
@@ -104,7 +120,6 @@ var main = {
                 });
                 if (flags) {
                     maxDefenders = flags.length;
-
 
                     for (var i in flags) {
                         var flag = flags[i];
@@ -156,7 +171,7 @@ var main = {
                     return true;
                 }
             }
-            else if (numHarvesters < maxHarvesters) {
+            else if (spawnHarvester) {
                 if (roleHarvester.spawn(spawner, false, maxHarvesterSize)) {
                     return true;
                 }
@@ -190,6 +205,103 @@ var main = {
                 }
             }
             else {
+                // Send forces to other rooms.
+                var brawlFlags = _.filter(Game.flags, (flag) => {
+                    if (flag.name.startsWith('Brawler@')) {
+                        var parts = flag.name.match(/^([^@]*)@([^@]*)@/);
+                        if (parts && parts[2] == spawner.pos.roomName) {
+                            return true;
+                        }
+                    }
+                });
+                if (brawlFlags.length > 0) {
+                    var position = spawner.pos;
+                    if (spawner.room.storage) {
+                        position = spawner.room.storage.pos;
+                    }
+
+                    for (var i in brawlFlags) {
+                        var flag = brawlFlags[i];
+                        if (Memory.rooms[flag.pos.roomName].enemies.safe) {
+                            continue;
+                        }
+
+                        var brawlers = _.filter(Game.creeps, (creep) => {
+                            if (creep.memory.role == 'brawler') {
+                                if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        });
+
+                        if (!brawlers || brawlers.length < 1) {
+                            if (roleBrawler.spawn(spawner, flag.pos)) {
+                                //Game.notify('Brawler spawned to defend room ' + flag.pos.roomName);
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                // If possible, we could claim new rooms!
+                var numRooms = _.size(_.filter(Game.rooms, (room) => room.controller.my));
+                var maxRooms = Game.gcl.level;
+                var claimFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('ClaimRoom'));
+                if (numRooms < maxRooms && claimFlags.length > 0) {
+                    for (var i in claimFlags) {
+                        var flag = claimFlags[i];
+
+                        if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
+                            // Room is already claimed.
+                            continue;
+                        }
+
+                        // @todo Make sure only the closest room spawns a claimer!
+                        var claimers = _.filter(Game.creeps, (creep) => {
+                            if (creep.memory.role == 'claimer') {
+                                if (creep.memory.mission == 'claim' && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        });
+
+                        if (!claimers || claimers.length < 1) {
+                            if (roleClaimer.spawn(spawner, flag.pos, 'claim')) {
+                                console.log('sending new claimer to', utilities.encodePosition(flag.pos));
+                                return true;
+                            }
+                        }
+                    }
+                }
+                else if (claimFlags.length > 0) {
+                    // Check if there are rooms marked for claiming, that belong to us, but have no spawner yet.
+                    for (var i in claimFlags) {
+                        var flag = claimFlags[i];
+
+                        if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
+                            // @todo Make sure only the closest room spawn builders!
+                            var maxRemoteBuilders = 2;
+                            var builders = _.filter(Game.creeps, (creep) => {
+                                if (creep.memory.role == 'builder.remote') {
+                                    if (creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
+
+                            if (!builders || builders.length < maxRemoteBuilders) {
+                                if (roleRemoteBuilder.spawn(spawner, flag.pos)) {
+                                    console.log('sending new remote builder to', utilities.encodePosition(flag.pos));
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // We've got nothing to do, how about some remote harvesting?
                 var harvestFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('HarvestRemote'));
                 for (var i in harvestFlags) {
@@ -198,10 +310,15 @@ var main = {
                         // First of all, if it's not safe, send a bruiser.
                         var roomMemory = Memory.rooms[flag.pos.roomName];
                         if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
+                            var position = spawner.pos;
+                            if (spawner.room.storage) {
+                                position = spawner.room.storage.pos;
+                            }
+
                             var maxBrawlers = 1;
                             var brawlers = _.filter(Game.creeps, (creep) => {
-                                if (creep.memory.role == 'bruiser') {
-                                    if (creep.memory.storage == utilities.encodePosition(spawner.room.storage.pos) && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                if (creep.memory.role == 'brawler') {
+                                    if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
                                         return true;
                                     }
                                 }
@@ -210,13 +327,13 @@ var main = {
 
                             if (!brawlers || brawlers.length < maxBrawlers) {
                                 if (roleBrawler.spawn(spawner, flag.pos)) {
-                                    Game.notify('Brawler spawned to defend room ' + flag.pos.roomName);
+                                    //Game.notify('Brawler spawned to defend room ' + flag.pos.roomName);
                                     return true;
                                 }
                             }
                         }
 
-                        // If it's safe or bruiser is sent, start harvesting.
+                        // If it's safe or brawler is sent, start harvesting.
                         var doSpawn = true;
                         if (spawner.room.memory.remoteHarvesting && spawner.room.memory.remoteHarvesting[flag.pos.roomName]) {
                             var memory = spawner.room.memory.remoteHarvesting[flag.pos.roomName];
@@ -236,11 +353,15 @@ var main = {
                                 maxRemoteHaulers = 2;
                             }
 
+                            var position = spawner.pos;
+                            if (spawner.room.storage) {
+                                position = spawner.room.storage.pos;
+                            }
                             for (var j in harvesters) {
                                 var creep = harvesters[j];
-                                //console.log(creep.memory.storage, utilities.encodePosition(spawner.room.storage.pos), creep.memory.source, utilities.encodePosition(flag.pos));
+                                //console.log(creep.memory.storage, utilities.encodePosition(position), creep.memory.source, utilities.encodePosition(flag.pos));
                                 // @todo Move into filter function.
-                                if (creep.memory.storage == utilities.encodePosition(spawner.room.storage.pos) && creep.memory.source == utilities.encodePosition(flag.pos)) {
+                                if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.source == utilities.encodePosition(flag.pos)) {
                                     if (!memory[creep.memory.source] || creep.ticksToLive > memory[creep.memory.source].travelTime) {
                                         memory.harvesters.push(creep.id);
                                     }
@@ -252,9 +373,9 @@ var main = {
 
                             for (var j in haulers) {
                                 var creep = haulers[j];
-                                //console.log(creep.memory.storage, utilities.encodePosition(spawner.room.storage.pos), creep.memory.source, utilities.encodePosition(flag.pos));
+                                //console.log(creep.memory.storage, utilities.encodePosition(position), creep.memory.source, utilities.encodePosition(flag.pos));
                                 // @todo Move into filter function.
-                                if (creep.memory.storage == utilities.encodePosition(spawner.room.storage.pos) && creep.memory.source == utilities.encodePosition(flag.pos)) {
+                                if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.source == utilities.encodePosition(flag.pos)) {
                                     if (!memory[creep.memory.source] || creep.ticksToLive > memory[creep.memory.source].travelTime) {
                                         haulCount++;
                                     }
@@ -373,6 +494,9 @@ var main = {
             }
             else if (creep.memory.role == 'brawler') {
                 roleBrawler.run(creep);
+            }
+            else if (creep.memory.role == 'builder.remote') {
+                roleRemoteBuilder.run(creep);
             }
         }
     },

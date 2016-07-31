@@ -7,7 +7,7 @@
  * mod.thing == 'a thing'; // true
  */
 
-module.exports = {
+var utilities = {
 
     energyStored: function (room) {
         return 0;
@@ -151,32 +151,37 @@ module.exports = {
                     }
                 }
 
-                // @todo Calculate number of needed worker body parts for completely saturating this source to prevent overspawning.
-                free = 1;
-
                 sourceMemory.maxHarvesters = free;
                 sourceMemory.harvesters = [];
 
                 // Keep harvesters which are already assigned.
-                var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
+                var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester' && creep.pos.roomName == source.pos.roomName);
+                var totalWork = 0;
                 for (var t in harvesters) {
                     var harvester = harvesters[t];
                     if (harvester.memory.fixedSource == id) {
                         sourceMemory.harvesters.push(harvester.id);
+                        totalWork += utilities.getBodyParts(harvester).work;
                     }
                 }
 
                 // Unassign extra harvesters.
-                while (sourceMemory.harvesters.length > free) {
-                    var old = sourceMemory.harvesters.pop();
-                    var harvester = Game.getObjectById(old);
-                    delete harvester.memory.fixedSource;
-                    delete harvester.memory.fixedTarget;
+                var harvester = Game.getObjectById(sourceMemory.harvesters[sourceMemory.harvesters.length - 1]);
+                while (sourceMemory.harvesters.length > 0 && (sourceMemory.harvesters.length > free || totalWork - utilities.getBodyParts(harvester).work >= sourceMemory.maxWorkParts)) {
+                    sourceMemory.harvesters.pop();
+                    if (harvester) {
+                        delete harvester.memory.fixedSource;
+                        delete harvester.memory.fixedTarget;
+                        delete harvester.memory.fixedDropoffSpot;
+                        totalWork -= utilities.getBodyParts(harvester).work;
+                    }
+                    harvester = Game.getObjectById(sourceMemory.harvesters[sourceMemory.harvesters.length - 1]);
                 }
 
                 // Assign free harvesters.
                 for (var t in harvesters) {
-                    if (sourceMemory.harvesters.length >= free) {
+                    //console.log(totalWork, sourceMemory.harvesters.length, sourceMemory.maxWorkParts);
+                    if (sourceMemory.harvesters.length >= free || totalWork >= sourceMemory.maxWorkParts) {
                         break;
                     }
 
@@ -185,6 +190,7 @@ module.exports = {
                         sourceMemory.harvesters.push(harvester.id);
                         harvester.memory.fixedSource = id;
                         delete harvester.memory.fixedTarget;
+                        delete harvester.memory.fixedDropoffSpot;
                     }
                 }
 
@@ -284,6 +290,19 @@ module.exports = {
         return cost;
     },
 
+    getBodyParts: function (creep) {
+        if (!creep.memory.body) {
+            creep.memory.body = {};
+            for (var i in creep.body) {
+                if (!creep.memory.body[creep.body[i].type]) {
+                    creep.memory.body[creep.body[i].type] = 0;
+                }
+                creep.memory.body[creep.body[i].type]++;
+            }
+        }
+        return creep.memory.body;
+    },
+
     generateCreepBody: function (weights, maxCost, limits) {
         var newParts = {};
         var size = 0;
@@ -373,3 +392,5 @@ module.exports = {
     }
 
 };
+
+module.exports = utilities;

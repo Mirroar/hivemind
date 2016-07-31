@@ -39,15 +39,40 @@ var roleUpgrader = {
             // Ideally, get energy from a container close to the controller.
             if (creep.room.memory.controllerContainer) {
                 var target = Game.getObjectById(creep.room.memory.controllerContainer);
-                if (target.transfer(creep, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target);
+                if (target) {
+                    var result = creep.withdraw(target, RESOURCE_ENERGY);
+                    if (result == OK) {
+                        return true;
+                    }
+                    else if (result == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(target);
+                        return true;
+                    }
+
+                    // Could also try to get energy from another nearby container.
+                    var otherContainers = target.pos.findInRange(FIND_STRUCTURES, 3, {
+                        filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
+                    });
+                    if (otherContainers && otherContainers.length > 0) {
+                        var result = creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
+                        if (result == OK) {
+                            return true;
+                        }
+                        else if (result == ERR_NOT_IN_RANGE) {
+                            creep.moveTo(otherContainers[0]);
+                            return true;
+                        }
+                    }//*/
                 }
-                return true;
+
             }
 
             // Otherwise, get energy from anywhere.
             if (roleTransporter.getEnergy(creep)) {
                 return true;
+            }
+            else if (creep.carry.energy > 0) {
+                roleUpgrader.setUpgrading(creep, true);
             }
             return false;
         }

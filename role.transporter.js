@@ -76,8 +76,10 @@ var roleTransporter = {
         // Prefer containers used as harvester dropoff.
         for (var i in targets) {
             var target = targets[i];
+
+            // Actually, don't use other containers, only those with harvesters are a valid source.
             var option = {
-                priority: 2,
+                priority: -1,
                 weight: target.store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
                 type: 'structure',
                 object: target,
@@ -325,7 +327,21 @@ var roleTransporter = {
             if (creep.pos.x == best.x && creep.pos.y == best.y) {
                 creep.drop(RESOURCE_ENERGY);
             } else {
-                creep.moveTo(best.x, best.y);
+                var result = creep.moveTo(best.x, best.y);
+                //console.log(result);
+                if (result == ERR_NO_PATH) {
+                    if (!creep.memory.blockedPathCounter) {
+                        creep.memory.blockedPathCounter = 0;
+                    }
+                    creep.memory.blockedPathCounter++;
+
+                    if (creep.memory.blockedPathCounter > 10) {
+                        roleTransporter.calculateEnergyTarget(creep);
+                    }
+                }
+                else {
+                    delete creep.memory.blockedPathCounter;
+                }
             }
             return true;
 
@@ -351,7 +367,7 @@ var roleTransporter = {
 
     /** @param {Creep} creep **/
     run: function (creep) {
-        if (creep.carry[RESOURCE_ENERGY] >= creep.carryCapacity && !creep.memory.delivering) {
+        if (_.sum(creep.carry) >= creep.carryCapacity * 0.9 && !creep.memory.delivering) {
             roleTransporter.setDelivering(creep, true);
         }
         else if (creep.carry[RESOURCE_ENERGY] <= 0 && creep.memory.delivering) {

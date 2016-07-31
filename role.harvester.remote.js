@@ -101,14 +101,25 @@ var roleRemoteHarvester = {
             return true;
         }
 
-        // Check if energy is on the ground nearby and pick that up.
-        /*var resource = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
-            filter: (resource) => resource.resourceType == RESOURCE_ENERGY
+        // Check if a container nearby is about to break, and repair it.
+        var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (structure) => (structure.structureType == STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax * 0.5
         });
-        if (resource && creep.pos.getRangeTo(resource) <= 1) {
-            creep.pickup(resource);
-            actionTaken = true;
-        }//*/
+        if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
+            var workParts = 0;
+            for (var j in creep.body) {
+                if (creep.body[j].type == WORK && creep.body[j].hits > 0) {
+                    workParts++;
+                }
+            }
+
+            if (creep.carry.energy >= workParts) {
+                Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName].buildCost += workParts;
+                creep.repair(needsRepair);
+
+                return true;
+            }
+        }
 
         var sources = creep.room.find(FIND_SOURCES, {
             filter: (source) => source.pos.x == sourcePosition.x && source.pos.y == sourcePosition.y
@@ -178,7 +189,7 @@ var roleRemoteHarvester = {
         // @todo If no storage is available, use default delivery method.
         target = creep.room.storage;
 
-        if (_.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
+        if (!target || _.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
             // Container is full, drop energy instead.
             if (creep.drop(RESOURCE_ENERGY) == OK) {
                 harvestMemory.revenue += creep.carry.energy;
@@ -266,9 +277,14 @@ var roleRemoteHarvester = {
             }
 
             if (spawner.canCreateCreep(body) == OK) {
+                var storage = utilities.encodePosition(spawner.pos);
+                if (spawner.room.storage) {
+                    storage = utilities.encodePosition(spawner.room.storage.pos);
+                }
+
                 var newName = spawner.createCreep(body, undefined, {
                     role: 'harvester.remote',
-                    storage: utilities.encodePosition(spawner.room.storage.pos),
+                    storage: storage,
                     source: utilities.encodePosition(targetPosition)
                 });
                 console.log('Spawning new remote harvester: ' + newName);

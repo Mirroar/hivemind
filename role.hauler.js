@@ -72,11 +72,6 @@ var roleHauler = {
     deliver: function (creep) {
         var sourcePos = utilities.decodePosition(creep.memory.source);
         var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePos.roomName];
-        if (sourcePos.roomName == creep.pos.roomName) {
-            if (roleRemoteHarvester.buildRoad(creep)) {
-                //return true;
-            }
-        }
 
         var target;
         var targetPosition = utilities.decodePosition(creep.memory.storage);
@@ -87,7 +82,7 @@ var roleHauler = {
         // @todo If no storage is available, use default delivery method.
         target = creep.room.storage;
 
-        if (_.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
+        if (!target || _.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
             // Container is full, drop energy instead.
             if (creep.drop(RESOURCE_ENERGY) == OK) {
                 harvestMemory.revenue += creep.carry.energy;
@@ -109,42 +104,6 @@ var roleHauler = {
 
     setHarvesting: function (creep, harvesting) {
         creep.memory.harvesting = harvesting;
-
-        // @todo Calculate time for each travel direction.
-
-        /*var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[utilities.decodePosition(creep.memory.source).roomName];
-        if (harvesting && !creep.memory.travelTimer) {
-            creep.memory.travelTimer = {
-                start: Game.time
-            };
-        }
-        else if (!harvesting && creep.memory.travelTimer && !creep.memory.travelTimer.end) {
-            creep.memory.travelTimer.end = Game.time;
-            if (!harvestMemory[creep.memory.source]) {
-                harvestMemory[creep.memory.source] = {};
-            }
-            if (!harvestMemory[creep.memory.source].travelTime) {
-                harvestMemory[creep.memory.source].travelTime = creep.memory.travelTimer.end - creep.memory.travelTimer.start;
-            }
-            else {
-                harvestMemory[creep.memory.source].travelTime = (harvestMemory[creep.memory.source].travelTime + creep.memory.travelTimer.end - creep.memory.travelTimer.start) / 2;
-            }
-        }
-
-        if (!harvesting) {
-            // Check if there is a container near the source, and save it.
-            var container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER
-            });
-            if (container && creep.pos.getRangeTo(container <= 3)) {
-                harvestMemory[creep.memory.source].hasContainer = true;
-                harvestMemory[creep.memory.source].containerId = container.id;
-            }
-            else {
-                harvestMemory[creep.memory.source].hasContainer = false;
-                delete harvestMemory[creep.memory.source].containerId;
-            }
-        }//*/
     },
 
     /** @param {Creep} creep **/
@@ -152,10 +111,17 @@ var roleHauler = {
         if (!creep.memory.harvesting && creep.carry.energy == 0) {
             roleHauler.setHarvesting(creep, true);
         }
-        else if (creep.memory.harvesting && creep.carry.energy == creep.carryCapacity) {
+        else if (creep.memory.harvesting && _.sum(creep.carry) >= creep.carryCapacity * 0.9) {
             roleHauler.setHarvesting(creep, false);
         }
 
+        // Repair / build roads, even when just waiting for more energy.
+        var sourcePos = utilities.decodePosition(creep.memory.source);
+        if (sourcePos.roomName == creep.pos.roomName) {
+            if (roleRemoteHarvester.buildRoad(creep)) {
+                //return true;
+            }
+        }
         if (creep.memory.harvesting) {
             return roleHauler.harvest(creep);
         }
@@ -169,9 +135,13 @@ var roleHauler = {
             var body = utilities.generateCreepBody({move: 0.35, work: 0.05, carry: 0.6}, spawner.room.energyAvailable);
 
             if (spawner.canCreateCreep(body) == OK) {
+                var position = spawner.pos;
+                if (spawner.room.storage) {
+                    position = spawner.room.storage.pos;
+                }
                 var newName = spawner.createCreep(body, undefined, {
                     role: 'hauler',
-                    storage: utilities.encodePosition(spawner.room.storage.pos),
+                    storage: utilities.encodePosition(position),
                     source: utilities.encodePosition(targetPosition)
                 });
                 console.log('Spawning new hauler: ' + newName);

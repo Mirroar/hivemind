@@ -29,30 +29,33 @@ var gameState = {
         return 0;
     },
 
-    getNumHarvesters: function () {
-        return gameState.getHarvesters().length;
+    getNumHarvesters: function (roomName) {
+        return gameState.getHarvesters(roomName).length;
     },
 
-    getHarvesters: function () {
-        if (!cache.harvesters) {
-            cache.harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
+    getHarvesters: function (roomName) {
+        if (!cache.harvesters[roomName]) {
+            cache.harvesters[roomName] = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester' && (!roomName || creep.pos.roomName == roomName));
         }
-        return cache.harvesters;
+        return cache.harvesters[roomName];
     },
 
-    getNumTransporters: function () {
-        return gameState.getTransporters().length;
+    getNumTransporters: function (roomName) {
+        return gameState.getTransporters(roomName).length;
     },
 
-    getTransporters: function () {
-        if (!cache.transporters) {
-            cache.transporters = _.filter(Game.creeps, (creep) => creep.memory.role == 'transporter');
+    getTransporters: function (roomName) {
+        if (!cache.transporters[roomName]) {
+            cache.transporters[roomName] = _.filter(Game.creeps, (creep) => creep.memory.role == 'transporter' && (!roomName || creep.pos.roomName == roomName));
         }
-        return cache.transporters;
+        return cache.transporters[roomName];
     },
-    
+
     clearCache: function() {
-        cache = {};
+        cache = {
+            harvesters: {},
+            transporters: {},
+        };
     }
 
 };

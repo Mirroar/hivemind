@@ -14,7 +14,7 @@ var roleBrawler = {
     getAvailableTargets: function (creep) {
         var options = [];
 
-        var tagetPosition = utilities.decodePosition(creep.memory.target);
+        var targetPosition = utilities.decodePosition(creep.memory.target);
         if (creep.pos.roomName == targetPosition.roomName) {
             // Find enemies to attack.
             // @todo only if attack parts are left.
@@ -39,7 +39,9 @@ var roleBrawler = {
 
             // Find friendlies to heal.
             // @todo only if heal parts are left.
-            var damaged = creep.room.find(FIND_MY_CREEPS, (friendly) => friendly.id != creep.id && friendly.hits < friendly.hitsMax);
+            var damaged = creep.room.find(FIND_MY_CREEPS, {
+                filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax))
+            });
 
             if (damaged && damaged.length > 0) {
                 for (var i in damaged) {
@@ -71,7 +73,7 @@ var roleBrawler = {
         var best = utilities.getBestOption(roleBrawler.getAvailableTargets(creep));
 
         if (best) {
-            //console.log('best repair target for this', creep.memory.role , ':', best.object.structureType, best.object.id, '@ priority', best.priority, best.weight, 'HP:', best.object.hits, '/', best.object.hitsMax);
+            //console.log('best target for this', creep.memory.role , ':', best.object.id, '@ priority', best.priority, best.weight, 'HP:', best.object.hits, '/', best.object.hitsMax);
             creep.memory.order = {
                 type: best.type == 'hostilecreep' ? 'attack' : 'heal',
                 target: best.object.id
@@ -83,9 +85,9 @@ var roleBrawler = {
     },
 
     move: function (creep) {
-        var tagetPosition = utilities.decodePosition(creep.memory.target);
+        var targetPosition = utilities.decodePosition(creep.memory.target);
         if (creep.pos.roomName != targetPosition.roomName) {
-            creep.moveTo(pos);
+            creep.moveTo(targetPosition);
             return true;
         }
 
@@ -93,9 +95,17 @@ var roleBrawler = {
             var target = Game.getObjectById(creep.memory.order.target);
 
             if (target) {
-                creep.moveTo(target);
+                creep.moveTo(target, {
+                    reusePath: 0,
+                });
             }
         }
+        else {
+            creep.moveTo(25, 25, {
+                reusePath: 50,
+            });
+        }
+
     },
 
     attack: function (creep) {
@@ -125,9 +135,9 @@ var roleBrawler = {
     },
 
     heal: function (creep) {
+        var healed = false;
         if (creep.memory.order) {
             var target = Game.getObjectById(creep.memory.order.target);
-            var healed = false;
 
             if (target && target.my) {
                 var result = creep.heal(target);
@@ -135,33 +145,40 @@ var roleBrawler = {
                     healed = true;
                 }
             }
-
-            if (!healed) {
-                // See if damaged creeps are adjacent, heal those.
-                var damaged = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-                    filter: (creep) => creep.hits < creep.hitsMax
-                });
-                if (damaged && damaged.length > 0) {
-                    if (creep.heal(damaged[0]) == OK) {
-                        healed = true;
-                    }
-                }
-            }
-
-            if (!healed) {
-                // See if damaged creeps are in range, heal those.
-                var damaged = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
-                    filter: (creep) => creep.hits < creep.hitsMax
-                });
-                if (damaged && damaged.length > 0) {
-                    if (creep.rangedHeal(damaged[0]) == OK) {
-                        healed = true;
-                    }
-                }
-            }
-
-            return healed;
         }
+
+        if (!healed) {
+            // See if damaged creeps are adjacent, heal those.
+            var damaged = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+                filter: (creep) => creep.hits < creep.hitsMax
+            });
+            if (damaged && damaged.length > 0) {
+                if (creep.heal(damaged[0]) == OK) {
+                    healed = true;
+                }
+            }
+        }
+
+        if (!healed && creep.hits < creep.hitsMax) {
+            // Heal self.
+            if (creep.heal(creep) == OK) {
+                healed = true;
+            }
+        }
+
+        if (!healed) {
+            // See if damaged creeps are in range, heal those.
+            var damaged = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
+                filter: (creep) => creep.hits < creep.hitsMax
+            });
+            if (damaged && damaged.length > 0) {
+                if (creep.rangedHeal(damaged[0]) == OK) {
+                    healed = true;
+                }
+            }
+        }
+
+        return healed;
     },
 
     /** @param {Creep} creep **/
@@ -177,7 +194,7 @@ var roleBrawler = {
 
     spawn: function (spawner, targetPosition) {
         if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.5) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.35, tough: 0.35, attack: 0.2, heal: 0.1}, spawner.room.energyAvailable);
+            var body = utilities.generateCreepBody({move: 0.4, tough: 0.3, attack: 0.2, heal: 0.1}, spawner.room.energyAvailable);
 
             if (spawner.canCreateCreep(body) == OK) {
                 var newName = spawner.createCreep(body, undefined, {

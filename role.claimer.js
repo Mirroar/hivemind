@@ -12,6 +12,23 @@ var utilities = require('utilities');
 
 var roleClaimer = {
 
+    claim: function (creep) {
+        var target;
+        var targetPosition = utilities.decodePosition(creep.memory.target);
+        if (targetPosition.roomName != creep.pos.roomName) {
+            creep.moveTo(targetPosition);
+            return true;
+        }
+        target = creep.room.controller;
+
+        var result = creep.claimController(target);
+        if (result == ERR_NOT_IN_RANGE) {
+            creep.moveTo(target);
+        }
+
+        return true;
+    },
+
     reserve: function (creep) {
         var target;
         var targetPosition = utilities.decodePosition(creep.memory.target);
@@ -43,6 +60,9 @@ var roleClaimer = {
     run: function (creep) {
         if (creep.memory.mission == 'reserve') {
             return roleClaimer.reserve(creep);
+        }
+        else if (creep.memory.mission == 'claim') {
+            return roleClaimer.claim(creep);
         }
     },
 
