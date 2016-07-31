@@ -1,22 +1,22 @@
 // Screeps profiler stuff
-var statsConsole = require('statsConsole');
 var profiler = require('screeps-profiler');
+
+require('role.brawler');
+require('role.builder');
+require('role.claimer');
+require('role.harvester');
+require('role.harvester.remote');
+require('role.hauler');
+require('role.repairer');
+require('role.scout');
+require('role.transporter');
+require('role.upgrader');
 
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
 var intelManager = require('manager.intel');
-var roleBrawler = require('role.brawler');
-var roleBuilder = require('role.builder');
-var roleClaimer = require('role.claimer');
-var roleHarvester = require('role.harvester');
-var roleHauler = require('role.hauler');
 var roleplay = require('manager.roleplay');
 var roleRemoteBuilder = require('role.builder.remote');
-var roleRemoteHarvester = require('role.harvester.remote');
-var roleRepairer = require('role.repairer');
-var roleScout = require('role.scout');
-var roleTransporter = require('role.transporter');
-var roleUpgrader = require('role.upgrader');
 var spawnManager = require('manager.spawn');
 var structureManager = require('structure.manager');
 var utilities = require('utilities');
@@ -33,7 +33,79 @@ var Squad = require('manager.squad');
 
 // @todo add try / catch block to main loops so that one broken routine doesn't stop the whole colony from working.
 
-//profiler.enable();
+Creep.prototype.runLogic = function() {
+    var creep = this;
+
+    if (this.memory.singleRoom && this.pos.roomName != this.memory.singleRoom) {
+        // @todo Keep in room.
+    }
+
+    try {
+        if (creep.memory.role == 'harvester') {
+            creep.runHarvesterLogic();
+        }
+        else if (creep.memory.role == 'harvester.minerals') {
+            creep.runHarvesterLogic();
+        }
+        else if (creep.memory.role == 'upgrader') {
+            creep.runUpgraderLogic();
+        }
+        else if (creep.memory.role == 'builder') {
+            if (creep.memory.tempRole || !creep.runBuilderLogic()) {
+                creep.memory.tempRole = 'upgrader';
+                creep.runUpgraderLogic();
+            }
+        }
+        else if (creep.memory.role == 'repairer') {
+            if (creep.memory.tempRole || !creep.runRepairerLogic()) {
+                creep.memory.tempRole = 'upgrader';
+                creep.runUpgraderLogic();
+            }
+        }
+        else if (creep.memory.role == 'transporter') {
+            creep.runTransporterLogic();
+        }
+        else if (creep.memory.role == 'harvester.remote') {
+            creep.runRemoteHarvesterLogic();
+        }
+        else if (creep.memory.role == 'claimer') {
+            creep.runClaimerLogic();
+        }
+        else if (creep.memory.role == 'hauler') {
+            creep.runHaulerLogic();
+        }
+        else if (creep.memory.role == 'brawler') {
+            creep.runBrawlerLogic();
+        }
+        else if (creep.memory.role == 'builder.remote') {
+            roleRemoteBuilder.run(creep);
+        }
+        else if (creep.memory.role == 'scout') {
+            creep.runScoutLogic();
+        }
+    }
+    catch (e) {
+        console.log('Error when managing creep', creep.name, ':', e);
+        console.log(e.stack);
+    }
+};
+
+Room.prototype.enhanceData = function () {
+    this.sources = [];
+
+    if (this.memory.intel) {
+        let intel = this.memory.intel;
+
+        if (intel.sources) {
+            for (let i in intel.sources) {
+                this.sources.push(Game.getObjectById(intel.sources[i]));
+            }
+        }
+    }
+};
+
+// Enable profiling of all methods in Game object protitypes defined up to now.
+profiler.enable();
 
 var main = {
 
@@ -48,54 +120,7 @@ var main = {
                 continue;
             }
 
-            try {
-                if (creep.memory.role == 'harvester') {
-                    roleHarvester.run(creep);
-                }
-                else if (creep.memory.role == 'harvester.minerals') {
-                    roleHarvester.run(creep);
-                }
-                else if (creep.memory.role == 'upgrader') {
-                    roleUpgrader.run(creep);
-                }
-                else if (creep.memory.role == 'builder') {
-                    if (creep.memory.tempRole || !roleBuilder.run(creep)) {
-                        creep.memory.tempRole = 'upgrader';
-                        roleUpgrader.run(creep);
-                    }
-                }
-                else if (creep.memory.role == 'repairer') {
-                    if (creep.memory.tempRole || !roleRepairer.run(creep)) {
-                        creep.memory.tempRole = 'upgrader';
-                        roleUpgrader.run(creep);
-                    }
-                }
-                else if (creep.memory.role == 'transporter') {
-                    roleTransporter.run(creep);
-                }
-                else if (creep.memory.role == 'harvester.remote') {
-                    roleRemoteHarvester.run(creep);
-                }
-                else if (creep.memory.role == 'claimer') {
-                    roleClaimer.run(creep);
-                }
-                else if (creep.memory.role == 'hauler') {
-                    roleHauler.run(creep);
-                }
-                else if (creep.memory.role == 'brawler') {
-                    roleBrawler.run(creep);
-                }
-                else if (creep.memory.role == 'builder.remote') {
-                    roleRemoteBuilder.run(creep);
-                }
-                else if (creep.memory.role == 'scout') {
-                    roleScout.run(creep);
-                }
-            }
-            catch (e) {
-                console.log('Error when managing creep', creep.name, ':', e);
-                console.log(e.stack);
-            }
+            creep.runLogic();
         }
     },
 
@@ -103,8 +128,7 @@ var main = {
      * Manages logic for structures.
      */
     manageStructures: function () {
-        if (!Memory.timers.checkRoads || Memory.timers.checkRoads + 1000 < Game.time) {
-            Memory.timers.checkRoads = Game.time;
+        if (Game.time % 1000 == 337) {
             for (var name in Game.rooms) {
                 structureManager.checkRoads(Game.rooms[name]);
             }
@@ -120,51 +144,8 @@ var main = {
             return (structure.structureType == STRUCTURE_TOWER) && structure.energy > 0;
         });
         for (var i in towers) {
-            var tower = towers[i];
-            if (tower) {
-                // Emergency repairs.
-                var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        if (structure.structureType == STRUCTURE_WALL) {
-                            return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
-                        }
-                        if (structure.structureType == STRUCTURE_RAMPART) {
-                            return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7 || structure.hits < 500;
-                        }
-                        return (structure.hits < structure.hitsMax - TOWER_POWER_REPAIR) && (structure.hits < structure.hitsMax * 0.2);
-                    }
-                });
-                if (closestDamagedStructure) {
-                    tower.repair(closestDamagedStructure);
-                }
-
-                // Attack enemies.
-                var closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-                    filter: (creep) => {
-                        for (var i in creep.body) {
-                            if (creep.body[i].type == HEAL && creep.body[i].hits > 0) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-                });
-                var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-                if (closestHostileHealer) {
-                    tower.attack(closestHostileHealer);
-                }
-                else if (closestHostile) {
-                    tower.attack(closestHostile);
-                }
-
-                // Heal friendlies.
-                var damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
-                    filter: (creep) => creep.hits < creep.hitsMax
-                });
-                if (damaged) {
-                    tower.heal(damaged);
-                }
-            }
+            // @todo Try / catch.
+            towers[i].runLogic();
         }
     },
 
@@ -255,18 +236,27 @@ var main = {
      */
     loop: function () {
         profiler.wrap(function () {
-            
+
+            if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
+                console.log('Bucket:', Game.cpu.bucket);
+            }
+
             var time = Game.cpu.getUsed();
-    
+
             // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
             gameState.clearCache();
-    
+
             // Add data to global Game object.
             Game.squads = [];
             for (var squadName in Memory.squads) {
                 Game.squads.push(new Squad(squadName));
             }
-    
+
+            // Add data to room objects.
+            for (let roomName in Game.rooms) {
+                Game.rooms[roomName].enhanceData();
+            }
+
             // Always place this memory cleaning code at the very top of your main loop!
             for (var name in Memory.creeps) {
                 if (!Game.creeps[name]) {
@@ -274,40 +264,40 @@ var main = {
                     delete Memory.creeps[name];
                 }
             }
-    
+
             // Make sure memory structure is available.
             if (!Memory.timers) {
                 Memory.timers = {};
             }
-    
+
             var initCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
+
             spawnManager.manageSpawns();
-    
+
             var CreepManagersCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
+
             main.manageStructures();
-    
+
             var linksCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
+
             main.manageCreeps();
-    
+
             var CreepsCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
+
             main.manageTowers();
-    
+
             var towersCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
+
             main.manageLinks();
-    
+
             var linksCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
+
             try {
                 main.checkRoomSecurity();
             }
@@ -315,7 +305,7 @@ var main = {
                 console.log('error in manageResources:');
                 console.log(e.stack);
             }
-    
+
             if (Game.time % 10 == 1) {
                 try {
                     structureManager.manageResources();
@@ -325,21 +315,21 @@ var main = {
                     console.log(e.stack);
                 }
             }
-    
+
             try {
                 intelManager.scout();
             }
             catch (e) {
-                statsConsole.log('Error in intelManager.scout:', e);
+                console.log('Error in intelManager.scout:', e);
             }
-    
+
             try {
                 roleplay.roomSongs();
             }
             catch (e) {
-                statsConsole.log('Error in roomSongs:', e);
+                console.log('Error in roomSongs:', e);
             }
-    
+
             let totalTime = Game.cpu.getUsed();
             // sample data format ["Name for Stat", variableForStat]
             let myStats = [
@@ -352,24 +342,9 @@ var main = {
                 //["Stats", statsCPUUsage],
                 ["Total", totalTime],
             ];
-    
-            statsConsole.run(myStats); // Run Stats collection
-    
+
             var statsCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
-    
-            if (totalTime > Game.cpu.limit) {
-                statsConsole.log("Tick: " + Game.time + "  CPU OVERRUN: " + Game.cpu.getUsed().toFixed(2) + "  Bucket:" + Game.cpu.bucket, 5);
-            }
-            if ((Game.time % 5) === 0) {
-                //console.log(statsConsole.displayHistogram());
-                //console.log(statsConsole.displayStats());
-                //console.log(statsConsole.displayLogs());
-                //console.log(statsConsole.displayMaps()); // Don't use as it will consume ~30-40 CPU
-                totalTime = (Game.cpu.getUsed() - totalTime);
-                //console.log("Time to Draw: " + totalTime.toFixed(2));
-            }
-            
         });
     }
 

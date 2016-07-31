@@ -18,7 +18,7 @@ var gameState = {
             return room.storage.store[RESOURCE_ENERGY];
         }
 
-        var storageLocation = utilities.getStorageLocation(room);
+        var storageLocation = room.getStorageLocation();
         var resources = room.find(FIND_DROPPED_ENERGY, {
             filter: (resource) => resource.resourceType == RESOURCE_ENERGY && resource.pos.x == storageLocation.x && resource.pos.y == storageLocation.y
         });

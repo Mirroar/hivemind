@@ -1,79 +1,72 @@
-/*
- * Module code goes here. Use 'module.exports' to export things:
- * module.exports.thing = 'a thing';
- *
- * You can import it from another modules like this:
- * var mod = require('role.claimer');
- * mod.thing == 'a thing'; // true
- */
-
 var gameState = require('game.state');
 var utilities = require('utilities');
 
-var roleClaimer = {
-
-    claim: function (creep) {
-        var target;
-        var targetPosition = utilities.decodePosition(creep.memory.target);
-        if (targetPosition.roomName != creep.pos.roomName) {
-            creep.moveTo(targetPosition);
-            return true;
-        }
-        target = creep.room.controller;
-
-        if (target.owner && !target.my && creep.memory.body && creep.memory.body.claim >= 5) {
-            var result = creep.claimController(target);
-            if (result == ERR_NOT_IN_RANGE) {
-                creep.moveTo(target);
-            }
-        }
-        else if (!target.my) {
-            var result = creep.claimController(target);
-            if (result != OK) {
-                creep.moveTo(target);
-            }
-        }
-
+/**
+ * Makes the creep claim a room for the hive!
+ */
+Creep.prototype.performClaim = function () {
+    var target;
+    var targetPosition = utilities.decodePosition(this.memory.target);
+    if (targetPosition.roomName != this.pos.roomName) {
+        this.moveTo(targetPosition);
         return true;
-    },
+    }
+    target = this.room.controller;
 
-    reserve: function (creep) {
-        var target;
-        var targetPosition = utilities.decodePosition(creep.memory.target);
-        if (targetPosition.roomName != creep.pos.roomName) {
-            creep.moveTo(targetPosition);
-            return true;
+    if (target.owner && !target.my && this.memory.body && this.memory.body.claim >= 5) {
+        let result = this.claimController(target);
+        if (result == ERR_NOT_IN_RANGE) {
+            this.moveTo(target);
         }
-        target = creep.room.controller;
+    }
+    else if (!target.my) {
+        let result = this.claimController(target);
+        if (result != OK) {
+            this.moveTo(target);
+        }
+    }
 
-        var result = creep.reserveController(target);
-        if (result == OK) {
-            var reservation = 0;
-            if (creep.room.controller.reservation && creep.room.controller.reservation.username == 'Mirroar') {
-                reservation = creep.room.controller.reservation.ticksToEnd;
-            }
-            creep.room.memory.lastClaim = {
-                time: Game.time,
-                value: reservation
-            };
-        }
-        else if (result == ERR_NOT_IN_RANGE) {
-            creep.moveTo(target);
-        }
-
-        return true;
-    },
-
-    /** @param {Creep} creep **/
-    run: function (creep) {
-        if (creep.memory.mission == 'reserve') {
-            return roleClaimer.reserve(creep);
-        }
-        else if (creep.memory.mission == 'claim') {
-            return roleClaimer.claim(creep);
-        }
-    },
-
+    return true;
 };
 
-module.exports = roleClaimer;
+/**
+ * Makes the creep reserve a room.
+ */
+Creep.prototype.performReserve = function () {
+    var target;
+    var targetPosition = utilities.decodePosition(this.memory.target);
+    if (targetPosition.roomName != this.pos.roomName) {
+        this.moveTo(targetPosition);
+        return true;
+    }
+    target = this.room.controller;
+
+    var result = this.reserveController(target);
+    if (result == OK) {
+        var reservation = 0;
+        if (this.room.controller.reservation && this.room.controller.reservation.username == 'Mirroar') {
+            reservation = this.room.controller.reservation.ticksToEnd;
+        }
+        this.room.memory.lastClaim = {
+            time: Game.time,
+            value: reservation
+        };
+    }
+    else if (result == ERR_NOT_IN_RANGE) {
+        this.moveTo(target);
+    }
+
+    return true;
+};
+
+/**
+ * Makes a creep behave like a claimer.
+ */
+Creep.prototype.runClaimerLogic = function () {
+    if (this.memory.mission == 'reserve') {
+        return this.performReserve();
+    }
+    else if (this.memory.mission == 'claim') {
+        return this.performClaim();
+    }
+}

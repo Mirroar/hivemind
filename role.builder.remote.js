@@ -1,5 +1,3 @@
-var roleTransporter = require('role.transporter');
-var roleHarvester = require('role.harvester');
 var utilities = require('utilities');
 
 var roleRemoteBuilder = {
@@ -8,13 +6,9 @@ var roleRemoteBuilder = {
     run: function (creep) {
         if (creep.memory.starting) {
             if (_.sum(creep.carry) < creep.carryCapacity) {
-                if (creep.withdraw(creep.room.storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(creep.room.storage);
-                }
+                return creep.getEnergy();
             }
-            else {
-                delete creep.memory.starting;
-            }
+            delete creep.memory.starting;
         }
 
         var targetPosition = utilities.decodePosition(creep.memory.target);
@@ -97,13 +91,12 @@ var roleRemoteBuilder = {
         }
         else {
             if (!creep.memory.resourceTarget) {
-                var sources = creep.room.find(FIND_SOURCES);
-                if (sources.length <= 0) {
+                if (!creep.room.sources || creep.room.sources.length <= 0) {
                     return false;
                 }
 
                 //creep.memory.resourceTarget = utilities.getClosest(creep, sources);
-                creep.memory.resourceTarget = sources[Math.floor(Math.random() * sources.length)].id;
+                creep.memory.resourceTarget = creep.room.sources[Math.floor(Math.random() * creep.room.sources.length)].id;
                 creep.memory.deliverTarget = null;
             }
             var best = creep.memory.resourceTarget;

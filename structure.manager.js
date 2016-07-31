@@ -2,6 +2,53 @@
 
 var utilities = require('utilities');
 
+StructureTower.prototype.runLogic = function() {
+    var tower = this;
+
+    // Emergency repairs.
+    var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: (structure) => {
+            if (structure.structureType == STRUCTURE_WALL) {
+                return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
+            }
+            if (structure.structureType == STRUCTURE_RAMPART) {
+                return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7 || structure.hits < 500;
+            }
+            return (structure.hits < structure.hitsMax - TOWER_POWER_REPAIR) && (structure.hits < structure.hitsMax * 0.2);
+        }
+    });
+    if (closestDamagedStructure) {
+        tower.repair(closestDamagedStructure);
+    }
+
+    // Attack enemies.
+    var closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+        filter: (creep) => {
+            for (var i in creep.body) {
+                if (creep.body[i].type == HEAL && creep.body[i].hits > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    });
+    var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    if (closestHostileHealer) {
+        tower.attack(closestHostileHealer);
+    }
+    else if (closestHostile) {
+        tower.attack(closestHostile);
+    }
+
+    // Heal friendlies.
+    var damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
+        filter: (creep) => creep.hits < creep.hitsMax
+    });
+    if (damaged) {
+        tower.heal(damaged);
+    }
+};
+
 var structureManager = {
 
     getRoomResourceStates: function () {
@@ -117,7 +164,6 @@ var structureManager = {
         console.log('---checking road structure in room', room.name);
 
         var controller = room.controller;
-        var sources = room.find(FIND_SOURCES);
         var spawns = room.find(FIND_STRUCTURES, {
             filter: (structure) => structure.structureType == STRUCTURE_SPAWN
         });
@@ -127,11 +173,11 @@ var structureManager = {
 
             structureManager.checkRoad(room, spawn.pos, controller.pos);
 
-            for (var j in sources) {
-                var source = sources[j];
+            for (var j in room.sources) {
+                var source = room.sources[j];
                 structureManager.checkRoad(room, spawn.pos, source.pos);
 
-                var storagePosition = utilities.getStorageLocation(room);
+                var storagePosition = room.getStorageLocation();
                 if (storagePosition) {
                     var sPos = room.getPositionAt(storagePosition.x, storagePosition.y);
                     structureManager.checkRoad(room, spawn.pos, sPos);
