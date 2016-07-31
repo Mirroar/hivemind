@@ -401,16 +401,16 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
         // Primarily fill spawn and extenstions.
         var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.structureType == STRUCTURE_EXTENSION ||
+                return ((structure.structureType == STRUCTURE_EXTENSION && !structure.isBayExtension()) ||
                         structure.structureType == STRUCTURE_SPAWN) && structure.energy < structure.energyCapacity;
             }
         });
 
-        for (var i in targets) {
-            var target = targets[i];
-            var option = {
+        for (let i in targets) {
+            let target = targets[i];
+            let option = {
                 priority: 5,
-                weight: (target.energyCapacity - target.energy) / 100,
+                weight: target.energy / target.energyCapacity,
                 type: 'structure',
                 object: target,
                 resourceType: RESOURCE_ENERGY,
@@ -418,6 +418,26 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 
             option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
             option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id).length * 3;
+
+            options.push(option);
+        }
+
+        // Fill bays.
+        for (let i in creep.room.bays) {
+            let target = creep.room.bays[i];
+
+            if (target.energy >= target.energyCapacity) continue;
+
+            let option = {
+                priority: 5,
+                weight: target.energy / target.energyCapacity,
+                type: 'bay',
+                object: target,
+                resourceType: RESOURCE_ENERGY,
+            };
+
+            option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
+            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.name).length * 3;
 
             options.push(option);
         }
@@ -445,9 +465,9 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             }
         });
 
-        for (var i in targets) {
-            var target = targets[i];
-            var option = {
+        for (let i in targets) {
+            let target = targets[i];
+            let option = {
                 priority: 4,
                 weight: (target.storeCapacity - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
                 type: 'structure',
@@ -455,7 +475,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 resourceType: RESOURCE_ENERGY,
             };
 
-            var prioFactor = 1;
+            let prioFactor = 1;
             if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.5) {
                 prioFactor = 2;
             }
@@ -622,11 +642,20 @@ Creep.prototype.calculateDeliveryTarget = function () {
     if (best) {
         //console.log('energy for this', creep.memory.role , 'should be delivered to:', best.type, best.object.id, '@ priority', best.priority, best.weight);
         if (best.type == 'position') {
-            creep.memory.deliverTarget = {x: best.object.x, y: best.object.y};
+            creep.memory.deliverTarget = {x: best.object.x, y: best.object.y, type: best.type};
 
             creep.memory.order = {
                 type: 'deliver',
                 target: utilities.encodePosition(best.object),
+                resourceType: best.resourceType,
+            };
+        }
+        else if (best.type == 'bay') {
+            creep.memory.deliverTarget = {x: best.object.pos.x, y: best.object.pos.y, type: best.type},
+
+            creep.memory.order = {
+                type: 'deliver',
+                target: best.object.name,
                 resourceType: best.resourceType,
             };
         }
@@ -679,11 +708,33 @@ Creep.prototype.performDeliver = function () {
         }
         return true;
     }
+    else if (best.type == 'bay') {
+        let target = creep.room.bays[creep.memory.order.target];
+        if (!target) {
+            creep.calculateDeliveryTarget();
+            return true;
+        }
+
+        if (creep.pos.getRangeTo(target) > 0) {
+            creep.moveTo(target);
+        }
+        else {
+            target.refillFrom(creep);
+        }
+        if (target.energy >= target.energyCapacity) {
+            creep.calculateDeliveryTarget();
+        }
+        if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
+            creep.calculateDeliveryTarget();
+        }
+        return true;
+    }
     else if (best.x) {
         // Dropoff location.
         if (creep.pos.x == best.x && creep.pos.y == best.y) {
             creep.drop(creep.memory.order.resourceType);
-        } else {
+        }
+        else {
             var result = creep.moveTo(best.x, best.y);
             //console.log(result);
             if (result == ERR_NO_PATH) {
