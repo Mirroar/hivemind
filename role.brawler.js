@@ -197,9 +197,14 @@ var roleBrawler = {
             var body = utilities.generateCreepBody({move: 0.4, tough: 0.3, attack: 0.2, heal: 0.1}, spawner.room.energyAvailable);
 
             if (spawner.canCreateCreep(body) == OK) {
+                var position = spawner.pos;
+                if (spawner.room.storage) {
+                    position = spawner.room.storage.pos;
+                }
+
                 var newName = spawner.createCreep(body, undefined, {
                     role: 'brawler',
-                    storage: utilities.encodePosition(spawner.room.storage.pos),
+                    storage: utilities.encodePosition(position),
                     target: utilities.encodePosition(targetPosition)
                 });
                 console.log('Spawning new brawler to defend', utilities.encodePosition(targetPosition), ':', newName);

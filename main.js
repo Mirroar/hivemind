@@ -19,7 +19,8 @@ var utilities = require('utilities');
 // @todo Move spawning logic into own file.
 
 // @todo Do not send any remote harvesters or claimers until enemies in a room should have expired. Maybe scout from time to time.
-// @todo Create a brawler creep role with heal and melee attack for defending rooms. Spawn it according to enemy size and maybe frequency.
+
+// @todo Make sure creeps that are supposed to stay in their room do that, go back to their room if exited, and pathfind within the room only.
 
 var main = {
 
