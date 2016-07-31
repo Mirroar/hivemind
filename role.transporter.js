@@ -18,7 +18,7 @@ var roleTransporter = {
     getAvailableEnergySources: function (creep) {
         var options = [];
         // Energy can be gotten at the room's storage.
-        if (creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] >= creep.carryCapacity - creep.carry[RESOURCE_ENERGY]) {
+        if (creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] >= creep.carryCapacity - _.sum(creep.carry)) {
             options.push({
                 priority: creep.memory.role == 'transporter' ? 0 : 5,
                 weight: 0,
@@ -60,7 +60,7 @@ var roleTransporter = {
                 }
             }
             else {
-                option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length;
+                option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length * 3;
             }
 
             options.push(option);
@@ -94,7 +94,7 @@ var roleTransporter = {
                 }
             }
 
-            option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length;
+            option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length * 2;
 
             options.push(option);
         }
@@ -120,11 +120,12 @@ var roleTransporter = {
             var target = targets[i];
             var option = {
                 priority: 5,
-                weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+                weight: (target.energyCapacity - target.energy) / 100,
                 type: 'structure',
                 object: target,
             };
 
+            option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
             option.priority -= creepGeneral.getCreepsWithOrder('deliverEnergy', target.id).length * 3;
 
             options.push(option);
@@ -384,18 +385,6 @@ var roleTransporter = {
         return true;
     },
 
-    spawn: function (spawner, force) {
-        var maxSize = 600;
-        if ((spawner.room.energyAvailable >= Math.min(maxSize, spawner.room.energyCapacityAvailable * 0.9) || (force && spawner.room.energyAvailable >= 250)) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.35, carry: 0.65}, Math.min(maxSize, spawner.room.energyAvailable));
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {role: 'transporter'});
-                console.log('Spawning new transporter: ' + newName);
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleTransporter;

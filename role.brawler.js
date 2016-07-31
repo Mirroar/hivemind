@@ -14,53 +14,103 @@ var roleBrawler = {
     getAvailableTargets: function (creep) {
         var options = [];
 
-        var targetPosition = utilities.decodePosition(creep.memory.target);
-        if (creep.pos.roomName == targetPosition.roomName) {
-            // Find enemies to attack.
-            // @todo only if attack parts are left.
-            var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+        if (creep.memory.target) {
+            var targetPosition = utilities.decodePosition(creep.memory.target);
+            if (creep.pos.roomName == targetPosition.roomName) {
+                // Find enemies to attack.
+                // @todo only if attack parts are left.
+                var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
 
-            if (enemies && enemies.length > 0) {
-                for (var i in enemies) {
-                    var enemy = enemies[i];
+                if (enemies && enemies.length > 0) {
+                    for (var i in enemies) {
+                        var enemy = enemies[i];
 
-                    var option = {
-                        priority: 4,
-                        weight: 0,
-                        type: 'hostilecreep',
-                        object: enemy,
-                    };
+                        var option = {
+                            priority: 5,
+                            weight: 0,
+                            type: 'hostilecreep',
+                            object: enemy,
+                        };
 
-                    // @todo Calculate weight / priority from distance, HP left, parts.
+                        // @todo Calculate weight / priority from distance, HP left, parts.
 
-                    options.push(option);
+                        options.push(option);
+                    }
                 }
-            }
 
-            // Find friendlies to heal.
-            // @todo only if heal parts are left.
-            var damaged = creep.room.find(FIND_MY_CREEPS, {
-                filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax))
-            });
+                // Find structures to attack.
+                var structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
+                    filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE
+                });
 
-            if (damaged && damaged.length > 0) {
-                for (var i in damaged) {
-                    var friendly = damaged[i];
+                if (structures && structures.length > 0) {
+                    for (var i in structures) {
+                        var structure = structures[i];
 
-                    var option = {
-                        priority: 3,
-                        weight: 0,
-                        type: 'creep',
-                        object: friendly,
-                    };
+                        var option = {
+                            priority: 2,
+                            weight: 0,
+                            type: 'hostilestructure',
+                            object: structure,
+                        };
 
-                    // @todo Calculate weight / priority from distance, HP left, parts.
+                        // @todo Calculate weight / priority from distance, HP left, parts.
+                        if (structure.structureType == STRUCTURE_SPAWN) {
+                            option.priority = 4;
+                        }
+                        if (structure.structureType == STRUCTURE_TOWER) {
+                            option.priority = 3;
+                        }
 
-                    options.push(option);
+                        options.push(option);
+                    }
                 }
-            }
 
-            // @todo Run home for healing if no functional parts are left.
+                // Find walls in front of controller.
+                if (creep.room.controller.owner && !creep.room.controller.my) {
+                    var structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1);
+
+                    if (structures && structures.length > 0) {
+                        for (var i in structures) {
+                            var structure = structures[i];
+
+                            var option = {
+                                priority: 0,
+                                weight: 0,
+                                type: 'hostilestructure',
+                                object: structure,
+                            };
+
+                            options.push(option);
+                        }
+                    }
+                }
+
+                // Find friendlies to heal.
+                // @todo only if heal parts are left.
+                var damaged = creep.room.find(FIND_MY_CREEPS, {
+                    filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax))
+                });
+
+                if (damaged && damaged.length > 0) {
+                    for (var i in damaged) {
+                        var friendly = damaged[i];
+
+                        var option = {
+                            priority: 3,
+                            weight: 0,
+                            type: 'creep',
+                            object: friendly,
+                        };
+
+                        // @todo Calculate weight / priority from distance, HP left, parts.
+
+                        options.push(option);
+                    }
+                }
+
+                // @todo Run home for healing if no functional parts are left.
+            }
         }
 
         return options;
@@ -75,7 +125,7 @@ var roleBrawler = {
         if (best) {
             //console.log('best target for this', creep.memory.role , ':', best.object.id, '@ priority', best.priority, best.weight, 'HP:', best.object.hits, '/', best.object.hitsMax);
             creep.memory.order = {
-                type: best.type == 'hostilecreep' ? 'attack' : 'heal',
+                type: (best.type == 'hostilecreep' || best.type == 'hostilestructure') ? 'attack' : 'heal',
                 target: best.object.id
             };
         }
@@ -85,10 +135,56 @@ var roleBrawler = {
     },
 
     move: function (creep) {
-        var targetPosition = utilities.decodePosition(creep.memory.target);
-        if (creep.pos.roomName != targetPosition.roomName) {
-            creep.moveTo(targetPosition);
-            return true;
+        if (creep.memory.squadName) {
+            // Check if there are orders and set a target accordingly.
+            var squads = _.filter(Game.squads, (squad) => squad.name = creep.memory.squadName);
+            if (squads.length > 0) {
+                var squad = squads[0];
+
+                var orders = squad.getOrders();
+                if (orders.length > 0) {
+                    creep.memory.target = orders[0].target;
+                }
+                else {
+                    delete creep.memory.target;
+                }
+            }
+
+            if (!creep.memory.target) {
+                // Movement is dictated by squad orders.
+                var spawnFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('SpawnSquad:' + creep.memory.squadName));
+                if (spawnFlags.length > 0) {
+                    var flag = spawnFlags[0];
+                    if (creep.pos.roomName == flag.pos.roomName) {
+                        // Refresh creep if it's getting low, so that it has high lifetime when a mission finally starts.
+                        if (creep.ticksToLive < CREEP_LIFE_TIME * 0.66) {
+                            var spawn = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                                filter: (structure) => structure.structureType == STRUCTURE_SPAWN
+                            });
+
+                            if (spawn) {
+                                if (spawn.renewCreep(creep) !== OK) {
+                                    creep.moveTo(spawn);
+                                }
+                                return true;
+                            }
+                        }
+                    }
+
+                    // If there's nothing to do, move back to spawn flag.
+                    creep.moveTo(flag);
+                }
+
+                return true;
+            }
+        }
+
+        if (creep.memory.target) {
+            var targetPosition = utilities.decodePosition(creep.memory.target);
+            if (creep.pos.roomName != targetPosition.roomName) {
+                creep.moveTo(targetPosition);
+                return true;
+            }
         }
 
         if (creep.memory.order) {
@@ -105,7 +201,6 @@ var roleBrawler = {
                 reusePath: 50,
             });
         }
-
     },
 
     attack: function (creep) {
@@ -126,6 +221,18 @@ var roleBrawler = {
                 if (hostile && hostile.length > 0) {
                     if (creep.attack(hostile[0]) == OK) {
                         attacked = true;
+                    }
+                }
+
+                if (!attacked) {
+                    // See if enemy structures are nearby, attack one of those.
+                    var hostile = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
+                        filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE
+                    });
+                    if (hostile && hostile.length > 0) {
+                        if (creep.attack(hostile[0]) == OK) {
+                            attacked = true;
+                        }
                     }
                 }
             }
@@ -192,41 +299,6 @@ var roleBrawler = {
         }
     },
 
-    spawn: function (spawner, targetPosition) {
-        if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.5) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.4, tough: 0.3, attack: 0.2, heal: 0.1}, spawner.room.energyAvailable);
-
-            if (spawner.canCreateCreep(body) == OK) {
-                var position = spawner.pos;
-                if (spawner.room.storage) {
-                    position = spawner.room.storage.pos;
-                }
-
-                var newName = spawner.createCreep(body, undefined, {
-                    role: 'brawler',
-                    storage: utilities.encodePosition(position),
-                    target: utilities.encodePosition(targetPosition)
-                });
-                console.log('Spawning new brawler to defend', utilities.encodePosition(targetPosition), ':', newName);
-
-                // Save some stats.
-                if (spawner.room.memory.remoteHarvesting && spawner.room.memory.remoteHarvesting[targetPosition.roomName]) {
-                    var cost = 0;
-                    for (var i in body) {
-                        cost += BODYPART_COST[body[i]];
-                    }
-
-                    if (!spawner.room.memory.remoteHarvesting[targetPosition.roomName].defenseCost) {
-                        spawner.room.memory.remoteHarvesting[targetPosition.roomName].defenseCost = 0;
-                    }
-                    spawner.room.memory.remoteHarvesting[targetPosition.roomName].defenseCost += cost;
-                }
-
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleBrawler;

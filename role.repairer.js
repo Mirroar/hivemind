@@ -22,8 +22,8 @@ var wallHealth = {
     3: 100000,
     4: 300000,
     5: 1000000,
-    6: 3000000,
-    7: 30000000,
+    6: 2000000,
+    7: 5000000,
     8: 300000000,
 };
 
@@ -149,17 +149,6 @@ var roleRepairer = {
         }
     },
 
-    spawn: function (spawner) {
-        if (spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.35, work: 0.35, carry: 0.3}, spawner.room.energyAvailable);
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {role: 'repairer'});
-                console.log('Spawning new repairer: ' + newName);
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleRepairer;

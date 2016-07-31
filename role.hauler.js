@@ -19,51 +19,56 @@ var roleHauler = {
     harvest: function (creep) {
         var source;
         var actionTaken = false;
-        var sourcePosition = utilities.decodePosition(creep.memory.source);
-        var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePosition.roomName];
-        if (sourcePosition.roomName != creep.pos.roomName) {
-            creep.moveTo(sourcePosition);
-            return true;
-        }
-
-        // Check if energy is on the ground nearby and pick that up.
-        var resource = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
-            filter: (resource) => resource.resourceType == RESOURCE_ENERGY
-        });
-        if (resource && creep.pos.getRangeTo(resource) <= 3) {
-            if (creep.pickup(resource) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(resource);
+        if (creep.memory.source) {
+            var sourcePosition = utilities.decodePosition(creep.memory.source);
+            var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[sourcePosition.roomName];
+            if (sourcePosition.roomName != creep.pos.roomName) {
+                creep.moveTo(sourcePosition);
                 return true;
             }
-            actionTaken = true;
-        }
 
-        if (harvestMemory[creep.memory.source] && harvestMemory[creep.memory.source].hasContainer) {
-            var container = Game.getObjectById(harvestMemory[creep.memory.source].containerId);
-
-            if (container) {
-                if (actionTaken) {
-                    creep.moveTo(container);
+            // Check if energy is on the ground nearby and pick that up.
+            var resource = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
+                filter: (resource) => resource.resourceType == RESOURCE_ENERGY
+            });
+            if (resource && creep.pos.getRangeTo(resource) <= 3) {
+                if (creep.pickup(resource) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(resource);
                     return true;
                 }
-                else {
-                    var result = creep.withdraw(container, RESOURCE_ENERGY);
-                    if (result == ERR_NOT_IN_RANGE || result == ERR_NOT_ENOUGH_RESOURCES) {
+                actionTaken = true;
+            }
+
+            if (harvestMemory[creep.memory.source] && harvestMemory[creep.memory.source].hasContainer) {
+                var container = Game.getObjectById(harvestMemory[creep.memory.source].containerId);
+
+                if (container) {
+                    if (actionTaken) {
                         creep.moveTo(container);
+                        return true;
                     }
-                    actionTaken = true;
+                    else {
+                        var result = creep.withdraw(container, RESOURCE_ENERGY);
+                        if (result == ERR_NOT_IN_RANGE || result == ERR_NOT_ENOUGH_RESOURCES) {
+                            creep.moveTo(container);
+                        }
+                        actionTaken = true;
+                    }
+                }
+            }
+
+            // Also lighten the load of harvesters nearby.
+            var harvester = sourcePosition.findClosestByRange(FIND_CREEPS, {
+                filter: (creep) => creep.my && creep.memory.role == 'harvester.remote' && creep.carry.energy > 0
+            });
+            if (harvester && !actionTaken) {
+                if (harvester.transfer(creep, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(harvester);
                 }
             }
         }
+        else if (creep.memory.sourceContainer) {
 
-        // Also lighten the load of harvesters nearby.
-        var harvester = sourcePosition.findClosestByRange(FIND_CREEPS, {
-            filter: (creep) => creep.my && creep.memory.role == 'harvester.remote' && creep.carry.energy > 0
-        });
-        if (harvester && !actionTaken) {
-            if (harvester.transfer(creep, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(harvester);
-            }
         }
 
         return true;
@@ -130,47 +135,6 @@ var roleHauler = {
         }
     },
 
-    spawn: function (spawner, targetPosition) {
-        if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.35, work: 0.05, carry: 0.6}, spawner.room.energyAvailable);
-
-            if (spawner.canCreateCreep(body) == OK) {
-                var position = spawner.pos;
-                if (spawner.room.storage) {
-                    position = spawner.room.storage.pos;
-                }
-                var newName = spawner.createCreep(body, undefined, {
-                    role: 'hauler',
-                    storage: utilities.encodePosition(position),
-                    source: utilities.encodePosition(targetPosition)
-                });
-                console.log('Spawning new hauler: ' + newName);
-
-                // Save some stats.
-                if (!spawner.room.memory.remoteHarvesting) {
-                    spawner.room.memory.remoteHarvesting = {};
-                }
-                if (!spawner.room.memory.remoteHarvesting[targetPosition.roomName]) {
-                    spawner.room.memory.remoteHarvesting[targetPosition.roomName] = {
-                        creepCost: 0,
-                        buildCost: 0,
-                        revenue: 0,
-                        harvesters: [],
-                    };
-                }
-
-                var cost = 0;
-                for (var i in body) {
-                    cost += BODYPART_COST[body[i]];
-                }
-
-                spawner.room.memory.remoteHarvesting[targetPosition.roomName].creepCost += cost;
-
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleHauler;

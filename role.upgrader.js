@@ -36,9 +36,9 @@ var roleUpgrader = {
             return true;
         }
         else {
-            // Ideally, get energy from a container close to the controller.
-            if (creep.room.memory.controllerContainer) {
-                var target = Game.getObjectById(creep.room.memory.controllerContainer);
+            // Ideally, get energy from a link or container close to the controller.
+            if (creep.room.memory.controllerLink) {
+                var target = Game.getObjectById(creep.room.memory.controllerLink);
                 if (target) {
                     var result = creep.withdraw(target, RESOURCE_ENERGY);
                     if (result == OK) {
@@ -49,22 +49,35 @@ var roleUpgrader = {
                         return true;
                     }
 
-                    // Could also try to get energy from another nearby container.
-                    var otherContainers = target.pos.findInRange(FIND_STRUCTURES, 3, {
-                        filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
-                    });
-                    if (otherContainers && otherContainers.length > 0) {
-                        var result = creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
-                        if (result == OK) {
-                            return true;
-                        }
-                        else if (result == ERR_NOT_IN_RANGE) {
-                            creep.moveTo(otherContainers[0]);
-                            return true;
-                        }
-                    }//*/
-                }
+                    if (creep.room.memory.controllerLink) {
+                        var target = Game.getObjectById(creep.room.memory.controllerContainer);
+                        if (target) {
+                            var result = creep.withdraw(target, RESOURCE_ENERGY);
+                            if (result == OK) {
+                                return true;
+                            }
+                            else if (result == ERR_NOT_IN_RANGE) {
+                                creep.moveTo(target);
+                                return true;
+                            }
 
+                            // Could also try to get energy from another nearby container.
+                            var otherContainers = target.pos.findInRange(FIND_STRUCTURES, 3, {
+                                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
+                            });
+                            if (otherContainers && otherContainers.length > 0) {
+                                var result = creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
+                                if (result == OK) {
+                                    return true;
+                                }
+                                else if (result == ERR_NOT_IN_RANGE) {
+                                    creep.moveTo(otherContainers[0]);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Otherwise, get energy from anywhere.
@@ -78,21 +91,6 @@ var roleUpgrader = {
         }
     },
 
-    spawn: function (spawner) {
-        if (spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 && !spawner.spawning) {
-            var bodyWeights = {move: 0.1, work: 0.3, carry: 0.6};
-            if (spawner.room.memory.controllerContainer) {
-                bodyWeights = {move: 0.1, work: 0.7, carry: 0.2};
-            }
-            var body = utilities.generateCreepBody(bodyWeights, spawner.room.energyAvailable);
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {role: 'upgrader'});
-                console.log('Spawning new upgrader: ' + newName);
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleUpgrader;

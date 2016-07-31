@@ -21,9 +21,17 @@ var roleClaimer = {
         }
         target = creep.room.controller;
 
-        var result = creep.claimController(target);
-        if (result == ERR_NOT_IN_RANGE) {
-            creep.moveTo(target);
+        if (target.owner && !target.my && creep.memory.body.claim >= 5) {
+            var result = creep.claimController(target);
+            if (result == ERR_NOT_IN_RANGE) {
+                creep.moveTo(target);
+            }
+        }
+        else if (!target.owner) {
+            var result = creep.claimController(target);
+            if (result == ERR_NOT_IN_RANGE) {
+                creep.moveTo(target);
+            }
         }
 
         return true;
@@ -66,34 +74,6 @@ var roleClaimer = {
         }
     },
 
-    spawn: function (spawner, targetPosition, mission) {
-        var minSize = BODYPART_COST[CLAIM] * 2 + BODYPART_COST[MOVE] * 2;
-        if ((spawner.room.energyAvailable >= Math.max(spawner.room.energyCapacityAvailable * 0.9, minSize)) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.5, claim: 0.5}, spawner.room.energyAvailable);
-
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {
-                    role: 'claimer',
-                    target: utilities.encodePosition(targetPosition),
-                    mission: mission,
-                });
-                console.log('Spawning new claimer: ' + newName);
-
-                // Save some stats.
-                if (mission == 'reserve' && spawner.room.memory.remoteHarvesting[targetPosition.roomName]) {
-                    var cost = 0;
-                    for (var i in body) {
-                        cost += BODYPART_COST[body[i]];
-                    }
-
-                    spawner.room.memory.remoteHarvesting[targetPosition.roomName].creepCost += cost;
-                }
-
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleClaimer;

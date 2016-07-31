@@ -100,23 +100,6 @@ var roleRemoteBuilder = {
         }
     },
 
-    spawn: function (spawner, targetPosition) {
-        if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.5, carry: 0.3, work: 0.2}, spawner.room.energyAvailable);
-
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {
-                    role: 'builder.remote',
-                    target: utilities.encodePosition(targetPosition),
-                    starting: true,
-                });
-                console.log('Spawning new remote builder: ' + newName);
-
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleRemoteBuilder;

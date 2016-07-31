@@ -56,17 +56,6 @@ var roleBuilder = {
         }
     },
 
-    spawn: function (spawner) {
-        if (spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9 && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.2, work: 0.3, carry: 0.5}, spawner.room.energyAvailable);
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {role: 'builder'});
-                console.log('Spawning new builder: ' + newName);
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleBuilder;

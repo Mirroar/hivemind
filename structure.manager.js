@@ -17,6 +17,10 @@ var structureManager = {
      * Make sure there are roads between all major points in a room.
      */
     checkRoads: function (room) {
+        if (!room.controller.my) {
+            return;
+        }
+
         // @todo Build roads around spawn, sources, controller and storage for easier access.
         console.log('---checking road structure in room', room.name);
 

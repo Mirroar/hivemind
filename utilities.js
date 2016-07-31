@@ -115,6 +115,17 @@ var utilities = {
             delete room.memory.controllerContainer;
         }
 
+        // Check if the controller has a link nearby.
+        var structures = room.find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.pos.getRangeTo(room.controller) <= 3
+        });
+        if (structures && structures.length > 0) {
+            room.memory.controllerLink = structures[0].id;
+        }
+        else {
+            delete room.memory.controllerLink;
+        }
+
         // Scan for energy sources.
         var sources = room.find(FIND_SOURCES);
 
@@ -195,6 +206,7 @@ var utilities = {
                 }
 
                 sourceMemory.targetContainer = null;
+                sourceMemory.targetLink = null;
 
                 // Check if there is a container nearby.
                 var structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
@@ -207,8 +219,19 @@ var utilities = {
                     }
                 }
 
+                // Check if there is a link nearby.
+                var structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
+                    filter: (structure) => structure.structureType == STRUCTURE_LINK
+                });
+                if (structures && structures.length > 0) {
+                    var structure = source.pos.findClosestByRange(structures);
+                    if (structure) {
+                        sourceMemory.targetLink = structure.id;
+                    }
+                }
+
+                // Decide on a dropoff-spot that will eventually have a container built.
                 if (!sourceMemory.dropoffSpot) {
-                    // Decide on a dropoff-spot that will eventually have a container built.
                     var best;
                     var bestCount = 0;
                     var terrain = room.lookForAtArea(LOOK_TERRAIN, source.pos.y - 2, source.pos.x - 2, source.pos.y + 2, source.pos.x + 2, true);
@@ -243,6 +266,7 @@ var utilities = {
                 }
 
                 // Assign target container to available harvesters.
+                // @todo Instead have harvesters check room memory for containers and links belonging to their source.
                 if (sourceMemory.targetContainer) {
                     for (var t in sourceMemory.harvesters) {
                         var harvester = Game.getObjectById(sourceMemory.harvesters[t]);

@@ -266,54 +266,6 @@ var roleRemoteHarvester = {
         }
     },
 
-    spawn: function (spawner, targetPosition) {
-        if ((spawner.room.energyAvailable >= spawner.room.energyCapacityAvailable * 0.9) && !spawner.spawning) {
-            var body = utilities.generateCreepBody({move: 0.5, work: 0.2, carry: 0.3}, spawner.room.energyAvailable);
-
-            // Use less move parts if a road has already been established.
-            if (spawner.room.memory.remoteHarvesting && spawner.room.memory.remoteHarvesting[targetPosition.roomName] && spawner.room.memory.remoteHarvesting[targetPosition.roomName].revenue > 0) {
-                // @todo Use calculated max size liek normal harvesters.
-                body = utilities.generateCreepBody({move: 0.35, work: 0.55, carry: 0.1}, spawner.room.energyAvailable, {work: 6});
-            }
-
-            if (spawner.canCreateCreep(body) == OK) {
-                var storage = utilities.encodePosition(spawner.pos);
-                if (spawner.room.storage) {
-                    storage = utilities.encodePosition(spawner.room.storage.pos);
-                }
-
-                var newName = spawner.createCreep(body, undefined, {
-                    role: 'harvester.remote',
-                    storage: storage,
-                    source: utilities.encodePosition(targetPosition)
-                });
-                console.log('Spawning new remote harvester: ' + newName);
-
-                // Save some stats.
-                if (!spawner.room.memory.remoteHarvesting) {
-                    spawner.room.memory.remoteHarvesting = {};
-                }
-                if (!spawner.room.memory.remoteHarvesting[targetPosition.roomName]) {
-                    spawner.room.memory.remoteHarvesting[targetPosition.roomName] = {
-                        creepCost: 0,
-                        buildCost: 0,
-                        revenue: 0,
-                        harvesters: [],
-                    };
-                }
-
-                var cost = 0;
-                for (var i in body) {
-                    cost += BODYPART_COST[body[i]];
-                }
-
-                spawner.room.memory.remoteHarvesting[targetPosition.roomName].creepCost += cost;
-
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleRemoteHarvester;

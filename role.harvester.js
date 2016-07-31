@@ -21,6 +21,10 @@ var roleHarvester = {
             source = Game.getObjectById(creep.memory.fixedSource);
             // @todo Just in case, handle source not existing anymore.
         }
+        else if (creep.memory.fixedMineralSource) {
+            source = Game.getObjectById(creep.memory.fixedMineralSource);
+            // @todo Just in case, handle source not existing anymore, or missing extractor.
+        }
         else {
             if (!creep.memory.resourceTarget) {
                 var sources = creep.room.find(FIND_SOURCES);
@@ -64,9 +68,42 @@ var roleHarvester = {
 
     deliver: function (creep) {
         var target;
-        if (creep.memory.fixedTarget && gameState.getNumTransporters(creep.pos.roomName) > 0) {
+
+        if (creep.memory.fixedMineralSource) {
+            var source = Game.getObjectById(creep.memory.fixedMineralSource);
+            // By default, deliver to room's terminal if there's space.
+            if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
+                var result = creep.transfer(creep.room.terminal, source.mineralType);
+                if (result == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(creep.room.terminal);
+                }
+            }
+            else if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
+                var result = creep.transfer(creep.room.storage, source.mineralType);
+                if (result == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(creep.room.storage);
+                }
+            }
+            else {
+                // @todo Drop on storage point, I guess? We probably shouldn't be collecting minerals if we have no place to store them.
+            }
+
+            return true;
+        }
+        else if (creep.memory.fixedTarget && gameState.getNumTransporters(creep.pos.roomName) > 0) {
+            // Drop off in link or container.
+            var sourceMemory = creep.room.memory.sources[creep.memory.fixedSource];
+            if (sourceMemory && sourceMemory.targetLink && gameState.getStoredEnergy(creep.room) > 10000) {
+                target = Game.getObjectById(sourceMemory.targetLink);
+                if (!target || target.energy >= target.energyCapacity) {
+                    target = null;
+                }
+            }
+
             //console.log(gameState.getNumTransporters(creep.pos.roomName), 'transporters found...', creep.pos.roomName);
-            target = Game.getObjectById(creep.memory.fixedTarget);
+            if (!target) {
+                target = Game.getObjectById(creep.memory.fixedTarget);
+            }
         }
         else if (creep.memory.fixedDropoffSpot && gameState.getNumTransporters(creep.pos.roomName) > 0) {
             if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
@@ -135,12 +172,11 @@ var roleHarvester = {
 
     /** @param {Creep} creep **/
     run: function (creep) {
-        if (creep.memory.delivering && creep.carry.energy == 0) {
+        if (creep.memory.delivering && _.sum(creep.carry) <= 0) {
             creep.memory.delivering = false;
-            creep.memory.buildTarget = null;
             delete creep.memory.tempRole;
         }
-        else if (!creep.memory.delivering && creep.carry.energy == creep.carryCapacity) {
+        else if (!creep.memory.delivering && _.sum(creep.carry) >= creep.carryCapacity) {
             creep.memory.delivering = true;
             creep.memory.resourceTarget = null;
             delete creep.memory.tempRole;
@@ -154,27 +190,6 @@ var roleHarvester = {
         }
     },
 
-    spawn: function (spawner, force, maxSize) {
-        var bodyWeights = {move: 0.1, work: 0.7, carry: 0.2};
-        var cost = 0;
-        if (maxSize) {
-            // With theoretically unlimites energy, check how expensive the creep can become with maxSize.
-            var tempBody = utilities.generateCreepBody(bodyWeights, spawner.room.energyCapacityAvailable, {work: maxSize});
-            for (var i in tempBody) {
-                cost += BODYPART_COST[tempBody[i]];
-            }
-        }
-
-        if ((spawner.room.energyAvailable >= Math.min(spawner.room.energyCapacityAvailable * 0.9, (maxSize ? cost : 99999)) || (force && spawner.room.energyAvailable >= 200)) && !spawner.spawning) {
-            var body = utilities.generateCreepBody(bodyWeights, spawner.room.energyAvailable, maxSize ? {work: maxSize} : undefined);
-            if (spawner.canCreateCreep(body) == OK) {
-                var newName = spawner.createCreep(body, undefined, {role: 'harvester'});
-                console.log('Spawning new harvester: ' + newName);
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 module.exports = roleHarvester;
