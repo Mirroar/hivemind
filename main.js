@@ -206,17 +206,16 @@ var main = {
             if (hostiles.length > 0) {
                 // Count body parts for strength estimation.
                 for (var j in hostiles) {
+                    if (hostiles[j].isDangerous()) {
+                        safe = false;
+                        lastSeen = Game.time;
+                    }
                     for (var k in hostiles[j].body) {
                         let type = hostiles[j].body[k].type;
                         if (!parts[type]) {
                             parts[type] = 0;
                         }
                         parts[type]++;
-
-                        if (safe && type != MOVE && type != CARRY && type != TOUGH) {
-                            safe = false;
-                            lastSeen = Game.time;
-                        }
                     }
                 }
             }
