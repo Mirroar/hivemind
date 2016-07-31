@@ -17,7 +17,7 @@ var structureManager = {
      * Make sure there are roads between all major points in a room.
      */
     checkRoads: function (room) {
-        if (!room.controller.my) {
+        if (!room.controller || !room.controller.my) {
             return;
         }
 

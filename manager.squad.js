@@ -22,6 +22,17 @@ Squad.prototype.addUnit = function (unitType) {
         this.memory.units[unitType] = [];
     }
     this.memory.composition[unitType]++;
+
+    return this.memory.composition[unitType];
+};
+
+Squad.prototype.removeUnit = function (unitType) {
+    if (!this.memory.composition[unitType]) {
+        return;
+    }
+    this.memory.composition[unitType]--;
+
+    return this.memory.composition[unitType];
 };
 
 Squad.prototype.registerCreeps = function () {
@@ -69,6 +80,16 @@ Squad.prototype.spawnUnit = function (spawn) {
         return spawn.createManagedCreep({
             role: 'brawler',
             bodyWeights: {move: 0.5, tough: 0.1, heal: 0.4},
+            memory: {
+                squadName: this.name,
+                squadUnitType: toSpawn,
+            },
+        });
+    }
+    else if (toSpawn == 'claimer') {
+        return spawn.createManagedCreep({
+            role: 'brawler',
+            bodyWeights: {move: 0.5, tough: 0.2, claim: 0.3},
             memory: {
                 squadName: this.name,
                 squadUnitType: toSpawn,

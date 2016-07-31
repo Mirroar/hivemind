@@ -1,7 +1,10 @@
+var statsConsole = require('statsConsole');
+
 var gameState = require('game.state');
-var Squad = require('manager.squad');
-var utilities = require('utilities');
 var stats = require('stats');
+var utilities = require('utilities');
+
+var Squad = require('manager.squad');
 
 /**
  * Intelligently tries to create a creep.
@@ -221,7 +224,7 @@ var spawnManager = {
             //console.log(room.name, spawn.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
             var maxUpgraders = 0;
-            if (room.controller.level <= 2) {
+            if (room.controller.level <= 3) {
                 maxUpgraders = 1 + numSources;
             }
             else {
@@ -249,6 +252,7 @@ var spawnManager = {
             if (constructionSites) {
                 maxBuilders = Math.min(1 + numSources, Math.ceil(constructionSites.length / 5));
             }
+            //console.log(room.name, maxBuilders);
 
             if (numHarvesters < 1) {
                 if (spawnManager.spawnHarvester(spawn, true, maxHarvesterSize)) {
@@ -266,7 +270,7 @@ var spawnManager = {
                     return true;
                 }
             }
-            else if (numTransporters < maxTransporters) {
+            else if (numTransporters < maxTransporters / 2) {
                 // @todo Spawn only if there is at least one container / storage.
                 if (spawnManager.spawnTransporter(spawn)) {
                     return true;
@@ -279,6 +283,12 @@ var spawnManager = {
             }
             else if (builders.length < maxBuilders) {
                 if (spawnManager.spawnBuilder(spawn)) {
+                    return true;
+                }
+            }
+            else if (numTransporters < maxTransporters) {
+                // @todo Spawn only if there is at least one container / storage.
+                if (spawnManager.spawnTransporter(spawn)) {
                     return true;
                 }
             }
@@ -357,7 +367,7 @@ var spawnManager = {
                 }
 
                 // If possible, we could claim new rooms!
-                var numRooms = _.size(_.filter(Game.rooms, (room) => room.controller.my));
+                var numRooms = _.size(_.filter(Game.rooms, (room) => room.controller && room.controller.my));
                 var maxRooms = Game.gcl.level;
                 var claimFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('ClaimRoom'));
                 if (numRooms < maxRooms && claimFlags.length > 0) {
@@ -368,21 +378,32 @@ var spawnManager = {
                             // Room is already claimed.
                             continue;
                         }
+                        // @todo Only if controller is neutral or about to be neutral.
 
-                        // @todo Make sure only the closest room spawns a claimer!
-                        var claimers = _.filter(Game.creeps, (creep) => {
-                            if (creep.memory.role == 'claimer') {
-                                if (creep.memory.mission == 'claim' && creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                    return true;
+                        // Make sure only the closest room spawns a claimer!
+                        var min = null;
+                        for (let j in Game.rooms) {
+                            if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
+                                if (!min || Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName) < min) {
+                                    min = Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName);
                                 }
                             }
-                            return false;
-                        });
+                        }
+                        if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
+                            var claimers = _.filter(Game.creeps, (creep) => {
+                                if (creep.memory.role == 'claimer') {
+                                    if (creep.memory.mission == 'claim' && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
 
-                        if (!claimers || claimers.length < 1) {
-                            if (spawnManager.spawnClaimer(spawn, flag.pos, 'claim')) {
-                                console.log('sending new claimer to', utilities.encodePosition(flag.pos));
-                                return true;
+                            if (!claimers || claimers.length < 1) {
+                                if (spawnManager.spawnClaimer(spawn, flag.pos, 'claim')) {
+                                    console.log('sending new claimer to', utilities.encodePosition(flag.pos));
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -393,21 +414,31 @@ var spawnManager = {
                         var flag = claimFlags[i];
 
                         if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
-                            // @todo Make sure only the closest room spawn builders!
-                            var maxRemoteBuilders = 2;
-                            var builders = _.filter(Game.creeps, (creep) => {
-                                if (creep.memory.role == 'builder.remote') {
-                                    if (creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                        return true;
+                            // Make sure only the closest room spawn builders!
+                            var min = null;
+                            for (let j in Game.rooms) {
+                                if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
+                                    if (!min || Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName) < min) {
+                                        min = Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName);
                                     }
                                 }
-                                return false;
-                            });
+                            }
+                            if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
+                                var maxRemoteBuilders = 2;
+                                var builders = _.filter(Game.creeps, (creep) => {
+                                    if (creep.memory.role == 'builder.remote') {
+                                        if (creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                });
 
-                            if (!builders || builders.length < maxRemoteBuilders) {
-                                if (spawnManager.spawnRemoteBuilder(spawn, flag.pos)) {
-                                    console.log('sending new remote builder to', utilities.encodePosition(flag.pos));
-                                    return true;
+                                if (!builders || builders.length < maxRemoteBuilders) {
+                                    if (spawnManager.spawnRemoteBuilder(spawn, flag.pos)) {
+                                        console.log('sending new remote builder to', utilities.encodePosition(flag.pos));
+                                        return true;
+                                    }
                                 }
                             }
                         }
@@ -557,6 +588,16 @@ var spawnManager = {
                         }
                     }
                 }
+
+                // Last but not least: Scouts.
+                // @todo Spawn scout closest to where we're gonna send it.
+                var maxScouts = 1;
+                var scouts = _.filter(Game.creeps, (creep) => creep.memory.role == 'scout');
+                if (scouts.length < maxScouts) {
+                    if (spawnManager.spawnScout(spawn)) {
+                        return true;
+                    }
+                }
             }
         }
     },
@@ -583,7 +624,7 @@ var spawnManager = {
         if (result == newName) {
             // Spawning successful.
             Memory.creepCounter[memory.role]++;
-            console.log('Spawning new creep:', newName);
+            statsConsole.log('Spawning new creep: ' + newName, 0);
         }
 
         return result;
@@ -707,6 +748,9 @@ var spawnManager = {
         return false;
     },
 
+    /**
+     * Spawns a new hauler.
+     */
     spawnHauler: function (spawn, targetPosition, maxCarryParts) {
         var maxParts = null;
         if (maxCarryParts) {
@@ -849,6 +893,17 @@ var spawnManager = {
                 target: utilities.encodePosition(targetPosition),
                 starting: true,
             },
+        });
+    },
+
+    /**
+     * Spawns a new scout.
+     */
+    spawnScout: function (spawn) {
+        return spawn.createManagedCreep({
+            role: 'scout',
+            body: [MOVE],
+            memory: {},
         });
     },
 

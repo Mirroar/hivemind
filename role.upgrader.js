@@ -71,35 +71,35 @@ var roleUpgrader = {
                         creep.moveTo(target);
                         return true;
                     }
+                }
+            }
 
-                    if (creep.room.memory.controllerLink) {
-                        var target = Game.getObjectById(creep.room.memory.controllerContainer);
-                        if (target) {
-                            var result = creep.withdraw(target, RESOURCE_ENERGY);
-                            if (result == OK) {
-                                return true;
-                            }
-                            else if (result == ERR_NOT_IN_RANGE) {
-                                creep.moveTo(target);
-                                return true;
-                            }
-
-                            // Could also try to get energy from another nearby container.
-                            var otherContainers = target.pos.findInRange(FIND_STRUCTURES, 3, {
-                                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
-                            });
-                            if (otherContainers && otherContainers.length > 0) {
-                                var result = creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
-                                if (result == OK) {
-                                    return true;
-                                }
-                                else if (result == ERR_NOT_IN_RANGE) {
-                                    creep.moveTo(otherContainers[0]);
-                                    return true;
-                                }
-                            }
-                        }
+            if (creep.room.memory.controllerContainer) {
+                var target = Game.getObjectById(creep.room.memory.controllerContainer);
+                if (target) {
+                    var result = creep.withdraw(target, RESOURCE_ENERGY);
+                    if (result == OK) {
+                        return true;
                     }
+                    else if (result == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(target);
+                        return true;
+                    }
+                }
+            }
+
+            // Could also try to get energy from another nearby container.
+            var otherContainers = target.pos.findInRange(FIND_STRUCTURES, 3, {
+                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
+            });
+            if (otherContainers && otherContainers.length > 0) {
+                var result = creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
+                if (result == OK) {
+                    return true;
+                }
+                else if (result == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(otherContainers[0]);
+                    return true;
                 }
             }
 

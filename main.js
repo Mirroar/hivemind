@@ -1,13 +1,19 @@
+// Screeps profiler stuff
+var statsConsole = require('statsConsole');
+
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
+var intelManager = require('manager.intel');
 var roleBrawler = require('role.brawler');
 var roleBuilder = require('role.builder');
 var roleClaimer = require('role.claimer');
 var roleHarvester = require('role.harvester');
 var roleHauler = require('role.hauler');
+var roleplay = require('manager.roleplay');
 var roleRemoteBuilder = require('role.builder.remote');
 var roleRemoteHarvester = require('role.harvester.remote');
 var roleRepairer = require('role.repairer');
+var roleScout = require('role.scout');
 var roleTransporter = require('role.transporter');
 var roleUpgrader = require('role.upgrader');
 var spawnManager = require('manager.spawn');
@@ -39,55 +45,52 @@ var main = {
                 continue;
             }
 
-            // @todo Rewrite renewing code when there's reasonable use cases.
-            /*if (harvesters.length >= maxHarvesters / 2 && utilities.energyStored(spawn.room) > 1000) {
-                    // Other creeps do not get renewed when we're low on harvesters or energy, so we don't waste the resources that could be spent on more harvesters.
-                if (creep.memory.role != 'harvester') {
-                    // Harvesters do not get renewed, because they move back to spawn too slowly anyway.
-                    if (creepGeneral.renew(creep, spawn)) {
-                        continue;
+            try {
+                if (creep.memory.role == 'harvester') {
+                    roleHarvester.run(creep);
+                }
+                else if (creep.memory.role == 'harvester.minerals') {
+                    roleHarvester.run(creep);
+                }
+                else if (creep.memory.role == 'upgrader') {
+                    roleUpgrader.run(creep);
+                }
+                else if (creep.memory.role == 'builder') {
+                    if (creep.memory.tempRole || !roleBuilder.run(creep)) {
+                        creep.memory.tempRole = 'upgrader';
+                        roleUpgrader.run(creep);
                     }
                 }
-            }//*/
-
-            if (creep.memory.role == 'harvester') {
-                roleHarvester.run(creep);
-            }
-            else if (creep.memory.role == 'harvester.minerals') {
-                roleHarvester.run(creep);
-            }
-            else if (creep.memory.role == 'upgrader') {
-                roleUpgrader.run(creep);
-            }
-            else if (creep.memory.role == 'builder') {
-                if (creep.memory.tempRole || !roleBuilder.run(creep)) {
-                    creep.memory.tempRole = 'upgrader';
-                    roleUpgrader.run(creep);
+                else if (creep.memory.role == 'repairer') {
+                    if (creep.memory.tempRole || !roleRepairer.run(creep)) {
+                        creep.memory.tempRole = 'upgrader';
+                        roleUpgrader.run(creep);
+                    }
+                }
+                else if (creep.memory.role == 'transporter') {
+                    roleTransporter.run(creep);
+                }
+                else if (creep.memory.role == 'harvester.remote') {
+                    roleRemoteHarvester.run(creep);
+                }
+                else if (creep.memory.role == 'claimer') {
+                    roleClaimer.run(creep);
+                }
+                else if (creep.memory.role == 'hauler') {
+                    roleHauler.run(creep);
+                }
+                else if (creep.memory.role == 'brawler') {
+                    roleBrawler.run(creep);
+                }
+                else if (creep.memory.role == 'builder.remote') {
+                    roleRemoteBuilder.run(creep);
+                }
+                else if (creep.memory.role == 'scout') {
+                    roleScout.run(creep);
                 }
             }
-            else if (creep.memory.role == 'repairer') {
-                if (creep.memory.tempRole || !roleRepairer.run(creep)) {
-                    creep.memory.tempRole = 'upgrader';
-                    roleUpgrader.run(creep);
-                }
-            }
-            else if (creep.memory.role == 'transporter') {
-                roleTransporter.run(creep);
-            }
-            else if (creep.memory.role == 'harvester.remote') {
-                roleRemoteHarvester.run(creep);
-            }
-            else if (creep.memory.role == 'claimer') {
-                roleClaimer.run(creep);
-            }
-            else if (creep.memory.role == 'hauler') {
-                roleHauler.run(creep);
-            }
-            else if (creep.memory.role == 'brawler') {
-                roleBrawler.run(creep);
-            }
-            else if (creep.memory.role == 'builder.remote') {
-                roleRemoteBuilder.run(creep);
+            catch (e) {
+                console.log('Error when managing creep', creep.name, ':', e);
             }
         }
     },
@@ -247,6 +250,8 @@ var main = {
      * Main game loop.
      */
     loop: function () {
+        var time = Game.cpu.getUsed();
+
         // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
         gameState.clearCache();
 
@@ -269,12 +274,79 @@ var main = {
             Memory.timers = {};
         }
 
+        var initCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
         spawnManager.manageSpawns();
+
+        var CreepManagersCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
         main.manageStructures();
+
+        var linksCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
         main.manageCreeps();
+
+        var CreepsCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
         main.manageTowers();
+
+        var towersCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
         main.manageLinks();
+
+        var linksCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
         main.checkRoomSecurity();
+
+        try {
+            intelManager.scout();
+        }
+        catch (e) {
+            statsConsole.log('Error in intelManager.scout:', e);
+        }
+
+        try {
+            roleplay.roomSongs();
+        }
+        catch (e) {
+            statsConsole.log('Error in roomSongs:', e);
+        }
+
+        let totalTime = Game.cpu.getUsed();
+        // sample data format ["Name for Stat", variableForStat]
+        let myStats = [
+            ["Creep Managers", CreepManagersCPUUsage],
+            ["Towers", towersCPUUsage],
+            ["Links", linksCPUUsage],
+            //["Setup Roles", SetupRolesCPUUsage],
+            ["Creeps", CreepsCPUUsage],
+            ["Init", initCPUUsage],
+            //["Stats", statsCPUUsage],
+            ["Total", totalTime],
+        ];
+
+        statsConsole.run(myStats); // Run Stats collection
+
+        var statsCPUUsage = Game.cpu.getUsed() - time;
+        time = Game.cpu.getUsed();
+
+        if (totalTime > Game.cpu.limit) {
+            statsConsole.log("Tick: " + Game.time + "  CPU OVERRUN: " + Game.cpu.getUsed().toFixed(2) + "  Bucket:" + Game.cpu.bucket, 5);
+        }
+        if ((Game.time % 5) === 0) {
+            console.log(statsConsole.displayHistogram());
+            console.log(statsConsole.displayStats());
+            console.log(statsConsole.displayLogs());
+            //console.log(statsConsole.displayMaps()); // Don't use as it will consume ~30-40 CPU
+            totalTime = (Game.cpu.getUsed() - totalTime);
+            console.log("Time to Draw: " + totalTime.toFixed(2));
+        }
     }
 
 };

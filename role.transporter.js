@@ -69,7 +69,7 @@ var roleTransporter = {
         // Look for energy in Containers.
         var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return (structure.structureType == STRUCTURE_CONTAINER) && (structure.store[RESOURCE_ENERGY] > 0 && structure.id != creep.room.memory.controllerContainer);
+                return (structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > 0;
             }
         });
 

@@ -96,7 +96,33 @@ var roleRemoteBuilder = {
             return false;
         }
         else {
-            return roleHarvester.harvest(creep);
+            if (!creep.memory.resourceTarget) {
+                var sources = creep.room.find(FIND_SOURCES);
+                if (sources.length <= 0) {
+                    return false;
+                }
+
+                //creep.memory.resourceTarget = utilities.getClosest(creep, sources);
+                creep.memory.resourceTarget = sources[Math.floor(Math.random() * sources.length)].id;
+                creep.memory.deliverTarget = null;
+            }
+            var best = creep.memory.resourceTarget;
+            if (!best) {
+                return false;
+            }
+            source = Game.getObjectById(best);
+            if (!source || source.energy <= 0) {
+                creep.memory.resourceTarget = null;
+            }
+
+            var result = creep.harvest(source);
+            if (result == ERR_NOT_IN_RANGE) {
+                var result = creep.moveTo(source);
+                if (result == ERR_NO_PATH) {
+                    creep.memory.resourceTarget = null;
+                }
+            }
+            return true;
         }
     },
 

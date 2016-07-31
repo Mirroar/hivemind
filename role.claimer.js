@@ -21,15 +21,15 @@ var roleClaimer = {
         }
         target = creep.room.controller;
 
-        if (target.owner && !target.my && creep.memory.body.claim >= 5) {
+        if (target.owner && !target.my && creep.memory.body && creep.memory.body.claim >= 5) {
             var result = creep.claimController(target);
             if (result == ERR_NOT_IN_RANGE) {
                 creep.moveTo(target);
             }
         }
-        else if (!target.owner) {
+        else if (!target.my) {
             var result = creep.claimController(target);
-            if (result == ERR_NOT_IN_RANGE) {
+            if (result != OK) {
                 creep.moveTo(target);
             }
         }
