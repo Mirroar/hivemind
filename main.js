@@ -18,7 +18,7 @@ var intelManager = require('manager.intel');
 var roleplay = require('manager.roleplay');
 var roleRemoteBuilder = require('role.builder.remote');
 var spawnManager = require('manager.spawn');
-var structureManager = require('structure.manager');
+var structureManager = require('manager.structure');
 var utilities = require('utilities');
 
 var Squad = require('manager.squad');
