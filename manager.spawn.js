@@ -220,6 +220,11 @@ var spawnManager = {
                 maxTransporters--;
             }
 
+            // If we have a terminal, we need more transporters.
+            if (room.terminal) {
+                maxTransporters++;
+            }
+
             //console.log(room.name, spawn.pos.roomName, 'Harvesters:', numHarvesters, '/', maxHarvesters);
             //console.log(room.name, spawn.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
@@ -301,10 +306,20 @@ var spawnManager = {
             else {
                 // Harvest minerals.
                 if (mineralHarvesters.length < minerals.length && minerals[0].mineralAmount > 0) {
-                    // @todo Do not spawn if we have a lot stored.
                     // We assume there is always at most one mineral deposit in a room.
-                    if (spawnManager.spawnMineralHarvester(spawn, minerals[0])) {
-                        return true;
+                    // Do not spawn if we have a lot stored.
+                    let total = 0;
+                    if (room.storage && room.storage.store[minerals[0].mineralType]) {
+                        total += room.storage.store[minerals[0].mineralType];
+                    }
+                    if (room.terminal && room.terminal.store[minerals[0].mineralType]) {
+                        total += room.terminal.store[minerals[0].mineralType];
+                    }
+
+                    if (total < 200000) {
+                        if (spawnManager.spawnMineralHarvester(spawn, minerals[0])) {
+                            return true;
+                        }
                     }
                 }
 
@@ -554,7 +569,7 @@ var spawnManager = {
                                 }
                             }
                         }
-                        console.log(utilities.encodePosition(flag.pos), flag.name, haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);
+                        //console.log(utilities.encodePosition(flag.pos), flag.name, haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);
                         if (haulCount < maxRemoteHaulers && !doSpawn) {
                             // Spawn hauler if necessary, but not if harvester is needed first.
                             if (spawnManager.spawnHauler(spawn, flag.pos, maxCarryParts)) {
@@ -816,6 +831,7 @@ var spawnManager = {
         return spawn.createManagedCreep({
             role: 'builder',
             bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
+            maxParts: {work: 5},
             memory: {
                 singleRoom: spawn.pos.roomName,
             },
@@ -863,6 +879,7 @@ var spawnManager = {
         return spawn.createManagedCreep({
             role: 'repairer',
             bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
+            maxParts: {work: 5},
             memory: {
                 singleRoom: spawn.pos.roomName,
             },
@@ -893,7 +910,7 @@ var spawnManager = {
      */
     spawnUpgrader: function (spawn) {
         var bodyWeights = {move: 0.35, work: 0.3, carry: 0.35};
-        if (spawn.room.memory.controllerContainer) {
+        if (spawn.room.memory.controllerContainer || spawn.room.memory.controllerLink) {
             bodyWeights = {move: 0.2, work: 0.75, carry: 0.05};
         }
 

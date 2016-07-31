@@ -46,7 +46,7 @@ var roleHarvester = {
             }
         }
 
-        var result =creep.harvest(source);
+        var result = creep.harvest(source);
         if (result == ERR_NOT_IN_RANGE) {
             var result = creep.moveTo(source);
             if (result == ERR_NO_PATH) {
@@ -64,6 +64,20 @@ var roleHarvester = {
                 creep.memory.moveFailCount = null;
             }
         }
+
+        // If there's a link or controller nearby, directly deposit energy.
+        var targets = creep.pos.findInRange(FIND_STRUCTURES, 1, {
+            filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.energy < structure.energyCapacity
+        });
+        if (targets.length <= 0) {
+            targets = creep.pos.findInRange(FIND_STRUCTURES, 1, {
+                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && _.sum(structure.store) < structure.storeCapacity
+            });
+        }
+        if (targets.length > 0) {
+            creep.transfer(targets[0], RESOURCE_ENERGY);
+        }
+
         return true;
     },
 

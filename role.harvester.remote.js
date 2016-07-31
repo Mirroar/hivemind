@@ -152,7 +152,7 @@ var roleRemoteHarvester = {
     },
 
     deliver: function (creep) {
-        var sourcePos = utilities.decodePosition(creep.memory.source);
+        var targetPosition = utilities.decodePosition(creep.memory.storage);
         var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
         if (harvestMemory.hasContainer) {
             var container = Game.getObjectById(harvestMemory.containerId);
@@ -174,14 +174,13 @@ var roleRemoteHarvester = {
             }
         }
 
-        if (sourcePos.roomName == creep.pos.roomName) {
+        if (targetPosition.roomName != creep.pos.roomName) {
             if (roleRemoteHarvester.buildRoad(creep)) {
                 return true;
             }
         }
 
         var target;
-        var targetPosition = utilities.decodePosition(creep.memory.storage);
         if (targetPosition.roomName != creep.pos.roomName) {
             creep.moveTo(targetPosition);
             return true;

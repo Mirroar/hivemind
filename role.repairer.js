@@ -136,6 +136,25 @@ var roleRepairer = {
 
         if (creep.repair(target) == ERR_NOT_IN_RANGE) {
             creep.moveTo(target);
+
+            // Also try to repair things that are close by when appropriate.
+            let workParts = creep.memory.body.work;
+            if (workParts && (creep.carry.energy > creep.carryCapacity * 0.7 || creep.carry.energy < creep.carryCapacity * 0.3)) {
+                var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        let maxHealth = structure.hitsMax;
+                        if (structure.structureType == STRUCTURE_RAMPART || structure.structureType == STRUCTURE_WALL) {
+                            maxHealth = wallHealth[structure.room.controller.level];
+                        }
+                        if (structure.hits < maxHealth) {
+                            return true;
+                        }
+                    }
+                });
+                if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
+                    creep.repair(needsRepair);
+                }
+            }
         }
         return true;
     },

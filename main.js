@@ -1,5 +1,6 @@
 // Screeps profiler stuff
 var statsConsole = require('statsConsole');
+var profiler = require('screeps-profiler');
 
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
@@ -31,6 +32,8 @@ var Squad = require('manager.squad');
 // @todo Make sure creeps that are supposed to stay in their room do that, go back to their room if exited, and pathfind within the room only.
 
 // @todo add try / catch block to main loops so that one broken routine doesn't stop the whole colony from working.
+
+//profiler.enable();
 
 var main = {
 
@@ -251,103 +254,123 @@ var main = {
      * Main game loop.
      */
     loop: function () {
-        var time = Game.cpu.getUsed();
-
-        // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
-        gameState.clearCache();
-
-        // Add data to global Game object.
-        Game.squads = [];
-        for (var squadName in Memory.squads) {
-            Game.squads.push(new Squad(squadName));
-        }
-
-        // Always place this memory cleaning code at the very top of your main loop!
-        for (var name in Memory.creeps) {
-            if (!Game.creeps[name]) {
-                //console.log(Memory.creeps[name].role, name, 'has died. :(');
-                delete Memory.creeps[name];
+        profiler.wrap(function () {
+            
+            var time = Game.cpu.getUsed();
+    
+            // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
+            gameState.clearCache();
+    
+            // Add data to global Game object.
+            Game.squads = [];
+            for (var squadName in Memory.squads) {
+                Game.squads.push(new Squad(squadName));
             }
-        }
-
-        // Make sure memory structure is available.
-        if (!Memory.timers) {
-            Memory.timers = {};
-        }
-
-        var initCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        spawnManager.manageSpawns();
-
-        var CreepManagersCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        main.manageStructures();
-
-        var linksCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        main.manageCreeps();
-
-        var CreepsCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        main.manageTowers();
-
-        var towersCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        main.manageLinks();
-
-        var linksCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        main.checkRoomSecurity();
-
-        try {
-            intelManager.scout();
-        }
-        catch (e) {
-            statsConsole.log('Error in intelManager.scout:', e);
-        }
-
-        try {
-            roleplay.roomSongs();
-        }
-        catch (e) {
-            statsConsole.log('Error in roomSongs:', e);
-        }
-
-        let totalTime = Game.cpu.getUsed();
-        // sample data format ["Name for Stat", variableForStat]
-        let myStats = [
-            ["Creep Managers", CreepManagersCPUUsage],
-            ["Towers", towersCPUUsage],
-            ["Links", linksCPUUsage],
-            //["Setup Roles", SetupRolesCPUUsage],
-            ["Creeps", CreepsCPUUsage],
-            ["Init", initCPUUsage],
-            //["Stats", statsCPUUsage],
-            ["Total", totalTime],
-        ];
-
-        statsConsole.run(myStats); // Run Stats collection
-
-        var statsCPUUsage = Game.cpu.getUsed() - time;
-        time = Game.cpu.getUsed();
-
-        if (totalTime > Game.cpu.limit) {
-            statsConsole.log("Tick: " + Game.time + "  CPU OVERRUN: " + Game.cpu.getUsed().toFixed(2) + "  Bucket:" + Game.cpu.bucket, 5);
-        }
-        if ((Game.time % 5) === 0) {
-            //console.log(statsConsole.displayHistogram());
-            //console.log(statsConsole.displayStats());
-            //console.log(statsConsole.displayLogs());
-            //console.log(statsConsole.displayMaps()); // Don't use as it will consume ~30-40 CPU
-            totalTime = (Game.cpu.getUsed() - totalTime);
-            //console.log("Time to Draw: " + totalTime.toFixed(2));
-        }
+    
+            // Always place this memory cleaning code at the very top of your main loop!
+            for (var name in Memory.creeps) {
+                if (!Game.creeps[name]) {
+                    //console.log(Memory.creeps[name].role, name, 'has died. :(');
+                    delete Memory.creeps[name];
+                }
+            }
+    
+            // Make sure memory structure is available.
+            if (!Memory.timers) {
+                Memory.timers = {};
+            }
+    
+            var initCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            spawnManager.manageSpawns();
+    
+            var CreepManagersCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            main.manageStructures();
+    
+            var linksCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            main.manageCreeps();
+    
+            var CreepsCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            main.manageTowers();
+    
+            var towersCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            main.manageLinks();
+    
+            var linksCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            try {
+                main.checkRoomSecurity();
+            }
+            catch (e) {
+                console.log('error in manageResources:');
+                console.log(e.stack);
+            }
+    
+            if (Game.time % 10 == 1) {
+                try {
+                    structureManager.manageResources();
+                }
+                catch (e) {
+                    console.log('error in manageResources:');
+                    console.log(e.stack);
+                }
+            }
+    
+            try {
+                intelManager.scout();
+            }
+            catch (e) {
+                statsConsole.log('Error in intelManager.scout:', e);
+            }
+    
+            try {
+                roleplay.roomSongs();
+            }
+            catch (e) {
+                statsConsole.log('Error in roomSongs:', e);
+            }
+    
+            let totalTime = Game.cpu.getUsed();
+            // sample data format ["Name for Stat", variableForStat]
+            let myStats = [
+                ["Creep Managers", CreepManagersCPUUsage],
+                ["Towers", towersCPUUsage],
+                ["Links", linksCPUUsage],
+                //["Setup Roles", SetupRolesCPUUsage],
+                ["Creeps", CreepsCPUUsage],
+                ["Init", initCPUUsage],
+                //["Stats", statsCPUUsage],
+                ["Total", totalTime],
+            ];
+    
+            statsConsole.run(myStats); // Run Stats collection
+    
+            var statsCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+    
+            if (totalTime > Game.cpu.limit) {
+                statsConsole.log("Tick: " + Game.time + "  CPU OVERRUN: " + Game.cpu.getUsed().toFixed(2) + "  Bucket:" + Game.cpu.bucket, 5);
+            }
+            if ((Game.time % 5) === 0) {
+                //console.log(statsConsole.displayHistogram());
+                //console.log(statsConsole.displayStats());
+                //console.log(statsConsole.displayLogs());
+                //console.log(statsConsole.displayMaps()); // Don't use as it will consume ~30-40 CPU
+                totalTime = (Game.cpu.getUsed() - totalTime);
+                //console.log("Time to Draw: " + totalTime.toFixed(2));
+            }
+            
+        });
     }
 
 };

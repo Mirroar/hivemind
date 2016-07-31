@@ -89,7 +89,7 @@ var roleUpgrader = {
             }
 
             // Could also try to get energy from another nearby container.
-            var otherContainers = target.pos.findInRange(FIND_STRUCTURES, 3, {
+            var otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
                 filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id != creep.room.memory.controllerContainer
             });
             if (otherContainers && otherContainers.length > 0) {
