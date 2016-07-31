@@ -126,6 +126,19 @@ var utilities = {
             delete room.memory.controllerLink;
         }
 
+        // Check if storage has a link nearby.
+        if (room.storage) {
+            var structures = room.find(FIND_STRUCTURES, {
+                filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.pos.getRangeTo(room.storage) <= 3
+            });
+            if (structures && structures.length > 0) {
+                room.memory.storageLink = structures[0].id;
+            }
+            else {
+                delete room.memory.storageLink;
+            }
+        }
+
         // Scan for energy sources.
         var sources = room.find(FIND_SOURCES);
 

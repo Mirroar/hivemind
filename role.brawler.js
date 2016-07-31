@@ -191,8 +191,9 @@ var roleBrawler = {
             var target = Game.getObjectById(creep.memory.order.target);
 
             if (target) {
-                creep.moveTo(target, {
+                var result = creep.moveTo(target, {
                     reusePath: 0,
+                    ignoreDestructibleStructures: !creep.room.controller.my,
                 });
             }
         }

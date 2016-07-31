@@ -1,6 +1,7 @@
 var gameState = require('game.state');
 var Squad = require('manager.squad');
 var utilities = require('utilities');
+var stats = require('stats');
 
 /**
  * Intelligently tries to create a creep.
@@ -203,8 +204,19 @@ var spawnManager = {
                     if (totalWork < room.memory.sources[id].maxWorkParts && room.memory.sources[id].harvesters.length < room.memory.sources[id].maxHarvesters) {
                         spawnHarvester = true;
                     }
+
+                    // If we have a link to beam energy around, we'll need less transporters.
+                    if (room.memory.sources[id].targetLink && room.memory.controllerLink) {
+                        maxTransporters--;
+                    }
                 }
             }
+
+            // Need less transporters if energy gets beamed around the place a lot.
+            if (room.memory.controllerLink && room.memory.storageLink) {
+                maxTransporters--;
+            }
+
             //console.log(room.name, spawn.pos.roomName, 'Harvesters:', numHarvesters, '/', maxHarvesters);
             //console.log(room.name, spawn.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
@@ -696,48 +708,36 @@ var spawnManager = {
     },
 
     spawnHauler: function (spawn, targetPosition, maxCarryParts) {
-        if ((spawn.room.energyAvailable >= spawn.room.energyCapacityAvailable * 0.9) && !spawn.spawning) {
-            var maxParts = null;
-            if (maxCarryParts) {
-                maxParts = {carry: maxCarryParts};
-            }
-            var body = utilities.generateCreepBody({move: 0.35, work: 0.05, carry: 0.6}, spawn.room.energyAvailable, maxParts);
-
-            if (spawn.canCreateCreep(body) == OK) {
-                var position = spawn.pos;
-                if (spawn.room.storage) {
-                    position = spawn.room.storage.pos;
-                }
-                var newName = spawnManager.createCreep(spawn, body, {
-                    role: 'hauler',
-                    storage: utilities.encodePosition(position),
-                    source: utilities.encodePosition(targetPosition),
-                });
-
-                // Save some stats.
-                if (!spawn.room.memory.remoteHarvesting) {
-                    spawn.room.memory.remoteHarvesting = {};
-                }
-                if (!spawn.room.memory.remoteHarvesting[targetPosition.roomName]) {
-                    spawn.room.memory.remoteHarvesting[targetPosition.roomName] = {
-                        creepCost: 0,
-                        buildCost: 0,
-                        revenue: 0,
-                        harvesters: [],
-                    };
-                }
-
-                var cost = 0;
-                for (var i in body) {
-                    cost += BODYPART_COST[body[i]];
-                }
-
-                spawn.room.memory.remoteHarvesting[targetPosition.roomName].creepCost += cost;
-
-                return true;
-            }
+        var maxParts = null;
+        if (maxCarryParts) {
+            maxParts = {carry: maxCarryParts};
         }
-        return false;
+
+        var position = spawn.pos;
+        if (spawn.room.storage) {
+            position = spawn.room.storage.pos;
+        }
+
+        var result = spawn.createManagedCreep({
+            role: 'hauler',
+            bodyWeights: {move: 0.35, work: 0.05, carry: 0.6},
+            maxParts: maxParts,
+            memory: {
+                storage: utilities.encodePosition(position),
+                source: utilities.encodePosition(targetPosition),
+            },
+        });
+
+        if (result) {
+            var cost = 0;
+            for (var part in Memory.creeps[result].body) {
+                var count = Memory.creeps[result].body[part];
+                cost += BODYPART_COST[part] * count;
+            }
+            stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(targetPosition), cost);
+        }
+
+        return result;
     },
 
     /**
@@ -825,7 +825,7 @@ var spawnManager = {
     spawnUpgrader: function (spawn) {
         var bodyWeights = {move: 0.35, work: 0.3, carry: 0.35};
         if (spawn.room.memory.controllerContainer) {
-            bodyWeights = {move: 0.1, work: 0.8, carry: 0.1};
+            bodyWeights = {move: 0.2, work: 0.75, carry: 0.05};
         }
 
         return spawn.createManagedCreep({

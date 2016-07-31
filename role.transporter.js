@@ -213,6 +213,19 @@ var roleTransporter = {
             }
         }
 
+        // Deliver energy to storage link.
+        if (creep.room.memory.storageLink) {
+            var target = Game.getObjectById(creep.room.memory.storageLink);
+            if (target && target.energy < target.energyCapacity) {
+                options.push({
+                    priority: 1,
+                    weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+                    type: 'structure',
+                    object: target,
+                });
+            }
+        }
+
         return options;
     },
 

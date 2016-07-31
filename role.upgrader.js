@@ -30,8 +30,31 @@ var roleUpgrader = {
         }
 
         if (creep.memory.upgrading) {
+            // Upgrade controller.
             if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller);
+            }
+
+            // Keep syphoning energy from link or controller to ideally never stop upgrading.
+            // Only real upgraders do this, though, otherwise other primary roles will never stop upgrading.
+            if (creep.memory.role == 'upgrader' && _.sum(creep.carry) < creep.carryCapacity) {
+                var withdrawn = false;
+                if (creep.room.memory.controllerLink) {
+                    var controllerLink = Game.getObjectById(creep.room.memory.controllerLink);
+                    if (controllerLink.energy > 0 && creep.pos.getRangeTo(controllerLink) <= 1) {
+                        if (creep.withdraw(controllerLink, RESOURCE_ENERGY) == OK) {
+                            withdrawn = true;
+                        }
+                    }
+                }
+                if (!withdrawn && creep.room.memory.controllerContainer) {
+                    var controllerContainer = Game.getObjectById(creep.room.memory.controllerContainer);
+                    if (controllerContainer.store.energy > 0 && creep.pos.getRangeTo(controllerContainer) <= 1) {
+                        if (creep.withdraw(controllerContainer, RESOURCE_ENERGY) == OK) {
+                            withdrawn = true;
+                        }
+                    }
+                }
             }
             return true;
         }

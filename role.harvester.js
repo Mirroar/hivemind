@@ -46,7 +46,8 @@ var roleHarvester = {
             }
         }
 
-        if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+        var result =creep.harvest(source);
+        if (result == ERR_NOT_IN_RANGE) {
             var result = creep.moveTo(source);
             if (result == ERR_NO_PATH) {
                 // If source can't be reached for a while, find a new one.
@@ -172,6 +173,7 @@ var roleHarvester = {
 
     /** @param {Creep} creep **/
     run: function (creep) {
+        //console.log('harvester run', creep.name);
         if (creep.memory.delivering && _.sum(creep.carry) <= 0) {
             creep.memory.delivering = false;
             delete creep.memory.tempRole;

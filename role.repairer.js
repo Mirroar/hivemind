@@ -57,6 +57,7 @@ var roleRepairer = {
                     continue;
                 }
                 option.weight = 1 - target.hits / maxHealth;
+                option.maxHealth = maxHealth;
             }
 
             if (target.hits / maxHealth > 0.9) {
@@ -78,6 +79,9 @@ var roleRepairer = {
                 }
             }
 
+            // Slightly adjust weight so that closer structures get prioritized.
+            option.weight -= creep.pos.getRangeTo(target) / 100;
+
             option.priority -= creepGeneral.getCreepsWithOrder('repair', target.id).length;
 
             options.push(option);
@@ -98,7 +102,8 @@ var roleRepairer = {
 
             creep.memory.order = {
                 type: 'repair',
-                target: best.object.id
+                target: best.object.id,
+                maxHealth: best.maxHealth,
             };
         }
         else {
@@ -116,7 +121,16 @@ var roleRepairer = {
             return false;
         }
         var target = Game.getObjectById(best);
-        if (!target || !target.hits || target.hits >= target.hitsMax) {
+        var maxHealth = target.hitsMax;
+        if (creep.memory.order.maxHealth) {
+            maxHealth = creep.memory.order.maxHealth;
+
+            // Repair ramparts past their maxHealth to counteract decaying.
+            if (target.structureType == STRUCTURE_RAMPART) {
+                maxHealth = Math.min(maxHealth + 10000, target.hitsMax);
+            }
+        }
+        if (!target || !target.hits || target.hits >= maxHealth) {
             roleRepairer.calculateRepairTarget(creep);
         }
 

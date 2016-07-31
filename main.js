@@ -167,20 +167,35 @@ var main = {
     manageLinks: function () {
         for (var roomName in Game.rooms) {
             var room = Game.rooms[roomName];
-            if (!room.memory.sources) continue;
 
-            for (var id in room.memory.sources) {
-                if (!room.memory.sources[id].targetLink) continue;
+            // Pump energy into upgrade controller link when possible to keep the upgrades flowing.
+            if (room.memory.controllerLink) {
+                var controllerLink = Game.getObjectById(room.memory.controllerLink);
+                if (controllerLink && controllerLink.energy <= controllerLink.energyCapacity * 0.5) {
+                    var upgradeControllerSupplied = false;
 
-                // We have a link next to a source. Good.
-                var link = Game.getObjectById(room.memory.sources[id].targetLink);
-                if (!link) continue;
+                    if (room.memory.sources) {
+                        for (var id in room.memory.sources) {
+                            if (!room.memory.sources[id].targetLink) continue;
 
-                if (room.memory.controllerLink) {
-                    var controllerLink = Game.getObjectById(room.memory.controllerLink);
-                    if (controllerLink) {
-                        if (link.energy >= link.energyCapacity * 0.5 && link.cooldown <= 0 && controllerLink.energy <= controllerLink.energyCapacity * 0.5) {
-                            link.transferEnergy(controllerLink);
+                            // We have a link next to a source. Good.
+                            var link = Game.getObjectById(room.memory.sources[id].targetLink);
+                            if (!link) continue;
+
+                            if (link.energy >= link.energyCapacity * 0.5 && link.cooldown <= 0) {
+                                link.transferEnergy(controllerLink);
+                                upgradeControllerSupplied = true;
+                            }
+                        }
+                    }
+
+                    if (!upgradeControllerSupplied && room.memory.storageLink) {
+                        var storageLink = Game.getObjectById(room.memory.storageLink);
+                        if (storageLink) {
+                            if (storageLink.energy >= storageLink.energyCapacity * 0.5 && storageLink.cooldown <= 0) {
+                                storageLink.transferEnergy(controllerLink);
+                                upgradeControllerSupplied = true;
+                            }
                         }
                     }
                 }
