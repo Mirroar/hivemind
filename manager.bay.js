@@ -45,6 +45,7 @@ Bay.prototype.refillFrom = function (creep) {
         let extension = this.extensions[i];
         if (extension.energy < extension.energyCapacity) {
             creep.transfer(extension, RESOURCE_ENERGY);
+            break;
         }
     }
 };
