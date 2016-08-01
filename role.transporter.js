@@ -161,6 +161,13 @@ Creep.prototype.getAvailableSources = function () {
                 option.priority++;
             }
 
+            if (creep.room.memory.currentReaction) {
+                // If we're doing a different reaction now, clean out faster!
+                if (REACTIONS[creep.room.memory.currentReaction[0]][creep.room.memory.currentReaction[1]] != lab.mineralType) {
+                    option.priority = 4;
+                }
+            }
+
             options.push(option);
         }
 
@@ -348,7 +355,7 @@ Creep.prototype.performGetResources = function () {
         return false;
     }
     var target = Game.getObjectById(best);
-    if (!target || (target.store && _.sum(target.store) <= 0) || (target.amount && target.amount <= 0) || (target.mineralAmount && target.mineralAmount <= 0)) {
+    if (!target || (target.store && _.sum(target.store) <= 0) || (target.amount && target.amount <= 0) || (target.mineralAmount && (target.mineralAmount <= 0 || target.mineralType != creep.memory.order.resourceType))) {
         creep.calculateSource();
     }
     else if (target.store) {
@@ -410,7 +417,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             let target = targets[i];
             let option = {
                 priority: 5,
-                weight: target.energy / target.energyCapacity,
+                weight: 1 - target.energy / target.energyCapacity,
                 type: 'structure',
                 object: target,
                 resourceType: RESOURCE_ENERGY,
@@ -430,7 +437,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 
             let option = {
                 priority: 5,
-                weight: target.energy / target.energyCapacity,
+                weight: 1 - target.energy / target.energyCapacity,
                 type: 'bay',
                 object: target,
                 resourceType: RESOURCE_ENERGY,
@@ -700,7 +707,7 @@ Creep.prototype.performDeliver = function () {
         else {
             creep.transfer(target, creep.memory.order.resourceType);
         }
-        if ((target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity)) {
+        if ((target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity) || (target.mineralAmount && target.mineralAmount >= target.mineralCapacity)) {
             creep.calculateDeliveryTarget();
         }
         if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
