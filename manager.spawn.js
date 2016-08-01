@@ -42,7 +42,7 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
         }
 
         // Creep might be requested with a maximum energy cost.
-        var maxCost = this.room.energyAvailable;
+        var maxCost = this.room.energyCapacityAvailable * 0.9;
         if (options.maxCost) {
             maxCost = Math.min(maxCost, options.maxCost);
         }
