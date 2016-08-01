@@ -101,7 +101,7 @@ var structureManager = {
                     amount /= 3;
                 }
 
-                if (amount >= 100000) {
+                if (amount >= 50000) {
                     roomData.state[resourceType] = 'high';
                 }
                 else if (amount >= 10000) {
