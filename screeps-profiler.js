@@ -15,6 +15,7 @@ function setupProfiler() {
       setupMemory('profile', duration || 100, filter);
     },
     reset: resetMemory,
+    printProfile: Profiler.printProfile,
   };
 
   overloadCPUCalc();
@@ -113,7 +114,8 @@ const Profiler = {
   },
 
   emailProfile() {
-    Game.notify(Profiler.output());
+    Memory.profiler.output = Profiler.output();
+    Game.notify(memory.profiler.output);
   },
 
   output() {
@@ -124,7 +126,7 @@ const Profiler = {
       `Total: ${Memory.profiler.totalTime.toFixed(2)}`,
       `Ticks: ${elapsedTicks}`,
     ].join('\t');
-    return [].concat(header, Profiler.lines().slice(0, 20), footer).join('\n');
+    return [].concat(header, Profiler.lines()/*.slice(0, 20)*/, footer).join('\n');
   },
 
   lines() {
