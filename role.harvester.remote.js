@@ -92,6 +92,17 @@ Creep.prototype.performRemoteHarvest = function () {
     var actionTaken = false;
     var source;
     var sourcePosition = utilities.decodePosition(creep.memory.source);
+
+    if (this.hasCachedPath()) {
+        this.followCachedPath();
+        if (this.hasArrived()) {
+            this.clearCachedPath();
+        }
+        else {
+            return;
+        }
+    }
+
     if (sourcePosition.roomName != creep.pos.roomName) {
         creep.moveTo(sourcePosition);
         return true;
@@ -148,6 +159,17 @@ Creep.prototype.performRemoteHarvest = function () {
     else {
         creep.harvest(source);
     }
+
+    // Immediately deposit energy if a container is nearby.
+    var targetPosition = utilities.decodePosition(creep.memory.storage);
+    var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
+    if (harvestMemory.hasContainer) {
+        var container = Game.getObjectById(harvestMemory.containerId);
+        if (_.sum(creep.carry) >= creep.carryCapacity * 0.5 && creep.pos.getRangeTo(container) <= 1) {
+            creep.transfer(container, RESOURCE_ENERGY);
+        }
+    }
+
     return true;
 };
 
@@ -157,7 +179,7 @@ Creep.prototype.performRemoteHarvest = function () {
 Creep.prototype.performRemoteHarvesterDeliver = function () {
     var creep = this;
     var targetPosition = utilities.decodePosition(creep.memory.storage);
-    var harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
+    var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
     if (harvestMemory.hasContainer) {
         var container = Game.getObjectById(harvestMemory.containerId);
         if (!container) {
@@ -179,6 +201,16 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
                 creep.drop(RESOURCE_ENERGY);
             }
             return true;
+        }
+    }
+
+    if (this.hasCachedPath()) {
+        this.followCachedPath();
+        if (this.hasArrived()) {
+            this.clearCachedPath();
+        }
+        else {
+            return;
         }
     }
 
@@ -244,6 +276,14 @@ Creep.prototype.setRemoteHarvestState = function (harvesting) {
             harvestMemory.hasContainer = false;
             delete harvestMemory.containerId;
         }
+    }
+
+    var sourcePosition = utilities.decodePosition(this.memory.source);
+    var targetPosition = utilities.decodePosition(this.memory.storage);
+    var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
+
+    if (harvestMemory.cachedPath) {
+        this.setCachedPath(harvestMemory.cachedPath.path, !harvesting, 1);
     }
 };
 
