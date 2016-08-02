@@ -1,11 +1,4 @@
-/*
- * Module code goes here. Use 'module.exports' to export things:
- * module.exports.thing = 'a thing';
- *
- * You can import it from another modules like this:
- * var mod = require('utilities');
- * mod.thing == 'a thing'; // true
- */
+var intelManager = require('manager.intel');
 
 Room.prototype.getStorageLocation = function () {
     var room = this;
@@ -321,7 +314,100 @@ Room.prototype.scan = function () {
     }
 };
 
+var pathPrecalculated = false;
+
 var utilities = {
+
+    precalculatePaths: function (room, sourceFlag) {
+        if (pathPrecalculated) return;
+
+        var start = Game.cpu.getUsed();
+        //console.log('precalculate harvest paths', room, sourceFlag);
+
+        var flagPosition = utilities.encodePosition(sourceFlag.pos);
+
+        if (!room.memory.remoteHarvesting) {
+            room.memory.remoteHarvesting = {};
+        }
+        if (!room.memory.remoteHarvesting[flagPosition]) {
+            room.memory.remoteHarvesting[flagPosition] = {};
+        }
+        var harvestMemory = room.memory.remoteHarvesting[flagPosition];
+
+        if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 1000) {
+            // No need to recalculate path.
+            return;
+        }
+
+        var startPosition = room.getStorageLocation();
+        startPosition = new RoomPosition(startPosition.x, startPosition.y, room.name);
+        if (room.storage) {
+            startPosition = room.storage.pos;
+        }
+
+        var endPosition = sourceFlag.pos;
+        //console.log('Finding path between', startPosition, 'and', endPosition);
+
+        var result = PathFinder.search(startPosition, {pos: endPosition, range: 1}, {
+            plainCost: 2,
+            swampCost: 10,
+
+            roomCallback: function (roomName) {
+                let room = Game.rooms[roomName];
+
+                // If a room is considered inaccessible, don't look for paths through it.
+                if (intelManager.isRoomInaccessible(roomName)) return false;
+
+                // If we have no sight in a room, assume it is empty.
+                if (!room) return new PathFinder.CostMatrix;
+
+                // Work with roads and structures in a room.
+                // @todo Let intel manager generate the CostMatrixes and reuse them here.
+                let costs = new PathFinder.CostMatrix;
+
+                room.find(FIND_STRUCTURES).forEach(function (structure) {
+                    if (structure.structureType === STRUCTURE_ROAD) {
+                        // Only do this if no structure is on the road.
+                        if (costs.get(structure.pos.x, structure.pos.y) <= 0) {
+                            // Favor roads over plain tiles.
+                            costs.set(structure.pos.x, structure.pos.y, 1);
+                        }
+                    } else if (structure.structureType !== STRUCTURE_CONTAINER && (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
+                        // Can't walk through non-walkable buildings.
+                        costs.set(structure.pos.x, structure.pos.y, 0xff);
+                    }
+                });
+
+                // Also try not to drive through bays.
+                room.find(FIND_FLAGS, {
+                    filter: (flag) => flag.name.startsWith('Bay:')
+                }).forEach(function (flag) {
+                    if (costs.get(flag.pos.x, flag.pos.y) <= 20) {
+                        costs.set(flag.pos.x, flag.pos.y, 20);
+                    }
+                });
+
+
+                return costs;
+            },
+        });
+        pathPrecalculated = true;
+
+        if (result) {
+            //console.log('found path in', result.ops, 'operations', result.path);
+
+            harvestMemory.cachedPath = {
+                lastCalculated: Game.time,
+                path: Room.serializePositionPath(result.path),
+            };
+        }
+        else {
+            console.log('No path found!');
+        }
+
+        var end = Game.cpu.getUsed();
+        //console.log('Total time:', end - start);
+    },
 
     getClosest: function (creep, targets) {
         if (targets.length > 0) {
