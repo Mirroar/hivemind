@@ -491,10 +491,13 @@ Room.prototype.manageSpawns = function () {
                         position = spawn.room.storage.pos;
                     }
 
+                    // Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
+                    var brawlPosition = new RoomPosition(25, 25, flag.pos.roomName);
+
                     var maxBrawlers = 1;
                     var brawlers = _.filter(Game.creeps, (creep) => {
                         if (creep.memory.role == 'brawler') {
-                            if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                            if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(brawlPosition)) {
                                 return true;
                             }
                         }
@@ -502,9 +505,8 @@ Room.prototype.manageSpawns = function () {
                     });
 
                     if (!brawlers || brawlers.length < maxBrawlers) {
-                        //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
-                        if (spawn.spawnBrawler(flag.pos, 4)) {
-                            //Game.notify('Brawler spawned to defend room ' + flag.pos.roomName);
+                        if (spawn.spawnBrawler(brawlPosition, 4)) {
+                            //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
                         }
                         return true;
                     }
