@@ -1,3 +1,5 @@
+// @todo Mark inaccessible rooms accessible again after a set number of ticks (to revisit with scouts or something similar).
+
 Room.prototype.gatherIntel = function () {
     var room = this;
     if (!room.memory.intel) {
@@ -52,6 +54,9 @@ Room.prototype.gatherIntel = function () {
     // @todo Check for neutral terminals.
 
     // @todo Check enemy structures.
+
+    // @todo Check for roads and structure in general to aid pathfinding when no creep is in a room. Even better, just generate and save a CostMatrix.
+    // @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
 };
 
 var intelManager = {
@@ -68,6 +73,18 @@ var intelManager = {
 
         intel.lastScan = Game.time;
         intel.inaccessible = true;
+    },
+
+    isRoomInaccessible: function (roomName) {
+        if (!Memory.rooms[roomName]) {
+            return false;
+        }
+        if (!Memory.rooms[roomName].intel) {
+            return false;
+        }
+
+        var intel = Memory.rooms[roomName].intel;
+        return intel.inaccessible;
     },
 
     /**
