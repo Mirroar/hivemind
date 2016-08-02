@@ -377,11 +377,16 @@ var main = {
 
                     if (room.storage) {
                         stored = room.storage.store[RESOURCE_ENERGY];
-                        storedTotal = room.storage.storeCapacity[RESOURCE_ENERGY];
+                        storedTotal = room.storage.storeCapacity;
                     }
                     else {
                         stored = 0;
                         storedTotal = 0;
+                    }
+
+                    if (room.terminal) {
+                        stored += room.terminal.store[RESOURCE_ENERGY];
+                        storedTotal += room.terminal.storeCapacity;
                     }
 
                     Memory.stats['room.' + room.name + '.storedEnergy'] = stored;
