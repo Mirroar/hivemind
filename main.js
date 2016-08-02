@@ -390,6 +390,12 @@ var main = {
                     }
 
                     Memory.stats['room.' + room.name + '.storedEnergy'] = stored;
+
+                    let roomSpawns = _.filter(spawns, (spawn) => spawn.room.name == room.name);
+                    for (let spawnKey in roomSpawns) {
+                        let spawn = roomSpawns[spawnKey];
+                        Memory.stats['room.' + room.name + '.spawns.' + spawn.name + '.spawning'] = spawn.spawning && 1 || 0;
+                    }
                 }
                 else {
                     Memory.stats['room.' + room.name + '.myRoom'] = undefined;
@@ -399,7 +405,7 @@ var main = {
             Memory.stats['gcl.progressTotal'] = Game.gcl.progressTotal;
             Memory.stats['gcl.level'] = Game.gcl.level;
             for (let spawnKey in spawns) {
-                let spawn = Game.spawns[spawnKey];
+                let spawn = spawns[spawnKey];
                 Memory.stats['spawn.' + spawn.name + '.defenderIndex'] = spawn.memory['defenderIndex'];
             }
             let creepCounts = {};

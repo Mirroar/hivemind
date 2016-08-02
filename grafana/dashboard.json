@@ -1003,7 +1003,7 @@
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1470167895533,
+          "repeatIteration": 1470172034011,
           "scopedVars": {},
           "seriesOverrides": [],
           "span": 3,
@@ -1097,7 +1097,7 @@
           "points": false,
           "renderer": "flot",
           "repeat": null,
-          "repeatIteration": 1470167895533,
+          "repeatIteration": 1470172034011,
           "scopedVars": {},
           "seriesOverrides": [
             {
@@ -1211,7 +1211,7 @@
               "to": "null"
             }
           ],
-          "repeatIteration": 1470167895533,
+          "repeatIteration": 1470172034011,
           "scopedVars": {},
           "span": 3,
           "sparkline": {
@@ -1263,7 +1263,7 @@
     }
   ],
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -1313,6 +1313,23 @@
         "refresh_on_load": true,
         "regex": "",
         "type": "query"
+      },
+      {
+        "allFormat": "regex values",
+        "current": {},
+        "datasource": "${DS_LOCALGRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "multiFormat": "glob",
+        "name": "spawns",
+        "options": [],
+        "query": "stats.gauges.room.$rooms.spawns.*",
+        "refresh": 1,
+        "refresh_on_load": true,
+        "regex": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -1321,7 +1338,7 @@
   },
   "refresh": "15s",
   "schemaVersion": 12,
-  "version": 10,
+  "version": 26,
   "links": [],
   "gnetId": null
 }
