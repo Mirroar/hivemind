@@ -1,6 +1,7 @@
 // Screeps profiler stuff
 var profiler = require('screeps-profiler');
 
+require('pathfinding');
 require('role.brawler');
 require('role.builder');
 require('role.claimer');
