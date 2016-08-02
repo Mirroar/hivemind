@@ -6,7 +6,7 @@ StructureTower.prototype.runLogic = function () {
     var tower = this;
 
     // Emergency repairs.
-    var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+    /*var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
         filter: (structure) => {
             if (structure.structureType == STRUCTURE_WALL) {
                 return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
@@ -19,7 +19,7 @@ StructureTower.prototype.runLogic = function () {
     });
     if (closestDamagedStructure) {
         tower.repair(closestDamagedStructure);
-    }
+    }//*/
 
     // Attack enemies.
     var closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
