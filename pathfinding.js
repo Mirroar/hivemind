@@ -113,6 +113,12 @@ Creep.prototype.followCachedPath = function () {
 
     // Check if we've already moved onto the next position.
     let next = path[this.memory.cachedPath.position + 1];
+    if (!next) {
+        // Out of range, so we're probably at the end of the path.
+        this.memory.cachedPath.arrived = true;
+        return;
+    }
+
     if (next.x == this.pos.x && next.y == this.pos.y) {
         this.memory.cachedPath.position++;
     }
