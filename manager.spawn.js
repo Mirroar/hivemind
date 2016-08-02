@@ -514,14 +514,25 @@ Room.prototype.manageSpawns = function () {
 
                 // If it's safe or brawler is sent, start harvesting.
                 var doSpawn = true;
-                if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[utilities.encodePosition(flag.pos)]) {
-                    var memory = spawn.room.memory.remoteHarvesting[utilities.encodePosition(flag.pos)];
+                var flagPosition = utilities.encodePosition(flag.pos);
+                var position = spawn.pos;
+                if (spawn.room.storage) {
+                    position = spawn.room.storage.pos;
+                }
+                position = utilities.encodePosition(position);
+
+                if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[flagPosition]) {
+                    var memory = spawn.room.memory.remoteHarvesting[flagPosition];
                     doSpawn = false;
 
                     memory.harvesters = [];
                     var haulCount = 0;
-                    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.remote');
-                    var haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
+                    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.remote' && creep.memory.storage == position && creep.memory.source == flagPosition);
+                    var haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler' && creep.memory.storage == position && creep.memory.source == flagPosition);
+
+                    /*if (flag.pos.roomName == 'E49S46')
+                    console.log('--', flagPosition, 'haulers:', haulers.length);//*/
+
                     var maxRemoteHarvesters = 1;
                     var maxRemoteHaulers = 0;
                     if (memory.revenue > 0 || memory.hasContainer) {
@@ -536,14 +547,6 @@ Room.prototype.manageSpawns = function () {
                         }
                     }
 
-                    var position = spawn.pos;
-                    if (spawn.room.storage) {
-                        position = spawn.room.storage.pos;
-                    }
-                    position = utilities.encodePosition(position);
-
-                    var flagPosition = utilities.encodePosition(flag.pos);
-
                     var maxCarryParts = null;
                     if (memory.travelTime) {
                         maxCarryParts = Math.ceil(memory.travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
@@ -553,14 +556,12 @@ Room.prototype.manageSpawns = function () {
                     for (var j in harvesters) {
                         var creep = harvesters[j];
                         //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
-                        // @todo Move into filter function.
-                        if (creep.memory.storage == position && creep.memory.source == flagPosition) {
-                            if (!memory.travelTime || creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500) {
-                                memory.harvesters.push(creep.id);
-                            }
+                        if (!memory.travelTime || creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500 || creep.spawning) {
+                            memory.harvesters.push(creep.id);
                         }
                     }
-                    //console.log(utilities.encodePosition(flag.pos), flag.name, memory.harvesters.length, '/', maxRemoteHarvesters);
+                    /*if (flag.pos.roomName == 'E49S46')
+                    console.log('--', flagPosition, 'harvesters:', memory.harvesters.length, '/', maxRemoteHarvesters);//*/
                     if (memory.harvesters.length < maxRemoteHarvesters) {
                         doSpawn = true;
                     }
@@ -568,14 +569,12 @@ Room.prototype.manageSpawns = function () {
                     for (var j in haulers) {
                         let creep = haulers[j];
                         //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
-                        // @todo Move into filter function.
-                        if (creep.memory.storage == position && creep.memory.source == flagPosition) {
-                            if (creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500) {
-                                haulCount++;
-                            }
+                        if (!memory.travelTime || creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500 || creep.spawning) {
+                            haulCount++;
                         }
                     }
-                    //console.log(utilities.encodePosition(flag.pos), flag.name, haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);
+                    /*if (flag.pos.roomName == 'E49S46')
+                    console.log('--', flagPosition, 'haulers:', haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);//*/
                     if (haulCount < maxRemoteHaulers && !doSpawn) {
                         // Spawn hauler if necessary, but not if harvester is needed first.
                         if (spawn.spawnHauler(flag.pos, maxCarryParts)) {
@@ -718,7 +717,7 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
         maxParts: maxParts,
         memory: {
             storage: utilities.encodePosition(position),
-            target: utilities.encodePosition(targetPosition)
+            target: utilities.encodePosition(targetPosition),
         },
     });
     if (result) {
