@@ -1,6 +1,7 @@
 var gameState = require('game.state');
 var stats = require('stats');
 var utilities = require('utilities');
+var intelManager = require('manager.intel');
 
 var Squad = require('manager.squad');
 
@@ -520,6 +521,15 @@ Room.prototype.manageSpawns = function () {
                     position = spawn.room.storage.pos;
                 }
                 position = utilities.encodePosition(position);
+
+                // Cache path when possible.
+                try {
+                    utilities.precalculatePaths(spawn.room, flag);
+                }
+                catch (e) {
+                    console.log('Error in pathfinding:', e);
+                    console.log(e.stack);
+                }
 
                 if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[flagPosition]) {
                     var memory = spawn.room.memory.remoteHarvesting[flagPosition];
