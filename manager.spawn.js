@@ -37,33 +37,32 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
         enoughEnergy = false;
     }
 
+    var maxCost = this.room.energyCapacityAvailable * 0.9;
     if (!options.body) {
         if (!options.bodyWeights) {
             throw "No body definition for creep found.";
         }
 
         // Creep might be requested with a maximum energy cost.
-        var maxCost = this.room.energyCapacityAvailable * 0.9;
         if (options.maxCost) {
             maxCost = Math.min(maxCost, options.maxCost);
         }
 
         // Creep might be requested with a part limit.
-        if (options.maxParts) {
-            var maxPartsCost = 0;
-            // With theoretically unlimited energy, check how expensive the creep can become with maxSize.
-            var tempBody = utilities.generateCreepBody(options.bodyWeights, this.room.energyCapacityAvailable, options.maxParts);
-            for (var i in tempBody) {
-                maxPartsCost += BODYPART_COST[tempBody[i]];
-            }
-
-            maxCost = Math.min(maxCost, maxPartsCost);
+        var maxPartsCost = 0;
+        // With theoretically unlimited energy, check how expensive the creep can become with maxSize.
+        var tempBody = utilities.generateCreepBody(options.bodyWeights, this.room.energyCapacityAvailable, options.maxParts);
+        for (var i in tempBody) {
+            maxPartsCost += BODYPART_COST[tempBody[i]];
         }
 
-        if (this.room.energyAvailable >= maxCost) {
-            enoughEnergy = true;
-        }
+        maxCost = Math.min(maxCost, maxPartsCost);
+
         options.body = utilities.generateCreepBody(options.bodyWeights, maxCost, options.maxParts);
+    }
+
+    if (this.room.energyAvailable >= maxCost) {
+        enoughEnergy = true;
     }
 
     if (!enoughEnergy || this.canCreateCreep(options.body) !== OK) {

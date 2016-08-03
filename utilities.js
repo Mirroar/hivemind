@@ -465,7 +465,7 @@ var utilities = {
         }
 
         var done = false;
-        while (!done) {
+        while (!done && size < 50) {
             done = true;
             for (var part in BODYPART_COST) {
                 var currentWeight = newParts[part] / size;
@@ -475,6 +475,9 @@ var utilities = {
                         newParts[part]++;
                         size++;
                         cost += BODYPART_COST[part];
+                        if (size >= 50) {
+                            break;
+                        }
                     }
                     else {
                         // Limit for this bodypart has been reached, so stop adding.
