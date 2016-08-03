@@ -94,11 +94,11 @@ Creep.prototype.performRemoteHarvest = function () {
     var sourcePosition = utilities.decodePosition(creep.memory.source);
 
     if (this.hasCachedPath()) {
-        this.followCachedPath();
-        if (this.hasArrived()) {
+        if (this.hasArrived() || this.pos.getRangeTo(sourcePosition) < 3) {
             this.clearCachedPath();
         }
         else {
+            this.followCachedPath();
             return;
         }
     }
@@ -204,6 +204,12 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
         }
     }
 
+    if (targetPosition.roomName != creep.pos.roomName) {
+        if (creep.performBuildRoad()) {
+            return true;
+        }
+    }
+
     if (this.hasCachedPath()) {
         this.followCachedPath();
         if (this.hasArrived()) {
@@ -211,12 +217,6 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
         }
         else {
             return;
-        }
-    }
-
-    if (targetPosition.roomName != creep.pos.roomName) {
-        if (creep.performBuildRoad()) {
-            return true;
         }
     }
 
@@ -256,7 +256,8 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
 Creep.prototype.setRemoteHarvestState = function (harvesting) {
     this.memory.harvesting = harvesting;
 
-    var harvestMemory = Memory.rooms[utilities.decodePosition(this.memory.storage).roomName].remoteHarvesting[this.memory.source];
+    var targetPosition = utilities.decodePosition(this.memory.storage);
+    var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
     if (harvesting) {
         roleRemoteHarvester.startTravelTimer(this);
     }
@@ -277,10 +278,6 @@ Creep.prototype.setRemoteHarvestState = function (harvesting) {
             delete harvestMemory.containerId;
         }
     }
-
-    var sourcePosition = utilities.decodePosition(this.memory.source);
-    var targetPosition = utilities.decodePosition(this.memory.storage);
-    var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
 
     if (harvestMemory.cachedPath) {
         this.setCachedPath(harvestMemory.cachedPath.path, !harvesting, 1);
@@ -305,7 +302,7 @@ Creep.prototype.runRemoteHarvesterLogic = function () {
     else {
         return this.performRemoteHarvesterDeliver();
     }
-}
+};
 
 // @todo Make travel timer functions reusable.
 var roleRemoteHarvester = {
