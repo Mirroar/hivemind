@@ -41,6 +41,7 @@ Creep.prototype.setCachedPath = function (path, reverse, distance) {
         path: path,
         position: null,
         arrived: false,
+        lastPositions: {},
     };
 };
 
@@ -136,13 +137,70 @@ Creep.prototype.followCachedPath = function () {
 
     this.say('Pos: ' + this.memory.cachedPath.position);
 
+    // @todo Check if we've been blocked for a while and try to move around the blockade.
+    // Check if we've moved at all during the previous ticks.
+    if (!this.memory.cachedPath.lastPositions) {
+        this.memory.cachedPath.lastPositions = {};
+    }
+    this.memory.cachedPath.lastPositions[Game.time % 10] = utilities.encodePosition(this.pos);
+
+    let stuck = false;
+    if (_.size(this.memory.cachedPath.lastPositions) > 5) {
+        let last = null;
+        stuck = true;
+        for (let i in this.memory.cachedPath.lastPositions) {
+            if (!last) {
+                last = this.memory.cachedPath.lastPositions[i];
+            }
+            if (last != this.memory.cachedPath.lastPositions[i]) {
+                stuck = false;
+                break;
+            }
+        }
+    }
+    if (stuck) {
+        //console.log(this.name, 'has been stuck for the last', _.size(this.memory.cachedPath.lastPositions), 'ticks. Trying to go around blockade.');
+        let i = this.memory.cachedPath.position + 1;
+        while (i < path.length) {
+            // Only try to get to paths where no creep is positioned.
+            let found = path[i].lookFor(LOOK_CREEPS);
+
+            if (!found || found.length <= 0) break;
+
+            i++;
+        }
+
+        if (i >= path.length) {
+            // No free spots until end of path. Let normal pathfinder take ofer.
+            this.memory.cachedPath.arrived = true;
+            return;
+        }
+        else {
+            //console.log(this.name, 'going to pos', i);
+            this.memory.cachedPath.forceGoTo = i;
+        }
+    }
+
     // Check if we've arrived at the end of our path.
     if (this.memory.cachedPath.position >= path.length - 1) {
         this.memory.cachedPath.arrived = true;
         return;
     }
 
-    // @todo Check if we've been blocked for a while and try to move around the blockade.
+    // Go around obstacles if necessary.
+    if (this.memory.cachedPath.forceGoTo) {
+        let pos = path[this.memory.cachedPath.forceGoTo];
+
+        if (this.pos.getRangeTo(pos) > 0) {
+            //console.log('movin to', utilities.encodePosition(pos));
+            this.moveTo(pos);
+            return;
+        }
+        else {
+            this.memory.cachedPath.position = this.memory.cachedPath.forceGoTo;
+            delete this.memory.cachedPath.forceGoTo;
+        }
+    }
 
     // Move towards next position.
     next = path[this.memory.cachedPath.position + 1];
