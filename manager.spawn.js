@@ -194,6 +194,7 @@ Room.prototype.manageSpawns = function () {
                 }
 
                 var assignedHarvesters = _.filter(harvesters, (creep) => creep.memory.fixedSource == id);
+                var sourceHarvesters = _.filter(room.memory.sources[id].harvesters, (id) => Game.getObjectById(id));
                 var totalWork = 0;
                 for (var i in assignedHarvesters) {
                     var harvester = assignedHarvesters[i];
@@ -202,7 +203,7 @@ Room.prototype.manageSpawns = function () {
                     }
                 }
 
-                if (totalWork < room.memory.sources[id].maxWorkParts && room.memory.sources[id].harvesters.length < room.memory.sources[id].maxHarvesters) {
+                if (totalWork < room.memory.sources[id].maxWorkParts && sourceHarvesters.length < room.memory.sources[id].maxHarvesters) {
                     spawnHarvester = true;
                     spawnHarvesterTarget = id;
                 }
@@ -384,7 +385,7 @@ Room.prototype.manageSpawns = function () {
             var numRooms = _.size(_.filter(Game.rooms, (room) => room.controller && room.controller.my));
             var maxRooms = Game.gcl.level;
             var claimFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('ClaimRoom'));
-            if (numRooms < maxRooms && claimFlags.length > 0) {
+            if (/*numRooms < maxRooms &&*/ claimFlags.length > 0) {
                 for (var i in claimFlags) {
                     var flag = claimFlags[i];
 
@@ -422,7 +423,7 @@ Room.prototype.manageSpawns = function () {
                     }
                 }
             }
-            else if (claimFlags.length > 0) {
+            if (claimFlags.length > 0) {
                 // Check if there are rooms marked for claiming, that belong to us, but have no spawn yet.
                 for (var i in claimFlags) {
                     var flag = claimFlags[i];
