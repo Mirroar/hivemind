@@ -6,7 +6,7 @@ var roleRemoteBuilder = {
     run: function (creep) {
         if (creep.memory.starting) {
             if (_.sum(creep.carry) < creep.carryCapacity) {
-                return creep.getEnergy();
+                return creep.performGetEnergy();
             }
             delete creep.memory.starting;
         }
