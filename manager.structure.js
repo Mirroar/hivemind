@@ -215,6 +215,9 @@ var structureManager = {
             return;
         }
 
+        // @todo Automatic road construction is disabled until I find a better way of planning rooms.
+        return;
+
         // @todo Build roads around spawn, sources, controller and storage for easier access.
         console.log('---checking road structure in room', room.name);
 
