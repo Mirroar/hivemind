@@ -221,6 +221,14 @@ Creep.prototype.performMilitaryMove = function () {
         }
     }
     else {
+        if (creep.memory.squadName) {
+            var attackFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('AttackSquad:' + creep.memory.squadName));
+            if (attackFlags.length > 0) {
+                creep.moveTo(attackFlags[0]);
+                return;
+            }
+        }
+
         creep.moveTo(25, 25, {
             reusePath: 50,
         });
