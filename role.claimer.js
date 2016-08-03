@@ -22,11 +22,17 @@ Creep.prototype.performClaim = function () {
         }
     }
     else if (!target.my) {
+        var numRooms = _.size(_.filter(Game.rooms, (room) => room.controller && room.controller.my));
+        var maxRooms = Game.gcl.level;
+
         if (this.pos.getRangeTo(target) > 1) {
             this.moveTo(target);
         }
-        else {
+        else if(numRooms < maxRooms) {
             this.claimController(target);
+        }
+        else {
+            this.reserveController(target);
         }
     }
 
