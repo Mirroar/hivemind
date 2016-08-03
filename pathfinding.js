@@ -73,10 +73,12 @@ Creep.prototype.followCachedPath = function () {
     if (!this.memory.cachedPath.position) {
         let target = this.pos.findClosestByRange(path, {
             filter: (pos) => {
-                // Only try to get to paths where no creep is positioned.
-                var found = pos.lookFor(LOOK_CREEPS);
+                if (pos.roomName == this.room.name) {
+                    // Only try to get to paths where no creep is positioned.
+                    var found = pos.lookFor(LOOK_CREEPS);
 
-                return (found.length < 1 || found[0].name == this.name) && pos.roomName == this.pos.roomName;
+                    return (found.length < 1 || found[0].name == this.name) && pos.roomName == this.pos.roomName;
+                }
             }
         });
         if (!target) {
@@ -148,7 +150,7 @@ Creep.prototype.followCachedPath = function () {
     if (next.roomName != this.pos.roomName) {
         // Something went wrong, we must have gone off the path.
         delete this.memory.cachedPath.position;
-        console.log('path reeinitialize', this.name);
+        //console.log('path reeinitialize', this.name);
         return;
     }
 
