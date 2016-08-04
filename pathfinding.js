@@ -204,6 +204,11 @@ Creep.prototype.followCachedPath = function () {
 
     // Move towards next position.
     next = path[this.memory.cachedPath.position + 1];
+    if (!next) {
+        // Out of range, so we're probably at the end of the path.
+        this.memory.cachedPath.arrived = true;
+        return;
+    }
 
     if (next.roomName != this.pos.roomName) {
         // Something went wrong, we must have gone off the path.
