@@ -9,10 +9,16 @@ var stats = {
         if (!memory.remoteHarvesting[target]) {
             memory.remoteHarvesting[target] = {
                 creepCost: 0,
+                defenseCost: 0,
                 buildCost: 0,
                 revenue: 0,
                 harvesters: [],
             };
+        }
+
+        // @toto Temporary.
+        if (!memory.remoteHarvesting[target].defenseCost) {
+            memory.remoteHarvesting[target].defenseCost = 0;
         }
     },
 
@@ -23,6 +29,15 @@ var stats = {
         stats.initRemoteHarvestMemory(source, target);
 
         memory.remoteHarvesting[target].creepCost += cost;
+    },
+
+    addRemoteHarvestDefenseCost: function (source, target, cost) {
+        if (!Memory.rooms[source]) return;
+
+        var memory = Memory.rooms[source];
+        stats.initRemoteHarvestMemory(source, target);
+
+        memory.remoteHarvesting[target].defenseCost += cost;
     },
 
 };
