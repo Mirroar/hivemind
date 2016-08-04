@@ -506,9 +506,22 @@ Room.prototype.manageSpawns = function () {
                     });
 
                     if (!brawlers || brawlers.length < maxBrawlers) {
-                        if (spawn.spawnBrawler(brawlPosition, 4)) {
+                        let result = spawn.spawnBrawler(brawlPosition, 4);
+                        if (result) {
                             //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
+
+                            if (result) {
+                                let position = utilities.encodePosition(flag.pos);
+                                console.log('Spawning new brawler to defend', position, ':', result);
+
+                                let cost = 0;
+                                for (let partType in Memory.creeps[result].body) {
+                                    cost += BODYPART_COST[partType] * Memory.creeps[result].body[partType];
+                                }
+                                stats.addRemoteHarvestDefenseCost(spawn.room.name, position, cost);
+                            }
                         }
+                        // Do not continue trying to spawn other creeps when defense is needed.
                         return true;
                     }
                 }
@@ -587,14 +600,28 @@ Room.prototype.manageSpawns = function () {
                     console.log('--', flagPosition, 'haulers:', haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);//*/
                     if (haulCount < maxRemoteHaulers && !doSpawn) {
                         // Spawn hauler if necessary, but not if harvester is needed first.
-                        if (spawn.spawnHauler(flag.pos, maxCarryParts)) {
+                        let result = spawn.spawnHauler(flag.pos, maxCarryParts);
+                        if (result) {
+                            var cost = 0;
+                            for (var part in Memory.creeps[result].body) {
+                                var count = Memory.creeps[result].body[part];
+                                cost += BODYPART_COST[part] * count;
+                            }
+                            stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(flag.pos), cost);
                             return true;
                         }
                     }
                 }
 
                 if (doSpawn) {
-                    if (spawn.spawnRemoteHarvester(flag.pos)) {
+                    let result = spawn.spawnRemoteHarvester(flag.pos);
+                    if (result) {
+                        let cost = 0;
+                        for (let part in Memory.creeps[result].body) {
+                            let count = Memory.creeps[result].body[part];
+                            cost += BODYPART_COST[part] * count;
+                        }
+                        stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(flag.pos), cost);
                         return true;
                     }
                 }
@@ -643,7 +670,32 @@ Room.prototype.manageSpawns = function () {
                 }
 
                 if (doSpawn) {
-                    if (spawn.spawnClaimer(flag.pos, 'reserve')) {
+                    let result = spawn.spawnClaimer(flag.pos, 'reserve');
+                    if (result) {
+                        // Add cost to a random harvest flag in the room.
+                        let harvestFlags = _.filter(Game.flags, (flag) => {
+                            if (flag.name.startsWith('HarvestRemote')) {
+                                // Make sure not to harvest from wrong rooms.
+                                if (flag.name.startsWith('HarvestRemote:')) {
+                                    let parts = flag.name.split(':');
+                                    if (parts[1] && parts[1] != spawn.pos.roomName) {
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            }
+                            return false;
+                        });
+
+                        if (harvestFlags.length > 0) {
+                            let cost = 0;
+                            for (let part in Memory.creeps[result].body) {
+                                let count = Memory.creeps[result].body[part];
+                                cost += BODYPART_COST[part] * count;
+                            }
+
+                            stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(_.sample(harvestFlags).pos), cost);
+                        }
                         return true;
                     }
                 }
@@ -688,7 +740,7 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
         position = this.room.storage.pos;
     }
 
-    var result = this.createManagedCreep({
+    return this.createManagedCreep({
         role: 'harvester.remote',
         bodyWeights: bodyWeights,
         maxParts: maxParts,
@@ -697,17 +749,6 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
             source: utilities.encodePosition(targetPosition),
         },
     });
-
-    if (result) {
-        var cost = 0;
-        for (var part in Memory.creeps[result].body) {
-            var count = Memory.creeps[result].body[part];
-            cost += BODYPART_COST[part] * count;
-        }
-        stats.addRemoteHarvestCost(this.room.name, utilities.encodePosition(targetPosition), cost);
-    }
-
-    return result;
 };
 
 StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts) {
@@ -721,7 +762,7 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
         position = this.room.storage.pos;
     }
 
-    var result = this.createManagedCreep({
+    return this.createManagedCreep({
         role: 'brawler',
         bodyWeights: {move: 0.4, tough: 0.3, attack: 0.2, heal: 0.1},
         maxParts: maxParts,
@@ -730,30 +771,13 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
             target: utilities.encodePosition(targetPosition),
         },
     });
-    if (result) {
-        console.log('Spawning new brawler to defend', utilities.encodePosition(targetPosition), ':', result);
-
-        if (this.room.memory.remoteHarvesting && this.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)]) {
-            var cost = 0;
-            for (var partType in Memory.creeps[result].body) {
-                cost += BODYPART_COST[partType] * Memory.creeps[result].body[partType];
-            }
-
-            if (!this.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].defenseCost) {
-                this.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].defenseCost = 0;
-            }
-            this.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].defenseCost += cost;
-        }
-    }
-
-    return result;
 };
 
 StructureSpawn.prototype.spawnClaimer = function (targetPosition, mission) {
     var minSize = BODYPART_COST[CLAIM] * 2 + BODYPART_COST[MOVE] * 2;
     if (this.room.energyAvailable < minSize) return false;
 
-    var result = this.createManagedCreep({
+    return this.createManagedCreep({
         role: 'claimer',
         bodyWeights: {move: 0.5, claim: 0.5},
         maxParts: {claim: 5},
@@ -762,17 +786,6 @@ StructureSpawn.prototype.spawnClaimer = function (targetPosition, mission) {
             mission: mission,
         },
     });
-
-    if (result && mission == 'reserve') {
-        var cost = 0;
-        for (var part in Memory.creeps[result].body) {
-            var count = Memory.creeps[result].body[part];
-            cost += BODYPART_COST[part] * count;
-        }
-        stats.addRemoteHarvestCost(this.room.name, utilities.encodePosition(targetPosition), cost);
-    }
-
-    return result;
 };
 
 /**
@@ -789,7 +802,7 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
         position = this.room.storage.pos;
     }
 
-    var result = this.createManagedCreep({
+    return this.createManagedCreep({
         role: 'hauler',
         bodyWeights: {move: 0.35, work: 0.05, carry: 0.6},
         maxParts: maxParts,
@@ -798,17 +811,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
             source: utilities.encodePosition(targetPosition),
         },
     });
-
-    if (result) {
-        var cost = 0;
-        for (var part in Memory.creeps[result].body) {
-            var count = Memory.creeps[result].body[part];
-            cost += BODYPART_COST[part] * count;
-        }
-        stats.addRemoteHarvestCost(this.room.name, utilities.encodePosition(targetPosition), cost);
-    }
-
-    return result;
 };
 
 /**
