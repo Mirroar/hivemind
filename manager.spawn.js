@@ -673,11 +673,11 @@ Room.prototype.manageSpawns = function () {
                     let result = spawn.spawnClaimer(flag.pos, 'reserve');
                     if (result) {
                         // Add cost to a random harvest flag in the room.
-                        let harvestFlags = _.filter(Game.flags, (flag) => {
-                            if (flag.name.startsWith('HarvestRemote')) {
+                        let harvestFlags = _.filter(Game.flags, (flag2) => {
+                            if (flag2.name.startsWith('HarvestRemote') && flag2.pos.roomName == flag.pos.roomName) {
                                 // Make sure not to harvest from wrong rooms.
-                                if (flag.name.startsWith('HarvestRemote:')) {
-                                    let parts = flag.name.split(':');
+                                if (flag2.name.startsWith('HarvestRemote:')) {
+                                    let parts = flag2.name.split(':');
                                     if (parts[1] && parts[1] != spawn.pos.roomName) {
                                         return false;
                                     }
