@@ -351,6 +351,7 @@ var utilities = {
         var result = PathFinder.search(startPosition, {pos: endPosition, range: 1}, {
             plainCost: 2,
             swampCost: 10,
+            maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
 
             roomCallback: function (roomName) {
                 let room = Game.rooms[roomName];
