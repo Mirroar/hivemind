@@ -77,9 +77,24 @@ Creep.prototype.followCachedPath = function () {
                 if (pos.roomName == this.room.name) {
                     // Only try to get to paths where no creep is positioned.
                     var found = pos.lookFor(LOOK_CREEPS);
+                    var found2 = pos.lookFor(LOOK_STRUCTURES);
+                    var found3 = pos.lookFor(LOOK_CONSTRUCTION_SITES);
 
-                    return (found.length < 1 || found[0].name == this.name) && pos.roomName == this.pos.roomName;
+                    var blocked = found.length > 0 && found[0].name != this.name;
+                    for (let i in found2) {
+                        if (found2[i].structureType != STRUCTURE_ROAD && found2[i].structureType != STRUCTURE_CONTAINER) {
+                            blocked = true;
+                        }
+                    }
+                    for (let i in found3) {
+                        if (found3[i].structureType != STRUCTURE_ROAD && found3[i].structureType != STRUCTURE_CONTAINER) {
+                            blocked = true;
+                        }
+                    }
+
+                    return !blocked;
                 }
+                return false;
             }
         });
         if (!target) {
@@ -142,10 +157,10 @@ Creep.prototype.followCachedPath = function () {
     if (!this.memory.cachedPath.lastPositions) {
         this.memory.cachedPath.lastPositions = {};
     }
-    this.memory.cachedPath.lastPositions[Game.time % 10] = utilities.encodePosition(this.pos);
+    this.memory.cachedPath.lastPositions[Game.time % 5] = utilities.encodePosition(this.pos);
 
     let stuck = false;
-    if (_.size(this.memory.cachedPath.lastPositions) > 5) {
+    if (_.size(this.memory.cachedPath.lastPositions) > 5 / 2) {
         let last = null;
         stuck = true;
         for (let i in this.memory.cachedPath.lastPositions) {
@@ -163,9 +178,23 @@ Creep.prototype.followCachedPath = function () {
         let i = this.memory.cachedPath.position + 1;
         while (i < path.length) {
             // Only try to get to paths where no creep is positioned.
-            let found = path[i].lookFor(LOOK_CREEPS);
+            var found = path[i].lookFor(LOOK_CREEPS);
+            var found2 = path[i].lookFor(LOOK_STRUCTURES);
+            var found3 = path[i].lookFor(LOOK_CONSTRUCTION_SITES);
 
-            if (!found || found.length <= 0) break;
+            var blocked = found.length > 0 && found[0].name != this.name;
+            for (let i in found2) {
+                if (found2[i].structureType != STRUCTURE_ROAD && found2[i].structureType != STRUCTURE_CONTAINER) {
+                    blocked = true;
+                }
+            }
+            for (let i in found3) {
+                if (found3[i].structureType != STRUCTURE_ROAD && found3[i].structureType != STRUCTURE_CONTAINER) {
+                    blocked = true;
+                }
+            }
+
+            if (!blocked) break;
 
             i++;
         }
@@ -178,6 +207,7 @@ Creep.prototype.followCachedPath = function () {
         else {
             //console.log(this.name, 'going to pos', i);
             this.memory.cachedPath.forceGoTo = i;
+            delete this.memory.cachedPath.lastPositions;
         }
     }
 
