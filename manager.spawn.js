@@ -571,15 +571,44 @@ Room.prototype.manageSpawns = function () {
                     }
 
                     var maxCarryParts = null;
+                    var travelTime = null;
+                    var travelTimeSpawn = null;
                     if (memory.travelTime) {
-                        maxCarryParts = Math.ceil(memory.travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
+                        travelTime = memory.travelTime;
+                        travelTimeSpawn = memory.travelTime;
+                    }
+                    if (memory.cachedPath && memory.cachedPath.path) {
+                        // Path length is more accurate than observed travel time, because it's calculated between storage and source, not spawn and source.
+                        travelTime = memory.cachedPath.path.length;
+
+                        if (!travelTimeSpawn) {
+                            travelTimeSpawn = memory.cachedPath.path.length;
+                        }
+                    }
+                    if (travelTime) {
+                        maxCarryParts = Math.ceil(travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
                         //console.log('Need', maxCarryParts, 'carry parts when transporting remotely harvested energy from', flagPosition);
+
+                        // If we cannot create big enough haulers (yet), create more of them!
+                        let bodyWeights = spawn.getHaulerBodyWeights();
+                        let maxHauler = utilities.generateCreepBody(bodyWeights, spawn.room.energyCapacityAvailable, {carry: maxCarryParts});
+                        let carryCount = 0;
+                        for (let j in maxHauler) {
+                            if (maxHauler[j] == CARRY) {
+                                carryCount++;
+                            }
+                        }
+
+                        let multiplier = Math.min(maxCarryParts / carryCount, 3);
+                        maxRemoteHaulers *= multiplier;
+
+                        //console.log(spawn.room.name, 'adjusting number of haulers by', multiplier, flagPosition);
                     }
 
                     for (var j in harvesters) {
                         var creep = harvesters[j];
                         //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
-                        if (!memory.travelTime || creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500 || creep.spawning) {
+                        if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
                             memory.harvesters.push(creep.id);
                         }
                     }
@@ -592,7 +621,7 @@ Room.prototype.manageSpawns = function () {
                     for (var j in haulers) {
                         let creep = haulers[j];
                         //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
-                        if (!memory.travelTime || creep.ticksToLive > memory.travelTime || creep.ticksToLive > 500 || creep.spawning) {
+                        if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
                             haulCount++;
                         }
                     }
@@ -728,6 +757,7 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
             maxParts.work = 6;
         }
     }
+    // @todo Also use high number of work parts if road still needs to be built.
 
     // Use less move parts if a road has already been established.
     if (this.room.memory.remoteHarvesting && this.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)] && this.room.memory.remoteHarvesting[utilities.encodePosition(targetPosition)].revenue > 0) {
@@ -788,6 +818,10 @@ StructureSpawn.prototype.spawnClaimer = function (targetPosition, mission) {
     });
 };
 
+StructureSpawn.prototype.getHaulerBodyWeights = function () {
+    return {move: 0.35, work: 0.05, carry: 0.6};
+}
+
 /**
  * Spawns a new hauler.
  */
@@ -802,9 +836,11 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
         position = this.room.storage.pos;
     }
 
+    var bodyWeights = this.getHaulerBodyWeights();
+
     return this.createManagedCreep({
         role: 'hauler',
-        bodyWeights: {move: 0.35, work: 0.05, carry: 0.6},
+        bodyWeights: bodyWeights,
         maxParts: maxParts,
         memory: {
             storage: utilities.encodePosition(position),
