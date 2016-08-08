@@ -227,6 +227,9 @@ Room.prototype.addHarvesterSpawnOptions = function () {
     }
 };
 
+/**
+ * Checks for and spawns more transporters.
+ */
 Room.prototype.addTransporterSpawnOptions = function () {
     var memory = this.memory.spawnQueue;
 
@@ -291,10 +294,10 @@ Room.prototype.manageSpawns = function () {
 
     // Gather some information.
     // @todo This could be done on script startup and partially kept in room memory.
-    var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder' && creep.pos.roomName == room.name);
-    var repairers = _.filter(Game.creeps, (creep) => creep.memory.role == 'repairer' && creep.pos.roomName == room.name);
-    var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader' && creep.pos.roomName == room.name);
-    var mineralHarvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.minerals' && creep.pos.roomName == room.name);
+    var builders = this.creepsByRole.builder || [];
+    var repairers = this.creepsByRole.repairer || [];
+    var upgraders = this.creepsByRole.upgrader || [];
+    var mineralHarvesters = this.creepsByRole['harvester.minerals'] || [];
     var minerals = room.find(FIND_MINERALS, {
         filter: (mineral) => {
             var extractors = room.find(FIND_STRUCTURES, {

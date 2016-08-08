@@ -505,13 +505,8 @@ var main = {
                 Memory.stats['spawn.' + spawn.name + '.defenderIndex'] = spawn.memory['defenderIndex'];
             }
             let creepCounts = {};
-            for (let i in Game.creeps) {
-                let creep = Game.creeps[i];
-                let role = creep.memory.role.replace('.', '_');
-                creepCounts[role] = (creepCounts[role] || 0) + 1;
-            }
-            for (let role in creepCounts) {
-                Memory.stats['creeps.count.' + role] = creepCounts[role];
+            for (let role in Game.creepsByRole) {
+                Memory.stats['creeps.count.' + role] = _.size(Game.creepsByRole[role]);
             }
 
             Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
