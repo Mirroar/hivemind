@@ -150,6 +150,9 @@ Room.prototype.manageSpawnsPriority = function () {
     // Fill spawn queue.
     this.addHarvesterSpawnOptions();
     this.addTransporterSpawnOptions();
+    this.addUpgraderSpawnOptions();
+    this.addBuilderSpawnOptions();
+    this.addRepairerSpawnOptions();
 
     if (memory.options.length > 0) {
         // Try to spawn the most needed creep.
@@ -171,6 +174,15 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     }
     else if (best.role == 'transporter') {
         activeSpawn.spawnTransporter(best.force);
+    }
+    else if (best.role == 'upgrader') {
+        activeSpawn.spawnUpgrader();
+    }
+    else if (best.role == 'builder') {
+        activeSpawn.spawnBuilder();
+    }
+    else if (best.role == 'repairer') {
+        activeSpawn.spawnRepairer();
     }
     else {
         console.log(this.name, 'trying to spawn unknown creep role:', best.role);
@@ -276,6 +288,88 @@ Room.prototype.addTransporterSpawnOptions = function () {
 };
 
 /**
+ * Spawns a number of upgraders appropriate for this room.
+ */
+Room.prototype.addUpgraderSpawnOptions = function () {
+    var memory = this.memory.spawnQueue;
+
+    var numUpgraders = _.size(this.creepsByRole.upgrader);
+    var maxUpgraders = 0;
+
+    if (this.controller.level <= 3) {
+        maxUpgraders = 1 + numSources + Math.floor(gameState.getStoredEnergy(this) / 2000);
+    }
+    else if (this.controller.level == 8) {
+        maxUpgraders = 1;
+    }
+    else {
+        if (gameState.getStoredEnergy(this) < 100000) {
+            maxUpgraders = 0;
+        }
+        else if (gameState.getStoredEnergy(this) < 500000) {
+            maxUpgraders = 1;
+        }
+        else {
+            // @todo Have maximum depend on number of work parts.
+            // @todo Make sure enough energy is brought by.
+            maxUpgraders = 2;
+        }
+    }
+
+    if (maxUpgraders == 0 && this.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[this.controller.level] * 0.5) {
+        console.log('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
+        // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
+        maxUpgraders = 1;
+    }
+
+    if (numUpgraders < maxUpgraders) {
+        memory.options.push({
+            priority: 4,
+            weight: 0,
+            role: 'upgrader',
+        });
+    }
+};
+
+/**
+ * Spawns builders when needed.
+ */
+Room.prototype.addBuilderSpawnOptions = function () {
+    var memory = this.memory.spawnQueue;
+
+    var numBuilders = _.size(this.creepsByRole.builder);
+
+    // Only spawn an amount of builders befitting the amount of construction to be done.
+    var constructionSites = this.find(FIND_MY_CONSTRUCTION_SITES);
+    var maxBuilders = Math.min(1 + this.sources.length, Math.ceil(constructionSites.length / 5));
+
+    if (numBuilders < maxBuilders) {
+        memory.options.push({
+            priority: 3,
+            weight: 0.5,
+            role: 'builder',
+        });
+    }
+};
+
+/**
+ * Spawns a number of repairers to keep buildings in good health.
+ */
+Room.prototype.addRepairerSpawnOptions = function () {
+    var memory = this.memory.spawnQueue;
+
+    var numRepairers = _.size(this.creepsByRole.repairer);
+
+    if (numRepairers < 2) {
+        memory.options.push({
+            priority: 3,
+            weight: 0.5,
+            role: 'repairer',
+        });
+    }
+};
+
+/**
  * Spawns creeps in a room whenever needed.
  */
 Room.prototype.manageSpawns = function () {
@@ -294,13 +388,10 @@ Room.prototype.manageSpawns = function () {
 
     // Gather some information.
     // @todo This could be done on script startup and partially kept in room memory.
-    var builders = this.creepsByRole.builder || [];
-    var repairers = this.creepsByRole.repairer || [];
-    var upgraders = this.creepsByRole.upgrader || [];
     var mineralHarvesters = this.creepsByRole['harvester.minerals'] || [];
     var minerals = room.find(FIND_MINERALS, {
         filter: (mineral) => {
-            var extractors = room.find(FIND_STRUCTURES, {
+            var extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
                 filter: (structure) => structure.structureType == STRUCTURE_EXTRACTOR && structure.pos.x == mineral.pos.x && structure.pos.y == mineral.pos.y
             });
 
@@ -332,55 +423,7 @@ Room.prototype.manageSpawns = function () {
 
         var numSources = 0;
 
-        var maxUpgraders = 0;
-        if (room.controller.level <= 3) {
-            maxUpgraders = 1 + numSources + Math.floor(gameState.getStoredEnergy(room) / 2000);
-        }
-        else {
-            if (gameState.getStoredEnergy(room) < 100000) {
-                maxUpgraders = 0;
-            }
-            else if (gameState.getStoredEnergy(room) < 500000) {
-                maxUpgraders = 1;
-            }
-            else {
-                // @todo Have maximum depend on number of work parts.
-                // @todo Make sure enough energy is brought by.
-                maxUpgraders = 2;
-            }
-        }
-        if (maxUpgraders == 0 && room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5) {
-            console.log('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
-            // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
-            maxUpgraders = 1;
-        }
-
-        // Only spawn an amount of builders befitting the amount of construction to be done.
-        var maxBuilders = 0;
-        var constructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
-        if (constructionSites) {
-            maxBuilders = Math.min(1 + numSources, Math.ceil(constructionSites.length / 5));
-        }
-        //console.log(room.name, maxBuilders);
-
-        // Actually spawn stuff.
-        if (upgraders.length < maxUpgraders) {
-            if (spawn.spawnUpgrader()) {
-                return true;
-            }
-        }
-        else if (builders.length < maxBuilders) {
-            if (spawn.spawnBuilder()) {
-                return true;
-            }
-        }
-        else if (repairers.length < 2) {
-            // @todo Determine total decay in room and how many worker parts that would need.
-            if (spawn.spawnRepairer()) {
-                return true;
-            }
-        }
-        else {
+        {
             // Harvest minerals.
             if (mineralHarvesters.length < minerals.length && minerals[0].mineralAmount > 0) {
                 // We assume there is always at most one mineral deposit in a room.
