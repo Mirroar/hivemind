@@ -401,6 +401,7 @@ var main = {
 
             var rooms = Game.rooms;
             var spawns = Game.spawns;
+            var resources = structureManager.getRoomResourceStates();
             for (let roomKey in rooms) {
                 let room = Game.rooms[roomKey];
                 var isMyRoom = (room.controller ? room.controller.my : 0);
@@ -445,6 +446,13 @@ var main = {
                     }
 
                     Memory.stats['room.' + room.name + '.storedEnergy'] = stored;
+
+                    // Log all resources.
+                    if (resources[room.name]) {
+                        for (var resourceType in resources[room.name].totalResources) {
+                            Memory.stats['room.' + room.name + '.resources.' + resourceType] = resources[room.name].totalResources[resourceType];
+                        }
+                    }
 
                     // Log spawn activity.
                     let roomSpawns = _.filter(spawns, (spawn) => spawn.room.name == room.name);
