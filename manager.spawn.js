@@ -464,11 +464,9 @@ Room.prototype.manageSpawns = function () {
                         continue;
                     }
 
-                    var brawlers = _.filter(Game.creeps, (creep) => {
-                        if (creep.memory.role == 'brawler') {
-                            if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                return true;
-                            }
+                    var brawlers = _.filter(Game.creepsByRole.brawler || [], (creep) => {
+                        if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                            return true;
                         }
                         return false;
                     });
@@ -525,11 +523,9 @@ Room.prototype.manageSpawns = function () {
                         }
                     }
                     if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
-                        var claimers = _.filter(Game.creeps, (creep) => {
-                            if (creep.memory.role == 'claimer') {
-                                if (creep.memory.mission == 'claim' && creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                    return true;
-                                }
+                        var claimers = _.filter(Game.creepsByRole.claimer || [], (creep) => {
+                            if (creep.memory.mission == 'claim' && creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                return true;
                             }
                             return false;
                         });
@@ -560,11 +556,9 @@ Room.prototype.manageSpawns = function () {
                         }
                         if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
                             var maxRemoteBuilders = 2;
-                            var builders = _.filter(Game.creeps, (creep) => {
-                                if (creep.memory.role == 'builder.remote') {
-                                    if (creep.memory.target == utilities.encodePosition(flag.pos)) {
-                                        return true;
-                                    }
+                            var builders = _.filter(Game.creepsByRole['builder.remote'] || [], (creep) => {
+                                if (creep.memory.target == utilities.encodePosition(flag.pos)) {
+                                    return true;
                                 }
                                 return false;
                             });
@@ -616,11 +610,9 @@ Room.prototype.manageSpawns = function () {
                     var brawlPosition = new RoomPosition(25, 25, flag.pos.roomName);
 
                     var maxBrawlers = 1;
-                    var brawlers = _.filter(Game.creeps, (creep) => {
-                        if (creep.memory.role == 'brawler') {
-                            if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(brawlPosition)) {
-                                return true;
-                            }
+                    var brawlers = _.filter(Game.creepsByRole.brawler || [], (creep) => {
+                        if (creep.memory.storage == utilities.encodePosition(position) && creep.memory.target == utilities.encodePosition(brawlPosition)) {
+                            return true;
                         }
                         return false;
                     });
@@ -670,8 +662,8 @@ Room.prototype.manageSpawns = function () {
 
                     memory.harvesters = [];
                     var haulCount = 0;
-                    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.remote' && creep.memory.storage == position && creep.memory.source == flagPosition);
-                    var haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler' && creep.memory.storage == position && creep.memory.source == flagPosition);
+                    var harvesters = _.filter(Game.creepsByRole['harvester.remote'] || [], (creep) => creep.memory.storage == position && creep.memory.source == flagPosition);
+                    var haulers = _.filter(Game.creepsByRole.hauler || [], (creep) => creep.memory.storage == position && creep.memory.source == flagPosition);
 
                     /*if (flag.pos.roomName == 'E49S46')
                     console.log('--', flagPosition, 'haulers:', haulers.length);//*/
@@ -798,7 +790,7 @@ Room.prototype.manageSpawns = function () {
                 let doSpawn = false;
 
                 var claimerIds = [];
-                var claimers = _.filter(Game.creeps, (creep) => creep.memory.role == 'claimer' && creep.memory.mission == 'reserve');
+                var claimers = _.filter(Game.creepsByRole.claimer || [], (creep) => creep.memory.mission == 'reserve');
                 var maxClaimers = 1;
 
                 for (var j in claimers) {
@@ -853,8 +845,8 @@ Room.prototype.manageSpawns = function () {
             // Last but not least: Scouts.
             // @todo Spawn scout closest to where we're gonna send it.
             var maxScouts = 1;
-            var scouts = _.filter(Game.creeps, (creep) => creep.memory.role == 'scout');
-            if (scouts.length < maxScouts) {
+            var numScouts = _.size(Game.creepsByRole.scout);
+            if (numScouts < maxScouts) {
                 if (spawn.spawnScout()) {
                     return true;
                 }
