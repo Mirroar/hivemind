@@ -1,6 +1,7 @@
 // Screeps profiler stuff
 var profiler = require('screeps-profiler');
 
+require('manager.source');
 require('pathfinding');
 require('role.brawler');
 require('role.builder');
@@ -35,6 +36,8 @@ var Squad = require('manager.squad');
 // @todo Make sure creeps that are supposed to stay in their room do that, go back to their room if exited, and pathfind within the room only.
 
 // @todo add try / catch block to main loops so that one broken routine doesn't stop the whole colony from working.
+
+// @todo Harvest source keeper rooms. Inspiration: E36N34
 
 Creep.prototype.runLogic = function() {
     var creep = this;
@@ -93,6 +96,9 @@ Creep.prototype.runLogic = function() {
     }
 };
 
+/**
+ * Adds some additional data to room objects.
+ */
 Room.prototype.enhanceData = function () {
     this.sources = [];
 
@@ -101,7 +107,9 @@ Room.prototype.enhanceData = function () {
 
         if (intel.sources) {
             for (let i in intel.sources) {
-                this.sources.push(Game.getObjectById(intel.sources[i]));
+                let source = Game.getObjectById(intel.sources[i]);
+                this.sources.push(source);
+                source.enhanceData();
             }
         }
     }
@@ -118,6 +126,11 @@ Room.prototype.enhanceData = function () {
             console.log('Error when initializing Bays:', e);
             console.log(e.stack);
         }
+    }
+
+    if (!this.creeps) {
+        this.creeps = {};
+        this.creepsByRole = {};
     }
 };
 
@@ -264,6 +277,30 @@ var main = {
             Game.squads = [];
             for (var squadName in Memory.squads) {
                 Game.squads.push(new Squad(squadName));
+            }
+
+            // Cache creeps per room and role.
+            // @todo Probably move to Creep.prototype.enhanceData().
+            Game.creepsByRole = {};
+            for (let creepName in Game.creeps) {
+                let creep = Game.creeps[creepName];
+                let role = creep.memory.role;
+
+                if (!Game.creepsByRole[role]) {
+                    Game.creepsByRole[role] = {};
+                }
+                Game.creepsByRole[role][creepName] = creep;
+
+                let room = creep.room;
+                if (!room.creeps) {
+                    room.creeps = {};
+                    room.creepsByRole = {};
+                }
+                room.creeps[creepName] = creep;
+                if (!room.creepsByRole[role]) {
+                    room.creepsByRole[role] = {};
+                }
+                room.creepsByRole[role][creepName] = creep;
             }
 
             // Add data to room objects.

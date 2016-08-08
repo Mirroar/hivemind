@@ -14,6 +14,7 @@ var cache = {};
 var gameState = {
 
     getStoredEnergy: function (room) {
+        // @todo Move into room.prototype.
         if (room.storage) {
             return room.storage.store[RESOURCE_ENERGY];
         }
