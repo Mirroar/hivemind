@@ -1,5 +1,9 @@
 var intelManager = require('manager.intel');
 
+/**
+ * Calculates a central room position with some free space around it for placing a storage later.
+ * If a storage already exists, its position is returned.
+ */
 Room.prototype.getStorageLocation = function () {
     var room = this;
 
@@ -95,6 +99,9 @@ Room.prototype.getStorageLocation = function () {
     return room.memory.storage;
 };
 
+/**
+ * Gathers information about a rooms sources and saves it to memory for faster access.
+ */
 Room.prototype.scan = function () {
     var room = this;
 
@@ -130,159 +137,6 @@ Room.prototype.scan = function () {
         }
         else {
             delete room.memory.storageLink;
-        }
-    }
-
-    // Scan for energy sources.
-    room.memory.sources = {};
-
-    for (var i in room.sources) {
-        var source = room.sources[i];
-        var id = source.id;
-        if (!room.memory.sources[id]) {
-            room.memory.sources[id] = {};
-        }
-        var sourceMemory = room.memory.sources[id];
-
-        // Calculate number of worker modules needed to fully harvest this source in time.
-        var energyRate = source.energyCapacity / ENERGY_REGEN_TIME;
-        sourceMemory.maxWorkParts = 1.2 * energyRate / 2;
-
-        // Calculate free adjacent squares for max harvesters.
-        var free = 0;
-        var terrain = room.lookForAtArea(LOOK_TERRAIN, source.pos.y - 1, source.pos.x - 1, source.pos.y + 1, source.pos.x + 1, true);
-        var adjacentTerrain = [];
-        for (var t in terrain) {
-            var tile = terrain[t];
-            if (tile.x == source.pos.x && tile.y == source.pos.y) {
-                continue;
-            }
-
-            //console.log(tile.terrain, tile.x, tile.y);
-            if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
-                // @todo Make sure no structures are blocking this tile.
-                free++;
-                adjacentTerrain.push(room.getPositionAt(tile.x, tile.y));
-            }
-        }
-
-        sourceMemory.maxHarvesters = free;
-        sourceMemory.harvesters = [];
-
-        // @todo Do harvester assigning during spawning.
-        // Keep harvesters which are already assigned.
-        var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester' && creep.pos.roomName == source.pos.roomName);
-        var totalWork = 0;
-        for (var t in harvesters) {
-            var harvester = harvesters[t];
-            if (harvester.memory.fixedSource == id) {
-                sourceMemory.harvesters.push(harvester.id);
-                totalWork += utilities.getBodyParts(harvester).work;
-            }
-        }
-
-        // Unassign extra harvesters.
-        var harvester = Game.getObjectById(sourceMemory.harvesters[sourceMemory.harvesters.length - 1]);
-        while (sourceMemory.harvesters.length > 0 && (sourceMemory.harvesters.length > free || totalWork - utilities.getBodyParts(harvester).work >= sourceMemory.maxWorkParts)) {
-            sourceMemory.harvesters.pop();
-            if (harvester) {
-                delete harvester.memory.fixedSource;
-                delete harvester.memory.fixedTarget;
-                delete harvester.memory.fixedDropoffSpot;
-                totalWork -= utilities.getBodyParts(harvester).work;
-            }
-            harvester = Game.getObjectById(sourceMemory.harvesters[sourceMemory.harvesters.length - 1]);
-        }
-
-        // Assign free harvesters.
-        for (var t in harvesters) {
-            //console.log(totalWork, sourceMemory.harvesters.length, sourceMemory.maxWorkParts);
-            if (sourceMemory.harvesters.length >= free || totalWork >= sourceMemory.maxWorkParts) {
-                break;
-            }
-
-            var harvester = harvesters[t];
-            if (!harvester.memory.fixedSource) {
-                sourceMemory.harvesters.push(harvester.id);
-                harvester.memory.fixedSource = id;
-                delete harvester.memory.fixedTarget;
-                delete harvester.memory.fixedDropoffSpot;
-            }
-        }
-
-        sourceMemory.targetContainer = null;
-        sourceMemory.targetLink = null;
-
-        // Check if there is a container nearby.
-        var structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
-            filter: (structure) => structure.structureType == STRUCTURE_CONTAINER
-        });
-        if (structures && structures.length > 0) {
-            var structure = source.pos.findClosestByRange(structures);
-            if (structure) {
-                sourceMemory.targetContainer = structure.id;
-            }
-        }
-
-        // Check if there is a link nearby.
-        var structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
-            filter: (structure) => structure.structureType == STRUCTURE_LINK
-        });
-        if (structures && structures.length > 0) {
-            var structure = source.pos.findClosestByRange(structures);
-            if (structure) {
-                sourceMemory.targetLink = structure.id;
-            }
-        }
-
-        // Decide on a dropoff-spot that will eventually have a container built.
-        if (!sourceMemory.dropoffSpot) {
-            var best;
-            var bestCount = 0;
-            var terrain = room.lookForAtArea(LOOK_TERRAIN, source.pos.y - 2, source.pos.x - 2, source.pos.y + 2, source.pos.x + 2, true);
-            for (var t in terrain) {
-                var tile = terrain[t];
-                if (source.pos.getRangeTo(tile.x, tile.y) <= 1) {
-                    continue;
-                }
-
-                //console.log(tile.terrain, tile.x, tile.y);
-                if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
-                    // @todo Make sure no structures are blocking this tile.
-                    var count = 0;
-                    for (var u in adjacentTerrain) {
-                        var aTile = adjacentTerrain[u];
-
-                        if (aTile.getRangeTo(tile.x, tile.y) <= 1) {
-                            count++;
-                        }
-                    }
-
-                    if (count > bestCount) {
-                        bestCount = count;
-                        best = tile;
-                    }
-                }
-            }
-
-            if (best) {
-                sourceMemory.dropoffSpot = {x: best.x, y: best.y};
-            }
-        }
-
-        // Assign target container to available harvesters.
-        // @todo Instead have harvesters check room memory for containers and links belonging to their source.
-        if (sourceMemory.targetContainer) {
-            for (var t in sourceMemory.harvesters) {
-                var harvester = Game.getObjectById(sourceMemory.harvesters[t]);
-                harvester.memory.fixedTarget = sourceMemory.targetContainer;
-            }
-        }
-        if (sourceMemory.dropoffSpot) {
-            for (var t in sourceMemory.harvesters) {
-                var harvester = Game.getObjectById(sourceMemory.harvesters[t]);
-                harvester.memory.fixedDropoffSpot = sourceMemory.dropoffSpot;
-            }
         }
     }
 

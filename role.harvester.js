@@ -1,5 +1,4 @@
-// @todo Assign close-by container to dump resources.
-// @todo Assign harvesters to a specific resource spot and balance numbers accordingly.
+// @todo Rewrite delivery part using priority queue.
 
 var gameState = require('game.state');
 var utilities = require('utilities');
@@ -61,61 +60,74 @@ Creep.prototype.performHarvest = function () {
 };
 
 /**
+ * Dumps minerals a harvester creep has gathered.
+ */
+Creep.prototype.performMineralHarvesterDeliver = function () {
+    var source = Game.getObjectById(creep.memory.fixedMineralSource);
+    // By default, deliver to room's terminal if there's space.
+    if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
+        if (creep.pos.getRangeTo(creep.room.terminal) > 1) {
+            creep.moveTo(creep.room.terminal);
+        }
+        else {
+            creep.transfer(creep.room.terminal, source.mineralType);
+        }
+    }
+    else if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
+        if (creep.pos.getRangeTo(creep.room.storage) > 1) {
+            creep.moveTo(creep.room.storage);
+        }
+        else {
+            creep.transfer(creep.room.storage, source.mineralType);
+        }
+    }
+    else {
+        // @todo Drop on storage point, I guess? We probably shouldn't be collecting minerals if we have no place to store them.
+    }
+
+    return true;
+};
+
+/**
  * Dumps resources a harvester creep has gathered.
  */
 Creep.prototype.performHarvesterDeliver = function () {
+    if (this.memory.fixedMineralSource) {
+        return this.performMineralHarvesterDeliver();
+    }
+
     var creep = this;
     var target;
 
-    if (creep.memory.fixedMineralSource) {
-        var source = Game.getObjectById(creep.memory.fixedMineralSource);
-        // By default, deliver to room's terminal if there's space.
-        if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
-            if (creep.pos.getRangeTo(creep.room.terminal) > 1) {
-                creep.moveTo(creep.room.terminal);
-            }
-            else {
-                creep.transfer(creep.room.terminal, source.mineralType);
-            }
-        }
-        else if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
-            if (creep.pos.getRangeTo(creep.room.storage) > 1) {
-                creep.moveTo(creep.room.storage);
-            }
-            else {
-                creep.transfer(creep.room.storage, source.mineralType);
-            }
-        }
-        else {
-            // @todo Drop on storage point, I guess? We probably shouldn't be collecting minerals if we have no place to store them.
-        }
+    if (this.memory.fixedSource) {
+        var source = Game.getObjectById(creep.memory.fixedSource);
+        var targetLink = source.getNearbyLink();
+        var targetContainer = source.getNearbyContainer();
+        var dropOffSpot = source.getDropoffSpot();
 
-        return true;
+        this.memory.fixedDropoffSpot = dropOffSpot;
+        this.memory.fixedTarget = source.memory.targetContainer;
     }
-    else if (creep.memory.fixedTarget && gameState.getNumTransporters(creep.pos.roomName) > 0) {
+
+    if (_.size(creep.room.creepsByRole.transporter) > 0) {
         // Drop off in link or container.
-        var sourceMemory = creep.room.memory.sources[creep.memory.fixedSource];
-        if (sourceMemory && sourceMemory.targetLink && gameState.getStoredEnergy(creep.room) > 10000) {
-            target = Game.getObjectById(sourceMemory.targetLink);
-            if (!target || target.energy >= target.energyCapacity) {
-                target = null;
+        if (targetLink && targetLink.energy < targetLink.energyCapacity && gameState.getStoredEnergy(creep.room) > 10000) {
+            target = targetLink;
+        }
+        else if (targetContainer && _.sum(targetContainer.store) < targetContainer.storeCapacity) {
+            target = targetContainer;
+        }
+        else if (dropOffSpot) {
+            if (creep.pos.x == dropOffSpot.x && creep.pos.y == dropOffSpot.y) {
+                creep.drop(RESOURCE_ENERGY);
+            } else {
+                creep.moveTo(dropOffSpot.x, dropOffSpot.y);
             }
+            return true;
         }
+    }
 
-        //console.log(gameState.getNumTransporters(creep.pos.roomName), 'transporters found...', creep.pos.roomName);
-        if (!target) {
-            target = Game.getObjectById(creep.memory.fixedTarget);
-        }
-    }
-    else if (creep.memory.fixedDropoffSpot && gameState.getNumTransporters(creep.pos.roomName) > 0) {
-        if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
-            creep.drop(RESOURCE_ENERGY);
-        } else {
-            creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
-        }
-        return true;
-    }
-    else {
+    if (!target) {
         // @todo Use transporter drop off logic.
         if (!creep.memory.deliverTarget) {
             var targets = creep.room.find(FIND_STRUCTURES, {
@@ -129,7 +141,7 @@ Creep.prototype.performHarvesterDeliver = function () {
                 // Containers get filled when all other structures are full.
                 targets = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_CONTAINER) && structure.storeCapacity && structure.store[RESOURCE_ENERGY] < structure.storeCapacity;
+                        return (structure.structureType == STRUCTURE_CONTAINER) && structure.storeCapacity && _.sum(structure.store) < structure.storeCapacity;
                     }
                 });
                 if (targets.length <= 0) {
@@ -160,13 +172,19 @@ Creep.prototype.performHarvesterDeliver = function () {
     if (target.energy >= target.energyCapacity) {
         creep.memory.deliverTarget = null;
     }
-    if (target.store && target.store[RESOURCE_ENERGY] >= target.storeCapacity) {
+    if (target.store && _.sum(target.store) >= target.storeCapacity) {
         if (creep.memory.fixedTarget && target.id == creep.memory.fixedTarget) {
             // Container is full, drop energy instead.
-            if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
+            if (creep.memory.fixedDropoffSpot) {
+                if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
+                    creep.drop(RESOURCE_ENERGY);
+                } else {
+                    creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
+                }
+            }
+            else {
+                // Drop on the spot, I guess.
                 creep.drop(RESOURCE_ENERGY);
-            } else {
-                creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
             }
         }
         else {

@@ -5,6 +5,8 @@ var intelManager = require('manager.intel');
 
 var Squad = require('manager.squad');
 
+// @todo Choose the best spawn for a creep (distance to target).
+
 /**
  * Intelligently tries to create a creep.
  *
@@ -114,6 +116,111 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 };
 
 /**
+ * WIP Replacement of manageSpawns using a priority queue and more caches.
+ */
+Room.prototype.manageSpawnsPriority = function () {
+    if (!this.controller || !this.controller.my) {
+        return;
+    }
+
+    this.spawnOptions = {};
+
+    var roomSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name);
+    // If all spawns are busy, no need to calculate what could be spawned.
+    var allSpawning = true;
+    var activeSpawn;
+    for (let i in roomSpawns) {
+        if (!roomSpawns[i].spawning) {
+            allSpawning = false;
+            activeSpawn = roomSpawns[i];
+            break;
+        }
+    }
+    if (allSpawning) {
+        return true;
+    }
+
+    // Prepare spawn queue.
+    if (!this.memory.spawnQueue) {
+        this.memory.spawnQueue = {};
+    }
+    var memory = this.memory.spawnQueue;
+    memory.options = [];
+
+    // Fill spawn queue.
+    this.addHarvesterSpawnOptions();
+
+    if (memory.options.length > 0) {
+        // Try to spawn the most needed creep.
+        return this.spawnCreepByPriority(activeSpawn);
+    }
+    return false;
+};
+
+/**
+ * Spawns the most needed creep from the priority queue.
+ */
+Room.prototype.spawnCreepByPriority = function (activeSpawn) {
+    var memory = this.memory.spawnQueue;
+    var best = utilities.getBestOption(memory.options);
+
+    //console.log(this.name, JSON.stringify(best));
+    if (best.role == 'harvester') {
+        activeSpawn.spawnHarvester(best.force, best.maxWorkParts, best.source);
+    }
+
+    return true;
+};
+
+/**
+ * Checks which sources in this room still need harvesters and adds those to queue.
+ */
+Room.prototype.addHarvesterSpawnOptions = function () {
+    var memory = this.memory.spawnQueue;
+
+    // If we have no other way to recover, spawn with reduced amounts of parts.
+    let force = false;
+    if (_.size(this.creepsByRole.harvester) == 0 && (_.size(this.creepsByRole.transporter) == 0 || gameState.getStoredEnergy(this) < 5000)) {
+        force = true;
+    }
+
+    for (let i in this.sources) {
+        let source = this.sources[i];
+        let maxParts = source.getMaxWorkParts();
+        // Make sure at least one harvester is spawned for each source.
+        if (source.harvesters.length == 0) {
+            memory.options.push({
+                priority: 5,
+                weight: 1,
+                role: 'harvester',
+                source: source.id,
+                maxWorkParts: maxParts,
+                force: force,
+            });
+        }
+        else if (this.controller.level <= 3 && source.harvesters.length < source.getNumHarvestSpots()) {
+            // If there's still space at this source, spawn additional harvesters until the maximum number of work parts has been reached.
+            // Starting from RCL 4, 1 harvester per source should always be enough.
+            let totalWorkParts = 0;
+            for (let j in source.harvesters) {
+                totalWorkParts += source.harvesters[j].memory.body.work || 0;
+            }
+
+            if (totalWorkParts < maxParts) {
+                memory.options.push({
+                    priority: 4,
+                    weight: 1 - (totalWorkParts / maxParts),
+                    role: 'harvester',
+                    source: source.id,
+                    maxWorkParts: maxParts - totalWorkParts,
+                    force: false,
+                });
+            }
+        }
+    }
+};
+
+/**
  * Spawns creeps in a room whenever needed.
  */
 Room.prototype.manageSpawns = function () {
@@ -121,9 +228,12 @@ Room.prototype.manageSpawns = function () {
         return;
     }
 
-    var roomSpawns = this.find(FIND_STRUCTURES, {
-        filter: (structure) => structure.structureType == STRUCTURE_SPAWN
-    });
+    // If the new spawn code is trying to spawn something, give it priority.
+    if (this.manageSpawnsPriority()) {
+        return;
+    }
+
+    var roomSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name);
 
     var room = this;
 
@@ -131,7 +241,6 @@ Room.prototype.manageSpawns = function () {
     // @todo This could be done on script startup and partially kept in room memory.
     var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder' && creep.pos.roomName == room.name);
     var harvesters = gameState.getHarvesters(room.name);
-    var numHarvesters = gameState.getNumHarvesters(room.name);
     var repairers = _.filter(Game.creeps, (creep) => creep.memory.role == 'repairer' && creep.pos.roomName == room.name);
     var numTransporters = gameState.getNumTransporters(room.name);
     var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader' && creep.pos.roomName == room.name);
@@ -169,45 +278,13 @@ Room.prototype.manageSpawns = function () {
         spawnerUsed = true;
 
         var numSources = 0;
-        var spawnHarvester = false;
-        var spawnHarvesterTarget = null;
-        var maxHarvesters = 3;
         var maxTransporters = 2; // @todo Find a good way to gauge needed number of transporters by measuring distances.
-        var maxHarvesterSize;
 
         // Spawn new creeps.
-
         if (room.memory.sources) {
             numSources = _.size(room.memory.sources);
-            maxHarvesters = 0;
             maxTransporters = 2 + 2 * numSources;
             for (var id in room.memory.sources) {
-                if (room.controller.level <= 3) {
-                    maxHarvesters += room.memory.sources[id].maxHarvesters;
-                }
-                else {
-                    maxHarvesters++;
-                }
-
-                if (!maxHarvesterSize || maxHarvesterSize < room.memory.sources[id].maxWorkParts) {
-                    maxHarvesterSize = room.memory.sources[id].maxWorkParts;
-                }
-
-                var assignedHarvesters = _.filter(harvesters, (creep) => creep.memory.fixedSource == id);
-                var sourceHarvesters = _.filter(room.memory.sources[id].harvesters, (id) => Game.getObjectById(id));
-                var totalWork = 0;
-                for (var i in assignedHarvesters) {
-                    var harvester = assignedHarvesters[i];
-                    if (harvester) {
-                        totalWork += harvester.memory.body.work;
-                    }
-                }
-
-                if (totalWork < room.memory.sources[id].maxWorkParts && sourceHarvesters.length < room.memory.sources[id].maxHarvesters) {
-                    spawnHarvester = true;
-                    spawnHarvesterTarget = id;
-                }
-
                 // If we have a link to beam energy around, we'll need less transporters.
                 if (room.memory.sources[id].targetLink && room.memory.controllerLink) {
                     maxTransporters--;
@@ -225,7 +302,6 @@ Room.prototype.manageSpawns = function () {
             //maxTransporters++;
         }
 
-        //console.log(room.name, spawn.pos.roomName, 'Harvesters:', numHarvesters, '/', maxHarvesters, 'spawn', spawnHarvester);
         //console.log(room.name, spawn.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
         var maxUpgraders = 0;
@@ -259,19 +335,10 @@ Room.prototype.manageSpawns = function () {
         }
         //console.log(room.name, maxBuilders);
 
-        if (numHarvesters < 1) {
-            if (spawn.spawnHarvester(true, maxHarvesterSize)) {
-                return true;
-            }
-        }
-        else if (numTransporters < 1) {
+        // Actually spawn stuff.
+        if (numTransporters < 1) {
             // @todo Spawn only if there is at least one container / storage.
             if (spawn.spawnTransporter(true)) {
-                return true;
-            }
-        }
-        else if (spawnHarvester && numHarvesters < maxHarvesters) {
-            if (spawn.spawnHarvester(false, maxHarvesterSize, spawnHarvesterTarget)) {
                 return true;
             }
         }
