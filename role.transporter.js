@@ -564,7 +564,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             var target = Game.getObjectById(creep.room.memory.storageLink);
             if (target && target.energy < target.energyCapacity) {
                 options.push({
-                    priority: 2,
+                    priority: 5,
                     weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
                     type: 'structure',
                     object: target,
