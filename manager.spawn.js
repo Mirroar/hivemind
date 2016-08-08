@@ -149,6 +149,7 @@ Room.prototype.manageSpawnsPriority = function () {
 
     // Fill spawn queue.
     this.addHarvesterSpawnOptions();
+    this.addTransporterSpawnOptions();
 
     if (memory.options.length > 0) {
         // Try to spawn the most needed creep.
@@ -167,6 +168,12 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     //console.log(this.name, JSON.stringify(best));
     if (best.role == 'harvester') {
         activeSpawn.spawnHarvester(best.force, best.maxWorkParts, best.source);
+    }
+    else if (best.role == 'transporter') {
+        activeSpawn.spawnTransporter(best.force);
+    }
+    else {
+        console.log(this.name, 'trying to spawn unknown creep role:', best.role);
     }
 
     return true;
@@ -220,6 +227,51 @@ Room.prototype.addHarvesterSpawnOptions = function () {
     }
 };
 
+Room.prototype.addTransporterSpawnOptions = function () {
+    var memory = this.memory.spawnQueue;
+
+    numSources = _.size(this.sources);
+    var numTransporters = _.size(this.creepsByRole.transporter);
+    var maxTransporters = 2 + 2 * numSources; // @todo Find a good way to gauge needed number of transporters by measuring distances.
+
+    for (var i in this.sources) {
+        // If we have a link to beam energy around, we'll need less transporters.
+        if (this.sources[i].getNearbyLink() && this.memory.controllerLink) {
+            maxTransporters--;
+        }
+    }
+
+    // Need less transporters if energy gets beamed around the place a lot.
+    if (this.memory.controllerLink && this.memory.storageLink) {
+        maxTransporters--;
+    }
+
+    // If we have a terminal, we need more transporters.
+    if (this.terminal) {
+        //maxTransporters++;
+    }
+
+    if (numTransporters < maxTransporters) {
+        let option = {
+            priority: 5,
+            weight: 0,
+            role: 'transporter',
+            force: true,
+        }
+
+        if (numTransporters >= maxTransporters / 2) {
+            option.priority = 3;
+            option.force = false;
+        }
+        else if (numTransporters > 1) {
+            option.priority = 4;
+            option.force = false;
+        }
+
+        memory.options.push(option);
+    }
+};
+
 /**
  * Spawns creeps in a room whenever needed.
  */
@@ -240,9 +292,7 @@ Room.prototype.manageSpawns = function () {
     // Gather some information.
     // @todo This could be done on script startup and partially kept in room memory.
     var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder' && creep.pos.roomName == room.name);
-    var harvesters = gameState.getHarvesters(room.name);
     var repairers = _.filter(Game.creeps, (creep) => creep.memory.role == 'repairer' && creep.pos.roomName == room.name);
-    var numTransporters = gameState.getNumTransporters(room.name);
     var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader' && creep.pos.roomName == room.name);
     var mineralHarvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester.minerals' && creep.pos.roomName == room.name);
     var minerals = room.find(FIND_MINERALS, {
@@ -278,31 +328,6 @@ Room.prototype.manageSpawns = function () {
         spawnerUsed = true;
 
         var numSources = 0;
-        var maxTransporters = 2; // @todo Find a good way to gauge needed number of transporters by measuring distances.
-
-        // Spawn new creeps.
-        if (room.memory.sources) {
-            numSources = _.size(room.memory.sources);
-            maxTransporters = 2 + 2 * numSources;
-            for (var id in room.memory.sources) {
-                // If we have a link to beam energy around, we'll need less transporters.
-                if (room.memory.sources[id].targetLink && room.memory.controllerLink) {
-                    maxTransporters--;
-                }
-            }
-        }
-
-        // Need less transporters if energy gets beamed around the place a lot.
-        if (room.memory.controllerLink && room.memory.storageLink) {
-            maxTransporters--;
-        }
-
-        // If we have a terminal, we need more transporters.
-        if (room.terminal) {
-            //maxTransporters++;
-        }
-
-        //console.log(room.name, spawn.pos.roomName, 'Transporters:', numTransporters, '/', maxTransporters);
 
         var maxUpgraders = 0;
         if (room.controller.level <= 3) {
@@ -336,31 +361,13 @@ Room.prototype.manageSpawns = function () {
         //console.log(room.name, maxBuilders);
 
         // Actually spawn stuff.
-        if (numTransporters < 1) {
-            // @todo Spawn only if there is at least one container / storage.
-            if (spawn.spawnTransporter(true)) {
-                return true;
-            }
-        }
-        else if (numTransporters < maxTransporters / 2) {
-            // @todo Spawn only if there is at least one container / storage.
-            if (spawn.spawnTransporter()) {
-                return true;
-            }
-        }
-        else if (upgraders.length < maxUpgraders) {
+        if (upgraders.length < maxUpgraders) {
             if (spawn.spawnUpgrader()) {
                 return true;
             }
         }
         else if (builders.length < maxBuilders) {
             if (spawn.spawnBuilder()) {
-                return true;
-            }
-        }
-        else if (numTransporters < maxTransporters) {
-            // @todo Spawn only if there is at least one container / storage.
-            if (spawn.spawnTransporter()) {
                 return true;
             }
         }
