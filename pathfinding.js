@@ -222,7 +222,7 @@ Creep.prototype.followCachedPath = function () {
         let pos = path[this.memory.cachedPath.forceGoTo];
 
         if (this.pos.getRangeTo(pos) > 0) {
-            //console.log('movin to', utilities.encodePosition(pos));
+            this.say('Skip:' + this.memory.cachedPath.forceGoTo);
             this.moveTo(pos);
             return;
         }
