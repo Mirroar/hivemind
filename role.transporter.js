@@ -130,6 +130,7 @@ Creep.prototype.getAvailableSources = function () {
 
     // Clear out overfull terminal.
     let terminal = creep.room.terminal;
+    let storage = creep.room.storage;
     if (terminal && _.sum(terminal.store) - terminal.store.energy > terminal.storeCapacity * 0.8) {
         // Find resource with highest count and take that.
         // @todo Unless it's supposed to be sent somewhere else.
@@ -235,11 +236,15 @@ Creep.prototype.getAvailableSources = function () {
         if (creep.room.memory.currentReaction) {
             lab = Game.getObjectById(creep.room.memory.labs.source1);
             if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[0]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
+                var source = terminal;
+                if (!terminal.store[creep.room.memory.currentReaction[0]] || terminal.store[creep.room.memory.currentReaction[0]] <= 0) {
+                    source = creep.room.storage;
+                }
                 let option = {
                     priority: 3,
                     weight: 1 - lab.mineralAmount / lab.mineralCapacity,
                     type: 'structure',
-                    object: terminal,
+                    object: source,
                     resourceType: creep.room.memory.currentReaction[0],
                 };
 
@@ -251,11 +256,15 @@ Creep.prototype.getAvailableSources = function () {
             }
             lab = Game.getObjectById(creep.room.memory.labs.source2);
             if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[1]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
+                var source = terminal;
+                if (!terminal.store[creep.room.memory.currentReaction[1]] || terminal.store[creep.room.memory.currentReaction[1]] <= 0) {
+                    source = creep.room.storage;
+                }
                 let option = {
                     priority: 3,
                     weight: 1 - lab.mineralAmount / lab.mineralCapacity,
                     type: 'structure',
-                    object: terminal,
+                    object: source,
                     resourceType: creep.room.memory.currentReaction[1],
                 };
 
@@ -390,6 +399,9 @@ Creep.prototype.performGetResources = function () {
     }
     var target = Game.getObjectById(best);
     if (!target || (target.store && _.sum(target.store) <= 0) || (target.amount && target.amount <= 0) || (target.mineralAmount && (target.mineralAmount <= 0 || target.mineralType != creep.memory.order.resourceType))) {
+        creep.calculateSource();
+    }
+    else if (target.store && (!target.store[creep.memory.order.resourceType] || target.store[creep.memory.order.resourceType] <= 0)) {
         creep.calculateSource();
     }
     else if (target.store) {
@@ -751,7 +763,10 @@ Creep.prototype.performDeliver = function () {
         if ((target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity) || (target.mineralAmount && target.mineralAmount >= target.mineralCapacity)) {
             creep.calculateDeliveryTarget();
         }
-        if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
+        else if (target.mineralAmount && target.mineralType != creep.memory.order.resourceType) {
+            creep.calculateDeliveryTarget();
+        }
+        else if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
             creep.calculateDeliveryTarget();
         }
         return true;
