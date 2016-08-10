@@ -8,54 +8,128 @@ var utilities = require('utilities');
  */
 Creep.prototype.performBuildRoad = function() {
     var creep = this;
-    // @todo Cache this in creep memory.
-    var workParts = 0;
-    for (let j in creep.body) {
-        if (creep.body[j].type == WORK && creep.body[j].hits > 0) {
-            workParts++;
-        }
-    }
+    var workParts = creep.memory.body.work;
 
     if (workParts < 1) {
         return false;
     }
 
-    // Check if creep is travelling on a road.
     var hasRoad = false;
     var actionTaken = false;
-    var structures = creep.pos.lookFor(LOOK_STRUCTURES);
-    if (structures && structures.length > 0) {
-        for (var i in structures) {
-            if (structures[i].structureType == STRUCTURE_ROAD) {
-                hasRoad = true;
-                break;
+
+    if (creep.memory.cachedPath) {
+        let pos = creep.memory.cachedPath.position;
+        for (let i = pos - 2; i <= pos + 2; i++) {
+            if (i < 0 || i >= creep.memory.cachedPath.path.length) {
+                continue;
+            }
+
+            let position = utilities.decodePosition(creep.memory.cachedPath.path[i]);
+            if (position.roomName != creep.pos.roomName) {
+                continue;
+            }
+
+            // Check for roads around the current path position to repair.
+            let tileHasRoad = false;
+            let structures = position.lookFor(LOOK_STRUCTURES);
+            if (structures.length > 0) {
+                for (let j in structures) {
+                    if (structures[j].structureType != STRUCTURE_ROAD) {
+                        continue;
+                    }
+
+                    tileHasRoad = true;
+
+                    if (structures[j].hits < structures[j].hitsMax - workParts * 100) {
+                        if (!actionTaken) {
+                            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+                            creep.repair(structures[j]);
+                            actionTaken = true;
+                            // If structure is especially damaged, stay here to keep repairing.
+                            if (structures[j].hits < structures[j].hitsMax - workParts * 2 * 100) {
+                                return true;
+                            }
+                            break;
+                        }
+                        else {
+                            // Many repairs to do, so stay here for next tick.
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            if (!tileHasRoad) {
+                let sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
+                let numSites = _.filter(Game.constructionSites, (site) => site.pos.roomName == position.roomName).length;
+                if (sites.length < 1 && numSites < 5) {
+                    position.createConstructionSite(STRUCTURE_ROAD);
+                    return true;
+                }
+            }
+        }
+
+        // Check source container and repair that, too.
+        var sourcePosition = utilities.decodePosition(creep.memory.source);
+        var sources = creep.room.find(FIND_SOURCES, {
+            filter: (source) => source.pos.x == sourcePosition.x && source.pos.y == sourcePosition.y
+        });
+
+        if (sources.length > 0) {
+            let container = sources[0].getNearbyContainer();
+            if (container && this.pos.getRangeTo(container) <= 3 && container.hits < container.hitsMax - workParts * 100) {
+                if (!actionTaken) {
+                    Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+                    creep.repair(container);
+                    actionTaken = true;
+                    // If structure is especially damaged, stay here to keep repairing.
+                    if (container.hits < container.hitsMax - workParts * 2 * 100) {
+                        return true;
+                    }
+                }
+                else {
+                    // Many repairs to do, so stay here for next tick.
+                    return true;
+                }
             }
         }
     }
-
-    // Also repair structures in passing.
-    var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-        filter: (structure) => (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - workParts * 100
-    });
-    if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-        Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
-        creep.repair(needsRepair);
-        actionTaken = true;
-        // If structure is especially damaged, stay here to keep repairing.
-        if (needsRepair.hits < needsRepair.hitsMax - workParts * 2 * 100) {
-            return true;
-        }
-    }
-
-    if (!hasRoad) {
-        // Make sure there is a construction site for a road on this tile.
-        var constructionSites = creep.pos.lookFor(LOOK_CONSTRUCTION_SITES);
-        _.filter(constructionSites, (site) => site.structureType == STRUCTURE_ROAD);
-        if (constructionSites.length <= 0) {
-            if (creep.pos.createConstructionSite(STRUCTURE_ROAD) != OK) {
-                hasRoad = true;
+    else {
+        // Check if creep is travelling on a road.
+        var structures = creep.pos.lookFor(LOOK_STRUCTURES);
+        if (structures && structures.length > 0) {
+            for (var i in structures) {
+                if (structures[i].structureType == STRUCTURE_ROAD) {
+                    hasRoad = true;
+                    break;
+                }
             }
         }
+
+        // Also repair structures in passing.
+        var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (structure) => (structure.structureType == STRUCTURE_ROAD || structure.structureType == STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - workParts * 100
+        });
+        if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
+            Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+            creep.repair(needsRepair);
+            actionTaken = true;
+            // If structure is especially damaged, stay here to keep repairing.
+            if (needsRepair.hits < needsRepair.hitsMax - workParts * 2 * 100) {
+                return true;
+            }
+        }
+
+        /*if (!hasRoad) {
+            // Make sure there is a construction site for a road on this tile.
+            var constructionSites = creep.pos.lookFor(LOOK_CONSTRUCTION_SITES);
+            _.filter(constructionSites, (site) => site.structureType == STRUCTURE_ROAD);
+            if (constructionSites.length <= 0) {
+                if (creep.pos.createConstructionSite(STRUCTURE_ROAD) != OK) {
+                    hasRoad = true;
+                }
+            }
+        }//*/
     }
 
     var needsBuilding = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
@@ -131,7 +205,7 @@ Creep.prototype.performRemoteHarvest = function () {
     var sources = creep.room.find(FIND_SOURCES, {
         filter: (source) => source.pos.x == sourcePosition.x && source.pos.y == sourcePosition.y
     });
-    if (sources && sources.length > 0) {
+    if (sources.length > 0) {
         source = sources[0];
     }
     else {
