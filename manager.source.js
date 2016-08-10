@@ -15,7 +15,7 @@ Source.prototype.enhanceData = function () {
 
     // Collect assigned harvesters.
     this.harvesters = [];
-    for (let i in this.room.creepsByRole.harvester) {
+    for (let i in this.room.creepsByRole.harvester || []) {
         let harvester = this.room.creepsByRole.harvester[i];
 
         if (harvester.memory.fixedSource == this.id) {
