@@ -105,6 +105,8 @@ Room.prototype.getStorageLocation = function () {
 Room.prototype.scan = function () {
     var room = this;
 
+    //console.log('scanning', room.name);
+
     // Check if the controller has a container nearby.
     var structures = room.find(FIND_STRUCTURES, {
         filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.pos.getRangeTo(room.controller) <= 3

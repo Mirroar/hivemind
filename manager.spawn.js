@@ -35,11 +35,15 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
     }
 
     var enoughEnergy = true;
-    if (this.room.energyAvailable < this.room.energyCapacityAvailable * 0.9) {
+    var minCost = this.room.energyCapacityAvailable * 0.9;
+    if (options.minCost) {
+        minCost = options.minCost;
+    }
+    if (this.room.energyAvailable < minCost) {
         enoughEnergy = false;
     }
 
-    var maxCost = this.room.energyCapacityAvailable * 0.9;
+    var maxCost = Math.max(minCost, this.room.energyAvailable);
     if (!options.body) {
         if (!options.bodyWeights) {
             throw "No body definition for creep found.";
@@ -96,10 +100,10 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
     if (!Memory.creepCounter) {
         Memory.creepCounter = {};
     }
-    if (!Memory.creepCounter[memory.role]) {
+    if (!Memory.creepCounter[memory.role] || Memory.creepCounter[memory.role] >= 36 * 36) {
         Memory.creepCounter[memory.role] = 0;
     }
-    var newName = memory.role + '.' + Memory.creepCounter[memory.role];
+    var newName = memory.role + '_' + Memory.creepCounter[memory.role].toString(36);
 
     // Actually try to spawn this creep.
     var result = this.createCreep(options.body, newName, memory);
@@ -133,7 +137,16 @@ Room.prototype.manageSpawnsPriority = function () {
         if (!roomSpawns[i].spawning) {
             allSpawning = false;
             activeSpawn = roomSpawns[i];
-            break;
+        }
+
+        // If spawning was just finished, scan the room again to assign creeps.
+        if (roomSpawns[i].spawning) {
+            roomSpawns[i].memory.wasSpawning = true;
+            continue;
+        }
+        else if (roomSpawns[i].memory.wasSpawning) {
+            roomSpawns[i].memory.wasSpawning = false;
+            this.scan();
         }
     }
     if (allSpawning) {
@@ -173,7 +186,7 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
         activeSpawn.spawnHarvester(best.force, best.maxWorkParts, best.source);
     }
     else if (best.role == 'transporter') {
-        activeSpawn.spawnTransporter(best.force);
+        activeSpawn.spawnTransporter(best.force, best.size);
     }
     else if (best.role == 'upgrader') {
         activeSpawn.spawnUpgrader();
@@ -182,7 +195,7 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
         activeSpawn.spawnBuilder();
     }
     else if (best.role == 'repairer') {
-        activeSpawn.spawnRepairer();
+        activeSpawn.spawnRepairer(best.size);
     }
     else {
         console.log(this.name, 'trying to spawn unknown creep role:', best.role);
@@ -199,7 +212,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
 
     // If we have no other way to recover, spawn with reduced amounts of parts.
     let force = false;
-    if (_.size(this.creepsByRole.harvester) == 0 && (_.size(this.creepsByRole.transporter) == 0 || gameState.getStoredEnergy(this) < 5000)) {
+    if (_.size(this.creepsByRole.harvester) == 0 && _.size(this.creepsByRole.transporter) == 0 && gameState.getStoredEnergy(this) < 5000) {
         force = true;
     }
 
@@ -209,7 +222,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
         // Make sure at least one harvester is spawned for each source.
         if (source.harvesters.length == 0) {
             memory.options.push({
-                priority: 5,
+                priority: 4,
                 weight: 1,
                 role: 'harvester',
                 source: source.id,
@@ -266,22 +279,39 @@ Room.prototype.addTransporterSpawnOptions = function () {
         //maxTransporters++;
     }
 
+    // On higher level rooms, spawn less, but bigger, transporters.
+    var sizeFactor = 1;
+    if (this.controller.level >= 7) {
+        sizeFactor = 2;
+    }
+    else if (this.controller.level >= 6) {
+        sizeFactor = 1.5;
+    }
+    else if (this.controller.level >= 5) {
+        sizeFactor = 1.25;
+    }
+
+    maxTransporters /= sizeFactor;
+    maxTransporters = Math.max(maxTransporters, 2);
     if (numTransporters < maxTransporters) {
         let option = {
             priority: 5,
-            weight: 0,
+            weight: 0.5,
             role: 'transporter',
-            force: true,
+            force: false,
+            size: 8 * sizeFactor,
         }
 
         if (numTransporters >= maxTransporters / 2) {
-            option.priority = 3;
-            option.force = false;
+            option.priority = 4;
         }
         else if (numTransporters > 1) {
-            option.priority = 4;
-            option.force = false;
+            option.weight = 0;
         }
+        else {
+            option.force = true;
+        }
+        //console.log(this.name, JSON.stringify(option));
 
         memory.options.push(option);
     }
@@ -324,8 +354,8 @@ Room.prototype.addUpgraderSpawnOptions = function () {
 
     if (numUpgraders < maxUpgraders) {
         memory.options.push({
-            priority: 4,
-            weight: 0,
+            priority: 3,
+            weight: 1,
             role: 'upgrader',
         });
     }
@@ -360,11 +390,18 @@ Room.prototype.addRepairerSpawnOptions = function () {
 
     var numRepairers = _.size(this.creepsByRole.repairer);
 
-    if (numRepairers < 2) {
+    // On higher level rooms, spawn less, but bigger, repairers.
+    var sizeFactor = 1;
+    if (this.controller.level >= 6) {
+        sizeFactor = 2;
+    }
+
+    if (numRepairers < 2 / sizeFactor) {
         memory.options.push({
             priority: 3,
             weight: 0.5,
             role: 'repairer',
+            size: 5 * sizeFactor,
         });
     }
 };
@@ -805,7 +842,7 @@ Room.prototype.manageSpawns = function () {
                 }
                 if (Memory.rooms[flag.pos.roomName]
                     && Memory.rooms[flag.pos.roomName].lastClaim
-                    && Memory.rooms[flag.pos.roomName].lastClaim.value + (Memory.rooms[flag.pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.8
+                    && Memory.rooms[flag.pos.roomName].lastClaim.value + (Memory.rooms[flag.pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.5
                 ) {
                     doSpawn = false;
                 }
@@ -979,15 +1016,15 @@ StructureSpawn.prototype.spawnBuilder = function () {
  * Spawns a new harvester.
  */
 StructureSpawn.prototype.spawnHarvester = function (force, maxSize, sourceID) {
-    var maxCost = null;
-    if (force && this.room.energyAvailable >= 200) {
-        maxCost = this.room.energyAvailable;
+    var minCost = null;
+    if (force) {
+        minCost = 200;
     }
 
     return this.createManagedCreep({
         role: 'harvester',
         bodyWeights: {move: 0.1, work: 0.7, carry: 0.2},
-        maxCost: maxCost,
+        minCost: minCost,
         maxParts: maxSize ? {work: maxSize} : null,
         memory: {
             singleRoom: this.pos.roomName,
@@ -1013,11 +1050,16 @@ StructureSpawn.prototype.spawnMineralHarvester = function (source) {
 /**
  * Spawns a new repairer.
  */
-StructureSpawn.prototype.spawnRepairer = function () {
+StructureSpawn.prototype.spawnRepairer = function (size) {
+    var maxParts = {work: 5};
+    if (size) {
+        maxParts.work = size;
+    }
+
     return this.createManagedCreep({
         role: 'repairer',
         bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
-        maxParts: {work: 5},
+        maxParts: maxParts,
         memory: {
             singleRoom: this.pos.roomName,
         },
@@ -1027,16 +1069,22 @@ StructureSpawn.prototype.spawnRepairer = function () {
 /**
  * Spawns a new transporter.
  */
-StructureSpawn.prototype.spawnTransporter = function (force) {
-    var maxCost = 600;
-    if (force && this.room.energyAvailable >= 250) {
-        maxCost = Math.min(maxCost, this.room.energyAvailable);
+StructureSpawn.prototype.spawnTransporter = function (force, size) {
+    var minCost = null;
+    if (force) {
+        minCost = 250;
+    }
+
+    var maxParts = {carry: 8};
+    if (size) {
+        maxParts.carry = size;
     }
 
     return this.createManagedCreep({
         role: 'transporter',
         bodyWeights: {move: 0.35, carry: 0.65},
-        maxCost: maxCost,
+        maxParts: maxParts,
+        minCost: minCost,
         memory: {
             singleRoom: this.pos.roomName,
         },
