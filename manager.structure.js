@@ -58,7 +58,7 @@ Room.prototype.manageLabs = function () {
         var reactor = Game.getObjectById(this.memory.labs.reactor);
 
         if (source1 && source2 && reactor) {
-            if (reactor.cooldown <= 0) {
+            if (reactor.cooldown <= 0 && source1.mineralType == this.memory.currentReaction[0] && source2.mineralType == this.memory.currentReaction[1]) {
                 reactor.runReaction(source1, source2);
             }
         }
@@ -67,6 +67,9 @@ Room.prototype.manageLabs = function () {
 
 var structureManager = {
 
+    /**
+     * Determines the amount of available resources in each room.
+     */
     getRoomResourceStates: function () {
         var rooms = {};
 
@@ -101,7 +104,7 @@ var structureManager = {
                     amount /= 3;
                 }
 
-                if (amount >= 50000) {
+                if (amount >= 30000) {
                     roomData.state[resourceType] = 'high';
                 }
                 else if (amount >= 10000) {
@@ -118,6 +121,9 @@ var structureManager = {
         return rooms;
     },
 
+    /**
+     * Determines when it makes sense to transport resources between rooms.
+     */
     getAvailableTransportRoutes: function (rooms) {
         var options = [];
 
@@ -157,9 +163,10 @@ var structureManager = {
         return options;
     },
 
-    getAvailableReactions: function (rooms) {
-        var options = [];
-
+    /**
+     * Sets appropriate reactions for each room depending on available resources.
+     */
+    chooseReactions: function (rooms) {
         for (let roomName in rooms) {
             let room = Game.rooms[roomName];
             let roomData = rooms[roomName];
@@ -188,10 +195,11 @@ var structureManager = {
                 room.memory.currentReaction = bestReaction;
             }
         }
-
-        return options;
     },
 
+    /**
+     * Manages all rooms' resources.
+     */
     manageResources: function () {
         let rooms = structureManager.getRoomResourceStates();
         let best = utilities.getBestOption(structureManager.getAvailableTransportRoutes(rooms));
@@ -202,8 +210,8 @@ var structureManager = {
             console.log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
         }
 
-        if (Game.time % 10 == 1) {
-            let best = utilities.getBestOption(structureManager.getAvailableReactions(rooms));
+        if (Game.time % 1500 == 983) {
+            structureManager.chooseReactions(rooms);
         }
     },
 
