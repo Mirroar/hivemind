@@ -102,6 +102,11 @@ Creep.prototype.runLogic = function() {
 Room.prototype.enhanceData = function () {
     this.sources = [];
 
+    if (!this.creeps) {
+        this.creeps = {};
+        this.creepsByRole = {};
+    }
+
     if (this.memory.intel) {
         let intel = this.memory.intel;
 
@@ -126,11 +131,6 @@ Room.prototype.enhanceData = function () {
             console.log('Error when initializing Bays:', e);
             console.log(e.stack);
         }
-    }
-
-    if (!this.creeps) {
-        this.creeps = {};
-        this.creepsByRole = {};
     }
 };
 
