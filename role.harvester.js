@@ -63,6 +63,7 @@ Creep.prototype.performHarvest = function () {
  * Dumps minerals a harvester creep has gathered.
  */
 Creep.prototype.performMineralHarvesterDeliver = function () {
+    var creep = this;
     var source = Game.getObjectById(creep.memory.fixedMineralSource);
     // By default, deliver to room's terminal if there's space.
     if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
