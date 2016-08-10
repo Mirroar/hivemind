@@ -182,7 +182,7 @@ var structureManager = {
 
                             if (roomData.totalResources[resourceType2] && roomData.totalResources[resourceType2] > 0) {
                                 //console.log(resourceType, '+', resourceType2, '=', REACTIONS[resourceType][resourceType2]);
-                                var resourceAmount = Math.min(roomData.totalResources[resourceType2], roomData.totalResources[resourceType2]);
+                                var resourceAmount = Math.min(roomData.totalResources[resourceType], roomData.totalResources[resourceType2]);
                                 if (!mostResources || mostResources < resourceAmount) {
                                     mostResources = resourceAmount;
                                     bestReaction = [resourceType, resourceType2];
@@ -210,7 +210,7 @@ var structureManager = {
             console.log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
         }
 
-        if (Game.time % 1500 == 983) {
+        if (Game.time % 1500 == 981) {
             structureManager.chooseReactions(rooms);
         }
     },
