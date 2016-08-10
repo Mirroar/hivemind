@@ -57,6 +57,9 @@ Room.prototype.gatherIntel = function () {
 
     // @todo Check for roads and structure in general to aid pathfinding when no creep is in a room. Even better, just generate and save a CostMatrix.
     // @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
+
+    // Perform normal scan process.
+    room.scan();
 };
 
 var intelManager = {
