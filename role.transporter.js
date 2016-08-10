@@ -17,10 +17,17 @@ Creep.prototype.getAvailableEnergySources = function () {
     var creep = this;
     var storage = this.room.storage;
     var options = [];
+
+    var storagePriority = 0;
+    if (creep.room.energyAvailable < creep.room.energyCapacityAvailable * 0.9) {
+        // Spawning is important, so get energy when needed.
+        storagePriority = 4;
+    }
+
     // Energy can be gotten at the room's storage.
-    if (storage && storage.store[RESOURCE_ENERGY] >= creep.carryCapacity - _.sum(creep.carry)) {
+    if (storage && storage.store.energy >= creep.carryCapacity - _.sum(creep.carry)) {
         options.push({
-            priority: creep.memory.role == 'transporter' ? 0 : 5,
+            priority: creep.memory.role == 'transporter' ? storagePriority : 5,
             weight: 0,
             type: 'structure',
             object: storage,
@@ -55,7 +62,7 @@ Creep.prototype.getAvailableEnergySources = function () {
 
         if (storagePosition && target.pos.x == storagePosition.x && target.pos.y == storagePosition.y) {
             if (creep.memory.role == 'transporter') {
-                option.priority = 0;
+                option.priority = storagePriority;
             }
             else {
                 option.priority = 5;
@@ -96,7 +103,11 @@ Creep.prototype.getAvailableEnergySources = function () {
         if (target.room.memory.sources) {
             for (var id in target.room.memory.sources) {
                 if (target.room.memory.sources[id].targetContainer && target.room.memory.sources[id].targetContainer == target.id) {
-                    option.priority = 3;
+                    option.priority = 2;
+                    if (_.sum(target.store) >= creep.carryCapacity - _.sum(creep.carry)) {
+                        // This container is filling up, prioritize emptying it.
+                        option.priority += 2;
+                    }
                     break;
                 }
             }
@@ -170,7 +181,7 @@ Creep.prototype.getAvailableSources = function () {
         let lab = Game.getObjectById(creep.room.memory.labs.reactor);
         if (lab && lab.mineralAmount > 0) {
             let option = {
-                priority: 2,
+                priority: 0,
                 weight: lab.mineralAmount / lab.mineralCapacity,
                 type: 'structure',
                 object: lab,
@@ -198,7 +209,7 @@ Creep.prototype.getAvailableSources = function () {
         lab = Game.getObjectById(creep.room.memory.labs.source1);
         if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType != creep.room.memory.currentReaction[0]) {
             let option = {
-                priority: 4,
+                priority: 3,
                 weight: 0,
                 type: 'structure',
                 object: lab,
@@ -210,7 +221,7 @@ Creep.prototype.getAvailableSources = function () {
         lab = Game.getObjectById(creep.room.memory.labs.source2);
         if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType != creep.room.memory.currentReaction[1]) {
             let option = {
-                priority: 4,
+                priority: 3,
                 weight: 0,
                 type: 'structure',
                 object: lab,
@@ -225,7 +236,7 @@ Creep.prototype.getAvailableSources = function () {
             lab = Game.getObjectById(creep.room.memory.labs.source1);
             if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[0]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
                 let option = {
-                    priority: 4,
+                    priority: 3,
                     weight: 1 - lab.mineralAmount / lab.mineralCapacity,
                     type: 'structure',
                     object: terminal,
@@ -241,7 +252,7 @@ Creep.prototype.getAvailableSources = function () {
             lab = Game.getObjectById(creep.room.memory.labs.source2);
             if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[1]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
                 let option = {
-                    priority: 4,
+                    priority: 3,
                     weight: 1 - lab.mineralAmount / lab.mineralCapacity,
                     type: 'structure',
                     object: terminal,
@@ -586,13 +597,20 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
         if (creep.room.memory.storageLink) {
             var target = Game.getObjectById(creep.room.memory.storageLink);
             if (target && target.energy < target.energyCapacity) {
-                options.push({
+                let option = {
                     priority: 5,
                     weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
                     type: 'structure',
                     object: target,
                     resourceType: RESOURCE_ENERGY,
-                });
+                };
+
+                if (creep.pos.getRangeTo(target) > 3) {
+                    // Don't go out of your way to fill the link, do it when energy is taken out of storage.
+                    option.priority = 4;
+                }
+
+                options.push(option);
             }
         }
     }
