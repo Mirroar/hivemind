@@ -142,6 +142,29 @@ Creep.prototype.getAvailableSources = function () {
 
     // @todo Take resources from storage if terminal is relatively empty.
 
+    // Look for resources on the ground.
+    var targets = creep.room.find(FIND_DROPPED_RESOURCES, {
+        filter: (resource) => {
+            if (resource.amount > 10 && creep.pos.findPathTo(resource)) {
+                return true;
+            }
+            return false;
+        }
+    });
+
+    for (var i in targets) {
+        var target = targets[i];
+        var option = {
+            priority: 4,
+            weight: target.amount / 30, // @todo Also factor in distance.
+            type: 'resource',
+            object: target,
+            resourceType: target.resourceType,
+        };
+
+        options.push(option);
+    }
+
     if (creep.room.memory.canPerformReactions) {
         // Clear out reaction lab.
         let lab = Game.getObjectById(creep.room.memory.labs.reactor);
