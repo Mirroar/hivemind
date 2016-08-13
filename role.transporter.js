@@ -154,6 +154,20 @@ Creep.prototype.getAvailableSources = function () {
 
     // @todo Take resources from storage if terminal is relatively empty.
 
+    // Take resources from storage to terminal for transfer if requested.
+    if (creep.room.memory.fillTerminal) {
+        let resourceType = creep.room.memory.fillTerminal;
+        if (storage && terminal && storage.store[resourceType] && storage.store[resourceType] > this.carryCapacity && _.sum(terminal.store) < terminal.storeCapacity - 10000) {
+            options.push({
+                priority: 3,
+                weight: 0,
+                type: 'structure',
+                object: storage,
+                resourceType: resourceType,
+            });
+        }
+    }
+
     // Look for resources on the ground.
     var targets = creep.room.find(FIND_DROPPED_RESOURCES, {
         filter: (resource) => {
@@ -505,9 +519,10 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                     }
 
                     // Do not deliver to containers used as harvester drop off points.
-                    if (structure.room.memory.sources) {
-                        for (var id in structure.room.memory.sources) {
-                            if (structure.room.memory.sources[id].targetContainer == structure.id) {
+                    if (structure.room.sources) {
+                        for (let id in structure.room.sources) {
+                            let container = structure.room.sources[id].getNearbyContainer();
+                            if (container.id == structure.id) {
                                 return false;
                             }
                         }
@@ -647,6 +662,23 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             }
 
             options.push(option);
+        }
+
+        // If it's needed for transferring, store in terminal.
+        if (resourceType == creep.room.memory.fillTerminal) {
+            if (creep.room.terminal && (!creep.room.terminal.store[resourceType] || creep.room.terminal.store[resourceType] < 10000)) {
+                var option = {
+                    priority: 5,
+                    weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+                    type: 'structure',
+                    object: creep.room.terminal,
+                    resourceType: resourceType,
+                };
+                options.push(option);
+            }
+            else {
+                delete creep.room.memory.fillTerminal;
+            }
         }
 
         // If there is space left, store in storage.
@@ -845,6 +877,13 @@ Creep.prototype.runTransporterLogic = function () {
     }
 
     if (!this.memory.delivering) {
+        // Make sure not to keep standing on resource drop stop.
+        var storagePosition = this.room.getStorageLocation();
+        if (this.pos.x == storagePosition.x && this.pos.y == storagePosition.y) {
+            this.move(_.random(1, 8));
+            return true;
+        }
+
         return this.performGetResources();
     }
     else {
