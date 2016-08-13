@@ -177,6 +177,8 @@ Creep.prototype.followCachedPath = function () {
         //console.log(this.name, 'has been stuck for the last', _.size(this.memory.cachedPath.lastPositions), 'ticks. Trying to go around blockade.');
         let i = this.memory.cachedPath.position + 1;
         while (i < path.length) {
+            if (path[i].roomName != this.pos.roomName) break;
+
             // Only try to get to paths where no creep is positioned.
             var found = path[i].lookFor(LOOK_CREEPS);
             var found2 = path[i].lookFor(LOOK_STRUCTURES);
