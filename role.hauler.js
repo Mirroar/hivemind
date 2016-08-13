@@ -25,6 +25,13 @@ Creep.prototype.performGetHaulerEnergy = function () {
                 return;
             }
         }
+        else if (this.pos.getRangeTo(sourcePosition) > 10) {
+            // This creep _should_ be on a cached path!
+            // It probably just spawned.
+            //console.log(this.name, '@', utilities.encodePosition(this.pos), 'is not on a cached path when it should be, resetting!');
+            this.setHaulerState(false);
+            return;
+        }
 
         if (sourcePosition.roomName != creep.pos.roomName) {
             creep.moveTo(sourcePosition);
