@@ -60,7 +60,7 @@ Creep.prototype.getAvailableRepairTargets = function () {
         }
 
         // Roads are not that important, repair only when low.
-        if (target.structureType == STRUCTURE_ROAD) {
+        if (target.structureType == STRUCTURE_ROAD && target.hits > 1000) {
             option.priority--;
         }
 
