@@ -206,8 +206,14 @@ var structureManager = {
 
         if (best) {
             let terminal = Game.rooms[best.source].terminal;
-            let result = terminal.send(best.resourceType, 5000, best.target, "Resource equalizing");
-            console.log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
+            if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+                let result = terminal.send(best.resourceType, 5000, best.target, "Resource equalizing");
+                console.log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
+            }
+            else {
+                console.log("Preparing 5000", best.resourceType, 'for transport from', best.source, 'to', best.target);
+                Game.rooms[best.source].memory.fillTerminal = best.resourceType;
+            }
         }
 
         if (Game.time % 1500 == 981) {
