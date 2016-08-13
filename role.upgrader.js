@@ -14,7 +14,7 @@ Creep.prototype.performUpgrade = function () {
 
     // Keep syphoning energy from link or controller to ideally never stop upgrading.
     // Only real upgraders do this, though, otherwise other primary roles will never stop upgrading.
-    if (this.memory.role == 'upgrader' && _.sum(this.carry) < this.carryCapacity) {
+    if (this.memory.role == 'upgrader' && _.sum(this.carry) < this.carryCapacity * 0.5) {
         var withdrawn = false;
         if (this.room.memory.controllerLink) {
             var controllerLink = Game.getObjectById(this.room.memory.controllerLink);
