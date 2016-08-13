@@ -20,6 +20,7 @@ var roleRemoteBuilder = {
         if (creep.memory.building && creep.carry.energy == 0) {
             creep.memory.building = false;
             creep.memory.buildTarget = null;
+            creep.memory.repairTarget = null;
             creep.memory.tempRole = null;
         }
         else if (!creep.memory.building && creep.carry.energy == creep.carryCapacity) {
@@ -56,6 +57,33 @@ var roleRemoteBuilder = {
                 }
             }
 
+            // Help by filling spawn with energy.
+            var spawns = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => structure.structureType == STRUCTURE_SPAWN
+            });
+            if (spawns && spawns.length > 0 && spawns[0].energy < spawns[0].energyCapacity * 0.8) {
+                if (creep.transfer(spawns[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(spawns[0]);
+                }
+                return true;
+            }
+
+            // Make sure ramparts don't break.
+            var targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => structure.structureType == STRUCTURE_RAMPART && structure.hits < 10000
+            });
+            if (targets.length > 0) {
+                creep.memory.repairTarget = targets[0].id;
+            }
+            if (creep.memory.repairTarget) {
+                var target = Game.getObjectById(creep.memory.repairTarget);
+                if (creep.repair(target) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target);
+                }
+                return true;
+            }
+
+            // Build structures.
             var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
             if (targets.length > 0) {
                 if (!creep.memory.buildTarget) {
@@ -77,15 +105,12 @@ var roleRemoteBuilder = {
                 return true;
             }
 
-            // If there is nothing to build, help by filling spawn with energy.
-            var spawners = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => structure.structureType == STRUCTURE_SPAWN
-            });
-            if (spawners && spawners.length > 0) {
-                if (creep.transfer(spawners[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(spawners[0]);
-                }
-                return true;
+            // Otherwise, upgrade controller.
+            if (creep.pos.getRangeTo(creep.room.controller) < 3) {
+                creep.upgradeController(creep.room.controller);
+            }
+            else {
+                creep.moveTo(creep.room.controller);
             }
             return false;
         }
@@ -96,8 +121,15 @@ var roleRemoteBuilder = {
                 }
 
                 //creep.memory.resourceTarget = utilities.getClosest(creep, sources);
-                creep.memory.resourceTarget = creep.room.sources[Math.floor(Math.random() * creep.room.sources.length)].id;
-                creep.memory.deliverTarget = null;
+                var sources = creep.room.find(FIND_SOURCES_ACTIVE);
+                if (sources.length > 0) {
+                    creep.memory.resourceTarget = sources[Math.floor(Math.random() * sources.length)].id;
+                    creep.memory.deliverTarget = null;
+                }
+                else {
+                    creep.performGetEnergy();
+                    return true;
+                }
             }
             var best = creep.memory.resourceTarget;
             if (!best) {
