@@ -223,7 +223,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
 
     // If we have no other way to recover, spawn with reduced amounts of parts.
     let force = false;
-    if (_.size(this.creepsByRole.harvester) == 0 && _.size(this.creepsByRole.transporter) == 0 && gameState.getStoredEnergy(this) < 5000) {
+    if (_.size(this.creepsByRole.harvester) == 0 && _.size(this.creepsByRole.transporter) == 0 && gameState.getStoredEnergy(this) < 5000 && _.size(this.creepsByRole['builder.remote']) == 0) {
         force = true;
     }
 
@@ -247,6 +247,9 @@ Room.prototype.addHarvesterSpawnOptions = function () {
             let totalWorkParts = 0;
             for (let j in source.harvesters) {
                 totalWorkParts += source.harvesters[j].memory.body.work || 0;
+            }
+            for (let j in this.creepsByRole['builder.remote'] || []) {
+                totalWorkParts += (this.creepsByRole['builder.remote'][j].memory.body.work || 0) / this.sources.length;
             }
 
             if (totalWorkParts < maxParts) {
@@ -289,6 +292,9 @@ Room.prototype.addTransporterSpawnOptions = function () {
     if (this.terminal) {
         //maxTransporters++;
     }
+
+    // Need less transporters in rooms where remote builders are working.
+    maxTransporters -= _.size(this.creepsByRole['builder.remote']);
 
     // On higher level rooms, spawn less, but bigger, transporters.
     var sizeFactor = 1;
