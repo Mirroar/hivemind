@@ -268,7 +268,7 @@ var utilities = {
 
     getClosest: function (creep, targets) {
         if (targets.length > 0) {
-            var target = creep.pos.findClosestByPath(targets);
+            var target = creep.pos.findClosestByRange(targets);
             if (target) {
                 return target.id;
             }
