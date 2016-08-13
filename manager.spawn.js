@@ -293,6 +293,11 @@ Room.prototype.addTransporterSpawnOptions = function () {
         //maxTransporters++;
     }
 
+    if (this.controller.level == 6) {
+        // RCL 6 is that annoying level at which refilling extensions is very tedious and there are many things that need spawning.
+        maxTransporters++;
+    }
+
     // Need less transporters in rooms where remote builders are working.
     maxTransporters -= _.size(this.creepsByRole['builder.remote']);
 
