@@ -2,6 +2,7 @@
 var profiler = require('screeps-profiler');
 
 require('manager.source');
+require('manager.path');
 require('pathfinding');
 require('role.brawler');
 require('role.builder');
@@ -293,9 +294,9 @@ var main = {
             gameState.clearCache();
 
             // Add data to global Game object.
-            Game.squads = [];
+            Game.squads = {};
             for (var squadName in Memory.squads) {
-                Game.squads.push(new Squad(squadName));
+                Game.squads[squadName] = new Squad(squadName);
             }
 
             // Cache creeps per room and role.
