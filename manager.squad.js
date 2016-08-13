@@ -67,7 +67,7 @@ Squad.prototype.spawnUnit = function (spawn) {
     if (!toSpawn) return false;
 
     if (toSpawn == 'ranger') {
-        return spawn.createManagedCreep({
+        spawn.createManagedCreep({
             role: 'brawler',
             bodyWeights: {move: 0.4, tough: 0.1, ranged_attack: 0.25, heal: 0.25},
             memory: {
@@ -77,9 +77,9 @@ Squad.prototype.spawnUnit = function (spawn) {
         });
     }
     else if (toSpawn == 'healer') {
-        return spawn.createManagedCreep({
+        spawn.createManagedCreep({
             role: 'brawler',
-            bodyWeights: {move: 0.5, tough: 0.1, heal: 0.4},
+            bodyWeights: {move: 0.52, tough: 0.1, heal: 0.38},
             memory: {
                 squadName: this.name,
                 squadUnitType: toSpawn,
@@ -87,9 +87,39 @@ Squad.prototype.spawnUnit = function (spawn) {
         });
     }
     else if (toSpawn == 'claimer') {
-        return spawn.createManagedCreep({
+        spawn.createManagedCreep({
             role: 'brawler',
-            bodyWeights: {move: 0.5, tough: 0.2, claim: 0.3},
+            bodyWeights: {move: 0.52, tough: 0.18, claim: 0.3},
+            memory: {
+                squadName: this.name,
+                squadUnitType: toSpawn,
+            },
+        });
+    }
+    else if (toSpawn == 'singleClaim') {
+        spawn.createManagedCreep({
+            role: 'brawler',
+            body: [MOVE, CLAIM],
+            memory: {
+                squadName: this.name,
+                squadUnitType: toSpawn,
+            },
+        });
+    }
+    else if (toSpawn == 'builder') {
+        spawn.createManagedCreep({
+            role: 'brawler',
+            bodyWeights: {move: 0.52, carry: 0.38, work: 0.1},
+            memory: {
+                squadName: this.name,
+                squadUnitType: toSpawn,
+            },
+        });
+    }
+    else if (toSpawn == 'test') {
+        spawn.createManagedCreep({
+            role: 'brawler',
+            body: [MOVE],
             memory: {
                 squadName: this.name,
                 squadUnitType: toSpawn,
@@ -97,7 +127,7 @@ Squad.prototype.spawnUnit = function (spawn) {
         });
     }
     else {
-        return spawn.createManagedCreep({
+        spawn.createManagedCreep({
             role: 'brawler',
             bodyWeights: {move: 0.4, tough: 0.3, attack: 0.2, heal: 0.1},
             memory: {
@@ -107,7 +137,7 @@ Squad.prototype.spawnUnit = function (spawn) {
         });
     }
 
-    return false;
+    return true;
 };
 
 Squad.prototype.getOrders = function () {
@@ -126,6 +156,12 @@ Squad.prototype.getOrders = function () {
     }
 
     return options;
+};
+
+Squad.prototype.setPath = function (pathName) {
+    this.memory.pathName = pathName;
+
+    // @todo If there are creeps already spawned, send them on the path.
 };
 
 module.exports = Squad;
