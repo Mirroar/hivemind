@@ -119,6 +119,14 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                     });
                 }
             }
+            if (creep.memory.body.claim && !creep.room.controller.owner) {
+                options.push({
+                    priority: 4,
+                    weight: 0,
+                    type: 'controller',
+                    object: creep.room.controller,
+                });
+            }
 
             // @todo Run home for healing if no functional parts are left.
         }
@@ -158,12 +166,50 @@ Creep.prototype.calculateMilitaryTarget = function (creep) {
  */
 Creep.prototype.performMilitaryMove = function () {
     var creep = this;
+
+    if (this.memory.fillWithEnergy) {
+        if (_.sum(this.carry) < this.carryCapacity) {
+            this.performGetEnergy();
+            return true;
+        }
+        else {
+            delete this.memory.fillWithEnergy;
+        }
+    }
+
+    if (this.memory.pathName) {
+        // @todo Decide if squad should be fully spawned / have an order or attack flag before moving along path.
+        var flagName ='Path:' + this.memory.pathName + ':' + this.memory.pathStep;
+        var flag = Game.flags[flagName];
+
+        if (!flag) {
+            console.log(this.name, 'reached end of path', this.memory.pathName, 'at step', this.memory.pathStep, 'and has', this.ticksToLive, 'ticks left to live.');
+
+            delete this.memory.pathName;
+            delete this.memory.pathStep;
+
+            if (this.memory.squadUnitType == 'builder') {
+                // Rebrand as remote builder to work in this room from now on.
+                this.memory.role = 'builder.remote';
+                this.memory.target = utilities.encodePosition(this.pos);
+                this.memory.starting = false;
+            }
+        }
+        else {
+            this.moveTo(flag);
+            if (this.pos.getRangeTo(flag) < 5) {
+                console.log(this.name, 'reached waypoint', this.memory.pathStep, 'of path', this.memory.pathName, 'and has', this.ticksToLive, 'ticks left to live.');
+
+                this.memory.pathStep++;
+            }
+            return true;
+        }
+    }
+
     if (creep.memory.squadName) {
         // Check if there are orders and set a target accordingly.
-        var squads = _.filter(Game.squads, (squad) => squad.name = creep.memory.squadName);
-        if (squads.length > 0) {
-            var squad = squads[0];
-
+        var squad = Game.squads[creep.memory.squadName];
+        if (squad) {
             var orders = squad.getOrders();
             if (orders.length > 0) {
                 creep.memory.target = orders[0].target;
@@ -192,10 +238,10 @@ Creep.prototype.performMilitaryMove = function () {
                             return true;
                         }
                     }
-                }
 
-                // If there's nothing to do, move back to spawn flag.
-                creep.moveTo(flag);
+                    // If there's nothing to do, move back to spawn flag.
+                    creep.moveTo(flag);
+                }
             }
 
             return true;
@@ -253,7 +299,19 @@ Creep.prototype.performMilitaryAttack = function () {
                 }
             }
             else if (!target.my) {
-                // @todo reserve
+                // If attack flag is directly on controller, claim it, otherwise just reserve.
+                if (creep.memory.squadName && Game.flags['AttackSquad:' + creep.memory.squadName] && Game.flags['AttackSquad:' + creep.memory.squadName].pos.getRangeTo(target) == 0) {
+                    var result = creep.claimController(target);
+                    if (result == OK) {
+                        attacked = true;
+                    }
+                }
+                else {
+                    var result = creep.reserveController(target);
+                    if (result == OK) {
+                        attacked = true;
+                    }
+                }
             }
         }
         else if (target && !target.my) {
@@ -346,10 +404,30 @@ Creep.prototype.performMilitaryHeal = function () {
     return healed;
 };
 
+Creep.prototype.initBrawlerState = function () {
+    this.memory.initialized = true;
+
+    if (this.memory.squadName) {
+        var squad = Game.squads[this.memory.squadName];
+        if (squad && squad.memory.pathName) {
+            this.memory.pathName = squad.memory.pathName;
+            this.memory.pathStep = 1;
+        }
+    }
+
+    if (this.memory.squadUnitType == 'builder') {
+        this.memory.fillWithEnergy = true;
+    }
+};
+
 /**
  * Makes a creep behave like a brawler.
  */
 Creep.prototype.runBrawlerLogic = function () {
+    if (!this.memory.initialized) {
+        this.initBrawlerState();
+    }
+
     // Target is recalculated every turn for best results.
     this.calculateMilitaryTarget();
 
