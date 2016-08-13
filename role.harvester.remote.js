@@ -63,8 +63,9 @@ Creep.prototype.performBuildRoad = function() {
                 let sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
                 let numSites = _.filter(Game.constructionSites, (site) => site.pos.roomName == position.roomName).length;
                 if (sites.length < 1 && numSites < 5) {
-                    position.createConstructionSite(STRUCTURE_ROAD);
-                    return true;
+                    if (position.createConstructionSite(STRUCTURE_ROAD) == OK) {
+                        return true;
+                    }
                 }
             }
         }
@@ -93,6 +94,7 @@ Creep.prototype.performBuildRoad = function() {
                 }
             }
         }
+        hasRoad = true;
     }
     else {
         // Check if creep is travelling on a road.
@@ -279,7 +281,13 @@ Creep.prototype.performRemoteHarvesterDeliver = function () {
     }
 
     if (targetPosition.roomName != creep.pos.roomName) {
-        if (creep.performBuildRoad()) {
+        if (creep.hasCachedPath()) {
+            if (creep.performBuildRoad()) {
+                return true;
+            }
+        }
+        else {
+            creep.setRemoteHarvestState(true);
             return true;
         }
     }
