@@ -132,7 +132,7 @@ Creep.prototype.performRepair = function () {
     }
 
     if (creep.pos.getRangeTo(target) > 3) {
-        creep.moveTo(target);
+        creep.moveToRange(target, 3);
 
         // Also try to repair things that are close by when appropriate.
         if (Game.cpu.bucket > 8000) {

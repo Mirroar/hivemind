@@ -46,6 +46,18 @@ var Squad = require('manager.squad');
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
+Creep.prototype.moveToRange = function (target, range) {
+    PathFinder.use(true);
+    let pos = target;
+    if (target.pos) {
+        pos = target.pos;
+    }
+    this.moveTo({pos: pos, range: range}, {
+        maxRooms: 1,
+    });
+    PathFinder.use(false);
+};
+
 Creep.prototype.runLogic = function() {
     var creep = this;
 

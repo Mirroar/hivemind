@@ -28,7 +28,7 @@ Creep.prototype.performBuild = function () {
     }
 
     if (this.build(target) == ERR_NOT_IN_RANGE) {
-        this.moveTo(target);
+        this.moveToRange(target, 3);
     }
     return true;
 };
