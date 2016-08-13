@@ -138,7 +138,7 @@ Creep.prototype.performRepair = function () {
         creep.moveToRange(target, 3);
 
         // Also try to repair things that are close by when appropriate.
-        if (Game.cpu.bucket > 8000) {
+        if (Game.cpu.bucket > 9500) {
             let workParts = creep.memory.body.work;
             if (workParts && (creep.carry.energy > creep.carryCapacity * 0.7 || creep.carry.energy < creep.carryCapacity * 0.3)) {
                 var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
