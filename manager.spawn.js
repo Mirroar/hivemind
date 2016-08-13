@@ -167,6 +167,14 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addBuilderSpawnOptions();
     this.addRepairerSpawnOptions();
 
+    if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
+        options.push({
+            priority: 4,
+            weight: 1,
+            role: 'brawler',
+        });
+    }
+
     if (memory.options.length > 0) {
         // Try to spawn the most needed creep.
         return this.spawnCreepByPriority(activeSpawn);
@@ -196,6 +204,9 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     }
     else if (best.role == 'repairer') {
         activeSpawn.spawnRepairer(best.size);
+    }
+    else if (best.role == 'brawler') {
+        activeSpawn.spawnBrawler(this.controller.pos);
     }
     else {
         console.log(this.name, 'trying to spawn unknown creep role:', best.role);
@@ -530,7 +541,7 @@ Room.prototype.manageSpawns = function () {
 
                 //console.log('Spawning squad', squadName);
                 // @todo Initialize Game.squads in main loop and use that.
-                var squad = new Squad(squadName);
+                var squad = Game.squads[squadName];
                 if (squad.spawnUnit(spawn)) {
                     return true;
                 }
