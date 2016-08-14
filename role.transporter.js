@@ -447,9 +447,13 @@ Creep.prototype.performGetResources = function () {
         else {
             let result = creep.withdraw(target, creep.memory.order.resourceType);
             if (result == OK) {
-                creep.calculateEnergySource();
+                creep.calculateSource();
             }
         }
+    }
+    else if (target.mineralCapacity) {
+        // Empty lab.
+        creep.calculateSource();
     }
     return true;
 };
