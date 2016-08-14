@@ -29,7 +29,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 
                         var option = {
                             priority: 5,
-                            weight: 0,
+                            weight: 1 - creep.pos.getRangeTo(enemy) / 50,
                             type: 'hostilecreep',
                             object: enemy,
                         };
@@ -214,6 +214,18 @@ Creep.prototype.performMilitaryMove = function () {
     if (this.memory.exploitName) {
         var exploit = Game.exploits[this.memory.exploitName];
         if (exploit) {
+            // If an enemy is close by, move to attack it.
+            let enemies = this.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
+                filter: (enemy) => enemy.isDangerous()
+            });
+            if (enemies.length > 0) {
+                if (this.pos.getRangeTo(enemies[0]) > 1) {
+                    this.moveTo(enemies[0]);
+                }
+                return;
+            }
+
+            // Follow cached path when requested.
             if (this.hasCachedPath()) {
                 this.followCachedPath();
                 if (this.hasArrived()) {
@@ -232,10 +244,67 @@ Creep.prototype.performMilitaryMove = function () {
                 }
             }
             else {
-                // @todo In-room movement.
-                if (!this.memory.target) {
-                    this.memory.target = utilities.encodePosition(exploit.flag.pos);
+                // In-room movement.
+
+                // Start at closest patrol point to entrance
+                if (!this.memory.patrolPoint) {
+                    if (exploit.memory.closestLairToEntrance) {
+                        this.memory.patrolPoint = exploit.memory.closestLairToEntrance;
+                    }
+                    else if (exploit.memory.lairs) {
+                        for (let id in exploit.memory.lairs) {
+                            this.memory.patrolPoint = id;
+                            break;
+                        }
+                    }
                 }
+
+                if (this.memory.patrolPoint) {
+                    this.memory.target = this.memory.patrolPoint;
+                    let lair = Game.getObjectById(this.memory.patrolPoint);
+                    if (!lair) return;
+
+                    // Seems we have arrived at a patrol Point, and no enemies are immediately nearby.
+                    // Find patrol point where we'll have the soonest fight.
+                    let best = null;
+                    let bestTime = null;
+
+                    let id = this.memory.patrolPoint;
+                    for (let id2 in exploit.memory.lairs) {
+                        if (id == id2) continue;
+                        let otherLair = Game.getObjectById(id2);
+                        if (!otherLair) continue;
+
+                        let time = otherLair.ticksToSpawn || 0;
+
+                        if (exploit.memory.lairs[id].paths[id2].path) {
+                            time = Math.max(time, exploit.memory.lairs[id].paths[id2].path.length);
+                        }
+                        else {
+                            time = Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
+                        }
+
+                        if (!best || time < bestTime) {
+                            best = id2;
+                            bestTime = time;
+                        }
+                    }
+
+                    if (best) {
+                        if (exploit.memory.lairs[id].paths[best].path) {
+                            this.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
+                        }
+                        else {
+                            this.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
+                        }
+                    }
+
+                    return;
+                }
+                else {
+                    // @todo No patrol points available, what now?
+                }
+
             }
         }
     }
