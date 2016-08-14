@@ -295,7 +295,7 @@ Creep.prototype.performMilitaryMove = function () {
 
         if (target) {
             var result = creep.moveTo(target, {
-                reusePath: 0,
+                reusePath: 5,
                 ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.my) && creep.memory.body.attack,
             });
         }
