@@ -25,6 +25,7 @@ var structureManager = require('manager.structure');
 var utilities = require('utilities');
 
 var Bay = require('manager.bay');
+var Exploit = require('manager.exploit');
 var Squad = require('manager.squad');
 
 // @todo Decide when it is a good idea to send out harvesters to adjacent unclaimend tiles.
@@ -46,6 +47,9 @@ var Squad = require('manager.squad');
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
+/**
+ * Use the new pathfinder to move within a certain range of a target.
+ */
 Creep.prototype.moveToRange = function (target, range) {
     PathFinder.use(true);
     let pos = target;
@@ -58,6 +62,9 @@ Creep.prototype.moveToRange = function (target, range) {
     PathFinder.use(false);
 };
 
+/**
+ * Runs a creeps logic depending on role and other factors.
+ */
 Creep.prototype.runLogic = function() {
     var creep = this;
 
