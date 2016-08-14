@@ -128,6 +128,7 @@ Creep.prototype.runLogic = function() {
 Creep.prototype.enhanceData = function () {
     let role = this.memory.role;
 
+    // Store creeps by role in global and room data.
     if (!Game.creepsByRole[role]) {
         Game.creepsByRole[role] = {};
     }
@@ -143,6 +144,17 @@ Creep.prototype.enhanceData = function () {
         room.creepsByRole[role] = {};
     }
     room.creepsByRole[role][this.name] = this;
+
+    // Store creeps that are part of a squad in their respectice squads.
+    if (this.memory.squadName) {
+        var squad = Game.squads[this.memory.squadName];
+        if (squad) {
+            if (!squad.units[this.memory.squadUnitType]) {
+                squad.units[this.memory.squadUnitType] = [];
+            }
+            squad.units[this.memory.squadUnitType].push(this.id);
+        }
+    }
 };
 
 /**
@@ -350,7 +362,7 @@ var main = {
             Game.creepsByRole = {};
             for (let creepName in Game.creeps) {
                 let creep = Game.creeps[creepName];
-                creep.enhanceData;
+                creep.enhanceData();
             }
 
             // Add data to room objects.

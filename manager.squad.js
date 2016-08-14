@@ -2,11 +2,11 @@ var utilities = require('utilities');
 
 var Squad = function(squadName) {
     this.name = squadName;
+    this.units = {};
 
     if (!Memory.squads[squadName]) {
         Memory.squads[squadName] = {
             composition: {},
-            units: {},
             fullySpawned: false,
         };
     }
@@ -17,9 +17,6 @@ var Squad = function(squadName) {
 Squad.prototype.addUnit = function (unitType) {
     if (!this.memory.composition[unitType]) {
         this.memory.composition[unitType] = 0;
-    }
-    if (!this.memory.units[unitType]) {
-        this.memory.units[unitType] = [];
     }
     this.memory.composition[unitType]++;
 
@@ -35,24 +32,9 @@ Squad.prototype.removeUnit = function (unitType) {
     return this.memory.composition[unitType];
 };
 
-Squad.prototype.registerCreeps = function () {
-    var squadCreeps = _.filter(Game.creeps, (creep) => creep.memory.squadName == this.name);
-    for (var unitType in this.memory.composition) {
-        this.memory.units[unitType] = [];
-        for (var i in squadCreeps) {
-            var creep = squadCreeps[i];
-            if (creep.memory.squadUnitType == unitType) {
-                this.memory.units[unitType].push(creep.id);
-            }
-        }
-    }
-};
-
 Squad.prototype.needsSpawning = function () {
-    // @todo Call registerCreeps somewhere globally whenever it makes sense.
-    this.registerCreeps();
     for (var unitType in this.memory.composition) {
-        if (this.memory.composition[unitType] > this.memory.units[unitType].length) {
+        if (this.memory.composition[unitType] > _.size(this.units[unitType])) {
             return unitType;
         }
     }
