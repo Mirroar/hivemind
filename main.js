@@ -123,6 +123,29 @@ Creep.prototype.runLogic = function() {
 };
 
 /**
+ * Add additional data for each creep.
+ */
+Creep.prototype.enhanceData = function () {
+    let role = this.memory.role;
+
+    if (!Game.creepsByRole[role]) {
+        Game.creepsByRole[role] = {};
+    }
+    Game.creepsByRole[role][this.name] = this;
+
+    let room = this.room;
+    if (!room.creeps) {
+        room.creeps = {};
+        room.creepsByRole = {};
+    }
+    room.creeps[this.name] = this;
+    if (!room.creepsByRole[role]) {
+        room.creepsByRole[role] = {};
+    }
+    room.creepsByRole[role][this.name] = this;
+};
+
+/**
  * Adds some additional data to room objects.
  */
 Room.prototype.enhanceData = function () {
@@ -324,27 +347,10 @@ var main = {
             }
 
             // Cache creeps per room and role.
-            // @todo Probably move to Creep.prototype.enhanceData().
             Game.creepsByRole = {};
             for (let creepName in Game.creeps) {
                 let creep = Game.creeps[creepName];
-                let role = creep.memory.role;
-
-                if (!Game.creepsByRole[role]) {
-                    Game.creepsByRole[role] = {};
-                }
-                Game.creepsByRole[role][creepName] = creep;
-
-                let room = creep.room;
-                if (!room.creeps) {
-                    room.creeps = {};
-                    room.creepsByRole = {};
-                }
-                room.creeps[creepName] = creep;
-                if (!room.creepsByRole[role]) {
-                    room.creepsByRole[role] = {};
-                }
-                room.creepsByRole[role][creepName] = creep;
+                creep.enhanceData;
             }
 
             // Add data to room objects.
