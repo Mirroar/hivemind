@@ -9,6 +9,11 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 
     if (creep.memory.target) {
         var targetPosition = utilities.decodePosition(creep.memory.target);
+        if (!targetPosition) {
+            delete creep.memory.target;
+            return options;
+        }
+
         if (creep.pos.roomName == targetPosition.roomName) {
 
             // Find enemies to attack.
@@ -37,7 +42,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 
                 // Find structures to attack.
                 var structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
-                    filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE
+                    filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.hits
                 });
 
                 if (structures && structures.length > 0) {
@@ -64,7 +69,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 }
 
                 // Find walls in front of controller.
-                if (creep.room.controller.owner && !creep.room.controller.my) {
+                if (creep.room.controller && creep.room.controller.owner && !creep.room.controller.my) {
                     var structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1);
 
                     if (structures && structures.length > 0) {
@@ -228,6 +233,9 @@ Creep.prototype.performMilitaryMove = function () {
             }
             else {
                 // @todo In-room movement.
+                if (!this.memory.target) {
+                    this.memory.target = utilities.encodePosition(exploit.flag.pos);
+                }
             }
         }
     }
@@ -288,7 +296,7 @@ Creep.prototype.performMilitaryMove = function () {
         if (target) {
             var result = creep.moveTo(target, {
                 reusePath: 0,
-                ignoreDestructibleStructures: !creep.room.controller.my && creep.memory.body.attack,
+                ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.my) && creep.memory.body.attack,
             });
         }
     }
