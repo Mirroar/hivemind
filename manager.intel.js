@@ -39,14 +39,32 @@ Room.prototype.gatherIntel = function () {
         intel.sources.push(sources[i].id);
     }
 
-    // Check for power.
-    var powerBanks = room.find(FIND_STRUCTURES, {
-        filter: (structure) => structure.structureType == STRUCTURE_POWER_BANK
-    });
-    if (powerBanks.length > 0) {
-        // For now, send a notification!
-        console.log('Power bank found in', room.name);
-        Game.notify('Power bank found in ' + room.name + '!');
+    // @todo Check minerals.
+
+    // Check structures.
+    intel.structures = {};
+    var structures = room.find(FIND_STRUCTURES);
+    for (let i in structures) {
+        let structure = structures[i];
+        let structureType = structure.structureType;
+
+        // Check for power.
+        if (structureType == STRUCTURE_POWER_BANK) {
+            // For now, send a notification!
+            console.log('Power bank found in', room.name);
+            Game.notify('Power bank found in ' + room.name + '!');
+        }
+        else if (structureType == STRUCTURE_KEEPER_LAIR) {
+            if (!intel.structures[structureType]) {
+                intel.structures[structureType] = {};
+            }
+            intel.structures[structureType][structure.id] = {
+                x: structure.pos.x,
+                y: structure.pos.y,
+                hits: structure.hits,
+                hitsMax: structure.hitsMax,
+            };
+        }
     }
 
     // @todo Check for portals.

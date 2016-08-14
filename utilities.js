@@ -204,7 +204,27 @@ var utilities = {
         var endPosition = sourceFlag.pos;
         //console.log('Finding path between', startPosition, 'and', endPosition);
 
-        var result = PathFinder.search(startPosition, {pos: endPosition, range: 1}, {
+        var result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
+        pathPrecalculated = true;
+
+        if (result) {
+            //console.log('found path in', result.ops, 'operations', result.path);
+
+            harvestMemory.cachedPath = {
+                lastCalculated: Game.time,
+                path: Room.serializePositionPath(result.path),
+            };
+        }
+        else {
+            console.log('No path found!');
+        }
+
+        var end = Game.cpu.getUsed();
+        //console.log('Total time:', end - start);
+    },
+
+    getPath: function (startPosition, endPosition, allowDanger) {
+        return PathFinder.search(startPosition, endPosition, {
             plainCost: 2,
             swampCost: 10,
             maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
@@ -213,7 +233,7 @@ var utilities = {
                 let room = Game.rooms[roomName];
 
                 // If a room is considered inaccessible, don't look for paths through it.
-                if (intelManager.isRoomInaccessible(roomName)) return false;
+                if (!allowDanger && intelManager.isRoomInaccessible(roomName)) return false;
 
                 // If we have no sight in a room, assume it is empty.
                 if (!room) return new PathFinder.CostMatrix;
@@ -244,26 +264,11 @@ var utilities = {
                     }
                 });
 
+                // @todo Try not to drive to close to sources / minerals / controllers.
 
                 return costs;
             },
         });
-        pathPrecalculated = true;
-
-        if (result) {
-            //console.log('found path in', result.ops, 'operations', result.path);
-
-            harvestMemory.cachedPath = {
-                lastCalculated: Game.time,
-                path: Room.serializePositionPath(result.path),
-            };
-        }
-        else {
-            console.log('No path found!');
-        }
-
-        var end = Game.cpu.getUsed();
-        //console.log('Total time:', end - start);
     },
 
     getClosest: function (creep, targets) {

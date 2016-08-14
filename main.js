@@ -128,11 +128,13 @@ Creep.prototype.runLogic = function() {
 Room.prototype.enhanceData = function () {
     this.sources = [];
 
+    // Prepare memory for creep cache (filled globally later).
     if (!this.creeps) {
         this.creeps = {};
         this.creepsByRole = {};
     }
 
+    // Register sources from intelManager.
     if (this.memory.intel) {
         let intel = this.memory.intel;
 
@@ -145,6 +147,7 @@ Room.prototype.enhanceData = function () {
         }
     }
 
+    // Register bays.
     this.bays = {};
     let flags = this.find(FIND_FLAGS, {
         filter: (flag) => flag.name.startsWith('Bay:')
@@ -156,6 +159,21 @@ Room.prototype.enhanceData = function () {
         catch (e) {
             console.log('Error when initializing Bays:', e);
             console.log(e.stack);
+        }
+    }
+
+    // Register exploits.
+    this.exploits = {};
+    if (this.controller && this.controller.level >= 7) {
+        flags = _.filter(Game.flags, (flag) => flag.name.startsWith('Exploit:' + this.name + ':'));
+        for (let i in flags) {
+            try {
+                this.exploits[flags[i].pos.roomName] = new Exploit(this, flags[i].name);
+            }
+            catch (e) {
+                console.log('Error when initializing Exploits:', e);
+                console.log(e.stack);
+            }
         }
     }
 };
