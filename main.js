@@ -152,7 +152,18 @@ Creep.prototype.enhanceData = function () {
             if (!squad.units[this.memory.squadUnitType]) {
                 squad.units[this.memory.squadUnitType] = [];
             }
-            squad.units[this.memory.squadUnitType].push(this.id);
+            squad.units[this.memory.squadUnitType].push(this);
+        }
+    }
+
+    // Store creeps that are part of an exploit operation in the correct object.
+    if (this.memory.exploitName) {
+        var exploit = Game.exploits[this.memory.exploitName];
+        if (exploit) {
+            if (exploit.units[this.memory.exploitUnitType]) {
+                exploit.units[this.memory.exploitUnitType] = [];
+            }
+            exploit.units[this.memory.squadUnitType].push(this);
         }
     }
 };
