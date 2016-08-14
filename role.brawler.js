@@ -271,17 +271,18 @@ Creep.prototype.performMilitaryMove = function () {
 
                     let id = this.memory.patrolPoint;
                     for (let id2 in exploit.memory.lairs) {
-                        if (id == id2) continue;
                         let otherLair = Game.getObjectById(id2);
                         if (!otherLair) continue;
 
                         let time = otherLair.ticksToSpawn || 0;
 
-                        if (exploit.memory.lairs[id].paths[id2].path) {
-                            time = Math.max(time, exploit.memory.lairs[id].paths[id2].path.length);
-                        }
-                        else {
-                            time = Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
+                        if (id != id2) {
+                            if (exploit.memory.lairs[id].paths[id2].path) {
+                                time = Math.max(time, exploit.memory.lairs[id].paths[id2].path.length);
+                            }
+                            else {
+                                time = Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
+                            }
                         }
 
                         if (!best || time < bestTime) {
@@ -291,11 +292,17 @@ Creep.prototype.performMilitaryMove = function () {
                     }
 
                     if (best) {
-                        if (exploit.memory.lairs[id].paths[best].path) {
-                            this.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
+                        if (best == this.memory.patrolPoint) {
+                            this.moveToRange(lair, 1);
                         }
                         else {
-                            this.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
+                            this.memory.patrolPoint = best;
+                            if (exploit.memory.lairs[id].paths[best].path) {
+                                this.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
+                            }
+                            else {
+                                this.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
+                            }
                         }
                     }
 
