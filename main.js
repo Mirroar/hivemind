@@ -2,7 +2,6 @@
 var profiler = require('screeps-profiler');
 
 require('manager.source');
-require('manager.path');
 require('pathfinding');
 require('role.brawler');
 require('role.builder');
