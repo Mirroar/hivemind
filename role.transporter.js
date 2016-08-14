@@ -879,7 +879,7 @@ Creep.prototype.runTransporterLogic = function () {
     if (!this.memory.delivering) {
         // Make sure not to keep standing on resource drop stop.
         var storagePosition = this.room.getStorageLocation();
-        if (this.pos.x == storagePosition.x && this.pos.y == storagePosition.y) {
+        if (storagePosition && this.pos.x == storagePosition.x && this.pos.y == storagePosition.y) {
             this.move(_.random(1, 8));
             return true;
         }
