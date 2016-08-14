@@ -206,6 +206,32 @@ Creep.prototype.performMilitaryMove = function () {
         }
     }
 
+    if (this.memory.exploitName) {
+        var exploit = Game.exploits[this.memory.exploitName];
+        if (exploit) {
+            if (this.hasCachedPath()) {
+                this.followCachedPath();
+                if (this.hasArrived()) {
+                    this.clearCachedPath();
+                }
+                else {
+                    return;
+                }
+            }
+
+            if (this.pos.roomName != exploit.roomName) {
+                // Follow cached path to target room.
+                if (!this.hasCachedPath() && exploit.memory.pathToRoom) {
+                    this.setCachedPath(exploit.memory.pathToRoom);
+                    return;
+                }
+            }
+            else {
+                // @todo In-room movement.
+            }
+        }
+    }
+
     if (creep.memory.squadName) {
         // Check if there are orders and set a target accordingly.
         var squad = Game.squads[creep.memory.squadName];

@@ -166,6 +166,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addUpgraderSpawnOptions();
     this.addBuilderSpawnOptions();
     this.addRepairerSpawnOptions();
+    this.addExploitSpawnOptions();
 
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
         options.push({
@@ -207,6 +208,9 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     }
     else if (best.role == 'brawler') {
         activeSpawn.spawnBrawler(this.controller.pos);
+    }
+    else if (best.role == 'exploit') {
+        Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
     }
     else {
         console.log(this.name, 'trying to spawn unknown creep role:', best.role);
@@ -426,6 +430,18 @@ Room.prototype.addRepairerSpawnOptions = function () {
             size: 5 * sizeFactor,
         });
     }
+};
+
+Room.prototype.addExploitSpawnOptions = function () {
+    if (_.size(this.exploits) == 0) {
+        return;
+    }
+
+    for (let name in this.exploits) {
+        this.exploits[name].addSpawnOptions(this.memory.spawnQueue.options);
+    }
+
+    var memory = this.memory.spawnQueue;
 };
 
 /**

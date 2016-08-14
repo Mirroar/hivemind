@@ -158,13 +158,10 @@ Creep.prototype.enhanceData = function () {
 
     // Store creeps that are part of an exploit operation in the correct object.
     if (this.memory.exploitName) {
-        var exploit = Game.exploits[this.memory.exploitName];
-        if (exploit) {
-            if (exploit.units[this.memory.exploitUnitType]) {
-                exploit.units[this.memory.exploitUnitType] = [];
-            }
-            exploit.units[this.memory.squadUnitType].push(this);
+        if (!Game.exploitTemp[this.memory.exploitName]) {
+            Game.exploitTemp[this.memory.exploitName] = [];
         }
+        Game.exploitTemp[this.memory.exploitName].push(this.id);
     }
 };
 
@@ -215,6 +212,7 @@ Room.prototype.enhanceData = function () {
         for (let i in flags) {
             try {
                 this.exploits[flags[i].pos.roomName] = new Exploit(this, flags[i].name);
+                Game.exploits[flags[i].pos.roomName] = this.exploits[flags[i].pos.roomName];
             }
             catch (e) {
                 console.log('Error when initializing Exploits:', e);
@@ -363,14 +361,17 @@ var main = {
             // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
             gameState.clearCache();
 
-            // Add data to global Game object.
             Game.squads = {};
+            Game.exploits = {};
+            Game.creepsByRole = {};
+            Game.exploitTemp = {};
+
+            // Add data to global Game object.
             for (var squadName in Memory.squads) {
                 Game.squads[squadName] = new Squad(squadName);
             }
 
             // Cache creeps per room and role.
-            Game.creepsByRole = {};
             for (let creepName in Game.creeps) {
                 let creep = Game.creeps[creepName];
                 creep.enhanceData();
