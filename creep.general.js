@@ -1,6 +1,11 @@
 var utilities = require('utilities');
 
 Creep.prototype.isDangerous = function () {
+    // Ignore Alekseyka's creeps when remote harvesting.
+    if ((this.pos.roomName == 'E46S41' || this.pos.roomName == 'E46S42' || this.pos.roomName == 'E47S41') && this.owner.username == 'Alekseyka') {
+        return false;
+    }
+
     for (let j in this.body) {
         let type = this.body[j].type;
 
@@ -9,7 +14,7 @@ Creep.prototype.isDangerous = function () {
         }
     }
     return false;
-}
+};
 
 module.exports = {
 

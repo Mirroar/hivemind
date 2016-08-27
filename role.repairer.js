@@ -138,24 +138,8 @@ Creep.prototype.performRepair = function () {
         creep.moveToRange(target, 3);
 
         // Also try to repair things that are close by when appropriate.
-        if (Game.cpu.bucket > 9500) {
-            let workParts = creep.memory.body.work;
-            if (workParts && (creep.carry.energy > creep.carryCapacity * 0.7 || creep.carry.energy < creep.carryCapacity * 0.3)) {
-                var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        let maxHealth = structure.hitsMax;
-                        if (structure.structureType == STRUCTURE_RAMPART || structure.structureType == STRUCTURE_WALL) {
-                            maxHealth = wallHealth[structure.room.controller.level];
-                        }
-                        if (structure.hits < maxHealth) {
-                            return true;
-                        }
-                    }
-                });
-                if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-                    creep.repair(needsRepair);
-                }
-            }
+        if (Game.cpu.bucket > 9500 && (this.carry.energy > this.carryCapacity * 0.7 || this.carry.energy < this.carryCapacity * 0.3)) {
+            creep.repairNearby();
         }
     }
     else {
@@ -163,6 +147,26 @@ Creep.prototype.performRepair = function () {
     }
     return true;
 };
+
+Creep.prototype.repairNearby = function () {
+    let workParts = this.memory.body.work;
+    if (workParts) {
+        var needsRepair = this.pos.findInRange(FIND_STRUCTURES, 3, {
+            filter: (structure) => {
+                let maxHealth = structure.hitsMax;
+                if (structure.structureType == STRUCTURE_RAMPART || structure.structureType == STRUCTURE_WALL) {
+                    maxHealth = wallHealth[structure.room.controller.level];
+                }
+                if (structure.hits <= maxHealth - workParts * 100) {
+                    return true;
+                }
+            }
+        });
+        if (needsRepair.length > 0) {
+            this.repair(needsRepair[0]);
+        }
+    }
+}
 
 /**
  * Puts this creep into or out of repair mode.

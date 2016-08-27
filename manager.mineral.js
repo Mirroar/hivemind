@@ -1,41 +1,33 @@
 /**
  * Adds some additional data to spawn objects. Should be invoked for each spawn early in the script's lifetime.
  */
-Source.prototype.enhanceData = function () {
+Mineral.prototype.enhanceData = function () {
     var roomMemory = Memory.rooms[this.pos.roomName];
 
-    if (!roomMemory.sources) {
-        roomMemory.sources = {};
+    if (!roomMemory.minerals) {
+        roomMemory.minerals = {};
     }
-    if (!roomMemory.sources[this.id]) {
-        roomMemory.sources[this.id] = {};
+    if (!roomMemory.minerals[this.id]) {
+        roomMemory.minerals[this.id] = {};
     }
 
-    this.memory = roomMemory.sources[this.id];
+    this.memory = roomMemory.minerals[this.id];
 
     // Collect assigned harvesters.
     this.harvesters = [];
     for (let i in this.room.creepsByRole.harvester || []) {
         let harvester = this.room.creepsByRole.harvester[i];
 
-        if (harvester.memory.fixedSource == this.id) {
+        if (harvester.memory.fixedMineral == this.id) {
             this.harvesters.push(harvester);
         }
     }
 };
 
 /**
- * Calculates the maximum number of work parts that should be used when harvesting this source.
- */
-Source.prototype.getMaxWorkParts = function () {
-    // @todo get Rid of maxWorkParts variable in favor of this.
-    return 1.2 * this.energyCapacity / ENERGY_REGEN_TIME / 2;
-};
-
-/**
  * Finds all adjacent squares that are not blocked by walls.
  */
-Source.prototype.getAdjacentFreeSquares = function () {
+Mineral.prototype.getAdjacentFreeSquares = function () {
     var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
     var adjacentTerrain = [];
     for (var t in terrain) {
@@ -54,53 +46,9 @@ Source.prototype.getAdjacentFreeSquares = function () {
 };
 
 /**
- * Decides on a decent dropoff spot for energy close to the source and easily accessible by harvesters.
+ * Calculates the number of walkable tiles around a mineral.
  */
-Source.prototype.getDropoffSpot = function () {
-    // Decide on a dropoff-spot that will eventually have a container built.
-    // @todo Maybe recalculate once in a while in case structures no block some tiles.
-    if (!this.memory.dropoffSpot) {
-        var best;
-        var bestCount = 0;
-        var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 2, this.pos.x - 2, this.pos.y + 2, this.pos.x + 2, true);
-        var adjacentTerrain = this.getAdjacentFreeSquares();
-
-        for (var t in terrain) {
-            var tile = terrain[t];
-            if (this.pos.getRangeTo(tile.x, tile.y) <= 1) {
-                continue;
-            }
-
-            if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
-                // @todo Make sure no structures are blocking this tile.
-                var count = 0;
-                for (var u in adjacentTerrain) {
-                    var aTile = adjacentTerrain[u];
-
-                    if (aTile.getRangeTo(tile.x, tile.y) <= 1) {
-                        count++;
-                    }
-                }
-
-                if (count > bestCount) {
-                    bestCount = count;
-                    best = tile;
-                }
-            }
-        }
-
-        if (best) {
-            this.memory.dropoffSpot = {x: best.x, y: best.y};
-        }
-    }
-
-    return this.memory.dropoffSpot;
-};
-
-/**
- * Calculates the number of walkable tiles around a source.
- */
-Source.prototype.getNumHarvestSpots = function () {
+Mineral.prototype.getNumHarvestSpots = function () {
     if (!this.memory.maxHarvestersCalculated || this.memory.maxHarvestersCalculated < Game.time - 1000) {
         this.memory.maxHarvestersCalculated = Game.time;
         this.memory.maxHarvesters = this.getAdjacentFreeSquares().length;
@@ -110,9 +58,9 @@ Source.prototype.getNumHarvestSpots = function () {
 };
 
 /**
- * Finds a container in close proximity to this source, for dropping off energy.
+ * Finds a container in close proximity to this mineral, for dropping off energy.
  */
-Source.prototype.getNearbyContainer = function () {
+Mineral.prototype.getNearbyContainer = function () {
     if (!this.memory.nearbyContainerCalculated || this.memory.nearbyContainerCalculated < Game.time - 150) {
         this.memory.nearbyContainerCalculated = Game.time;
         this.memory.targetContainer = null;
@@ -133,9 +81,9 @@ Source.prototype.getNearbyContainer = function () {
 };
 
 /**
- * Finds a link in close proximity to this source, for dropping off energy.
+ * Finds a link in close proximity to this mineral, for dropping off energy.
  */
-Source.prototype.getNearbyLink = function () {
+Mineral.prototype.getNearbyLink = function () {
     if (!this.memory.nearbyLinkCalculated || this.memory.nearbyLinkCalculated < Game.time - 1000) {
         this.memory.nearbyLinkCalculated = Game.time;
         this.memory.targetLink = null;
@@ -156,9 +104,9 @@ Source.prototype.getNearbyLink = function () {
 };
 
 /**
- * Finds a source keeper lair in close proximity to this source.
+ * Finds a mineral keeper lair in close proximity to this mineral.
  */
-Source.prototype.getNearbyLair = function () {
+Mineral.prototype.getNearbyLair = function () {
     if (!this.memory.nearbyLairCalculated || this.memory.nearbyLairCalculated < Game.time - 123456) {
         // This information really shouldn't ever change.
         this.memory.nearbyLairCalculated = Game.time;
@@ -180,16 +128,16 @@ Source.prototype.getNearbyLair = function () {
 };
 
 /**
- * Checks if being close to this source is currently dangerous.
+ * Checks if being close to this mineral is currently dangerous.
  */
-Source.prototype.isDangerous = function () {
+Mineral.prototype.isDangerous = function () {
     var lair = this.getNearbyLair();
     if (lair && lair.isDangerous()) {
         // It's still safe if a guardian with sufficient lifespan is nearby to take care of any source keepers.
         if (this.room.creepsByRole.brawler) {
             for (let i in this.room.creepsByRole.brawler) {
-                let guardian = this.room.creepsByRole.brawler[i];
-                if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30 && guardian.memory.exploitUnitType == 'guardian') {
+                let guardian = this.room.creepsByRole.brawler;
+                if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30) {
                     return false;
                 }
             }

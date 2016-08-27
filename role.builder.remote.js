@@ -115,6 +115,19 @@ var roleRemoteBuilder = {
             return false;
         }
         else {
+            var dropped = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
+                filter: (drop) => drop.resourceType == RESOURCE_ENERGY,
+            });
+            if (dropped) {
+                if (creep.pos.getRangeTo(dropped) > 1) {
+                    creep.moveTo(dropped);
+                }
+                else {
+                    creep.pickup(dropped);
+                }
+                return true;
+            }
+
             if (!creep.memory.resourceTarget) {
                 if (!creep.room.sources || creep.room.sources.length <= 0) {
                     return false;

@@ -134,7 +134,7 @@ Creep.prototype.performBuildRoad = function() {
         }//*/
     }
 
-    var needsBuilding = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES, {
+    var needsBuilding = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
         filter: (site) => site.structureType == STRUCTURE_ROAD || site.structureType == STRUCTURE_CONTAINER
     });
     if (needsBuilding && creep.pos.getRangeTo(needsBuilding) <= 3) {

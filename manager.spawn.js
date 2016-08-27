@@ -5,6 +5,25 @@ var intelManager = require('manager.intel');
 
 var Squad = require('manager.squad');
 
+var roleNameMap = {
+    builder: 'B',
+    'builder.exploit': 'BE',
+    'builder.remote': 'BR',
+    claimer: 'C',
+    brawler: 'F',
+    guardian: 'FE',
+    harvester: 'H',
+    'harvester.exploit': 'HE',
+    'harvester.minerals': 'HM',
+    'harvester.remote': 'HR',
+    repairer: 'R',
+    scout: 'S',
+    transporter: 'T',
+    'hauler.exploit': 'TE',
+    hauler: 'TR',
+    upgrader: 'U',
+};
+
 // @todo Choose the best spawn for a creep (distance to target).
 
 /**
@@ -103,7 +122,11 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
     if (!Memory.creepCounter[memory.role] || Memory.creepCounter[memory.role] >= 36 * 36) {
         Memory.creepCounter[memory.role] = 0;
     }
-    var newName = memory.role + '_' + Memory.creepCounter[memory.role].toString(36);
+    var roleName = memory.role;
+    if (roleNameMap[roleName]) {
+        roleName = roleNameMap[roleName];
+    }
+    var newName = roleName + '_' + Memory.creepCounter[memory.role].toString(36);
 
     // Actually try to spawn this creep.
     var result = this.createCreep(options.body, newName, memory);
@@ -169,7 +192,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addExploitSpawnOptions();
 
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
-        options.push({
+        memory.options.push({
             priority: 4,
             weight: 1,
             role: 'brawler',
@@ -316,6 +339,8 @@ Room.prototype.addTransporterSpawnOptions = function () {
     else if (this.controller.level >= 5) {
         sizeFactor = 1.25;
     }
+    sizeFactor *= 1.5;
+    maxTransporters /= 1.2;
 
     maxTransporters /= sizeFactor;
     maxTransporters = Math.max(maxTransporters, 2);
@@ -362,13 +387,16 @@ Room.prototype.addUpgraderSpawnOptions = function () {
         if (gameState.getStoredEnergy(this) < 100000) {
             maxUpgraders = 0;
         }
-        else if (gameState.getStoredEnergy(this) < 500000) {
+        else if (gameState.getStoredEnergy(this) < 300000) {
             maxUpgraders = 1;
+        }
+        else if (gameState.getStoredEnergy(this) < 500000) {
+            maxUpgraders = 2;
         }
         else {
             // @todo Have maximum depend on number of work parts.
             // @todo Make sure enough energy is brought by.
-            maxUpgraders = 2;
+            maxUpgraders = 3;
         }
     }
 
@@ -415,6 +443,7 @@ Room.prototype.addRepairerSpawnOptions = function () {
     var memory = this.memory.spawnQueue;
 
     var numRepairers = _.size(this.creepsByRole.repairer);
+    var maxRepairers = 2;
 
     // On higher level rooms, spawn less, but bigger, repairers.
     var sizeFactor = 1;
@@ -422,7 +451,12 @@ Room.prototype.addRepairerSpawnOptions = function () {
         sizeFactor = 2;
     }
 
-    if (numRepairers < 2 / sizeFactor) {
+    // On RCL 8, spawn more repairers to max out walls.
+    if (this.controller.level >= 8) {
+        sizeFactor = 3;
+    }
+
+    if (numRepairers < maxRepairers / sizeFactor) {
         memory.options.push({
             priority: 3,
             weight: 0.5,
@@ -650,7 +684,7 @@ Room.prototype.manageSpawns = function () {
             }
 
             // Remote harvesting temporarily disabled until CPU is better.
-            if (Game.cpu.bucket < 8000) {
+            if (Game.cpu.bucket < 5000) {
                 continue;
             }
 
@@ -862,6 +896,15 @@ Room.prototype.manageSpawns = function () {
                     continue;
                 }
 
+                // Cache path when possible.
+                try {
+                    utilities.precalculatePaths(spawn.room, flag);
+                }
+                catch (e) {
+                    console.log('Error in pathfinding:', e);
+                    console.log(e.stack);
+                }
+
                 let doSpawn = false;
 
                 var claimerIds = [];
@@ -919,13 +962,13 @@ Room.prototype.manageSpawns = function () {
 
             // Last but not least: Scouts.
             // @todo Spawn scout closest to where we're gonna send it.
-            var maxScouts = 1;
+            /*var maxScouts = 1;
             var numScouts = _.size(Game.creepsByRole.scout);
             if (numScouts < maxScouts) {
                 if (spawn.spawnScout()) {
                     return true;
                 }
-            }
+            }//*/
         }
 
         // Let only one spawner spawn each tickt to prevent confusion.
@@ -1098,6 +1141,38 @@ StructureSpawn.prototype.spawnRepairer = function (size) {
         role: 'repairer',
         bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
         maxParts: maxParts,
+        memory: {
+            singleRoom: this.pos.roomName,
+        },
+    });
+};
+
+/**
+ * Spawns a new repairer.
+ */
+StructureSpawn.prototype.spawnRepairerBoosted = function (size) {
+    var maxParts = {work: 5};
+    if (size) {
+        maxParts.work = size;
+    }
+
+    var boosts = this.room.getAvailableBoosts('repair');
+    var bestBoost;
+    for (let resourceType in boosts || []) {
+        if (boosts[resourceType].available >= maxParts.work) {
+            if (!bestBoost || boosts[resourceType].effect > boosts[bestBoost].effect) {
+                bestBoost = resourceType;
+            }
+        }
+    }
+
+    return this.createManagedCreep({
+        role: 'repairer',
+        bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
+        maxParts: maxParts,
+        boosts: {
+            work: bestBoost,
+        },
         memory: {
             singleRoom: this.pos.roomName,
         },

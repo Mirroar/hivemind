@@ -1,18 +1,41 @@
 // Screeps profiler stuff
-var profiler = require('screeps-profiler');
+var useProfiler = false;
+var collectStats = false;
 
+require('manager.mineral');
 require('manager.source');
 require('pathfinding');
 require('role.brawler');
 require('role.builder');
+require('role.builder.exploit');
 require('role.claimer');
 require('role.harvester');
+require('role.harvester.exploit');
 require('role.harvester.remote');
 require('role.hauler');
+require('role.hauler.exploit');
 require('role.repairer');
 require('role.scout');
 require('role.transporter');
 require('role.upgrader');
+
+var RoomPlanner;
+try {
+    RoomPlanner = require('roomplanner');
+}
+catch (e) {
+    console.log('Error when loading room planner:', e);
+    console.log(e.stack);
+}
+
+var BoostManager;
+try {
+    BoostManager = require('manager.boost');
+}
+catch (e) {
+    console.log('Error when loading boost manager:', e);
+    console.log(e.stack);
+}
 
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
@@ -100,17 +123,26 @@ Creep.prototype.runLogic = function() {
         else if (creep.memory.role == 'harvester.remote') {
             creep.runRemoteHarvesterLogic();
         }
+        else if (creep.memory.role == 'harvester.exploit') {
+            creep.runExploitHarvesterLogic();
+        }
         else if (creep.memory.role == 'claimer') {
             creep.runClaimerLogic();
         }
         else if (creep.memory.role == 'hauler') {
             creep.runHaulerLogic();
         }
+        else if (creep.memory.role == 'hauler.exploit') {
+            creep.runExploitHaulerLogic();
+        }
         else if (creep.memory.role == 'brawler') {
             creep.runBrawlerLogic();
         }
         else if (creep.memory.role == 'builder.remote') {
             roleRemoteBuilder.run(creep);
+        }
+        else if (creep.memory.role == 'builder.exploit') {
+            creep.runExploitBuilderLogic();
         }
         else if (creep.memory.role == 'scout') {
             creep.runScoutLogic();
@@ -188,6 +220,12 @@ Room.prototype.enhanceData = function () {
                 source.enhanceData();
             }
         }
+
+        if (intel.mineral) {
+            let mineral = Game.getObjectById(intel.mineral);
+            this.mineral = mineral;
+            mineral.enhanceData();
+        }
     }
 
     // Register bays.
@@ -220,10 +258,19 @@ Room.prototype.enhanceData = function () {
             }
         }
     }
+
+    // Initialize boost manager.
+    if (BoostManager) {
+        this.boostManager = new BoostManager(this.name);
+    }
 };
 
-// Enable profiling of all methods in Game object protitypes defined up to now.
-profiler.enable();
+
+if (useProfiler) {
+    var profiler = require('screeps-profiler');
+    // Enable profiling of all methods in Game object protitypes defined up to now.
+    profiler.enable();
+}
 
 var main = {
 
@@ -350,7 +397,7 @@ var main = {
      * Main game loop.
      */
     loop: function () {
-        profiler.wrap(function () {
+        var mainLoop = function () {
 
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
                 console.log('Bucket:', Game.cpu.bucket);
@@ -360,6 +407,8 @@ var main = {
 
             // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
             gameState.clearCache();
+
+            Game.RoomPlanner = RoomPlanner;
 
             Game.squads = {};
             Game.exploits = {};
@@ -468,135 +517,147 @@ var main = {
             var statsCPUUsage = Game.cpu.getUsed() - time;
             let totalTime = Game.cpu.getUsed();
 
-            // Grafana stats
-            if (Memory.stats == undefined) {
-              Memory.stats = {};
-            }
+            if (collectStats) {
+                // Grafana stats
+                if (Memory.stats == undefined) {
+                  Memory.stats = {};
+                }
 
-            var rooms = Game.rooms;
-            var spawns = Game.spawns;
-            var resources = structureManager.getRoomResourceStates();
-            for (let roomKey in rooms) {
-                let room = Game.rooms[roomKey];
-                var isMyRoom = (room.controller ? room.controller.my : 0);
-                if (isMyRoom) {
-                    Memory.stats['room.' + room.name + '.myRoom'] = 1;
-                    Memory.stats['room.' + room.name + '.energyAvailable'] = room.energyAvailable;
-                    Memory.stats['room.' + room.name + '.energyCapacityAvailable'] = room.energyCapacityAvailable;
-                    Memory.stats['room.' + room.name + '.controllerProgress'] = room.controller.progress;
-                    Memory.stats['room.' + room.name + '.controllerProgressTotal'] = room.controller.progressTotal;
-                    var stored = 0;
-                    var storedTotal = 0;
+                var rooms = Game.rooms;
+                var spawns = Game.spawns;
+                var resources = structureManager.getRoomResourceStates();
+                for (let roomKey in rooms) {
+                    let room = Game.rooms[roomKey];
+                    var isMyRoom = (room.controller ? room.controller.my : 0);
+                    if (isMyRoom) {
+                        Memory.stats['room.' + room.name + '.myRoom'] = 1;
+                        Memory.stats['room.' + room.name + '.energyAvailable'] = room.energyAvailable;
+                        Memory.stats['room.' + room.name + '.energyCapacityAvailable'] = room.energyCapacityAvailable;
+                        Memory.stats['room.' + room.name + '.controllerProgress'] = room.controller.progress;
+                        Memory.stats['room.' + room.name + '.controllerProgressTotal'] = room.controller.progressTotal;
+                        var stored = 0;
+                        var storedTotal = 0;
 
-                    if (room.storage) {
-                        stored = room.storage.store[RESOURCE_ENERGY];
-                        storedTotal = room.storage.storeCapacity;
-                    }
-                    else {
-                        var storagePosition = room.getStorageLocation();
-                        var spot = room.find(FIND_DROPPED_ENERGY, {
-                            filter: (resource) => {
-                                if (resource.resourceType == RESOURCE_ENERGY) {
-                                    if (storagePosition && resource.pos.x == storagePosition.x && resource.pos.y == storagePosition.y) {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            }
-                        });
-
-                        if (spot.length > 0) {
-                            stored = spot[0].amount;
+                        if (room.storage) {
+                            stored = room.storage.store[RESOURCE_ENERGY];
+                            storedTotal = room.storage.storeCapacity;
                         }
                         else {
-                            stored = 0;
-                        }
-                        storedTotal = 0;
-                    }
-
-                    if (room.terminal) {
-                        stored += room.terminal.store[RESOURCE_ENERGY];
-                        storedTotal += room.terminal.storeCapacity;
-                    }
-
-                    Memory.stats['room.' + room.name + '.storedEnergy'] = stored;
-
-                    // Log all resources.
-                    if (resources[room.name]) {
-                        for (var resourceType in resources[room.name].totalResources) {
-                            Memory.stats['room.' + room.name + '.resources.' + resourceType] = resources[room.name].totalResources[resourceType];
-                        }
-                    }
-
-                    // Log spawn activity.
-                    let roomSpawns = _.filter(spawns, (spawn) => spawn.room.name == room.name);
-                    for (let spawnKey in roomSpawns) {
-                        let spawn = roomSpawns[spawnKey];
-                        Memory.stats['room.' + room.name + '.spawns.' + spawn.name + '.spawning'] = spawn.spawning && 1 || 0;
-                    }
-
-                    // Log remote harvest revenue.
-                    var harvestMemory = room.memory.remoteHarvesting;
-                    if (harvestMemory) {
-                        for (var target in harvestMemory) {
-                            if (Game.time % 10000 == 0) {
-                                stats.clearRemoteHarvestStats(room.name, target);
-                            }
-
-                            var harvestFlags = _.filter(Game.flags, (flag) => {
-                                if (flag.name.startsWith('HarvestRemote') && utilities.encodePosition(flag.pos) == target) {
-                                    if (flag.name.startsWith('HarvestRemote:')) {
-                                        let parts = flag.name.split(':');
-                                        if (parts[1] && parts[1] != room.name) {
-                                            return false;
+                            var storagePosition = room.getStorageLocation();
+                            var spot = room.find(FIND_DROPPED_ENERGY, {
+                                filter: (resource) => {
+                                    if (resource.resourceType == RESOURCE_ENERGY) {
+                                        if (storagePosition && resource.pos.x == storagePosition.x && resource.pos.y == storagePosition.y) {
+                                            return true;
                                         }
                                     }
-                                    return true;
+                                    return false;
                                 }
-                                return false;
                             });
 
-                            if (harvestFlags.length > 0) {
-                                Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.revenue'] = harvestMemory[target].revenue;
-                                Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.creepCost'] = -harvestMemory[target].creepCost;
-                                Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.buildCost'] = -harvestMemory[target].buildCost;
-                                Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.defenseCost'] = -harvestMemory[target].defenseCost;
-                                // Total does not include buildCost, because we get that "for free" from the remote energy source.
-                                Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.total'] = harvestMemory[target].revenue - harvestMemory[target].creepCost - harvestMemory[target].defenseCost;
+                            if (spot.length > 0) {
+                                stored = spot[0].amount;
+                            }
+                            else {
+                                stored = 0;
+                            }
+                            storedTotal = 0;
+                        }
+
+                        if (room.terminal) {
+                            stored += room.terminal.store[RESOURCE_ENERGY];
+                            storedTotal += room.terminal.storeCapacity;
+                        }
+
+                        Memory.stats['room.' + room.name + '.storedEnergy'] = stored;
+
+                        // Log all resources.
+                        if (resources[room.name]) {
+                            for (var resourceType in resources[room.name].totalResources) {
+                                Memory.stats['room.' + room.name + '.resources.' + resourceType] = resources[room.name].totalResources[resourceType];
+                            }
+                        }
+
+                        // Log spawn activity.
+                        let roomSpawns = _.filter(spawns, (spawn) => spawn.room.name == room.name);
+                        for (let spawnKey in roomSpawns) {
+                            let spawn = roomSpawns[spawnKey];
+                            Memory.stats['room.' + room.name + '.spawns.' + spawn.name + '.spawning'] = spawn.spawning && 1 || 0;
+                        }
+
+                        // Log remote harvest revenue.
+                        var harvestMemory = room.memory.remoteHarvesting;
+                        if (harvestMemory) {
+                            for (var target in harvestMemory) {
+                                if (Game.time % 10000 == 0) {
+                                    stats.clearRemoteHarvestStats(room.name, target);
+                                }
+
+                                var harvestFlags = _.filter(Game.flags, (flag) => {
+                                    if (flag.name.startsWith('HarvestRemote') && utilities.encodePosition(flag.pos) == target) {
+                                        if (flag.name.startsWith('HarvestRemote:')) {
+                                            let parts = flag.name.split(':');
+                                            if (parts[1] && parts[1] != room.name) {
+                                                return false;
+                                            }
+                                        }
+                                        return true;
+                                    }
+                                    return false;
+                                });
+
+                                if (harvestFlags.length > 0) {
+                                    Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.revenue'] = harvestMemory[target].revenue;
+                                    Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.creepCost'] = -harvestMemory[target].creepCost;
+                                    Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.buildCost'] = -harvestMemory[target].buildCost;
+                                    Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.defenseCost'] = -harvestMemory[target].defenseCost;
+                                    // Total does not include buildCost, because we get that "for free" from the remote energy source.
+                                    Memory.stats['room.' + room.name + '.remoteHarvesting.' + target + '.total'] = harvestMemory[target].revenue - harvestMemory[target].creepCost - harvestMemory[target].defenseCost;
+                                }
                             }
                         }
                     }
+                    else {
+                        Memory.stats['room.' + room.name + '.myRoom'] = undefined;
+                    }
                 }
-                else {
-                    Memory.stats['room.' + room.name + '.myRoom'] = undefined;
+                Memory.stats['gcl.progress'] = Game.gcl.progress;
+                Memory.stats['gcl.progressTotal'] = Game.gcl.progressTotal;
+                Memory.stats['gcl.level'] = Game.gcl.level;
+                for (let spawnKey in spawns) {
+                    let spawn = spawns[spawnKey];
+                    Memory.stats['spawn.' + spawn.name + '.defenderIndex'] = spawn.memory['defenderIndex'];
                 }
-            }
-            Memory.stats['gcl.progress'] = Game.gcl.progress;
-            Memory.stats['gcl.progressTotal'] = Game.gcl.progressTotal;
-            Memory.stats['gcl.level'] = Game.gcl.level;
-            for (let spawnKey in spawns) {
-                let spawn = spawns[spawnKey];
-                Memory.stats['spawn.' + spawn.name + '.defenderIndex'] = spawn.memory['defenderIndex'];
-            }
-            let creepCounts = {};
-            for (let role in Game.creepsByRole) {
-                Memory.stats['creeps.count.' + role] = _.size(Game.creepsByRole[role]);
-            }
+                let creepCounts = {};
+                for (let role in Game.creepsByRole) {
+                    Memory.stats['creeps.count.' + role] = _.size(Game.creepsByRole[role]);
+                }
 
-            Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
-            Memory.stats['cpu.Towers'] = towersCPUUsage;
-            //Memory.stats['cpu.Links'] = linksRunning;
-            //Memory.stats['cpu.SetupRoles'] = roleSetup;
-            Memory.stats['cpu.Creeps'] = creepsCPUUsage;
-            //Memory.stats['cpu.SumProfiling'] = sumOfProfiller;
-            Memory.stats['cpu.Start'] = initCPUUsage;
-            Memory.stats['cpu.bucket'] = Game.cpu.bucket;
-            Memory.stats['cpu.limit'] = Game.cpu.limit;
-            Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
-            Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
+                Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
+                Memory.stats['cpu.Towers'] = towersCPUUsage;
+                //Memory.stats['cpu.Links'] = linksRunning;
+                //Memory.stats['cpu.SetupRoles'] = roleSetup;
+                Memory.stats['cpu.Creeps'] = creepsCPUUsage;
+                //Memory.stats['cpu.SumProfiling'] = sumOfProfiller;
+                Memory.stats['cpu.Start'] = initCPUUsage;
+                Memory.stats['cpu.bucket'] = Game.cpu.bucket;
+                Memory.stats['cpu.limit'] = Game.cpu.limit;
+                Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
+                Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
+            }
+            else {
+                Memory.stats = {};
+            }
 
             time = Game.cpu.getUsed();
-        });
+        };
+
+        if (useProfiler) {
+            profiler.wrap(mainLoop);
+        }
+        else {
+            mainLoop();
+        }
     }
 
 };

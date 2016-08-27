@@ -74,27 +74,29 @@ Creep.prototype.followCachedPath = function () {
     if (!this.memory.cachedPath.position) {
         let target = this.pos.findClosestByRange(path, {
             filter: (pos) => {
-                if (pos.roomName == this.room.name) {
-                    // Only try to get to paths where no creep is positioned.
-                    var found = pos.lookFor(LOOK_CREEPS);
-                    var found2 = pos.lookFor(LOOK_STRUCTURES);
-                    var found3 = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-
-                    var blocked = found.length > 0 && found[0].name != this.name;
-                    for (let i in found2) {
-                        if (found2[i].structureType != STRUCTURE_ROAD && found2[i].structureType != STRUCTURE_CONTAINER) {
-                            blocked = true;
-                        }
-                    }
-                    for (let i in found3) {
-                        if (found3[i].structureType != STRUCTURE_ROAD && found3[i].structureType != STRUCTURE_CONTAINER) {
-                            blocked = true;
-                        }
-                    }
-
-                    return !blocked;
+                if (pos.roomName != this.room.name) return false;
+                if (pos.x == 0 || pos.x == 49 || pos.y == 0 || pos.y == 49) {
+                    return false;
                 }
-                return false;
+
+                // Only try to get to paths where no creep is positioned.
+                var found = pos.lookFor(LOOK_CREEPS);
+                var found2 = pos.lookFor(LOOK_STRUCTURES);
+                var found3 = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+
+                var blocked = found.length > 0 && found[0].name != this.name;
+                for (let i in found2) {
+                    if (found2[i].structureType != STRUCTURE_ROAD && found2[i].structureType != STRUCTURE_CONTAINER) {
+                        blocked = true;
+                    }
+                }
+                for (let i in found3) {
+                    if (found3[i].structureType != STRUCTURE_ROAD && found3[i].structureType != STRUCTURE_CONTAINER) {
+                        blocked = true;
+                    }
+                }
+
+                return !blocked;
             }
         });
         if (!target) {
@@ -143,11 +145,21 @@ Creep.prototype.followCachedPath = function () {
     else if (next.roomName != this.pos.roomName) {
         // We just changed rooms.
         let afterNext = path[this.memory.cachedPath.position + 2];
-        if (afterNext.roomName == this.pos.roomName && afterNext.getRangeTo(this.pos) <= 1) {
+        if (afterNext && afterNext.roomName == this.pos.roomName && afterNext.getRangeTo(this.pos) <= 1) {
             this.memory.cachedPath.position += 2;
 
             //console.log('path room switch', this.name, this.memory.cachedPath.position);
         }
+        else if (!afterNext) {
+            delete this.memory.cachedPath.forceGoTo;
+            delete this.memory.cachedPath.lastPositions;
+        }
+        /*else if (!afterNext) {
+            console.log(this.name, 'stuck?');
+            this.move(_.random(1, 8));
+            return;
+            //this.memory.cachedPath.position += 1;
+        }//*/
     }
 
     this.say('Pos: ' + this.memory.cachedPath.position);
@@ -177,7 +189,11 @@ Creep.prototype.followCachedPath = function () {
         //console.log(this.name, 'has been stuck for the last', _.size(this.memory.cachedPath.lastPositions), 'ticks. Trying to go around blockade.');
         let i = this.memory.cachedPath.position + 1;
         while (i < path.length) {
-            if (path[i].roomName != this.pos.roomName) break;
+            if (path[i].roomName != this.pos.roomName) {
+                // Skip past exit tile in next room.
+                i++;
+                break;
+            }
 
             // Only try to get to paths where no creep is positioned.
             var found = path[i].lookFor(LOOK_CREEPS);

@@ -15,8 +15,12 @@ var gameState = {
 
     getStoredEnergy: function (room) {
         // @todo Move into room.prototype.
+        var total = 0;
         if (room.storage) {
-            return room.storage.store[RESOURCE_ENERGY];
+            total += room.storage.store[RESOURCE_ENERGY];
+        }
+        if (room.terminal) {
+            total += room.terminal.store[RESOURCE_ENERGY];
         }
 
         var storageLocation = room.getStorageLocation();
@@ -24,10 +28,10 @@ var gameState = {
             filter: (resource) => resource.resourceType == RESOURCE_ENERGY && resource.pos.x == storageLocation.x && resource.pos.y == storageLocation.y
         });
         if (resources && resources.length > 0) {
-            return resources[0].amount;
+            total += resources[0].amount;
         }
 
-        return 0;
+        return total;
     },
 
     clearCache: function() {

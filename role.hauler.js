@@ -74,7 +74,7 @@ Creep.prototype.performGetHaulerEnergy = function () {
 
         // Also lighten the load of harvesters nearby.
         var harvester = sourcePosition.findClosestByRange(FIND_CREEPS, {
-            filter: (creep) => creep.my && creep.memory.role == 'harvester.remote' && creep.carry.energy > 0 && this.pos.getRangeTo(creep) <= 3
+            filter: (creep) => creep.my && creep.memory.role == 'harvester.remote' && creep.carry.energy > creep.carryCapacity * 0.5 && this.pos.getRangeTo(creep) <= 3
         });
         if (harvester && !actionTaken) {
             if (creep.pos.getRangeTo(harvester) > 1) {
@@ -88,6 +88,14 @@ Creep.prototype.performGetHaulerEnergy = function () {
         // If all else fails, make sure we're close enough to our source.
         if (this.pos.getRangeTo(sourcePosition) > 2) {
             this.moveTo(sourcePosition);
+        }
+
+        // Repair / build roads, even when just waiting for more energy.
+        var targetPosition = utilities.decodePosition(this.memory.storage);
+        if (!actionTaken && targetPosition.roomName != this.pos.roomName && Game.cpu.bucket > 3000) {
+            if (this.performBuildRoad()) {
+                return true;
+            }
         }
     }
     else if (creep.memory.sourceContainer) {
@@ -195,17 +203,17 @@ Creep.prototype.runHaulerLogic = function () {
         this.setHaulerState(true);
     }
 
-    // Repair / build roads, even when just waiting for more energy.
-    var targetPosition = utilities.decodePosition(this.memory.storage);
-    if (targetPosition.roomName != this.pos.roomName && Game.cpu.bucket > 5000) {
-        if (this.performBuildRoad()) {
-            //return true;
-        }
-    }
     if (!this.memory.delivering) {
         return this.performGetHaulerEnergy();
     }
     else {
+        // Repair / build roads on the way home.
+        var targetPosition = utilities.decodePosition(this.memory.storage);
+        if (targetPosition.roomName != this.pos.roomName && Game.cpu.bucket > 3000) {
+            if (this.performBuildRoad()) {
+                //return true;
+            }
+        }
         return this.performHaulerDeliver();
     }
 };

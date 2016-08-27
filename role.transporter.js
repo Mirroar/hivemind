@@ -16,6 +16,7 @@ var utilities = require('utilities');
 Creep.prototype.getAvailableEnergySources = function () {
     var creep = this;
     var storage = this.room.storage;
+    var terminal = this.room.terminal;
     var options = [];
 
     var storagePriority = 0;
@@ -33,6 +34,19 @@ Creep.prototype.getAvailableEnergySources = function () {
             object: storage,
             resourceType: RESOURCE_ENERGY,
         });
+    }
+
+    // Energy can be gotten at the room's terminal if storage is pretty empty.
+    if (terminal && terminal.store.energy >= creep.carryCapacity - _.sum(creep.carry)) {
+        if (!storage || storage.store.energy < 5000) {
+            options.push({
+                priority: creep.memory.role == 'transporter' ? storagePriority - 1 : 4,
+                weight: 0,
+                type: 'structure',
+                object: terminal,
+                resourceType: RESOURCE_ENERGY,
+            });
+        }
     }
 
     // Get storage location, since that is a low priority source for transporters.
@@ -131,12 +145,17 @@ Creep.prototype.getAvailableSources = function () {
     // Clear out overfull terminal.
     let terminal = creep.room.terminal;
     let storage = creep.room.storage;
-    if (terminal && _.sum(terminal.store) - terminal.store.energy > terminal.storeCapacity * 0.8) {
+    if (terminal && _.sum(terminal.store) > terminal.storeCapacity * 0.8) {
         // Find resource with highest count and take that.
         // @todo Unless it's supposed to be sent somewhere else.
         let max = null;
         let maxResourceType = null;
         for (let resourceType in terminal.store) {
+            if (resourceType == RESOURCE_ENERGY && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) {
+                // Do not take out energy if there is enough in storage.
+                continue;
+            }
+
             if (!max || terminal.store[resourceType] > max) {
                 max = terminal.store[resourceType];
                 maxResourceType = resourceType;
@@ -159,7 +178,7 @@ Creep.prototype.getAvailableSources = function () {
         let resourceType = creep.room.memory.fillTerminal;
         if (storage && terminal && storage.store[resourceType] && storage.store[resourceType] > this.carryCapacity && _.sum(terminal.store) < terminal.storeCapacity - 10000) {
             options.push({
-                priority: 3,
+                priority: 4,
                 weight: 0,
                 type: 'structure',
                 object: storage,
@@ -526,7 +545,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                     if (structure.room.sources) {
                         for (let id in structure.room.sources) {
                             let container = structure.room.sources[id].getNearbyContainer();
-                            if (container.id == structure.id) {
+                            if (container && container.id == structure.id) {
                                 return false;
                             }
                         }
@@ -647,27 +666,6 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
     }
 
     for (let resourceType in creep.carry) {
-        if (resourceType == RESOURCE_ENERGY || creep.carry[resourceType] <= 0) {
-            continue;
-        }
-
-        // If there is space left, store in terminal.
-        if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
-            var option = {
-                priority: 0,
-                weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
-                type: 'structure',
-                object: creep.room.terminal,
-                resourceType: resourceType,
-            };
-
-            if (_.sum(creep.room.terminal.store) - creep.room.terminal.store.energy < creep.room.terminal.storeCapacity * 0.7) {
-                option.priority = 3;
-            }
-
-            options.push(option);
-        }
-
         // If it's needed for transferring, store in terminal.
         if (resourceType == creep.room.memory.fillTerminal) {
             if (creep.room.terminal && (!creep.room.terminal.store[resourceType] || creep.room.terminal.store[resourceType] < 10000)) {
@@ -683,6 +681,28 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             else {
                 delete creep.room.memory.fillTerminal;
             }
+        }
+
+        // The following only only concerns resources other than energy.
+        if (resourceType == RESOURCE_ENERGY || creep.carry[resourceType] <= 0) {
+            continue;
+        }
+
+        // If there is space left, store in terminal.
+        if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
+            var option = {
+                priority: 0,
+                weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+                type: 'structure',
+                object: creep.room.terminal,
+                resourceType: resourceType,
+            };
+
+            if (_.sum(creep.room.terminal.store) - creep.room.terminal.store.energy < creep.room.terminal.storeCapacity * 0.6 && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity * 0.7) {
+                option.priority = 3;
+            }
+
+            options.push(option);
         }
 
         // If there is space left, store in storage.
@@ -873,6 +893,11 @@ Creep.prototype.setTransporterState = function (delivering) {
 };
 
 Creep.prototype.runTransporterLogic = function () {
+    if (this.memory.singleRoom && this.pos.roomName != this.memory.singleRoom) {
+        this.moveToRange(new RoomPosition(25, 25, this.memory.singleRoom), 10);
+        return;
+    }
+
     if (_.sum(this.carry) >= this.carryCapacity * 0.9 && !this.memory.delivering) {
         this.setTransporterState(true);
     }

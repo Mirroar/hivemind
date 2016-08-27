@@ -11,12 +11,12 @@ Creep.prototype.performBuild = function () {
     }
 
     if (!this.memory.buildTarget) {
-        var targets = this.room.find(FIND_CONSTRUCTION_SITES);
-        if (targets.length <= 0) {
+        let target = this.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+        if (!target) {
             return false;
         }
 
-        this.memory.buildTarget = utilities.getClosest(this, targets);
+        this.memory.buildTarget = target.id;
     }
     var best = this.memory.buildTarget;
     if (!best) {
@@ -27,10 +27,22 @@ Creep.prototype.performBuild = function () {
         this.memory.buildTarget = null;
     }
 
-    if (this.build(target) == ERR_NOT_IN_RANGE) {
+    this.buildTarget(target);
+    return true;
+};
+
+Creep.prototype.buildTarget = function (target) {
+    if (this.pos.getRangeTo(target) > 3) {
         this.moveToRange(target, 3);
     }
-    return true;
+    else {
+        this.build(target);
+
+        /*if (target.structureType == STRUCTURE_RAMPART) {
+            // Make sure to repair ramparts a bit so they don't get destroyed immediately after 100 ticks.
+            this.memory.buildRampartPos = utilities.encodePosition(target.pos);
+        }//*/
+    }
 };
 
 /**

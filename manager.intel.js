@@ -39,7 +39,14 @@ Room.prototype.gatherIntel = function () {
         intel.sources.push(sources[i].id);
     }
 
-    // @todo Check minerals.
+    // Check minerals.
+    delete intel.mineral;
+    delete intel.mineralType;
+    var minerals = this.find(FIND_MINERALS);
+    for (let i in minerals) {
+        intel.mineral = minerals[i].id;
+        intel.mineralType = minerals[i].mineralType;
+    }
 
     // Check structures.
     intel.structures = {};
@@ -52,7 +59,7 @@ Room.prototype.gatherIntel = function () {
         if (structureType == STRUCTURE_POWER_BANK) {
             // For now, send a notification!
             console.log('Power bank found in', room.name);
-            Game.notify('Power bank found in ' + room.name + '!');
+            //Game.notify('Power bank found in ' + room.name + '!');
         }
         else if (structureType == STRUCTURE_KEEPER_LAIR) {
             if (!intel.structures[structureType]) {

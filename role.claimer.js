@@ -7,6 +7,7 @@ var utilities = require('utilities');
 Creep.prototype.performClaim = function () {
     var target;
     var targetPosition = utilities.decodePosition(this.memory.target);
+
     if (targetPosition.roomName != this.pos.roomName) {
         this.moveTo(targetPosition);
         return true;
@@ -75,10 +76,29 @@ Creep.prototype.performReserve = function () {
  * Makes a creep behave like a claimer.
  */
 Creep.prototype.runClaimerLogic = function () {
+    var targetPosition = utilities.decodePosition(this.memory.target);
+    if (!this.hasCachedPath() && Memory.rooms[this.room.name].remoteHarvesting && Memory.rooms[this.room.name].remoteHarvesting[this.memory.target]) {
+        var harvestMemory = Memory.rooms[this.room.name].remoteHarvesting[this.memory.target];
+
+        if (harvestMemory.cachedPath) {
+            this.setCachedPath(harvestMemory.cachedPath.path, false, 1);
+        }
+    }
+
+    if (this.hasCachedPath()) {
+        if (this.hasArrived() || this.pos.getRangeTo(targetPosition) < 3) {
+            this.clearCachedPath();
+        }
+        else {
+            this.followCachedPath();
+            return;
+        }
+    }
+
     if (this.memory.mission == 'reserve') {
         return this.performReserve();
     }
     else if (this.memory.mission == 'claim') {
         return this.performClaim();
     }
-}
+};

@@ -219,10 +219,16 @@ Creep.prototype.performMilitaryMove = function () {
                 filter: (enemy) => enemy.isDangerous()
             });
             if (enemies.length > 0) {
-                if (this.pos.getRangeTo(enemies[0]) > 1) {
-                    this.moveTo(enemies[0]);
-                }
+                this.moveTo(enemies[0]);
                 return;
+            }
+
+            // Clear cached path if we've gotton close to goal.
+            if (this.memory.patrolPoint && this.hasCachedPath()) {
+                let lair = Game.getObjectById(this.memory.patrolPoint);
+                if (this.pos.getRangeTo(lair) <= 7) {
+                    this.clearCachedPath();
+                }
             }
 
             // Follow cached path when requested.
@@ -293,7 +299,13 @@ Creep.prototype.performMilitaryMove = function () {
 
                     if (best) {
                         if (best == this.memory.patrolPoint) {
-                            this.moveToRange(lair, 1);
+                            // We're at the correct control point. Move to intercept potentially spawning source keepers.
+                            if (exploit.memory.lairs[best].sourcePath) {
+                                this.moveTo(utilities.decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
+                            }
+                            else {
+                                this.moveToRange(lair, 1);
+                            }
                         }
                         else {
                             this.memory.patrolPoint = best;

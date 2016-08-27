@@ -2,6 +2,10 @@
 
 var utilities = require('utilities');
 
+StructureKeeperLair.prototype.isDangerous = function () {
+    return !this.ticksToSpawn || this.ticksToSpawn < 20;
+};
+
 StructureTower.prototype.runLogic = function () {
     var tower = this;
 
@@ -101,10 +105,13 @@ var structureManager = {
             for (let resourceType in roomData.totalResources) {
                 let amount = roomData.totalResources[resourceType];
                 if (resourceType == RESOURCE_ENERGY) {
-                    amount /= 3;
+                    amount /= 2.5;
                 }
 
-                if (amount >= 30000) {
+                if (amount >= 220000) {
+                    roomData.state[resourceType] = 'excessive';
+                }
+                else if (amount >= 30000) {
                     roomData.state[resourceType] = 'high';
                 }
                 else if (amount >= 10000) {
@@ -130,10 +137,10 @@ var structureManager = {
         for (var roomName in rooms) {
             var roomState = rooms[roomName];
             for (var resourceType in roomState.state) {
-                if (roomState.state[resourceType] == 'high') {
+                if (roomState.state[resourceType] == 'high' || roomState.state[resourceType] == 'excessive') {
                     // Look for other rooms that are low on this resource.
                     for (var roomName2 in rooms) {
-                        if (!rooms[roomName2].state[resourceType] || rooms[roomName2].state[resourceType] == 'low') {
+                        if (!rooms[roomName2].state[resourceType] || rooms[roomName2].state[resourceType] == 'low' || (roomState.state[resourceType] == 'excessive' && (rooms[roomName2].state[resourceType] == 'medium' || rooms[roomName2].state[resourceType] == 'high'))) {
                             // Make sure target has space left.
                             if (_.sum(Game.rooms[roomName2].terminal.store) > Game.rooms[roomName2].terminal.storeCapacity - 5000) {
                                 continue;
@@ -141,17 +148,17 @@ var structureManager = {
 
                             var option = {
                                 priority: 5,
-                                weight: 0,
+                                weight: (roomState.totalResources[resourceType] - rooms[roomName2].totalResources[resourceType]) / 100000 - Game.map.getRoomLinearDistance(roomName, roomName2),
                                 resourceType: resourceType,
                                 source: roomName,
                                 target: roomName2,
                             };
 
-                            option.priority -= Game.map.getRoomLinearDistance(roomName, roomName2) * 0.5;
-
-                            if (option.priority < 0) {
-                                continue;
+                            if (rooms[roomName2].state[resourceType] == 'medium') {
+                                option.priority--;
                             }
+
+                            //option.priority -= Game.map.getRoomLinearDistance(roomName, roomName2) * 0.5;
 
                             options.push(option);
                         }
