@@ -98,6 +98,16 @@ Squad.prototype.spawnUnit = function (spawn) {
             },
         });
     }
+    else if (toSpawn == 'attacker') {
+        spawn.createManagedCreep({
+            role: 'brawler',
+            bodyWeights: {move: 0.5, attack: 0.5},
+            memory: {
+                squadName: this.name,
+                squadUnitType: toSpawn,
+            },
+        });
+    }
     else if (toSpawn == 'test') {
         spawn.createManagedCreep({
             role: 'brawler',
