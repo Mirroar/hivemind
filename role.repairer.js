@@ -148,6 +148,9 @@ Creep.prototype.performRepair = function () {
     return true;
 };
 
+/**
+ * While not actively working on anything else, use carried energy to repair nearby structures.
+ */
 Creep.prototype.repairNearby = function () {
     let workParts = this.memory.body.work;
     if (workParts) {
@@ -166,7 +169,7 @@ Creep.prototype.repairNearby = function () {
             this.repair(needsRepair[0]);
         }
     }
-}
+};
 
 /**
  * Puts this creep into or out of repair mode.
