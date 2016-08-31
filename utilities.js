@@ -210,7 +210,7 @@ var utilities = {
         }
         var harvestMemory = room.memory.remoteHarvesting[flagPosition];
 
-        if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 1000) {
+        if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 4060) {
             // No need to recalculate path.
             return;
         }
@@ -229,6 +229,7 @@ var utilities = {
 
         if (result) {
             //console.log('found path in', result.ops, 'operations', result.path);
+            console.log('[PathFinder] New path calculated.');
 
             harvestMemory.cachedPath = {
                 lastCalculated: Game.time,
