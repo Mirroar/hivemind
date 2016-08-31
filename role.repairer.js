@@ -195,6 +195,7 @@ Creep.prototype.runRepairerLogic = function () {
         return this.performRepair();
     }
     else {
-        return this.performGetEnergy();
+        this.performGetEnergy();
+        return true;
     }
 };

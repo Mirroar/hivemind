@@ -70,6 +70,7 @@ Creep.prototype.runBuilderLogic = function () {
         return this.performBuild();
     }
     else {
-        return this.performGetEnergy();
+        this.performGetEnergy();
+        return true;
     }
 };
