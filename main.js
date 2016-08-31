@@ -9,6 +9,7 @@ require('role.brawler');
 require('role.builder');
 require('role.builder.exploit');
 require('role.claimer');
+require('role.dismantler');
 require('role.harvester');
 require('role.harvester.exploit');
 require('role.harvester.remote');
@@ -128,6 +129,9 @@ Creep.prototype.runLogic = function() {
         }
         else if (creep.memory.role == 'claimer') {
             creep.runClaimerLogic();
+        }
+        else if (creep.memory.role == 'dismantler') {
+            creep.runDismantlerLogic();
         }
         else if (creep.memory.role == 'hauler') {
             creep.runHaulerLogic();

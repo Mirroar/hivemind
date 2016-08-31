@@ -10,6 +10,7 @@ var roleNameMap = {
     'builder.exploit': 'BE',
     'builder.remote': 'BR',
     claimer: 'C',
+    dismantler: 'D',
     brawler: 'F',
     guardian: 'FE',
     harvester: 'H',
@@ -190,6 +191,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addBuilderSpawnOptions();
     this.addRepairerSpawnOptions();
     this.addExploitSpawnOptions();
+    this.addDismantlerSpawnOptions();
 
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
         memory.options.push({
@@ -225,6 +227,9 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     }
     else if (best.role == 'builder') {
         activeSpawn.spawnBuilder();
+    }
+    else if (best.role == 'dismantler') {
+        activeSpawn.spawnDismantler(best.targetRoom);
     }
     else if (best.role == 'repairer') {
         activeSpawn.spawnRepairer(best.size);
@@ -477,6 +482,26 @@ Room.prototype.addExploitSpawnOptions = function () {
 
     var memory = this.memory.spawnQueue;
 };
+
+Room.prototype.addDismantlerSpawnOptions = function () {
+    var memory = this.memory.spawnQueue;
+
+    let flags = _.filter(Game.flags, (flag) => flag.name.startsWith('Dismantle:' + this.name));
+    if (flags.length > 0) {
+        // @todo Check if there is enough dismantlers per room with flags in it.
+        let flag = flags[0];
+        let numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep) => creep.memory.targetRoom == flag.pos.roomName && creep.memory.sourceRoom == this.name).length;
+
+        if (numDismantlers < flags.length) {
+            memory.options.push({
+                priority: 4,
+                weight: 0,
+                role: 'dismantler',
+                targetRoom: flag.pos.roomName,
+            });
+        }
+    }
+}
 
 /**
  * Spawns creeps in a room whenever needed.
@@ -1089,6 +1114,20 @@ StructureSpawn.prototype.spawnBuilder = function () {
         maxParts: {work: 5},
         memory: {
             singleRoom: this.pos.roomName,
+        },
+    });
+};
+
+/**
+ * Spawns a new dismantler.
+ */
+StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
+    return this.createManagedCreep({
+        role: 'dismantler',
+        bodyWeights: {move: 0.35, work: 0.65},
+        memory: {
+            sourceRoom: this.pos.roomName,
+            targetRoom: targetRoom,
         },
     });
 };
