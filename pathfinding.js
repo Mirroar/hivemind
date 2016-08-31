@@ -86,12 +86,12 @@ Creep.prototype.followCachedPath = function () {
 
                 var blocked = found.length > 0 && found[0].name != this.name;
                 for (let i in found2) {
-                    if (found2[i].structureType != STRUCTURE_ROAD && found2[i].structureType != STRUCTURE_CONTAINER) {
+                    if (found2[i].structureType != STRUCTURE_ROAD && found2[i].structureType != STRUCTURE_CONTAINER && found2[i].structureType != STRUCTURE_RAMPART) {
                         blocked = true;
                     }
                 }
                 for (let i in found3) {
-                    if (found3[i].structureType != STRUCTURE_ROAD && found3[i].structureType != STRUCTURE_CONTAINER) {
+                    if (found3[i].structureType != STRUCTURE_ROAD && found3[i].structureType != STRUCTURE_CONTAINER && found3[i].structureType != STRUCTURE_RAMPART) {
                         blocked = true;
                     }
                 }
