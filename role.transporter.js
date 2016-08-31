@@ -211,32 +211,41 @@ Creep.prototype.getAvailableSources = function () {
     }
 
     if (creep.room.memory.canPerformReactions) {
-        // Clear out reaction lab.
-        let lab = Game.getObjectById(creep.room.memory.labs.reactor);
-        if (lab && lab.mineralAmount > 0) {
-            let option = {
-                priority: 0,
-                weight: lab.mineralAmount / lab.mineralCapacity,
-                type: 'structure',
-                object: lab,
-                resourceType: lab.mineralType,
-            };
+        let labs = creep.room.memory.labs.reactor;
+        if (typeof labs == 'string') {
+            labs = [labs];
+            creep.room.memory.labs.reactor = labs;
+        }
 
-            if (lab.mineralAmount > lab.mineralCapacity * 0.5) {
-                option.priority++;
-            }
-            if (lab.mineralAmount > lab.mineralCapacity * 0.8) {
-                option.priority++;
-            }
+        for (let i in labs) {
+            // Clear out reaction labs.
+            let lab = Game.getObjectById(labs[i]);
 
-            if (creep.room.memory.currentReaction) {
-                // If we're doing a different reaction now, clean out faster!
-                if (REACTIONS[creep.room.memory.currentReaction[0]][creep.room.memory.currentReaction[1]] != lab.mineralType) {
-                    option.priority = 4;
+            if (lab && lab.mineralAmount > 0) {
+                let option = {
+                    priority: 0,
+                    weight: lab.mineralAmount / lab.mineralCapacity,
+                    type: 'structure',
+                    object: lab,
+                    resourceType: lab.mineralType,
+                };
+
+                if (lab.mineralAmount > lab.mineralCapacity * 0.5) {
+                    option.priority++;
                 }
-            }
+                if (lab.mineralAmount > lab.mineralCapacity * 0.8) {
+                    option.priority++;
+                }
 
-            options.push(option);
+                if (creep.room.memory.currentReaction) {
+                    // If we're doing a different reaction now, clean out faster!
+                    if (REACTIONS[creep.room.memory.currentReaction[0]][creep.room.memory.currentReaction[1]] != lab.mineralType) {
+                        option.priority = 4;
+                    }
+                }
+
+                options.push(option);
+            }
         }
 
         // Clear out labs with wrong resources.

@@ -144,7 +144,10 @@ Room.prototype.scan = function () {
 
     // Scan room for labs.
     // @todo Find labs not used for reactions, to do creep boosts.
-    if (!room.memory.canPerformReactions) {
+    if (!room.memory.labsLastChecked || room.memory.labsLastChecked < Game.time - 3267) {
+        room.memory.labsLastChecked = Game.time;
+        room.memory.canPerformReactions = false;
+
         var labs = room.find(FIND_STRUCTURES, {
             filter: (structure) => structure.structureType == STRUCTURE_LAB
         });
@@ -160,10 +163,27 @@ Room.prototype.scan = function () {
 
                 room.memory.canPerformReactions = true;
                 room.memory.labs = {
-                    reactor: lab.id,
+                    reactor: [lab.id],
                     source1: closeLabs[0].id,
                     source2: closeLabs[1].id,
                 };
+
+                // Find other labs close to sources.
+                let close2 = closeLabs[0].pos.findInRange(FIND_STRUCTURES, 2, {
+                    filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.id != lab.id && structure.id != closeLabs[0].id && structure.id != closeLabs[1].id
+                });
+                let close3 = closeLabs[1].pos.findInRange(FIND_STRUCTURES, 2, {
+                    filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.id != lab.id && structure.id != closeLabs[0].id && structure.id != closeLabs[1].id
+                });
+                for (let j in close2) {
+                    for (let k in close3) {
+                        if (close2[j].id == close3[k].id) {
+                            room.memory.labs.reactor.push(close2[j].id);
+                            break;
+                        }
+                    }
+                }
+
                 break;
             }
         }

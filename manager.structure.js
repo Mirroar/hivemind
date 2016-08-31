@@ -59,11 +59,20 @@ Room.prototype.manageLabs = function () {
     if (this.controller && this.controller.my && this.memory.canPerformReactions && this.memory.currentReaction) {
         var source1 = Game.getObjectById(this.memory.labs.source1);
         var source2 = Game.getObjectById(this.memory.labs.source2);
-        var reactor = Game.getObjectById(this.memory.labs.reactor);
 
-        if (source1 && source2 && reactor) {
-            if (reactor.cooldown <= 0 && source1.mineralType == this.memory.currentReaction[0] && source2.mineralType == this.memory.currentReaction[1]) {
-                reactor.runReaction(source1, source2);
+        var labs = this.memory.labs.reactor;
+        if (!labs) return;
+        if (typeof labs == 'string') {
+            labs = [labs];
+            this.memory.labs.reactor = labs;
+        }
+        for (let i in labs) {
+            var reactor = Game.getObjectById(labs[i]);
+
+            if (source1 && source2 && reactor) {
+                if (reactor.cooldown <= 0 && source1.mineralType == this.memory.currentReaction[0] && source2.mineralType == this.memory.currentReaction[1]) {
+                    reactor.runReaction(source1, source2);
+                }
             }
         }
     }
