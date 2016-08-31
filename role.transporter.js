@@ -27,13 +27,16 @@ Creep.prototype.getAvailableEnergySources = function () {
 
     // Energy can be gotten at the room's storage.
     if (storage && storage.store.energy >= creep.carryCapacity - _.sum(creep.carry)) {
-        options.push({
-            priority: creep.memory.role == 'transporter' ? storagePriority : 5,
-            weight: 0,
-            type: 'structure',
-            object: storage,
-            resourceType: RESOURCE_ENERGY,
-        });
+        // Only transporters can get the last bit of energy from storage, so spawning can always go on.
+        if (creep.memory.role == 'transporter' || storage.store.energy > 5000) {
+            options.push({
+                priority: creep.memory.role == 'transporter' ? storagePriority : 5,
+                weight: 0,
+                type: 'structure',
+                object: storage,
+                resourceType: RESOURCE_ENERGY,
+            });
+        }
     }
 
     // Energy can be gotten at the room's terminal if storage is pretty empty.
