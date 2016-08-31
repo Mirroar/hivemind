@@ -16,6 +16,26 @@ Creep.prototype.isDangerous = function () {
     return false;
 };
 
+Creep.prototype.transferAny = function (target) {
+    for (let resourceType in this.carry) {
+        if (this.carry[resourceType] > 0) {
+            return this.transfer(target, resourceType);
+        }
+    }
+
+    return ERR_NOT_ENOUGH_RESOURCES;
+};
+
+Creep.prototype.dropAny = function () {
+    for (let resourceType in this.carry) {
+        if (this.carry[resourceType] > 0) {
+            return this.drop(resourceType);
+        }
+    }
+
+    return ERR_NOT_ENOUGH_RESOURCES;
+};
+
 module.exports = {
 
     renew: function (creep, spawner) {
