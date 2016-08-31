@@ -1059,13 +1059,19 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
 };
 
 StructureSpawn.prototype.spawnClaimer = function (targetPosition, mission) {
-    var minSize = BODYPART_COST[CLAIM] * 2 + BODYPART_COST[MOVE] * 3;
-    if (this.room.energyAvailable < minSize) return false;
+    var setCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
+
+    var numSets = Math.floor(this.room.energyCapacityAvailable / setCost);
+    if (numSets < 2) return false;
+
+    if (numSets > 5) {
+        numSets = 5;
+    }
+    var body = _.fill(Array(numSets), CLAIM).concat(_.fill(Array(numSets), MOVE));
 
     return this.createManagedCreep({
         role: 'claimer',
-        bodyWeights: {move: 0.5, claim: 0.5},
-        maxParts: {claim: 5},
+        body: body,
         memory: {
             target: utilities.encodePosition(targetPosition),
             mission: mission,
