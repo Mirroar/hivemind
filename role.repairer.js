@@ -71,8 +71,10 @@ Creep.prototype.getAvailableRepairTargets = function () {
             }
         }
 
-        // Slightly adjust weight so that closer structures get prioritized.
-        option.weight -= creep.pos.getRangeTo(target) / 100;
+        // Slightly adjust weight so that closer structures get prioritized. Not for walls or Ramparts, though, we want those to be equally strong all arond.
+        if (target.structureType != STRUCTURE_RAMPART && target.structureType != STRUCTURE_WALL) {
+            option.weight -= creep.pos.getRangeTo(target) / 100;
+        }
 
         option.priority -= creepGeneral.getCreepsWithOrder('repair', target.id).length;
 
