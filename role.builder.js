@@ -7,7 +7,32 @@ var utilities = require('utilities');
  */
 Creep.prototype.performBuild = function () {
     if (Game.cpu.bucket < 500) {
-        return false;
+        return true;
+    }
+
+    if (this.memory.buildRampartPos) {
+        let pos = utilities.decodePosition(this.memory.buildRampartPos);
+        let structures = pos.lookFor(LOOK_STRUCTURES);
+        for (let i in structures) {
+            if (structures[i].structureType == STRUCTURE_RAMPART) {
+                if (structures[i].hits >= 10000) {
+                    // No need to keep repairing this.
+                    break;
+                }
+
+                // Repair this rampart a little so it isn't gone within 100 ticks.
+                if (this.pos.getRangeTo(structures[i]) > 3) {
+                    this.moveToRange(structures[i], 3);
+                }
+                else {
+                    this.repair(structures[i]);
+                }
+                return true;
+            }
+        }
+
+        // If we get here, there's no rampart at the stored position, it seems.
+        delete this.memory.buildRampartPos;
     }
 
     if (!this.memory.buildTarget) {
@@ -25,6 +50,7 @@ Creep.prototype.performBuild = function () {
     var target = Game.getObjectById(best);
     if (!target) {
         this.memory.buildTarget = null;
+        return true;
     }
 
     this.buildTarget(target);
@@ -38,10 +64,10 @@ Creep.prototype.buildTarget = function (target) {
     else {
         this.build(target);
 
-        /*if (target.structureType == STRUCTURE_RAMPART) {
+        if (target.structureType == STRUCTURE_RAMPART) {
             // Make sure to repair ramparts a bit so they don't get destroyed immediately after 100 ticks.
             this.memory.buildRampartPos = utilities.encodePosition(target.pos);
-        }//*/
+        }
     }
 };
 
@@ -53,6 +79,7 @@ Creep.prototype.setBuilderState = function (building) {
     delete this.memory.buildTarget;
     delete this.memory.resourceTarget;
     delete this.memory.tempRole;
+    delete this.memory.buildRampartPos;
 };
 
 /**

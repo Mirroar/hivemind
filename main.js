@@ -2,6 +2,8 @@
 var useProfiler = false;
 var collectStats = false;
 
+var debug = require('debug');
+
 require('manager.mineral');
 require('manager.source');
 require('pathfinding');
@@ -15,6 +17,7 @@ require('role.harvester.exploit');
 require('role.harvester.remote');
 require('role.hauler');
 require('role.hauler.exploit');
+require('role.helper');
 require('role.repairer');
 require('role.scout');
 require('role.transporter');
@@ -97,6 +100,10 @@ Creep.prototype.runLogic = function() {
     }
 
     try {
+        if (creep.room.boostManager && creep.room.boostManager.overrideCreepLogic(creep)) {
+            return;
+        }
+
         if (creep.memory.role == 'harvester') {
             creep.runHarvesterLogic();
         }
@@ -108,8 +115,14 @@ Creep.prototype.runLogic = function() {
         }
         else if (creep.memory.role == 'builder') {
             if (creep.memory.tempRole || !creep.runBuilderLogic()) {
-                creep.memory.tempRole = 'upgrader';
-                creep.runUpgraderLogic();
+                if (creep.room.controller.level == 8) {
+                    creep.memory.tempRole = 'repairer';
+                    creep.runRepairerLogic();
+                }
+                else {
+                    creep.memory.tempRole = 'upgrader';
+                    creep.runUpgraderLogic();
+                }
             }
         }
         else if (creep.memory.role == 'repairer') {
@@ -147,6 +160,9 @@ Creep.prototype.runLogic = function() {
         }
         else if (creep.memory.role == 'builder.exploit') {
             creep.runExploitBuilderLogic();
+        }
+        else if (creep.memory.role == 'helper') {
+            creep.runHelperLogic();
         }
         else if (creep.memory.role == 'scout') {
             creep.runScoutLogic();
@@ -267,6 +283,7 @@ Room.prototype.enhanceData = function () {
     if (BoostManager) {
         this.boostManager = new BoostManager(this.name);
     }
+    this.roomPlanner = new RoomPlanner(this.name);
 };
 
 
@@ -297,9 +314,17 @@ var main = {
      * Manages logic for structures.
      */
     manageStructures: function () {
-        if (Game.time % 1000 == 337) {
-            for (var name in Game.rooms) {
+        for (var name in Game.rooms) {
+            if (Game.time % 1000 == 337) {
                 structureManager.checkRoads(Game.rooms[name]);
+            }
+
+            try {
+                Game.rooms[name].roomPlanner.runLogic();
+            }
+            catch (e) {
+                console.log('Error when running RoomPlanner:', e);
+                console.log(e.stack);
             }
         }
     },
@@ -402,9 +427,11 @@ var main = {
      */
     loop: function () {
         var mainLoop = function () {
+            debug.init();
+            var logger = new Game.logger('main');
 
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
-                console.log('Bucket:', Game.cpu.bucket);
+                logger.log('Bucket:', Game.cpu.bucket);
             }
 
             var time = Game.cpu.getUsed();

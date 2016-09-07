@@ -361,6 +361,13 @@ Creep.prototype.setRemoteHarvestState = function (harvesting) {
         }
     }
 
+    if (!harvestMemory.cachedPath) {
+        // Try precalculating the path back home if it doesn't exist yet.
+        let room = Game.rooms[targetPosition.roomName];
+        let sourceFlag = {pos: utilities.decodePosition(this.memory.source)};
+        utilities.precalculatePaths(room, sourceFlag);
+    }
+
     if (harvestMemory.cachedPath) {
         this.setCachedPath(harvestMemory.cachedPath.path, !harvesting, 1);
     }

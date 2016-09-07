@@ -25,7 +25,7 @@ Creep.prototype.getAvailableRepairTargets = function () {
     var options = [];
 
     var targets = creep.room.find(FIND_STRUCTURES, {
-        filter: (structure) => structure.hits < structure.hitsMax
+        filter: (structure) => structure.hits < structure.hitsMax && !structure.needsDismantling()
     });
 
     for (var i in targets) {
@@ -121,7 +121,8 @@ Creep.prototype.performRepair = function () {
     }
     var target = Game.getObjectById(best);
     if (!target) {
-        return false;
+        creep.calculateRepairTarget();
+        return true;
     }
     var maxHealth = target.hitsMax;
     if (creep.memory.order.maxHealth) {
@@ -158,6 +159,8 @@ Creep.prototype.repairNearby = function () {
     if (workParts) {
         var needsRepair = this.pos.findInRange(FIND_STRUCTURES, 3, {
             filter: (structure) => {
+                if (structure.needsDismantling()) return false;
+
                 let maxHealth = structure.hitsMax;
                 if (structure.structureType == STRUCTURE_RAMPART || structure.structureType == STRUCTURE_WALL) {
                     maxHealth = wallHealth[structure.room.controller.level];

@@ -68,21 +68,25 @@ Creep.prototype.performHarvest = function () {
 Creep.prototype.performMineralHarvesterDeliver = function () {
     var creep = this;
     var source = Game.getObjectById(creep.memory.fixedMineralSource);
+    var container = source.getNearbyContainer();
+    var target;
     // By default, deliver to room's terminal if there's space.
-    if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
-        if (creep.pos.getRangeTo(creep.room.terminal) > 1) {
-            creep.moveTo(creep.room.terminal);
-        }
-        else {
-            creep.transfer(creep.room.terminal, source.mineralType);
-        }
+    if (container && _.sum(container.store) + creep.carryCapacity <= container.storeCapacity) {
+        target = container;
+    }
+    else if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
+        target = creep.room.terminal;
     }
     else if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
-        if (creep.pos.getRangeTo(creep.room.storage) > 1) {
-            creep.moveTo(creep.room.storage);
+        target = creep.room.storage;
+    }
+
+    if (target) {
+        if (creep.pos.getRangeTo(target) > 1) {
+            creep.moveTo(target);
         }
         else {
-            creep.transfer(creep.room.storage, source.mineralType);
+            creep.transferAny(target);
         }
     }
     else {

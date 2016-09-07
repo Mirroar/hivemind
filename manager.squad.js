@@ -14,6 +14,9 @@ var Squad = function(squadName) {
     this.memory = Memory.squads[squadName];
 };
 
+/**
+ * Adds one unit of a certain type to the squad's composition.
+ */
 Squad.prototype.addUnit = function (unitType) {
     if (!this.memory.composition[unitType]) {
         this.memory.composition[unitType] = 0;
@@ -23,6 +26,9 @@ Squad.prototype.addUnit = function (unitType) {
     return this.memory.composition[unitType];
 };
 
+/**
+ * Removes one unit of a certain type from the squad's composition.
+ */
 Squad.prototype.removeUnit = function (unitType) {
     if (!this.memory.composition[unitType]) {
         return;
@@ -32,6 +38,9 @@ Squad.prototype.removeUnit = function (unitType) {
     return this.memory.composition[unitType];
 };
 
+/**
+ * Decides whether this squad needs additional units spawned.
+ */
 Squad.prototype.needsSpawning = function () {
     for (var unitType in this.memory.composition) {
         if (this.memory.composition[unitType] > _.size(this.units[unitType])) {
@@ -43,6 +52,9 @@ Squad.prototype.needsSpawning = function () {
     return null;
 };
 
+/**
+ * Spawns another unit for this squad.
+ */
 Squad.prototype.spawnUnit = function (spawn) {
     var toSpawn = this.needsSpawning();
 
@@ -150,6 +162,9 @@ Squad.prototype.getOrders = function () {
     return options;
 };
 
+/**
+ * Sets a waypoint path for all units of this squad to follow after spawning.
+ */
 Squad.prototype.setPath = function (pathName) {
     this.memory.pathName = pathName;
 

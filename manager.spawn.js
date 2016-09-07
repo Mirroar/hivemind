@@ -135,7 +135,12 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
     if (result == newName) {
         // Spawning successful.
         Memory.creepCounter[memory.role]++;
-        console.log(this.room.name, 'Spawning new creep:', newName);
+        new Game.logger('creeps', this.pos.roomName).log('Spawning new creep:', newName);
+
+        // Also notify room's boost manager if necessary.
+        if (options.boosts && this.room.boostManager) {
+            this.room.boostManager.markForBoosting(newName, options.boosts);
+        }
 
         return result;
     }
@@ -192,6 +197,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addRepairerSpawnOptions();
     this.addExploitSpawnOptions();
     this.addDismantlerSpawnOptions();
+    this.addBoostManagerSpawnOptions();
 
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
         memory.options.push({
@@ -240,8 +246,11 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     else if (best.role == 'exploit') {
         Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
     }
+    else if (best.role == 'boosts') {
+        Game.rooms[best.roomName].boostManager.spawn(activeSpawn);
+    }
     else {
-        console.log(this.name, 'trying to spawn unknown creep role:', best.role);
+        new Game.logger('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
     }
 
     return true;
@@ -460,6 +469,10 @@ Room.prototype.addRepairerSpawnOptions = function () {
     if (this.controller.level >= 8) {
         sizeFactor = 3;
     }
+    if (this.storage && this.storage.store.energy > 400000) {
+        // Add more repairers if we have a lot of energy to spare.
+        maxRepairers *= 2;
+    }
 
     if (numRepairers < maxRepairers / sizeFactor) {
         memory.options.push({
@@ -476,11 +489,24 @@ Room.prototype.addExploitSpawnOptions = function () {
         return;
     }
 
+    var memory = this.memory.spawnQueue;
     for (let name in this.exploits) {
-        this.exploits[name].addSpawnOptions(this.memory.spawnQueue.options);
+        this.exploits[name].addSpawnOptions(memory.options);
     }
+};
+
+Room.prototype.addBoostManagerSpawnOptions = function () {
+    if (!this.boostManager) return;
 
     var memory = this.memory.spawnQueue;
+    if (this.boostManager.needsSpawning()) {
+        memory.options.push({
+            priority: 4,
+            weight: 1,
+            role: 'boosts',
+            roomName: this.name,
+        });
+    }
 };
 
 Room.prototype.addDismantlerSpawnOptions = function () {
@@ -492,7 +518,7 @@ Room.prototype.addDismantlerSpawnOptions = function () {
         let flag = flags[0];
         let numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep) => creep.memory.targetRoom == flag.pos.roomName && creep.memory.sourceRoom == this.name).length;
 
-        if (numDismantlers < flags.length) {
+        if (numDismantlers < 1) {
             memory.options.push({
                 priority: 4,
                 weight: 0,
@@ -501,7 +527,20 @@ Room.prototype.addDismantlerSpawnOptions = function () {
             });
         }
     }
-}
+
+    if (this.roomPlanner.needsDismantling()) {
+        let numDismantlers = _.filter(this.creepsByRole.dismantler || [], (creep) => creep.memory.targetRoom == this.name && creep.memory.sourceRoom == this.name).length;
+
+        if (numDismantlers < 1) {
+            memory.options.push({
+                priority: 3,
+                weight: 0,
+                role: 'dismantler',
+                targetRoom: this.name,
+            });
+        }
+    }
+};
 
 /**
  * Spawns creeps in a room whenever needed.
@@ -1128,6 +1167,25 @@ StructureSpawn.prototype.spawnBuilder = function () {
  * Spawns a new dismantler.
  */
 StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
+    var boosts = null;
+    if (this.room.canSpawnBoostedCreeps()) {
+        var availableBoosts = this.room.getAvailableBoosts('dismantle');
+        var bestBoost;
+        for (let resourceType in availableBoosts || []) {
+            if (availableBoosts[resourceType].available >= 50) {
+                if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+                    bestBoost = resourceType;
+                }
+            }
+        }
+
+        if (bestBoost) {
+            boosts = {
+                work: bestBoost,
+            };
+        }
+    }
+
     return this.createManagedCreep({
         role: 'dismantler',
         bodyWeights: {move: 0.35, work: 0.65},
@@ -1163,9 +1221,29 @@ StructureSpawn.prototype.spawnHarvester = function (force, maxSize, sourceID) {
  * Spawns a new mineral harvester.
  */
 StructureSpawn.prototype.spawnMineralHarvester = function (source) {
+    var boosts = null;
+    if (this.room.canSpawnBoostedCreeps()) {
+        var availableBoosts = this.room.getAvailableBoosts('harvest');
+        var bestBoost;
+        for (let resourceType in availableBoosts || []) {
+            if (availableBoosts[resourceType].available >= 50) {
+                if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+                    bestBoost = resourceType;
+                }
+            }
+        }
+
+        if (bestBoost) {
+            boosts = {
+                work: bestBoost,
+            };
+        }
+    }
+
     return this.createManagedCreep({
         role: 'harvester.minerals',
         bodyWeights: {move: 0.35, work: 0.3, carry: 0.35},
+        boosts: boosts,
         memory: {
             singleRoom: this.pos.roomName,
             fixedMineralSource: source.id,
@@ -1176,7 +1254,7 @@ StructureSpawn.prototype.spawnMineralHarvester = function (source) {
 /**
  * Spawns a new repairer.
  */
-StructureSpawn.prototype.spawnRepairer = function (size) {
+/*StructureSpawn.prototype.spawnRepairer = function (size) {
     var maxParts = {work: 5};
     if (size) {
         maxParts.work = size;
@@ -1190,24 +1268,33 @@ StructureSpawn.prototype.spawnRepairer = function (size) {
             singleRoom: this.pos.roomName,
         },
     });
-};
+};//*/
 
 /**
  * Spawns a new repairer.
  */
-StructureSpawn.prototype.spawnRepairerBoosted = function (size) {
+StructureSpawn.prototype.spawnRepairer = function (size) {
     var maxParts = {work: 5};
     if (size) {
         maxParts.work = size;
     }
 
-    var boosts = this.room.getAvailableBoosts('repair');
-    var bestBoost;
-    for (let resourceType in boosts || []) {
-        if (boosts[resourceType].available >= maxParts.work) {
-            if (!bestBoost || boosts[resourceType].effect > boosts[bestBoost].effect) {
-                bestBoost = resourceType;
+    var boosts = null;
+    if (this.room.canSpawnBoostedCreeps()) {
+        var availableBoosts = this.room.getAvailableBoosts('repair');
+        var bestBoost;
+        for (let resourceType in availableBoosts || []) {
+            if (availableBoosts[resourceType].available >= maxParts.work) {
+                if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+                    bestBoost = resourceType;
+                }
             }
+        }
+
+        if (bestBoost) {
+            boosts = {
+                work: bestBoost,
+            };
         }
     }
 
@@ -1215,9 +1302,7 @@ StructureSpawn.prototype.spawnRepairerBoosted = function (size) {
         role: 'repairer',
         bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
         maxParts: maxParts,
-        boosts: {
-            work: bestBoost,
-        },
+        boosts: boosts,
         memory: {
             singleRoom: this.pos.roomName,
         },
@@ -1252,7 +1337,7 @@ StructureSpawn.prototype.spawnTransporter = function (force, size) {
 /**
  * Spawns a new upgrader.
  */
-StructureSpawn.prototype.spawnUpgrader = function () {
+/*StructureSpawn.prototype.spawnUpgrader = function () {
     var bodyWeights = {move: 0.35, work: 0.3, carry: 0.35};
     if (this.room.memory.controllerContainer || this.room.memory.controllerLink) {
         bodyWeights = {move: 0.2, work: 0.75, carry: 0.05};
@@ -1261,6 +1346,45 @@ StructureSpawn.prototype.spawnUpgrader = function () {
     return this.createManagedCreep({
         role: 'upgrader',
         bodyWeights: bodyWeights,
+        maxParts: {work: 15},
+        memory: {
+            singleRoom: this.pos.roomName,
+        },
+    });
+};//*/
+
+/**
+ * Spawns a new upgrader.
+ */
+StructureSpawn.prototype.spawnUpgrader = function () {
+    var bodyWeights = {move: 0.35, work: 0.3, carry: 0.35};
+    if (this.room.memory.controllerContainer || this.room.memory.controllerLink) {
+        bodyWeights = {move: 0.2, work: 0.75, carry: 0.05};
+    }
+
+    var boosts = null;
+    if (this.room.canSpawnBoostedCreeps()) {
+        var availableBoosts = this.room.getAvailableBoosts('upgradeController');
+        var bestBoost;
+        for (let resourceType in availableBoosts || []) {
+            if (availableBoosts[resourceType].available >= 15) {
+                if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+                    bestBoost = resourceType;
+                }
+            }
+        }
+
+        if (bestBoost) {
+            boosts = {
+                work: bestBoost,
+            };
+        }
+    }
+
+    return this.createManagedCreep({
+        role: 'upgrader',
+        bodyWeights: bodyWeights,
+        boosts: boosts,
         maxParts: {work: 15},
         memory: {
             singleRoom: this.pos.roomName,

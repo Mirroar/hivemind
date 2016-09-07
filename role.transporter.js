@@ -24,6 +24,10 @@ Creep.prototype.getAvailableEnergySources = function () {
         // Spawning is important, so get energy when needed.
         storagePriority = 4;
     }
+    else if (creep.room.terminal && creep.room.storage && creep.room.terminal.store.energy < creep.room.storage.store.energy * 0.05) {
+        // Take some energy out of storage to put into terminal from time to time.
+        storagePriority = 2;
+    }
 
     // Energy can be gotten at the room's storage.
     if (storage && storage.store.energy >= creep.carryCapacity - _.sum(creep.carry)) {
@@ -59,9 +63,8 @@ Creep.prototype.getAvailableEnergySources = function () {
     var targets = creep.room.find(FIND_DROPPED_ENERGY, {
         filter: (resource) => {
             if (resource.resourceType == RESOURCE_ENERGY) {
-                if (creep.pos.findPathTo(resource)) {
-                    return true;
-                }
+                if (resource.amount < 200) return false;
+                if (creep.pos.findPathTo(resource)) return true;
             }
             return false;
         }
@@ -213,6 +216,29 @@ Creep.prototype.getAvailableSources = function () {
         options.push(option);
     }
 
+    // Take non-energy out of containers.
+    if (terminal || storage) {
+        let containers = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_CONTAINER
+        });
+
+        for (let i in containers) {
+            for (let resourceType in containers[i].store) {
+                if (resourceType != RESOURCE_ENERGY && containers[i].store[resourceType] > 0) {
+                    var option = {
+                        priority: 3,
+                        weight: containers[i].store[resourceType] / 20, // @todo Also factor in distance.
+                        type: 'structure',
+                        object: containers[i],
+                        resourceType: resourceType,
+                    };
+
+                    options.push(option);
+                }
+            }
+        }
+    }
+
     if (creep.room.memory.canPerformReactions) {
         let labs = creep.room.memory.labs.reactor;
         if (typeof labs == 'string') {
@@ -244,6 +270,7 @@ Creep.prototype.getAvailableSources = function () {
                     // If we're doing a different reaction now, clean out faster!
                     if (REACTIONS[creep.room.memory.currentReaction[0]][creep.room.memory.currentReaction[1]] != lab.mineralType) {
                         option.priority = 4;
+                        option.weight = 0;
                     }
                 }
 
@@ -510,9 +537,12 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 
         for (let i in targets) {
             let target = targets[i];
+
+            let canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
+
             let option = {
                 priority: 5,
-                weight: 1 - target.energy / target.energyCapacity,
+                weight: canDeliver / creep.carryCapacity,
                 type: 'structure',
                 object: target,
                 resourceType: RESOURCE_ENERGY,
@@ -530,9 +560,11 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 
             if (target.energy >= target.energyCapacity) continue;
 
+            let canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
+
             let option = {
                 priority: 5,
-                weight: 1 - target.energy / target.energyCapacity,
+                weight: canDeliver / creep.carryCapacity,
                 type: 'bay',
                 object: target,
                 resourceType: RESOURCE_ENERGY,
@@ -557,6 +589,12 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                     if (structure.room.sources) {
                         for (let id in structure.room.sources) {
                             let container = structure.room.sources[id].getNearbyContainer();
+                            if (container && container.id == structure.id) {
+                                return false;
+                            }
+                        }
+                        if (structure.room.mineral) {
+                            let container = structure.room.mineral.getNearbyContainer();
                             if (container && container.id == structure.id) {
                                 return false;
                             }
@@ -625,7 +663,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 };
 
                 if (terminal.store.energy < 5000) {
-                    option.priority += 2;
+                    option.priority += 1;
                 }
 
                 options.push(option);
@@ -679,13 +717,13 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 
     for (let resourceType in creep.carry) {
         // If it's needed for transferring, store in terminal.
-        if (resourceType == creep.room.memory.fillTerminal) {
-            if (creep.room.terminal && (!creep.room.terminal.store[resourceType] || creep.room.terminal.store[resourceType] < 10000)) {
+        if (resourceType == creep.room.memory.fillTerminal && creep.carry[resourceType] > 0) {
+            if (terminal && (!terminal.store[resourceType] || terminal.store[resourceType] < 10000) && _.sum(terminal.store) < terminal.storeCapacity) {
                 var option = {
-                    priority: 5,
+                    priority: 4,
                     weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
                     type: 'structure',
-                    object: creep.room.terminal,
+                    object: terminal,
                     resourceType: resourceType,
                 };
                 options.push(option);
@@ -701,7 +739,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
         }
 
         // If there is space left, store in terminal.
-        if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
+        if (terminal && _.sum(terminal.store) < terminal.storeCapacity) {
             var option = {
                 priority: 0,
                 weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
@@ -821,6 +859,9 @@ Creep.prototype.performDeliver = function () {
             creep.calculateDeliveryTarget();
             return true;
         }
+        if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
+            creep.calculateDeliveryTarget();
+        }
 
         if (creep.pos.getRangeTo(target) > 1) {
             creep.moveTo(target);
@@ -832,9 +873,6 @@ Creep.prototype.performDeliver = function () {
             creep.calculateDeliveryTarget();
         }
         else if (target.mineralAmount && target.mineralType != creep.memory.order.resourceType) {
-            creep.calculateDeliveryTarget();
-        }
-        else if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
             creep.calculateDeliveryTarget();
         }
         return true;
@@ -920,7 +958,7 @@ Creep.prototype.runTransporterLogic = function () {
     if (!this.memory.delivering) {
         // Make sure not to keep standing on resource drop stop.
         var storagePosition = this.room.getStorageLocation();
-        if (storagePosition && this.pos.x == storagePosition.x && this.pos.y == storagePosition.y) {
+        if (!this.room.storage && storagePosition && this.pos.x == storagePosition.x && this.pos.y == storagePosition.y) {
             this.move(_.random(1, 8));
             return true;
         }

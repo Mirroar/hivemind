@@ -10,6 +10,8 @@ Creep.prototype.performDismantle = function () {
         return true;
     }
 
+    var target;
+
     // Look for dismantle flags.
     var flags = this.room.find(FIND_FLAGS, {
         filter: (flag) => flag.name.startsWith('Dismantle:')
@@ -25,16 +27,25 @@ Creep.prototype.performDismantle = function () {
                 continue;
             }
 
-            let target = structures[0];
-            if (this.pos.getRangeTo(target) > 1) {
-                this.moveTo(target);
-            }
-            else {
-                this.dismantle(target);
-            }
-            return true;
+            target = structures[0];
+            break;
         }
+    }
 
+    if (!target && this.room.roomPlanner.needsDismantling()) {
+        target = this.room.roomPlanner.getDismantleTarget();
+        if (target) {
+            target.notifyWhenAttacked(false);
+        }
+    }
+
+    if (target) {
+        if (this.pos.getRangeTo(target) > 1) {
+            this.moveTo(target);
+        }
+        else {
+            this.dismantle(target);
+        }
         return true;
     }
 

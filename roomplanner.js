@@ -2,6 +2,7 @@ var utilities = require('utilities');
 
 var RoomPlanner = function (roomName) {
   this.roomName = roomName;
+  this.room = Game.rooms[roomName]; // Will not always be available.
 
   if (!Memory.rooms[roomName]) {
     Memory.rooms[roomName] = {};
@@ -10,49 +11,212 @@ var RoomPlanner = function (roomName) {
     Memory.rooms[roomName].roomPlanner = {};
   }
   this.memory = Memory.rooms[roomName].roomPlanner;
+};
 
-  console.log('room planner for', roomName, 'initialized.');
+/**
+ * Gives a the roomplanner control over a room, or takes it away.
+ */
+RoomPlanner.prototype.controlRoom = function (giveControl) {
+  this.memory.controlRoom = giveControl;
+};
+
+/**
+ * Allows this room planner to give commands in controlled rooms.
+ */
+RoomPlanner.prototype.runLogic = function () {
+  if (!this.memory.controlRoom) return;
+  if (!this.memory.locations) return;
+  if (Game.time % 100 != 3) return;
+  if (Game.cpu.bucket < 3500) return;
+
+  //console.log('[RoomPlanner]', 'running logic in', this.roomName);
+
+  // Make sure all requested ramparts are built.
+  var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
+  var newStructures = 0;
+  var wallsBuilt = true;
+
+  for (let posName in this.memory.locations.rampart || []) {
+    let pos = utilities.decodePosition(posName);
+
+    let found = false;
+    // Check if there's a rampart here already.
+    let structures = pos.lookFor(LOOK_STRUCTURES);
+    for (let i in structures) {
+      if (structures[i].structureType == STRUCTURE_RAMPART) {
+        found = true;
+
+        if (structures[i].hits < 500000) {
+          wallsBuilt = false;
+        }
+        break;
+      }
+    }
+
+    // Check if there's a construction site here already.
+    let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+    for (let i in sites) {
+      if (sites[i].structureType == STRUCTURE_RAMPART) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      wallsBuilt = false;
+
+      if (newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
+        if (pos.createConstructionSite(STRUCTURE_RAMPART) == OK) {
+          newStructures++;
+        }
+      }
+    }
+  }
+
+  if (!wallsBuilt) return;
+  console.log('[RoomPlanner]', 'walls are finished in', this.roomName);
+
+  // Slate all unmanaged walls and ramparts for deconstruction.
+  var unwantedDefenses = this.room.find(FIND_STRUCTURES, {
+    filter: (structure) => {
+      if (structure.structureType == STRUCTURE_WALL) return true;
+      if (structure.structureType == STRUCTURE_RAMPART) {
+        // Keep rampart if it is one we have placed.
+        let pos = utilities.encodePosition(structure.pos);
+        if (this.memory.locations.rampart[pos]) return false;
+
+        // Keep rampart if anything important is below it.
+        let structures = structure.pos.lookFor(LOOK_STRUCTURES);
+        for (let i in structures) {
+          if (structures[i].structureType != STRUCTURE_RAMPART && structures[i].structureType != STRUCTURE_ROAD) {
+            return false;
+          }
+        }
+        return true;
+      }
+      return false;
+    }
+  });
+
+  if (!this.memory.dismantle) {
+    this.memory.dismantle = {};
+  }
+  for (let i in unwantedDefenses) {
+    this.memory.dismantle[unwantedDefenses[i].id] = 1;
+  }
+};
+
+/**
+ * Decides whether a dismantler is needed in the current room.
+ */
+RoomPlanner.prototype.needsDismantling = function () {
+  if (!this.memory.controlRoom) return false;
+  if (_.size(this.memory.dismantle) > 0) {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Decides on a structure that needs to be dismantled.
+ */
+RoomPlanner.prototype.getDismantleTarget = function () {
+  if (!this.needsDismantling()) return null;
+
+  for (let id in this.memory.dismantle) {
+    let structure = Game.getObjectById(id);
+    if (structure) {
+      // If there's a rampart on it, dismantle the rampart first if requested, or just destroy the building immediately.
+      let structures = structure.pos.lookFor(LOOK_STRUCTURES);
+      let innocentRampartFound = false;
+      for (let i in structures) {
+        if (structures[i].structureType == STRUCTURE_RAMPART) {
+          if (this.memory.dismantle[structures[i].id]) {
+            return structures[i];
+          }
+          else {
+            structure.destroy();
+            innocentRampartFound = true;
+            break;
+          }
+        }
+      }
+
+      if (!innocentRampartFound) {
+        return structure;
+      }
+    }
+    else {
+      delete this.memory.dismantle[id];
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Decides whether a structure is supposed to be dismantled.
+ */
+Structure.prototype.needsDismantling = function () {
+  if (!this.room.roomPlanner.needsDismantling()) return false;
+
+  if (this.room.roomPlanner.memory.dismantle && this.room.roomPlanner.memory.dismantle[this.id]) {
+    return true;
+  }
+  return false;
 };
 
 /**
  * Places a room planner flag of a certain type.
  */
-RoomPlanner.prototype.placeFlag = function (pos, flagType) {
-  let flagName = 'RP:' + utilities.encodePosition(pos) + ':' + flagType;
+RoomPlanner.prototype.placeFlag = function (pos, flagType, visible) {
+  let posName = utilities.encodePosition(pos);
 
-  let color = COLOR_WHITE;
-  let color2 = COLOR_WHITE;
+  if (!this.memory.locations) {
+    this.memory.locations = {};
+  }
+  if (!this.memory.locations[flagType]) {
+    this.memory.locations[flagType] = {};
+  }
+  this.memory.locations[flagType][posName] = 1;
 
-  if (flagType == 'wall') {
-    color = COLOR_GREY;
-    color2 = COLOR_GREY;
-  }
-  else if (flagType == 'rampart') {
-    color = COLOR_GREY;
-    color2 = COLOR_GREEN;
-  }
-  else if (flagType == 'road') {
-    color = COLOR_GREY;
-    color2 = COLOR_WHITE;
-  }
-  else if (flagType == 'exit') {
-    color = COLOR_RED;
-    color2 = COLOR_RED;
-  }
-  else if (flagType == 'center') {
-    color = COLOR_GREEN;
-    color2 = COLOR_GREEN;
-  }
-  else if (flagType == 'test') {
-    color = COLOR_YELLOW;
-    color2 = COLOR_GREY;
-  }
+  if (visible) {
+    let flagName = 'RP:' + posName + ':' + flagType;
 
-  if (Game.flags[flagName]) {
-    Game.flags[flagName].setColor(color, color2);
-  }
-  else {
-    pos.createFlag(flagName, color, color2);
+    let color = COLOR_WHITE;
+    let color2 = COLOR_WHITE;
+
+    if (flagType == 'wall') {
+      color = COLOR_GREY;
+      color2 = COLOR_GREY;
+    }
+    else if (flagType == 'rampart') {
+      color = COLOR_GREY;
+      color2 = COLOR_GREEN;
+    }
+    else if (flagType == 'road') {
+      color = COLOR_GREY;
+      color2 = COLOR_WHITE;
+    }
+    else if (flagType == 'exit') {
+      color = COLOR_RED;
+      color2 = COLOR_RED;
+    }
+    else if (flagType == 'center') {
+      color = COLOR_GREEN;
+      color2 = COLOR_GREEN;
+    }
+    else if (flagType == 'test') {
+      color = COLOR_YELLOW;
+      color2 = COLOR_GREY;
+    }
+
+    if (Game.flags[flagName]) {
+      Game.flags[flagName].setColor(color, color2);
+    }
+    else {
+      pos.createFlag(flagName, color, color2);
+    }
   }
 };
 
@@ -145,13 +309,17 @@ RoomPlanner.prototype.generateDistanceMatrixes = function () {
 /**
  * Makes plans for a room and place flags to visualize.
  */
-RoomPlanner.prototype.placeFlags = function () {
+RoomPlanner.prototype.placeFlags = function (visible) {
   var start = Game.cpu.getUsed();
 
   if (!this.memory.wallDistanceMatrix) {
     this.generateDistanceMatrixes();
     return;
   }
+
+  // Reset location memory, to be replaced with new flags.
+  this.memory.locations = {};
+
   let wallDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.wallDistanceMatrix);
   let exitDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.exitDistanceMatrix);
 
@@ -228,7 +396,6 @@ RoomPlanner.prototype.placeFlags = function () {
         startPos = pos;
       }
       if (prevPos && pos.getRangeTo(prevPos) > 1) {
-        console.log(prevPos, pos, pos.getRangeTo(prevPos));
         // New exit block started.
         let middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
         exitCenters[dir].push(middlePos);
@@ -245,12 +412,12 @@ RoomPlanner.prototype.placeFlags = function () {
     }
 
     for (let i in exitCenters[dir]) {
-      this.placeFlag(exitCenters[dir][i], 'exit');
+      this.placeFlag(exitCenters[dir][i], 'exit', visible);
     }
   }
 
   for (let i in walls) {
-    this.placeFlag(walls[i], 'rampart');
+    this.placeFlag(walls[i], 'rampart', visible);
   }
 
   // Decide where room center should be by averaging exit positions.
@@ -269,7 +436,7 @@ RoomPlanner.prototype.placeFlags = function () {
 
   // Find closest position with distance from walls around there.
   let roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(centerPositions);
-  this.placeFlag(roomCenter, 'center');
+  this.placeFlag(roomCenter, 'center', visible);
 
   // Center is accessible via the 4 cardinal directions.
   let centerEntrances = [
@@ -286,27 +453,25 @@ RoomPlanner.prototype.placeFlags = function () {
     }
   }
 
-  if (Game.rooms[this.roomName]) {
+  if (this.room) {
     // @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
-    let room = Game.rooms[this.roomName];
-
-    if (room.controller) {
-      this.scanAndAddRoad(room.controller.pos, centerEntrances, matrix, roads);
+    if (this.room.controller) {
+      this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
     }
 
-    if (room.mineral) {
-      this.scanAndAddRoad(room.mineral.pos, centerEntrances, matrix, roads);
+    if (this.room.mineral) {
+      this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
     }
 
-    if (room.sources) {
-      for (let i in room.sources) {
-        this.scanAndAddRoad(room.sources[i].pos, centerEntrances, matrix, roads);
+    if (this.room.sources) {
+      for (let i in this.room.sources) {
+        this.scanAndAddRoad(this.room.sources[i].pos, centerEntrances, matrix, roads);
       }
     }
   }
 
   for (let i in roads) {
-    this.placeFlag(roads[i], 'road');
+    this.placeFlag(roads[i], 'road', visible);
   }
 
   var end = Game.cpu.getUsed();

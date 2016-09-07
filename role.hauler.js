@@ -39,10 +39,28 @@ Creep.prototype.performGetHaulerEnergy = function () {
         }
 
         // Check if energy is on the ground nearby and pick that up.
-        var resource = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
-            filter: (resource) => resource.resourceType == RESOURCE_ENERGY
-        });
-        if (resource && creep.pos.getRangeTo(resource) <= 3) {
+        var resource;
+        if (creep.memory.energyPickupTarget) {
+            resource = Game.getObjectById(creep.memory.energyPickupTarget);
+
+            if (!resource) {
+                delete creep.memory.energyPickupTarget;
+            }
+            else if (resource.pos.roomName != creep.pos.roomName) {
+                resource = null;
+                delete creep.memory.energyPickupTarget;
+            }
+        }
+        if (!resource) {
+            let resources = creep.pos.findInRange(FIND_DROPPED_ENERGY, 3, {
+                filter: (resource) => resource.resourceType == RESOURCE_ENERGY
+            });
+            if (resources.length > 0) {
+                resource = resources[0];
+                creep.memory.energyPickupTarget = resource.id;
+            }
+        }
+        if (resource) {
             if (creep.pos.getRangeTo(resource) > 1) {
                 creep.moveTo(resource);
                 return true;
@@ -131,7 +149,10 @@ Creep.prototype.performHaulerDeliver = function () {
         return true;
     }
     // @todo If no storage is available, use default delivery method.
-    target = creep.room.storage;
+    target = creep.room.terminal;
+    if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
+        target = creep.room.storage;
+    }
 
     if (!target || _.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
         // Container is full, drop energy instead.

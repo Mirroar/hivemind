@@ -190,12 +190,10 @@ Room.prototype.scan = function () {
     }
 };
 
-var pathPrecalculated = false;
-
 var utilities = {
 
     precalculatePaths: function (room, sourceFlag) {
-        if (pathPrecalculated) return;
+        if (Game.pathPrecalculated) return;
 
         var start = Game.cpu.getUsed();
         //console.log('precalculate harvest paths', room, sourceFlag);
@@ -225,7 +223,7 @@ var utilities = {
         //console.log('Finding path between', startPosition, 'and', endPosition);
 
         var result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
-        pathPrecalculated = true;
+        Game.pathPrecalculated = true;
 
         if (result) {
             //console.log('found path in', result.ops, 'operations', result.path);

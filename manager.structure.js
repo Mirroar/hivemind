@@ -145,6 +145,10 @@ var structureManager = {
 
         for (var roomName in rooms) {
             var roomState = rooms[roomName];
+
+            // Do not try transferring from a room that is already preparing a transfer.
+            if (Game.rooms[roomName].memory.fillTerminal) continue;
+
             for (var resourceType in roomState.state) {
                 if (roomState.state[resourceType] == 'high' || roomState.state[resourceType] == 'excessive') {
                     // Look for other rooms that are low on this resource.
@@ -194,11 +198,16 @@ var structureManager = {
                 for (var resourceType in roomData.totalResources) {
                     if (roomData.totalResources[resourceType] > 0 && REACTIONS[resourceType]) {
                         for (var resourceType2 in REACTIONS[resourceType]) {
-                            if (roomData.totalResources[REACTIONS[resourceType][resourceType2]] > 10000) continue;
+                            let targetType = REACTIONS[resourceType][resourceType2];
+                            if (roomData.totalResources[targetType] > 10000) continue;
 
                             if (roomData.totalResources[resourceType2] && roomData.totalResources[resourceType2] > 0) {
                                 //console.log(resourceType, '+', resourceType2, '=', REACTIONS[resourceType][resourceType2]);
                                 var resourceAmount = Math.min(roomData.totalResources[resourceType], roomData.totalResources[resourceType2]);
+
+                                // Also prioritize reactions whose product we don't have much of.
+                                resourceAmount -= (roomData.totalResources[targetType] || 0);
+
                                 if (!mostResources || mostResources < resourceAmount) {
                                     mostResources = resourceAmount;
                                     bestReaction = [resourceType, resourceType2];
@@ -209,6 +218,9 @@ var structureManager = {
                 }
 
                 room.memory.currentReaction = bestReaction;
+                if (bestReaction) {
+                    console.log('[Labs] ', room.name, 'will now produce', REACTIONS[bestReaction[0]][bestReaction[1]]);
+                }
             }
         }
     },
