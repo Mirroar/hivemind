@@ -193,7 +193,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addHarvesterSpawnOptions();
     this.addTransporterSpawnOptions();
     this.addUpgraderSpawnOptions();
-    this.addBuilderSpawnOptions();
+    //this.addBuilderSpawnOptions();
     this.addRepairerSpawnOptions();
     this.addExploitSpawnOptions();
     this.addDismantlerSpawnOptions();

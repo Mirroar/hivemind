@@ -1,7 +1,3 @@
-// @todo Try to have different targets.
-// @todo Use energy from storage.
-// @todo Walls and ramparts should be repaired to the same amount, not percentage.
-
 var creepGeneral = require('creep.general');
 var utilities = require('utilities');
 
@@ -18,7 +14,7 @@ var wallHealth = {
 };
 
 /**
- * Collects information about all damaged buildings in the current room.
+ * Collects information about all damaged or unfinished buildings in the current room.
  */
 Creep.prototype.getAvailableRepairTargets = function () {
     var creep = this;
@@ -28,17 +24,17 @@ Creep.prototype.getAvailableRepairTargets = function () {
         filter: (structure) => structure.hits < structure.hitsMax && !structure.needsDismantling()
     });
 
-    for (var i in targets) {
-        var target = targets[i];
+    for (let i in targets) {
+        let target = targets[i];
 
-        var option = {
-            priority: 4,
-            weight: 1 - target.hits / target.hitsMax, // @todo Also factor in distance.
+        let option = {
+            priority: 3,
+            weight: 1 - target.hits / target.hitsMax,
             type: 'structure',
             object: target,
         };
 
-        var maxHealth = target.hitsMax;
+        let maxHealth = target.hitsMax;
         if (target.structureType == STRUCTURE_WALL || target.structureType == STRUCTURE_RAMPART) {
             option.priority--;
 
@@ -50,6 +46,11 @@ Creep.prototype.getAvailableRepairTargets = function () {
             }
             option.weight = 1 - target.hits / maxHealth;
             option.maxHealth = maxHealth;
+
+            if (target.structureType == STRUCTURE_RAMPART && target.hits < 10000) {
+                // Low ramparts get special treatment so they don't decay.
+                option.priority++;
+            }
         }
 
         if (target.hits / maxHealth > 0.9) {
@@ -81,11 +82,30 @@ Creep.prototype.getAvailableRepairTargets = function () {
         options.push(option);
     }
 
+    targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+    for (let i in targets) {
+        let target = targets[i];
+
+        let option = {
+            priority: 4,
+            weight: 1,
+            type: 'site',
+            object: target,
+        };
+
+        // Slightly adjust weight so that closer sites get prioritized.
+        option.weight -= creep.pos.getRangeTo(target) / 100;
+
+        option.priority -= creepGeneral.getCreepsWithOrder('build', target.id).length;
+
+        options.push(option);
+    }
+
     return options;
 };
 
 /**
- * Sets a good energy source target for this creep.
+ * Sets a good repair or build target for this creep.
  */
 Creep.prototype.calculateRepairTarget = function () {
     var creep = this;
@@ -93,16 +113,25 @@ Creep.prototype.calculateRepairTarget = function () {
 
     if (best) {
         //console.log('best repair target for this', creep.memory.role , ':', best.object.structureType, best.object.id, '@ priority', best.priority, best.weight, 'HP:', best.object.hits, '/', best.object.hitsMax);
-        creep.memory.repairTarget = best.object.id;
+        if (best.type == 'structure') {
+            creep.memory.order = {
+                type: 'repair',
+                target: best.object.id,
+                maxHealth: best.maxHealth,
+            };
 
-        creep.memory.order = {
-            type: 'repair',
-            target: best.object.id,
-            maxHealth: best.maxHealth,
-        };
+            new Game.logger('creep', this.pos.roomName).log(creep.name, 'is now repairing', best.object);
+        }
+        else if (best.type == 'site') {
+            creep.memory.order = {
+                type: 'build',
+                target: best.object.id,
+            };
+
+            new Game.logger('creep', this.pos.roomName).log(creep.name, 'is now building', best.object);
+        }
     }
     else {
-        delete creep.memory.repairTarget;
         delete creep.memory.order;
     }
 };
@@ -112,43 +141,80 @@ Creep.prototype.calculateRepairTarget = function () {
  */
 Creep.prototype.performRepair = function () {
     var creep = this;
-    if (!creep.memory.repairTarget) {
+    if (!creep.memory.order || !creep.memory.order.target) {
         creep.calculateRepairTarget();
     }
-    var best = creep.memory.repairTarget;
-    if (!best) {
+    if (!creep.memory.order || !creep.memory.order.target) {
         return false;
     }
-    var target = Game.getObjectById(best);
+    var target = Game.getObjectById(creep.memory.order.target);
     if (!target) {
         creep.calculateRepairTarget();
         return true;
     }
-    var maxHealth = target.hitsMax;
-    if (creep.memory.order.maxHealth) {
-        maxHealth = creep.memory.order.maxHealth;
 
-        // Repair ramparts past their maxHealth to counteract decaying.
-        if (target.structureType == STRUCTURE_RAMPART) {
-            maxHealth = Math.min(maxHealth + 10000, target.hitsMax);
+    if (creep.memory.order.type == 'repair') {
+        var maxHealth = target.hitsMax;
+        if (creep.memory.order.maxHealth) {
+            maxHealth = creep.memory.order.maxHealth;
+
+            // Repair ramparts past their maxHealth to counteract decaying.
+            if (target.structureType == STRUCTURE_RAMPART) {
+                maxHealth = Math.min(maxHealth + 10000, target.hitsMax);
+            }
         }
-    }
-    if (!target || !target.hits || target.hits >= maxHealth) {
-        creep.calculateRepairTarget();
-    }
+        if (!target.hits || target.hits >= maxHealth) {
+            creep.calculateRepairTarget();
+            return true;
+        }
 
-    if (creep.pos.getRangeTo(target) > 3) {
-        creep.moveToRange(target, 3);
+        creep.repairTarget(target);
+        return true;
+    }
+    else if (creep.memory.order.type == 'build') {
+        this.buildTarget(target);
+        return true;
+    }
+    else {
+        // Unknown order type, recalculate!
+        new Game.logger('creep', this.pos.roomName).log('Unknown order type detected on', creep.name);
+        creep.calculateRepairTarget();
+        return true;
+    }
+};
+
+/**
+ * Moves towards a target structure and repairs it once close enough.
+ */
+Creep.prototype.repairTarget = function (target) {
+    if (this.pos.getRangeTo(target) > 3) {
+        this.moveToRange(target, 3);
 
         // Also try to repair things that are close by when appropriate.
         if (Game.cpu.bucket > 9500 && (this.carry.energy > this.carryCapacity * 0.7 || this.carry.energy < this.carryCapacity * 0.3)) {
-            creep.repairNearby();
+            this.repairNearby();
         }
     }
     else {
-        creep.repair(target);
+        this.repair(target);
     }
-    return true;
+}
+
+/**
+ * Moves towards a target construction site and builds it once close enough.
+ */
+Creep.prototype.buildTarget = function (target) {
+    if (this.pos.getRangeTo(target) > 3) {
+        this.moveToRange(target, 3);
+
+        // Also try to repair things that are close by when appropriate.
+        if (Game.cpu.bucket > 9500 && (this.carry.energy > this.carryCapacity * 0.7 || this.carry.energy < this.carryCapacity * 0.3)) {
+            this.repairNearby();
+        }
+    }
+    else {
+        this.build(target);
+    }
 };
 
 /**
@@ -181,8 +247,8 @@ Creep.prototype.repairNearby = function () {
  */
 Creep.prototype.setRepairState = function (repairing) {
     this.memory.repairing = repairing;
-    delete this.memory.repairTarget;
     delete this.memory.tempRole;
+    delete this.memory.order;
 };
 
 Creep.prototype.runRepairerLogic = function () {

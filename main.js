@@ -126,10 +126,7 @@ Creep.prototype.runLogic = function() {
             }
         }
         else if (creep.memory.role == 'repairer') {
-            if (creep.memory.tempRole || !creep.runRepairerLogic()) {
-                creep.memory.tempRole = 'upgrader';
-                creep.runUpgraderLogic();
-            }
+            creep.runRepairerLogic();
         }
         else if (creep.memory.role == 'transporter') {
             creep.runTransporterLogic();
