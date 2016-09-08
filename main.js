@@ -372,10 +372,6 @@ var main = {
      */
     manageStructures: function () {
         for (var name in Game.rooms) {
-            if (Game.time % 1000 == 337) {
-                structureManager.checkRoads(Game.rooms[name]);
-            }
-
             try {
                 Game.rooms[name].roomPlanner.runLogic();
             }
