@@ -92,23 +92,31 @@ var structureManager = {
             let storage = room.storage;
             let terminal = room.terminal;
 
-            if (!room.controller || !room.controller.my || !terminal || !storage) {
+            if (!room.controller || !room.controller.my) {
                 continue;
             }
 
             let roomData = {
                 totalResources: {},
                 state: {},
+                canTrade: false,
             };
-
-            for (let resourceType in storage.store) {
-                roomData.totalResources[resourceType] = storage.store[resourceType];
+            if (storage && terminal) {
+                roomData.canTrade = true;
             }
-            for (let resourceType in terminal.store) {
-                if (!roomData.totalResources[resourceType]) {
-                    roomData.totalResources[resourceType] = 0;
+
+            if (storage) {
+                for (let resourceType in storage.store) {
+                    roomData.totalResources[resourceType] = storage.store[resourceType];
                 }
-                roomData.totalResources[resourceType] += terminal.store[resourceType];
+            }
+            if (terminal) {
+                for (let resourceType in terminal.store) {
+                    if (!roomData.totalResources[resourceType]) {
+                        roomData.totalResources[resourceType] = 0;
+                    }
+                    roomData.totalResources[resourceType] += terminal.store[resourceType];
+                }
             }
 
             for (let resourceType in roomData.totalResources) {
@@ -145,6 +153,7 @@ var structureManager = {
 
         for (var roomName in rooms) {
             var roomState = rooms[roomName];
+            if (!roomState.canTrade) continue;
 
             // Do not try transferring from a room that is already preparing a transfer.
             if (Game.rooms[roomName].memory.fillTerminal) continue;
@@ -153,6 +162,8 @@ var structureManager = {
                 if (roomState.state[resourceType] == 'high' || roomState.state[resourceType] == 'excessive') {
                     // Look for other rooms that are low on this resource.
                     for (var roomName2 in rooms) {
+                        if (!rooms[roomName2].canTrade) continue;
+
                         if (!rooms[roomName2].state[resourceType] || rooms[roomName2].state[resourceType] == 'low' || (roomState.state[resourceType] == 'excessive' && (rooms[roomName2].state[resourceType] == 'medium' || rooms[roomName2].state[resourceType] == 'high'))) {
                             // Make sure target has space left.
                             if (_.sum(Game.rooms[roomName2].terminal.store) > Game.rooms[roomName2].terminal.storeCapacity - 5000) {
@@ -236,10 +247,10 @@ var structureManager = {
             let terminal = Game.rooms[best.source].terminal;
             if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
                 let result = terminal.send(best.resourceType, 5000, best.target, "Resource equalizing");
-                console.log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
+                new Game.logger('trade').log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
             }
             else {
-                console.log("Preparing 5000", best.resourceType, 'for transport from', best.source, 'to', best.target);
+                new Game.logger('trade').log("Preparing 5000", best.resourceType, 'for transport from', best.source, 'to', best.target);
                 Game.rooms[best.source].memory.fillTerminal = best.resourceType;
             }
         }
