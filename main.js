@@ -18,7 +18,6 @@ require('role.harvester.remote');
 require('role.hauler');
 require('role.hauler.exploit');
 require('role.helper');
-require('role.repairer');
 require('role.scout');
 require('role.transporter');
 require('role.upgrader');
@@ -113,20 +112,8 @@ Creep.prototype.runLogic = function() {
         else if (creep.memory.role == 'upgrader') {
             creep.runUpgraderLogic();
         }
-        else if (creep.memory.role == 'builder') {
-            if (creep.memory.tempRole || !creep.runBuilderLogic()) {
-                if (creep.room.controller.level == 8) {
-                    creep.memory.tempRole = 'repairer';
-                    creep.runRepairerLogic();
-                }
-                else {
-                    creep.memory.tempRole = 'upgrader';
-                    creep.runUpgraderLogic();
-                }
-            }
-        }
-        else if (creep.memory.role == 'repairer') {
-            creep.runRepairerLogic();
+        else if (creep.memory.role == 'builder' || creep.memory.role == 'repairer') {
+            creep.runBuilderLogic();
         }
         else if (creep.memory.role == 'transporter') {
             creep.runTransporterLogic();

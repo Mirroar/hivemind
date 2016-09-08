@@ -193,8 +193,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addHarvesterSpawnOptions();
     this.addTransporterSpawnOptions();
     this.addUpgraderSpawnOptions();
-    //this.addBuilderSpawnOptions();
-    this.addRepairerSpawnOptions();
+    this.addBuilderSpawnOptions();
     this.addExploitSpawnOptions();
     this.addDismantlerSpawnOptions();
     this.addBoostManagerSpawnOptions();
@@ -232,13 +231,10 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
         activeSpawn.spawnUpgrader();
     }
     else if (best.role == 'builder') {
-        activeSpawn.spawnBuilder();
+        activeSpawn.spawnBuilder(best.size);
     }
     else if (best.role == 'dismantler') {
         activeSpawn.spawnDismantler(best.targetRoom);
-    }
-    else if (best.role == 'repairer') {
-        activeSpawn.spawnRepairer(best.size);
     }
     else if (best.role == 'brawler') {
         activeSpawn.spawnBrawler(this.controller.pos);
@@ -430,33 +426,12 @@ Room.prototype.addUpgraderSpawnOptions = function () {
 };
 
 /**
- * Spawns builders when needed.
+ * Spawns a number of repairers to keep buildings in good health.
  */
 Room.prototype.addBuilderSpawnOptions = function () {
     var memory = this.memory.spawnQueue;
 
-    var numBuilders = _.size(this.creepsByRole.builder);
-
-    // Only spawn an amount of builders befitting the amount of construction to be done.
-    var constructionSites = this.find(FIND_MY_CONSTRUCTION_SITES);
-    var maxBuilders = Math.min(1 + this.sources.length, Math.ceil(constructionSites.length / 5));
-
-    if (numBuilders < maxBuilders) {
-        memory.options.push({
-            priority: 3,
-            weight: 0.5,
-            role: 'builder',
-        });
-    }
-};
-
-/**
- * Spawns a number of repairers to keep buildings in good health.
- */
-Room.prototype.addRepairerSpawnOptions = function () {
-    var memory = this.memory.spawnQueue;
-
-    var numRepairers = _.size(this.creepsByRole.repairer);
+    var numRepairers = _.size(this.creepsByRole.repairer) + _.size(this.creepsByRole.builder);
     var maxRepairers = 2;
 
     // On higher level rooms, spawn less, but bigger, repairers.
@@ -474,11 +449,13 @@ Room.prototype.addRepairerSpawnOptions = function () {
         maxRepairers *= 2;
     }
 
+    // @todo Spawn more builders depending on total size of current construction sites.
+
     if (numRepairers < maxRepairers / sizeFactor) {
         memory.options.push({
             priority: 3,
             weight: 0.5,
-            role: 'repairer',
+            role: 'builder',
             size: 5 * sizeFactor,
         });
     }
@@ -1150,20 +1127,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 };
 
 /**
- * Spawns a new builder.
- */
-StructureSpawn.prototype.spawnBuilder = function () {
-    return this.createManagedCreep({
-        role: 'builder',
-        bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
-        maxParts: {work: 5},
-        memory: {
-            singleRoom: this.pos.roomName,
-        },
-    });
-};
-
-/**
  * Spawns a new dismantler.
  */
 StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
@@ -1273,7 +1236,7 @@ StructureSpawn.prototype.spawnMineralHarvester = function (source) {
 /**
  * Spawns a new repairer.
  */
-StructureSpawn.prototype.spawnRepairer = function (size) {
+StructureSpawn.prototype.spawnBuilder = function (size) {
     var maxParts = {work: 5};
     if (size) {
         maxParts.work = size;
@@ -1299,7 +1262,7 @@ StructureSpawn.prototype.spawnRepairer = function (size) {
     }
 
     return this.createManagedCreep({
-        role: 'repairer',
+        role: 'builder',
         bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
         maxParts: maxParts,
         boosts: boosts,
