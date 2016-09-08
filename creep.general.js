@@ -1,5 +1,8 @@
 var utilities = require('utilities');
 
+/**
+ * Determines if a creep is dangerous and should be attacked.
+ */
 Creep.prototype.isDangerous = function () {
     // Ignore Alekseyka's creeps when remote harvesting.
     if ((this.pos.roomName == 'E46S41' || this.pos.roomName == 'E46S42' || this.pos.roomName == 'E47S41') && this.owner.username == 'Alekseyka') {
@@ -16,6 +19,9 @@ Creep.prototype.isDangerous = function () {
     return false;
 };
 
+/**
+ * Transfer resources to a target, if the creep carries any.
+ */
 Creep.prototype.transferAny = function (target) {
     for (let resourceType in this.carry) {
         if (this.carry[resourceType] > 0) {
@@ -26,6 +32,9 @@ Creep.prototype.transferAny = function (target) {
     return ERR_NOT_ENOUGH_RESOURCES;
 };
 
+/**
+ * Drop resources on the ground, if the creep carries any.
+ */
 Creep.prototype.dropAny = function () {
     for (let resourceType in this.carry) {
         if (this.carry[resourceType] > 0) {
@@ -38,41 +47,27 @@ Creep.prototype.dropAny = function () {
 
 module.exports = {
 
-    renew: function (creep, spawner) {
-        var cost = utilities.getBodyCost(creep);
-        if (cost < spawner.room.energyCapacityAvailable * 0.75) {
-            // Do not renew cheap creeps, they should be replaced with better ones.
-            return false;
-        }
-
-        if (creep.memory.renewing || creep.ticksToLive < CREEP_LIFE_TIME * 0.2) {
-            creep.memory.renewing = true;
-
-            var result = spawner.renewCreep(creep);
-            if (result == ERR_NOT_IN_RANGE) {
-                creep.moveTo(spawner);
-            }
-            if (creep.ticksToLive >= CREEP_LIFE_TIME * 0.9) {
-                delete creep.memory.renewing;
-            }
-            else if (creep.ticksToLive > CREEP_LIFE_TIME * 0.3 && spawner.room.energyAvailable < spawner.room.energyCapacityAvailable * 0.1) {
-                // If there is not much energy left in the spawner, return to work prematurely.
-                delete creep.memory.renewing;
-            }
-            return true;
-        }
-        return false;
-    },
-
-    getCreepsWithOrder: function(type, target) {
-        return _.filter(Game.creeps, (creep) => {
-            if (creep.memory.order) {
-                if (creep.memory.order.type == type && creep.memory.order.target == target) {
-                    return true;
+    getCreepsWithOrder: function(type, target, room) {
+        if (room) {
+            return _.filter(room.creeps, (creep) => {
+                if (creep.memory.order) {
+                    if (creep.memory.order.type == type && creep.memory.order.target == target) {
+                        return true;
+                    }
                 }
-            }
-            return false;
-        });
+                return false;
+            });
+        }
+        else {
+            return _.filter(Game.creeps, (creep) => {
+                if (creep.memory.order) {
+                    if (creep.memory.order.type == type && creep.memory.order.target == target) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
     }
 
 };

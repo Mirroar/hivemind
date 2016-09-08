@@ -89,7 +89,7 @@ Creep.prototype.getAvailableEnergySources = function () {
             }
         }
         else {
-            option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length * 3;
+            option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id, creep.room).length * 3;
         }
 
         options.push(option);
@@ -133,7 +133,7 @@ Creep.prototype.getAvailableEnergySources = function () {
             }
         }
 
-        option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id).length * 3;
+        option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id, creep.room).length * 3;
 
         options.push(option);
     }
@@ -549,7 +549,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             };
 
             option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id).length * 3;
+            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * 3;
 
             options.push(option);
         }
@@ -571,7 +571,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             };
 
             option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.name).length * 3;
+            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.name, creep.room).length * 3;
 
             options.push(option);
         }
@@ -624,7 +624,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 prioFactor = 3;
             }
 
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id).length * prioFactor;
+            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * prioFactor;
 
             options.push(option);
         }
@@ -646,7 +646,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 resourceType: RESOURCE_ENERGY,
             };
 
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id).length * 2;
+            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * 2;
 
             options.push(option);
         }
