@@ -414,7 +414,134 @@ var utilities = {
             return new RoomPosition(parts[2], parts[3], parts[1]);
         }
         return null;
-    }
+    },
+
+    /**
+     * Generates a Van der Corput sequence for the given number of digits and base.
+     */
+    generateEvenSequence: function (numDigits, base) {
+        let numbers = [];
+        let digits = [];
+        for (let i = 0; i < numDigits; i++) {
+            digits[i] = 0;
+        }
+
+        function increase(digit) {
+            if (digit >= numDigits) return;
+
+            digits[digit]++;
+            if (digits[digit] >= base) {
+                digits[digit] = 0;
+                increase(digit + 1);
+            }
+        }
+
+        function getNumber() {
+            let sum = 0;
+            for (let i = 0; i < numDigits; i++) {
+                sum *= base;
+                sum += digits[i];
+            }
+            return sum;
+        }
+
+        increase(0);
+        let number = getNumber();
+        let max = number * base;
+        numbers.push(max);
+        while (number != 0) {
+            numbers.push(number);
+            increase(0);
+            number = getNumber();
+        }
+
+        return numbers;
+    },
+
+    /**
+     * Choose whether a calculation should currently be executed based on priorities.
+     */
+    throttle: function (offset, minBucket, maxBucket) {
+        utilities.initThrottleMemory();
+
+        if (!offset) offset = 0;
+        if (!minBucket) minBucket = Memory.throttleInfo.bucket.critical;
+        if (!maxBucket) maxBucket = Memory.throttleInfo.bucket.normal;
+
+        var bucket = Game.cpu.bucket;
+        if (bucket > maxBucket) return false;
+        if (bucket < minBucket) return true;
+
+        var tick = (Game.time + offset) % Memory.throttleInfo.max;
+        var ratio = (bucket - minBucket) / (maxBucket - minBucket);
+
+        if (ratio >= Memory.throttleInfo.numbers[tick]) return false;
+
+        return true;
+    },
+
+    getThrottleOffset: function () {
+        utilities.initThrottleMemory();
+
+        if (!Memory.throttleInfo.currentOffset) {
+            Memory.throttleInfo.currentOffset = 0;
+        }
+        Memory.throttleInfo.currentOffset++;
+        return Memory.throttleInfo.currentOffset;
+    },
+
+    initThrottleMemory: function () {
+        if (!Memory.throttleInfo) {
+            Memory.throttleInfo = {
+                bucket: {
+                    normal: 8000,
+                    warning: 5000,
+                    critical: 2000,
+                },
+            };
+        }
+        if (!Memory.throttleInfo.numbers) {
+            Memory.throttleInfo.numbers = [];
+
+            let sequence = utilities.generateEvenSequence(8, 2);
+            let max = sequence[0];
+            Memory.throttleInfo.max = max;
+            let distribution = [];
+
+            for (let i in sequence) {
+                Memory.throttleInfo.numbers[sequence[i]] = 1 - (i / max);
+            }
+            Memory.throttleInfo.numbers[0] = 1;
+        }
+    },
+
+    generateCPUStats: function () {
+        /*//
+        Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
+        Memory.stats['cpu.Towers'] = towersCPUUsage;
+        Memory.stats['cpu.Creeps'] = creepsCPUUsage;
+        Memory.stats['cpu.Start'] = initCPUUsage;
+        Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
+        Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
+        //*/
+
+        let limit = Game.cpu.limit;
+
+        let output = '';
+
+        function formatStat(amount, label) {
+            var percent = 100 * amount / limit;
+            return '[' + label + ':' + ('    ' + Math.round(percent)).slice(-4) + '%]';
+        }
+        output += formatStat(Memory.stats['cpu.getUsed'], 'Total');
+        output += formatStat(Memory.stats['cpu.Start'], 'Init');
+        output += formatStat(Memory.stats['cpu.CreepManagers'], 'Spawns');
+        output += formatStat(Memory.stats['cpu.Creeps'], 'Creeps');
+        output += formatStat(Memory.stats['cpu.Towers'], 'Towers');
+        output += formatStat(Memory.stats['cpu.stats'], 'Stats');
+
+        return output;
+    },
 
 };
 

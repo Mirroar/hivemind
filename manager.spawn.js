@@ -527,6 +527,12 @@ Room.prototype.manageSpawns = function () {
         return;
     }
 
+    if (!this.memory.throttleOffset) this.memory.throttleOffset = utilities.getThrottleOffset();
+
+    if (utilities.throttle(this.memory.throttleOffset, 0, Memory.throttleInfo.bucket.warning)) {
+        return;
+    }
+
     // If the new spawn code is trying to spawn something, give it priority.
     if (this.manageSpawnsPriority()) {
         return;
@@ -722,11 +728,6 @@ Room.prototype.manageSpawns = function () {
                         }
                     }
                 }
-            }
-
-            // Remote harvesting temporarily disabled until CPU is better.
-            if (Game.cpu.bucket < 5000) {
-                continue;
             }
 
             // We've got nothing to do, how about some remote harvesting?

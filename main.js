@@ -88,11 +88,80 @@ Creep.prototype.moveToRange = function (target, range) {
     PathFinder.use(false);
 };
 
+var creepThrottleLevels = {
+    // Military creeps are always fully active!
+    brawler: {
+        max: 0,
+        min: -1,
+    },
+    claimer: {
+        max: 0,
+        min: -1,
+    },
+
+    // Some essential creeps only start throttling when things get critical.
+    harvester: {
+        max: 'critical',
+        min: 0,
+    },
+    'harvester.minerals': {
+        max: 'warning',
+        min: 0,
+    },
+    'harvester.remote': {
+        max: 'warning',
+        min: 'critical',
+    },
+    'harvester.exploit': {
+        max: 'normal',
+        min: 0,
+    },
+    upgrader: {
+        max: 'critical',
+        min: 0,
+    },
+    transporter: {
+        max: 'normal',
+        min: 0,
+    },
+};
+
 /**
  * Runs a creeps logic depending on role and other factors.
  */
 Creep.prototype.runLogic = function() {
     var creep = this;
+
+    if (!this.memory.throttleOffset) this.memory.throttleOffset = utilities.getThrottleOffset();
+    let minBucket = null;
+    let maxBucket = null;
+    if (creepThrottleLevels[this.memory.role]) {
+        let min = creepThrottleLevels[this.memory.role].min;
+        let max = creepThrottleLevels[this.memory.role].max;
+
+        if (min && Memory.throttleInfo.bucket[min]) {
+            minBucket = Memory.throttleInfo.bucket[min];
+        }
+        else {
+            minBucket = min;
+        }
+        if (max && Memory.throttleInfo.bucket[max]) {
+            maxBucket = Memory.throttleInfo.bucket[max];
+        }
+        else {
+            maxBucket = max;
+        }
+    }
+
+    if (utilities.throttle(this.memory.throttleOffset, minBucket, maxBucket)) {
+        if (creep.pos.x == 0 || creep.pos.x == 49 || creep.pos.y == 0 || creep.pos.y == 49) {
+            // Do not throttle creeps at room borders, so they don't get stuck between rooms.
+        }
+        else {
+            Game.numThrottledCreeps++;
+            return;
+        }
+    }
 
     if (this.memory.singleRoom && this.pos.roomName != this.memory.singleRoom) {
         // @todo Keep in room.
@@ -283,6 +352,7 @@ var main = {
      * Manages logic for all creeps.
      */
     manageCreeps: function () {
+        Game.numThrottledCreeps = 0;
         for (var name in Game.creeps) {
             var creep = Game.creeps[name];
 
@@ -291,6 +361,9 @@ var main = {
             }
 
             creep.runLogic();
+        }
+        if (Game.numThrottledCreeps > 0) {
+            new Game.logger('creeps').log(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
         }
     },
 
