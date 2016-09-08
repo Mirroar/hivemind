@@ -7,9 +7,17 @@ var channels = {
     name: 'Main Loop',
     color: '#ffffff',
   },
+  cpu: {
+    name: 'CPU',
+    color: '#ff8080',
+  },
   creeps: {
     name: 'Creeps',
     color: '#80ff80',
+  },
+  labs: {
+    name: 'Labs',
+    color: '#8080ff',
   },
 };
 
@@ -42,14 +50,39 @@ var Logger = function (channel, roomName) {
   }
 };
 
-Logger.prototype.log = function(...args) {
-  if (!this.active) return;
+Logger.prototype.setEnabled = function (enabled) {
+  if (!Memory.logger.channelSettings[this.channel]) {
+    Memory.logger.channelSettings[this.channel] = {};
+  }
+  Memory.logger.channelSettings[this.channel].disabled = !enabled;
+};
 
+Logger.prototype.getOutputPrefix = function () {
   var prefix = '[<font color="'+ this.color +'">' + this.channelName + '</font>';
   prefix += ']';
   if (this.roomName) {
     prefix += '[<font color="#ffff80">' + this.roomName + '</font>]';
   }
+  else {
+    prefix += '        ';
+  }
+
+  return prefix;
+};
+
+Logger.prototype.debug = function(...args) {
+  if (!this.active) return;
+
+  var prefix = '<font color="#ffff80">';
+  prefix += this.getOutputPrefix();
+
+  console.log(prefix, ...args, '</font>');
+};
+
+Logger.prototype.log = function(...args) {
+  if (!this.active) return;
+
+  var prefix = this.getOutputPrefix();
 
   console.log(prefix, ...args);
 };
@@ -58,11 +91,7 @@ Logger.prototype.error = function(...args) {
   //if (!this.active) return;
 
   var prefix = '<font color="#ff8080">';
-  prefix += '[<font color="'+ this.color +'">' + this.channelName + '</font>';
-  prefix += ']';
-  if (this.roomName) {
-    prefix += '[<font color="#ffff80">' + this.roomName + '</font>]';
-  }
+  prefix += this.getOutputPrefix();
 
   console.log(prefix, ...args, '</font>');
 };

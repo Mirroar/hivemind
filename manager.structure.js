@@ -219,7 +219,7 @@ var structureManager = {
 
                 room.memory.currentReaction = bestReaction;
                 if (bestReaction) {
-                    console.log('[Labs] ', room.name, 'will now produce', REACTIONS[bestReaction[0]][bestReaction[1]]);
+                    new Game.logger('labs', roomName).log('now producing', REACTIONS[bestReaction[0]][bestReaction[1]]);
                 }
             }
         }

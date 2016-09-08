@@ -647,24 +647,29 @@ var main = {
                 for (let role in Game.creepsByRole) {
                     Memory.stats['creeps.count.' + role] = _.size(Game.creepsByRole[role]);
                 }
-
-                Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
-                Memory.stats['cpu.Towers'] = towersCPUUsage;
-                //Memory.stats['cpu.Links'] = linksRunning;
-                //Memory.stats['cpu.SetupRoles'] = roleSetup;
-                Memory.stats['cpu.Creeps'] = creepsCPUUsage;
-                //Memory.stats['cpu.SumProfiling'] = sumOfProfiller;
-                Memory.stats['cpu.Start'] = initCPUUsage;
-                Memory.stats['cpu.bucket'] = Game.cpu.bucket;
-                Memory.stats['cpu.limit'] = Game.cpu.limit;
-                Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
-                Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
             }
             else {
                 Memory.stats = {};
             }
 
+            Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
+            Memory.stats['cpu.Towers'] = towersCPUUsage;
+            //Memory.stats['cpu.Links'] = linksRunning;
+            //Memory.stats['cpu.SetupRoles'] = roleSetup;
+            Memory.stats['cpu.Creeps'] = creepsCPUUsage;
+            //Memory.stats['cpu.SumProfiling'] = sumOfProfiller;
+            Memory.stats['cpu.Start'] = initCPUUsage;
+            Memory.stats['cpu.bucket'] = Game.cpu.bucket;
+            Memory.stats['cpu.limit'] = Game.cpu.limit;
+            Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
+            Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
+
             time = Game.cpu.getUsed();
+
+            if (time > Game.cpu.limit * 1.2) {
+                var linePrefix = '                     ';
+                new Game.logger('cpu').log('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
+            }
         };
 
         if (useProfiler) {
