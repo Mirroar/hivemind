@@ -373,7 +373,17 @@ Creep.prototype.performMilitaryMove = function () {
     if (creep.memory.target) {
         var targetPosition = utilities.decodePosition(creep.memory.target);
         if (creep.pos.roomName != targetPosition.roomName) {
-            creep.moveTo(targetPosition);
+            if (this.hasCachedPath()) {
+                this.followCachedPath();
+                if (this.hasArrived()) {
+                    this.clearCachedPath();
+                }
+            }
+            else {
+                // @todo This is cross-room movement and should therefore only calculate a path once.
+                creep.moveTo(targetPosition);
+            }
+
             return true;
         }
     }
@@ -539,6 +549,12 @@ Creep.prototype.initBrawlerState = function () {
 
     if (this.memory.squadUnitType == 'builder') {
         this.memory.fillWithEnergy = true;
+    }
+
+    if (this.memory.pathTarget) {
+        if (this.room.memory.remoteHarvesting && this.room.memory.remoteHarvesting[this.memory.pathTarget] && this.room.memory.remoteHarvesting[this.memory.pathTarget].cachedPath) {
+            this.setCachedPath(this.room.memory.remoteHarvesting[this.memory.pathTarget].cachedPath.path);
+        }
     }
 };
 

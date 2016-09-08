@@ -769,7 +769,7 @@ Room.prototype.manageSpawns = function () {
                     });
 
                     if (!brawlers || brawlers.length < maxBrawlers) {
-                        let result = spawn.spawnBrawler(brawlPosition, 4);
+                        let result = spawn.spawnBrawler(brawlPosition, 4, utilities.encodePosition(flag.pos));
                         if (result) {
                             //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
 
@@ -1053,7 +1053,7 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
     });
 };
 
-StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts) {
+StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts, pathTarget) {
     var maxParts = null;
     if (maxAttackParts) {
         maxParts = {attack: maxAttackParts};
@@ -1071,6 +1071,7 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
         memory: {
             storage: utilities.encodePosition(position),
             target: utilities.encodePosition(targetPosition),
+            pathTarget: pathTarget,
         },
     });
 };
