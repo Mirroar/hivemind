@@ -6,7 +6,7 @@ var utilities = require('utilities');
 Creep.prototype.performUpgrade = function () {
     // Upgrade controller.
     if (this.pos.getRangeTo(this.room.controller) > 3) {
-        this.moveTo(this.room.controller);
+        this.moveToRange(this.room.controller, 3);
     }
     else {
         this.upgradeController(this.room.controller);
@@ -46,7 +46,7 @@ Creep.prototype.performGetUpgraderEnergy = function () {
         var target = Game.getObjectById(creep.room.memory.controllerLink);
         if (target && target.energy > 50) {
             if (creep.pos.getRangeTo(target) > 1) {
-                creep.moveTo(target);
+                creep.moveToRange(target, 1);
             }
             else {
                 creep.withdraw(target, RESOURCE_ENERGY);
@@ -59,7 +59,7 @@ Creep.prototype.performGetUpgraderEnergy = function () {
         var target = Game.getObjectById(creep.room.memory.controllerContainer);
         if (target && target.store.energy > 50) {
             if (creep.pos.getRangeTo(target) > 1) {
-                creep.moveTo(target);
+                creep.moveToRange(target, 1);
             }
             else {
                 creep.withdraw(target, RESOURCE_ENERGY);
@@ -74,7 +74,7 @@ Creep.prototype.performGetUpgraderEnergy = function () {
     });
     if (otherContainers && otherContainers.length > 0) {
         if (creep.pos.getRangeTo(otherContainers[0]) > 1) {
-            creep.moveTo(otherContainers[0]);
+            creep.moveToRange(otherContainers[0], 1);
         }
         else {
             creep.withdraw(otherContainers[0], RESOURCE_ENERGY);

@@ -334,11 +334,6 @@ Room.prototype.addTransporterSpawnOptions = function () {
         maxTransporters--;
     }
 
-    // If we have a terminal, we need more transporters.
-    if (this.terminal) {
-        //maxTransporters++;
-    }
-
     if (this.controller.level == 6) {
         // RCL 6 is that annoying level at which refilling extensions is very tedious and there are many things that need spawning.
         maxTransporters++;
@@ -348,8 +343,12 @@ Room.prototype.addTransporterSpawnOptions = function () {
     maxTransporters -= _.size(this.creepsByRole['builder.remote']);
 
     // On low level rooms, do not use (too many) transporters.
-    if (this.controller.level < 4 || !this.storage) {
+    if (this.controller.level < 3) {
         maxTransporters = 1;
+    }
+    if (this.controller.level < 4 || !this.storage) {
+        // Storage mostly takes place in containers, units will get their energy from there.
+        maxTransporters = 2;
     }
 
     // On higher level rooms, spawn less, but bigger, transporters.

@@ -618,6 +618,79 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   // Flood fill from the center to place buildings that need to be accessible.
   // @todo Decide position of spawns.
+  var openList = {};
+  openList[utilities.encodePosition(roomCenter)] = true;
+  var closedList = {};
+  var buildingsPlaced = false;
+  console.log('starting flood fill');
+  while (!buildingsPlaced && _.size(openList) > 0) {
+    //console.log('.');
+    let minDist = null;
+    let nextPos = null;
+    for (let posName in openList) {
+      let pos = utilities.decodePosition(posName);
+      let range = pos.getRangeTo(roomCenter);
+      if (!minDist || range < minDist) {
+        minDist = range;
+        nextPos = pos;
+      }
+    }
+
+    if (!nextPos) {
+      console.log('no more elements in open list');
+      break;
+    }
+    delete openList[utilities.encodePosition(nextPos)];
+    closedList[utilities.encodePosition(nextPos)] = true;
+
+    // Add unhandled adjacent tiles to open list.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx == 0 && dy == 0) continue;
+        let pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
+        if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) continue;
+
+        // Only build on valid terraint.
+        if (wallDistanceMatrix.get(pos.x, pos.y) < 1) continue;
+
+        // Don't build too close to exits.
+        if (exitDistanceMatrix.get(pos.x, pos.y) < 5) continue;
+
+        let posName = utilities.encodePosition(pos);
+        if (openList[posName] || closedList[posName]) continue;
+        //console.log('openList', pos.x, pos.y);
+        openList[posName] = true;
+      }
+    }
+
+    // Handle current position.
+    if (nextPos.getRangeTo(roomCenter) < 3) continue;
+
+    if (!this.memory.locations.spawn || _.size(this.memory.locations.spawn) < 3) {
+      // Try placing spawns.
+      if (matrix.get(nextPos.x, nextPos.y) != 0) continue;
+      if (matrix.get(nextPos.x - 1, nextPos.y) > 1) continue;
+      if (matrix.get(nextPos.x + 1, nextPos.y) > 1) continue;
+      if (matrix.get(nextPos.x, nextPos.y - 1) > 1) continue;
+      if (matrix.get(nextPos.x, nextPos.y + 1) > 1) continue;
+
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn', visible);
+      matrix.set(nextPos.x, nextPos.y, 255);
+      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName), 'road', visible);
+      matrix.set(nextPos.x - 1, nextPos.y, 1);
+      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName), 'road', visible);
+      matrix.set(nextPos.x + 1, nextPos.y, 1);
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y - 1, this.roomName), 'road', visible);
+      matrix.set(nextPos.x, nextPos.y - 1, 1);
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, this.roomName), 'road', visible);
+      matrix.set(nextPos.x, nextPos.y + 1, 1);
+
+      new Game.logger('roomplanner', this.roomName).debug('Placing new spawn at', nextPos);
+    }
+    else {
+      buildingsPlaced = true;
+    }
+  }
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
