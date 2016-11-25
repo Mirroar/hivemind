@@ -347,6 +347,11 @@ Room.prototype.addTransporterSpawnOptions = function () {
     // Need less transporters in rooms where remote builders are working.
     maxTransporters -= _.size(this.creepsByRole['builder.remote']);
 
+    // On low level rooms, do not use (too many) transporters.
+    if (this.controller.level < 4 || !this.storage) {
+        maxTransporters = 1;
+    }
+
     // On higher level rooms, spawn less, but bigger, transporters.
     var sizeFactor = 1;
     if (this.controller.level >= 7) {

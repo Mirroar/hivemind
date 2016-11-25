@@ -11,6 +11,9 @@ var RoomPlanner = function (roomName) {
     Memory.rooms[roomName].roomPlanner = {};
   }
   this.memory = Memory.rooms[roomName].roomPlanner;
+
+  // Automatically assume control over any room.
+  this.memory.controlRoom = true;
 };
 
 /**
@@ -21,21 +24,120 @@ RoomPlanner.prototype.controlRoom = function (giveControl) {
 };
 
 /**
+ *
+ */
+RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionSites) {
+  // Check if there's a structure here already.
+  let structures = pos.lookFor(LOOK_STRUCTURES);
+  for (let i in structures) {
+    if (structures[i].structureType == structureType) {
+      return true;
+    }
+  }
+
+  // Check if there's a construction site here already.
+  let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+  for (let i in sites) {
+    if (sites[i].structureType == structureType) {
+      return false;
+    }
+  }
+
+  if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
+    if (pos.createConstructionSite(structureType) == OK) {
+      this.newStructures++;
+    }
+  }
+
+  return false;
+};
+
+/**
  * Allows this room planner to give commands in controlled rooms.
  */
 RoomPlanner.prototype.runLogic = function () {
-  if (!this.memory.controlRoom) return;
-  if (!this.memory.locations) return;
-  if (Game.time % 100 != 3) return;
   if (Game.cpu.bucket < 3500) return;
+  if (!this.memory.controlRoom) return;
+  if (!this.memory.locations) {
+    if (Game.cpu.getUsed() < 100) {
+      this.placeFlags();
+    }
+    return;
+  }
+  if (Game.time % 100 != 3) return;
 
   //console.log('[RoomPlanner]', 'running logic in', this.roomName);
 
+  if (this.room.controller.level < 2) return;
+  var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
+  this.newStructures = 0;
+  let doneBuilding = true;
+
+  // @todo Make sure all current extensions have been built.
+
+  // At level 2, we can start building containers and roads to sources.
+  for (let posName in this.memory.locations['container.source'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+  for (let posName in this.memory.locations['road.source'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+  // Next priority is a container and road at the controller.
+  for (let posName in this.memory.locations['container.controller'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+  for (let posName in this.memory.locations['road.controller'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+  if (this.room.controller.level < 3) return;
+  // At level 3, we can build all remaining roads.
+  for (let posName in this.memory.locations['road'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+
   if (this.room.controller.level < 4) return;
 
+  // Build storage. Finally!
+  for (let posName in this.memory.locations['storage'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_STORAGE, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
   // Make sure all requested ramparts are built.
-  var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
-  var newStructures = 0;
   var wallsBuilt = true;
 
   for (let posName in this.memory.locations.rampart || []) {
@@ -67,9 +169,9 @@ RoomPlanner.prototype.runLogic = function () {
     if (!found) {
       wallsBuilt = false;
 
-      if (newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
+      if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
         if (pos.createConstructionSite(STRUCTURE_RAMPART) == OK) {
-          newStructures++;
+          this.newStructures++;
         }
       }
     }
@@ -460,18 +562,30 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   if (this.room) {
     // @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
-    // @todo Save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
+    // We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
     if (this.room.controller) {
-      this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
+      let contollerRoads = this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
+      for (let i in contollerRoads) {
+        this.placeFlag(contollerRoads[i], 'road.controller', visible);
+      }
+      this.placeFlag(contollerRoads[1], 'container.controller', visible);
     }
 
     if (this.room.mineral) {
-      this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
+      let mineralRoads = this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
+      for (let i in mineralRoads) {
+        this.placeFlag(mineralRoads[i], 'road.mineral', visible);
+      }
+      this.placeFlag(mineralRoads[1], 'container.mineral', visible);
     }
 
     if (this.room.sources) {
       for (let i in this.room.sources) {
-        this.scanAndAddRoad(this.room.sources[i].pos, centerEntrances, matrix, roads);
+        let sourceRoads = this.scanAndAddRoad(this.room.sources[i].pos, centerEntrances, matrix, roads);
+        for (let i in sourceRoads) {
+          this.placeFlag(sourceRoads[i], 'road.source', visible);
+        }
+        this.placeFlag(sourceRoads[1], 'container.source', visible);
       }
     }
   }
@@ -503,7 +617,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
 
   // Flood fill from the center to place buildings that need to be accessible.
-  // Decide position of spawns.
+  // @todo Decide position of spawns.
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
@@ -518,10 +632,12 @@ RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
     heuristicWeight: 0.9,
   });
 
+  let newRoads = [];
   if (result.path) {
     for (let j in result.path) {
       let pos = result.path[j];
       roads.push(pos);
+      newRoads.push(pos);
 
       // Since we're building a road on this tile anyway, prefer it for future pathfinding.
       matrix.set(pos.x, pos.y, 1);
@@ -530,6 +646,8 @@ RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
   else {
     // @todo If a path does not exist, mark this center location as invalid and start over.
   }
+
+  return newRoads;
 }
 
 /**
