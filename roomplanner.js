@@ -70,10 +70,34 @@ RoomPlanner.prototype.runLogic = function () {
 
   if (this.room.controller.level < 2) return;
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
+  var roomStructures = this.room.find(FIND_STRUCTURES);
   this.newStructures = 0;
   let doneBuilding = true;
 
-  // @todo Make sure all current extensions have been built.
+  // Make sure extensions are built in the right place, remove otherwise.
+  var roomExtensions = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_EXTENSION);
+  var roomExtensionSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_EXTENSION);
+  for (let i = 0; i < roomExtensions.length; i++) {
+    let extension = roomExtensions[i];
+    if (!this.memory.locations.extension[utilities.encodePosition(extension.pos)]) {
+      extension.destroy();
+
+      // Only kill of one extension for each call of runLogic, it takes a while to rebuild anyway.
+      break;
+    }
+  }
+
+  // Make sure all current extensions have been built.
+  if (roomExtensions.length + roomExtensionSites.length < CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][this.room.controller.level]) {
+    for (let posName in this.memory.locations.extension || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_EXTENSION, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
 
   // At level 2, we can start building containers and roads to sources.
   for (let posName in this.memory.locations['container.source'] || []) {
@@ -622,6 +646,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   openList[utilities.encodePosition(roomCenter)] = true;
   var closedList = {};
   var buildingsPlaced = false;
+  var bayCount = 0;
   console.log('starting flood fill');
   while (!buildingsPlaced && _.size(openList) > 0) {
     //console.log('.');
@@ -650,8 +675,8 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         let pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
         if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) continue;
 
-        // Only build on valid terraint.
-        if (wallDistanceMatrix.get(pos.x, pos.y) < 1) continue;
+        // Only build on valid terrain.
+        if (wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
 
         // Don't build too close to exits.
         if (exitDistanceMatrix.get(pos.x, pos.y) < 5) continue;
@@ -666,13 +691,14 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     // Handle current position.
     if (nextPos.getRangeTo(roomCenter) < 3) continue;
 
-    if (!this.memory.locations.spawn || _.size(this.memory.locations.spawn) < 3) {
+    let maxRoomLevel = 8;
+    if (!this.memory.locations.spawn || _.size(this.memory.locations.spawn) < CONTROLLER_STRUCTURES.spawn[maxRoomLevel]) {
       // Try placing spawns.
       if (matrix.get(nextPos.x, nextPos.y) != 0) continue;
-      if (matrix.get(nextPos.x - 1, nextPos.y) > 1) continue;
-      if (matrix.get(nextPos.x + 1, nextPos.y) > 1) continue;
-      if (matrix.get(nextPos.x, nextPos.y - 1) > 1) continue;
-      if (matrix.get(nextPos.x, nextPos.y + 1) > 1) continue;
+      if (matrix.get(nextPos.x - 1, nextPos.y) > 1 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y) > 100) continue;
+      if (matrix.get(nextPos.x + 1, nextPos.y) > 1 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y) > 100) continue;
+      if (matrix.get(nextPos.x, nextPos.y - 1) > 1 || wallDistanceMatrix.get(nextPos.x, nextPos.y - 1) > 100) continue;
+      if (matrix.get(nextPos.x, nextPos.y + 1) > 1 || wallDistanceMatrix.get(nextPos.x, nextPos.y + 1) > 100) continue;
 
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
@@ -686,6 +712,50 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       matrix.set(nextPos.x, nextPos.y + 1, 1);
 
       new Game.logger('roomplanner', this.roomName).debug('Placing new spawn at', nextPos);
+    }
+    else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[maxRoomLevel]) {
+      //buildingsPlaced = true;
+      //break;
+
+      if (matrix.get(nextPos.x, nextPos.y) != 0) continue;
+      if (matrix.get(nextPos.x - 1, nextPos.y) != 0 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y) > 100) continue;
+      if (matrix.get(nextPos.x + 1, nextPos.y) != 0 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y) > 100) continue;
+      if (matrix.get(nextPos.x, nextPos.y - 1) != 0 || wallDistanceMatrix.get(nextPos.x, nextPos.y - 1) > 100) continue;
+      if (matrix.get(nextPos.x, nextPos.y + 1) != 0 || wallDistanceMatrix.get(nextPos.x, nextPos.y + 1) > 100) continue;
+      if (matrix.get(nextPos.x - 1, nextPos.y - 1) != 0 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y - 1) > 100) continue;
+      if (matrix.get(nextPos.x + 1, nextPos.y - 1) != 0 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y - 1) > 100) continue;
+      if (matrix.get(nextPos.x - 1, nextPos.y + 1) != 0 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y + 1) > 100) continue;
+      if (matrix.get(nextPos.x + 1, nextPos.y + 1) != 0 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y + 1) > 100) continue;
+
+      // Leave a road to room center.
+      let extensionRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
+      for (let i in extensionRoads) {
+        this.placeFlag(extensionRoads[i], 'road', visible);
+        matrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
+      }
+      // Make sure there is a road in the center of the bay.
+      this.placeFlag(nextPos, 'road', visible);
+      matrix.set(nextPos.x, nextPos.y, 1);
+
+      // Fill other unused spots with extensions.
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (matrix.get(nextPos.x + dx, nextPos.y + dy) == 0) {
+            this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension', visible);
+            matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
+          }
+        }
+      }
+
+      // Place a flag to mark this bay.
+      let flagKey = 'Bay:' + nextPos.roomName + ':' + bayCount;
+      if (Game.flags[flagKey]) {
+        Game.flags[flagKey].setPosition(nextPos);
+      }
+      else {
+        nextPos.createFlag(flagKey);
+      }
+      bayCount++;
     }
     else {
       buildingsPlaced = true;
