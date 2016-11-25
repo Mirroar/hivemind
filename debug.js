@@ -19,6 +19,10 @@ var channels = {
     name: 'Labs',
     color: '#8080ff',
   },
+  trade: {
+    name: 'Trade',
+    color: '#80ffff',
+  },
 };
 
 var Logger = function (channel, roomName) {
@@ -57,6 +61,14 @@ Logger.prototype.setEnabled = function (enabled) {
   Memory.logger.channelSettings[this.channel].disabled = !enabled;
 };
 
+Logger.prototype.enable = function () {
+  this.setEnabled(true);
+};
+
+Logger.prototype.disable = function () {
+  this.setEnabled(false);
+};
+
 Logger.prototype.getOutputPrefix = function () {
   var prefix = '[<font color="'+ this.color +'">' + this.channelName + '</font>';
   prefix += ']';
@@ -73,7 +85,7 @@ Logger.prototype.getOutputPrefix = function () {
 Logger.prototype.debug = function(...args) {
   if (!this.active) return;
 
-  var prefix = '<font color="#ffff80">';
+  var prefix = '<font color="#606060">';
   prefix += this.getOutputPrefix();
 
   console.log(prefix, ...args, '</font>');

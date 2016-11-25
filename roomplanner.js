@@ -31,6 +31,8 @@ RoomPlanner.prototype.runLogic = function () {
 
   //console.log('[RoomPlanner]', 'running logic in', this.roomName);
 
+  if (this.room.controller.level < 4) return;
+
   // Make sure all requested ramparts are built.
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   var newStructures = 0;
@@ -74,7 +76,7 @@ RoomPlanner.prototype.runLogic = function () {
   }
 
   if (!wallsBuilt) return;
-  console.log('[RoomPlanner]', 'walls are finished in', this.roomName);
+  new Game.logger('roomplanner', this.roomName).debug('walls are finished');
 
   // Slate all unmanaged walls and ramparts for deconstruction.
   var unwantedDefenses = this.room.find(FIND_STRUCTURES, {
@@ -220,6 +222,9 @@ RoomPlanner.prototype.placeFlag = function (pos, flagType, visible) {
   }
 };
 
+/**
+ * Generates CostMatrixes needed for structure placement.
+ */
 RoomPlanner.prototype.generateDistanceMatrixes = function () {
   var matrix = new PathFinder.CostMatrix();
   var exitMatrix = new PathFinder.CostMatrix();
@@ -455,6 +460,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   if (this.room) {
     // @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
+    // @todo Save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
     if (this.room.controller) {
       this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
     }
@@ -473,6 +479,31 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   for (let i in roads) {
     this.placeFlag(roads[i], 'road', visible);
   }
+
+  // Fill center cross with roads.
+  this.placeFlag(new RoomPosition(roomCenter.x - 1, roomCenter.y, this.roomName), 'road', visible);
+  matrix.set(roomCenter.x - 1, roomCenter.y, 1);
+  this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y, this.roomName), 'road', visible);
+  matrix.set(roomCenter.x + 1, roomCenter.y, 1);
+  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y - 1, this.roomName), 'road', visible);
+  matrix.set(roomCenter.x, roomCenter.y - 1, 1);
+  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y + 1, this.roomName), 'road', visible);
+  matrix.set(roomCenter.x, roomCenter.y + 1, 1);
+  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y, this.roomName), 'road', visible);
+  matrix.set(roomCenter.x, roomCenter.y, 1);
+
+  // Mark center buildings for construction.
+  this.placeFlag(new RoomPosition(roomCenter.x - 1, roomCenter.y + 1, this.roomName), 'storage', visible);
+  matrix.set(roomCenter.x - 1, roomCenter.y + 1, 255);
+  this.placeFlag(new RoomPosition(roomCenter.x - 1, roomCenter.y - 1, this.roomName), 'terminal', visible);
+  matrix.set(roomCenter.x - 1, roomCenter.y - 1, 255);
+  this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y + 1, this.roomName), 'lab', visible);
+  matrix.set(roomCenter.x + 1, roomCenter.y + 1, 255);
+  this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y - 1, this.roomName), 'link', visible);
+  matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
+
+  // Flood fill from the center to place buildings that need to be accessible.
+  // Decide position of spawns.
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');

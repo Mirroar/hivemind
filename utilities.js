@@ -1,5 +1,9 @@
 var intelManager = require('manager.intel');
 
+Room.prototype.getCostMatrix = function () {
+    return utilities.getCostMatrix(this.name);
+};
+
 /**
  * Calculates a central room position with some free space around it for placing a storage later.
  * If a storage already exists, its position is returned.
@@ -9,6 +13,12 @@ Room.prototype.getStorageLocation = function () {
 
     if (!this.controller) {
         return;
+    }
+
+    if (this.roomPlanner && this.roomPlanner.memory.locations && this.roomPlanner.memory.locations.center) {
+        for (let pos in this.roomPlanner.memory.locations.center) {
+            return utilities.decodePosition(pos);
+        }
     }
 
     if (!room.memory.storage) {
@@ -193,7 +203,7 @@ Room.prototype.scan = function () {
 var utilities = {
 
     precalculatePaths: function (room, sourceFlag) {
-        if (Game.pathPrecalculated) return;
+        if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.5) return;
 
         var start = Game.cpu.getUsed();
         //console.log('precalculate harvest paths', room, sourceFlag);
@@ -223,15 +233,14 @@ var utilities = {
         //console.log('Finding path between', startPosition, 'and', endPosition);
 
         var result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
-        Game.pathPrecalculated = true;
 
         if (result) {
             //console.log('found path in', result.ops, 'operations', result.path);
-            console.log('[PathFinder] New path calculated.');
+            new Game.logger('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
 
             harvestMemory.cachedPath = {
                 lastCalculated: Game.time,
-                path: Room.serializePositionPath(result.path),
+                path: utilities.serializePositionPath(result.path),
             };
         }
         else {
@@ -242,8 +251,8 @@ var utilities = {
         //console.log('Total time:', end - start);
     },
 
-    getPath: function (startPosition, endPosition, allowDanger) {
-        return PathFinder.search(startPosition, endPosition, {
+    getPath: function (startPosition, endPosition, allowDanger, addOptions) {
+        let options = {
             plainCost: 2,
             swampCost: 10,
             maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
@@ -254,40 +263,84 @@ var utilities = {
                 // If a room is considered inaccessible, don't look for paths through it.
                 if (!allowDanger && intelManager.isRoomInaccessible(roomName)) return false;
 
-                // If we have no sight in a room, assume it is empty.
-                if (!room) return new PathFinder.CostMatrix;
-
                 // Work with roads and structures in a room.
-                // @todo Let intel manager generate the CostMatrixes and reuse them here.
-                let costs = new PathFinder.CostMatrix;
+                let options = {};
+                if (addOptions && addOptions.singleRoom && addOptions.singleRoom == roomName) {
+                    options.singleRoom = true;
+                }
 
-                room.find(FIND_STRUCTURES).forEach(function (structure) {
-                    if (structure.structureType === STRUCTURE_ROAD) {
-                        // Only do this if no structure is on the road.
-                        if (costs.get(structure.pos.x, structure.pos.y) <= 0) {
-                            // Favor roads over plain tiles.
-                            costs.set(structure.pos.x, structure.pos.y, 1);
-                        }
-                    } else if (structure.structureType !== STRUCTURE_CONTAINER && (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
-                        // Can't walk through non-walkable buildings.
-                        costs.set(structure.pos.x, structure.pos.y, 0xff);
-                    }
-                });
+                let costs = utilities.getCostMatrix(roomName, options);
 
                 // Also try not to drive through bays.
-                room.find(FIND_FLAGS, {
-                    filter: (flag) => flag.name.startsWith('Bay:')
+                _.filter(Game.flags, (flag) => {
+                    return flag.pos.roomName == roomName && flag.name.startsWith('Bay:')
                 }).forEach(function (flag) {
                     if (costs.get(flag.pos.x, flag.pos.y) <= 20) {
                         costs.set(flag.pos.x, flag.pos.y, 20);
                     }
                 });
 
-                // @todo Try not to drive to close to sources / minerals / controllers.
+                // @todo Try not to drive too close to sources / minerals / controllers.
 
                 return costs;
             },
-        });
+        };
+
+        if (addOptions) {
+            for (let key in addOptions) {
+                options[key] = addOptions[key];
+            }
+        }
+
+        return PathFinder.search(startPosition, endPosition, options);
+    },
+
+    costMatrixCache: {},
+
+    getCostMatrix: function (roomName, options) {
+        if (!options) {
+            options = {};
+        }
+
+        let cacheKey = roomName;
+        let matrix;
+        if (!utilities.costMatrixCache[cacheKey]) {
+            if (Memory.rooms[roomName] && Memory.rooms[roomName].intel && Memory.rooms[roomName].intel.costMatrix) {
+                matrix = PathFinder.CostMatrix.deserialize(Memory.rooms[roomName].intel.costMatrix);
+            }
+            else if (Game.rooms[roomName]) {
+                matrix = Game.rooms[roomName].generateCostMatrix();
+            }
+            else {
+                matrix = new PathFinder.CostMatrix();
+            }
+
+            utilities.costMatrixCache[cacheKey] = matrix;
+        }
+        matrix = utilities.costMatrixCache[cacheKey];
+
+        if (matrix && options.singleRoom) {
+            // Highly discourage room exits if creep is supposed to stay in a room.
+            cacheKey += ':singleRoom';
+
+            if (!utilities.costMatrixCache[cacheKey]) {
+                matrix = matrix.clone();
+                for (let x = 0; x < 50; x++) {
+                    for (let y = 0; y < 50; y++) {
+                        if (x == 0 || y == 0 || x == 49 || y == 49) {
+                            let terrain = Game.map.getTerrainAt(x, y, roomName);
+                            if (terrain != 'wall') {
+                                matrix.set(x, y, 50);
+                            }
+                        }
+                    }
+                }
+                utilities.costMatrixCache[cacheKey] = matrix;
+            }
+        }
+        matrix = utilities.costMatrixCache[cacheKey];
+
+        return matrix;
     },
 
     getClosest: function (creep, targets) {
@@ -404,16 +457,44 @@ var utilities = {
     },
 
     encodePosition: function (position) {
+        if (!position) return;
+
         return position.roomName + '@' + position.x + 'x' + position.y;
     },
 
     decodePosition: function (position) {
+        if (!position) return;
+
         var parts = position.match(/^(.*)@([0-9]*)x([0-9]*)$/);
 
         if (parts && parts.length > 0) {
             return new RoomPosition(parts[2], parts[3], parts[1]);
         }
         return null;
+    },
+
+    /**
+     * Serializes an array of RoomPosition objects for storing in memory.
+     */
+    serializePositionPath: function (path) {
+        var result = [];
+        for (var i in path) {
+            result.push(utilities.encodePosition(path[i]));
+        }
+
+        return result;
+    },
+
+    /**
+     * Deserializes a serialized path into an array of RoomPosition objects.
+     */
+    deserializePositionPath: function (path) {
+        var result = [];
+        for (var i in path) {
+            result.push(utilities.decodePosition(path[i]));
+        }
+
+        return result;
     },
 
     /**

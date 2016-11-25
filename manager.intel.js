@@ -7,7 +7,7 @@ Room.prototype.gatherIntel = function () {
     }
     var intel = room.memory.intel;
 
-    if (intel.lastScan && Game.time - intel.lastScan < 100) return;
+    if (intel.lastScan && Game.time - intel.lastScan < 500) return;
     intel.lastScan = Game.time;
 
     //console.log('intel: Scanning room ' + room.name, 0);
@@ -74,9 +74,11 @@ Room.prototype.gatherIntel = function () {
         }
     }
 
-    // @todo Check for portals.
+    // At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
+    var costs = room.generateCostMatrix(structures);
+    intel.costMatrix = costs.serialize();
 
-    // @todo Check for neutral terminals.
+    // @todo Check for portals.
 
     // @todo Check enemy structures.
 
@@ -112,6 +114,10 @@ var intelManager = {
         }
 
         var intel = Memory.rooms[roomName].intel;
+        if (intel.owner && intel.owner != 'Mirroar') {
+            return true;
+        }
+
         return intel.inaccessible;
     },
 

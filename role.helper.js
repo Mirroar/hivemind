@@ -192,6 +192,9 @@ Creep.prototype.performHelperGather = function () {
         this.setHelperState(true);
     }
 
+    // After that, just go into parking position.
+    this.parkHelper();
+
     return true;
 };
 
@@ -238,6 +241,16 @@ Creep.prototype.performHelperCleanup = function () {
     return false;
 };
 
+Creep.prototype.parkHelper = function () {
+    let flagName = 'Helper:' + this.pos.roomName;
+    if (Game.flags[flagName]) {
+        let flag = Game.flags[flagName];
+        if (this.pos.getRangeTo(flag) > 0) {
+            this.moveToRange(flag, 0);
+        }
+    }
+};
+
 /**
  * Puts this creep into or out of deliver mode.
  */
@@ -249,7 +262,10 @@ Creep.prototype.setHelperState = function (delivering) {
  * Makes a creep behave like a helper.
  */
 Creep.prototype.runHelperLogic = function () {
-    if (!this.room.boostManager) return;
+    if (!this.room.boostManager) {
+        this.parkHelper();
+        return;
+    }
     this.orders = this.room.boostManager.getLabOrders();
 
     if (this.memory.delivering && _.sum(this.carry) == 0) {

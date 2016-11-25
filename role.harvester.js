@@ -1,4 +1,5 @@
 // @todo Rewrite delivery part using priority queue.
+// @todo Just make the harvester build a container when none is available.
 
 var gameState = require('game.state');
 var utilities = require('utilities');
@@ -37,7 +38,7 @@ Creep.prototype.performHarvest = function () {
     }
 
     if (creep.pos.getRangeTo(source) > 1) {
-        creep.moveTo(source);
+        creep.moveToRange(source, 1);
     }
     else {
         var result = creep.harvest(source);
@@ -51,7 +52,7 @@ Creep.prototype.performHarvest = function () {
         }
         if (target) {
             if (creep.pos.getRangeTo(target) > 1) {
-                creep.moveTo(target);
+                creep.moveToRange(target, 1);
             }
             else {
                 creep.transfer(target, RESOURCE_ENERGY);
@@ -74,16 +75,13 @@ Creep.prototype.performMineralHarvesterDeliver = function () {
     if (container && _.sum(container.store) + creep.carryCapacity <= container.storeCapacity) {
         target = container;
     }
-    else if (creep.room.terminal && _.sum(creep.room.terminal.store) < creep.room.terminal.storeCapacity) {
-        target = creep.room.terminal;
-    }
-    else if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
-        target = creep.room.storage;
+    else {
+        target = this.room.getBestStorageTarget(this.carryCapacity, source.mineralType);
     }
 
     if (target) {
         if (creep.pos.getRangeTo(target) > 1) {
-            creep.moveTo(target);
+            creep.moveToRange(target, 1);
         }
         else {
             creep.transferAny(target);
@@ -114,7 +112,7 @@ Creep.prototype.performHarvesterDeliver = function () {
         var dropOffSpot = source.getDropoffSpot();
 
         this.memory.fixedDropoffSpot = dropOffSpot;
-        this.memory.fixedTarget = source.memory.targetContainer;
+        this.memory.fixedTarget = source.memory.targetContainer; // @todo this should not work well...
     }
 
     if (_.size(creep.room.creepsByRole.transporter) > 0) {
@@ -126,7 +124,7 @@ Creep.prototype.performHarvesterDeliver = function () {
             target = targetContainer;
         }
         else if (dropOffSpot) {
-            if (creep.pos.x == dropOffSpot.x && creep.pos.y == dropOffSpot.y) {
+            if (true || creep.pos.x == dropOffSpot.x && creep.pos.y == dropOffSpot.y) {
                 creep.drop(RESOURCE_ENERGY);
             } else {
                 creep.moveTo(dropOffSpot.x, dropOffSpot.y);
@@ -167,11 +165,24 @@ Creep.prototype.performHarvesterDeliver = function () {
         target = Game.getObjectById(best);
         if (!target) {
             creep.memory.deliverTarget = null;
+            return false;
+        }
+    }
+
+    if (source && !targetContainer && creep.pos.getRangeTo(source) <= 1) {
+        // Check if there is a container construction site nearby and help build it.
+        let sites = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
+            filter: (site) => site.structureType == STRUCTURE_CONTAINER
+        });
+
+        if (sites.length > 0) {
+            this.buildTarget(sites[0]);
+            return true;
         }
     }
 
     if (creep.pos.getRangeTo(target) > 1) {
-        creep.moveTo(target);
+        creep.moveToRange(target, 1);
     }
     else {
         creep.transfer(target, RESOURCE_ENERGY);
@@ -183,7 +194,7 @@ Creep.prototype.performHarvesterDeliver = function () {
     if (target.store && _.sum(target.store) >= target.storeCapacity) {
         if (creep.memory.fixedTarget && target.id == creep.memory.fixedTarget) {
             // Container is full, drop energy instead.
-            if (creep.memory.fixedDropoffSpot) {
+            if (false && creep.memory.fixedDropoffSpot) {
                 if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
                     creep.drop(RESOURCE_ENERGY);
                 } else {

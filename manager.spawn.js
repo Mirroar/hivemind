@@ -86,6 +86,14 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 
         options.body = utilities.generateCreepBody(options.bodyWeights, maxCost, options.maxParts);
     }
+    else {
+        // Use the actual cost of a creep with this body.
+        var maxPartsCost = 0;
+        for (var i in options.body) {
+            maxPartsCost += BODYPART_COST[options.body[i]];
+        }
+        maxCost = Math.min(maxCost, maxPartsCost);
+    }
 
     if (this.room.energyAvailable >= maxCost) {
         enoughEnergy = true;
@@ -198,9 +206,10 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addDismantlerSpawnOptions();
     this.addBoostManagerSpawnOptions();
 
+    // In low level rooms, add defenses!
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
         memory.options.push({
-            priority: 4,
+            priority: 5,
             weight: 1,
             role: 'brawler',
         });
@@ -260,7 +269,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
 
     // If we have no other way to recover, spawn with reduced amounts of parts.
     let force = false;
-    if (_.size(this.creepsByRole.harvester) == 0 && _.size(this.creepsByRole.transporter) == 0 && gameState.getStoredEnergy(this) < 5000 && _.size(this.creepsByRole['builder.remote']) == 0) {
+    if (_.size(this.creepsByRole.harvester) == 0 && (!this.storage || (_.size(this.creepsByRole.transporter) == 0 && gameState.getStoredEnergy(this) < 5000))) {
         force = true;
     }
 
@@ -286,7 +295,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
                 totalWorkParts += source.harvesters[j].memory.body.work || 0;
             }
             for (let j in this.creepsByRole['builder.remote'] || []) {
-                totalWorkParts += (this.creepsByRole['builder.remote'][j].memory.body.work || 0) / this.sources.length;
+                totalWorkParts += (this.creepsByRole['builder.remote'][j].memory.body.work || 0) / 2;
             }
 
             if (totalWorkParts < maxParts) {
@@ -384,7 +393,7 @@ Room.prototype.addTransporterSpawnOptions = function () {
 Room.prototype.addUpgraderSpawnOptions = function () {
     var memory = this.memory.spawnQueue;
 
-    var numUpgraders = _.size(this.creepsByRole.upgrader);
+    var numUpgraders = _.size(_.filter(this.creepsByRole.upgrader, (creep) => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
     var maxUpgraders = 0;
 
     if (this.controller.level <= 3) {
@@ -410,8 +419,10 @@ Room.prototype.addUpgraderSpawnOptions = function () {
         }
     }
 
+    if (this.isEvacuating()) maxUpgraders = 0;
+
     if (maxUpgraders == 0 && this.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[this.controller.level] * 0.5) {
-        console.log('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
+        new Game.logger('creeps', this.name).log('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
         // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
         maxUpgraders = 1;
     }
@@ -431,32 +442,45 @@ Room.prototype.addUpgraderSpawnOptions = function () {
 Room.prototype.addBuilderSpawnOptions = function () {
     var memory = this.memory.spawnQueue;
 
-    var numRepairers = _.size(this.creepsByRole.repairer) + _.size(this.creepsByRole.builder);
-    var maxRepairers = 2;
-
-    // On higher level rooms, spawn less, but bigger, repairers.
-    var sizeFactor = 1;
-    if (this.controller.level >= 6) {
-        sizeFactor = 2;
+    var numWorkParts = 0;
+    var maxWorkParts = 5;
+    if (this.controller.level > 2) {
+        maxWorkParts += 5;
     }
 
-    // On RCL 8, spawn more repairers to max out walls.
-    if (this.controller.level >= 8) {
-        sizeFactor = 3;
+    for (let name in this.creepsByRole.repairer || {}) {
+        numWorkParts += this.creepsByRole.repairer[name].memory.body.work || 0;
     }
+    for (let name in this.creepsByRole.builder || {}) {
+        numWorkParts += this.creepsByRole.builder[name].memory.body.work || 0;
+    }
+
+    // There are a lot of ramparts in planned rooms, spawn builders appropriately.
+    if (this.roomPlanner && this.roomPlanner.memory.controlRoom && this.controller && this.controller.my && this.controller.level >= 4) {
+        maxWorkParts += _.size(this.roomPlanner.memory.locations.rampart) / 10;
+    }
+
+    // Add more repairers if we have a lot of energy to spare.
     if (this.storage && this.storage.store.energy > 400000) {
-        // Add more repairers if we have a lot of energy to spare.
-        maxRepairers *= 2;
+        maxWorkParts *= 2;
+    }
+    else if (this.storage && this.storage.store.energy > 200000) {
+        maxWorkParts *= 1.5;
     }
 
-    // @todo Spawn more builders depending on total size of current construction sites.
+    if (this.isEvacuating()) maxWorkParts = 0;
 
-    if (numRepairers < maxRepairers / sizeFactor) {
+    // Spawn more builders depending on total size of current construction sites.
+    // @todo Use hitpoints of construction sites vs number of work parts as a guide.
+    if (this.controller.level > 3) {
+        maxWorkParts += this.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
+    }
+
+    if (numWorkParts < maxWorkParts) {
         memory.options.push({
             priority: 3,
             weight: 0.5,
             role: 'builder',
-            size: 5 * sizeFactor,
         });
     }
 };
@@ -583,19 +607,8 @@ Room.prototype.manageSpawns = function () {
             // Harvest minerals.
             if (mineralHarvesters.length < minerals.length && minerals[0].mineralAmount > 0) {
                 // We assume there is always at most one mineral deposit in a room.
-                // Do not spawn if we have a lot stored.
-                let total = 0;
-                if (room.storage && room.storage.store[minerals[0].mineralType]) {
-                    total += room.storage.store[minerals[0].mineralType];
-                }
-                if (room.terminal && room.terminal.store[minerals[0].mineralType]) {
-                    total += room.terminal.store[minerals[0].mineralType];
-                }
-
-                if (total < 200000) {
-                    if (spawn.spawnMineralHarvester(minerals[0])) {
-                        return true;
-                    }
+                if (spawn.spawnMineralHarvester(minerals[0])) {
+                    return true;
                 }
             }
 
@@ -972,6 +985,7 @@ Room.prototype.manageSpawns = function () {
 
                 if (doSpawn) {
                     let result = spawn.spawnClaimer(flag.pos, 'reserve');
+
                     if (result) {
                         // Add cost to a random harvest flag in the room.
                         let harvestFlags = _.filter(Game.flags, (flag2) => {
@@ -1239,7 +1253,7 @@ StructureSpawn.prototype.spawnMineralHarvester = function (source) {
  * Spawns a new repairer.
  */
 StructureSpawn.prototype.spawnBuilder = function (size) {
-    var maxParts = {work: 5};
+    var maxParts = {};
     if (size) {
         maxParts.work = size;
     }
@@ -1332,7 +1346,7 @@ StructureSpawn.prototype.spawnUpgrader = function () {
         var availableBoosts = this.room.getAvailableBoosts('upgradeController');
         var bestBoost;
         for (let resourceType in availableBoosts || []) {
-            if (availableBoosts[resourceType].available >= 15) {
+            if (availableBoosts[resourceType].available >= CONTROLLER_MAX_UPGRADE_PER_TICK) {
                 if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
                     bestBoost = resourceType;
                 }
@@ -1350,7 +1364,7 @@ StructureSpawn.prototype.spawnUpgrader = function () {
         role: 'upgrader',
         bodyWeights: bodyWeights,
         boosts: boosts,
-        maxParts: {work: 15},
+        maxParts: {work: CONTROLLER_MAX_UPGRADE_PER_TICK},
         memory: {
             singleRoom: this.pos.roomName,
         },

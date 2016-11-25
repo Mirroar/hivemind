@@ -22,7 +22,12 @@ Creep.prototype.performGetHaulerEnergy = function () {
                 this.clearCachedPath();
             }
             else {
-                return;
+                if (this.pos.getRangeTo(sourcePosition) <= 3) {
+                    this.clearCachedPath();
+                }
+                else {
+                    return;
+                }
             }
         }
         else if (this.pos.getRangeTo(sourcePosition) > 10) {
@@ -139,7 +144,12 @@ Creep.prototype.performHaulerDeliver = function () {
             this.clearCachedPath();
         }
         else {
-            return;
+            if (this.pos.getRangeTo(targetPosition) <= 3) {
+                this.clearCachedPath();
+            }
+            else {
+                return;
+            }
         }
     }
 
@@ -149,16 +159,13 @@ Creep.prototype.performHaulerDeliver = function () {
         return true;
     }
     // @todo If no storage is available, use default delivery method.
-    target = creep.room.terminal;
-    if (creep.room.storage && _.sum(creep.room.storage.store) < creep.room.storage.storeCapacity) {
-        target = creep.room.storage;
-    }
-
+    target = creep.room.getBestStorageTarget(creep.carry.energy, RESOURCE_ENERGY);
     if (!target || _.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
         // Container is full, drop energy instead.
-        if (creep.room.memory.storage) {
-            if (creep.pos.x != creep.room.memory.storage.x || creep.pos.y != creep.room.memory.storage.y) {
-                let result = creep.moveTo(creep.room.memory.storage.x, creep.room.memory.storage.y);
+        let storageLocation = creep.room.getStorageLocation();
+        if (storageLocation) {
+            if (creep.pos.x != storageLocation.x || creep.pos.y != storageLocation.y) {
+                let result = creep.moveTo(storageLocation.x, storageLocation.y);
                 if (result == ERR_NO_PATH) {
                     // Cannot reach dropoff spot, just drop energy right here then.
                     if (creep.drop(RESOURCE_ENERGY) == OK) {
@@ -208,7 +215,7 @@ Creep.prototype.setHaulerState = function (delivering) {
         var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
 
         if (harvestMemory.cachedPath) {
-            this.setCachedPath(harvestMemory.cachedPath.path, delivering, 3);
+            this.setCachedPath(harvestMemory.cachedPath.path, delivering, 1);
         }
     }
 };

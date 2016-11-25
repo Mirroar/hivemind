@@ -11,6 +11,16 @@ var Squad = function(squadName) {
         };
     }
 
+    let spawnFlag = Game.flags['SpawnSquad:' + squadName];
+    if (spawnFlag && spawnFlag.color != COLOR_GREEN) {
+        spawnFlag.setColor(COLOR_GREEN);
+    }
+
+    let attackFlag = Game.flags['AttackSquad:' + squadName];
+    if (attackFlag && attackFlag.color != COLOR_RED) {
+        attackFlag.setColor(COLOR_RED);
+    }
+
     this.memory = Memory.squads[squadName];
 };
 
@@ -71,9 +81,29 @@ Squad.prototype.spawnUnit = function (spawn) {
         });
     }
     else if (toSpawn == 'healer') {
+        var boosts = null;
+        if (spawn.room.canSpawnBoostedCreeps()) {
+            var availableBoosts = spawn.room.getAvailableBoosts('heal');
+            var bestBoost;
+            for (let resourceType in availableBoosts || []) {
+                if (availableBoosts[resourceType].available >= 50) {
+                    if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+                        bestBoost = resourceType;
+                    }
+                }
+            }
+
+            if (bestBoost) {
+                boosts = {
+                    heal: bestBoost,
+                };
+            }
+        }
+
         spawn.createManagedCreep({
             role: 'brawler',
             bodyWeights: {move: 0.52, tough: 0.1, heal: 0.38},
+            boosts: boosts,
             memory: {
                 squadName: this.name,
                 squadUnitType: toSpawn,
@@ -111,6 +141,25 @@ Squad.prototype.spawnUnit = function (spawn) {
         });
     }
     else if (toSpawn == 'attacker') {
+        var boosts = null;
+        if (spawn.room.canSpawnBoostedCreeps()) {
+            var availableBoosts = spawn.room.getAvailableBoosts('attack');
+            var bestBoost;
+            for (let resourceType in availableBoosts || []) {
+                if (availableBoosts[resourceType].available >= 50) {
+                    if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+                        bestBoost = resourceType;
+                    }
+                }
+            }
+
+            if (bestBoost) {
+                boosts = {
+                    attack: bestBoost,
+                };
+            }
+        }
+
         spawn.createManagedCreep({
             role: 'brawler',
             bodyWeights: {move: 0.5, attack: 0.5},

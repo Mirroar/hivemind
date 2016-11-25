@@ -12,6 +12,9 @@ Room.prototype.getAvailableBoosts = function (type) {
         for (let workPart in BOOSTS) {
             let mineralBoosts = BOOSTS[workPart];
             for (let mineralType in mineralBoosts) {
+                // Only boost using the best boosts. We'll make sure we have what we need through trading.
+                if (mineralType.indexOf('X') == -1) continue;
+
                 let boostValues = mineralBoosts[mineralType];
 
                 if (_.indexOf(resourceTypes, mineralType) != -1) {
@@ -44,6 +47,8 @@ Room.prototype.getAvailableBoosts = function (type) {
  * Requires at least one unused lab.
  */
 Room.prototype.canSpawnBoostedCreeps = function () {
+    if (this.isEvacuating()) return false;
+
     var labs = this.getBoostLabs();
 
     if (labs.length > 0) {

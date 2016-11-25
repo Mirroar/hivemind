@@ -24,8 +24,6 @@ Creep.prototype.getAvailableBuilderTargets = function () {
         filter: (structure) => structure.hits < structure.hitsMax && !structure.needsDismantling()
     });
 
-    let highestPrio = null;
-
     for (let i in targets) {
         let target = targets[i];
 
@@ -49,22 +47,23 @@ Creep.prototype.getAvailableBuilderTargets = function () {
             option.weight = 1 - target.hits / maxHealth;
             option.maxHealth = maxHealth;
 
-            if (target.structureType == STRUCTURE_RAMPART && target.hits < 10000) {
+            if (target.structureType == STRUCTURE_RAMPART && target.hits < 10000 && this.room.controller.level >= 4) {
                 // Low ramparts get special treatment so they don't decay.
-                option.priority++;
+                option.priority += 2;
             }
         }
+        else {
+            if (target.hits / maxHealth > 0.9) {
+                option.priority--;
+            }
+            if (target.hits / maxHealth < 0.2) {
+                option.priority++;
+            }
 
-        if (target.hits / maxHealth > 0.9) {
-            option.priority--;
-        }
-        if (target.hits / maxHealth < 0.2) {
-            option.priority++;
-        }
-
-        // Roads are not that important, repair only when low.
-        if (target.structureType == STRUCTURE_ROAD && target.hits > 1000) {
-            option.priority--;
+            // Roads are not that important, repair only when low.
+            if (target.structureType == STRUCTURE_ROAD && target.hits > 1000) {
+                option.priority--;
+            }
         }
 
         // For many decaying structures, we don't care if they're "almost" full.
@@ -122,7 +121,7 @@ Creep.prototype.calculateBuilderTarget = function () {
                 maxHealth: best.maxHealth,
             };
 
-            new Game.logger('creeps', this.pos.roomName).log(creep.name, 'is now repairing', best.object);
+            new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now repairing', best.object);
         }
         else if (best.type == 'site') {
             creep.memory.order = {
@@ -130,7 +129,7 @@ Creep.prototype.calculateBuilderTarget = function () {
                 target: best.object.id,
             };
 
-            new Game.logger('creeps', this.pos.roomName).log(creep.name, 'is now building', best.object);
+            new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now building', best.object);
         }
     }
     else {
@@ -225,9 +224,10 @@ Creep.prototype.buildTarget = function (target) {
 Creep.prototype.repairNearby = function () {
     let workParts = this.memory.body.work;
     if (workParts) {
-        var needsRepair = this.pos.findInRange(FIND_STRUCTURES, 3);
+        var needsRepair = this.room.find(FIND_STRUCTURES);
         for (let i in needsRepair) {
             let structure = needsRepair[i];
+            if (this.pos.getRangeTo(structure) > 3) continue;
             if (structure.needsDismantling()) continue;
 
             let maxHealth = structure.hitsMax;
@@ -260,7 +260,7 @@ Creep.prototype.runBuilderLogic = function () {
     if (this.memory.repairing && this.carry.energy == 0) {
         this.setBuilderState(false);
     }
-    else if (!this.memory.repairing && this.carry.energy == this.carryCapacity) {
+    else if (!this.memory.repairing && _.sum(this.carry) >= this.carryCapacity * 0.9) {
         this.setBuilderState(true);
     }
 

@@ -44,6 +44,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 var structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
                     filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.hits
                 });
+                if (!creep.room.controller || !creep.room.controller.owner || creep.room.controller.owner.username == 'Voronoi') structures = [];
 
                 if (structures && structures.length > 0) {
                     for (var i in structures) {
@@ -70,7 +71,9 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 
                 // Find walls in front of controller.
                 if (creep.room.controller && creep.room.controller.owner && !creep.room.controller.my) {
-                    var structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1);
+                    var structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
+                        filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER
+                    });
 
                     if (structures && structures.length > 0) {
                         for (var i in structures) {
@@ -94,6 +97,11 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 var damaged = creep.room.find(FIND_MY_CREEPS, {
                     filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax))
                 });
+                if (!damaged || damaged.length == 0) {
+                    damaged = creep.room.find(FIND_HOSTILE_CREEPS, {
+                        filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax) && friendly.owner.username == 'Voronoi')
+                    });
+                }
 
                 if (damaged && damaged.length > 0) {
                     for (var i in damaged) {
@@ -394,7 +402,7 @@ Creep.prototype.performMilitaryMove = function () {
         if (target) {
             var result = creep.moveTo(target, {
                 reusePath: 5,
-                ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.my) && creep.memory.body.attack,
+                ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && creep.room.controller.owner.username != 'Voronoi')) && creep.memory.body.attack,
             });
         }
     }
@@ -446,7 +454,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 }
             }
         }
-        else if (target && !target.my) {
+        else if (target && (!target.my && target.owner.username != 'Voronoi')) {
             var result = creep.attack(target);
             if (result == OK) {
                 attacked = true;
@@ -460,6 +468,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 for (let i in hostile) {
                     // Check if enemy is harmless, and ignore it.
                     if (!hostile[i].isDangerous()) continue;
+                    if (hostile[i].owner && hostile[i].owner.username == 'Voronoi') continue;
 
                     if (creep.attack(hostile[i]) == OK) {
                         attacked = true;
@@ -471,10 +480,18 @@ Creep.prototype.performMilitaryAttack = function () {
             if (!attacked) {
                 // See if enemy structures are nearby, attack one of those.
                 var hostile = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
-                    filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE
+                    filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.structureType != STRUCTURE_TERMINAL
                 });
+                if (creep.room.controller && creep.room.controller.owner && creep.room.controller.owner.username == 'Voronoi') hostile = [];
                 if (hostile && hostile.length > 0) {
-                    if (creep.attack(hostile[0]) == OK) {
+                    // Find target with lowest HP to kill off (usually relevant while trying to break through walls).
+                    let minHits;
+                    for (let i in hostile) {
+                        if (hostile[i].hits && (!minHits || hostile[i].hits < hostile[minHits].hits)) {
+                            minHits = i;
+                        }
+                    }
+                    if (creep.attack(hostile[minHits]) == OK) {
                         attacked = true;
                     }
                 }
@@ -494,9 +511,9 @@ Creep.prototype.performMilitaryHeal = function () {
     if (creep.memory.order) {
         var target = Game.getObjectById(creep.memory.order.target);
 
-        if (target && target.my) {
+        if (target && (target.my || (target.owner && target.owner.username == 'Voronoi'))) {
             var result = creep.heal(target);
-            if (result != OK) {
+            if (result == OK) {
                 healed = true;
             }
         }

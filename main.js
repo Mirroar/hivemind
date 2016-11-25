@@ -76,7 +76,7 @@ var Squad = require('manager.squad');
 /**
  * Use the new pathfinder to move within a certain range of a target.
  */
-Creep.prototype.moveToRange = function (target, range) {
+Creep.prototype._moveToRange = function (target, range) {
     PathFinder.use(true);
     let pos = target;
     if (target.pos) {
@@ -88,6 +88,10 @@ Creep.prototype.moveToRange = function (target, range) {
     PathFinder.use(false);
 };
 
+Creep.prototype.moveToRange = function (target, range) {
+    this.goTo(target, {range: range});
+};
+
 var creepThrottleLevels = {
     // Military creeps are always fully active!
     brawler: {
@@ -95,6 +99,10 @@ var creepThrottleLevels = {
         min: -1,
     },
     claimer: {
+        max: 0,
+        min: -1,
+    },
+    'builder.remote': {
         max: 0,
         min: -1,
     },
@@ -132,6 +140,14 @@ var creepThrottleLevels = {
 Creep.prototype.runLogic = function() {
     var creep = this;
 
+    if (!Game.creepPerformance[this.memory.role]) {
+        Game.creepPerformance[this.memory.role] = {
+            throttled: 0,
+            count: 0,
+            cpu: 0,
+        };
+    }
+
     if (!this.memory.throttleOffset) this.memory.throttleOffset = utilities.getThrottleOffset();
     let minBucket = null;
     let maxBucket = null;
@@ -159,13 +175,42 @@ Creep.prototype.runLogic = function() {
         }
         else {
             Game.numThrottledCreeps++;
+            Game.creepPerformance[this.memory.role].throttled++;
             return;
         }
     }
 
     if (this.memory.singleRoom && this.pos.roomName != this.memory.singleRoom) {
-        // @todo Keep in room.
+        this.moveTo(new RoomPosition(25, 25, this.memory.singleRoom));
     }
+
+    if (this.memory.singleRoom && this.pos.roomName == this.memory.singleRoom) {
+        let stuck = true;
+        if (this.pos.x == 0) {
+            this.move(RIGHT);
+        }
+        else if (this.pos.y == 0) {
+            this.move(BOTTOM);
+        }
+        else if (this.pos.x == 49) {
+            this.move(LEFT);
+        }
+        else if (this.pos.y == 49) {
+            this.move(TOP);
+        }
+        else {
+            stuck = false;
+        }
+        if (stuck) {
+            this.say('unstuck!');
+            delete this.memory.go;
+            this.clearCachedPath();
+            return;
+        }
+    }
+
+    Game.creepPerformance[this.memory.role].count++;
+    let startTime = Game.cpu.getUsed();
 
     try {
         if (creep.room.boostManager && creep.room.boostManager.overrideCreepLogic(creep)) {
@@ -225,6 +270,8 @@ Creep.prototype.runLogic = function() {
         console.log('Error when managing creep', creep.name, ':', e);
         console.log(e.stack);
     }
+
+    Game.creepPerformance[this.memory.role].cpu += Game.cpu.getUsed() - startTime;
 };
 
 /**
@@ -344,6 +391,23 @@ if (useProfiler) {
     var profiler = require('screeps-profiler');
     // Enable profiling of all methods in Game object protitypes defined up to now.
     profiler.enable();
+    profiler.registerClass(Game.map, 'Map');
+    profiler.registerClass(Game.market, 'Market');
+
+    profiler.registerClass(Bay, 'Bay');
+    profiler.registerClass(Exploit, 'Exploit');
+    profiler.registerClass(Squad, 'Squad');
+    profiler.registerClass(RoomPlanner, 'RoomPlanner');
+    profiler.registerClass(BoostManager, 'BoostManager');
+
+    profiler.registerObject(creepGeneral, 'creepGeneral');
+    profiler.registerObject(gameState, 'gameState');
+    profiler.registerObject(intelManager, 'intelManager');
+    profiler.registerObject(roleplay, 'roleplay');
+    profiler.registerObject(spawnManager, 'spawnManager');
+    profiler.registerObject(stats, 'stats');
+    profiler.registerObject(structureManager, 'structureManager');
+    profiler.registerObject(utilities, 'utilities');
 }
 
 var main = {
@@ -353,6 +417,7 @@ var main = {
      */
     manageCreeps: function () {
         Game.numThrottledCreeps = 0;
+        Game.creepPerformance = {};
         for (var name in Game.creeps) {
             var creep = Game.creeps[name];
 
@@ -360,10 +425,24 @@ var main = {
                 continue;
             }
 
-            creep.runLogic();
+            let temp = function () {
+                creep.runLogic();
+            }
+
+            if (useProfiler) {
+                temp = profiler.registerFN(temp, creep.pos.roomName + '.runCreepLogic');
+            }
+
+            temp();
         }
         if (Game.numThrottledCreeps > 0) {
             new Game.logger('creeps').log(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
+        }
+
+        for (let role in Game.creepPerformance) {
+            if (Game.creepPerformance[role].count > 0) {
+                Game.creepPerformance[role].avg = Game.creepPerformance[role].cpu / Game.creepPerformance[role].count;
+            }
         }
     },
 
@@ -481,6 +560,11 @@ var main = {
     loop: function () {
         var mainLoop = function () {
             debug.init();
+
+            if (useProfiler) {
+                profiler.registerClass(Game.logger, 'Logger');
+            }
+
             var logger = new Game.logger('main');
 
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
@@ -560,7 +644,7 @@ var main = {
                 main.checkRoomSecurity();
             }
             catch (e) {
-                console.log('error in manageResources:');
+                console.log('error in checkRoomSecurity:');
                 console.log(e.stack);
             }
 
@@ -570,6 +654,16 @@ var main = {
                 }
                 catch (e) {
                     console.log('error in manageResources:');
+                    console.log(e.stack);
+                }
+            }
+
+            if (Game.time % 50 == 3) {
+                try {
+                    structureManager.manageTrade();
+                }
+                catch (e) {
+                    console.log('error in manageTrade:');
                     console.log(e.stack);
                 }
             }
@@ -609,7 +703,7 @@ var main = {
 
                 var rooms = Game.rooms;
                 var spawns = Game.spawns;
-                var resources = structureManager.getRoomResourceStates();
+                var resources = structureManager.getRoomResourceStates().rooms;
                 for (let roomKey in rooms) {
                     let room = Game.rooms[roomKey];
                     var isMyRoom = (room.controller ? room.controller.my : 0);
