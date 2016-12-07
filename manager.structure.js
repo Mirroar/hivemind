@@ -47,12 +47,12 @@ StructureTower.prototype.runLogic = function () {
     }
 
     // Heal friendlies.
-    /*var damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
+    var damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
         filter: (creep) => creep.hits < creep.hitsMax
     });
     if (damaged) {
         tower.heal(damaged);
-    }//*/
+    }
 };
 
 Room.prototype.manageLabs = function () {

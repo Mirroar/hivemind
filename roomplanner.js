@@ -74,12 +74,35 @@ RoomPlanner.prototype.runLogic = function () {
   this.newStructures = 0;
   let doneBuilding = true;
 
+  // For bot debugging purposes, remove all roads not part of current room plan.
+  var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
+  for (let i = 0; i < roomRoads.length; i++) {
+    let road = roomRoads[i];
+    if (!this.memory.locations.road[utilities.encodePosition(road.pos)]) {
+      road.destroy();
+    }
+  }
+
+  // Make sure all current towers have been built.
+  var roomTowers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_TOWER);
+  var roomTowerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_TOWER);
+  if (roomTowers.length + roomTowerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
+    for (let posName in this.memory.locations.tower || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_TOWER, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
   // Make sure extensions are built in the right place, remove otherwise.
   var roomExtensions = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_EXTENSION);
   var roomExtensionSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_EXTENSION);
   for (let i = 0; i < roomExtensions.length; i++) {
     let extension = roomExtensions[i];
-    if (!this.memory.locations.extension[utilities.encodePosition(extension.pos)]) {
+    if (!this.memory.locations.extension[utilities.encodePosition(extension.pos)] && roomExtensions.length > 10) {
       extension.destroy();
 
       // Only kill of one extension for each call of runLogic, it takes a while to rebuild anyway.
@@ -688,17 +711,28 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       }
     }
 
+    let tileFreeForBuilding = function (x, y, allowRoads) {
+      let matrixValue = matrix.get(x, y);
+      if (matrixValue > 100) return false;
+      if (wallDistanceMatrix.get(x, y) > 100) return false;
+      if (matrixValue == 10 && wallDistanceMatrix.get(x, y) == 1) return true;
+      if (matrixValue > 1) return false;
+      if (matrixValue == 1 && !allowRoads) return false;
+
+      return true;
+    }
+
     // Handle current position.
     if (nextPos.getRangeTo(roomCenter) < 3) continue;
 
     let maxRoomLevel = 8;
     if (!this.memory.locations.spawn || _.size(this.memory.locations.spawn) < CONTROLLER_STRUCTURES.spawn[maxRoomLevel]) {
       // Try placing spawns.
-      if (matrix.get(nextPos.x, nextPos.y) != 0) continue;
-      if (matrix.get(nextPos.x - 1, nextPos.y) > 1 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y) > 100) continue;
-      if (matrix.get(nextPos.x + 1, nextPos.y) > 1 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y) > 100) continue;
-      if (matrix.get(nextPos.x, nextPos.y - 1) > 1 || wallDistanceMatrix.get(nextPos.x, nextPos.y - 1) > 100) continue;
-      if (matrix.get(nextPos.x, nextPos.y + 1) > 1 || wallDistanceMatrix.get(nextPos.x, nextPos.y + 1) > 100) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y, true)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y, true)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y - 1, true)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 1, true)) continue;
 
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
@@ -713,19 +747,26 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
       new Game.logger('roomplanner', this.roomName).debug('Placing new spawn at', nextPos);
     }
+    else if (!this.memory.locations.tower || _.size(this.memory.locations.tower) < 1) {
+      // Place one tower close to spawn for early defense.
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
+
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'tower', visible);
+      matrix.set(nextPos.x, nextPos.y, 255);
+    }
     else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[maxRoomLevel]) {
       //buildingsPlaced = true;
       //break;
 
-      if (matrix.get(nextPos.x, nextPos.y) != 0) continue;
-      if (matrix.get(nextPos.x - 1, nextPos.y) != 0 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y) > 100) continue;
-      if (matrix.get(nextPos.x + 1, nextPos.y) != 0 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y) > 100) continue;
-      if (matrix.get(nextPos.x, nextPos.y - 1) != 0 || wallDistanceMatrix.get(nextPos.x, nextPos.y - 1) > 100) continue;
-      if (matrix.get(nextPos.x, nextPos.y + 1) != 0 || wallDistanceMatrix.get(nextPos.x, nextPos.y + 1) > 100) continue;
-      if (matrix.get(nextPos.x - 1, nextPos.y - 1) != 0 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y - 1) > 100) continue;
-      if (matrix.get(nextPos.x + 1, nextPos.y - 1) != 0 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y - 1) > 100) continue;
-      if (matrix.get(nextPos.x - 1, nextPos.y + 1) != 0 || wallDistanceMatrix.get(nextPos.x - 1, nextPos.y + 1) > 100) continue;
-      if (matrix.get(nextPos.x + 1, nextPos.y + 1) != 0 || wallDistanceMatrix.get(nextPos.x + 1, nextPos.y + 1) > 100) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y - 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y - 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y - 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y + 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 1)) continue;
 
       // Leave a road to room center.
       let extensionRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);

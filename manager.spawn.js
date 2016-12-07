@@ -460,8 +460,8 @@ Room.prototype.addBuilderSpawnOptions = function () {
     }
 
     // There are a lot of ramparts in planned rooms, spawn builders appropriately.
-    if (this.roomPlanner && this.roomPlanner.memory.controlRoom && this.controller && this.controller.my && this.controller.level >= 4) {
-        maxWorkParts += _.size(this.roomPlanner.memory.locations.rampart) / 10;
+    if (this.roomPlanner && this.roomPlanner.memory.controlRoom && this.roomPlanner.memory.locations && this.controller && this.controller.my && this.controller.level >= 4) {
+        maxWorkParts += _.size(this.roomPlanner.memory.locations.rampart || []) / 10;
     }
 
     // Add more repairers if we have a lot of energy to spare.
