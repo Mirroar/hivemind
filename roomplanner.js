@@ -651,11 +651,14 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     // @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
     // We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
     if (this.room.controller) {
-      let contollerRoads = this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
-      for (let i in contollerRoads) {
-        this.placeFlag(contollerRoads[i], 'road.controller', visible);
+      let controllerRoads = this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
+      for (let i in controllerRoads) {
+        if (i == 0) continue;
+        this.placeFlag(controllerRoads[i], 'road.controller', visible);
       }
-      this.placeFlag(contollerRoads[1], 'container.controller', visible);
+      this.placeFlag(controllerRoads[1], 'container.controller', visible);
+      this.placeFlag(controllerRoads[0], 'link.controller', visible);
+      matrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
     }
 
     if (this.room.mineral) {
@@ -673,6 +676,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
           this.placeFlag(sourceRoads[i], 'road.source', visible);
         }
         this.placeFlag(sourceRoads[1], 'container.source', visible);
+        // @todo Place a link near sources, but off the calculated path and not directly next to source.
       }
     }
   }
