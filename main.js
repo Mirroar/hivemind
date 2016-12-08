@@ -43,6 +43,7 @@ catch (e) {
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
 var intelManager = require('manager.intel');
+var strategyManager = require('manager.strategy');
 var roleplay = require('manager.roleplay');
 var roleRemoteBuilder = require('role.builder.remote');
 var spawnManager = require('manager.spawn');
@@ -403,6 +404,7 @@ if (useProfiler) {
     profiler.registerObject(creepGeneral, 'creepGeneral');
     profiler.registerObject(gameState, 'gameState');
     profiler.registerObject(intelManager, 'intelManager');
+    profiler.registerObject(strategyManager, 'strategyManager');
     profiler.registerObject(roleplay, 'roleplay');
     profiler.registerObject(spawnManager, 'spawnManager');
     profiler.registerObject(stats, 'stats');
@@ -683,6 +685,16 @@ var main = {
             }
             catch (e) {
                 console.log('Error in intelManager.scout:', e);
+            }
+
+            if (Game.time % 50 == 13) {
+                try {
+                    strategyManager.runLogic();
+                }
+                catch (e) {
+                    console.log('error in strategyManager:');
+                    console.log(e.stack);
+                }
             }
 
             try {
