@@ -13,7 +13,12 @@ var RoomPlanner = function (roomName) {
   this.memory = Memory.rooms[roomName].roomPlanner;
 
   // Automatically assume control over any room.
-  this.memory.controlRoom = true;
+  if (this.room.controller && this.room.controller.my) {
+    this.memory.controlRoom = true;
+  }
+  else {
+    this.memory.controlRoom = false;
+  }
 };
 
 /**
