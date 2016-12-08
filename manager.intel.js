@@ -74,6 +74,9 @@ Room.prototype.gatherIntel = function () {
         }
     }
 
+    // Remember room exits.
+    intel.exits = Game.map.describeExits(room.name);
+
     // At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
     var costs = room.generateCostMatrix(structures);
     intel.costMatrix = costs.serialize();
