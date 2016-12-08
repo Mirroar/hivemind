@@ -708,28 +708,24 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
 
   // Flood fill from the center to place buildings that need to be accessible.
-  // @todo Decide position of spawns.
   var openList = {};
-  openList[utilities.encodePosition(roomCenter)] = true;
+  openList[utilities.encodePosition(roomCenter)] = {range: 0};
   var closedList = {};
   var buildingsPlaced = false;
   var bayCount = 0;
-  console.log('starting flood fill');
   while (!buildingsPlaced && _.size(openList) > 0) {
-    //console.log('.');
     let minDist = null;
     let nextPos = null;
     for (let posName in openList) {
+      let info = openList[posName];
       let pos = utilities.decodePosition(posName);
-      let range = pos.getRangeTo(roomCenter);
-      if (!minDist || range < minDist) {
-        minDist = range;
+      if (!minDist || info.range < minDist) {
+        minDist = info.range;
         nextPos = pos;
       }
     }
 
     if (!nextPos) {
-      console.log('no more elements in open list');
       break;
     }
     delete openList[utilities.encodePosition(nextPos)];
@@ -751,7 +747,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         let posName = utilities.encodePosition(pos);
         if (openList[posName] || closedList[posName]) continue;
         //console.log('openList', pos.x, pos.y);
-        openList[posName] = true;
+        openList[posName] = {range: minDist + 1};
       }
     }
 
