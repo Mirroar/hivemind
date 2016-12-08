@@ -71,13 +71,48 @@ RoomPlanner.prototype.runLogic = function () {
   }
   if (Game.time % 100 != 3) return;
 
-  //console.log('[RoomPlanner]', 'running logic in', this.roomName);
-
-  if (this.room.controller.level < 2) return;
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   var roomStructures = this.room.find(FIND_STRUCTURES);
   this.newStructures = 0;
   let doneBuilding = true;
+
+  // Make sure all current spawns have been built.
+  var roomSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_SPAWN);
+  var roomSpawnSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_SPAWN);
+
+  // Make sure spawns are built in the right place, remove otherwise.
+  for (let i = 0; i < roomSpawns.length; i++) {
+    let spawn = roomSpawns[i];
+    if (!this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
+      // Only destroy spawn if there are enough resources and builders available.
+      if (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1 && !spawn.spawning) {
+        for (let j in this.room.creepsByRole.builder) {
+          let creep = this.room.creepsByRole.builder[j];
+
+          if (creep.ticksToLive && creep.ticksToLive > CREEP_LIFE_TIME * 0.8) {
+            spawn.destroy();
+            break;
+          }
+        }
+      }
+
+      // Only kill of one spawn for each call of runLogic, it takes a while to rebuild anyway.
+      break;
+    }
+  }
+
+  if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
+    for (let posName in this.memory.locations.spawn || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_SPAWN, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
+  if (this.room.controller.level < 2) return;
 
   // For bot debugging purposes, remove all roads not part of current room plan.
   var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
@@ -166,6 +201,7 @@ RoomPlanner.prototype.runLogic = function () {
   if (!doneBuilding) return;
 
   if (this.room.controller.level < 3) return;
+
   // At level 3, we can build all remaining roads.
   for (let posName in this.memory.locations['road'] || []) {
     let pos = utilities.decodePosition(posName);
@@ -175,7 +211,6 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
   if (!doneBuilding) return;
-
 
   if (this.room.controller.level < 4) return;
 
