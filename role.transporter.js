@@ -1041,6 +1041,53 @@ Creep.prototype.setTransporterState = function (delivering) {
     delete this.memory.tempRole;
 };
 
+Creep.prototype.bayUnstuck = function () {
+    // If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
+    for (let i in this.room.bays) {
+        let bay = this.room.bays[i];
+
+        if (this.pos.x != bay.pos.x || this.pos.y != bay.pos.y) continue;
+
+        let best = this.memory.deliverTarget;
+
+        if (best && typeof best != 'string' && best.type == 'bay' && this.memory.order.target == i) continue;
+
+        // We're standing in a bay that we're not delivering to.
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+
+                if (Game.map.getTerrainAt(this.pos.x + dx, this.pos.y + dy, this.pos.roomName) == 'wall') continue;
+
+                let pos = new RoomPosition(this.pos.x + dx, this.pos.y + dy, this.pos.roomName);
+
+                // Check if there's a structure here already.
+                let structures = pos.lookFor(LOOK_STRUCTURES);
+                for (let i in structures) {
+                    if (structures[i].structureType != STRUCTURE_ROAD && structures[i].structureType != STRUCTURE_CONTAINER && structures[i].structureType != STRUCTURE_RAMPART) {
+                        continue;
+                    }
+                }
+
+                // Check if there's a construction site here already.
+                let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+                for (let i in sites) {
+                    if (sites[i].structureType != STRUCTURE_ROAD && sites[i].structureType != STRUCTURE_CONTAINER && sites[i].structureType != STRUCTURE_RAMPART) {
+                        continue;
+                    }
+                }
+
+                let dir = pos.getDirectionTo(this.pos);
+                console.log(dir, this.name);
+                this.move(dir);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 Creep.prototype.runTransporterLogic = function () {
     if (this.memory.singleRoom && this.pos.roomName != this.memory.singleRoom) {
         this.moveToRange(new RoomPosition(25, 25, this.memory.singleRoom), 10);
@@ -1052,6 +1099,10 @@ Creep.prototype.runTransporterLogic = function () {
     }
     else if (_.sum(this.carry) <= this.carryCapacity * 0.1 && this.memory.delivering) {
         this.setTransporterState(false);
+    }
+
+    if (this.bayUnstuck()) {
+        return true;
     }
 
     if (!this.memory.delivering) {
