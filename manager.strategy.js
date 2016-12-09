@@ -10,6 +10,31 @@ var strategyManager = {
     var roomList = strategyManager.generateScoutTargets();
     memory.roomList = roomList;
 
+    // Add data to scout list for creating priorities.
+    for (let roomName in roomList) {
+      let info = roomList[roomName];
+
+      info.scoutPriority = 0;
+
+      if (info.range > 0 && info.range <= 2) {
+        // This is a potential room for remote mining.
+        let scoutPriority = 0;
+        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) {
+          scoutPriority = 3;
+        }
+        else {
+          let intel = Memory.rooms[roomName].intel;
+          if (Game.time - intel.lastScan > 10000) {
+            scoutPriority = 2;
+          }
+        }
+
+        if (scoutPriority > info.scoutPriority) {
+          info.scoutPriority = scoutPriority;
+        }
+      }
+    }
+
     // @todo Create scouts when no observer in range of a listed room, and send scouts to those rooms.
 
   },
@@ -72,11 +97,6 @@ var strategyManager = {
           origin: info.origin,
         };
       }
-    }
-
-    // Add data to scout list for creating priorities.
-    for (let roomName in roomList) {
-      let info = roomList[roomName];
     }
 
     return roomList;

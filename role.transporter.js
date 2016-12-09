@@ -1078,7 +1078,6 @@ Creep.prototype.bayUnstuck = function () {
                 }
 
                 let dir = pos.getDirectionTo(this.pos);
-                console.log(dir, this.name);
                 this.move(dir);
                 return true;
             }
