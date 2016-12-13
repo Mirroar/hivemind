@@ -1042,6 +1042,8 @@ Creep.prototype.setTransporterState = function (delivering) {
 };
 
 Creep.prototype.bayUnstuck = function () {
+    //return false;
+
     // If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
     for (let i in this.room.bays) {
         let bay = this.room.bays[i];
@@ -1060,25 +1062,33 @@ Creep.prototype.bayUnstuck = function () {
                 if (Game.map.getTerrainAt(this.pos.x + dx, this.pos.y + dy, this.pos.roomName) == 'wall') continue;
 
                 let pos = new RoomPosition(this.pos.x + dx, this.pos.y + dy, this.pos.roomName);
+                let blocked = false;
 
                 // Check if there's a structure here already.
                 let structures = pos.lookFor(LOOK_STRUCTURES);
                 for (let i in structures) {
                     if (structures[i].structureType != STRUCTURE_ROAD && structures[i].structureType != STRUCTURE_CONTAINER && structures[i].structureType != STRUCTURE_RAMPART) {
-                        continue;
+                        blocked = true;
+                        break;
                     }
                 }
+                if (blocked) continue;
 
                 // Check if there's a construction site here already.
                 let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
                 for (let i in sites) {
                     if (sites[i].structureType != STRUCTURE_ROAD && sites[i].structureType != STRUCTURE_CONTAINER && sites[i].structureType != STRUCTURE_RAMPART) {
-                        continue;
+                        blocked = true;
+                        break;
                     }
                 }
+                if (blocked) continue;
 
-                let dir = pos.getDirectionTo(this.pos);
+                let dir = this.pos.getDirectionTo(pos);
                 this.move(dir);
+
+                //console.log(this.name, dir);
+
                 return true;
             }
         }
