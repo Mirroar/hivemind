@@ -162,6 +162,49 @@ RoomPlanner.prototype.runLogic = function () {
     if (!doneBuilding) return;
   }
 
+  // Build storage ASAP.
+  if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0) {
+    for (let posName in this.memory.locations['storage'] || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_STORAGE, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
+  // Also build terminal when available.
+  if (CONTROLLER_STRUCTURES[STRUCTURE_TERMINAL][this.room.controller.level] > 0) {
+    for (let posName in this.memory.locations['terminal'] || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_TERMINAL, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
+  // Build extractor and related container if available.
+  if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
+    for (let posName in this.memory.locations['extractor'] || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_EXTRACTOR, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    for (let posName in this.memory.locations['container.mineral'] || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
   // At level 2, we can start building containers and roads to sources.
   for (let posName in this.memory.locations['container.source'] || []) {
     let pos = utilities.decodePosition(posName);
@@ -213,16 +256,6 @@ RoomPlanner.prototype.runLogic = function () {
   if (!doneBuilding) return;
 
   if (this.room.controller.level < 4) return;
-
-  // Build storage. Finally!
-  for (let posName in this.memory.locations['storage'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_STORAGE, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
 
   // Make sure all requested ramparts are built.
   var wallsBuilt = true;
@@ -662,6 +695,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
 
     if (this.room.mineral) {
+      this.placeFlag(this.room.mineral.pos, 'extractor', visible);
       let mineralRoads = this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
       for (let i in mineralRoads) {
         this.placeFlag(mineralRoads[i], 'road.mineral', visible);
