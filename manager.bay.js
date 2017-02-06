@@ -9,7 +9,7 @@ var Bay = function (flagName) {
     }
 
     if (!this.memory.extensions || Game.time % 100 == 38) {
-        var extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
+        let extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
             filter: (structure) => structure.structureType == STRUCTURE_EXTENSION
         });
         this.memory.extensions = [];
@@ -31,6 +31,14 @@ var Bay = function (flagName) {
             }
         }
     }
+
+    // Draw bay.
+    let visual = new RoomVisual(this.pos.roomName);
+    visual.rect(this.pos.x - 1.4, this.pos.y - 1.4, 2.8, 2.8, {
+        fill: 'rgba(255, 255, 128, 0.2)',
+        opacity: 0.5,
+        stroke: '#ffff80',
+    });
 };
 
 Bay.prototype.hasExtension = function (extension) {

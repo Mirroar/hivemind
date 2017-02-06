@@ -1,4 +1,5 @@
 var utilities = require('utilities');
+var roomPlannerVersion = 3;
 
 var RoomPlanner = function (roomName) {
   this.roomName = roomName;
@@ -63,9 +64,10 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
 RoomPlanner.prototype.runLogic = function () {
   if (Game.cpu.bucket < 3500) return;
   if (!this.memory.controlRoom) return;
-  if (!this.memory.locations) {
+  if (!this.memory.locations || !this.memory.plannerVersion || this.memory.plannerVersion != roomPlannerVersion) {
     if (Game.cpu.getUsed() < 100) {
       this.placeFlags();
+      this.memory.plannerVersion = roomPlannerVersion;
     }
     return;
   }
@@ -855,10 +857,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       // Fill other unused spots with extensions.
       for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
-          if (matrix.get(nextPos.x + dx, nextPos.y + dy) == 0) {
-            this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension', visible);
-            matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
-          }
+          if (!tileFreeForBuilding(nextPos.x + dx, nextPos.y + dy)) continue;
+
+          this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension', visible);
+          matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
         }
       }
 
@@ -874,6 +876,14 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
     else {
       buildingsPlaced = true;
+    }
+  }
+
+  // Remove other bay flags in room that might be left over.
+  for (let i = bayCount; i < 30; i++) {
+    let flagKey = 'Bay:' + this.roomName + ':' + i;
+    if (Game.flags[flagKey]) {
+      Game.flags[flagKey].remove();
     }
   }
 
