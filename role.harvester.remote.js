@@ -157,6 +157,39 @@ Creep.prototype.performBuildRoad = function() {
     if (!hasRoad) {
         return true;
     }
+
+    // Check if container is built at target location.
+    var sourcePosition = utilities.decodePosition(creep.memory.source);
+    var sources = creep.room.find(FIND_SOURCES, {
+        filter: (source) => source.pos.x == sourcePosition.x && source.pos.y == sourcePosition.y
+    });
+
+    if (sources.length > 0) {
+        let container = sources[0].getNearbyContainer();
+
+        if (!container) {
+            // Check if there is a container or construction site nearby.
+            var structures = sources[0].pos.findInRange(FIND_STRUCTURES, 3, {
+                filter: (structure) => structure.structureType == STRUCTURE_CONTAINER
+            });
+            var sites = sources[0].pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3, {
+                filter: (site) => site.structureType == STRUCTURE_CONTAINER
+            });
+            if (structures.length == 0 && sites.length == 0) {
+                // Place a container construction site for this source.
+                var targetPosition = utilities.decodePosition(this.memory.storage);
+                var harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
+
+                if (harvestMemory.cachedPath) {
+                    //this.setCachedPath(harvestMemory.cachedPath.path, !harvesting, 1);
+                    let path = harvestMemory.cachedPath.path;
+                    let containerPosition = utilities.decodePosition(path[path.length - 2]);
+                    containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
+                }
+            }
+        }
+    }
+
     return false;
 };
 
