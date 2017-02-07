@@ -86,7 +86,7 @@ Creep.prototype.hasArrived = function () {
  */
 Creep.prototype.followCachedPath = function () {
     this.memory.moveBlocked = false;
-    if (!this.memory.cachedPath || !this.memory.cachedPath.path) {
+    if (!this.memory.cachedPath || !this.memory.cachedPath.path || _.size(this.memory.cachedPath.path) == 0) {
         this.clearCachedPath();
         new Game.logger('creeps', this.room.name).error(this.name, 'Trying to follow non-existing path');
         return;

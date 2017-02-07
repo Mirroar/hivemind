@@ -33,9 +33,6 @@ var strategyManager = {
         }
       }
     }
-
-    // @todo Create scouts when no observer in range of a listed room, and send scouts to those rooms.
-
   },
 
   generateScoutTargets: function () {
