@@ -1021,14 +1021,18 @@ Room.prototype.manageSpawns = function () {
             }
 
             // Last but not least: Scouts.
-            // @todo Spawn scout closest to where we're gonna send it.
-            /*var maxScouts = 1;
-            var numScouts = _.size(Game.creepsByRole.scout);
-            if (numScouts < maxScouts) {
+            let found = false;
+            for (let i in Game.creepsByRole.scout || []) {
+                if (Game.creepsByRole.scout[i].memory.origin == spawn.pos.roomName) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && spawn.room.needsScout()) {
                 if (spawn.spawnScout()) {
                     return true;
                 }
-            }//*/
+            }
         }
 
         // Let only one spawner spawn each tickt to prevent confusion.
@@ -1396,7 +1400,9 @@ StructureSpawn.prototype.spawnScout = function () {
     return this.createManagedCreep({
         role: 'scout',
         body: [MOVE],
-        memory: {},
+        memory: {
+            origin: this.pos.roomName,
+        },
     });
 };
 

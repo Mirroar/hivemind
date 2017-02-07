@@ -125,8 +125,13 @@ Creep.prototype.followCachedPath = function () {
         if (!target) {
             // We're not in the correct room to move on this path. Kind of sucks, but try to get there using the default pathfinder anyway.
             // @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
-            this.moveTo(decodedPath[0]);
-            this.say('Searching');
+            if (this.pos.roomName != decodedPath[0].roomName) {
+                this.moveTo(decodedPath[0]);
+                this.say('Searching');
+            }
+            else {
+                this.say('Blocked');
+            }
             this.memory.moveBlocked = true;
             return;
         }

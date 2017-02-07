@@ -1,7 +1,6 @@
 var strategyManager = {
 
   runLogic: function () {
-
     if (!Memory.strategy) {
       Memory.strategy = {};
     }
@@ -102,6 +101,23 @@ var strategyManager = {
     return roomList;
   },
 
+};
+
+Room.prototype.needsScout = function () {
+  if (!Memory.strategy) {
+    return false;
+  }
+  let memory = Memory.strategy;
+
+  for (let roomName in memory.roomList) {
+    let info = memory.roomList[roomName];
+
+    if (info.origin == this.name && info.scoutPriority > 0) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 module.exports = strategyManager;
