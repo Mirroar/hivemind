@@ -87,7 +87,8 @@ RoomPlanner.prototype.runLogic = function () {
     let spawn = roomSpawns[i];
     if (!this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
       // Only destroy spawn if there are enough resources and builders available.
-      if (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1 && !spawn.spawning) {
+      let resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
+      if ((resourcesAvailable || _.size(roomSpawns) > 1) && !spawn.spawning) {
         for (let j in this.room.creepsByRole.builder) {
           let creep = this.room.creepsByRole.builder[j];
 
