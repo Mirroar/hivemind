@@ -1,7 +1,7 @@
 var utilities = require('utilities');
-var roomPlannerVersion = 3;
 
 var RoomPlanner = function (roomName) {
+  this.roomPlannerVersion = 5;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -19,6 +19,29 @@ var RoomPlanner = function (roomName) {
   }
   else {
     this.memory.controlRoom = false;
+  }
+
+  //this.drawDebug();
+};
+
+RoomPlanner.prototype.drawDebug = function () {
+  let debugSymbols = {
+    lab: '🔬',
+  };
+
+  let visual = new RoomVisual(this.roomName);
+
+  if (this.memory.locations) {
+    for (let locationType in this.memory.locations) {
+      let positions = this.memory.locations[locationType];
+      if (!debugSymbols[locationType]) continue;
+
+      for (let posName in positions) {
+        let pos = utilities.decodePosition(posName);
+
+        visual.text(debugSymbols[locationType], pos.x, pos.y);
+      }
+    }
   }
 };
 
@@ -64,10 +87,10 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
 RoomPlanner.prototype.runLogic = function () {
   if (Game.cpu.bucket < 3500) return;
   if (!this.memory.controlRoom) return;
-  if (!this.memory.locations || !this.memory.plannerVersion || this.memory.plannerVersion != roomPlannerVersion) {
+  if (!this.memory.locations || !this.memory.plannerVersion || this.memory.plannerVersion != this.roomPlannerVersion) {
     if (Game.cpu.getUsed() < 100) {
       this.placeFlags();
-      this.memory.plannerVersion = roomPlannerVersion;
+      this.memory.plannerVersion = this.roomPlannerVersion;
     }
     return;
   }
@@ -330,6 +353,31 @@ RoomPlanner.prototype.runLogic = function () {
   }
   for (let i in unwantedDefenses) {
     this.memory.dismantle[unwantedDefenses[i].id] = 1;
+  }
+
+  // Make sure labs are built in the right place, remove otherwise.
+  var roomLabs = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_LAB);
+  var roomLabSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_LAB);
+  for (let i = 0; i < roomLabs.length; i++) {
+    let lab = roomLabs[i];
+    if (!this.memory.locations.lab[utilities.encodePosition(lab.pos)] && roomLabs.length == CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]) {
+      lab.destroy();
+
+      // Only kill of one lab at a time to rebuild.
+      break;
+    }
+  }
+
+  // Make sure all current labs have been built.
+  if (roomLabs.length + roomLabSites.length < CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]) {
+    for (let posName in this.memory.locations.lab || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_LAB, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
   }
 };
 
@@ -832,9 +880,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       matrix.set(nextPos.x, nextPos.y, 255);
     }
     else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[maxRoomLevel]) {
-      //buildingsPlaced = true;
-      //break;
-
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
       if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y)) continue;
       if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y)) continue;
@@ -875,6 +920,74 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       }
       bayCount++;
     }
+    else if (!this.memory.locations.lab || _.size(this.memory.locations.lab) < CONTROLLER_STRUCTURES.lab[maxRoomLevel]) {
+      // @todo Dynamically generate lab layout for servers where 10 labs is not the max.
+      // @todo Allow rotating this blueprint for better access.
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y - 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y - 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y - 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y + 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 1)) continue;
+      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y + 2)) continue;
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 2)) continue;
+      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 2)) continue;
+
+      // Make sure we can get a road back to storage.
+      let testMatrix = matrix.clone();
+      testMatrix.set(nextPos.x - 1, nextPos.y - 1, 255);
+      testMatrix.set(nextPos.x, nextPos.y - 1, 255);
+      testMatrix.set(nextPos.x + 1, nextPos.y - 1, 255);
+      testMatrix.set(nextPos.x - 1, nextPos.y, 255);
+      testMatrix.set(nextPos.x, nextPos.y, 1); // Road.
+      testMatrix.set(nextPos.x + 1, nextPos.y, 255);
+      testMatrix.set(nextPos.x - 1, nextPos.y + 1, 1); // Road.
+      testMatrix.set(nextPos.x, nextPos.y + 1, 255);
+      testMatrix.set(nextPos.x + 1, nextPos.y + 1, 1); // Road.
+      testMatrix.set(nextPos.x - 1, nextPos.y + 2, 255);
+      testMatrix.set(nextPos.x, nextPos.y + 2, 255);
+      testMatrix.set(nextPos.x + 1, nextPos.y + 2, 255);
+      let path = this.scanAndAddRoad(nextPos, centerEntrances, testMatrix, []);
+
+      if (_.size(path) == 0) {
+        // This location is not reasonable.
+        continue;
+      }
+
+      // Add buildings and roads for real.
+      matrix.set(nextPos.x - 1, nextPos.y - 1, 255);
+      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y - 1, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x, nextPos.y - 1, 255);
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y - 1, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x + 1, nextPos.y - 1, 255);
+      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y - 1, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x - 1, nextPos.y, 255);
+      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x, nextPos.y, 1); // Road.
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', visible);
+      matrix.set(nextPos.x + 1, nextPos.y, 255);
+      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x - 1, nextPos.y + 1, 1); // Road.
+      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'road', visible);
+      matrix.set(nextPos.x, nextPos.y + 1, 255);
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x + 1, nextPos.y + 1, 1); // Road.
+      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'road', visible);
+      matrix.set(nextPos.x - 1, nextPos.y + 2, 255);
+      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 2, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x, nextPos.y + 2, 255);
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 2, nextPos.roomName), 'lab', visible);
+      matrix.set(nextPos.x + 1, nextPos.y + 2, 255);
+      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 2, nextPos.roomName), 'lab', visible);
+      let labRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
+      for (let i in labRoads) {
+        this.placeFlag(labRoads[i], 'road', visible);
+        matrix.set(labRoads[i].x, labRoads[i].y, 1);
+      }
+    }
     else {
       buildingsPlaced = true;
     }
@@ -911,9 +1024,6 @@ RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
       // Since we're building a road on this tile anyway, prefer it for future pathfinding.
       matrix.set(pos.x, pos.y, 1);
     }
-  }
-  else {
-    // @todo If a path does not exist, mark this center location as invalid and start over.
   }
 
   return newRoads;
