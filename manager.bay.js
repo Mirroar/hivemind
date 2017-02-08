@@ -18,6 +18,8 @@ var Bay = function (flagName) {
         }
     }
 
+    // @todo Do not add extensions to bay if center is blocked by a structure.
+
     this.extensions = [];
     this.energy = 0;
     this.energyCapacity = 0;
