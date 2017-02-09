@@ -150,6 +150,9 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
             this.room.boostManager.markForBoosting(newName, options.boosts);
         }
 
+        // Store role of spawning creep for visualization.
+        this.memory.spawnRole = memory.role;
+
         return result;
     }
 
@@ -179,6 +182,9 @@ Room.prototype.manageSpawnsPriority = function () {
         // If spawning was just finished, scan the room again to assign creeps.
         if (roomSpawns[i].spawning) {
             roomSpawns[i].memory.wasSpawning = true;
+            if (this.visual) {
+                this.visual.text(roomSpawns[i].memory.spawnRole, roomSpawns[i].pos.x, roomSpawns[i].pos.y);
+            }
             continue;
         }
         else if (roomSpawns[i].memory.wasSpawning) {
