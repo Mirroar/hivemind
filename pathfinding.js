@@ -92,7 +92,22 @@ Creep.prototype.followCachedPath = function () {
         return;
     }
     var path = this.memory.cachedPath.path;
-    if (!this.memory.cachedPath.position) {
+
+    if (this.memory.cachedPath.forceGoTo) {
+        let pos = utilities.decodePosition(path[this.memory.cachedPath.forceGoTo]);
+
+        if (this.pos.getRangeTo(pos) > 0) {
+            //this.say('Skip:' + this.memory.cachedPath.forceGoTo);
+            this.say('S:' + pos.x + 'x' + pos.y);
+            this.moveTo(pos);
+            return;
+        }
+        else {
+            this.memory.cachedPath.position = this.memory.cachedPath.forceGoTo;
+            delete this.memory.cachedPath.forceGoTo;
+        }
+    }
+    else if (!this.memory.cachedPath.position) {
         let decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
         let target = this.pos.findClosestByRange(decodedPath, {
             filter: (pos) => {
@@ -196,21 +211,7 @@ Creep.prototype.followCachedPath = function () {
     this.memory.cachedPath.lastPositions[Game.time % 5] = utilities.encodePosition(this.pos);
 
     // Go around obstacles if necessary.
-    if (this.memory.cachedPath.forceGoTo) {
-        let pos = utilities.decodePosition(path[this.memory.cachedPath.forceGoTo]);
-
-        if (this.pos.getRangeTo(pos) > 0) {
-            //this.say('Skip:' + this.memory.cachedPath.forceGoTo);
-            this.say('S:' + pos.x + 'x' + pos.y);
-            this.moveTo(pos);
-            return;
-        }
-        else {
-            this.memory.cachedPath.position = this.memory.cachedPath.forceGoTo;
-            delete this.memory.cachedPath.forceGoTo;
-        }
-    }
-    else {
+    if (!this.memory.cachedPath.forceGoTo) {
         let stuck = false;
         if (_.size(this.memory.cachedPath.lastPositions) > 5 / 2) {
             let last = null;
