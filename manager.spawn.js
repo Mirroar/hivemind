@@ -183,7 +183,13 @@ Room.prototype.manageSpawnsPriority = function () {
         if (roomSpawns[i].spawning) {
             roomSpawns[i].memory.wasSpawning = true;
             if (this.visual) {
-                this.visual.text(roomSpawns[i].memory.spawnRole, roomSpawns[i].pos.x, roomSpawns[i].pos.y);
+                this.visual.text(roomSpawns[i].memory.spawnRole, roomSpawns[i].pos.x + 0.05, roomSpawns[i].pos.y + 0.05, {
+                    size: 0.5,
+                    color: 'black',
+                });
+                this.visual.text(roomSpawns[i].memory.spawnRole, roomSpawns[i].pos.x, roomSpawns[i].pos.y, {
+                    size: 0.5,
+                });
             }
             continue;
         }
