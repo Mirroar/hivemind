@@ -217,19 +217,21 @@ Creep.prototype.performRemoteHarvest = function () {
         return true;
     }
 
-    // Check if a container nearby is about to break, and repair it.
+    // Check if a container nearby is in need of repairs, since we can handle
+    // it better than haulers do.
+    var workParts = creep.memory.body.work;
     var needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-        filter: (structure) => (structure.structureType == STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax * 0.5
+        filter: (structure) => (structure.structureType == STRUCTURE_CONTAINER) && structure.hits <= structure.hitsMax - workParts * 100
     });
     if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-        var workParts = 0;
+        workParts = 0;
         for (var j in creep.body) {
             if (creep.body[j].type == WORK && creep.body[j].hits > 0) {
                 workParts++;
             }
         }
 
-        if (creep.carry.energy >= workParts) {
+        if (creep.carry.energy >= workParts && workParts > 0) {
             Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
             creep.repair(needsRepair);
 
