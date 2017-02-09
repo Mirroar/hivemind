@@ -15,7 +15,9 @@ Creep.prototype.performScout = function () {
     return true;
   }
 
-  this.room.visual.text(this.memory.scoutTarget, this.pos);
+  if (typeof this.room.visual !== 'undefined') {
+    this.room.visual.text(this.memory.scoutTarget, this.pos);
+  }
 
   // Check which room to go to next.
 

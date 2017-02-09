@@ -60,6 +60,7 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
   let structures = pos.lookFor(LOOK_STRUCTURES);
   for (let i in structures) {
     if (structures[i].structureType == structureType) {
+      // Structure is here, continue.
       return true;
     }
   }
@@ -68,6 +69,7 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
   let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
   for (let i in sites) {
     if (sites[i].structureType == structureType) {
+      // Structure is being built, wait until finished.
       return false;
     }
   }
@@ -75,9 +77,15 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
   if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
     if (pos.createConstructionSite(structureType) == OK) {
       this.newStructures++;
+      // Structure is being built, wait until finished.
+      return false;
     }
+
+    // Some other structure is blocking. Building logic should continue for now so it might be moved.
+    return true;
   }
 
+  // We can't build anymore in this room right now.
   return false;
 };
 
@@ -95,6 +103,8 @@ RoomPlanner.prototype.runLogic = function () {
     return;
   }
   if (Game.time % 100 != 3) return;
+
+  console.log('Running room planner logic for', this.roomName);
 
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   var roomStructures = this.room.find(FIND_STRUCTURES);
@@ -168,7 +178,7 @@ RoomPlanner.prototype.runLogic = function () {
   var roomExtensionSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_EXTENSION);
   for (let i = 0; i < roomExtensions.length; i++) {
     let extension = roomExtensions[i];
-    if (!this.memory.locations.extension[utilities.encodePosition(extension.pos)] && roomExtensions.length > 10) {
+    if (!this.memory.locations.extension[utilities.encodePosition(extension.pos)] && roomExtensions.length > CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][this.room.controller.level] - 5) {
       extension.destroy();
 
       // Only kill of one extension for each call of runLogic, it takes a while to rebuild anyway.
@@ -358,6 +368,7 @@ RoomPlanner.prototype.runLogic = function () {
   // Make sure labs are built in the right place, remove otherwise.
   var roomLabs = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_LAB);
   var roomLabSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_LAB);
+  console.log('Lab placement logic', this.memory.locations.lab[utilities.encodePosition(lab.pos)], roomLabs.length, CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]);
   for (let i = 0; i < roomLabs.length; i++) {
     let lab = roomLabs[i];
     if (!this.memory.locations.lab[utilities.encodePosition(lab.pos)] && roomLabs.length == CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]) {

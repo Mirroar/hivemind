@@ -279,7 +279,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
         // Make sure at least one harvester is spawned for each source.
         if (source.harvesters.length == 0) {
             memory.options.push({
-                priority: 4,
+                priority: (force ? 5 : 4),
                 weight: 1,
                 role: 'harvester',
                 source: source.id,
@@ -405,6 +405,9 @@ Room.prototype.addUpgraderSpawnOptions = function () {
     }
     else if (this.controller.level == 8) {
         maxUpgraders = 1;
+        if (gameState.getStoredEnergy(this) < 50000) {
+            maxUpgraders = 0;
+        }
     }
     else {
         if (gameState.getStoredEnergy(this) < 100000) {
