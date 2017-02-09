@@ -1,7 +1,7 @@
 var utilities = require('utilities');
 
 var RoomPlanner = function (roomName) {
-  this.roomPlannerVersion = 5;
+  this.roomPlannerVersion = 6;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -27,6 +27,7 @@ var RoomPlanner = function (roomName) {
 RoomPlanner.prototype.drawDebug = function () {
   let debugSymbols = {
     lab: '🔬',
+    tower: '⚔',
   };
 
   let visual = new RoomVisual(this.roomName);
@@ -104,8 +105,6 @@ RoomPlanner.prototype.runLogic = function () {
   }
   if (Game.time % 100 != 3) return;
 
-  console.log('Running room planner logic for', this.roomName);
-
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   var roomStructures = this.room.find(FIND_STRUCTURES);
   this.newStructures = 0;
@@ -159,9 +158,20 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
 
-  // Make sure all current towers have been built.
+  // Make sure extensions are built in the right place, remove otherwise.
   var roomTowers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_TOWER);
   var roomTowerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_TOWER);
+  for (let i = 0; i < roomTowers.length; i++) {
+    let tower = roomTowers[i];
+    if (!this.memory.locations.tower[utilities.encodePosition(tower.pos)] && roomTowers.length == CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
+      tower.destroy();
+
+      // Only kill of one tower for each call of runLogic.
+      break;
+    }
+  }
+
+  // Make sure all current towers have been built.
   if (roomTowers.length + roomTowerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
     for (let posName in this.memory.locations.tower || []) {
       let pos = utilities.decodePosition(posName);
@@ -368,7 +378,6 @@ RoomPlanner.prototype.runLogic = function () {
   // Make sure labs are built in the right place, remove otherwise.
   var roomLabs = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_LAB);
   var roomLabSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_LAB);
-  console.log('Lab placement logic', this.memory.locations.lab[utilities.encodePosition(lab.pos)], roomLabs.length, CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]);
   for (let i = 0; i < roomLabs.length; i++) {
     let lab = roomLabs[i];
     if (!this.memory.locations.lab[utilities.encodePosition(lab.pos)] && roomLabs.length == CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]) {
@@ -596,6 +605,45 @@ RoomPlanner.prototype.generateDistanceMatrixes = function () {
 };
 
 /**
+ * Find positions from where many exit tiles are in short range.
+ */
+RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
+  let positions = {
+    N: {count: 0, tiles: []},
+    E: {count: 0, tiles: []},
+    S: {count: 0, tiles: []},
+    W: {count: 0, tiles: []},
+  };
+
+  for (let x = 5; x < 45; x++) {
+    for (let y = 5; y < 45; y++) {
+      if (x != 5 && x != 44 && y != 5 && y != 44) continue;
+      if (matrix.get(x, y) != 0) continue;
+      if (Game.map.getTerrainAt(x, y, this.roomName) == 'wall') continue;
+      let score = 0;
+
+      for (let dir in exits) {
+        for (let i in exits[dir]) {
+          score += 1 / exits[dir][i].getRangeTo(x, y);
+        }
+      }
+
+      let dir = 'S';
+      if (x == 5) dir = 'W';
+      if (x == 44) dir = 'E';
+      if (y == 5) dir = 'N';
+
+      positions[dir].tiles.push({
+        score: score,
+        pos: new RoomPosition(x, y, this.roomName),
+      });
+    }
+  }
+
+  return positions;
+};
+
+/**
  * Makes plans for a room and place flags to visualize.
  */
 RoomPlanner.prototype.placeFlags = function (visible) {
@@ -608,6 +656,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   // Reset location memory, to be replaced with new flags.
   this.memory.locations = {};
+  let maxRoomLevel = 8;
 
   let wallDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.wallDistanceMatrix);
   let exitDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.exitDistanceMatrix);
@@ -861,7 +910,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     // Handle current position.
     if (nextPos.getRangeTo(roomCenter) < 3) continue;
 
-    let maxRoomLevel = 8;
     if (!this.memory.locations.spawn || _.size(this.memory.locations.spawn) < CONTROLLER_STRUCTURES.spawn[maxRoomLevel]) {
       // Try placing spawns.
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
@@ -1010,6 +1058,36 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     if (Game.flags[flagKey]) {
       Game.flags[flagKey].remove();
     }
+  }
+
+  // Determine where towers should be.
+  let positions = this.findTowerPositions(exits, matrix);
+  while (_.size(this.memory.locations.tower) < CONTROLLER_STRUCTURES.tower[maxRoomLevel]) {
+    let info = null;
+    let bestDir = null;
+    for (let dir in positions) {
+      for (let i in positions[dir].tiles) {
+        let tile = positions[dir].tiles[i];
+        if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count == positions[dir].count)) {
+          info = tile;
+          bestDir = dir;
+        }
+      }
+    }
+
+    info.score = -1;
+    positions[bestDir].count++;
+
+    // Also create a road to this tower.
+    let towerRoads = this.scanAndAddRoad(info.pos, centerEntrances, matrix, roads);
+    for (let i in towerRoads) {
+      //if (i == 0) continue;
+      this.placeFlag(towerRoads[i], 'road', visible);
+      matrix.set(towerRoads[i].x, towerRoads[i].y, 1);
+    }
+
+    this.placeFlag(new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName), 'tower', visible);
+    matrix.set(info.pos.x + 1, info.pos.y + 2, 255);
   }
 
   var end = Game.cpu.getUsed();
