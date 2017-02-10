@@ -227,8 +227,20 @@ Creep.prototype.performMilitaryMove = function () {
                 filter: (enemy) => enemy.isDangerous()
             });
             if (enemies.length > 0) {
+                this.memory.exploitTarget = enemies[0].id;
                 this.moveTo(enemies[0]);
                 return;
+            }
+            else if (this.memory.exploitTarget) {
+                let target = Game.getObjectById(this.memory.exploitTarget);
+
+                if (!target) {
+                    delete this.memory.exploitTarget;
+                }
+                else {
+                    this.moveTo(target);
+                    return;
+                }
             }
 
             // Clear cached path if we've gotton close to goal.
