@@ -1,7 +1,7 @@
 var utilities = require('utilities');
 
 var RoomPlanner = function (roomName) {
-  this.roomPlannerVersion = 6;
+  this.roomPlannerVersion = 7;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -622,18 +622,20 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
       if (Game.map.getTerrainAt(x, y, this.roomName) == 'wall') continue;
       let score = 0;
 
+      let tileDir = 'S';
+      if (x == 5) tileDir = 'W';
+      if (x == 44) tileDir = 'E';
+      if (y == 5) tileDir = 'N';
+
+      if (_.size(exits[tileDir]) == 0) continue;
+
       for (let dir in exits) {
         for (let i in exits[dir]) {
           score += 1 / exits[dir][i].getRangeTo(x, y);
         }
       }
 
-      let dir = 'S';
-      if (x == 5) dir = 'W';
-      if (x == 44) dir = 'E';
-      if (y == 5) dir = 'N';
-
-      positions[dir].tiles.push({
+      positions[tileDir].tiles.push({
         score: score,
         pos: new RoomPosition(x, y, this.roomName),
       });
