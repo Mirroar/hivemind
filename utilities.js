@@ -162,39 +162,42 @@ Room.prototype.scan = function () {
             filter: (structure) => structure.structureType == STRUCTURE_LAB
         });
         if (labs.length >= 3) {
+            // Find best 2 source labs for other labs to perform reactions.
+            let best = null;
             for (let i in labs) {
                 var lab = labs[i];
 
-                // Check if there's at least 2 labs nearby for doing reactions.
                 var closeLabs = lab.pos.findInRange(FIND_STRUCTURES, 2, {
                     filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.id != lab.id
                 });
                 if (closeLabs.length < 2) continue;
 
-                room.memory.canPerformReactions = true;
-                room.memory.labs = {
-                    reactor: [lab.id],
-                    source1: closeLabs[0].id,
-                    source2: closeLabs[1].id,
-                };
+                for (let j in closeLabs) {
+                    lab2 = closeLabs[j];
 
-                // Find other labs close to sources.
-                let close2 = closeLabs[0].pos.findInRange(FIND_STRUCTURES, 2, {
-                    filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.id != lab.id && structure.id != closeLabs[0].id && structure.id != closeLabs[1].id
-                });
-                let close3 = closeLabs[1].pos.findInRange(FIND_STRUCTURES, 2, {
-                    filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.id != lab.id && structure.id != closeLabs[0].id && structure.id != closeLabs[1].id
-                });
-                for (let j in close2) {
-                    for (let k in close3) {
-                        if (close2[j].id == close3[k].id) {
-                            room.memory.labs.reactor.push(close2[j].id);
-                            break;
-                        }
+                    let reactors = [];
+                    for (let k in closeLabs) {
+                        let reactor = closeLabs[k];
+                        if (reactor == lab || reactor == lab2) continue;
+                        if (reactor.pos.getRangeTo(lab2) > 2) continue;
+
+                        reactors.push(reactor.id);
+                    }
+
+                    if (reactors.length == 0) continue;
+                    if (!best || best.reactor.length < reactors.length) {
+                        best = {
+                            source1: lab.id,
+                            source2: lab2.id,
+                            reactor: reactors,
+                        };
                     }
                 }
+            }
 
-                break;
+            if (best) {
+                room.memory.canPerformReactions = true;
+                room.memory.labs = best;
             }
         }
     }

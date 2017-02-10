@@ -60,6 +60,11 @@ Room.prototype.manageLabs = function () {
         var source1 = Game.getObjectById(this.memory.labs.source1);
         var source2 = Game.getObjectById(this.memory.labs.source2);
 
+        if (this.visual) {
+            this.visual.circle(source1.pos, {fill: '#4080ff'});
+            this.visual.circle(source2.pos, {fill: '#4080ff'});
+        }
+
         var labs = this.memory.labs.reactor;
         if (!labs) return;
         if (typeof labs == 'string') {
