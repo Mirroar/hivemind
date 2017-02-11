@@ -9,6 +9,16 @@ var strategyManager = {
     var roomList = strategyManager.generateScoutTargets();
     memory.roomList = roomList;
 
+    let canExpand = false;
+    let ownedRooms = 0;
+    for (let roomName in Game.rooms) {
+      let room = Game.rooms[roomName];
+      if (room.controller && room.controller.my) ownedRooms++;
+    }
+    if (ownedRooms < Game.gcl.level) {
+      canExpand = true;
+    }
+
     // Add data to scout list for creating priorities.
     for (let roomName in roomList) {
       let info = roomList[roomName];
@@ -32,6 +42,26 @@ var strategyManager = {
           info.scoutPriority = scoutPriority;
         }
       }
+      else if (canExpand && info.range > 2 && info.range <= 5) {
+        // This room might be interesting for expansions.
+        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Memory.rooms[roomName].intel.lastScan > 10000) {
+          info.scoutPriority = 1;
+        }
+        else {
+          // Decide how worthwile settling here is.
+          // @todo Factor in amount of mineral sources we have to prefer rooms with rarer minerals.
+          let expansionScore = 0;
+          let intel = Memory.rooms[roomName].intel;
+
+          if (!intel.hasController) continue;
+          if (intel.owner) continue;
+
+          expansionScore += intel.sources.length;
+          if (intel.mineral) {
+            expansionScore++;
+          }
+        }
+      }
     }
   },
 
@@ -52,7 +82,7 @@ var strategyManager = {
       };
     }
 
-    // @todo Flood fill from center of room and add rooms we need intel of.
+    // @todo Flood fill from own rooms and add rooms we need intel of.
     while (_.size(openList) > 0) {
       let minDist = null;
       let nextRoom = null;

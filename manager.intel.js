@@ -20,6 +20,7 @@ Room.prototype.gatherIntel = function () {
     intel.rcl = 0;
     intel.ticksToDowngrade = 0;
     intel.ticksToNeutral = 0;
+    intel.hasController = (room.controller ? true : false);
     if (room.controller && room.controller.owner) {
         intel.owner = room.controller.owner.username;
         intel.rcl = room.controller.level;
@@ -85,7 +86,6 @@ Room.prototype.gatherIntel = function () {
 
     // @todo Check enemy structures.
 
-    // @todo Check for roads and structure in general to aid pathfinding when no creep is in a room. Even better, just generate and save a CostMatrix.
     // @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
 
     // Perform normal scan process.
