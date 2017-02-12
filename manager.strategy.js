@@ -24,6 +24,7 @@ var strategyManager = {
       let info = roomList[roomName];
 
       info.scoutPriority = 0;
+      info.expansionScore = 0;
 
       if (info.range > 0 && info.range <= 2) {
         // This is a potential room for remote mining.
@@ -42,7 +43,7 @@ var strategyManager = {
           info.scoutPriority = scoutPriority;
         }
       }
-      else if (canExpand && info.range > 2 && info.range <= 5) {
+      else if (info.range > 2 && info.range <= 5) {
         // This room might be interesting for expansions.
         if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Memory.rooms[roomName].intel.lastScan > 10000) {
           info.scoutPriority = 1;
@@ -60,8 +61,14 @@ var strategyManager = {
           if (intel.mineral) {
             expansionScore++;
           }
+
+          info.expansionScore = expansionScore;
         }
       }
+    }
+
+    if (canExpand) {
+      strategyManager.manageExpanding();
     }
   },
 
@@ -126,6 +133,11 @@ var strategyManager = {
     }
 
     return roomList;
+  },
+
+  manageExpanding: function () {
+    let memory = Memory.strategy;
+
   },
 
 };
