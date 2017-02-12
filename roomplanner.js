@@ -1,7 +1,7 @@
 var utilities = require('utilities');
 
 var RoomPlanner = function (roomName) {
-  this.roomPlannerVersion = 7;
+  this.roomPlannerVersion = 8;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -158,16 +158,18 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
 
-  // Make sure extensions are built in the right place, remove otherwise.
+  // Make sure towers are built in the right place, remove otherwise.
   var roomTowers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_TOWER);
   var roomTowerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_TOWER);
-  for (let i = 0; i < roomTowers.length; i++) {
-    let tower = roomTowers[i];
-    if (!this.memory.locations.tower[utilities.encodePosition(tower.pos)] && roomTowers.length == CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
-      tower.destroy();
+  if (this.memory.locations.tower) {
+    for (let i = 0; i < roomTowers.length; i++) {
+      let tower = roomTowers[i];
+      if (!this.memory.locations.tower[utilities.encodePosition(tower.pos)] && roomTowers.length == CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
+        tower.destroy();
 
-      // Only kill of one tower for each call of runLogic.
-      break;
+        // Only kill of one tower for each call of runLogic.
+        break;
+      }
     }
   }
 
@@ -860,6 +862,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   var closedList = {};
   var buildingsPlaced = false;
   var bayCount = 0;
+  var helperPlaced = false;
   while (!buildingsPlaced && _.size(openList) > 0) {
     let minDist = null;
     let nextPos = null;
@@ -933,12 +936,20 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
       new Game.logger('roomplanner', this.roomName).debug('Placing new spawn at', nextPos);
     }
-    else if (!this.memory.locations.tower || _.size(this.memory.locations.tower) < 1) {
-      // Place one tower close to spawn for early defense.
+    else if (!helperPlaced) {
+      // Place parking spot for helper creep.
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
 
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'tower', visible);
+      let flagKey = 'Helper:' + nextPos.roomName;
+      if (Game.flags[flagKey]) {
+        Game.flags[flagKey].setPosition(nextPos);
+      }
+      else {
+        nextPos.createFlag(flagKey);
+      }
+      this.placeFlag(nextPos, 'road', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
+      helperPlaced = true;
     }
     else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[maxRoomLevel]) {
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
@@ -1076,6 +1087,8 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         }
       }
     }
+
+    if (!info) break;
 
     info.score = -1;
     positions[bestDir].count++;
