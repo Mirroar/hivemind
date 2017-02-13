@@ -195,10 +195,11 @@ var strategyManager = {
         // Remove claimer from composition once room has been claimed.
         if (Game.rooms[info.roomName]) {
           let room = Game.rooms[info.roomName];
+          Game.flags['AttackSquad:expand'].setPosition(room.controller.pos);
+
           if (room.controller.my) {
             let squad = new Squad('expand');
             squad.setUnitCount('singleClaim', 0);
-            Game.flags['AttackSquad:expand'].setPosition(room.controller.pos);
 
             if (room.controller.level > 3 && room.storage) {
               memory.expand = {};

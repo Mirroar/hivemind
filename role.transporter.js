@@ -1047,12 +1047,14 @@ Creep.prototype.bayUnstuck = function () {
     // If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
     for (let i in this.room.bays) {
         let bay = this.room.bays[i];
+        if (bay.extensions.length < 7) continue;
 
         if (this.pos.x != bay.pos.x || this.pos.y != bay.pos.y) continue;
 
         let best = this.memory.deliverTarget;
 
         if (best && typeof best != 'string' && best.type == 'bay' && this.memory.order.target == i) continue;
+
 
         // We're standing in a bay that we're not delivering to.
         for (let dx = -1; dx <= 1; dx++) {

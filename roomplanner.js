@@ -1,7 +1,7 @@
 var utilities = require('utilities');
 
 var RoomPlanner = function (roomName) {
-  this.roomPlannerVersion = 8;
+  this.roomPlannerVersion = 10;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -21,13 +21,14 @@ var RoomPlanner = function (roomName) {
     this.memory.controlRoom = false;
   }
 
-  //this.drawDebug();
+  this.drawDebug();
 };
 
 RoomPlanner.prototype.drawDebug = function () {
   let debugSymbols = {
     lab: '🔬',
     tower: '⚔',
+    link: '🔗',
   };
 
   let visual = new RoomVisual(this.roomName);
@@ -228,6 +229,33 @@ RoomPlanner.prototype.runLogic = function () {
       let pos = utilities.decodePosition(posName);
 
       if (!this.tryBuild(pos, STRUCTURE_TERMINAL, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
+  // Make sure links are built in the right place, remove otherwise.
+  var roomLinks = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_LINK);
+  var roomLinkSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_LINK);
+  if (this.memory.locations.link) {
+    for (let i = 0; i < roomLinks.length; i++) {
+      let link = roomLinks[i];
+      if (!this.memory.locations.link[utilities.encodePosition(link.pos)]) {
+        link.destroy();
+
+        // Only kill of one link for each call of runLogic.
+        break;
+      }
+    }
+  }
+
+  // Make sure all current links have been built.
+  if (roomLinks.length + roomLinkSites.length < CONTROLLER_STRUCTURES[STRUCTURE_LINK][this.room.controller.level]) {
+    for (let posName in this.memory.locations.link || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_LINK, roomConstructionSites)) {
         doneBuilding = false;
       }
     }
@@ -795,6 +823,71 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
   }
 
+  let tileFreeForBuilding = function (x, y, allowRoads) {
+    if (x < 2 || x > 47 || y < 2 || y > 47) return false;
+
+    let matrixValue = matrix.get(x, y);
+    if (matrixValue > 100) return false;
+    if (wallDistanceMatrix.get(x, y) > 100) return false;
+    if (matrixValue == 10 && wallDistanceMatrix.get(x, y) == 1) return true;
+    if (matrixValue > 1) return false;
+    if (matrixValue == 1 && !allowRoads) return false;
+
+    return true;
+  }
+
+  let planner = this;
+  let placeLink = function (sourceRoads) {
+    let linkPlaced = false;
+    for (let i in sourceRoads) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx == 0 && dy == 0) continue;
+
+          if (tileFreeForBuilding(sourceRoads[i].x + dx, sourceRoads[i].y + dy)) {
+            planner.placeFlag(new RoomPosition(sourceRoads[i].x + dx, sourceRoads[i].y + dy, sourceRoads[i].roomName), 'link', visible);
+            matrix.set(sourceRoads[i].x + dx, sourceRoads[i].y + dy, 255);
+            linkPlaced = true;
+            break;
+          }
+        }
+        if (linkPlaced) break;
+      }
+      if (linkPlaced) break;
+    }
+  }
+
+  let placeContainer = function (sourceRoads, containerType) {
+    let targetPos = null;
+    if (tileFreeForBuilding(sourceRoads[1].x, sourceRoads[1].y, true)) {
+      targetPos = sourceRoads[1];
+    }
+    else if (tileFreeForBuilding(sourceRoads[0].x, sourceRoads[0].y, true)) {
+      targetPos = sourceRoads[0];
+    }
+    else {
+      for (let i in sourceRoads) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (i > 3) continue;
+
+            if (tileFreeForBuilding(sourceRoads[i].x + dx, sourceRoads[i].y + dy, true)) {
+              targetPos = new RoomPosition(sourceRoads[i].x + dx, sourceRoads[i].y + dy, sourceRoads[i].roomName);
+              break;
+            }
+          }
+          if (targetPos) break;
+        }
+        if (targetPos) break;
+      }
+    }
+
+    if (targetPos) {
+      planner.placeFlag(targetPos, 'container' + (containerType ? '.' + containerType : ''), visible);
+      matrix.set(targetPos.x, targetPos.y, 1);
+    }
+  }
+
   if (this.room) {
     // @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
     // We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
@@ -804,9 +897,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         if (i == 0) continue;
         this.placeFlag(controllerRoads[i], 'road.controller', visible);
       }
-      this.placeFlag(controllerRoads[1], 'container.controller', visible);
-      this.placeFlag(controllerRoads[0], 'link.controller', visible);
-      matrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
+      placeContainer(controllerRoads, 'controller');
+
+      // Place a link near controller, but off the calculated path.
+      placeLink(controllerRoads);
     }
 
     if (this.room.mineral) {
@@ -815,7 +909,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       for (let i in mineralRoads) {
         this.placeFlag(mineralRoads[i], 'road.mineral', visible);
       }
-      this.placeFlag(mineralRoads[1], 'container.mineral', visible);
+      placeContainer(mineralRoads, 'mineral');
     }
 
     if (this.room.sources) {
@@ -824,8 +918,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         for (let i in sourceRoads) {
           this.placeFlag(sourceRoads[i], 'road.source', visible);
         }
-        this.placeFlag(sourceRoads[1], 'container.source', visible);
-        // @todo Place a link near sources, but off the calculated path and not directly next to source.
+        placeContainer(sourceRoads, 'source');
+
+        // Place a link near sources, but off the calculated path.
+        placeLink(sourceRoads);
       }
     }
   }
@@ -899,17 +995,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         //console.log('openList', pos.x, pos.y);
         openList[posName] = {range: minDist + 1};
       }
-    }
-
-    let tileFreeForBuilding = function (x, y, allowRoads) {
-      let matrixValue = matrix.get(x, y);
-      if (matrixValue > 100) return false;
-      if (wallDistanceMatrix.get(x, y) > 100) return false;
-      if (matrixValue == 10 && wallDistanceMatrix.get(x, y) == 1) return true;
-      if (matrixValue > 1) return false;
-      if (matrixValue == 1 && !allowRoads) return false;
-
-      return true;
     }
 
     // Handle current position.
