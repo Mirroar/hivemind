@@ -346,7 +346,7 @@ RoomPlanner.prototype.runLogic = function () {
   }
 
   if (!wallsBuilt) return;
-  new Game.logger('roomplanner', this.roomName).debug('walls are finished');
+  new Game.logger('room plan', this.roomName).debug('walls are finished');
 
   // Slate all unmanaged walls and ramparts for deconstruction.
   var unwantedDefenses = this.room.find(FIND_STRUCTURES, {
@@ -934,7 +934,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, this.roomName), 'road', visible);
       matrix.set(nextPos.x, nextPos.y + 1, 1);
 
-      new Game.logger('roomplanner', this.roomName).debug('Placing new spawn at', nextPos);
+      new Game.logger('room plan', this.roomName).debug('Placing new spawn at', nextPos);
     }
     else if (!helperPlaced) {
       // Place parking spot for helper creep.

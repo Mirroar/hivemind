@@ -1,3 +1,5 @@
+var Squad = require('manager.squad');
+
 var strategyManager = {
 
   runLogic: function () {
@@ -25,6 +27,7 @@ var strategyManager = {
 
       info.scoutPriority = 0;
       info.expansionScore = 0;
+      info.roomName = roomName;
 
       if (info.range > 0 && info.range <= 2) {
         // This is a potential room for remote mining.
@@ -45,7 +48,7 @@ var strategyManager = {
       }
       else if (info.range > 2 && info.range <= 5) {
         // This room might be interesting for expansions.
-        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Memory.rooms[roomName].intel.lastScan > 10000) {
+        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 10000) {
           info.scoutPriority = 1;
         }
         else {
@@ -67,9 +70,7 @@ var strategyManager = {
       }
     }
 
-    if (canExpand) {
-      strategyManager.manageExpanding();
-    }
+    strategyManager.manageExpanding(ownedRooms);
   },
 
   generateScoutTargets: function () {
@@ -135,9 +136,87 @@ var strategyManager = {
     return roomList;
   },
 
-  manageExpanding: function () {
+  manageExpanding: function (ownedRooms) {
     let memory = Memory.strategy;
 
+    if (!memory.expand) {
+      memory.expand = {};
+    }
+
+    if (!memory.expand.currentTarget && ownedRooms < Game.gcl.level) {
+      // Choose a room to expand to.
+      // @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
+      let bestTarget = null;
+      for (let i in memory.roomList) {
+        let info = memory.roomList[i];
+        if (!info.expansionScore || info.expansionScore <= 0) continue;
+
+        if (!bestTarget || bestTarget.expansionScore < info.expansionScore) {
+          bestTarget = info;
+        }
+      }
+
+      if (bestTarget) {
+        memory.expand.currentTarget = bestTarget;
+      }
+    }
+
+    if (memory.expand.currentTarget) {
+      let info = memory.expand.currentTarget;
+      if (!memory.expand.started) {
+        // Spawn expanstion squad at origin.
+        let key = 'SpawnSquad:expand';
+        let spawnPos = new RoomPosition(25, 25, info.origin);
+        if (Game.flags[key]) {
+          Game.flags[key].setPosition(spawnPos);
+        }
+        else {
+          spawnPos.createFlag(key);
+        }
+
+        // Sent to target room.
+        key = 'AttackSquad:expand';
+        let destinationPos = new RoomPosition(25, 25, info.roomName);
+        if (Game.flags[key]) {
+          Game.flags[key].setPosition(destinationPos);
+        }
+        else {
+          destinationPos.createFlag(key);
+        }
+
+        // @todo Place flags to guide squad through safe rooms and make pathfinding easier.
+        let squad = new Squad('expand');
+        squad.clearUnits();
+        squad.setUnitCount('singleClaim', 1);
+        squad.setUnitCount('builder', 2);
+        memory.expand.started = true;
+      }
+      else {
+        // Remove claimer from composition once room has been claimed.
+        if (Game.rooms[info.roomName]) {
+          let room = Game.rooms[info.roomName];
+          if (room.controller.my) {
+            let squad = new Squad('expand');
+            squad.setUnitCount('singleClaim', 0);
+            Game.flags['AttackSquad:expand'].setPosition(room.controller.pos);
+
+            if (room.controller.level > 3 && room.storage) {
+              memory.expand = {};
+              squad.clearUnits();
+
+              if (Game.flags['AttackSquad:expand']) {
+                Game.flags['AttackSquad:expand'].remove();
+              }
+              if (Game.flags['SpawnSquad:expand']) {
+                Game.flags['SpawnSquad:expand'].remove();
+              }
+
+              return;
+            }
+          }
+        }
+      }
+    }
   },
 
 };

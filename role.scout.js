@@ -50,7 +50,6 @@ Creep.prototype.chooseScoutTarget = function () {
   let memory = Memory.strategy;
 
   let best = null;
-  let bestRoom = null;
   for (let roomName in memory.roomList) {
     let info = memory.roomList[roomName];
 
@@ -58,13 +57,12 @@ Creep.prototype.chooseScoutTarget = function () {
       if (!best || best.scoutPriority < info.scoutPriority) {
         // @todo Check distance / path to room.
         best = info;
-        bestRoom = roomName;
       }
     }
   }
 
   if (best) {
-    this.memory.scoutTarget = bestRoom;
+    this.memory.scoutTarget = best.roomName;
   }
 
   if (!this.memory.scoutTarget) {

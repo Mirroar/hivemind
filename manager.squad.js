@@ -4,6 +4,10 @@ var Squad = function(squadName) {
     this.name = squadName;
     this.units = {};
 
+    if (!Memory.squads) {
+        Memory.squads = {};
+    }
+
     if (!Memory.squads[squadName]) {
         Memory.squads[squadName] = {
             composition: {},
@@ -46,6 +50,20 @@ Squad.prototype.removeUnit = function (unitType) {
     this.memory.composition[unitType]--;
 
     return this.memory.composition[unitType];
+};
+
+/**
+ * Set the number of requested units of a certain type.
+ */
+Squad.prototype.setUnitCount = function (unitType, count) {
+    this.memory.composition[unitType] = count;
+};
+
+/**
+ * Clears registered units for this squad.
+ */
+Squad.prototype.clearUnits = function () {
+    this.memory.composition = {};
 };
 
 /**

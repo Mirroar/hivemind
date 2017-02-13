@@ -423,6 +423,16 @@ Creep.prototype.performMilitaryMove = function () {
             var attackFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('AttackSquad:' + creep.memory.squadName));
             if (attackFlags.length > 0) {
                 creep.moveTo(attackFlags[0]);
+
+                if (creep.pos.roomName == attackFlags[0].pos.roomName) {
+                    if (this.memory.squadUnitType == 'builder') {
+                        // Rebrand as remote builder to work in this room from now on.
+                        this.memory.role = 'builder.remote';
+                        this.memory.target = utilities.encodePosition(this.pos);
+                        this.memory.starting = false;
+                    }
+                }
+
                 return;
             }
         }

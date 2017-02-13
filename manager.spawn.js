@@ -677,7 +677,7 @@ Room.prototype.manageSpawns = function () {
                 var commandParts = flag.name.split(':');
                 var squadName = commandParts[1];
 
-                if (!Memory.squads[squadName]) continue;
+                if (!Memory.squads || !Memory.squads[squadName]) continue;
 
                 //console.log('Spawning squad', squadName);
                 // @todo Initialize Game.squads in main loop and use that.
