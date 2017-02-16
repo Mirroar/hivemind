@@ -119,7 +119,7 @@ Creep.prototype.calculateRoomPath = function (targetRoom) {
         let exit = Memory.rooms[nextRoom].intel.exits[i];
         if (openList[exit] || closedList[exit]) continue;
 
-        if (Memory.rooms[exit]) {
+        if (Memory.rooms[exit] && Memory.rooms[exit].intel) {
           let intel = Memory.rooms[exit].intel;
           if (intel.inaccessible) continue;
           if (intel.structures && _.size(intel.structures[STRUCTURE_KEEPER_LAIR]) > 0) continue;
