@@ -851,6 +851,8 @@ var main = {
                 var linePrefix = '                     ';
                 new Game.logger('cpu').log('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
             }
+
+            stats.recordStat('cpu_total', time);
         };
 
         if (useProfiler) {

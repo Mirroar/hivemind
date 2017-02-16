@@ -1,4 +1,5 @@
 var utilities = require('utilities');
+var stats = require('stats');
 var Squad = require('manager.squad');
 
 var strategyManager = {
@@ -11,16 +12,6 @@ var strategyManager = {
 
     var roomList = strategyManager.generateScoutTargets();
     memory.roomList = roomList;
-
-    let canExpand = false;
-    let ownedRooms = 0;
-    for (let roomName in Game.rooms) {
-      let room = Game.rooms[roomName];
-      if (room.controller && room.controller.my) ownedRooms++;
-    }
-    if (ownedRooms < Game.gcl.level) {
-      canExpand = true;
-    }
 
     // Add data to scout list for creating priorities.
     for (let roomName in roomList) {
@@ -97,7 +88,7 @@ var strategyManager = {
       }
     }
 
-    strategyManager.manageExpanding(ownedRooms);
+    strategyManager.manageExpanding();
   },
 
   generateScoutTargets: function () {
@@ -163,14 +154,27 @@ var strategyManager = {
     return roomList;
   },
 
-  manageExpanding: function (ownedRooms) {
+  manageExpanding: function () {
     let memory = Memory.strategy;
 
     if (!memory.expand) {
       memory.expand = {};
     }
 
-    if (!memory.expand.currentTarget && ownedRooms < Game.gcl.level) {
+    let canExpand = false;
+    let ownedRooms = 0;
+    for (let roomName in Game.rooms) {
+      let room = Game.rooms[roomName];
+      if (room.controller && room.controller.my) ownedRooms++;
+    }
+    if (ownedRooms < Game.gcl.level) {
+      // Check if we have some cpu power to spare.
+      if (stats.getStat('cpu_total', 10000) && stats.getStat('cpu_total', 10000) < Game.cpu.limit * 0.8 && stats.getStat('cpu_total', 1000) < Game.cpu.limit * 0.8) {
+        canExpand = true;
+      }
+    }
+
+    if (!memory.expand.currentTarget && canExpand) {
       // Choose a room to expand to.
       // @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
       let bestTarget = null;
