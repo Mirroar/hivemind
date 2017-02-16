@@ -272,9 +272,11 @@ Room.prototype.getRemoteHarvestTargets = function () {
   if (!Memory.strategy) return [];
   let memory = Memory.strategy;
 
+  let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name).length;
+  let maxHarvesting = 2 * numSpawns;
   let targets = {};
 
-  for (let numTargets = 0; numTargets < 2; numTargets++) {
+  for (let numTargets = 0; numTargets < maxHarvesting; numTargets++) {
     let bestTarget = null;
     for (let i in memory.roomList) {
       let info = memory.roomList[i];
