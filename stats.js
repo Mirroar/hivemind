@@ -52,6 +52,51 @@ var stats = {
         memory.remoteHarvesting[target].defenseCost += cost;
     },
 
+    recordStat: function (key, value) {
+        if (!Memory.history) {
+            Memory.history = {};
+        }
+        if (!Memory.history[key]) {
+            Memory.history[key] = {};
+        }
+
+        stats.saveStatValue(Memory.history[key], 1, value);
+    },
+
+    saveStatValue: function (memory, multiplier, value) {
+        var increment = 10;
+
+        if (typeof memory[multiplier] === 'undefined') {
+            memory[multiplier] = {
+                currentValues: [],
+                previousValues: [],
+            };
+        }
+
+        if (memory[multiplier].currentValues.length >= increment) {
+            var avg = 0;
+            for (var i in memory[multiplier].currentValues) {
+                avg += memory[multiplier].currentValues[i];
+            }
+            avg /= memory[multiplier].currentValues.length;
+
+            stats.saveStatValue(memory, multiplier * increment, avg);
+
+            memory[multiplier].previousValues = memory[multiplier].currentValues;
+            memory[multiplier].currentValues = [];
+        }
+
+        memory[multiplier].currentValues.push(value);
+    },
+
+    getStat: function (key, interval) {
+        // @todo Allow intervals that are not directly stored, like 300.
+        if (!Memory.history || !Memory.history[key] || !Memory.history[key][interval]) {
+            return null;
+        }
+
+        return _.last(Memory.history[key][interval].currentValues);
+    },
 };
 
 module.exports = stats;
