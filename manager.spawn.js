@@ -763,7 +763,9 @@ Room.prototype.manageSpawns = function () {
             }
 
             // We've got nothing to do, how about some remote harvesting?
+            let harvestPositions = [];
             var harvestFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('HarvestRemote'));
+
             for (var i in harvestFlags) {
                 let flag = harvestFlags[i];
                 let isSpecificFlag = false;
@@ -781,8 +783,27 @@ Room.prototype.manageSpawns = function () {
                     continue;
                 }
 
+                harvestPositions.push(flag.pos);
+            }
+
+            let remoteHarvestTargets = spawn.room.getRemoteHarvestTargets();
+            for (var i in remoteHarvestTargets) {
+                let roomName = remoteHarvestTargets[i].roomName;
+                if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) continue;
+                let sources = Memory.rooms[roomName].intel.sources;
+                for (let j in sources) {
+                    if (typeof sources[j] == 'object') {
+                        harvestPositions.push(new RoomPosition(sources[j].x, sources[j].y, roomName));
+                    }
+                }
+            }
+
+            for (var i in harvestPositions) {
+                let pos = harvestPositions[i];
+                let isSpecificFlag = false;
+
                 // First of all, if it's not safe, send a bruiser.
-                var roomMemory = Memory.rooms[flag.pos.roomName];
+                var roomMemory = Memory.rooms[pos.roomName];
                 if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
                     var position = spawn.pos;
                     if (spawn.room.storage) {
@@ -790,7 +811,7 @@ Room.prototype.manageSpawns = function () {
                     }
 
                     // Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
-                    var brawlPosition = new RoomPosition(25, 25, flag.pos.roomName);
+                    var brawlPosition = new RoomPosition(25, 25, pos.roomName);
 
                     var maxBrawlers = 1;
                     var brawlers = _.filter(Game.creepsByRole.brawler || [], (creep) => {
@@ -801,12 +822,12 @@ Room.prototype.manageSpawns = function () {
                     });
 
                     if (!brawlers || brawlers.length < maxBrawlers) {
-                        let result = spawn.spawnBrawler(brawlPosition, 4, utilities.encodePosition(flag.pos));
+                        let result = spawn.spawnBrawler(brawlPosition, 4, utilities.encodePosition(pos));
                         if (result) {
-                            //console.log('Brawler spawning to defend room ' + flag.pos.roomName);
+                            //console.log('Brawler spawning to defend room ' + pos.roomName);
 
                             if (result) {
-                                let position = utilities.encodePosition(flag.pos);
+                                let position = utilities.encodePosition(pos);
                                 console.log('Spawning new brawler to defend', position, ':', result);
 
                                 let cost = 0;
@@ -823,7 +844,7 @@ Room.prototype.manageSpawns = function () {
 
                 // If it's safe or brawler is sent, start harvesting.
                 var doSpawn = true;
-                var flagPosition = utilities.encodePosition(flag.pos);
+                var flagPosition = utilities.encodePosition(pos);
                 var position = spawn.pos;
                 if (spawn.room.storage) {
                     position = spawn.room.storage.pos;
@@ -832,7 +853,7 @@ Room.prototype.manageSpawns = function () {
 
                 // Cache path when possible.
                 try {
-                    utilities.precalculatePaths(spawn.room, flag);
+                    utilities.precalculatePaths(spawn.room, pos);
                 }
                 catch (e) {
                     console.log('Error in pathfinding:', e);
@@ -848,17 +869,14 @@ Room.prototype.manageSpawns = function () {
                     var harvesters = _.filter(Game.creepsByRole['harvester.remote'] || [], (creep) => creep.memory.storage == position && creep.memory.source == flagPosition);
                     var haulers = _.filter(Game.creepsByRole.hauler || [], (creep) => creep.memory.storage == position && creep.memory.source == flagPosition);
 
-                    /*if (flag.pos.roomName == 'E49S46')
-                    console.log('--', flagPosition, 'haulers:', haulers.length);//*/
-
                     var maxRemoteHarvesters = 1;
                     var maxRemoteHaulers = 0;
                     if (memory.revenue > 0 || memory.hasContainer) {
                         // @todo Calculate number of needed haulers.
                         maxRemoteHaulers = 1;
 
-                        if (Game.rooms[flag.pos.roomName]) {
-                            let room = Game.rooms[flag.pos.roomName];
+                        if (Game.rooms[pos.roomName]) {
+                            let room = Game.rooms[pos.roomName];
                             if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == 'Mirroar'))) {
                                 maxRemoteHaulers = 2;
                             }
@@ -882,7 +900,6 @@ Room.prototype.manageSpawns = function () {
                     }
                     if (travelTime) {
                         maxCarryParts = Math.ceil(travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
-                        //console.log('Need', maxCarryParts, 'carry parts when transporting remotely harvested energy from', flagPosition);
 
                         // If we cannot create big enough haulers (yet), create more of them!
                         let bodyWeights = spawn.getHaulerBodyWeights();
@@ -896,62 +913,58 @@ Room.prototype.manageSpawns = function () {
 
                         let multiplier = Math.min(maxCarryParts / carryCount, 3);
                         maxRemoteHaulers *= multiplier;
-
-                        //console.log(spawn.room.name, 'adjusting number of haulers by', multiplier, flagPosition);
                     }
 
                     for (var j in harvesters) {
                         var creep = harvesters[j];
-                        //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
                         if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
                             memory.harvesters.push(creep.id);
                         }
                     }
-                    /*if (flag.pos.roomName == 'E49S46')
-                    console.log('--', flagPosition, 'harvesters:', memory.harvesters.length, '/', maxRemoteHarvesters);//*/
+
                     if (memory.harvesters.length < maxRemoteHarvesters) {
                         doSpawn = true;
                     }
 
                     for (var j in haulers) {
                         let creep = haulers[j];
-                        //console.log(creep.memory.storage, position, creep.memory.source, flagPosition);
                         if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
                             haulCount++;
                         }
                     }
-                    /*if (flag.pos.roomName == 'E49S46')
-                    console.log('--', flagPosition, 'haulers:', haulCount, '/', maxRemoteHaulers, '@', maxCarryParts);//*/
+
                     if (haulCount < maxRemoteHaulers && !doSpawn) {
                         // Spawn hauler if necessary, but not if harvester is needed first.
-                        let result = spawn.spawnHauler(flag.pos, maxCarryParts);
+                        let result = spawn.spawnHauler(pos, maxCarryParts);
                         if (result) {
                             var cost = 0;
                             for (var part in Memory.creeps[result].body) {
                                 var count = Memory.creeps[result].body[part];
                                 cost += BODYPART_COST[part] * count;
                             }
-                            stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(flag.pos), cost);
+                            stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(pos), cost);
                             return true;
                         }
                     }
                 }
 
                 if (doSpawn) {
-                    let result = spawn.spawnRemoteHarvester(flag.pos);
+                    let result = spawn.spawnRemoteHarvester(pos);
                     if (result) {
                         let cost = 0;
                         for (let part in Memory.creeps[result].body) {
                             let count = Memory.creeps[result].body[part];
                             cost += BODYPART_COST[part] * count;
                         }
-                        stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(flag.pos), cost);
+                        stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(pos), cost);
                         return true;
                     }
                 }
             }
 
             // No harvester spawned? How about some claimers?
+            // @todo Move from flags to positions for automation.
+            var reservePositions = [];
             var reserveFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('ReserveRoom'));
             for (var i in reserveFlags) {
                 var flag = reserveFlags[i];
@@ -970,9 +983,27 @@ Room.prototype.manageSpawns = function () {
                     continue;
                 }
 
+                reservePositions.push(flag.pos);
+            }
+
+            for (var i in remoteHarvestTargets) {
+                let roomName = remoteHarvestTargets[i].roomName;
+                if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) continue;
+                let intel = Memory.rooms[roomName].intel;
+                if (!intel.structures || !intel.structures[STRUCTURE_CONTROLLER]) continue;
+
+                let controllers = intel.structures[STRUCTURE_CONTROLLER];
+                for (let j in controllers) {
+                    reservePositions.push(new RoomPosition(controllers[j].x, controllers[j].y, roomName));
+                }
+            }
+
+            for (var i in reservePositions) {
+                let pos = reservePositions[i];
+
                 // Cache path when possible.
                 try {
-                    utilities.precalculatePaths(spawn.room, flag);
+                    utilities.precalculatePaths(spawn.room, pos);
                 }
                 catch (e) {
                     console.log('Error in pathfinding:', e);
@@ -988,27 +1019,28 @@ Room.prototype.manageSpawns = function () {
                 for (var j in claimers) {
                     var creep = claimers[j];
 
-                    if (creep.memory.target == utilities.encodePosition(flag.pos)) {
+                    if (creep.memory.target == utilities.encodePosition(pos)) {
                         claimerIds.push(creep.id);
                     }
                 }
                 if (claimerIds.length < maxClaimers) {
                     doSpawn = true;
                 }
-                if (Memory.rooms[flag.pos.roomName]
-                    && Memory.rooms[flag.pos.roomName].lastClaim
-                    && Memory.rooms[flag.pos.roomName].lastClaim.value + (Memory.rooms[flag.pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.5
+                if (Memory.rooms[pos.roomName]
+                    && Memory.rooms[pos.roomName].lastClaim
+                    && Memory.rooms[pos.roomName].lastClaim.value + (Memory.rooms[pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.5
                 ) {
                     doSpawn = false;
                 }
 
                 if (doSpawn) {
-                    let result = spawn.spawnClaimer(flag.pos, 'reserve');
+                    let result = spawn.spawnClaimer(pos, 'reserve');
 
                     if (result) {
                         // Add cost to a random harvest flag in the room.
+                        // @todo Now that we don't always use flags, find a better way to associate.
                         let harvestFlags = _.filter(Game.flags, (flag2) => {
-                            if (flag2.name.startsWith('HarvestRemote') && flag2.pos.roomName == flag.pos.roomName) {
+                            if (flag2.name.startsWith('HarvestRemote') && flag2.pos.roomName == pos.roomName) {
                                 // Make sure not to harvest from wrong rooms.
                                 if (flag2.name.startsWith('HarvestRemote:')) {
                                     let parts = flag2.name.split(':');
@@ -1050,7 +1082,7 @@ Room.prototype.manageSpawns = function () {
             }
         }
 
-        // Let only one spawner spawn each tickt to prevent confusion.
+        // Let only one spawner spawn each tick to prevent confusion.
         break;
     }
 };

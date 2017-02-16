@@ -20,8 +20,8 @@ Creep.prototype.performScout = function () {
   }
 
   // Check which room to go to next.
-
-  if (!this.memory.nextRoom || this.pos.roomName == this.memory.nextRoom) {
+  let inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
+  if (!this.memory.nextRoom || (this.pos.roomName == this.memory.nextRoom && inRoom)) {
     let path = this.calculateRoomPath(this.memory.scoutTarget);
     if (_.size(path) < 1) {
       this.chooseScoutTarget();
@@ -52,11 +52,16 @@ Creep.prototype.chooseScoutTarget = function () {
   let best = null;
   for (let roomName in memory.roomList) {
     let info = memory.roomList[roomName];
+    if (roomName == this.pos.roomName) continue;
 
     if (info.origin == this.memory.origin && info.scoutPriority > 0) {
       if (!best || best.scoutPriority < info.scoutPriority) {
-        // @todo Check distance / path to room.
-        best = info;
+        // Check distance / path to room.
+        let path = this.calculateRoomPath(roomName);
+
+        if (path) {
+          best = info;
+        }
       }
     }
   }
@@ -113,6 +118,14 @@ Creep.prototype.calculateRoomPath = function (targetRoom) {
       for (let i in Memory.rooms[nextRoom].intel.exits) {
         let exit = Memory.rooms[nextRoom].intel.exits[i];
         if (openList[exit] || closedList[exit]) continue;
+
+        if (Memory.rooms[exit]) {
+          let intel = Memory.rooms[exit].intel;
+          if (intel.inaccessible) continue;
+          if (intel.structures && _.size(intel.structures[STRUCTURE_KEEPER_LAIR]) > 0) continue;
+
+          // @todo Don't send scouts through rooms owned by other players, either.
+        }
 
         let path = [];
         for (let i in info.path) {

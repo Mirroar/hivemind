@@ -336,7 +336,13 @@ Room.prototype.enhanceData = function () {
 
         if (intel.sources) {
             for (let i in intel.sources) {
-                let source = Game.getObjectById(intel.sources[i]);
+                let source;
+                if (typeof intel.sources[i] == 'object') {
+                    source = Game.getObjectById(intel.sources[i].id);
+                }
+                else {
+                    source = Game.getObjectById(intel.sources[i]);
+                }
                 this.sources.push(source);
                 source.enhanceData();
             }

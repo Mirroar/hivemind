@@ -1,3 +1,4 @@
+var utilities = require('utilities');
 var Squad = require('manager.squad');
 
 var strategyManager = {
@@ -27,6 +28,7 @@ var strategyManager = {
 
       info.scoutPriority = 0;
       info.expansionScore = 0;
+      info.harvestPriority = 0;
       info.roomName = roomName;
 
       if (info.range > 0 && info.range <= 2) {
@@ -37,8 +39,33 @@ var strategyManager = {
         }
         else {
           let intel = Memory.rooms[roomName].intel;
-          if (Game.time - intel.lastScan > 10000) {
+          if (Game.time - intel.lastScan > 5000) {
             scoutPriority = 2;
+          }
+
+          if (intel.hasController) {
+            let income = -2000; // Flat cost for room reservation
+            let pathLength = 0;
+            for (let i in intel.sources) {
+              income += 3000;
+              pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
+              if (typeof(intel.sources[i]) == 'object') {
+                let sourcePos = new RoomPosition(intel.sources[i].x, intel.sources[i].y, roomName);
+                utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
+
+                if (Memory.rooms[info.origin].remoteHarvesting) {
+                  let harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
+                  if (harvestMemory && harvestMemory.cachedPath) {
+                    pathLength -= info.range * 50;
+                    pathLength += harvestMemory.cachedPath.path.length;
+                  }
+                }
+              }
+            }
+
+            if (pathLength > 0) {
+              info.harvestPriority = income / pathLength;
+            }
           }
         }
 
@@ -48,7 +75,7 @@ var strategyManager = {
       }
       else if (info.range > 2 && info.range <= 5) {
         // This room might be interesting for expansions.
-        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 10000) {
+        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 5000) {
           info.scoutPriority = 1;
         }
         else {
@@ -96,7 +123,7 @@ var strategyManager = {
       let nextRoom = null;
       for (let rName in openList) {
         let info = openList[rName];
-        if (!minDist || info.range < minDist) {
+        if (minDist === null || info.range < minDist) {
           minDist = info.range;
           nextRoom = rName;
         }
@@ -237,6 +264,37 @@ Room.prototype.needsScout = function () {
   }
 
   return false;
+};
+
+Room.prototype.getRemoteHarvestTargets = function () {
+  // @todo Cache this if we use it during spawning.
+
+  if (!Memory.strategy) return [];
+  let memory = Memory.strategy;
+
+  let targets = {};
+
+  for (let numTargets = 0; numTargets < 2; numTargets++) {
+    let bestTarget = null;
+    for (let i in memory.roomList) {
+      let info = memory.roomList[i];
+
+      if (targets[info.roomName]) continue;
+      if (info.origin !== this.name) continue;
+
+      if (info.harvestPriority && info.harvestPriority > 0) {
+        if (!bestTarget || bestTarget.harvestPriority < info.harvestPriority) {
+          bestTarget = info;
+        }
+      }
+    }
+
+    if (bestTarget) {
+      targets[bestTarget.roomName] = bestTarget;
+    }
+  }
+
+  return targets;
 };
 
 module.exports = strategyManager;

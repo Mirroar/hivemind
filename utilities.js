@@ -205,13 +205,13 @@ Room.prototype.scan = function () {
 
 var utilities = {
 
-    precalculatePaths: function (room, sourceFlag) {
+    precalculatePaths: function (room, sourcePos) {
         if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.5) return;
 
         var start = Game.cpu.getUsed();
-        //console.log('precalculate harvest paths', room, sourceFlag);
+        //console.log('precalculate harvest paths', room, sourcePos);
 
-        var flagPosition = utilities.encodePosition(sourceFlag.pos);
+        var flagPosition = utilities.encodePosition(sourcePos);
 
         if (!room.memory.remoteHarvesting) {
             room.memory.remoteHarvesting = {};
@@ -232,7 +232,7 @@ var utilities = {
             startPosition = room.storage.pos;
         }
 
-        var endPosition = sourceFlag.pos;
+        var endPosition = sourcePos;
         //console.log('Finding path between', startPosition, 'and', endPosition);
 
         var result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
