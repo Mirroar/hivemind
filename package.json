@@ -1,0 +1,17 @@
+{
+  "name": "screeps-bot-hivemind",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "screeps_bot": true,
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Mirroar/hivemind.git"
+  },
+  "author": "David Franke",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Mirroar/hivemind/issues"
+  }
+}
