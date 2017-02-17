@@ -44,7 +44,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 var structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
                     filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.hits
                 });
-                if (!creep.room.controller || !creep.room.controller.owner || creep.room.controller.owner.username == 'Voronoi') structures = [];
+                if (!creep.room.controller || !creep.room.controller.owner || Game.isAlly(creep.room.controller.owner.username)) structures = [];
 
                 if (structures && structures.length > 0) {
                     for (var i in structures) {
@@ -99,7 +99,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 });
                 if (!damaged || damaged.length == 0) {
                     damaged = creep.room.find(FIND_HOSTILE_CREEPS, {
-                        filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax) && friendly.owner.username == 'Voronoi')
+                        filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax) && Game.isAlly(friendly.owner.username))
                     });
                 }
 
@@ -414,7 +414,7 @@ Creep.prototype.performMilitaryMove = function () {
         if (target) {
             var result = creep.moveTo(target, {
                 reusePath: 5,
-                ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && creep.room.controller.owner.username != 'Voronoi')) && creep.memory.body.attack,
+                ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !Game.isAlly(creep.room.controller.owner.username))) && creep.memory.body.attack,
             });
         }
     }
@@ -476,7 +476,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 }
             }
         }
-        else if (target && (!target.my && target.owner.username != 'Voronoi')) {
+        else if (target && (!target.my && !Game.isAlly(target.owner.username))) {
             var result = creep.attack(target);
             if (result == OK) {
                 attacked = true;
@@ -490,7 +490,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 for (let i in hostile) {
                     // Check if enemy is harmless, and ignore it.
                     if (!hostile[i].isDangerous()) continue;
-                    if (hostile[i].owner && hostile[i].owner.username == 'Voronoi') continue;
+                    if (hostile[i].owner && Game.isAlly(hostile[i].owner.username)) continue;
 
                     if (creep.attack(hostile[i]) == OK) {
                         attacked = true;
@@ -504,7 +504,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 var hostile = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
                     filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.structureType != STRUCTURE_TERMINAL
                 });
-                if (creep.room.controller && creep.room.controller.owner && creep.room.controller.owner.username == 'Voronoi') hostile = [];
+                if (creep.room.controller && creep.room.controller.owner && Game.isAlly(creep.room.controller.owner.username)) hostile = [];
                 if (hostile && hostile.length > 0) {
                     // Find target with lowest HP to kill off (usually relevant while trying to break through walls).
                     let minHits;
@@ -533,7 +533,7 @@ Creep.prototype.performMilitaryHeal = function () {
     if (creep.memory.order) {
         var target = Game.getObjectById(creep.memory.order.target);
 
-        if (target && (target.my || (target.owner && target.owner.username == 'Voronoi'))) {
+        if (target && (target.my || (target.owner && Game.isAlly(target.owner.username)))) {
             var result = creep.heal(target);
             if (result == OK) {
                 healed = true;

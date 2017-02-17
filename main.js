@@ -54,6 +54,23 @@ var Bay = require('manager.bay');
 var Exploit = require('manager.exploit');
 var Squad = require('manager.squad');
 
+var relations = {
+  allies: [],
+};
+
+try {
+  var localRelations = require('relations.local');
+
+  if (localRelations.allies) {
+    for (var i in localRelations.allies) {
+      relations.allies.push(localRelations.allies[i]);
+    }
+  }
+}
+catch (e) {
+  // No local relations declared, ignore.
+}
+
 // @todo Decide when it is a good idea to send out harvesters to adjacent unclaimend tiles.
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 // @todo spawn new buildings where reasonable when controller upgrades or stuff gets destroyed.
@@ -573,6 +590,11 @@ var main = {
             }
 
             var logger = new Game.logger('main');
+
+            Game.relations = relations;
+            Game.isAlly = function (username) {
+                return Game.relations.allies.indexOf(username) !== -1;
+            }
 
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
                 logger.log('Bucket:', Game.cpu.bucket);

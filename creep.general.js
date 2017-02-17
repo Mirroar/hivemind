@@ -4,11 +4,7 @@ var utilities = require('utilities');
  * Determines if a creep is dangerous and should be attacked.
  */
 Creep.prototype.isDangerous = function () {
-    // Ignore Alekseyka's creeps when remote harvesting.
-    if ((this.pos.roomName == 'E46S41' || this.pos.roomName == 'E46S42' || this.pos.roomName == 'E47S41') && this.owner.username == 'Alekseyka') {
-        return false;
-    }
-    if (this.owner.username == 'Voronoi') return false;
+    if (Game.isAlly(this.owner.username)) return false;
 
     for (let j in this.body) {
         let type = this.body[j].type;
