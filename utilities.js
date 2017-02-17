@@ -205,6 +205,15 @@ Room.prototype.scan = function () {
 
 var utilities = {
 
+    /**
+     * Dynamically determines the username of the current user.
+     */
+    getUsername: function () {
+        for (var i in Game.spawns) {
+            return Game.spawns[i].owner.username;
+        }
+    },
+
     precalculatePaths: function (room, sourcePos) {
         if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.5) return;
 

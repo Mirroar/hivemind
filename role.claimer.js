@@ -59,7 +59,7 @@ Creep.prototype.performReserve = function () {
         var result = this.reserveController(target);
         if (result == OK) {
             var reservation = 0;
-            if (this.room.controller.reservation && this.room.controller.reservation.username == 'Mirroar') {
+            if (this.room.controller.reservation && this.room.controller.reservation.username == utilities.getUsername()) {
                 reservation = this.room.controller.reservation.ticksToEnd;
             }
             this.room.memory.lastClaim = {

@@ -122,7 +122,7 @@ var intelManager = {
         }
 
         var intel = Memory.rooms[roomName].intel;
-        if (intel.owner && intel.owner != 'Mirroar') {
+        if (intel.owner && intel.owner != _.sample(Game.spawns).owner.username) {
             return true;
         }
 

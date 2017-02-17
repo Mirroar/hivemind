@@ -877,7 +877,7 @@ Room.prototype.manageSpawns = function () {
 
                         if (Game.rooms[pos.roomName]) {
                             let room = Game.rooms[pos.roomName];
-                            if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == 'Mirroar'))) {
+                            if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == utilities.getUsername()))) {
                                 maxRemoteHaulers = 2;
                             }
                         }
@@ -1094,7 +1094,7 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
     // Use less work parts if room is not reserved yet.
     if (Game.rooms[targetPosition.roomName]) {
         let room = Game.rooms[targetPosition.roomName];
-        if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == 'Mirroar'))) {
+        if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == utilities.getUsername()))) {
             maxParts.work = 6;
         }
     }
