@@ -15,11 +15,6 @@ var stats = {
                 harvesters: [],
             };
         }
-
-        // @todo Temporary.
-        if (!memory.remoteHarvesting[target].defenseCost) {
-            memory.remoteHarvesting[target].defenseCost = 0;
-        }
     },
 
     clearRemoteHarvestStats: function (source, target) {
@@ -52,6 +47,9 @@ var stats = {
         memory.remoteHarvesting[target].defenseCost += cost;
     },
 
+    /**
+     * Saves a new stat value for long term history tracking.
+     */
     recordStat: function (key, value) {
         if (!Memory.history) {
             Memory.history = {};
@@ -63,6 +61,9 @@ var stats = {
         stats.saveStatValue(Memory.history[key], 1, value);
     },
 
+    /**
+     * Recursively saves new data in long term history.
+     */
     saveStatValue: function (memory, multiplier, value) {
         var increment = 10;
 
@@ -89,6 +90,9 @@ var stats = {
         memory[multiplier].currentValues.push(value);
     },
 
+    /**
+     * Retrieves long term history data.
+     */
     getStat: function (key, interval) {
         // @todo Allow intervals that are not directly stored, like 300.
         if (!Memory.history || !Memory.history[key] || !Memory.history[key][interval]) {

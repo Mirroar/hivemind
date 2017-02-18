@@ -434,8 +434,6 @@ var utilities = {
             }
         }
 
-        //console.log('total cost of new body: ' + cost);
-
         // Chain the generated configuration into an array of body parts.
         var body = [];
 
@@ -468,12 +466,18 @@ var utilities = {
         return body;
     },
 
+    /**
+     * Serializes a position for storing it in memory.
+     */
     encodePosition: function (position) {
         if (!position) return;
 
         return position.roomName + '@' + position.x + 'x' + position.y;
     },
 
+    /**
+     * Creates a RoomPosition object from serialized data.
+     */
     decodePosition: function (position) {
         if (!position) return;
 
