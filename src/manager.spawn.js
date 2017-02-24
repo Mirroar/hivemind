@@ -493,6 +493,11 @@ Room.prototype.addBuilderSpawnOptions = function () {
         maxWorkParts *= 1.5;
     }
 
+    // Add more builders if we're moving a spawn.
+    if (this.memory.roomPlanner && this.memory.roomPlanner.hasMisplacedSpawn) {
+        maxWorkParts *= 2;
+    }
+
     if (this.isEvacuating()) maxWorkParts = 0;
 
     if (this.controller.level <= 3) {

@@ -104,7 +104,8 @@ RoomPlanner.prototype.runLogic = function () {
     }
     return;
   }
-  if (Game.time % 100 != 3) return;
+  if (Game.time % 100 != 3 && !this.memory.runNextTick) return;
+  delete this.memory.runNextTick;
 
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   var roomStructures = this.room.find(FIND_STRUCTURES);
@@ -116,28 +117,42 @@ RoomPlanner.prototype.runLogic = function () {
   var roomSpawnSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_SPAWN);
 
   // Make sure spawns are built in the right place, remove otherwise.
-  for (let i = 0; i < roomSpawns.length; i++) {
-    let spawn = roomSpawns[i];
-    if (!this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
-      // Only destroy spawn if there are enough resources and builders available.
-      let resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
-      if ((resourcesAvailable || _.size(roomSpawns) > 1) && !spawn.spawning) {
-        for (let j in this.room.creepsByRole.builder) {
-          let creep = this.room.creepsByRole.builder[j];
+  delete this.memory.hasMisplacedSpawn;
+  if (roomSpawns.length == CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level] && roomConstructionSites.length == 0) {
+    for (let i = 0; i < roomSpawns.length; i++) {
+      let spawn = roomSpawns[i];
+      if (!this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
+        // Only destroy spawn if there are enough resources and builders available.
+        let resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
+        if ((resourcesAvailable || _.size(roomSpawns) > 1)) {
+          // This spawn is misplaced, set a flag for spawning more builders to help.
+          this.memory.hasMisplacedSpawn = true;
 
-          if (creep.ticksToLive && creep.ticksToLive > CREEP_LIFE_TIME * 0.8) {
-            spawn.destroy();
-            break;
+          if (!spawn.spawning) {
+            let buildPower = 0;
+            for (let j in this.room.creepsByRole.builder) {
+              let creep = this.room.creepsByRole.builder[j];
+
+              if (creep.ticksToLive) {
+                buildPower += creep.memory.body.work * creep.ticksToLive / CREEP_LIFE_TIME;
+              }
+            }
+
+            if (buildPower > 20) {
+              spawn.destroy();
+              this.memory.runNextTick = true;
+              // Only kill of one spawn at a time, it should be rebuilt right away next tick!
+              return;
+            }
           }
         }
-      }
 
-      // Only kill of one spawn for each call of runLogic, it takes a while to rebuild anyway.
-      break;
+        // No need to check for another misplaced spawn, it won't be moved either.
+        break;
+      }
     }
   }
-
-  if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
+  else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
     for (let posName in this.memory.locations.spawn || []) {
       let pos = utilities.decodePosition(posName);
 
