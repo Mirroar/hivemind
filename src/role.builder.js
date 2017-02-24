@@ -49,7 +49,8 @@ Creep.prototype.getAvailableBuilderTargets = function () {
 
             if (target.structureType == STRUCTURE_RAMPART && target.hits < 10000 && this.room.controller.level >= 4) {
                 // Low ramparts get special treatment so they don't decay.
-                option.priority += 2;
+                option.priority++;
+                option.weight++;
             }
         }
         else {
@@ -98,6 +99,12 @@ Creep.prototype.getAvailableBuilderTargets = function () {
         option.weight -= creep.pos.getRangeTo(target) / 100;
 
         option.priority -= creepGeneral.getCreepsWithOrder('build', target.id, creep.room).length;
+
+        if (target.structureType == STRUCTURE_SPAWN) {
+            // Spawns have highest construction priority - we want to make
+            // sure moving a spawn always works out.
+            option.priority = 5;
+        }
 
         options.push(option);
     }
