@@ -440,6 +440,12 @@ Room.prototype.addUpgraderSpawnOptions = function () {
 
     if (this.isEvacuating()) maxUpgraders = 0;
 
+    if (!this.storage && !this.terminal && this.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
+        // Do not spawn upgraders when builders and spawns will need most of
+        // our energy.
+        maxUpgraders = 0;
+    }
+
     if (maxUpgraders == 0 && this.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[this.controller.level] * 0.5) {
         new Game.logger('creeps', this.name).log('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
         // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
@@ -489,9 +495,16 @@ Room.prototype.addBuilderSpawnOptions = function () {
 
     if (this.isEvacuating()) maxWorkParts = 0;
 
-    // Spawn more builders depending on total size of current construction sites.
-    // @todo Use hitpoints of construction sites vs number of work parts as a guide.
-    if (this.controller.level > 3) {
+    if (this.controller.level <= 3) {
+        if (this.find(FIND_MY_CONSTRUCTION_SITES).length == 0) {
+            // There isn't really much to repair before RCL 4, so don't spawn
+            // new builders when there's nothing to build.
+            maxWorkParts = 0;
+        }
+    }
+    else {
+        // Spawn more builders depending on total size of current construction sites.
+        // @todo Use hitpoints of construction sites vs number of work parts as a guide.
         maxWorkParts += this.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
     }
 
