@@ -1,25 +1,4 @@
 /**
- * Finds all adjacent squares that are not blocked by walls.
- */
-Mineral.prototype.getAdjacentFreeSquares = function () {
-    var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
-    var adjacentTerrain = [];
-    for (var t in terrain) {
-        var tile = terrain[t];
-        if (tile.x == this.pos.x && tile.y == this.pos.y) {
-            continue;
-        }
-
-        if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
-            // @todo Make sure no structures are blocking this tile.
-            adjacentTerrain.push(this.room.getPositionAt(tile.x, tile.y));
-        }
-    }
-
-    return adjacentTerrain;
-};
-
-/**
  * Calculates the number of walkable tiles around a mineral.
  */
 Mineral.prototype.getNumHarvestSpots = function () {

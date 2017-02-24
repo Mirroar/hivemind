@@ -41,7 +41,7 @@ Source.prototype.getMaxWorkParts = function () {
 /**
  * Finds all adjacent squares that are not blocked by walls.
  */
-Source.prototype.getAdjacentFreeSquares = function () {
+var getAdjacentFreeSquares = function () {
     var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
     var adjacentTerrain = [];
     for (var t in terrain) {
@@ -57,6 +57,12 @@ Source.prototype.getAdjacentFreeSquares = function () {
     }
 
     return adjacentTerrain;
+};
+Source.prototype.getAdjacentFreeSquares = function () {
+    getAdjacentFreeSquares.call(this);
+};
+Mineral.prototype.getAdjacentFreeSquares = function () {
+    getAdjacentFreeSquares.call(this);
 };
 
 /**
