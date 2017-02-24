@@ -112,7 +112,7 @@ Source.prototype.getDropoffSpot = function () {
 /**
  * Calculates the number of walkable tiles around a source.
  */
-Source.prototype.getNumHarvestSpots = function () {
+var getNumHarvestSpots = function () {
     if (!this.memory.maxHarvestersCalculated || this.memory.maxHarvestersCalculated < Game.time - 1000) {
         this.memory.maxHarvestersCalculated = Game.time;
         this.memory.maxHarvesters = this.getAdjacentFreeSquares().length;
@@ -120,11 +120,17 @@ Source.prototype.getNumHarvestSpots = function () {
 
     return this.memory.maxHarvesters;
 };
+Source.prototype.getNumHarvestSpots = function () {
+    getNumHarvestSpots.call(this);
+};
+Mineral.prototype.getNumHarvestSpots = function () {
+    getNumHarvestSpots.call(this);
+};
 
 /**
  * Finds a container in close proximity to this source, for dropping off energy.
  */
-Source.prototype.getNearbyContainer = function () {
+var getNearbyContainer = function () {
     if (!this.memory.nearbyContainerCalculated || this.memory.nearbyContainerCalculated < Game.time - 150) {
         this.memory.nearbyContainerCalculated = Game.time;
         this.memory.targetContainer = null;
@@ -142,6 +148,12 @@ Source.prototype.getNearbyContainer = function () {
     if (this.memory.targetContainer) {
         return Game.getObjectById(this.memory.targetContainer);
     }
+};
+Source.prototype.getNearbyContainer = function () {
+    getNearbyContainer.call(this);
+};
+Mineral.prototype.getNearbyContainer = function () {
+    getNearbyContainer.call(this);
 };
 
 /**
