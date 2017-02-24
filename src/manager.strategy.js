@@ -77,6 +77,7 @@ var strategyManager = {
 
           if (!intel.hasController) continue;
           if (intel.owner) continue;
+          if (Memory.rooms[info.origin].intel.rcl < 5) continue;
 
           expansionScore += intel.sources.length;
           if (intel.mineral) {
