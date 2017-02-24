@@ -31,14 +31,6 @@ Mineral.prototype.enhanceData = function () {
 };
 
 /**
- * Calculates the maximum number of work parts that should be used when harvesting this source.
- */
-Source.prototype.getMaxWorkParts = function () {
-    // @todo get Rid of maxWorkParts variable in favor of this.
-    return 1.2 * this.energyCapacity / ENERGY_REGEN_TIME / 2;
-};
-
-/**
  * Finds all adjacent squares that are not blocked by walls.
  */
 var getAdjacentFreeSquares = function () {
@@ -63,50 +55,6 @@ Source.prototype.getAdjacentFreeSquares = function () {
 };
 Mineral.prototype.getAdjacentFreeSquares = function () {
     getAdjacentFreeSquares.call(this);
-};
-
-/**
- * Decides on a decent dropoff spot for energy close to the source and easily accessible by harvesters.
- */
-Source.prototype.getDropoffSpot = function () {
-    // Decide on a dropoff-spot that will eventually have a container built.
-    // @todo Maybe recalculate once in a while in case structures no block some tiles.
-    if (!this.memory.dropoffSpot) {
-        var best;
-        var bestCount = 0;
-        var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 2, this.pos.x - 2, this.pos.y + 2, this.pos.x + 2, true);
-        var adjacentTerrain = this.getAdjacentFreeSquares();
-
-        for (var t in terrain) {
-            var tile = terrain[t];
-            if (this.pos.getRangeTo(tile.x, tile.y) <= 1) {
-                continue;
-            }
-
-            if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
-                // @todo Make sure no structures are blocking this tile.
-                var count = 0;
-                for (var u in adjacentTerrain) {
-                    var aTile = adjacentTerrain[u];
-
-                    if (aTile.getRangeTo(tile.x, tile.y) <= 1) {
-                        count++;
-                    }
-                }
-
-                if (count > bestCount) {
-                    bestCount = count;
-                    best = tile;
-                }
-            }
-        }
-
-        if (best) {
-            this.memory.dropoffSpot = {x: best.x, y: best.y};
-        }
-    }
-
-    return this.memory.dropoffSpot;
 };
 
 /**
@@ -154,29 +102,6 @@ Source.prototype.getNearbyContainer = function () {
 };
 Mineral.prototype.getNearbyContainer = function () {
     getNearbyContainer.call(this);
-};
-
-/**
- * Finds a link in close proximity to this source, for dropping off energy.
- */
-Source.prototype.getNearbyLink = function () {
-    if (!this.memory.nearbyLinkCalculated || this.memory.nearbyLinkCalculated < Game.time - 1000) {
-        this.memory.nearbyLinkCalculated = Game.time;
-        this.memory.targetLink = null;
-
-        // Check if there is a link nearby.
-        var structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
-            filter: (structure) => structure.structureType == STRUCTURE_LINK
-        });
-        if (structures.length > 0) {
-            var structure = this.pos.findClosestByRange(structures);
-            this.memory.targetLink = structure.id;
-        }
-    }
-
-    if (this.memory.targetLink) {
-        return Game.getObjectById(this.memory.targetLink);
-    }
 };
 
 /**
@@ -233,4 +158,79 @@ Source.prototype.isDangerous = function () {
 };
 Mineral.prototype.isDangerous = function () {
     isDangerous.call(this);
+};
+
+/**
+ * Calculates the maximum number of work parts that should be used when harvesting this source.
+ */
+Source.prototype.getMaxWorkParts = function () {
+    // @todo get Rid of maxWorkParts variable in favor of this.
+    return 1.2 * this.energyCapacity / ENERGY_REGEN_TIME / 2;
+};
+
+/**
+ * Decides on a decent dropoff spot for energy close to the source and easily accessible by harvesters.
+ */
+Source.prototype.getDropoffSpot = function () {
+    // Decide on a dropoff-spot that will eventually have a container built.
+    // @todo Maybe recalculate once in a while in case structures no block some tiles.
+    if (!this.memory.dropoffSpot) {
+        var best;
+        var bestCount = 0;
+        var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 2, this.pos.x - 2, this.pos.y + 2, this.pos.x + 2, true);
+        var adjacentTerrain = this.getAdjacentFreeSquares();
+
+        for (var t in terrain) {
+            var tile = terrain[t];
+            if (this.pos.getRangeTo(tile.x, tile.y) <= 1) {
+                continue;
+            }
+
+            if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
+                // @todo Make sure no structures are blocking this tile.
+                var count = 0;
+                for (var u in adjacentTerrain) {
+                    var aTile = adjacentTerrain[u];
+
+                    if (aTile.getRangeTo(tile.x, tile.y) <= 1) {
+                        count++;
+                    }
+                }
+
+                if (count > bestCount) {
+                    bestCount = count;
+                    best = tile;
+                }
+            }
+        }
+
+        if (best) {
+            this.memory.dropoffSpot = {x: best.x, y: best.y};
+        }
+    }
+
+    return this.memory.dropoffSpot;
+};
+
+/**
+ * Finds a link in close proximity to this source, for dropping off energy.
+ */
+Source.prototype.getNearbyLink = function () {
+    if (!this.memory.nearbyLinkCalculated || this.memory.nearbyLinkCalculated < Game.time - 1000) {
+        this.memory.nearbyLinkCalculated = Game.time;
+        this.memory.targetLink = null;
+
+        // Check if there is a link nearby.
+        var structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
+            filter: (structure) => structure.structureType == STRUCTURE_LINK
+        });
+        if (structures.length > 0) {
+            var structure = this.pos.findClosestByRange(structures);
+            this.memory.targetLink = structure.id;
+        }
+    }
+
+    if (this.memory.targetLink) {
+        return Game.getObjectById(this.memory.targetLink);
+    }
 };
