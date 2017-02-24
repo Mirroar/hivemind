@@ -51,10 +51,10 @@ var getAdjacentFreeSquares = function () {
     return adjacentTerrain;
 };
 Source.prototype.getAdjacentFreeSquares = function () {
-    getAdjacentFreeSquares.call(this);
+    return getAdjacentFreeSquares.call(this);
 };
 Mineral.prototype.getAdjacentFreeSquares = function () {
-    getAdjacentFreeSquares.call(this);
+    return getAdjacentFreeSquares.call(this);
 };
 
 /**
@@ -69,10 +69,10 @@ var getNumHarvestSpots = function () {
     return this.memory.maxHarvesters;
 };
 Source.prototype.getNumHarvestSpots = function () {
-    getNumHarvestSpots.call(this);
+    return getNumHarvestSpots.call(this);
 };
 Mineral.prototype.getNumHarvestSpots = function () {
-    getNumHarvestSpots.call(this);
+    return getNumHarvestSpots.call(this);
 };
 
 /**
@@ -98,10 +98,10 @@ var getNearbyContainer = function () {
     }
 };
 Source.prototype.getNearbyContainer = function () {
-    getNearbyContainer.call(this);
+    return getNearbyContainer.call(this);
 };
 Mineral.prototype.getNearbyContainer = function () {
-    getNearbyContainer.call(this);
+    return getNearbyContainer.call(this);
 };
 
 /**
@@ -128,10 +128,10 @@ var getNearbyLair = function () {
     }
 };
 Source.prototype.getNearbyLair = function () {
-    getNearbyLair.call(this);
+    return getNearbyLair.call(this);
 };
 Mineral.prototype.getNearbyLair = function () {
-    getNearbyLair.call(this);
+    return getNearbyLair.call(this);
 };
 
 /**
@@ -154,10 +154,10 @@ var isDangerous = function () {
     }
 };
 Source.prototype.isDangerous = function () {
-    isDangerous.call(this);
+    return isDangerous.call(this);
 };
 Mineral.prototype.isDangerous = function () {
-    isDangerous.call(this);
+    return isDangerous.call(this);
 };
 
 /**
