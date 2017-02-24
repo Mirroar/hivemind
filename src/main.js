@@ -3,7 +3,6 @@ var useProfiler = false;
 
 var debug = require('debug');
 
-require('manager.mineral');
 require('manager.source');
 require('pathfinding');
 require('role.brawler');

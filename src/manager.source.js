@@ -182,7 +182,7 @@ Source.prototype.getNearbyLink = function () {
 /**
  * Finds a source keeper lair in close proximity to this source.
  */
-Source.prototype.getNearbyLair = function () {
+var getNearbyLair = function () {
     if (!this.memory.nearbyLairCalculated || this.memory.nearbyLairCalculated < Game.time - 123456) {
         // This information really shouldn't ever change.
         this.memory.nearbyLairCalculated = Game.time;
@@ -202,11 +202,17 @@ Source.prototype.getNearbyLair = function () {
         return Game.getObjectById(this.memory.nearbyLair);
     }
 };
+Source.prototype.getNearbyLair = function () {
+    getNearbyLair.call(this);
+};
+Mineral.prototype.getNearbyLair = function () {
+    getNearbyLair.call(this);
+};
 
 /**
  * Checks if being close to this source is currently dangerous.
  */
-Source.prototype.isDangerous = function () {
+var isDangerous = function () {
     var lair = this.getNearbyLair();
     if (lair && lair.isDangerous()) {
         // It's still safe if a guardian with sufficient lifespan is nearby to take care of any source keepers.
@@ -221,4 +227,10 @@ Source.prototype.isDangerous = function () {
 
         return true;
     }
+};
+Source.prototype.isDangerous = function () {
+    isDangerous.call(this);
+};
+Mineral.prototype.isDangerous = function () {
+    isDangerous.call(this);
 };
