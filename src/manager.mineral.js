@@ -1,30 +1,4 @@
 /**
- * Adds some additional data to spawn objects. Should be invoked for each spawn early in the script's lifetime.
- */
-Mineral.prototype.enhanceData = function () {
-    var roomMemory = Memory.rooms[this.pos.roomName];
-
-    if (!roomMemory.minerals) {
-        roomMemory.minerals = {};
-    }
-    if (!roomMemory.minerals[this.id]) {
-        roomMemory.minerals[this.id] = {};
-    }
-
-    this.memory = roomMemory.minerals[this.id];
-
-    // Collect assigned harvesters.
-    this.harvesters = [];
-    for (let i in this.room.creepsByRole.harvester || []) {
-        let harvester = this.room.creepsByRole.harvester[i];
-
-        if (harvester.memory.fixedMineral == this.id) {
-            this.harvesters.push(harvester);
-        }
-    }
-};
-
-/**
  * Finds all adjacent squares that are not blocked by walls.
  */
 Mineral.prototype.getAdjacentFreeSquares = function () {

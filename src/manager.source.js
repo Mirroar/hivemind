@@ -1,27 +1,33 @@
 /**
  * Adds some additional data to spawn objects. Should be invoked for each spawn early in the script's lifetime.
  */
-Source.prototype.enhanceData = function () {
+var enhanceData = function (collection, creepAttribute) {
     var roomMemory = Memory.rooms[this.pos.roomName];
 
-    if (!roomMemory.sources) {
-        roomMemory.sources = {};
+    if (!roomMemory[collection]) {
+        roomMemory[collection] = {};
     }
-    if (!roomMemory.sources[this.id]) {
-        roomMemory.sources[this.id] = {};
+    if (!roomMemory[collection][this.id]) {
+        roomMemory[collection][this.id] = {};
     }
 
-    this.memory = roomMemory.sources[this.id];
+    this.memory = roomMemory[collection][this.id];
 
     // Collect assigned harvesters.
     this.harvesters = [];
     for (let i in this.room.creepsByRole.harvester || []) {
         let harvester = this.room.creepsByRole.harvester[i];
 
-        if (harvester.memory.fixedSource == this.id) {
+        if (harvester.memory[creepAttribute] == this.id) {
             this.harvesters.push(harvester);
         }
     }
+};
+Source.prototype.enhanceData = function () {
+    enhanceData.call(this, 'sources', 'fixedSource');
+};
+Mineral.prototype.enhanceData = function () {
+    enhanceData.call(this, 'minerals', 'fixedMineral');
 };
 
 /**
