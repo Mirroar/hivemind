@@ -495,7 +495,7 @@ Room.prototype.addBuilderSpawnOptions = function () {
 
     // Add more builders if we're moving a spawn.
     if (this.memory.roomPlanner && this.memory.roomPlanner.hasMisplacedSpawn) {
-        maxWorkParts *= 2;
+        maxWorkParts *= 1.5;
     }
 
     if (this.isEvacuating()) maxWorkParts = 0;

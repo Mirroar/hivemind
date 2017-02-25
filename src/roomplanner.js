@@ -126,7 +126,9 @@ RoomPlanner.prototype.runLogic = function () {
         let resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
         if ((resourcesAvailable || _.size(roomSpawns) > 1)) {
           // This spawn is misplaced, set a flag for spawning more builders to help.
-          this.memory.hasMisplacedSpawn = true;
+          if (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 3) {
+            this.memory.hasMisplacedSpawn = true;
+          }
 
           if (!spawn.spawning) {
             let buildPower = 0;
@@ -138,7 +140,7 @@ RoomPlanner.prototype.runLogic = function () {
               }
             }
 
-            if (buildPower > 20) {
+            if (buildPower > 10) {
               spawn.destroy();
               this.memory.runNextTick = true;
               // Only kill of one spawn at a time, it should be rebuilt right away next tick!

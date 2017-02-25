@@ -63,7 +63,7 @@ Creep.prototype.setCachedPath = function (path, reverse, distance) {
  * Checks if a creep has a path stored.
  */
 Creep.prototype.hasCachedPath = function () {
-    return this.memory.cachedPath;
+    return typeof this.memory.cachedPath != 'undefined';
 };
 
 /**
