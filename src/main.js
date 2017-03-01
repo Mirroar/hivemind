@@ -287,6 +287,13 @@ Creep.prototype.runLogic = function() {
         console.log(e.stack);
     }
 
+    if (!Game.creepPerformance[this.memory.role]) {
+        Game.creepPerformance[this.memory.role] = {
+            throttled: 0,
+            count: 0,
+            cpu: 0,
+        };
+    }
     Game.creepPerformance[this.memory.role].cpu += Game.cpu.getUsed() - startTime;
 };
 
