@@ -76,7 +76,7 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
     }
   }
 
-  if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
+  if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
     if (pos.createConstructionSite(structureType) == OK) {
       this.newStructures++;
       // Structure is being built, wait until finished.

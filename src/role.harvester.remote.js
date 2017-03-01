@@ -59,7 +59,7 @@ Creep.prototype.performBuildRoad = function() {
                 }
             }
 
-            if (!tileHasRoad) {
+            if (!tileHasRoad && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.7) {
                 let sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
                 let numSites = _.filter(Game.constructionSites, (site) => site.pos.roomName == position.roomName).length;
                 if (sites.length < 1 && numSites < 5) {
