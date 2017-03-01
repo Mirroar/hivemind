@@ -331,6 +331,9 @@ Creep.prototype.goTo = function (target, options) {
             options.singleRoom = this.memory.singleRoom;
         }
 
+        // Always allow pathfinding in current room.
+        options.whiteListRooms = [this.pos.roomName];
+
         // Calculate a path to take.
         var result = utilities.getPath(this.pos, {pos: target, range: range}, false, options);
 
