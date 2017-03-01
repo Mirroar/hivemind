@@ -348,8 +348,8 @@ var structureManager = {
         }
 
         // Pay no less than 1.05 and no more than 3 credits.
-        offerPrice = Math.max(offerPrice, npcPrice * 1.05);
-        offerPrice = Math.min(offerPrice, npcPrice * 3);
+        // offerPrice = Math.max(offerPrice, npcPrice * 1.05);
+        // offerPrice = Math.min(offerPrice, npcPrice * 3);
 
         new Game.logger('trade', bestRoom).debug('Offering to buy for', offerPrice);
 
@@ -407,8 +407,8 @@ var structureManager = {
         }
 
         // Demand no less than 1.2 and no more than 5 credits.
-        offerPrice = Math.max(offerPrice, npcPrice * 1.2);
-        offerPrice = Math.min(offerPrice, npcPrice * 5);
+        // offerPrice = Math.max(offerPrice, npcPrice * 1.2);
+        // offerPrice = Math.min(offerPrice, npcPrice * 5);
 
         new Game.logger('trade', bestRoom).debug('Offering to sell for', offerPrice);
 
@@ -421,11 +421,27 @@ var structureManager = {
         Game.market.createOrder(ORDER_SELL, resourceType, offerPrice, 10000, bestRoom);
     },
 
+    removeOldTrades: function () {
+        for (let id in Game.market.orders) {
+            let order = Game.market.orders[id];
+            let age = Game.time - order.created;
+
+            if (age > 100000 || order.remainingAmount < 100) {
+                // Nobody seems to be buying or selling this order, cancel it.
+                new Game.logger('trade', order.roomName).log('Cancelling old trade', order.type + 'ing', order.remainingAmount, order.resourceType, 'for', order.price, 'each after', age, 'ticks.');
+                Game.market.cancelOrder(order.id);
+            }
+        }
+    },
+
     manageTrade: function () {
+        structureManager.removeOldTrades();
+
         var resources = structureManager.getRoomResourceStates();
         var total = resources.total;
 
-        for (let resourceType in total.resources) {
+        for (let i in RESOURCES_ALL) {
+            resourceType = RESOURCES_ALL[i];
             let tier = structureManager.getResourceTier(resourceType);
 
             if (tier == 1) {
@@ -435,17 +451,17 @@ var structureManager = {
                 let minStorage = total.rooms * 5000;
 
                 // Check for base resources we have too much of.
-                if (total.resources[resourceType] > maxStorage) {
+                if ((total.resources[resourceType] || 0) > maxStorage) {
                     structureManager.instaSellResources(resourceType, resources.rooms);
                 }
-                else if (total.resources[resourceType] > highStorage) {
+                else if ((total.resources[resourceType] || 0) > highStorage) {
                     structureManager.trySellResources(resourceType, resources.rooms);
                 }
-                else if (total.resources[resourceType] < lowStorage && Game.market.credits > 1000) {
+                else if ((total.resources[resourceType] || 0) < lowStorage && Game.market.credits > 1000) {
                     // @todo Actually iterate over all tier 1 resources to make sure we buy every type.
                     structureManager.tryBuyResources(resourceType, resources.rooms);
                 }
-                else if (total.resources[resourceType] < minStorage && Game.market.credits > 10000) {
+                else if ((total.resources[resourceType] || 0) < minStorage && Game.market.credits > 10000) {
                     // @todo Actually iterate over all tier 1 resources to make sure we buy every type.
                     structureManager.instaBuyResources(resourceType, resources.rooms);
                 }
