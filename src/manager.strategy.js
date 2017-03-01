@@ -33,8 +33,7 @@ var strategyManager = {
           if (Game.time - intel.lastScan > 5000) {
             scoutPriority = 2;
           }
-
-          if (intel.hasController) {
+          else if (intel.hasController && !intel.owner) {
             let income = -2000; // Flat cost for room reservation
             let pathLength = 0;
             for (let i in intel.sources) {
@@ -278,7 +277,7 @@ Room.prototype.getRemoteHarvestTargets = function () {
   let memory = Memory.strategy;
 
   let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name).length;
-  let maxHarvesting = 2 * numSpawns;
+  let maxHarvesting = 1 + numSpawns;
   let targets = {};
 
   for (let numTargets = 0; numTargets < maxHarvesting; numTargets++) {
