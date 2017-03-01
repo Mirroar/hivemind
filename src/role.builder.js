@@ -84,7 +84,7 @@ Creep.prototype.getAvailableBuilderTargets = function () {
         options.push(option);
     }
 
-    targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+    targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
     for (let i in targets) {
         let target = targets[i];
 
