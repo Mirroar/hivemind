@@ -745,6 +745,8 @@ var main = {
             }
 
             stats.recordStat('cpu_total', time);
+            stats.recordStat('bucket', Game.cpu.bucket);
+            stats.recordStat('creeps', _.size(Game.creeps));
         };
 
         if (useProfiler) {
