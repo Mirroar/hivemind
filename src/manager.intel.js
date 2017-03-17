@@ -33,6 +33,14 @@ Room.prototype.gatherIntel = function () {
         intel.ticksToNeutral = total;
     }
 
+    intel.reservation = {
+        username: null,
+        ticksToEnd: 0,
+    };
+    if (room.controller && room.controller.reservation) {
+        intel.reservation = room.controller.reservation;
+    }
+
     // Check sources.
     var sources = this.find(FIND_SOURCES);
     intel.sources = [];
