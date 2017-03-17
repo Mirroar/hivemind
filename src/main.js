@@ -634,6 +634,15 @@ var main = {
 
             var time = Game.cpu.getUsed();
 
+            // Clean up flag memory from time to time.
+            if (Game.time % 1000 == 725) {
+                for (let flagName in Memory.flags) {
+                    if (!Game.flags[flagName]) {
+                        delete Memory.flags[flagName];
+                    }
+                }
+            }
+
             // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
             gameState.clearCache();
 
