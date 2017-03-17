@@ -21,6 +21,7 @@ Creep.prototype.isDangerous = function () {
  */
 Creep.prototype.transferAny = function (target) {
     for (let resourceType in this.carry) {
+        if (target.structureType == STRUCTURE_LINK && resourceType != RESOURCE_ENERGY) continue;
         if (this.carry[resourceType] > 0) {
             return this.transfer(target, resourceType);
         }
