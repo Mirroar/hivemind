@@ -60,7 +60,7 @@ Creep.prototype.performHelperDeliver = function () {
     }
 
     // Nothing to do, store excess energy in terminal.
-    if (this.carry.energy > 0 && storage && terminal) {
+    if (this.carry.energy > 0 && storage && terminal && !this.room.isClearingTerminal()) {
         if (terminal.store.energy < storage.store.energy * 0.05) {
             if (_.sum(terminal.store) + this.carry.energy <= terminal.storeCapacity) {
                 if (this.pos.getRangeTo(terminal) > 1) {
@@ -76,7 +76,7 @@ Creep.prototype.performHelperDeliver = function () {
 
     // Store anything else in storage or terminal.
     let target = terminal;
-    if (storage && _.sum(storage.store) + _.sum(this.carry) < storage.storeCapacity) {
+    if (storage && (!this.room.isClearingTerminal() || _.sum(storage.store) + _.sum(this.carry) < storage.storeCapacity)) {
         target = storage;
     }
 
@@ -175,7 +175,7 @@ Creep.prototype.performHelperGather = function () {
     }
 
     // Get energy to fill terminal when needed.
-    if (storage && terminal && terminal.store.energy < storage.store.energy * 0.05) {
+    if (storage && terminal && terminal.store.energy < storage.store.energy * 0.05 && !this.room.isClearingTerminal()) {
         let target = storage;
 
         if (this.pos.getRangeTo(target) > 1) {

@@ -108,6 +108,20 @@ Room.prototype.isEvacuating = function () {
     return this.memory.isEvacuating;
 };
 
+/**
+ * Starts emptying a rooms terminal and keeps it empty.
+ */
+Room.prototype.setClearingTerminal = function (clear) {
+    this.memory.isClearingTerminal = clear;
+};
+
+/**
+ * Checks if a room's terminal should be emptied.
+ */
+Room.prototype.isClearingTerminal = function () {
+    return this.memory.isClearingTerminal;
+};
+
 var structureManager = {
 
     getResourceTier: function (resourceType) {

@@ -8,9 +8,13 @@ Room.prototype.getBestStorageTarget = function (amount, resourceType) {
     if (this.storage && this.terminal) {
         let storageFree = this.storage.storeCapacity - _.sum(this.storage.store);
         let terminalFree = this.terminal.storeCapacity - _.sum(this.terminal.store);
-        if (this.isEvacuating() && storageFree > this.terminal.storeCapacity * 0.2) {
+        if (this.isEvacuating() && terminalFree > this.terminal.storeCapacity * 0.2) {
             // If we're evacuating, store everything in terminal to be sent away.
             return this.terminal;
+        }
+        if (this.isClearingTerminal() && storageFree > this.storage.storeCapacity * 0.2) {
+            // If we're clearing out the terminal, put everything into storage.
+            return this.storage;
         }
 
         if (!resourceType) {
@@ -50,6 +54,16 @@ Room.prototype.getBestStorageSource = function (resourceType) {
             }
             else if (this.terminal.store[resourceType] && (resourceType == RESOURCE_ENERGY || _.sum(this.terminal.store) > this.terminal.storeCapacity * 0.8)) {
                 return this.terminal;
+            }
+            return;
+        }
+        if (this.isClearingTerminal()) {
+            // Take resources out of terminal if possible to empty it out.
+            if (this.terminal.store[resourceType] && (_.sum(this.storage.store) < this.storage.storeCapacity * 0.8 || !this.storage.store[resourceType])) {
+                return this.terminal;
+            }
+            else if (this.storage.store[resourceType] && (resourceType == RESOURCE_ENERGY || _.sum(this.storage.store) > this.storage.storeCapacity * 0.8)) {
+                return this.storage;
             }
             return;
         }
@@ -204,7 +218,7 @@ Creep.prototype.getAvailableSources = function () {
     // Clear out overfull terminal.
     let terminal = creep.room.terminal;
     let storage = creep.room.storage;
-    if (terminal && _.sum(terminal.store) > terminal.storeCapacity * 0.8 && !creep.room.isEvacuating()) {
+    if (terminal && (_.sum(terminal.store) > terminal.storeCapacity * 0.8 || creep.room.isClearingTerminal()) && !creep.room.isEvacuating()) {
         // Find resource with highest count and take that.
         // @todo Unless it's supposed to be sent somewhere else.
         let max = null;
@@ -221,19 +235,25 @@ Creep.prototype.getAvailableSources = function () {
             }
         }
 
-        options.push({
+        let option = {
             priority: 1,
             weight: 0,
             type: 'structure',
             object: terminal,
             resourceType: maxResourceType,
-        });
+        };
+
+        if (creep.room.isClearingTerminal()) {
+            option.priority = 3;
+        }
+
+        options.push(option);
     }
 
     // @todo Take resources from storage if terminal is relatively empty.
 
     // Take resources from storage to terminal for transfer if requested.
-    if (creep.room.memory.fillTerminal) {
+    if (creep.room.memory.fillTerminal && !creep.room.isClearingTerminal()) {
         let resourceType = creep.room.memory.fillTerminal;
         if (storage && terminal && storage.store[resourceType]) {
             if ((storage.store[resourceType] > this.carryCapacity || creep.room.isEvacuating()) && _.sum(terminal.store) < terminal.storeCapacity - 10000) {
@@ -418,7 +438,7 @@ Creep.prototype.getAvailableSources = function () {
             lab = Game.getObjectById(creep.room.memory.labs.source1);
             if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[0]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
                 var source = terminal;
-                if (!terminal.store[creep.room.memory.currentReaction[0]] || terminal.store[creep.room.memory.currentReaction[0]] <= 0) {
+                if (!terminal || !terminal.store[creep.room.memory.currentReaction[0]] || terminal.store[creep.room.memory.currentReaction[0]] <= 0) {
                     source = creep.room.storage;
                 }
                 let option = {
@@ -438,7 +458,7 @@ Creep.prototype.getAvailableSources = function () {
             lab = Game.getObjectById(creep.room.memory.labs.source2);
             if (lab && (!lab.mineralType || lab.mineralType == creep.room.memory.currentReaction[1]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
                 var source = terminal;
-                if (!terminal.store[creep.room.memory.currentReaction[1]] || terminal.store[creep.room.memory.currentReaction[1]] <= 0) {
+                if (!terminal || !terminal.store[creep.room.memory.currentReaction[1]] || terminal.store[creep.room.memory.currentReaction[1]] <= 0) {
                     source = creep.room.storage;
                 }
                 let option = {
@@ -493,7 +513,7 @@ Creep.prototype.calculateSource = function () {
     var creep = this;
     var best = utilities.getBestOption(creep.getAvailableSources());
 
-    if (best) {
+    if (best && best.object) {
         //console.log('best source for this', creep.memory.role , ':', best.type, best.object.id, '@ priority', best.priority, best.weight);
         creep.memory.sourceTarget = best.object.id;
 
@@ -784,6 +804,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             options.push(option);
         }
 
+        // Put in storage if nowhere else needs it.
         let storageTarget = creep.room.getBestStorageTarget(this.carry.energy, RESOURCE_ENERGY);
         if (storageTarget) {
             options.push({
@@ -831,7 +852,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 
     for (let resourceType in creep.carry) {
         // If it's needed for transferring, store in terminal.
-        if (resourceType == creep.room.memory.fillTerminal && creep.carry[resourceType] > 0) {
+        if (resourceType == creep.room.memory.fillTerminal && creep.carry[resourceType] > 0 && !creep.room.isClearingTerminal()) {
             if (terminal && (!terminal.store[resourceType] || terminal.store[resourceType] < (creep.room.memory.fillTerminalAmount || 10000)) && _.sum(terminal.store) < terminal.storeCapacity) {
                 var option = {
                     priority: 4,

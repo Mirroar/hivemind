@@ -379,6 +379,11 @@ Room.prototype.addTransporterSpawnOptions = function () {
 
     maxTransporters /= sizeFactor;
     maxTransporters = Math.max(maxTransporters, 2);
+
+    if (this.isClearingTerminal() && this.terminal && _.sum(this.terminal.store) > this.terminal.storeCapacity * 0.01) {
+        maxTransporters *= 1.5;
+    }
+
     if (numTransporters < maxTransporters) {
         let option = {
             priority: 5,
@@ -469,6 +474,7 @@ Room.prototype.addBuilderSpawnOptions = function () {
 
     var numWorkParts = 0;
     var maxWorkParts = 5;
+    var builderSize = null;
     if (this.controller.level > 2) {
         maxWorkParts += 5;
     }
@@ -498,8 +504,6 @@ Room.prototype.addBuilderSpawnOptions = function () {
         maxWorkParts *= 1.5;
     }
 
-    if (this.isEvacuating()) maxWorkParts = 0;
-
     if (this.controller.level <= 3) {
         if (this.find(FIND_MY_CONSTRUCTION_SITES).length == 0) {
             // There isn't really much to repair before RCL 4, so don't spawn
@@ -513,11 +517,18 @@ Room.prototype.addBuilderSpawnOptions = function () {
         maxWorkParts += this.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
     }
 
+    if (this.isEvacuating()) {
+        // Just spawn a small builder for keeping roads intact.
+        maxWorkParts = 1;
+        builderSize = 3;
+    }
+
     if (numWorkParts < maxWorkParts) {
         memory.options.push({
             priority: 3,
             weight: 0.5,
             role: 'builder',
+            size: builderSize,
         });
     }
 };
