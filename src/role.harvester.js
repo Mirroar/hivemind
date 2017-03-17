@@ -44,18 +44,21 @@ Creep.prototype.performHarvest = function () {
         var result = creep.harvest(source);
     }
 
-    // If there's a link or controller nearby, directly deposit energy.
-    if (_.sum(creep.carry) > creep.carryCapacity * 0.5 && creep.carry.energy > 0) {
-        var target = source.getNearbyLink();
-        if (!target || target.energy >= target.energyCapacity) {
-            target = source.getNearbyContainer();
+    // If there's a link or controller nearby, directly deposit resources.
+    if (_.sum(creep.carry) > creep.carryCapacity * 0.5) {
+        var target = source.getNearbyContainer();
+        if (creep.carry.energy > 0) {
+            let link = source.getNearbyLink();
+            if (link && link.energy < link.energyCapacity) {
+                target = link;
+            }
         }
         if (target) {
             if (creep.pos.getRangeTo(target) > 1) {
                 creep.moveToRange(target, 1);
             }
             else {
-                creep.transfer(target, RESOURCE_ENERGY);
+                creep.transferAny(target);
             }
         }
     }
