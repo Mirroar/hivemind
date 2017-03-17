@@ -108,6 +108,8 @@ var strategyManager = {
       }
     }
 
+    strategyManager.manageHarvestRooms();
+
     strategyManager.manageExpanding();
   },
 
@@ -192,6 +194,92 @@ var strategyManager = {
     return roomList;
   },
 
+  /**
+   * Determines optimal number of remote harvest rooms based on CPU and expansion plans.
+   */
+  manageHarvestRooms: function () {
+    let memory = Memory.strategy;
+
+    let max = 0;
+    let numRooms = 0;
+
+    let sourceRooms = {};
+
+    // Determine how much remote mining each room can handle.
+    for (let roomName in Game.rooms) {
+      let room = Game.rooms[roomName];
+      if (!room.controller || !room.controller.my) continue;
+
+      let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == roomName).length;
+      if (numSpawns == 0) continue;
+
+      numRooms++;
+      max += 2 * numSpawns;
+
+      sourceRooms[roomName] = {
+        current: 0,
+        max: 2 * numSpawns,
+      };
+    }
+
+    if (!memory.remoteHarvesting) {
+      // Try starting with 2 per active room.
+      memory.remoteHarvesting = {
+        currentCount: 2 * numRooms,
+        lastCheck: Game.time,
+      };
+    }
+
+    // Create ordered list of best harvest rooms.
+    let harvestRooms = [];
+    for (let roomName in memory.roomList) {
+      let info = memory.roomList[roomName];
+      if (!info.harvestPriority || info.harvestPriority <= 0.1) continue;
+
+      info.harvestActive = false;
+      harvestRooms.push(info);
+    }
+    foo = _.sortBy(harvestRooms, (o) => -o.harvestPriority);
+
+    // Decide which are active.
+    let total = 0;
+    for (let i = 0; i < foo.length; i++) {
+      let info = foo[i];
+      if (!sourceRooms[info.origin]) continue;
+      if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
+
+      sourceRooms[info.origin].current++;
+      info.harvestActive = true;
+
+      total++;
+      if (total >= memory.remoteHarvesting.currentCount) break;
+    }
+
+    // Adjust remote harvesting number according to cpu.
+    if (Game.time - memory.remoteHarvesting.lastCheck >= 1000) {
+      memory.remoteHarvesting.lastCheck = Game.time;
+
+      if (stats.getStat('bucket', 10000)) {
+        if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.9 * Game.cpu.limit) {
+          if (memory.remoteHarvesting.currentCount < max) {
+            memory.remoteHarvesting.currentCount++;
+          }
+        }
+        else if (stats.getStat('bucket', 1000) <= 8000) {
+          if (memory.remoteHarvesting.currentCount > 0) {
+            memory.remoteHarvesting.currentCount--;
+          }
+        }
+      }
+    }
+
+    // @todo Reduce remote harvesting if we want to expand.
+
+  },
+
+  /**
+   * Sends a squad for expanding to a new room if GCL and CPU allow.
+   */
   manageExpanding: function () {
     let memory = Memory.strategy;
 
@@ -314,28 +402,15 @@ Room.prototype.getRemoteHarvestTargets = function () {
   if (!Memory.strategy) return [];
   let memory = Memory.strategy;
 
-  let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name).length;
-  let maxHarvesting = 1 + numSpawns;
   let targets = {};
 
-  for (let numTargets = 0; numTargets < maxHarvesting; numTargets++) {
-    let bestTarget = null;
-    for (let i in memory.roomList) {
-      let info = memory.roomList[i];
+  for (let i in memory.roomList) {
+    let info = memory.roomList[i];
 
-      if (targets[info.roomName]) continue;
-      if (info.origin !== this.name) continue;
+    if (info.origin !== this.name) continue;
+    if (!info.harvestActive) continue;
 
-      if (info.harvestPriority && info.harvestPriority > 0) {
-        if (!bestTarget || bestTarget.harvestPriority < info.harvestPriority) {
-          bestTarget = info;
-        }
-      }
-    }
-
-    if (bestTarget) {
-      targets[bestTarget.roomName] = bestTarget;
-    }
+    targets[info.roomName] = info;
   }
 
   return targets;
