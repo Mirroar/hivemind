@@ -340,10 +340,36 @@ Creep.prototype.enhanceData = function () {
     }
 };
 
+Room.prototype.addObserverReference = function () {
+    if (!this.controller) return;
+
+    if (CONTROLLER_STRUCTURES[STRUCTURE_OBSERVER][this.controller.level] == 0) return;
+
+    if (!this.memory.observerId) {
+        if (!this.memory.observerChecked || this.memory.observerChecked + 250 < Game.time) {
+            this.memory.observerChecked = Game.time;
+
+            let structures = this.find(FIND_STRUCTURES, {filter: {structureType: STRUCTURE_OBSERVER}});
+
+            for (let i in structures) {
+                this.memory.observerId = structures[i].id;
+            }
+        }
+    }
+
+    this.observer = Game.getObjectById(this.memory.observerId);
+
+    if (this.memory.observerId && !this.observer) {
+        delete this.memory.observerId;
+    }
+}
+
 /**
  * Adds some additional data to room objects.
  */
 Room.prototype.enhanceData = function () {
+    this.addObserverReference();
+
     this.sources = [];
 
     // Prepare memory for creep cache (filled globally later).
