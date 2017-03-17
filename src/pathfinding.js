@@ -352,6 +352,10 @@ Creep.prototype.goTo = function (target, options) {
 
     if (!this.hasArrived()) {
         this.followCachedPath();
+
+        // Debug creep movement.
+        new RoomVisual(this.pos.roomName).line(this.pos, target);
+
         if (this.memory.moveBlocked) {
             // Seems like we can't move on the target space for some reason right now.
             // This should be rare, so we use the default pathfinder to get us the rest of the way there.
