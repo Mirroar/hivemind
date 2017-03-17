@@ -14,6 +14,7 @@ var strategyManager = {
     memory.roomList = roomList;
 
     // Add data to scout list for creating priorities.
+    // @todo Add harvestPriority for rooms with harvest flags.
     for (let roomName in roomList) {
       let info = roomList[roomName];
 
@@ -33,7 +34,7 @@ var strategyManager = {
           if (Game.time - intel.lastScan > 5000) {
             scoutPriority = 2;
           }
-          else if (intel.hasController && !intel.owner) {
+          else if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername())) {
             let income = -2000; // Flat cost for room reservation
             let pathLength = 0;
             for (let i in intel.sources) {
@@ -69,7 +70,7 @@ var strategyManager = {
           info.scoutPriority = 1;
         }
         else {
-          // Decide how worthwile settling here is.
+          // Decide how worthwhile settling here is.
           // @todo Factor in amount of mineral sources we have to prefer rooms with rarer minerals.
           let expansionScore = 0;
           let intel = Memory.rooms[roomName].intel;
@@ -82,6 +83,12 @@ var strategyManager = {
           if (intel.mineral) {
             expansionScore++;
           }
+
+          // @todo Having rooms with many sources nearby is good.
+          // @todo Having fewer exit sides is good.
+          // @todo Having dead ends / safe rooms nearby is similarly good.
+          // @todo Having fewer exit tiles is good.
+          // @todo Being close to other player's rooms / reserved rooms is bad.
 
           info.expansionScore = expansionScore;
         }
