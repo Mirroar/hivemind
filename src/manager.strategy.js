@@ -93,16 +93,34 @@ var strategyManager = {
           info.expansionScore = expansionScore;
         }
       }
+
+      if (info.scoutPriority > 0 && info.observer) {
+        // No need to manually scout rooms in range of an observer.
+        info.scoutPriority = 0;
+
+        // Let observer scout one room per run at maximum.
+        // @todo Move this to structure management so we can scan one open room per tick.
+        let observer = Game.getObjectById(info.observer);
+        if (observer && !observer.hasScouted) {
+          observer.observeRoom(roomName);
+          observer.hasScouted = true;
+        }
+      }
     }
 
     strategyManager.manageExpanding();
   },
 
+  /**
+   * Generates a list of rooms originating from owned rooms.
+   */
   generateScoutTargets: function () {
     let roomList = {};
 
     let openList = {};
     let closedList = {};
+
+    let observers = {};
 
     // Starting point for scouting operations are owned rooms.
     for (let roomName in Game.rooms) {
@@ -113,9 +131,13 @@ var strategyManager = {
         range: 0,
         origin: roomName,
       };
+
+      if (room.observer) {
+        observers[roomName] = room.observer;
+      }
     }
 
-    // @todo Flood fill from own rooms and add rooms we need intel of.
+    // Flood fill from own rooms and add rooms we need intel of.
     while (_.size(openList) > 0) {
       let minDist = null;
       let nextRoom = null;
@@ -151,9 +173,18 @@ var strategyManager = {
 
       // Add current room as a candidate for scouting.
       if (!roomList[nextRoom] || roomList[nextRoom].range > info.range) {
+        let observer = null;
+        for (let roomName in observers) {
+          if (Game.map.getRoomLinearDistance(roomName, nextRoom) <= OBSERVER_RANGE) {
+            observer = observers[roomName].id;
+            break;
+          }
+        }
+
         roomList[nextRoom] = {
           range: info.range,
           origin: info.origin,
+          observer: observer,
         };
       }
     }
