@@ -476,7 +476,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 }
             }
         }
-        else if (target && (!target.my && !Game.isAlly(target.owner.username))) {
+        else if (target && (!target.my && target.owner && !Game.isAlly(target.owner.username))) {
             var result = creep.attack(target);
             if (result == OK) {
                 attacked = true;

@@ -236,6 +236,10 @@ var utilities = {
         }
 
         var startPosition = room.getStorageLocation();
+        if(!startPosition) {
+            console.log('No storage found in: ' + room.name);
+            return;
+        }
         startPosition = new RoomPosition(startPosition.x, startPosition.y, room.name);
         if (room.storage) {
             startPosition = room.storage.pos;
@@ -617,15 +621,17 @@ var utilities = {
     },
 
     generateCPUStats: function () {
-        /*//
-        Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
-        Memory.stats['cpu.Towers'] = towersCPUUsage;
-        Memory.stats['cpu.Creeps'] = creepsCPUUsage;
-        Memory.stats['cpu.Start'] = initCPUUsage;
-        Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
-        Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
-        //*/
-
+        //
+        Memory.stats = {
+        //    'cpu.CreepManagers': spawnCPUUsage,
+        //    'cpu.Towers': towersCPUUsage,
+        //    'cpu.Creeps': creepsCPUUsage,
+        //    'cpu.Start': initCPUUsage,
+        //    'cpu.stats': Game.cpu.getUsed() - totalTime,
+            'cpu.getUsed': Game.cpu.getUsed()
+        };
+        
+        
         let limit = Game.cpu.limit;
 
         let output = '';
@@ -635,11 +641,11 @@ var utilities = {
             return '[' + label + ':' + ('    ' + Math.round(percent)).slice(-4) + '%]';
         }
         output += formatStat(Memory.stats['cpu.getUsed'], 'Total');
-        output += formatStat(Memory.stats['cpu.Start'], 'Init');
-        output += formatStat(Memory.stats['cpu.CreepManagers'], 'Spawns');
-        output += formatStat(Memory.stats['cpu.Creeps'], 'Creeps');
-        output += formatStat(Memory.stats['cpu.Towers'], 'Towers');
-        output += formatStat(Memory.stats['cpu.stats'], 'Stats');
+        //output += formatStat(Memory.stats['cpu.Start'], 'Init');
+        //output += formatStat(Memory.stats['cpu.CreepManagers'], 'Spawns');
+        //output += formatStat(Memory.stats['cpu.Creeps'], 'Creeps');
+        //output += formatStat(Memory.stats['cpu.Towers'], 'Towers');
+        //output += formatStat(Memory.stats['cpu.stats'], 'Stats');
 
         return output;
     },

@@ -32,7 +32,7 @@ var Logger = function (channel, roomName) {
   this.active = true;
 
   if (channels[this.channel]) {
-    this.channelName = ('          ' + channels[this.channel].name).slice(-10);
+    this.channelName = ('       ' + channels[this.channel].name).slice(-7);
     if (channels[this.channel].color) {
       this.color = channels[this.channel].color;
     }
