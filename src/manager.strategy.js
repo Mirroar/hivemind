@@ -239,7 +239,7 @@ var strategyManager = {
       info.harvestActive = false;
       harvestRooms.push(info);
     }
-    foo = _.sortBy(harvestRooms, (o) => -o.harvestPriority);
+    var foo = _.sortBy(harvestRooms, (o) => -o.harvestPriority);
 
     // Decide which are active.
     let total = 0;

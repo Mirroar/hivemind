@@ -98,7 +98,7 @@ Creep.prototype.followCachedPath = function () {
 
         if (this.pos.getRangeTo(pos) > 0) {
             //this.say('Skip:' + this.memory.cachedPath.forceGoTo);
-            this.say('S:' + pos.x + 'x' + pos.y);
+            //this.say('S:' + pos.x + 'x' + pos.y);
             this.moveTo(pos);
             return;
         }
@@ -201,7 +201,7 @@ Creep.prototype.followCachedPath = function () {
         }
     }
 
-    this.say('Pos: ' + this.memory.cachedPath.position);
+    //this.say('Pos: ' + this.memory.cachedPath.position);
 
     // @todo Check if we've been blocked for a while and try to move around the blockade.
     // Check if we've moved at all during the previous ticks.

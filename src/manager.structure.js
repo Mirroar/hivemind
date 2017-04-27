@@ -455,7 +455,7 @@ var structureManager = {
         var total = resources.total;
 
         for (let i in RESOURCES_ALL) {
-            resourceType = RESOURCES_ALL[i];
+            var resourceType = RESOURCES_ALL[i];
             let tier = structureManager.getResourceTier(resourceType);
 
             if (tier == 1) {
@@ -502,6 +502,11 @@ var structureManager = {
                 temp[roomName] = lowRooms[roomName];
                 structureManager.tryBuyResources(RESOURCE_ENERGY, temp, true);
             }
+        }
+
+        if (Game.market.credits > 500000) {
+            // Buy a subscription token if we can.
+            structureManager.instaBuyResources(SUBSCRIPTION_TOKEN, resources.rooms);
         }
     },
 
