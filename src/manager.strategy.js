@@ -94,16 +94,25 @@ var strategyManager = {
         }
       }
 
-      if (info.scoutPriority > 0 && info.observer) {
-        // No need to manually scout rooms in range of an observer.
-        info.scoutPriority = 0;
+      if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || (Game.time - Memory.rooms[roomName].intel.lastScan > 1000))) {
+        // Corridor rooms get scouted more often to look for power banks.
+        info.scoutPriority = 2;
+      }
 
-        // Let observer scout one room per run at maximum.
-        // @todo Move this to structure management so we can scan one open room per tick.
-        let observer = Game.getObjectById(info.observer);
-        if (observer && !observer.hasScouted) {
-          observer.observeRoom(roomName);
-          observer.hasScouted = true;
+      if (info.scoutPriority > 0 && info.observer) {
+        // Only observe if last Scan was longer ago than intel manager delay,
+        // so we don't get stuck scanning the same room for some reason.
+        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 500) {
+          // No need to manually scout rooms in range of an observer.
+          info.scoutPriority = 0;
+
+          // Let observer scout one room per run at maximum.
+          // @todo Move this to structure management so we can scan one open room per tick.
+          let observer = Game.getObjectById(info.observer);
+          if (observer && !observer.hasScouted) {
+            observer.observeRoom(roomName);
+            observer.hasScouted = true;
+          }
         }
       }
     }
@@ -177,9 +186,11 @@ var strategyManager = {
       if (!roomList[nextRoom] || roomList[nextRoom].range > info.range) {
         let observer = null;
         for (let roomName in observers) {
-          if (Game.map.getRoomLinearDistance(roomName, nextRoom) <= OBSERVER_RANGE) {
-            observer = observers[roomName].id;
-            break;
+          let roomDist = Game.map.getRoomLinearDistance(roomName, nextRoom);
+          if (roomDist <= OBSERVER_RANGE) {
+            if (!observer || roomDist < Game.map.getRoomLinearDistance(observer.pos.roomName, nextRoom)) {
+              observer = observers[roomName];
+            }
           }
         }
 
