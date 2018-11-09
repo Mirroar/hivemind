@@ -3,6 +3,7 @@ var useProfiler = false;
 
 var debug = require('debug');
 
+require('manager.military');
 require('manager.source');
 require('pathfinding');
 require('role.brawler');
@@ -107,7 +108,7 @@ Creep.prototype._moveToRange = function (target, range) {
 };
 
 Creep.prototype.moveToRange = function (target, range) {
-    this.goTo(target, {range: range});
+    return this.goTo(target, {range: range});
 };
 
 var creepThrottleLevels = {
@@ -599,6 +600,10 @@ var main = {
             var safe = true;
 
             if (hostiles.length > 0) {
+                room.assertMilitarySituation();
+            }
+
+            if (hostiles.length > 0) {
                 // Count body parts for strength estimation.
                 for (var j in hostiles) {
                     if (hostiles[j].isDangerous()) {
@@ -713,11 +718,6 @@ var main = {
             var creepsCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
 
-            main.manageTowers();
-
-            var towersCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
             main.manageLinks();
 
             var linksCPUUsage = Game.cpu.getUsed() - time;
@@ -730,6 +730,14 @@ var main = {
                 console.log('error in checkRoomSecurity:');
                 console.log(e.stack);
             }
+
+            var securityCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
+
+            main.manageTowers();
+
+            var towersCPUUsage = Game.cpu.getUsed() - time;
+            time = Game.cpu.getUsed();
 
             if (Game.time % 10 == 1) {
                 try {
