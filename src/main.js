@@ -12,9 +12,11 @@ require('role.claimer');
 require('role.dismantler');
 require('role.harvester');
 require('role.harvester.exploit');
+require('role.harvester.power');
 require('role.harvester.remote');
 require('role.hauler');
 require('role.hauler.exploit');
+require('role.hauler.power');
 require('role.helper');
 require('role.scout');
 require('role.transporter');
@@ -132,6 +134,10 @@ var creepThrottleLevels = {
         max: 'warning',
         min: 0,
     },
+    'harvester.power': {
+        max: 'warning',
+        min: 0,
+    },
     'harvester.remote': {
         max: 'warning',
         min: 'critical',
@@ -233,6 +239,7 @@ Creep.prototype.runLogic = function() {
             return;
         }
 
+        // @todo Condense this mess, please!
         if (creep.memory.role == 'harvester') {
             creep.runHarvesterLogic();
         }
@@ -254,6 +261,9 @@ Creep.prototype.runLogic = function() {
         else if (creep.memory.role == 'harvester.exploit') {
             creep.runExploitHarvesterLogic();
         }
+        else if (creep.memory.role == 'harvester.power') {
+            creep.runPowerHarvesterLogic();
+        }
         else if (creep.memory.role == 'claimer') {
             creep.runClaimerLogic();
         }
@@ -265,6 +275,9 @@ Creep.prototype.runLogic = function() {
         }
         else if (creep.memory.role == 'hauler.exploit') {
             creep.runExploitHaulerLogic();
+        }
+        else if (creep.memory.role == 'hauler.power') {
+            creep.runPowerHaulerLogic();
         }
         else if (creep.memory.role == 'brawler') {
             creep.runBrawlerLogic();
