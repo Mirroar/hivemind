@@ -1,7 +1,7 @@
 var utilities = require('utilities');
 
 var RoomPlanner = function (roomName) {
-  this.roomPlannerVersion = 10;
+  this.roomPlannerVersion = 19;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -13,7 +13,7 @@ var RoomPlanner = function (roomName) {
   }
   this.memory = Memory.rooms[roomName].roomPlanner;
 
-  // Automatically assume control over any room.
+  // Automatically assume control over any owned room.
   if (this.room.controller && this.room.controller.my) {
     this.memory.controlRoom = true;
   }
@@ -29,6 +29,9 @@ RoomPlanner.prototype.drawDebug = function () {
     lab: '🔬',
     tower: '⚔',
     link: '🔗',
+    rampart: '#',
+    nuker: '☢',
+    powerSpawn: '⚡',
   };
 
   let visual = new RoomVisual(this.roomName);
@@ -41,7 +44,7 @@ RoomPlanner.prototype.drawDebug = function () {
       for (let posName in positions) {
         let pos = utilities.decodePosition(posName);
 
-        visual.text(debugSymbols[locationType], pos.x, pos.y);
+        visual.text(debugSymbols[locationType], pos.x, pos.y + 0.2);
       }
     }
   }
@@ -97,20 +100,50 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
 RoomPlanner.prototype.runLogic = function () {
   if (Game.cpu.bucket < 3500) return;
   if (!this.memory.controlRoom) return;
-  if (!this.memory.locations || !this.memory.plannerVersion || this.memory.plannerVersion != this.roomPlannerVersion) {
+
+  this.checkAdjacentRooms();
+
+  if (!this.memory.plannerVersion || this.memory.plannerVersion != this.roomPlannerVersion) {
+    delete this.memory.locations;
+    this.memory.plannerVersion = this.roomPlannerVersion;
+  }
+
+  if (!this.memory.locations || !this.memory.locations.observer) {
     if (Game.cpu.getUsed() < 100) {
       this.placeFlags();
-      this.memory.plannerVersion = this.roomPlannerVersion;
     }
     return;
   }
   if (Game.time % 100 != 3 && !this.memory.runNextTick) return;
   delete this.memory.runNextTick;
 
+  // Prune old planning cost matrixes. They will be regenerated if needed
+  delete this.memory.wallDistanceMatrix;
+  delete this.memory.exitDistanceMatrix;
+
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   var roomStructures = this.room.find(FIND_STRUCTURES);
   this.newStructures = 0;
   let doneBuilding = true;
+
+  // For bot debugging purposes, remove all roads not part of current room plan.
+  var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
+  for (let i = 0; i < roomRoads.length; i++) {
+    let road = roomRoads[i];
+    if (!this.memory.locations.road || !this.memory.locations.road[utilities.encodePosition(road.pos)]) {
+      road.destroy();
+    }
+  }
+
+  // Build road to sources asap to make getting energy easier.
+  for (let posName in this.memory.locations['road.source'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
 
   // Make sure all current spawns have been built.
   var roomSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_SPAWN);
@@ -121,7 +154,7 @@ RoomPlanner.prototype.runLogic = function () {
   if (roomSpawns.length == CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level] && roomConstructionSites.length == 0) {
     for (let i = 0; i < roomSpawns.length; i++) {
       let spawn = roomSpawns[i];
-      if (!this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
+      if (!this.memory.locations.spawn || !this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
         // Only destroy spawn if there are enough resources and builders available.
         let resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
         if ((resourcesAvailable || _.size(roomSpawns) > 1)) {
@@ -167,12 +200,24 @@ RoomPlanner.prototype.runLogic = function () {
 
   if (this.room.controller.level < 2) return;
 
-  // For bot debugging purposes, remove all roads not part of current room plan.
-  var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
-  for (let i = 0; i < roomRoads.length; i++) {
-    let road = roomRoads[i];
-    if (!this.memory.locations.road[utilities.encodePosition(road.pos)]) {
-      road.destroy();
+  // At level 2, we can start building containers at sources.
+  for (let posName in this.memory.locations['container.source'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+  // Make sure containers are built in the right place, remove otherwise.
+  var roomContainers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_CONTAINER);
+  if (this.memory.locations.container) {
+    for (let i = 0; i < roomContainers.length; i++) {
+      let container = roomContainers[i];
+      if (!this.memory.locations.container[utilities.encodePosition(container.pos)]) {
+        container.destroy();
+      }
     }
   }
 
@@ -298,25 +343,6 @@ RoomPlanner.prototype.runLogic = function () {
     if (!doneBuilding) return;
   }
 
-  // At level 2, we can start building containers and roads to sources.
-  for (let posName in this.memory.locations['container.source'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
-
-  for (let posName in this.memory.locations['road.source'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
-
   // Next priority is a container and road at the controller.
   for (let posName in this.memory.locations['container.controller'] || []) {
     let pos = utilities.decodePosition(posName);
@@ -390,6 +416,8 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
 
+  // Further constructions should only happen in safe rooms.
+  if (this.room && this.room.isEvacuating()) return;
   if (!wallsBuilt) return;
   new Game.logger('room plan', this.roomName).debug('walls are finished');
 
@@ -446,6 +474,49 @@ RoomPlanner.prototype.runLogic = function () {
     }
     if (!doneBuilding) return;
   }
+
+  // Make sure all current nukers have been built.
+  var roomNukers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_NUKER);
+  var roomNukerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_NUKER);
+  if (roomNukers.length + roomNukerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_NUKER][this.room.controller.level]) {
+    for (let posName in this.memory.locations.nuker || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_NUKER, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
+  // Make sure all current power spawns have been built.
+  var roomPSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_POWER_SPAWN);
+  var roomPSpawnSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_POWER_SPAWN);
+  if (roomPSpawns.length + roomPSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][this.room.controller.level]) {
+    for (let posName in this.memory.locations.powerSpawn || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_POWER_SPAWN, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
+  // Make sure all current observers have been built.
+  var roomObservers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_OBSERVER);
+  var roomObserverSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_OBSERVER);
+  if (roomObservers.length + roomObserverSites.length < CONTROLLER_STRUCTURES[STRUCTURE_OBSERVER][this.room.controller.level]) {
+    for (let posName in this.memory.locations.observer || []) {
+      let pos = utilities.decodePosition(posName);
+
+      if (!this.tryBuild(pos, STRUCTURE_OBSERVER, roomConstructionSites)) {
+        doneBuilding = false;
+      }
+    }
+    if (!doneBuilding) return;
+  }
+
 };
 
 /**
@@ -500,7 +571,7 @@ RoomPlanner.prototype.getDismantleTarget = function () {
  * Decides whether a structure is supposed to be dismantled.
  */
 Structure.prototype.needsDismantling = function () {
-  if (!this.room.roomPlanner.needsDismantling()) return false;
+  if (!this.room.roomPlanner || !this.room.roomPlanner.needsDismantling()) return false;
 
   if (this.room.roomPlanner.memory.dismantle && this.room.roomPlanner.memory.dismantle[this.id]) {
     return true;
@@ -665,7 +736,7 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
   for (let x = 5; x < 45; x++) {
     for (let y = 5; y < 45; y++) {
       if (x != 5 && x != 44 && y != 5 && y != 44) continue;
-      if (matrix.get(x, y) != 0) continue;
+      if (matrix.get(x, y) != 0 && matrix.get(x, y) != 10) continue;
       if (Game.map.getTerrainAt(x, y, this.roomName) == 'wall') continue;
       let score = 0;
 
@@ -676,7 +747,13 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
 
       if (_.size(exits[tileDir]) == 0) continue;
 
+      // Don't count exits toward "safe" rooms or dead ends.
+      if (this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
+
       for (let dir in exits) {
+        // Don't count exits toward "safe" rooms or dead ends.
+        if (this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
+
         for (let i in exits[dir]) {
           score += 1 / exits[dir][i].getRangeTo(x, y);
         }
@@ -696,6 +773,7 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
  * Makes plans for a room and place flags to visualize.
  */
 RoomPlanner.prototype.placeFlags = function (visible) {
+  // @todo Place some ramparts on spawns and maybe towers as a last protection if walls go down.
   var start = Game.cpu.getUsed();
 
   if (!this.memory.wallDistanceMatrix) {
@@ -758,10 +836,15 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         centerPositions.push(new RoomPosition(x, y, this.roomName));
       }
 
-      if (exitDistance >= 2 && exitDistance <= 5) {
+      if (exitDistance <= 2) {
+        // Avoid tiles we can't build ramparts on.
+        matrix.set(x, y, 20);
+      }
+      if (exitDistance > 2 && exitDistance <= 5) {
         // Avoid area near exits and room walls to not get shot at.
         matrix.set(x, y, 10);
       }
+
       if (exitDistance == 3) {
         matrix.set(x, y, 10);
         walls.push(new RoomPosition(x, y, this.roomName));
@@ -803,10 +886,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
   }
 
-  for (let i in walls) {
-    this.placeFlag(walls[i], 'rampart', visible);
-  }
-
   // Decide where room center should be by averaging exit positions.
   let cx = 0;
   let cy = 0;
@@ -824,6 +903,16 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   // Find closest position with distance from walls around there.
   let roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(centerPositions);
   this.placeFlag(roomCenter, 'center', visible);
+
+  // Do another flood fill pass from interesting positions to remove walls that don't protect anything.
+  this.pruneWalls(walls, roomCenter, wallDistanceMatrix);
+
+  // Actually place ramparts.
+  for (let i in walls) {
+    if (walls[i].isRelevant) {
+      this.placeFlag(walls[i], 'rampart', visible);
+    }
+  }
 
   // Center is accessible via the 4 cardinal directions.
   let centerEntrances = [
@@ -900,7 +989,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
 
     if (targetPos) {
-      planner.placeFlag(targetPos, 'container' + (containerType ? '.' + containerType : ''), visible);
+      if (containerType) {
+        planner.placeFlag(targetPos, 'container.' + containerType, visible);
+      }
+      planner.placeFlag(targetPos, 'container', visible);
       matrix.set(targetPos.x, targetPos.y, 1);
     }
   }
@@ -927,6 +1019,9 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         this.placeFlag(mineralRoads[i], 'road.mineral', visible);
       }
       placeContainer(mineralRoads, 'mineral');
+
+      // Make sure no other paths get led through harvester position.
+      matrix.set(mineralRoads[0].x, mineralRoads[0].y, 255);
     }
 
     if (this.room.sources) {
@@ -939,6 +1034,9 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
         // Place a link near sources, but off the calculated path.
         placeLink(sourceRoads);
+
+        // Make sure no other paths get led through harvester position.
+        matrix.set(sourceRoads[0].x, sourceRoads[0].y, 255);
       }
     }
   }
@@ -968,10 +1066,26 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   matrix.set(roomCenter.x + 1, roomCenter.y + 1, 255);
   this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y - 1, this.roomName), 'link', visible);
   matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
+  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y, this.roomName), 'nuker', visible);
+  matrix.set(roomCenter.x, roomCenter.y, 255);
 
   // Flood fill from the center to place buildings that need to be accessible.
   var openList = {};
-  openList[utilities.encodePosition(roomCenter)] = {range: 0};
+  let startPath = {};
+  startPath[utilities.encodePosition(roomCenter)] = true;
+  openList[utilities.encodePosition(roomCenter)] = {
+    range: 0,
+    path: startPath,
+  };
+
+  let filterOpenList = function (targetPos) {
+    for (let posName in openList) {
+      if (openList[posName].path[targetPos]) {
+        delete openList[posName]
+      }
+    }
+  }
+
   var closedList = {};
   var buildingsPlaced = false;
   var bayCount = 0;
@@ -979,12 +1093,14 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   while (!buildingsPlaced && _.size(openList) > 0) {
     let minDist = null;
     let nextPos = null;
+    let nextInfo = null;
     for (let posName in openList) {
       let info = openList[posName];
       let pos = utilities.decodePosition(posName);
       if (!minDist || info.range < minDist) {
         minDist = info.range;
         nextPos = pos;
+        nextInfo = info;
       }
     }
 
@@ -1005,12 +1121,20 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         if (wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
 
         // Don't build too close to exits.
-        if (exitDistanceMatrix.get(pos.x, pos.y) < 5) continue;
+        if (exitDistanceMatrix.get(pos.x, pos.y) < 6) continue;
 
         let posName = utilities.encodePosition(pos);
         if (openList[posName] || closedList[posName]) continue;
-        //console.log('openList', pos.x, pos.y);
-        openList[posName] = {range: minDist + 1};
+
+        let newPath = {};
+        for (let oldPos in nextInfo.path) {
+          newPath[oldPos] = true;
+        }
+        newPath[posName] = true;
+        openList[posName] = {
+          range: minDist + 1,
+          path: newPath,
+        };
       }
     }
 
@@ -1027,6 +1151,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
+      filterOpenList(utilities.encodePosition(nextPos));
       this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName), 'road', visible);
       matrix.set(nextPos.x - 1, nextPos.y, 1);
       this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName), 'road', visible);
@@ -1051,9 +1176,13 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       }
       this.placeFlag(nextPos, 'road', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
+      filterOpenList(utilities.encodePosition(nextPos));
       helperPlaced = true;
     }
     else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[maxRoomLevel]) {
+      // Don't build too close to exits.
+      if (exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
       if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y)) continue;
       if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y)) continue;
@@ -1081,6 +1210,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
           this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension', visible);
           matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
+          filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
         }
       }
 
@@ -1095,6 +1225,9 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       bayCount++;
     }
     else if (!this.memory.locations.lab || _.size(this.memory.locations.lab) < CONTROLLER_STRUCTURES.lab[maxRoomLevel]) {
+      // Don't build too close to exits.
+      if (exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+
       // @todo Dynamically generate lab layout for servers where 10 labs is not the max.
       // @todo Allow rotating this blueprint for better access.
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
@@ -1110,57 +1243,66 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       if (!tileFreeForBuilding(nextPos.x, nextPos.y + 2)) continue;
       if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 2)) continue;
 
-      // Make sure we can get a road back to storage.
-      let testMatrix = matrix.clone();
-      testMatrix.set(nextPos.x - 1, nextPos.y - 1, 255);
-      testMatrix.set(nextPos.x, nextPos.y - 1, 255);
-      testMatrix.set(nextPos.x + 1, nextPos.y - 1, 255);
-      testMatrix.set(nextPos.x - 1, nextPos.y, 255);
-      testMatrix.set(nextPos.x, nextPos.y, 1); // Road.
-      testMatrix.set(nextPos.x + 1, nextPos.y, 255);
-      testMatrix.set(nextPos.x - 1, nextPos.y + 1, 1); // Road.
-      testMatrix.set(nextPos.x, nextPos.y + 1, 255);
-      testMatrix.set(nextPos.x + 1, nextPos.y + 1, 1); // Road.
-      testMatrix.set(nextPos.x - 1, nextPos.y + 2, 255);
-      testMatrix.set(nextPos.x, nextPos.y + 2, 255);
-      testMatrix.set(nextPos.x + 1, nextPos.y + 2, 255);
-      let path = this.scanAndAddRoad(nextPos, centerEntrances, testMatrix, []);
-
-      if (_.size(path) == 0) {
-        // This location is not reasonable.
-        continue;
-      }
-
-      // Add buildings and roads for real.
-      matrix.set(nextPos.x - 1, nextPos.y - 1, 255);
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y - 1, nextPos.roomName), 'lab', visible);
-      matrix.set(nextPos.x, nextPos.y - 1, 255);
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y - 1, nextPos.roomName), 'lab', visible);
-      matrix.set(nextPos.x + 1, nextPos.y - 1, 255);
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y - 1, nextPos.roomName), 'lab', visible);
+      // Place center area.
       matrix.set(nextPos.x - 1, nextPos.y, 255);
       this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab', visible);
+      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName)));
       matrix.set(nextPos.x, nextPos.y, 1); // Road.
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', visible);
+
       matrix.set(nextPos.x + 1, nextPos.y, 255);
       this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab', visible);
-      matrix.set(nextPos.x - 1, nextPos.y + 1, 1); // Road.
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'road', visible);
-      matrix.set(nextPos.x, nextPos.y + 1, 255);
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'lab', visible);
-      matrix.set(nextPos.x + 1, nextPos.y + 1, 1); // Road.
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'road', visible);
-      matrix.set(nextPos.x - 1, nextPos.y + 2, 255);
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 2, nextPos.roomName), 'lab', visible);
-      matrix.set(nextPos.x, nextPos.y + 2, 255);
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 2, nextPos.roomName), 'lab', visible);
-      matrix.set(nextPos.x + 1, nextPos.y + 2, 255);
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 2, nextPos.roomName), 'lab', visible);
+      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName)));
+      matrix.set(nextPos.x - 1, nextPos.y + 1, 255);
+      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab', visible);
+      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y + 1, this.roomName)));
+      matrix.set(nextPos.x, nextPos.y + 1, 1); // Road.
+      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', visible);
+
+      matrix.set(nextPos.x + 1, nextPos.y + 1, 255);
+      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab', visible);
+      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y + 1, this.roomName)));
+
+      // Plan road out of labs.
       let labRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
       for (let i in labRoads) {
         this.placeFlag(labRoads[i], 'road', visible);
         matrix.set(labRoads[i].x, labRoads[i].y, 1);
       }
+
+      // Add top and bottom buildings.
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 2; dy += 3) {
+          if (tileFreeForBuilding(nextPos.x + dx, nextPos.y + dy)) {
+            matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
+            this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab', visible);
+            filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
+          }
+        }
+      }
+    }
+    else if (!this.memory.locations.powerSpawn || _.size(this.memory.locations.powerSpawn) < CONTROLLER_STRUCTURES.powerSpawn[maxRoomLevel]) {
+      // Place power spawn.
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
+
+      this.placeFlag(nextPos, 'powerSpawn', visible);
+      matrix.set(nextPos.x, nextPos.y, 255);
+      filterOpenList(utilities.encodePosition(nextPos));
+
+      // Plan road out of power spawn.
+      let psRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
+      for (let i in psRoads) {
+        this.placeFlag(psRoads[i], 'road', visible);
+        matrix.set(psRoads[i].x, psRoads[i].y, 1);
+      }
+    }
+    else if (!this.memory.locations.observer || _.size(this.memory.locations.observer) < CONTROLLER_STRUCTURES.observer[maxRoomLevel]) {
+      // Place observer.
+      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
+
+      this.placeFlag(nextPos, 'observer', visible);
+      matrix.set(nextPos.x, nextPos.y, 255);
+      filterOpenList(utilities.encodePosition(nextPos));
     }
     else {
       buildingsPlaced = true;
@@ -1196,6 +1338,8 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     positions[bestDir].count++;
 
     // Also create a road to this tower.
+    // @todo If possible, create roads after placing ALL towers,
+    // to prevent placing further towers on roads.
     let towerRoads = this.scanAndAddRoad(info.pos, centerEntrances, matrix, roads);
     for (let i in towerRoads) {
       //if (i == 0) continue;
@@ -1210,6 +1354,125 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
 };
+
+/**
+ * Removes any walls that can not be reached from the given list of coordinates.
+ */
+RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, tiles, onlyRelevant) {
+  var openList = {};
+  var closedList = {};
+
+  for (var i in tiles) {
+    openList[tiles[i]] = true;
+  }
+
+  // If we're doing an additionall pass, unmark walls first.
+  if (onlyRelevant) {
+    for (var i in walls) {
+      walls[i].wasRelevant = false;
+      if (walls[i].isRelevant) {
+        walls[i].wasRelevant = true;
+        walls[i].isRelevant = false;
+      }
+    }
+  }
+
+  // Flood fill, marking all walls we touch as relevant.
+  while (_.size(openList) > 0) {
+    let nextPos = null;
+    for (let posName in openList) {
+      let pos = utilities.decodePosition(posName);
+      nextPos = pos;
+      break;
+    }
+
+    delete openList[utilities.encodePosition(nextPos)];
+    closedList[utilities.encodePosition(nextPos)] = true;
+
+    // Add unhandled adjacent tiles to open list.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx == 0 && dy == 0) continue;
+        let pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
+        if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) continue;
+
+        // Ignore walls.
+        if (wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
+
+        let posName = utilities.encodePosition(pos);
+        if (openList[posName] || closedList[posName]) continue;
+
+        // If there's a rampart to be built there, mark it and move on.
+        var wallFound = false;
+        for (var i in walls) {
+          if (walls[i].x == pos.x && walls[i].y == pos.y) {
+            // Skip walls that might have been discarded in a previous pass.
+            if (onlyRelevant && !walls[i].wasRelevant) continue;
+
+            walls[i].isRelevant = true;
+            wallFound = true;
+            closedList[posName] = true;
+            break;
+          }
+        }
+
+        if (!wallFound) {
+          openList[posName] = true;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Marks all walls which are adjacent to the "inner area" of the room.
+ */
+RoomPlanner.prototype.pruneWalls = function (walls, roomCenter, wallDistanceMatrix) {
+  var openList = [];
+
+  openList.push (utilities.encodePosition(roomCenter));
+  // @todo Include sources, minerals, controller.
+  if (this.room) {
+    openList.push(utilities.encodePosition(this.room.controller.pos));
+    var sources = this.room.find(FIND_SOURCES);
+    for (var i in sources) {
+      openList.push(utilities.encodePosition(sources[i].pos));
+    }
+    var minerals = this.room.find(FIND_MINERALS);
+    for (var i in sources) {
+      openList.push(utilities.encodePosition(sources[i].pos));
+    }
+  }
+  this.pruneWallFromTiles(walls, wallDistanceMatrix, openList);
+
+  // Do a second pass, checking which walls get touched by unsafe exits.
+
+  // Prepare CostMatrix and exit points.
+  let exits = [];
+
+  for (let x = 0; x < 50; x++) {
+    for (let y = 0; y < 50; y++) {
+      if (x != 0 && y != 0 && x != 49 && y != 49) continue;
+
+      let terrain = Game.map.getTerrainAt(x, y, this.roomName);
+      if (terrain == 'wall') continue;
+
+      if (x == 0 && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.W)) {
+        exits.push(utilities.encodePosition(new RoomPosition(x, y, this.roomName)));
+      }
+      if (x == 49 && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.E)) {
+        exits.push(utilities.encodePosition(new RoomPosition(x, y, this.roomName)));
+      }
+      if (y == 0 && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.N)) {
+        exits.push(utilities.encodePosition(new RoomPosition(x, y, this.roomName)));
+      }
+      if (y == 49 && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.S)) {
+        exits.push(utilities.encodePosition(new RoomPosition(x, y, this.roomName)));
+      }
+    }
+  }
+  this.pruneWallFromTiles(walls, wallDistanceMatrix, exits, true);
+}
 
 RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
   let result = PathFinder.search(from, to, {
@@ -1245,5 +1508,152 @@ RoomPlanner.prototype.clearFlags = function () {
     flags[i].remove();
   }
 };
+
+/**
+ * Checks which adjacent rooms are owned by ourselves or
+ */
+RoomPlanner.prototype.checkAdjacentRooms = function () {
+  if (!this.memory.adjacentSafe) {
+    this.memory.adjacentSafe = {
+      N: false,
+      E: false,
+      S: false,
+      W: false,
+    };
+  }
+
+  let newStatus = {
+    N: false,
+    E: false,
+    S: false,
+    W: false,
+  };
+
+  let dirMap = {
+    1: 'N',
+    3: 'E',
+    5: 'S',
+    7: 'W',
+  }
+
+  // @todo Do processing.
+  if (this.room.memory.intel) {
+    let intel = this.room.memory.intel;
+
+    newStatus = {
+      N: true,
+      E: true,
+      S: true,
+      W: true,
+    };
+
+    let openList = {};
+    let closedList = {};
+    let joinedDirs = {};
+    // Add initial directions to open list.
+    for (let moveDir in intel.exits || []) {
+      let dir = dirMap[moveDir];
+      let roomName = intel.exits[moveDir];
+
+      if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
+        // This is one of our own rooms, and as such is safe.
+        if ((Game.rooms[roomName].controller.level >= Math.min(5, this.room.controller.level - 1)) && !Game.rooms[roomName].isEvacuating()) {
+          continue;
+        }
+      }
+
+      openList[roomName] = {
+        range: 1,
+        origin: dir,
+        room: roomName,
+      };
+    }
+
+    // Process adjacent rooms until range has been reached.
+    while (_.size(openList) > 0) {
+      let minRange = null;
+      for (let roomName in openList) {
+        if (!minRange || minRange.range > openList[roomName].range) {
+          minRange = openList[roomName];
+        }
+      }
+
+      delete openList[minRange.room];
+      closedList[minRange.room] = minRange;
+
+      if (Memory.rooms[minRange.room] && Memory.rooms[minRange.room].intel) {
+        let roomIntel = Memory.rooms[minRange.room].intel;
+        // Add new adjacent rooms to openList if available.
+        for (let moveDir in roomIntel.exits || []) {
+          let roomName = roomIntel.exits[moveDir];
+
+          if (minRange.range >= 3) {
+            // Room has open exits more than 3 rooms away.
+            // Mark as unsafe.
+            newStatus[minRange.origin] = false;
+            break;
+          }
+
+          let found = openList[roomName] || closedList[roomName] || false;
+          if (found) {
+            if (found.origin != minRange.origin) {
+              // Two different exit directions are joined here.
+              // Treat them as the same.
+              if (!joinedDirs[found.origin]) {
+                joinedDirs[found.origin] = {};
+              }
+              joinedDirs[found.origin][minRange.origin] = true;
+            }
+            continue;
+          }
+
+          if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
+            // This is one of our own rooms, and as such is safe.
+            if (Game.rooms[roomName].controller.level >= 5 && !Game.rooms[roomName].isEvacuating() || roomName == this.room.name) {
+              continue;
+            }
+          }
+
+          // Room has not been checked yet.
+          openList[roomName] = {
+            range: minRange.range + 1,
+            origin: minRange.origin,
+            room: roomName,
+          };
+        }
+      }
+      else {
+        // Room has no intel, declare it as unsafe.
+        newStatus[minRange.origin] = false;
+      }
+    }
+
+    // Unify status of directions which meet up somewhere.
+    for (let dir1 in joinedDirs) {
+      for (let dir2 in joinedDirs[dir1]) {
+        newStatus[dir1] = newStatus[dir1] && newStatus[dir2];
+        newStatus[dir2] = newStatus[dir1] && newStatus[dir2];
+      }
+    }
+  }
+
+  // Check if status changed since last check.
+  for (let dir in newStatus) {
+    if (newStatus[dir] != this.memory.adjacentSafe[dir]) {
+      // Status has changed, recalculate building positioning.
+      new Game.logger('room plan', this.roomName).debug('changed adjacent room status!');
+      Game.notify(
+        'Exit safety has changed for room ' + this.room.name + '!' + "\n\n" +
+        'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.N ? 'safe' : 'not safe') + "\n" +
+        'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.E ? 'safe' : 'not safe') + "\n" +
+        'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.S ? 'safe' : 'not safe') + "\n" +
+        'W: ' + (this.memory.adjacentSafe.W ? 'safe' : 'not safe') + ' -> ' + (newStatus.W ? 'safe' : 'not safe') + "\n"
+      );
+      delete this.memory.locations;
+      this.memory.adjacentSafe = newStatus;
+      break;
+    }
+  }
+}
 
 module.exports = RoomPlanner;
