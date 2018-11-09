@@ -17,10 +17,12 @@ var roleNameMap = {
     'harvester.exploit': 'HE',
     'harvester.minerals': 'HM',
     'harvester.remote': 'HR',
+    'harvester.power': 'HP',
     repairer: 'R',
     scout: 'S',
     transporter: 'T',
     'hauler.exploit': 'TE',
+    'hauler.power': 'TP',
     hauler: 'TR',
     upgrader: 'U',
 };
@@ -217,6 +219,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addExploitSpawnOptions();
     this.addDismantlerSpawnOptions();
     this.addBoostManagerSpawnOptions();
+    this.addPowerSpawnOptions();
 
     // In low level rooms, add defenses!
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
@@ -259,6 +262,12 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     }
     else if (best.role == 'brawler') {
         activeSpawn.spawnBrawler(this.controller.pos);
+    }
+    else if (best.role == 'harvester.power') {
+        activeSpawn.spawnPowerHarvester(best.targetRoom, best.isHealer);
+    }
+    else if (best.role == 'hauler.power') {
+        activeSpawn.spawnPowerHauler(best.targetRoom);
     }
     else if (best.role == 'exploit') {
         Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
@@ -556,6 +565,86 @@ Room.prototype.addBoostManagerSpawnOptions = function () {
             role: 'boosts',
             roomName: this.name,
         });
+    }
+};
+
+Room.prototype.addPowerSpawnOptions = function () {
+    if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) {
+        return;
+    }
+
+    var memory = this.memory.spawnQueue;
+    let myRoomName = this.name;
+
+    for (let roomName in Memory.strategy.power.rooms) {
+        let info = Memory.strategy.power.rooms[roomName];
+
+        if (!info.isActive) continue;
+
+        // @todo Determine supposed time until we crack open the power bank.
+        // Then we can stop spawning attackers and spawn haulers instead.
+
+        if (info.spawnRooms[myRoomName]) {
+            let travelTime = 50 * info.spawnRooms[myRoomName].distance;
+
+            let timeToKill = info.hits / info.dps;
+
+            // We're assigned to spawn creeps for this power gathering operation!
+            let powerHarvesters = _.filter(Game.creepsByRole['harvester.power'] || [], function (creep) {
+                if (creep.memory.sourceRoom == myRoomName && creep.memory.targetRoom == roomName && !creep.memory.isHealer) {
+                    if ((creep.ticksToLive || CREEP_LIFE_TIME) >= CREEP_SPAWN_TIME * MAX_CREEP_SIZE + travelTime) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            let powerHealers = _.filter(Game.creepsByRole['harvester.power'] || [], function (creep) {
+                if (creep.memory.sourceRoom == myRoomName && creep.memory.targetRoom == roomName && creep.memory.isHealer) {
+                    if ((creep.ticksToLive || CREEP_LIFE_TIME) >= CREEP_SPAWN_TIME * MAX_CREEP_SIZE + travelTime) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            if (powerHarvesters.length < 2 && powerHarvesters.length <= powerHealers.length && timeToKill > 0) {
+                memory.options.push({
+                    priority: 4,
+                    weight: 1,
+                    role: 'harvester.power',
+                    targetRoom: roomName,
+                });
+            }
+
+            // Also spawn healers.
+            if (powerHealers.length < 2 && powerHarvesters.length >= powerHealers.length && timeToKill > 0) {
+                memory.options.push({
+                    priority: 4,
+                    weight: 1,
+                    role: 'harvester.power',
+                    targetRoom: roomName,
+                    isHealer: true,
+                });
+            }
+
+            if (timeToKill < CREEP_SPAWN_TIME * MAX_CREEP_SIZE + CREEP_LIFE_TIME * 1 / 3) {
+                // Time to spawn haulers!
+                let powerHaulers = _.filter(Game.creepsByRole['hauler.power'] || [], (creep) => creep.memory.targetRoom == roomName);
+                let totalCapacity = 0;
+                for (let i in powerHaulers) {
+                    totalCapacity += powerHaulers[i].carryCapacity;
+                }
+
+                if (totalCapacity < info.amount * 1.2) {
+                    memory.options.push({
+                        priority: 4,
+                        weight: 0.5,
+                        role: 'hauler.power',
+                        targetRoom: roomName,
+                    });
+                }
+            }
+        }
     }
 };
 
@@ -1280,6 +1369,51 @@ StructureSpawn.prototype.spawnHarvester = function (force, maxSize, sourceID) {
         },
     });
 };
+
+/**
+ * Spawns a new power harvester.
+ */
+StructureSpawn.prototype.spawnPowerHarvester = function (targetRoom, isHealer) {
+    var bodyParts = [];
+    var functionalPart = ATTACK;
+    if (isHealer) {
+        functionalPart = HEAL;
+    }
+    for (let i = 0; i < MAX_CREEP_SIZE; i++) {
+        // First half is all move parts.
+        if (i < MAX_CREEP_SIZE / 2) {
+            bodyParts.push(MOVE);
+            continue;
+        }
+
+        // The rest is functional parts.
+        bodyParts.push(functionalPart);
+    }
+
+    return this.createManagedCreep({
+        role: 'harvester.power',
+        body: bodyParts,
+        memory: {
+            sourceRoom: this.pos.roomName,
+            targetRoom: targetRoom,
+            isHealer: isHealer,
+        },
+    });
+}
+
+/**
+ * Spawns a new power hauler.
+ */
+StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
+    return this.createManagedCreep({
+        role: 'hauler.power',
+        bodyWeights: {move: 0.35, carry: 0.65},
+        memory: {
+            sourceRoom: this.pos.roomName,
+            targetRoom: targetRoom,
+        },
+    });
+}
 
 /**
  * Spawns a new mineral harvester.
