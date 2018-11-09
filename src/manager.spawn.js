@@ -419,6 +419,7 @@ Room.prototype.addUpgraderSpawnOptions = function () {
 
     if (this.controller.level <= 3) {
         maxUpgraders = 1 + numSources + Math.floor(gameState.getStoredEnergy(this) / 2000);
+        maxUpgraders = Math.min(maxUpgraders, 5);
     }
     else if (this.controller.level == 8) {
         maxUpgraders = 1;
