@@ -1165,7 +1165,7 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
 
     return this.createManagedCreep({
         role: 'brawler',
-        bodyWeights: {move: 0.4, tough: 0.3, attack: 0.2, heal: 0.1},
+        bodyWeights: {move: 0.5, attack: 0.3, heal: 0.2},
         maxParts: maxParts,
         memory: {
             storage: utilities.encodePosition(position),
