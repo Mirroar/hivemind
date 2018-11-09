@@ -447,14 +447,11 @@ var utilities = {
             }
             delete newParts.tough;
         }
-        if (newParts.move) {
-            // One move part will be added last.
-            newParts.move--;
-        }
         var done = false;
         while (!done) {
             done = true;
             for (var part in newParts) {
+                if (part == ATTACK || part == RANGED_ATTACK || part == HEAL) continue;
                 if (newParts[part] > 0) {
                     body.push(part);
                     newParts[part]--;
@@ -462,9 +459,14 @@ var utilities = {
                 }
             }
         }
-        if (newParts.move !== undefined) {
-            // Add last move part to make sure creep is always mobile.
-            body.push(MOVE);
+
+        // Add military parts last to keep fighting effeciency.
+        var lastParts = [RANGED_ATTACK, ATTACK, HEAL];
+        for (var p in lastParts) {
+            var part = lastParts[p];
+            for (var i = 0; i < newParts[part] || 0; i++) {
+                body.push(part);
+            }
         }
 
         return body;
