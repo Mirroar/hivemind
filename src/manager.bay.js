@@ -18,11 +18,22 @@ var Bay = function (flagName) {
         }
     }
 
-    // @todo Do not add extensions to bay if center is blocked by a structure.
+    // Do not add extensions to bay if center is blocked by a structure.
+    var posStructures = this.pos.lookFor(LOOK_STRUCTURES);
+    var blocked = false;
+    for (var i in posStructures) {
+        if (OBSTACLE_OBJECT_TYPES.indexOf(posStructures[i].structureType) !== -1) {
+            blocked = true;
+            break;
+        }
+    }
 
     this.extensions = [];
     this.energy = 0;
     this.energyCapacity = 0;
+
+    if (blocked) return;
+
     if (this.memory.extensions) {
         for (let i in this.memory.extensions) {
             let extension = Game.getObjectById(this.memory.extensions[i]);
