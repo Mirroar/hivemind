@@ -7,10 +7,14 @@ Room.prototype.gatherIntel = function () {
     }
     var intel = room.memory.intel;
 
-    if (intel.lastScan && Game.time - intel.lastScan < 500) return;
-    intel.lastScan = Game.time;
+    let lastScanThreshold = 500;
+    if (Game.cpu.bucket < 5000) {
+        lastScanThreshold = 2500;
+    }
 
-    //console.log('intel: Scanning room ' + room.name, 0);
+    if (intel.lastScan && Game.time - intel.lastScan < lastScanThreshold) return;
+    new Game.logger('intel', this.name).debug('Gathering intel after', intel.lastScan && Game.time - intel.lastScan || 'infinite', 'ticks.');
+    intel.lastScan = Game.time;
 
     // @todo Check if this could cause problems.
     intel.inaccessible = false;
