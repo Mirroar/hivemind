@@ -68,6 +68,7 @@ Room.prototype.gatherIntel = function () {
 
     // Check structures.
     intel.structures = {};
+    delete intel.power;
     var structures = room.find(FIND_STRUCTURES);
     for (let i in structures) {
         let structure = structures[i];
@@ -76,8 +77,38 @@ Room.prototype.gatherIntel = function () {
         // Check for power.
         if (structureType == STRUCTURE_POWER_BANK) {
             // For now, send a notification!
-            console.log('Power bank found in', room.name);
-            //Game.notify('Power bank found in ' + room.name + '!');
+            new Game.logger('intel', this.name).log('Power bank found!');
+
+            // Find out how many access points are around this power bank.
+            let numFreeTiles = 0;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    if (Game.map.getTerrainAt(structure.pos.x + dx, structure.pos.y + dy, this.name) != 'wall') {
+                        numFreeTiles++;
+                    }
+                }
+            }
+
+            intel.power = {
+                amount: structure.power,
+                hits: structure.hits,
+                decays: Game.time + (structure.ticksToDecay || POWER_BANK_DECAY),
+                freeTiles: numFreeTiles,
+            };
+
+            // Also store room in strategy memory for easy access.
+            if (Memory.strategy) {
+                if (!Memory.strategy.power) {
+                    Memory.strategy.power = {};
+                }
+                if (!Memory.strategy.power.rooms) {
+                    Memory.strategy.power.rooms = {};
+                }
+                if (!Memory.strategy.power.rooms[this.name] || !Memory.strategy.power.rooms[this.name].isActive) {
+                    Memory.strategy.power.rooms[this.name] = intel.power;
+                }
+            }
         }
         else if (structureType == STRUCTURE_KEEPER_LAIR || structureType == STRUCTURE_CONTROLLER) {
             if (!intel.structures[structureType]) {
