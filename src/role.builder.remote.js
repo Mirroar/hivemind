@@ -156,7 +156,7 @@ var roleRemoteBuilder = {
             return false;
         }
         else {
-            var dropped = creep.pos.findClosestByRange(FIND_DROPPED_ENERGY, {
+            var dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
                 filter: (drop) => drop.resourceType == RESOURCE_ENERGY,
             });
             if (dropped) {

@@ -122,7 +122,7 @@ Creep.prototype.getAvailableEnergySources = function () {
     var storagePosition = creep.room.getStorageLocation();
 
     // Look for energy on the ground.
-    var targets = creep.room.find(FIND_DROPPED_ENERGY, {
+    var targets = creep.room.find(FIND_DROPPED_RESOURCES, {
         filter: (resource) => {
             if (resource.resourceType == RESOURCE_ENERGY) {
                 if (creep.pos.findPathTo(resource)) return true;
