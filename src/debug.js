@@ -73,7 +73,19 @@ Logger.prototype.getOutputPrefix = function () {
   var prefix = '[<font color="'+ this.color +'">' + this.channelName + '</font>';
   prefix += ']';
   if (this.roomName) {
-    prefix += '[<font color="#ffff80">' + this.roomName + '</font>]';
+    let roomColor = 'ffff80';
+    if (Game.rooms[this.roomName]) {
+      if (!Game.rooms[this.roomName].controller) {
+        roomColor = 'dddddd';
+      }
+      else if (Game.rooms[this.roomName].controller.my) {
+        roomColor = '80ff80';
+      }
+      else if (Game.rooms[this.roomName].controller.owner) {
+        roomColor = 'ff8080';
+      }
+    }
+    prefix += '[<font color="#' + roomColor + '">' + this.roomName + '</font>]';
   }
   else {
     prefix += '        ';
