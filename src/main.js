@@ -459,16 +459,18 @@ Room.prototype.enhanceData = function () {
 
     // Register bays.
     this.bays = {};
-    let flags = this.find(FIND_FLAGS, {
-        filter: (flag) => flag.name.startsWith('Bay:')
-    });
-    for (let i in flags) {
-        try {
-            this.bays[flags[i].name] = new Bay(flags[i].name);
-        }
-        catch (e) {
-            console.log('Error when initializing Bays:', e);
-            console.log(e.stack);
+    if (this.controller && this.controller.my) {
+        let flags = this.find(FIND_FLAGS, {
+            filter: (flag) => flag.name.startsWith('Bay:')
+        });
+        for (let i in flags) {
+            try {
+                this.bays[flags[i].name] = new Bay(flags[i].name);
+            }
+            catch (e) {
+                console.log('Error when initializing Bays:', e);
+                console.log(e.stack);
+            }
         }
     }
 
@@ -492,7 +494,9 @@ Room.prototype.enhanceData = function () {
     if (BoostManager) {
         this.boostManager = new BoostManager(this.name);
     }
-    this.roomPlanner = new RoomPlanner(this.name);
+    if (this.controller && this.controller.my) {
+        this.roomPlanner = new RoomPlanner(this.name);
+    }
 };
 
 
@@ -562,11 +566,26 @@ var main = {
     manageStructures: function () {
         for (var name in Game.rooms) {
             try {
-                Game.rooms[name].roomPlanner.runLogic();
+                if (Game.rooms[name].roomPlanner) {
+                    Game.rooms[name].roomPlanner.runLogic();
+                }
             }
             catch (e) {
                 console.log('Error when running RoomPlanner:', e);
                 console.log(e.stack);
+            }
+
+            if (Game.rooms[name].powerSpawn) {
+                try {
+                    var powerSpawn = Game.rooms[name].powerSpawn;
+                    if (powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
+                        powerSpawn.processPower();
+                    }
+                }
+                catch (e) {
+                    console.log('Error when running Power Spawns:', e);
+                    console.log(e.stack);
+                }
             }
         }
     },
@@ -826,11 +845,13 @@ var main = {
                 }
             }
 
-            try {
-                roleplay.roomSongs();
-            }
-            catch (e) {
-                console.log('Error in roomSongs:', e);
+            if (Game.cpu.bucket > 5000) {
+                try {
+                    roleplay.roomSongs();
+                }
+                catch (e) {
+                    console.log('Error in roomSongs:', e);
+                }
             }
 
             time = Game.cpu.getUsed();
