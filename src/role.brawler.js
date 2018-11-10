@@ -175,6 +175,19 @@ Creep.prototype.calculateMilitaryTarget = function (creep) {
 };
 
 /**
+ * Potentially modifies a creep when target room has been reached.
+ */
+Creep.prototype.militaryRoomReached = function () {
+    if (this.memory.squadUnitType == 'builder') {
+        // Rebrand as remote builder to work in this room from now on.
+        this.memory.role = 'builder.remote';
+        this.memory.target = utilities.encodePosition(this.pos);
+        this.memory.starting = false;
+        this.memory.singleRoom = this.pos.roomName;
+    }
+}
+
+/**
  * Makes a creep move towards its designated target.
  */
 Creep.prototype.performMilitaryMove = function () {
@@ -201,12 +214,7 @@ Creep.prototype.performMilitaryMove = function () {
             delete this.memory.pathName;
             delete this.memory.pathStep;
 
-            if (this.memory.squadUnitType == 'builder') {
-                // Rebrand as remote builder to work in this room from now on.
-                this.memory.role = 'builder.remote';
-                this.memory.target = utilities.encodePosition(this.pos);
-                this.memory.starting = false;
-            }
+            this.militaryRoomReached();
         }
         else {
             this.moveTo(flag);
@@ -363,7 +371,7 @@ Creep.prototype.performMilitaryMove = function () {
 
         if (!creep.memory.target) {
             // Movement is dictated by squad orders.
-            var spawnFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('SpawnSquad:' + creep.memory.squadName));
+            var spawnFlags = _.filter(Game.flags, (flag) => flag.name == 'SpawnSquad:' + creep.memory.squadName);
             if (spawnFlags.length > 0) {
                 var flag = spawnFlags[0];
                 if (creep.pos.roomName == flag.pos.roomName) {
@@ -393,15 +401,10 @@ Creep.prototype.performMilitaryMove = function () {
     if (creep.memory.target) {
         var targetPosition = utilities.decodePosition(creep.memory.target);
         if (creep.pos.roomName != targetPosition.roomName) {
-            if (this.hasCachedPath()) {
-                this.followCachedPath();
-                if (this.hasArrived()) {
-                    this.clearCachedPath();
-                }
-            }
-            else {
+            if (!this.moveToRoom(targetPosition.roomName)) {
+                console.log(this.pos.roomName, targetPosition.roomName);
                 // @todo This is cross-room movement and should therefore only calculate a path once.
-                creep.moveTo(targetPosition);
+                creep.moveToRange(targetPosition, 3);
             }
 
             return true;
@@ -412,25 +415,31 @@ Creep.prototype.performMilitaryMove = function () {
         var target = Game.getObjectById(creep.memory.order.target);
 
         if (target) {
-            var result = creep.moveTo(target, {
-                reusePath: 5,
-                ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !Game.isAlly(creep.room.controller.owner.username))) && creep.memory.body.attack,
-            });
+            if (creep.memory.body.attack) {
+                var result = creep.moveTo(target, {
+                    reusePath: 5,
+                    ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !Game.isAlly(creep.room.controller.owner.username))),
+                });
+            }
+            else {
+                var result = creep.goTo(target, {
+                    range: 1,
+                    maxRooms: 1,
+                });
+            }
         }
     }
     else {
         if (creep.memory.squadName) {
-            var attackFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('AttackSquad:' + creep.memory.squadName));
+            var attackFlags = _.filter(Game.flags, (flag) => flag.name == 'AttackSquad:' + creep.memory.squadName);
             if (attackFlags.length > 0) {
                 creep.moveTo(attackFlags[0]);
 
                 if (creep.pos.roomName == attackFlags[0].pos.roomName) {
-                    if (this.memory.squadUnitType == 'builder') {
-                        // Rebrand as remote builder to work in this room from now on.
-                        this.memory.role = 'builder.remote';
-                        this.memory.target = utilities.encodePosition(this.pos);
-                        this.memory.starting = false;
-                    }
+                    creep.militaryRoomReached();
+                }
+                else {
+                    creep.memory.target = utilities.encodePosition(attackFlags[0].pos);
                 }
 
                 return;
