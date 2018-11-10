@@ -115,7 +115,7 @@ Creep.prototype.performGetHaulerEnergy = function () {
 
         // Repair / build roads, even when just waiting for more energy.
         var targetPosition = utilities.decodePosition(this.memory.storage);
-        if (!actionTaken && targetPosition.roomName != this.pos.roomName && Game.cpu.bucket > 3000) {
+        if (!actionTaken && targetPosition.roomName != this.pos.roomName && (!this.room.controller || !this.room.controller.my) && Game.cpu.bucket > 3000) {
             if (this.performBuildRoad()) {
                 return true;
             }
@@ -173,6 +173,23 @@ Creep.prototype.performHaulerDeliver = function () {
                         harvestMemory.revenue += creep.carry.energy;
                         return true;
                     }
+                }
+                let pos = utilities.encodePosition(creep.pos);
+                if (creep.memory.lastWaitPosition == pos) {
+                    creep.memory.lastWaitCount = (creep.memory.lastWaitCount || 0) + 1;
+                    if (creep.memory.lastWaitCount > 10) {
+                        // Cannot reach dropoff spot, just drop energy right here then.
+                        if (creep.drop(RESOURCE_ENERGY) == OK) {
+                            // If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+                            harvestMemory.revenue += creep.carry.energy;
+                            delete creep.memory.lastWaitCount;
+                            return true;
+                        }
+                    }
+                }
+                else {
+                    delete creep.memory.lastWaitCount;
+                    creep.memory.lastWaitPosition = pos;
                 }
             }
             else {
