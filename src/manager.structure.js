@@ -131,6 +131,78 @@ Room.prototype.isClearingTerminal = function () {
     return this.memory.isClearingTerminal;
 };
 
+Room.prototype.getStorageLimit = function () {
+    let total = 0;
+    if (this.storage) {
+        total = total + this.storage.storeCapacity;
+    }
+    else {
+        // Assume 10000 storage for dropping stuff on the ground.
+        total = total + 10000;
+    }
+    if (this.terminal) {
+        total = total + this.terminal.storeCapacity;
+    }
+
+    return total;
+}
+
+Room.prototype.getStorageCapacity = function () {
+    // Determines amount of free space in storage.
+    let limit = this.getStorageLimit();
+    if (this.storage) {
+        limit = limit - _.sum(this.storage.store);
+    }
+    if (this.terminal) {
+        limit = limit - _.sum(this.terminal.store);
+    }
+
+    return limit;
+}
+
+Room.prototype.getCurrentResourceAmount = function (resourceType) {
+    let total = 0;
+    if (this.storage && this.storage.store[resourceType]) {
+        total = total + this.storage.store[resourceType];
+    }
+    if (this.terminal && this.terminal.store[resourceType]) {
+        total = total + this.terminal.store[resourceType];
+    }
+
+    return total;
+}
+
+Room.prototype.getCurrentMineralAmount = function () {
+    // @todo This could use caching.
+    let total = 0;
+
+    for (let i in RESOURCES_ALL) {
+        let resourceType = RESOURCES_ALL[i];
+        if (resourceType == RESOURCE_ENERGY || resourceType == RESOURCE_POWER) continue;
+        total = total + this.getCurrentResourceAmount(resourceType);
+    }
+
+    return total;
+}
+
+Room.prototype.isFullOnEnergy = function () {
+    return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 2;
+}
+
+Room.prototype.isFullOnPower = function () {
+    return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 6;
+}
+
+Room.prototype.isFullOnMinerals = function () {
+    return this.getCurrentMineralAmount() > this.getStorageLimit() / 3;
+}
+
+Room.prototype.isFullOn = function (resourceType) {
+    if (resourceType == RESOURCE_ENERGY) return this.isFullOnEnergy();
+    if (resourceType == RESOURCE_POWER) return this.isFullOnPower();
+    return this.isFullOnMinerals();
+}
+
 var structureManager = {
 
     getResourceTier: function (resourceType) {
@@ -283,6 +355,7 @@ var structureManager = {
         for (let roomName in rooms) {
             let roomState = rooms[roomName];
             if (!roomState.canTrade) continue;
+            if (Game.rooms[roomName] && Game.rooms[roomName].isFullOn(resourceType)) continue;
             if (!minAmount || (roomState.totalResources[resourceType] || 0) < minAmount) {
                 minAmount = roomState.totalResources[resourceType];
                 bestRoom = roomName;
@@ -332,7 +405,7 @@ var structureManager = {
                 return true;
             }
         }).length > 0) {
-            new Game.logger('trade').debug('Already buying', resourceType);
+            // new Game.logger('trade').debug('Already buying', resourceType);
             return;
         }
 
@@ -342,6 +415,7 @@ var structureManager = {
         for (let roomName in rooms) {
             let roomState = rooms[roomName];
             if (!roomState.canTrade) continue;
+            if (Game.rooms[roomName] && Game.rooms[roomName].isFullOn(resourceType)) continue;
             if (!minAmount || (roomState.totalResources[resourceType] || 0) < minAmount) {
                 minAmount = roomState.totalResources[resourceType];
                 bestRoom = roomName;
@@ -378,7 +452,7 @@ var structureManager = {
 
         // Make sure we have enough credits to actually buy this.
         if (Game.market.credits < 10000 * offerPrice) {
-            new Game.logger('trade', bestRoom).debug('Not enough credits, no buy order created.');
+            // new Game.logger('trade', bestRoom).debug('Not enough credits, no buy order created.');
             return;
         }
 
@@ -391,7 +465,7 @@ var structureManager = {
         let npcPrice = 1;
 
         if (_.filter(Game.market.orders, (order) => order.type == ORDER_SELL && order.resourceType == resourceType).length > 0) {
-            new Game.logger('trade').debug('Already selling', resourceType);
+            // new Game.logger('trade').debug('Already selling', resourceType);
             return;
         }
 
@@ -437,7 +511,7 @@ var structureManager = {
 
         // Make sure we have enough credits to actually sell this.
         if (Game.market.credits < 10000 * offerPrice * 0.05) {
-            new Game.logger('trade', bestRoom).debug('Not enough credits, no sell order created.');
+            // new Game.logger('trade', bestRoom).debug('Not enough credits, no sell order created.');
             return;
         }
 
@@ -464,7 +538,7 @@ var structureManager = {
         var total = resources.total;
 
         for (let i in RESOURCES_ALL) {
-            resourceType = RESOURCES_ALL[i];
+            let resourceType = RESOURCES_ALL[i];
             let tier = structureManager.getResourceTier(resourceType);
 
             if (tier == 1) {
@@ -758,7 +832,7 @@ var structureManager = {
             }
         }
         else {
-            new Game.logger('trade').log("Nothing to trade");
+            // new Game.logger('trade').log("Nothing to trade");
         }
 
         if (Game.time % 1500 == 981) {
