@@ -73,22 +73,12 @@ catch (e) {
   // No local relations declared, ignore.
 }
 
-// @todo Decide when it is a good idea to send out harvesters to adjacent unclaimend tiles.
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
-// @todo spawn new buildings where reasonable when controller upgrades or stuff gets destroyed.
 
 // @todo Do not send any remote harvesters or claimers until enemies in a room should have expired. Maybe scout from time to time.
 // @todo make unarmed creeps run from hostiles.
 
-// @todo Make sure creeps that are supposed to stay in their room do that, go back to their room if exited, and pathfind within the room only.
-
-// @todo add try / catch block to main loops so that one broken routine doesn't stop the whole colony from working.
-
-// @todo Harvest source keeper rooms. Inspiration: E36N34
-
 // @todo Cache building info and CostMatrix objects when scanning rooms in intel manager.
-
-// @todo Buff creeps with mineral compounds when there are labs near a spawn.
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
