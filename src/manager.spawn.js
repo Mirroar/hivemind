@@ -294,6 +294,8 @@ Room.prototype.addHarvesterSpawnOptions = function () {
         force = true;
     }
 
+    if (!force && this.isFullOnEnergy()) return;
+
     for (let i in this.sources) {
         let source = this.sources[i];
         let maxParts = source.getMaxWorkParts();
@@ -649,6 +651,8 @@ Room.prototype.addPowerSpawnOptions = function () {
 };
 
 Room.prototype.addDismantlerSpawnOptions = function () {
+    if (this.isEvacuating()) return;
+
     var memory = this.memory.spawnQueue;
 
     let flags = _.filter(Game.flags, (flag) => flag.name.startsWith('Dismantle:' + this.name));
@@ -743,7 +747,7 @@ Room.prototype.manageSpawns = function () {
 
         {
             // Harvest minerals.
-            if (mineralHarvesters.length < minerals.length && minerals[0].mineralAmount > 0) {
+            if (mineralHarvesters.length < minerals.length && minerals[0].mineralAmount > 0 && !this.isFullOnMinerals()) {
                 // We assume there is always at most one mineral deposit in a room.
                 if (spawn.spawnMineralHarvester(minerals[0])) {
                     return true;
