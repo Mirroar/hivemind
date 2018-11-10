@@ -6,8 +6,14 @@ var utilities = require('utilities');
 Creep.prototype.performDismantle = function () {
     // First, get to target room.
     if (this.pos.roomName != this.memory.targetRoom) {
-        this.moveTo(new RoomPosition(25, 25, this.memory.targetRoom));
-        return true;
+        if (this.memory._move && this.memory._move.dest && this.memory._move.dest.room == this.memory.targetRoom) {
+            // If we're already moving to target room, just continue that movement.
+            this.moveTo(new RoomPosition(this.memory._move.dest.x, this.memory._move.dest.y, this.memory._move.dest.room));
+        }
+        else {
+            this.moveTo(new RoomPosition(25, 25, this.memory.targetRoom));
+            return true;
+        }
     }
 
     var target;
@@ -32,7 +38,7 @@ Creep.prototype.performDismantle = function () {
         }
     }
 
-    if (!target && this.room.roomPlanner.needsDismantling()) {
+    if (!target && this.room.roomPlanner && this.room.roomPlanner.needsDismantling()) {
         target = this.room.roomPlanner.getDismantleTarget();
         if (target) {
             target.notifyWhenAttacked(false);
