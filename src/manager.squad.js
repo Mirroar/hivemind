@@ -216,7 +216,7 @@ Squad.prototype.getOrders = function () {
 
     if (this.memory.fullySpawned) {
         // Check if there is an attack flag for this squad.
-        var attackFlags = _.filter(Game.flags, (flag) => flag.name.startsWith('AttackSquad:' + this.name));
+        var attackFlags = _.filter(Game.flags, (flag) => flag.name == 'AttackSquad:' + this.name);
         if (attackFlags.length > 0) {
             options.push({
                 priority: 5,
