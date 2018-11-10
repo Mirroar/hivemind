@@ -52,6 +52,14 @@ Creep.prototype.performHarvest = function () {
             if (link && link.energy < link.energyCapacity) {
                 target = link;
             }
+            else {
+                // Check for other nearby links.
+                let links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.energy < structure.energyCapacity});
+                for (var i in links) {
+                    target = links[i];
+                    break;
+                }
+            }
         }
         if (target) {
             if (creep.pos.getRangeTo(target) > 1) {
