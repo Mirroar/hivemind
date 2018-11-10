@@ -26,6 +26,14 @@ StructureTower.prototype.runLogic = function () {
     }//*/
 
     // Attack enemies.
+    if (this.room.find(FIND_HOSTILE_CREEPS).length > 0) {
+        var target = this.room.getTowerTarget(this);
+        if (target) {
+            this.attack(target);
+            return true;
+        }
+    }
+
     var closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
         filter: (creep) => {
             for (var i in creep.body) {
