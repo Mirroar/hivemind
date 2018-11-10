@@ -639,12 +639,11 @@ RoomPlanner.prototype.placeFlag = function (pos, flagType, visible) {
 RoomPlanner.prototype.generateDistanceMatrixes = function () {
   var matrix = new PathFinder.CostMatrix();
   var exitMatrix = new PathFinder.CostMatrix();
+  var terrain = new Room.Terrain(this.roomName);
 
   for (let x = 0; x < 50; x++) {
     for (let y = 0; y < 50; y++) {
-      let terrain = Game.map.getTerrainAt(x, y, this.roomName);
-
-      if (terrain == 'wall') {
+      if (terrain.get(x, y) == TERRAIN_MASK_WALL) {
         matrix.set(x, y, 255);
         exitMatrix.set(x, y, 255);
         continue;
@@ -660,7 +659,7 @@ RoomPlanner.prototype.generateDistanceMatrixes = function () {
           let ax = (x + dx < 0 ? 0 : (x + dx > 49 ? 49 : x + dx));
           let ay = (y + dy < 0 ? 0 : (y + dy > 49 ? 49 : y + dy));
 
-          if ((ax != 0 || ay != 0) && Game.map.getTerrainAt(ax, ay, this.roomName) == 'wall') {
+          if ((ax != 0 || ay != 0) && terrain.get(ax, ay) == TERRAIN_MASK_WALL) {
             matrix.set(x, y, 1);
             found = true;
             break;
@@ -733,11 +732,12 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
     W: {count: 0, tiles: []},
   };
 
+  let terrain = new Room.Terrain(this.roomName);
   for (let x = 5; x < 45; x++) {
     for (let y = 5; y < 45; y++) {
       if (x != 5 && x != 44 && y != 5 && y != 44) continue;
       if (matrix.get(x, y) != 0 && matrix.get(x, y) != 10) continue;
-      if (Game.map.getTerrainAt(x, y, this.roomName) == 'wall') continue;
+      if (terrain.get(x, y) == TERRAIN_MASK_WALL) continue;
       let score = 0;
 
       let tileDir = 'S';
@@ -799,13 +799,12 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   let walls = [];
   let roads = [];
   let centerPositions = [];
+  let terrain = new Room.Terrain(this.roomName);
   for (let x = 0; x < 50; x++) {
     for (let y = 0; y < 50; y++) {
-      let terrain = Game.map.getTerrainAt(x, y, this.roomName);
-
       // Treat exits as unwalkable for in-room pathfinding.
       if (x == 0 || y == 0 || x == 49 || y == 49) {
-        if (terrain != 'wall') {
+        if (terrain.get(x, y) != TERRAIN_MASK_WALL) {
           if (x == 0) {
             exits.W.push(new RoomPosition(x, y, this.roomName));
           }
@@ -1449,13 +1448,13 @@ RoomPlanner.prototype.pruneWalls = function (walls, roomCenter, wallDistanceMatr
 
   // Prepare CostMatrix and exit points.
   let exits = [];
+  let terrain = new Room.Terrain(this.roomName);
 
   for (let x = 0; x < 50; x++) {
     for (let y = 0; y < 50; y++) {
       if (x != 0 && y != 0 && x != 49 && y != 49) continue;
 
-      let terrain = Game.map.getTerrainAt(x, y, this.roomName);
-      if (terrain == 'wall') continue;
+      if (terrain.get(x, y) == TERRAIN_MASK_WALL) continue;
 
       if (x == 0 && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.W)) {
         exits.push(utilities.encodePosition(new RoomPosition(x, y, this.roomName)));

@@ -1209,13 +1209,13 @@ Creep.prototype.bayUnstuck = function () {
 
         if (best && typeof best != 'string' && best.type == 'bay' && this.memory.order.target == i) continue;
 
-
         // We're standing in a bay that we're not delivering to.
+        let terrain = new Room.Terrain(this.pos.roomName);
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;
 
-                if (Game.map.getTerrainAt(this.pos.x + dx, this.pos.y + dy, this.pos.roomName) == 'wall') continue;
+                if (terrain.get(this.pos.x + dx, this.pos.y + dy) == TERRAIN_MASK_WALL) continue;
 
                 let pos = new RoomPosition(this.pos.x + dx, this.pos.y + dy, this.pos.roomName);
                 let blocked = false;

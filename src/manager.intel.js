@@ -80,11 +80,12 @@ Room.prototype.gatherIntel = function () {
             new Game.logger('intel', this.name).log('Power bank found!');
 
             // Find out how many access points are around this power bank.
+            let terrain = new Room.Terrain(this.name);
             let numFreeTiles = 0;
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 1; dy++) {
                     if (dx == 0 && dy == 0) continue;
-                    if (Game.map.getTerrainAt(structure.pos.x + dx, structure.pos.y + dy, this.name) != 'wall') {
+                    if (terrain.get(structure.pos.x + dx, structure.pos.y + dy) != TERRAIN_MASK_WALL) {
                         numFreeTiles++;
                     }
                 }

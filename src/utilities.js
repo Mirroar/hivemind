@@ -341,11 +341,11 @@ var utilities = {
 
             if (!utilities.costMatrixCache[cacheKey]) {
                 matrix = matrix.clone();
+                let terrain = new Room.Terrain(roomName);
                 for (let x = 0; x < 50; x++) {
                     for (let y = 0; y < 50; y++) {
                         if (x == 0 || y == 0 || x == 49 || y == 49) {
-                            let terrain = Game.map.getTerrainAt(x, y, roomName);
-                            if (terrain != 'wall') {
+                            if (terrain.get(x, y) != TERRAIN_MASK_WALL) {
                                 matrix.set(x, y, 50);
                             }
                         }
