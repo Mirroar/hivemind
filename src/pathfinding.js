@@ -301,7 +301,7 @@ Creep.prototype.followCachedPath = function () {
  * Replacement for default moveTo that uses cached paths while trying to go around targets.
  */
 Creep.prototype.goTo = function (target, options) {
-    if (!target) return;
+    if (!target) return false;
     if (!options) options = {};
 
     if (!this.memory.go || this.memory.go.lastAccess < Game.time - 10) {
@@ -323,19 +323,23 @@ Creep.prototype.goTo = function (target, options) {
     if (!this.memory.go.target || this.memory.go.target != targetPos || !this.hasCachedPath()) {
         this.memory.go.target = targetPos;
 
-        let options = {};
+        let pfOptions = {};
         if (this.memory.singleRoom) {
             if (this.pos.roomName == this.memory.singleRoom) {
-                options.maxRooms = 1;
+                pfOptions.maxRooms = 1;
             }
-            options.singleRoom = this.memory.singleRoom;
+            pfOptions.singleRoom = this.memory.singleRoom;
+        }
+
+        if (options.maxRooms) {
+            pfOptions.maxRooms = options.maxRooms;
         }
 
         // Always allow pathfinding in current room.
-        options.whiteListRooms = [this.pos.roomName];
+        pfOptions.whiteListRooms = [this.pos.roomName];
 
         // Calculate a path to take.
-        var result = utilities.getPath(this.pos, {pos: target, range: range}, false, options);
+        var result = utilities.getPath(this.pos, {pos: target, range: range}, false, pfOptions);
 
         if (result && result.path) {
             //console.log('found path in', result.ops, 'operations', result.path);
@@ -360,11 +364,13 @@ Creep.prototype.goTo = function (target, options) {
             // Seems like we can't move on the target space for some reason right now.
             // This should be rare, so we use the default pathfinder to get us the rest of the way there.
             if (this.pos.getRangeTo(target) > range && this.pos.getRangeTo(target) < range + 5) {
-                this.moveTo(target);
+                let result = this.moveTo(target);
+                if (result == ERR_NO_PATH) return false;
             }
         }
     }
     else {
         this.clearCachedPath();
     }
+    return true;
 };
