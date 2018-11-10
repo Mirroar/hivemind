@@ -199,7 +199,7 @@ var strategyManager = {
         roomList[nextRoom] = {
           range: info.range,
           origin: info.origin,
-          observer: observer,
+          observer: observer && observer.id,
         };
       }
     }
@@ -252,12 +252,12 @@ var strategyManager = {
       info.harvestActive = false;
       harvestRooms.push(info);
     }
-    foo = _.sortBy(harvestRooms, (o) => -o.harvestPriority);
+    let sortedRooms = _.sortBy(harvestRooms, (o) => -o.harvestPriority);
 
     // Decide which are active.
     let total = 0;
-    for (let i = 0; i < foo.length; i++) {
-      let info = foo[i];
+    for (let i = 0; i < sortedRooms.length; i++) {
+      let info = sortedRooms[i];
       if (!sourceRooms[info.origin]) continue;
       if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
 
@@ -395,6 +395,11 @@ var strategyManager = {
    */
   managePower: function () {
     let memory = Memory.strategy;
+
+    // @todo Add throttle like with remote harvesting.
+    if (!memory.power) {
+      memory.power = {};
+    }
 
     for (let roomName in memory.power.rooms || []) {
       // @todo Skip room if we already decided to harvest it.
