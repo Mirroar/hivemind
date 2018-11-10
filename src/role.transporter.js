@@ -332,6 +332,44 @@ Creep.prototype.getAvailableSources = function () {
         }
     }
 
+    // Take ghodium if nuker needs it.
+    if (creep.room.nuker && creep.room.nuker.ghodium < creep.room.nuker.ghodiumCapacity) {
+        var target = creep.room.getBestStorageSource(RESOURCE_GHODIUM);
+        if (target && target.store[RESOURCE_GHODIUM] > 0) {
+            var option = {
+                priority: 2,
+                weight: 0, // @todo Also factor in distance.
+                type: 'structure',
+                object: target,
+                resourceType: RESOURCE_GHODIUM,
+            };
+
+            options.push(option);
+        }
+    }
+
+    // Take power if power spawn needs it.
+    if (creep.room.powerSpawn && creep.room.powerSpawn.power < creep.room.powerSpawn.powerCapacity * 0.1) {
+        var target = creep.room.getBestStorageSource(RESOURCE_POWER);
+        if (target && target.store.power > 0) {
+            // @todo Limit amount since power spawn can only hold 100 power at a time.
+            // @todo Make sure only 1 creep does this at a time.
+            var option = {
+                priority: 3,
+                weight: 0, // @todo Also factor in distance.
+                type: 'structure',
+                object: target,
+                resourceType: RESOURCE_POWER,
+            };
+
+            if (creep.room.isFullOnPower()) {
+                option.priority++;
+            }
+
+            options.push(option);
+        }
+    }
+
     if (creep.room.isEvacuating()) {
         // Take everything out of labs.
         let labs = creep.room.find(FIND_STRUCTURES, {
@@ -818,6 +856,34 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             options.push(option);
         }
 
+        if (!creep.room.isEvacuating()) {
+            // Supply nukers and power spawns with energy.
+            var targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_NUKER || structure.structureType == STRUCTURE_POWER_SPAWN) && structure.energy < structure.energyCapacity;
+                }
+            });
+
+            for (var i in targets) {
+                var target = targets[i];
+                var option = {
+                    priority: 1,
+                    weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+                    type: 'structure',
+                    object: target,
+                    resourceType: RESOURCE_ENERGY,
+                };
+
+                if (target.structureType == STRUCTURE_POWER_SPAWN) {
+                    option.priority += 2;
+                }
+
+                option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * 2;
+
+                options.push(option);
+            }
+        }
+
         // Put in storage if nowhere else needs it.
         let storageTarget = creep.room.getBestStorageTarget(this.carry.energy, RESOURCE_ENERGY);
         if (storageTarget) {
@@ -898,6 +964,38 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 object: storageTarget,
                 resourceType: resourceType,
             });
+        }
+
+        // Put ghodium in nukers.
+        if (resourceType == RESOURCE_GHODIUM && !creep.room.isEvacuating()) {
+            var targets = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_NUKER) && structure.ghodium < structure.ghodiumCapacity;
+                }
+            });
+
+            for (var i in targets) {
+                options.push({
+                    priority: 2,
+                    weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+                    type: 'structure',
+                    object: targets[i],
+                    resourceType: resourceType,
+                });
+            }
+        }
+
+        // Put power in power spawns.
+        if (resourceType == RESOURCE_POWER && creep.room.powerSpawn && !creep.room.isEvacuating()) {
+            if (creep.room.powerSpawn.power < creep.room.powerSpawn.powerCapacity * 0.1) {
+                options.push({
+                    priority: 4,
+                    weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+                    type: 'structure',
+                    object: creep.room.powerSpawn,
+                    resourceType: resourceType,
+                });
+            }
         }
 
         // Put correct resources into labs.
@@ -1014,9 +1112,14 @@ Creep.prototype.performDeliver = function () {
         else {
             creep.transfer(target, creep.memory.order.resourceType);
         }
-        if ((target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity) || (target.mineralAmount && target.mineralAmount >= target.mineralCapacity)) {
+
+        if ((creep.memory.order.resourceType == RESOURCE_ENERGY && target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity) || (target.mineralAmount && target.mineralAmount >= target.mineralCapacity)) {
             creep.calculateDeliveryTarget();
         }
+        else if (creep.memory.order.resourceType == RESOURCE_POWER && target.power && target.power >= target.powerCapacity) {
+            creep.calculateDeliveryTarget();
+        }
+
         else if (target.mineralAmount && target.mineralType != creep.memory.order.resourceType) {
             creep.calculateDeliveryTarget();
         }
