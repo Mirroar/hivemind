@@ -37,12 +37,22 @@ Creep.prototype.getAvailableBuilderTargets = function () {
         let maxHealth = target.hitsMax;
         if (target.structureType == STRUCTURE_WALL || target.structureType == STRUCTURE_RAMPART) {
             option.priority--;
+            if (target.structureType == STRUCTURE_WALL) {
+                option.priority--;
+            }
 
             // Walls and ramparts get repaired up to a certain health level.
             maxHealth = wallHealth[target.room.controller.level];
-            if (target.hits >= maxHealth) {
-                // Skip this.
-                continue;
+            if (target.hits >= maxHealth * 0.9) {
+                if (target.hits < target.hitsMax && target.structureType == STRUCTURE_RAMPART) {
+                    // This has really low priority.
+                    option.priority = 0;
+                    maxHealth = target.hitsMax;
+                }
+                else {
+                    // Skip this.
+                    continue;
+                }
             }
             option.weight = 1 - target.hits / maxHealth;
             option.maxHealth = maxHealth;
@@ -128,7 +138,7 @@ Creep.prototype.calculateBuilderTarget = function () {
                 maxHealth: best.maxHealth,
             };
 
-            new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now repairing', best.object);
+            //new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now repairing', best.object);
         }
         else if (best.type == 'site') {
             creep.memory.order = {
@@ -136,7 +146,7 @@ Creep.prototype.calculateBuilderTarget = function () {
                 target: best.object.id,
             };
 
-            new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now building', best.object);
+            // new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now building', best.object);
         }
     }
     else {
