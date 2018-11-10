@@ -368,11 +368,61 @@ Room.prototype.addObserverReference = function () {
     }
 }
 
+Room.prototype.addNukerReference = function () {
+    if (!this.controller) return;
+
+    if (CONTROLLER_STRUCTURES[STRUCTURE_NUKER][this.controller.level] == 0) return;
+
+    if (!this.memory.nukerId) {
+        if (!this.memory.nukerChecked || this.memory.nukerChecked + 250 < Game.time) {
+            this.memory.nukerChecked = Game.time;
+
+            let structures = this.find(FIND_STRUCTURES, {filter: {structureType: STRUCTURE_NUKER}});
+
+            for (let i in structures) {
+                this.memory.nukerId = structures[i].id;
+            }
+        }
+    }
+
+    this.nuker = Game.getObjectById(this.memory.nukerId);
+
+    if (this.memory.nukerId && !this.nuker) {
+        delete this.memory.nukerId;
+    }
+}
+
+Room.prototype.addPowerSpawnReference = function () {
+    if (!this.controller) return;
+
+    if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][this.controller.level] == 0) return;
+
+    if (!this.memory.powerSpawnId) {
+        if (!this.memory.powerSpawnChecked || this.memory.powerSpawnChecked + 250 < Game.time) {
+            this.memory.powerSpawnChecked = Game.time;
+
+            let structures = this.find(FIND_STRUCTURES, {filter: {structureType: STRUCTURE_POWER_SPAWN}});
+
+            for (let i in structures) {
+                this.memory.powerSpawnId = structures[i].id;
+            }
+        }
+    }
+
+    this.powerSpawn = Game.getObjectById(this.memory.powerSpawnId);
+
+    if (this.memory.powerSpawnId && !this.powerSpawn) {
+        delete this.memory.powerSpawnId;
+    }
+}
+
 /**
  * Adds some additional data to room objects.
  */
 Room.prototype.enhanceData = function () {
     this.addObserverReference();
+    this.addNukerReference();
+    this.addPowerSpawnReference();
 
     this.sources = [];
 
