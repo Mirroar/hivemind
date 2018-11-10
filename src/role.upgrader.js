@@ -18,7 +18,7 @@ Creep.prototype.performUpgrade = function () {
         var withdrawn = false;
         if (this.room.memory.controllerLink) {
             var controllerLink = Game.getObjectById(this.room.memory.controllerLink);
-            if (controllerLink.energy > 50 && this.pos.getRangeTo(controllerLink) <= 1) {
+            if (controllerLink && controllerLink.energy > 50 && this.pos.getRangeTo(controllerLink) <= 1) {
                 if (this.withdraw(controllerLink, RESOURCE_ENERGY) == OK) {
                     withdrawn = true;
                 }
@@ -26,7 +26,7 @@ Creep.prototype.performUpgrade = function () {
         }
         if (!withdrawn && this.room.memory.controllerContainer) {
             var controllerContainer = Game.getObjectById(this.room.memory.controllerContainer);
-            if (controllerContainer.store.energy > 50 && this.pos.getRangeTo(controllerContainer) <= 1) {
+            if (controllerContainer && controllerContainer.store.energy > 50 && this.pos.getRangeTo(controllerContainer) <= 1) {
                 if (this.withdraw(controllerContainer, RESOURCE_ENERGY) == OK) {
                     withdrawn = true;
                 }
