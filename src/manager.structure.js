@@ -622,7 +622,7 @@ var structureManager = {
 
             roomData.isEvacuating = room.isEvacuating();
 
-            if (storage) {
+            if (storage && !roomData.isEvacuating) {
                 for (let resourceType in storage.store) {
                     roomData.totalResources[resourceType] = storage.store[resourceType];
                     total.resources[resourceType] = (total.resources[resourceType] || 0) + storage.store[resourceType];
@@ -638,14 +638,14 @@ var structureManager = {
                 }
             }
 
-            if (room.mineral) {
+            if (room.mineral && !roomData.isEvacuating) {
                 // @todo Only count if there is an extractor on this mineral.
                 roomData.mineralType = room.mineral.mineralType;
                 total.sources[room.mineral.mineralType] = (total.sources[room.mineral.mineralType] || 0) + 1;
             }
 
             // Add resources in labs as well.
-            if (room.memory.labs) {
+            if (room.memory.labs && !roomData.isEvacuating) {
                 let ids = [];
                 if (room.memory.labs.source1) {
                     ids.push(room.memory.labs.source1);
