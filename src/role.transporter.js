@@ -159,6 +159,11 @@ Creep.prototype.getAvailableEnergySources = function () {
             option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id, creep.room).length * 3;
         }
 
+        if (creep.room.getStorageCapacity() < target.amount) {
+            // If storage is super full, try leaving stuff on the ground.
+            option.priority -= 2;
+        }
+
         options.push(option);
     }
 
@@ -291,6 +296,15 @@ Creep.prototype.getAvailableSources = function () {
             object: target,
             resourceType: target.resourceType,
         };
+
+        if (target.resourceType == RESOURCE_POWER) {
+            option.priority++;
+        }
+
+        if (creep.room.getStorageCapacity() < target.amount) {
+            // If storage is super full, try leaving stuff on the ground.
+            option.priority -= 2;
+        }
 
         options.push(option);
     }
@@ -913,6 +927,14 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 }
             }
         }
+
+        // As a last resort, simply drop the resource since it can't be put anywhere.
+        options.push({
+            priority: 0,
+            weight: 0,
+            type: 'drop',
+            resourceType: resourceType,
+        });
     }
 
     return options;
@@ -944,6 +966,9 @@ Creep.prototype.calculateDeliveryTarget = function () {
                 target: best.object.name,
                 resourceType: best.resourceType,
             };
+        }
+        else if (best.type == 'drop') {
+            creep.drop(best.resourceType, creep.carry[best.resourceType]);
         }
         else {
             creep.memory.deliverTarget = best.object.id;
