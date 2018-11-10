@@ -19,12 +19,23 @@ Creep.prototype.performScout = function () {
     this.room.visual.text(this.memory.scoutTarget, this.pos);
   }
 
+  if (!this.moveToRoom(this.memory.scoutTarget)) {
+    this.chooseScoutTarget();
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Makes this creep move to a certain room.
+ */
+Creep.prototype.moveToRoom = function (roomName) {
   // Check which room to go to next.
   let inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
   if (!this.memory.nextRoom || (this.pos.roomName == this.memory.nextRoom && inRoom)) {
-    let path = this.calculateRoomPath(this.memory.scoutTarget);
+    let path = this.calculateRoomPath(roomName);
     if (_.size(path) < 1) {
-      this.chooseScoutTarget();
       return false;
     }
 
@@ -33,9 +44,10 @@ Creep.prototype.performScout = function () {
 
   // Move to next room.
   let target = new RoomPosition(25, 25, this.memory.nextRoom);
-  if (this.pos.getRangeTo(target) > 3) {
-    this.moveToRange(target, 3);
+  if (this.pos.getRangeTo(target) > 15) {
+    this.moveToRange(target, 15);
   }
+
   return true;
 };
 
@@ -75,11 +87,11 @@ Creep.prototype.chooseScoutTarget = function () {
   }
 };
 
-Creep.prototype.calculateRoomPath = function (targetRoom) {
+Room.prototype.calculateRoomPath = function (targetRoom) {
+  let roomName = this.name;
+
   let openList = {};
   let closedList = {};
-
-  let roomName = this.pos.roomName;
 
   openList[roomName] = {
     range: 0,
@@ -124,7 +136,10 @@ Creep.prototype.calculateRoomPath = function (targetRoom) {
           if (intel.inaccessible) continue;
           if (intel.structures && _.size(intel.structures[STRUCTURE_KEEPER_LAIR]) > 0) continue;
 
-          // @todo Don't send scouts through rooms owned by other players, either.
+          // Don't send scouts through rooms owned by other players, either.
+          if (intel.owner && intel.owner != 'Mirroar') {
+              continue;
+          }
         }
 
         let path = [];
@@ -147,6 +162,10 @@ Creep.prototype.calculateRoomPath = function (targetRoom) {
   }
 
   return finalPath;
+};
+
+Creep.prototype.calculateRoomPath = function (targetRoom) {
+  return this.room.calculateRoomPath(targetRoom);
 };
 
 /**
