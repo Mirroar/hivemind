@@ -401,6 +401,10 @@ var strategyManager = {
       memory.power = {};
     }
 
+    if (Memory.disablePowerHarvesting) {
+      return;
+    }
+
     for (let roomName in memory.power.rooms || []) {
       // @todo Skip room if we already decided to harvest it.
       let info = memory.power.rooms[roomName];

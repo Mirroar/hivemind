@@ -571,6 +571,10 @@ Room.prototype.addBoostManagerSpawnOptions = function () {
 };
 
 Room.prototype.addPowerSpawnOptions = function () {
+    if (Memory.disablePowerHarvesting) {
+      return;
+    }
+
     if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) {
         return;
     }
