@@ -67,20 +67,8 @@ catch (e) {
 // @todo Spawn creeps using "sequences" where more control is needed.
 
 /**
- * Use the new pathfinder to move within a certain range of a target.
+ * Moves creep within a certain range of a target.
  */
-Creep.prototype._moveToRange = function (target, range) {
-    PathFinder.use(true);
-    let pos = target;
-    if (target.pos) {
-        pos = target.pos;
-    }
-    this.moveTo({pos: pos, range: range}, {
-        maxRooms: 1,
-    });
-    PathFinder.use(false);
-};
-
 Creep.prototype.moveToRange = function (target, range) {
     return this.goTo(target, {range: range});
 };
