@@ -23,24 +23,8 @@ require('role.scout');
 require('role.transporter');
 require('role.upgrader');
 
-var RoomPlanner;
-try {
-    RoomPlanner = require('roomplanner');
-}
-catch (e) {
-    console.log('Error when loading room planner:', e);
-    console.log(e.stack);
-}
-
-var BoostManager;
-try {
-    BoostManager = require('manager.boost');
-}
-catch (e) {
-    console.log('Error when loading boost manager:', e);
-    console.log(e.stack);
-}
-
+var RoomPlanner = require('roomplanner');
+var BoostManager = require('manager.boost');
 var creepGeneral = require('creep.general');
 var gameState = require('game.state');
 var intelManager = require('manager.intel');
