@@ -66,13 +66,6 @@ catch (e) {
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
-/**
- * Moves creep within a certain range of a target.
- */
-Creep.prototype.moveToRange = function (target, range) {
-    return this.goTo(target, {range: range});
-};
-
 var creepThrottleLevels = {
     // Military creeps are always fully active!
     brawler: {
