@@ -8,6 +8,12 @@ var ManageLinksProcess = function (params, data) {
 };
 ManageLinksProcess.prototype = Object.create(Process.prototype);
 
+/**
+ * Moves energy between links.
+ *
+ * @todo Determine which links serve as energy input or output, and transfer
+ * dynamically between those.
+ */
 ManageLinksProcess.prototype.run = function () {
   // Pump energy into upgrade controller link when possible to keep the upgrades flowing.
   if (this.room.memory.controllerLink) {
