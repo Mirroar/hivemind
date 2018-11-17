@@ -570,48 +570,6 @@ var main = {
     },
 
     /**
-     * Manages logic for all links.
-     */
-    manageLinks: function () {
-        for (var roomName in Game.rooms) {
-            var room = Game.rooms[roomName];
-
-            // Pump energy into upgrade controller link when possible to keep the upgrades flowing.
-            if (room.memory.controllerLink) {
-                var controllerLink = Game.getObjectById(room.memory.controllerLink);
-                if (controllerLink && controllerLink.energy <= controllerLink.energyCapacity * 0.5) {
-                    var upgradeControllerSupplied = false;
-
-                    if (room.memory.sources) {
-                        for (var id in room.memory.sources) {
-                            if (!room.memory.sources[id].targetLink) continue;
-
-                            // We have a link next to a source. Good.
-                            var link = Game.getObjectById(room.memory.sources[id].targetLink);
-                            if (!link) continue;
-
-                            if (link.energy >= link.energyCapacity * 0.5 && link.cooldown <= 0) {
-                                link.transferEnergy(controllerLink);
-                                upgradeControllerSupplied = true;
-                            }
-                        }
-                    }
-
-                    if (!upgradeControllerSupplied && room.memory.storageLink) {
-                        var storageLink = Game.getObjectById(room.memory.storageLink);
-                        if (storageLink) {
-                            if (storageLink.energy >= storageLink.energyCapacity * 0.5 && storageLink.cooldown <= 0) {
-                                storageLink.transferEnergy(controllerLink);
-                                upgradeControllerSupplied = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
-
-    /**
      * Records when hostiles were last seen in a room.
      */
     checkRoomSecurity: function () {
@@ -740,11 +698,6 @@ var main = {
             main.manageCreeps();
 
             var creepsCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
-            main.manageLinks();
-
-            var linksCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
 
             try {
