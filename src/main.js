@@ -2,6 +2,7 @@
 
 // Make sure game object prototypes are enhanced.
 require('creep.prototype');
+require('room.prototype');
 
 var Hivemind = require('hivemind');
 global.hivemind = new Hivemind();

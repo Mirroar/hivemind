@@ -1,5 +1,8 @@
 'use strict';
 
+/**
+ * Kernel that can be used to run various processes.
+ */
 var Hivemind = function () {
   if (!Memory.hivemind) {
     Memory.hivemind = {
