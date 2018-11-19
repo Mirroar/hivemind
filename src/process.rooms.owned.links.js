@@ -8,45 +8,77 @@ var ManageLinksProcess = function (params, data) {
 };
 ManageLinksProcess.prototype = Object.create(Process.prototype);
 
+ManageLinksProcess.prototype.shouldRun = function () {
+  if (!Process.prototype.shouldRun.call(this)) return false;
+  if (!this.room.linkNetwork) return false;
+
+  return true;
+};
+
 /**
  * Moves energy between links.
  *
- * @todo Determine which links serve as energy input or output, and transfer
- * dynamically between those.
+ * Determines which links serve as energy input or output, and transfers
+ * dynamically between those and neutral links.
  */
 ManageLinksProcess.prototype.run = function () {
-  // Pump energy into upgrade controller link when possible to keep the upgrades flowing.
-  if (this.room.memory.controllerLink) {
-    var controllerLink = Game.getObjectById(this.room.memory.controllerLink);
-    if (controllerLink && controllerLink.energy <= controllerLink.energyCapacity * 0.5) {
-      var upgradeControllerSupplied = false;
+  // Determine "requesting" links from link network.
+  let highLinks = [];
+  let lowLinks = [];
+  const MIN_ENERGY_TRANSFER = 100;
 
-      if (this.room.memory.sources) {
-        for (var id in this.room.memory.sources) {
-          if (!this.room.memory.sources[id].targetLink) continue;
+  for (let info of this.room.linkNetwork.overfullLinks) {
+    highLinks.push({
+      link: info.link,
+      delta: info.delta,
+    });
+  }
+  for (let info of this.room.linkNetwork.underfullLinks) {
+    lowLinks.push({
+      link: info.link,
+      delta: info.delta,
+    });
+  }
 
-          // We have a link next to a source. Good.
-          var link = Game.getObjectById(this.room.memory.sources[id].targetLink);
-          if (!link) continue;
+  // Stop if there is no link needing action.
+  if (highLinks.length == 0 && lowLinks.length == 0) return;
 
-          if (link.energy >= link.energyCapacity * 0.5 && link.cooldown <= 0) {
-            link.transferEnergy(controllerLink);
-            upgradeControllerSupplied = true;
-          }
-        }
-      }
+  let fromLink;
+  let toLink;
+  if (highLinks.length > 0) {
+    let sorted = _.sortBy(highLinks, (link) => -link.delta);
+    fromLink = sorted[0];
+  }
+  if (lowLinks.length > 0) {
+    let sorted = _.sortBy(lowLinks, (link) => -link.delta);
+    toLink = sorted[0];
+  }
 
-      if (!upgradeControllerSupplied && this.room.memory.storageLink) {
-        var storageLink = Game.getObjectById(this.room.memory.storageLink);
-        if (storageLink) {
-          if (storageLink.energy >= storageLink.energyCapacity * 0.5 && storageLink.cooldown <= 0) {
-            storageLink.transferEnergy(controllerLink);
-            upgradeControllerSupplied = true;
-          }
-        }
-      }
+  if (this.room.linkNetwork.neutralLinks.length > 0) {
+    // Use neutral links if necessary.
+    if (!fromLink || fromLink.delta < MIN_ENERGY_TRANSFER) {
+      let sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link) => -link.energy);
+      fromLink = {
+        link: sorted[0],
+        delta: sorted[0].energy,
+      };
+    }
+    if (!toLink || toLink.delta < MIN_ENERGY_TRANSFER) {
+      let sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link) => link.energy);
+      toLink = {
+        link: sorted[0],
+        delta: sorted[0].energyCapacity - sorted[0].energy,
+      };
     }
   }
+
+  if (!fromLink || !toLink || fromLink.cooldown > 0) return;
+
+  // Calculate maximum possible transfer amount, taking into account 3% cost on arrival.
+  // @todo For some reason, using 1.03 as target amount results in ERR_FULL.
+  let amount = Math.floor(Math.min(fromLink.delta, toLink.delta * 1.02));
+  let result = fromLink.link.transferEnergy(toLink.link, amount);
+  // console.log(this.room.name, 'transfer of ', amount, result);
 };
 
 module.exports = ManageLinksProcess;
