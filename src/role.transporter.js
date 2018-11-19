@@ -209,6 +209,29 @@ Creep.prototype.getAvailableEnergySources = function () {
         options.push(option);
     }
 
+
+    // Take energy from storage links.
+    if (creep.room.linkNetwork && creep.room.linkNetwork.energy > creep.room.linkNetwork.maxEnergy) {
+        for (let link of creep.room.linkNetwork.neutralLinks) {
+            if (link.energy > 0) {
+                let option = {
+                    priority: 5,
+                    weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
+                    type: 'structure',
+                    object: link,
+                    resourceType: RESOURCE_ENERGY,
+                };
+
+                if (creep.pos.getRangeTo(target) > 3) {
+                    // Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
+                    option.priority--;
+                }
+
+                options.push(option);
+            }
+        }
+    }
+
     return options;
 };
 
@@ -913,24 +936,25 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             }
         }
 
-        // Deliver energy to storage link.
-        if (creep.room.memory.storageLink) {
-            var target = Game.getObjectById(creep.room.memory.storageLink);
-            if (target && target.energy < target.energyCapacity) {
-                let option = {
-                    priority: 5,
-                    weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
-                    type: 'structure',
-                    object: target,
-                    resourceType: RESOURCE_ENERGY,
-                };
+        // Deliver energy to storage links.
+        if (creep.room.linkNetwork && creep.room.linkNetwork.energy < creep.room.linkNetwork.minEnergy) {
+            for (let link of creep.room.linkNetwork.neutralLinks) {
+                if (link.energy < link.energyCapacity) {
+                    let option = {
+                        priority: 5,
+                        weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
+                        type: 'structure',
+                        object: link,
+                        resourceType: RESOURCE_ENERGY,
+                    };
 
-                if (creep.pos.getRangeTo(target) > 3) {
-                    // Don't go out of your way to fill the link, do it when energy is taken out of storage.
-                    option.priority = 4;
+                    if (creep.pos.getRangeTo(target) > 3) {
+                        // Don't go out of your way to fill the link, do it when nearby, e.g. at storage.
+                        option.priority--;
+                    }
+
+                    options.push(option);
                 }
-
-                options.push(option);
             }
         }
     }
