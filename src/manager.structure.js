@@ -183,25 +183,25 @@ Room.prototype.getCurrentMineralAmount = function () {
     }
 
     return total;
-}
+};
 
 Room.prototype.isFullOnEnergy = function () {
     return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 2;
-}
+};
 
 Room.prototype.isFullOnPower = function () {
     return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 6;
-}
+};
 
 Room.prototype.isFullOnMinerals = function () {
     return this.getCurrentMineralAmount() > this.getStorageLimit() / 3;
-}
+};
 
 Room.prototype.isFullOn = function (resourceType) {
     if (resourceType == RESOURCE_ENERGY) return this.isFullOnEnergy();
     if (resourceType == RESOURCE_POWER) return this.isFullOnPower();
     return this.isFullOnMinerals();
-}
+};
 
 var structureManager = {
 

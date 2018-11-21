@@ -11,6 +11,7 @@ require('role.builder');
 require('role.builder.exploit');
 require('role.claimer');
 require('role.dismantler');
+require('role.gift');
 require('role.harvester');
 require('role.harvester.exploit');
 require('role.harvester.power');
@@ -210,6 +211,9 @@ Creep.prototype.runLogic = function() {
         }
         else if (creep.memory.role == 'transporter') {
             creep.runTransporterLogic();
+        }
+        else if (creep.memory.role == 'gift') {
+            creep.performGiftCollection();
         }
         else if (creep.memory.role == 'harvester.remote') {
             creep.runRemoteHarvesterLogic();

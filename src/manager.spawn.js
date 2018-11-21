@@ -13,6 +13,7 @@ var roleNameMap = {
     dismantler: 'D',
     brawler: 'F',
     guardian: 'FE',
+    gift: ':) GIFT (: ',
     harvester: 'H',
     'harvester.exploit': 'HE',
     'harvester.minerals': 'HM',
@@ -220,6 +221,7 @@ Room.prototype.manageSpawnsPriority = function () {
     this.addDismantlerSpawnOptions();
     this.addBoostManagerSpawnOptions();
     this.addPowerSpawnOptions();
+    this.addGiftSpawnOptions();
 
     // In low level rooms, add defenses!
     if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
@@ -253,6 +255,9 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
     }
     else if (best.role == 'upgrader') {
         activeSpawn.spawnUpgrader();
+    }
+    else if (best.role == 'gift') {
+        activeSpawn.spawnGift();
     }
     else if (best.role == 'builder') {
         activeSpawn.spawnBuilder(best.size);
@@ -653,6 +658,18 @@ Room.prototype.addPowerSpawnOptions = function () {
         }
     }
 };
+
+Room.prototype.addGiftSpawnOptions = function () {
+    if (Game.time % 123 != 67) return;
+    if (!this.storage || this.getStorageCapacity() > this.getStorageLimit() * 0.05) return;
+
+    var memory = this.memory.spawnQueue;
+    memory.options.push({
+        priority: 5,
+        weight: 0,
+        role: 'gift',
+    });
+}
 
 Room.prototype.addDismantlerSpawnOptions = function () {
     if (this.isEvacuating()) return;
@@ -1419,6 +1436,19 @@ StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
         memory: {
             sourceRoom: this.pos.roomName,
             targetRoom: targetRoom,
+        },
+    });
+}
+
+/**
+ * Spawns a new gifter.
+ */
+StructureSpawn.prototype.spawnGift = function () {
+    return this.createManagedCreep({
+        role: 'gift',
+        bodyWeights: {move: 0.2, carry: 0.8},
+        memory: {
+            origin: this.pos.roomName,
         },
     });
 }

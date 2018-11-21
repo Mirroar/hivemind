@@ -104,7 +104,7 @@ var strategyManager = {
         // so we don't get stuck scanning the same room for some reason.
         if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 500) {
           // No need to manually scout rooms in range of an observer.
-          info.scoutPriority = 0;
+          info.scoutPriority = 0.5;
 
           // Let observer scout one room per run at maximum.
           // @todo Move this to structure management so we can scan one open room per tick.
@@ -535,7 +535,7 @@ Room.prototype.needsScout = function () {
   for (let roomName in memory.roomList) {
     let info = memory.roomList[roomName];
 
-    if (info.origin == this.name && info.scoutPriority > 0) {
+    if (info.origin == this.name && info.scoutPriority >= 1) {
       return true;
     }
   }
