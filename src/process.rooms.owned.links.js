@@ -58,10 +58,12 @@ ManageLinksProcess.prototype.run = function () {
     // Use neutral links if necessary.
     if (!fromLink || fromLink.delta < MIN_ENERGY_TRANSFER) {
       let sorted = _.sortBy(_.filter(this.room.linkNetwork.neutralLinks, (link) => link.cooldown <= 0), (link) => -link.energy);
-      fromLink = {
-        link: sorted[0],
-        delta: sorted[0].energy,
-      };
+      if (sorted.length > 0) {
+        fromLink = {
+          link: sorted[0],
+          delta: sorted[0].energy,
+        };
+      }
     }
     if (!toLink || toLink.delta < MIN_ENERGY_TRANSFER) {
       let sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link) => link.energy);
@@ -75,7 +77,7 @@ ManageLinksProcess.prototype.run = function () {
   if (!fromLink || !toLink || fromLink.cooldown > 0) return;
 
   // Calculate maximum possible transfer amount, taking into account 3% cost on arrival.
-  // @todo For some reason, using 1.03 as target amount results in ERR_FULL.
+  // @todo For some reason, using 1 + LINK_LOSS_RATIO as target amount results in ERR_FULL.
   let amount = Math.floor(Math.min(fromLink.delta, toLink.delta));
   if (amount < MIN_ENERGY_TRANSFER) return;
 
