@@ -11,6 +11,15 @@ var OwnedRoomProcess = function (params, data) {
 OwnedRoomProcess.prototype = Object.create(Process.prototype);
 
 OwnedRoomProcess.prototype.run = function () {
+  try {
+    this.room.roomPlanner = new RoomPlanner(this.room.name);
+    this.room.roomPlanner.runLogic();
+  }
+  catch (e) {
+    console.log('Error when running RoomPlanner:', e);
+    console.log(e.stack);
+  }
+
   // @todo Only run processes based on current room level.
   this.room.generateLinkNetwork();
   hivemind.runProcess(this.room.name + '_defense', RoomDefenseProcess, {

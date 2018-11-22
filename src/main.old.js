@@ -463,9 +463,6 @@ Room.prototype.enhanceData = function () {
     if (BoostManager) {
         this.boostManager = new BoostManager(this.name);
     }
-    if (this.controller && this.controller.my) {
-        this.roomPlanner = new RoomPlanner(this.name);
-    }
 };
 
 
@@ -525,23 +522,6 @@ var main = {
         for (let role in Game.creepPerformance) {
             if (Game.creepPerformance[role].count > 0) {
                 Game.creepPerformance[role].avg = Game.creepPerformance[role].cpu / Game.creepPerformance[role].count;
-            }
-        }
-    },
-
-    /**
-     * Manages logic for structures.
-     */
-    manageStructures: function () {
-        for (var name in Game.rooms) {
-            try {
-                if (Game.rooms[name].roomPlanner) {
-                    Game.rooms[name].roomPlanner.runLogic();
-                }
-            }
-            catch (e) {
-                console.log('Error when running RoomPlanner:', e);
-                console.log(e.stack);
             }
         }
     },
@@ -623,8 +603,6 @@ var main = {
             // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
             gameState.clearCache();
 
-            Game.RoomPlanner = RoomPlanner;
-
             Game.squads = {};
             Game.exploits = {};
             Game.creepsByRole = {};
@@ -665,11 +643,6 @@ var main = {
             spawnManager.manageSpawns();
 
             var spawnCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
-            main.manageStructures();
-
-            var linksCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
 
             main.manageCreeps();

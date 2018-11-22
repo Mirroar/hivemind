@@ -13,14 +13,6 @@ var RoomPlanner = function (roomName) {
   }
   this.memory = Memory.rooms[roomName].roomPlanner;
 
-  // Automatically assume control over any owned room.
-  if (this.room.controller && this.room.controller.my) {
-    this.memory.controlRoom = true;
-  }
-  else {
-    this.memory.controlRoom = false;
-  }
-
   this.drawDebug();
 };
 
@@ -48,13 +40,6 @@ RoomPlanner.prototype.drawDebug = function () {
       }
     }
   }
-};
-
-/**
- * Gives a the roomplanner control over a room, or takes it away.
- */
-RoomPlanner.prototype.controlRoom = function (giveControl) {
-  this.memory.controlRoom = giveControl;
 };
 
 /**
@@ -99,7 +84,6 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
  */
 RoomPlanner.prototype.runLogic = function () {
   if (Game.cpu.bucket < 3500) return;
-  if (!this.memory.controlRoom) return;
 
   this.checkAdjacentRooms();
 
@@ -523,7 +507,6 @@ RoomPlanner.prototype.runLogic = function () {
  * Decides whether a dismantler is needed in the current room.
  */
 RoomPlanner.prototype.needsDismantling = function () {
-  if (!this.memory.controlRoom) return false;
   if (_.size(this.memory.dismantle) > 0) {
     return true;
   }
