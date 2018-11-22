@@ -76,9 +76,13 @@ ManageLinksProcess.prototype.run = function () {
 
   // Calculate maximum possible transfer amount, taking into account 3% cost on arrival.
   // @todo For some reason, using 1.03 as target amount results in ERR_FULL.
-  let amount = Math.floor(Math.min(fromLink.delta, toLink.delta * 1.02));
+  let amount = Math.floor(Math.min(fromLink.delta, toLink.delta));
+  if (amount < MIN_ENERGY_TRANSFER) return;
+
   let result = fromLink.link.transferEnergy(toLink.link, amount);
-  // console.log(this.room.name, 'transfer of ', amount, result);
+  if (result != 0) {
+    console.log(this.room.name, 'link transfer of ', amount, 'energy failed:', result);
+  }
 };
 
 module.exports = ManageLinksProcess;
