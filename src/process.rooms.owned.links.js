@@ -25,7 +25,7 @@ ManageLinksProcess.prototype.run = function () {
   // Determine "requesting" links from link network.
   let highLinks = [];
   let lowLinks = [];
-  const MIN_ENERGY_TRANSFER = 100;
+  const MIN_ENERGY_TRANSFER = LINK_CAPACITY / 4;
 
   for (let info of this.room.linkNetwork.overfullLinks) {
     highLinks.push({
