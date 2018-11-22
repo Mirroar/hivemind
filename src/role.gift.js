@@ -47,5 +47,6 @@ Creep.prototype.chooseGiftResource = function () {
  * Move the creep out of the room by letting it scout.
  */
 Creep.prototype.performGiftTransport = function () {
+  // @todo Move to a known enemy room and suicide.
   this.memory.role = 'scout';
 };

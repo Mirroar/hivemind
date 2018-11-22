@@ -665,7 +665,7 @@ Room.prototype.addGiftSpawnOptions = function () {
 
     var memory = this.memory.spawnQueue;
     memory.options.push({
-        priority: 5,
+        priority: 4,
         weight: 0,
         role: 'gift',
     });
