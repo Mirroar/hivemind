@@ -20,6 +20,12 @@ OwnedRoomProcess.prototype.run = function () {
     interval: 10,
     room: this.room,
   });
+
+  // Process power in power spawns.
+  let powerSpawn = this.room.powerSpawn;
+  if (powerSpawn && powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
+    powerSpawn.processPower();
+  }
 };
 
 module.exports = OwnedRoomProcess;

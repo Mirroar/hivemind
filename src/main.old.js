@@ -543,19 +543,6 @@ var main = {
                 console.log('Error when running RoomPlanner:', e);
                 console.log(e.stack);
             }
-
-            if (Game.rooms[name].powerSpawn) {
-                try {
-                    var powerSpawn = Game.rooms[name].powerSpawn;
-                    if (powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
-                        powerSpawn.processPower();
-                    }
-                }
-                catch (e) {
-                    console.log('Error when running Power Spawns:', e);
-                    console.log(e.stack);
-                }
-            }
         }
     },
 
