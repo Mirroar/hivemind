@@ -47,9 +47,30 @@ RoomDefenseProcess.prototype.run = function () {
         tower.attack(target);
         return true;
       }
+
+      var closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+        filter: (creep) => {
+          for (var i in creep.body) {
+            if (creep.body[i].type == HEAL && creep.body[i].hits > 0) {
+              return true;
+            }
+          }
+          return false;
+        }
+      });
+      var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+        filter: (creep) => creep.isDangerous()
+      });
+      if (closestHostileHealer) {
+        tower.attack(closestHostileHealer);
+      }
+      else if (closestHostile) {
+        tower.attack(closestHostile);
+      }
     }
 
     // Heal friendlies.
+    // @todo Don't check this for every tower in the room.
     var damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
       filter: (creep) => creep.hits < creep.hitsMax
     });

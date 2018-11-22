@@ -4,7 +4,7 @@ var utilities = require('utilities');
  * Determines if a creep is dangerous and should be attacked.
  */
 Creep.prototype.isDangerous = function () {
-    if (Game.isAlly(this.owner.username)) return false;
+    if (Game.isAlly && Game.isAlly(this.owner.username)) return false;
 
     for (let j in this.body) {
         let type = this.body[j].type;
