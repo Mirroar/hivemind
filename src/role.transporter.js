@@ -222,10 +222,12 @@ Creep.prototype.getAvailableEnergySources = function () {
                     resourceType: RESOURCE_ENERGY,
                 };
 
-                if (creep.pos.getRangeTo(target) > 3) {
+                if (creep.pos.getRangeTo(target) > 10) {
                     // Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
                     option.priority--;
                 }
+
+                option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', link.id, creep.room).length * 2;
 
                 options.push(option);
             }
@@ -948,7 +950,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                         resourceType: RESOURCE_ENERGY,
                     };
 
-                    if (creep.pos.getRangeTo(target) > 3) {
+                    if (creep.pos.getRangeTo(target) > 10) {
                         // Don't go out of your way to fill the link, do it when nearby, e.g. at storage.
                         option.priority--;
                     }
