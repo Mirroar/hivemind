@@ -6,63 +6,6 @@ StructureKeeperLair.prototype.isDangerous = function () {
     return !this.ticksToSpawn || this.ticksToSpawn < 20;
 };
 
-StructureTower.prototype.runLogic = function () {
-    var tower = this;
-
-    // Emergency repairs.
-    /*var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-        filter: (structure) => {
-            if (structure.structureType == STRUCTURE_WALL) {
-                return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7;
-            }
-            if (structure.structureType == STRUCTURE_RAMPART) {
-                return ((structure.pos.getRangeTo(tower) <= 5 && structure.hits < 10000) || structure.hits < 1000) && tower.energy > tower.energyCapacity * 0.7 || structure.hits < 500;
-            }
-            return (structure.hits < structure.hitsMax - TOWER_POWER_REPAIR) && (structure.hits < structure.hitsMax * 0.2);
-        }
-    });
-    if (closestDamagedStructure) {
-        tower.repair(closestDamagedStructure);
-    }//*/
-
-    // Attack enemies.
-    if (this.room.find(FIND_HOSTILE_CREEPS).length > 0) {
-        var target = this.room.getTowerTarget(this);
-        if (target) {
-            this.attack(target);
-            return true;
-        }
-    }
-
-    var closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-        filter: (creep) => {
-            for (var i in creep.body) {
-                if (creep.body[i].type == HEAL && creep.body[i].hits > 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    });
-    var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-        filter: (creep) => creep.isDangerous()
-    });
-    if (closestHostileHealer) {
-        tower.attack(closestHostileHealer);
-    }
-    else if (closestHostile) {
-        tower.attack(closestHostile);
-    }
-
-    // Heal friendlies.
-    var damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
-        filter: (creep) => creep.hits < creep.hitsMax
-    });
-    if (damaged) {
-        tower.heal(damaged);
-    }
-};
-
 Room.prototype.manageLabs = function () {
     if (!this.controller || !this.controller.my || Game.cpu.bucket < 5000 || !this.memory.canPerformReactions || !this.memory.currentReaction) return;
 
