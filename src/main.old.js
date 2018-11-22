@@ -560,20 +560,6 @@ var main = {
     },
 
     /**
-     * Manages logic for all towers.
-     */
-    manageTowers: function () {
-        // Handle towers.
-        var towers = _.filter(Game.structures, function (structure) {
-            return (structure.structureType == STRUCTURE_TOWER) && structure.energy > 0;
-        });
-        for (var i in towers) {
-            // @todo Try / catch.
-            towers[i].runLogic();
-        }
-    },
-
-    /**
      * Records when hostiles were last seen in a room.
      */
     checkRoomSecurity: function () {
@@ -713,11 +699,6 @@ var main = {
             }
 
             var securityCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
-            main.manageTowers();
-
-            var towersCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
 
             if (Game.time % 10 == 1) {
