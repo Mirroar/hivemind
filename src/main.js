@@ -17,6 +17,9 @@ module.exports = {
    * Runs main game loop.
    */
   loop: function () {
+    // @todo Remove old "main" code eventually.
+    oldMain.loop();
+
     try {
       hivemind.runProcess('rooms', RoomsProcess);
     }
@@ -24,9 +27,6 @@ module.exports = {
       console.log('Error when running room process:', e);
       console.log(e.stack);
     }
-
-    // @todo Remove old "main" code eventually.
-    oldMain.loop();
   },
 
 };
