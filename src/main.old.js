@@ -5,7 +5,6 @@ Game.logger = require('debug');
 
 require('manager.military');
 require('manager.source');
-require('pathfinding');
 require('role.brawler');
 require('role.builder');
 require('role.builder.exploit');
