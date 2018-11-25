@@ -27,7 +27,6 @@ require('role.upgrader');
 var RoomPlanner = require('roomplanner');
 var BoostManager = require('manager.boost');
 var creepGeneral = require('creep.general');
-var gameState = require('game.state');
 var intelManager = require('manager.intel');
 var strategyManager = require('manager.strategy');
 var roleplay = require('manager.roleplay');
@@ -481,7 +480,6 @@ if (useProfiler) {
     profiler.registerClass(BoostManager, 'BoostManager');
 
     profiler.registerObject(creepGeneral, 'creepGeneral');
-    profiler.registerObject(gameState, 'gameState');
     profiler.registerObject(intelManager, 'intelManager');
     profiler.registerObject(strategyManager, 'strategyManager');
     profiler.registerObject(roleplay, 'roleplay');
@@ -578,7 +576,7 @@ var main = {
             Game.relations = relations;
             Game.isAlly = function (username) {
                 return Game.relations.allies.indexOf(username) !== -1;
-            }
+            };
 
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
                 logger.log('Bucket:', Game.cpu.bucket);
@@ -594,9 +592,6 @@ var main = {
                     }
                 }
             }
-
-            // Clear gameState cache variable, since it seems to persist between Ticks from time to time.
-            gameState.clearCache();
 
             Game.squads = {};
             Game.exploits = {};

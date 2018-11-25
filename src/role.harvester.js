@@ -1,7 +1,6 @@
 // @todo Rewrite delivery part using priority queue.
 // @todo Just make the harvester build a container when none is available.
 
-var gameState = require('game.state');
 var utilities = require('utilities');
 
 /**
@@ -128,7 +127,7 @@ Creep.prototype.performHarvesterDeliver = function () {
 
     if (_.size(creep.room.creepsByRole.transporter) > 0) {
         // Drop off in link or container.
-        if (targetLink && targetLink.energy < targetLink.energyCapacity && gameState.getStoredEnergy(creep.room) > 10000) {
+        if (targetLink && targetLink.energy < targetLink.energyCapacity && creep.room.getStoredEnergy() > 10000) {
             target = targetLink;
         }
         else if (targetContainer && _.sum(targetContainer.store) < targetContainer.storeCapacity) {

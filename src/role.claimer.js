@@ -1,4 +1,3 @@
-var gameState = require('game.state');
 var utilities = require('utilities');
 
 /**

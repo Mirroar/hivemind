@@ -1,4 +1,3 @@
-var gameState = require('game.state');
 var stats = require('stats');
 var utilities = require('utilities');
 var intelManager = require('manager.intel');
@@ -295,7 +294,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
 
     // If we have no other way to recover, spawn with reduced amounts of parts.
     let force = false;
-    if (_.size(this.creepsByRole.harvester) == 0 && (!this.storage || (_.size(this.creepsByRole.transporter) == 0 && gameState.getStoredEnergy(this) < 5000))) {
+    if (_.size(this.creepsByRole.harvester) == 0 && (!this.storage || (_.size(this.creepsByRole.transporter) == 0 && this.getStoredEnergy() < 5000))) {
         force = true;
     }
 
@@ -434,23 +433,23 @@ Room.prototype.addUpgraderSpawnOptions = function () {
     var maxUpgraders = 0;
 
     if (this.controller.level <= 3) {
-        maxUpgraders = 1 + numSources + Math.floor(gameState.getStoredEnergy(this) / 2000);
+        maxUpgraders = 1 + numSources + Math.floor(this.getStoredEnergy() / 2000);
         maxUpgraders = Math.min(maxUpgraders, 5);
     }
     else if (this.controller.level == 8) {
         maxUpgraders = 1;
-        if (gameState.getStoredEnergy(this) < 50000) {
+        if (this.getStoredEnergy() < 50000) {
             maxUpgraders = 0;
         }
     }
     else {
-        if (gameState.getStoredEnergy(this) < 100000) {
+        if (this.getStoredEnergy() < 100000) {
             maxUpgraders = 0;
         }
-        else if (gameState.getStoredEnergy(this) < 300000) {
+        else if (this.getStoredEnergy() < 300000) {
             maxUpgraders = 1;
         }
-        else if (gameState.getStoredEnergy(this) < 500000) {
+        else if (this.getStoredEnergy() < 500000) {
             maxUpgraders = 2;
         }
         else {
