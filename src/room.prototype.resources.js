@@ -72,7 +72,7 @@ Room.prototype.isFullOnEnergy = function () {
 };
 
 Room.prototype.isFullOnPower = function () {
-  return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 6;
+  return this.getCurrentResourceAmount(RESOURCE_POWER) > this.getStorageLimit() / 6;
 };
 
 Room.prototype.isFullOnMinerals = function () {
