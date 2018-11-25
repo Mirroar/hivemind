@@ -120,8 +120,4 @@ Logger.prototype.error = function(...args) {
   console.log(prefix, ...args, '</font>');
 };
 
-module.exports = {
-  init: function () {
-    Game.logger = Logger;
-  },
-};
+module.exports = Logger;

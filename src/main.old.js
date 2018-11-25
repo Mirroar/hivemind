@@ -1,7 +1,7 @@
 // Screeps profiler stuff
 var useProfiler = false;
 
-var debug = require('debug');
+Game.logger = require('debug');
 
 require('manager.military');
 require('manager.source');
@@ -472,6 +472,7 @@ if (useProfiler) {
     profiler.enable();
     profiler.registerClass(Game.map, 'Map');
     profiler.registerClass(Game.market, 'Market');
+    profiler.registerClass(Game.logger, 'Logger');
 
     profiler.registerClass(Bay, 'Bay');
     profiler.registerClass(Exploit, 'Exploit');
@@ -572,12 +573,6 @@ var main = {
      */
     loop: function () {
         var mainLoop = function () {
-            debug.init();
-
-            if (useProfiler) {
-                profiler.registerClass(Game.logger, 'Logger');
-            }
-
             var logger = new Game.logger('main');
 
             Game.relations = relations;
