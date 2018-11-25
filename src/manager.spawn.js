@@ -692,7 +692,8 @@ Room.prototype.addDismantlerSpawnOptions = function () {
         }
     }
 
-    if (this.roomPlanner.needsDismantling()) {
+    if (this.roomPlanner && this.roomPlanner.needsDismantling()) {
+        // @todo this.roomPlanner will not be available until spawn management is moved to run after room logic.
         let numDismantlers = _.filter(this.creepsByRole.dismantler || [], (creep) => creep.memory.targetRoom == this.name && creep.memory.sourceRoom == this.name).length;
 
         if (numDismantlers < 1) {

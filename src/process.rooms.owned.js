@@ -1,6 +1,7 @@
 'use strict';
 
 var Process = require('process');
+var RoomPlanner = require('roomplanner');
 var RoomDefenseProcess = require('process.rooms.owned.defense');
 var ManageLinksProcess = require('process.rooms.owned.links');
 
