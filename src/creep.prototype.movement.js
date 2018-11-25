@@ -348,3 +348,34 @@ Creep.prototype.goTo = function (target, options) {
   }
   return true;
 };
+
+/**
+ * Makes this creep move to a certain room.
+ */
+Creep.prototype.moveToRoom = function (roomName) {
+  // Check which room to go to next.
+  let inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
+  if (!this.memory.nextRoom || (this.pos.roomName == this.memory.nextRoom && inRoom)) {
+    let path = this.calculateRoomPath(roomName);
+    if (_.size(path) < 1) {
+      return false;
+    }
+
+    this.memory.nextRoom = path[0];
+  }
+
+  // Move to next room.
+  let target = new RoomPosition(25, 25, this.memory.nextRoom);
+  if (this.pos.getRangeTo(target) > 15) {
+    this.moveToRange(target, 15);
+  }
+
+  return true;
+};
+
+/**
+ * Generates a list of rooms the creep needs to travel through to get to the target room.
+ */
+Creep.prototype.calculateRoomPath = function (targetRoom) {
+  return this.room.calculateRoomPath(targetRoom);
+};
