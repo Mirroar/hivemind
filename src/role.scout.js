@@ -1,7 +1,3 @@
-var utilities = require('utilities');
-var intelManager = require('manager.intel');
-var strategyManager = require('manager.strategy');
-
 /**
  * Makes this creep move between rooms to gather intel.
  */
@@ -61,83 +57,6 @@ Creep.prototype.chooseScoutTarget = function () {
   if (!this.memory.scoutTarget) {
     this.memory.scoutTarget = this.memory.origin;
   }
-};
-
-Room.prototype.calculateRoomPath = function (targetRoom) {
-  let roomName = this.name;
-
-  let openList = {};
-  let closedList = {};
-
-  openList[roomName] = {
-    range: 0,
-    dist: Game.map.getRoomLinearDistance(roomName, targetRoom),
-    origin: roomName,
-    path: [],
-  };
-
-  // A* from here to targetRoom.
-  // @todo Avoid unsafe rooms.
-  let finalPath = null;
-  while (_.size(openList) > 0) {
-    let minDist = null;
-    let nextRoom = null;
-    for (let rName in openList) {
-      let info = openList[rName];
-      if (!minDist || info.range + info.dist < minDist) {
-        minDist = info.range + info.dist;
-        nextRoom = rName;
-      }
-    }
-
-    if (!nextRoom) {
-      break;
-    }
-
-    let info = openList[nextRoom];
-
-    // We're done if we reached targetRoom.
-    if (nextRoom == targetRoom) {
-      finalPath = info.path;
-    }
-
-    // Add unhandled adjacent rooms to open list.
-    if (Memory.rooms[nextRoom] && Memory.rooms[nextRoom].intel && Memory.rooms[nextRoom].intel.exits) {
-      for (let i in Memory.rooms[nextRoom].intel.exits) {
-        let exit = Memory.rooms[nextRoom].intel.exits[i];
-        if (openList[exit] || closedList[exit]) continue;
-
-        if (Memory.rooms[exit] && Memory.rooms[exit].intel) {
-          let intel = Memory.rooms[exit].intel;
-          if (intel.inaccessible) continue;
-          if (intel.structures && _.size(intel.structures[STRUCTURE_KEEPER_LAIR]) > 0) continue;
-
-          // Don't send scouts through rooms owned by other players, either.
-          if (intel.owner && intel.owner != 'Mirroar') {
-              continue;
-          }
-        }
-
-        let path = [];
-        for (let i in info.path) {
-          path.push(info.path[i]);
-        }
-        path.push(exit);
-
-        openList[exit] = {
-          range: info.range + 1,
-          dist: Game.map.getRoomLinearDistance(exit, targetRoom),
-          origin: info.origin,
-          path: path,
-        };
-      }
-    }
-
-    delete openList[nextRoom];
-    closedList[nextRoom] = true;
-  }
-
-  return finalPath;
 };
 
 /**
