@@ -451,47 +451,6 @@ var main = {
     },
 
     /**
-     * Records when hostiles were last seen in a room.
-     */
-    checkRoomSecurity: function () {
-        for (var roomName in Game.rooms) {
-            var room = Game.rooms[roomName];
-
-            var hostiles = room.find(FIND_HOSTILE_CREEPS);
-            var parts = {};
-            var lastSeen = room.memory.enemies && room.memory.enemies.lastSeen || 0;
-            var safe = true;
-
-            if (hostiles.length > 0) {
-                room.assertMilitarySituation();
-            }
-
-            if (hostiles.length > 0) {
-                // Count body parts for strength estimation.
-                for (var j in hostiles) {
-                    if (hostiles[j].isDangerous()) {
-                        safe = false;
-                        lastSeen = Game.time;
-                    }
-                    for (var k in hostiles[j].body) {
-                        let type = hostiles[j].body[k].type;
-                        if (!parts[type]) {
-                            parts[type] = 0;
-                        }
-                        parts[type]++;
-                    }
-                }
-            }
-
-            room.memory.enemies = {
-                parts: parts,
-                lastSeen: lastSeen,
-                safe: safe,
-            };
-        }
-    },
-
-    /**
      * Main game loop.
      */
     loop: function () {
@@ -564,17 +523,6 @@ var main = {
             main.manageCreeps();
 
             var creepsCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
-            try {
-                main.checkRoomSecurity();
-            }
-            catch (e) {
-                console.log('error in checkRoomSecurity:');
-                console.log(e.stack);
-            }
-
-            var securityCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
 
             if (Game.time % 10 == 1) {
