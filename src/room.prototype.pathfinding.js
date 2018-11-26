@@ -1,5 +1,9 @@
 'use strict';
 
+Room.prototype.getCostMatrix = function () {
+  return utilities.getCostMatrix(this.name);
+};
+
 /**
  * Generates a new CostMatrix for pathfinding in this room.
  */
