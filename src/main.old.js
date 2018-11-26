@@ -313,9 +313,9 @@ Creep.prototype.enhanceData = function () {
  * Adds some additional data to room objects.
  */
 Room.prototype.enhanceData = function () {
-    this.addObserverReference();
-    this.addNukerReference();
-    this.addPowerSpawnReference();
+    this.addStructureReference(STRUCTURE_NUKER);
+    this.addStructureReference(STRUCTURE_OBSERVER);
+    this.addStructureReference(STRUCTURE_POWER_SPAWN);
 
     this.sources = [];
 
