@@ -1,8 +1,6 @@
 // Screeps profiler stuff
 var useProfiler = false;
 
-Game.logger = require('debug');
-
 require('manager.military');
 require('manager.source');
 require('role.brawler');
@@ -23,6 +21,7 @@ require('role.scout');
 require('role.transporter');
 require('role.upgrader');
 
+var Logger = require('debug');
 var RoomPlanner = require('roomplanner');
 var BoostManager = require('manager.boost');
 var creepGeneral = require('creep.general');
@@ -570,6 +569,7 @@ var main = {
      */
     loop: function () {
         var mainLoop = function () {
+            Game.logger = Logger;
             var logger = new Game.logger('main');
 
             Game.relations = relations;
