@@ -1,26 +1,19 @@
 module.exports = {
 
     getCreepsWithOrder: function(type, target, room) {
+        let creeps = Game.creeps;
         if (room) {
-            return _.filter(room.creeps, (creep) => {
-                if (creep.memory.order) {
-                    if (creep.memory.order.type == type && creep.memory.order.target == target) {
-                        return true;
-                    }
-                }
-                return false;
-            });
+            creeps = room.creeps;
         }
-        else {
-            return _.filter(Game.creeps, (creep) => {
-                if (creep.memory.order) {
-                    if (creep.memory.order.type == type && creep.memory.order.target == target) {
-                        return true;
-                    }
+
+        return _.filter(creeps, (creep) => {
+            if (creep.memory.order) {
+                if (creep.memory.order.type == type && creep.memory.order.target == target) {
+                    return true;
                 }
-                return false;
-            });
-        }
+            }
+            return false;
+        });
     }
 
 };
