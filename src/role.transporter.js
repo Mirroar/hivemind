@@ -1,4 +1,3 @@
-var creepGeneral = require('creep.general');
 var utilities = require('utilities');
 
 /**
@@ -156,7 +155,7 @@ Creep.prototype.getAvailableEnergySources = function () {
             if (target.amount < 200) {
                 option.priority--;
             }
-            option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id, creep.room).length * 3;
+            option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
         }
 
         if (creep.room.getStorageCapacity() < target.amount) {
@@ -204,7 +203,7 @@ Creep.prototype.getAvailableEnergySources = function () {
             }
         }
 
-        option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', target.id, creep.room).length * 3;
+        option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 
         options.push(option);
     }
@@ -227,7 +226,7 @@ Creep.prototype.getAvailableEnergySources = function () {
                     option.priority--;
                 }
 
-                option.priority -= creepGeneral.getCreepsWithOrder('getEnergy', link.id, creep.room).length * 2;
+                option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
 
                 options.push(option);
             }
@@ -776,7 +775,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             };
 
             option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * 3;
+            option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 3;
 
             options.push(option);
         }
@@ -798,7 +797,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
             };
 
             option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.name, creep.room).length * 3;
+            option.priority -= creep.room.getCreepsWithOrder('deliver', target.name).length * 3;
 
             options.push(option);
         }
@@ -852,7 +851,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 prioFactor = 3;
             }
 
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * prioFactor;
+            option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
 
             options.push(option);
         }
@@ -881,7 +880,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                 option.priority++;
             }
 
-            option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * 2;
+            option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 2;
 
             options.push(option);
         }
@@ -908,7 +907,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
                     option.priority += 2;
                 }
 
-                option.priority -= creepGeneral.getCreepsWithOrder('deliver', target.id, creep.room).length * 2;
+                option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 2;
 
                 options.push(option);
             }

@@ -1,4 +1,3 @@
-var creepGeneral = require('creep.general');
 var utilities = require('utilities');
 
 var wallHealth = {
@@ -89,7 +88,7 @@ Creep.prototype.getAvailableBuilderTargets = function () {
             option.weight -= creep.pos.getRangeTo(target) / 100;
         }
 
-        option.priority -= creepGeneral.getCreepsWithOrder('repair', target.id, creep.room).length;
+        option.priority -= creep.room.getCreepsWithOrder('repair', target.id).length;
 
         options.push(option);
     }
@@ -108,7 +107,7 @@ Creep.prototype.getAvailableBuilderTargets = function () {
         // Slightly adjust weight so that closer sites get prioritized.
         option.weight -= creep.pos.getRangeTo(target) / 100;
 
-        option.priority -= creepGeneral.getCreepsWithOrder('build', target.id, creep.room).length;
+        option.priority -= creep.room.getCreepsWithOrder('build', target.id).length;
 
         if (target.structureType == STRUCTURE_SPAWN) {
             // Spawns have highest construction priority - we want to make

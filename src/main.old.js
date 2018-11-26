@@ -24,7 +24,6 @@ require('role.upgrader');
 var Logger = require('debug');
 var RoomPlanner = require('roomplanner');
 var BoostManager = require('manager.boost');
-var creepGeneral = require('creep.general');
 var intelManager = require('manager.intel');
 var strategyManager = require('manager.strategy');
 var roleplay = require('manager.roleplay');
