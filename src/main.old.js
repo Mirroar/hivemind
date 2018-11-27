@@ -507,11 +507,6 @@ var main = {
                 }
             }
 
-            // Make sure memory structure is available.
-            if (!Memory.timers) {
-                Memory.timers = {};
-            }
-
             var initCPUUsage = Game.cpu.getUsed() - time;
             time = Game.cpu.getUsed();
 
