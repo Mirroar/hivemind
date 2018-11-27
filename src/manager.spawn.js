@@ -145,7 +145,7 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
     if (result == newName) {
         // Spawning successful.
         Memory.creepCounter[memory.role]++;
-        new Game.logger('creeps', this.pos.roomName).log('Spawning new creep:', newName);
+        hivemind.log('creeps', this.pos.roomName).info('Spawning new creep:', newName);
 
         // Also notify room's boost manager if necessary.
         if (options.boosts && this.room.boostManager) {
@@ -280,7 +280,7 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
         Game.rooms[best.roomName].boostManager.spawn(activeSpawn);
     }
     else {
-        new Game.logger('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
+        hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
     }
 
     return true;
@@ -468,7 +468,7 @@ Room.prototype.addUpgraderSpawnOptions = function () {
     }
 
     if (maxUpgraders == 0 && this.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[this.controller.level] * 0.5) {
-        new Game.logger('creeps', this.name).log('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
+        hivemind.log('creeps', this.name).info('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
         // Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
         maxUpgraders = 1;
     }

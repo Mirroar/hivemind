@@ -396,13 +396,13 @@ if (useProfiler) {
     profiler.enable();
     profiler.registerClass(Game.map, 'Map');
     profiler.registerClass(Game.market, 'Market');
-    profiler.registerClass(Game.logger, 'Logger');
 
     profiler.registerClass(Bay, 'Bay');
-    profiler.registerClass(Exploit, 'Exploit');
-    profiler.registerClass(Squad, 'Squad');
-    profiler.registerClass(RoomPlanner, 'RoomPlanner');
     profiler.registerClass(BoostManager, 'BoostManager');
+    profiler.registerClass(Exploit, 'Exploit');
+    profiler.registerClass(Logger, 'Logger');
+    profiler.registerClass(RoomPlanner, 'RoomPlanner');
+    profiler.registerClass(Squad, 'Squad');
 
     profiler.registerObject(creepGeneral, 'creepGeneral');
     profiler.registerObject(intelManager, 'intelManager');
@@ -440,7 +440,7 @@ var main = {
             temp();
         }
         if (Game.numThrottledCreeps > 0) {
-            new Game.logger('creeps').log(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
+            hivemind.log('creeps').info(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
         }
 
         for (let role in Game.creepPerformance) {
@@ -455,16 +455,13 @@ var main = {
      */
     loop: function () {
         var mainLoop = function () {
-            Game.logger = Logger;
-            var logger = new Game.logger('main');
-
             Game.relations = relations;
             Game.isAlly = function (username) {
                 return Game.relations.allies.indexOf(username) !== -1;
             };
 
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
-                logger.log('Bucket:', Game.cpu.bucket);
+                hivemind.log('main').info('Bucket:', Game.cpu.bucket);
             }
 
             var time = Game.cpu.getUsed();
@@ -580,7 +577,7 @@ var main = {
 
             if (time > Game.cpu.limit * 1.2) {
                 var linePrefix = '                     ';
-                new Game.logger('cpu').log('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
+                hivemind.log('cpu').info('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
             }
 
             stats.recordStat('cpu_total', time);

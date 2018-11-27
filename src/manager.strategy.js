@@ -448,7 +448,7 @@ var strategyManager = {
         continue;
       }
 
-      new Game.logger('strategy').debug('Gathering ' + info.amount + ' power in ' + roomName + ' would need ' + dps + ' DPS, or ' + numCreeps + ' attack creeps.');
+      hivemind.log('strategy').debug('Gathering ' + info.amount + ' power in ' + roomName + ' would need ' + dps + ' DPS, or ' + numCreeps + ' attack creeps.');
 
       // Determine which rooms need to spawn creeps.
       let potentialSpawns = [];
@@ -462,7 +462,7 @@ var strategyManager = {
         let roomRoute = Game.map.findRoute(myRoomName, roomName);
         if (roomRoute == ERR_NO_PATH || roomRoute.length > 10) continue;
 
-        new Game.logger('strategy').debug('Could spawn creeps in', myRoomName, 'with distance', roomRoute.length);
+        hivemind.log('strategy').debug('Could spawn creeps in', myRoomName, 'with distance', roomRoute.length);
 
         potentialSpawns.push({
           room: myRoomName,
@@ -520,7 +520,7 @@ var strategyManager = {
 
       // @todo Start spawning.
       Game.notify('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
-      new Game.logger('strategy').log('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
+      hivemind.log('strategy').info('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
     }
   }
 

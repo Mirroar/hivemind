@@ -13,7 +13,7 @@ Room.prototype.gatherIntel = function () {
     }
 
     if (intel.lastScan && Game.time - intel.lastScan < lastScanThreshold) return;
-    new Game.logger('intel', this.name).debug('Gathering intel after', intel.lastScan && Game.time - intel.lastScan || 'infinite', 'ticks.');
+    hivemind.log('intel', this.name).debug('Gathering intel after', intel.lastScan && Game.time - intel.lastScan || 'infinite', 'ticks.');
     intel.lastScan = Game.time;
 
     // @todo Check if this could cause problems.
@@ -77,7 +77,7 @@ Room.prototype.gatherIntel = function () {
         // Check for power.
         if (structureType == STRUCTURE_POWER_BANK) {
             // For now, send a notification!
-            new Game.logger('intel', this.name).log('Power bank found!');
+            hivemind.log('intel', this.name).info('Power bank found!');
 
             // Find out how many access points are around this power bank.
             let terrain = new Room.Terrain(this.name);

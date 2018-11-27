@@ -403,7 +403,7 @@ RoomPlanner.prototype.runLogic = function () {
   // Further constructions should only happen in safe rooms.
   if (this.room && this.room.isEvacuating()) return;
   if (!wallsBuilt) return;
-  new Game.logger('room plan', this.roomName).debug('walls are finished');
+  hivemind.log('room plan', this.roomName).debug('walls are finished');
 
   // Slate all unmanaged walls and ramparts for deconstruction.
   var unwantedDefenses = this.room.find(FIND_STRUCTURES, {
@@ -1143,7 +1143,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, this.roomName), 'road', visible);
       matrix.set(nextPos.x, nextPos.y + 1, 1);
 
-      new Game.logger('room plan', this.roomName).debug('Placing new spawn at', nextPos);
+      hivemind.log('room plan', this.roomName).debug('Placing new spawn at', nextPos);
     }
     else if (!helperPlaced) {
       // Place parking spot for helper creep.
@@ -1623,7 +1623,7 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
   for (let dir in newStatus) {
     if (newStatus[dir] != this.memory.adjacentSafe[dir]) {
       // Status has changed, recalculate building positioning.
-      new Game.logger('room plan', this.roomName).debug('changed adjacent room status!');
+      hivemind.log('room plan', this.roomName).debug('changed adjacent room status!');
       Game.notify(
         'Exit safety has changed for room ' + this.room.name + '!' + "\n\n" +
         'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.N ? 'safe' : 'not safe') + "\n" +

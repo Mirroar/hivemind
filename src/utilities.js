@@ -139,7 +139,7 @@ var utilities = {
 
         if (result) {
             //console.log('found path in', result.ops, 'operations', result.path);
-            new Game.logger('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
+            hivemind.log('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
 
             harvestMemory.cachedPath = {
                 lastCalculated: Game.time,

@@ -103,7 +103,7 @@ Logger.prototype.debug = function(...args) {
   console.log(prefix, ...args, '</font>');
 };
 
-Logger.prototype.log = function(...args) {
+Logger.prototype.info = function(...args) {
   if (!this.active) return;
 
   var prefix = this.getOutputPrefix();

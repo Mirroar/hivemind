@@ -165,7 +165,7 @@ var structureManager = {
     },
 
     instaSellResources: function (resourceType, rooms) {
-        //new Game.logger('trade').debug('Trying to instantly sell some', resourceType);
+        //hivemind.log('trade').debug('Trying to instantly sell some', resourceType);
 
         // Find room with highest amount of this resource.
         let bestRoom;
@@ -191,10 +191,10 @@ var structureManager = {
         if (amount > (room.terminal.store[resourceType] || 0)) {
             if (!room.memory.fillTerminal) {
                 room.prepareForTrading(resourceType, amount);
-                new Game.logger('trade', bestRoom).log('Preparing', amount, resourceType, 'for selling to', bestOrder.roomName, 'at', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
+                hivemind.log('trade', bestRoom).info('Preparing', amount, resourceType, 'for selling to', bestOrder.roomName, 'at', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
             }
             else {
-                new Game.logger('trade', bestRoom).log('Busy, can\'t prepare', amount, resourceType, 'for selling.');
+                hivemind.log('trade', bestRoom).info('Busy, can\'t prepare', amount, resourceType, 'for selling.');
             }
             return;
         }
@@ -202,15 +202,15 @@ var structureManager = {
         if (transactionCost > room.terminal.store.energy) {
             if (!room.memory.fillTerminal) {
                 room.prepareForTrading(RESOURCE_ENERGY, transactionCost);
-                new Game.logger('trade', bestRoom).log('Preparing', transactionCost, 'energy for selling', amount, resourceType, 'to', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
+                hivemind.log('trade', bestRoom).info('Preparing', transactionCost, 'energy for selling', amount, resourceType, 'to', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
             }
             else {
-                new Game.logger('trade', bestRoom).log('Busy, can\'t prepare', transactionCost, 'energy for selling', amount, resourceType);
+                hivemind.log('trade', bestRoom).info('Busy, can\'t prepare', transactionCost, 'energy for selling', amount, resourceType);
             }
             return;
         }
 
-        new Game.logger('trade', bestRoom).log('Selling', amount, resourceType, 'to', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
+        hivemind.log('trade', bestRoom).info('Selling', amount, resourceType, 'to', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
 
         if (Game.market.deal(bestOrder.id, amount, bestRoom) == OK) {
             return true;
@@ -218,7 +218,7 @@ var structureManager = {
     },
 
     instaBuyResources: function (resourceType, rooms) {
-        //new Game.logger('trade').debug('Trying to instantly buy some', resourceType);
+        //hivemind.log('trade').debug('Trying to instantly buy some', resourceType);
 
         // Find room with lowest amount of this resource.
         let bestRoom;
@@ -245,15 +245,15 @@ var structureManager = {
         if (transactionCost > room.terminal.store.energy) {
             if (!room.memory.fillTerminal) {
                 room.prepareForTrading(RESOURCE_ENERGY, transactionCost);
-                new Game.logger('trade', bestRoom).log('Preparing', transactionCost, 'energy for buying', amount, resourceType, 'from', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
+                hivemind.log('trade', bestRoom).info('Preparing', transactionCost, 'energy for buying', amount, resourceType, 'from', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
             }
             else {
-                new Game.logger('trade', bestRoom).log('Busy, can\'t prepare', transactionCost, 'energy for buying', amount, resourceType);
+                hivemind.log('trade', bestRoom).info('Busy, can\'t prepare', transactionCost, 'energy for buying', amount, resourceType);
             }
             return;
         }
 
-        new Game.logger('trade', bestRoom).log('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
+        hivemind.log('trade', bestRoom).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
 
         if (Game.market.deal(bestOrder.id, amount, bestRoom) == OK) {
             return true;
@@ -261,7 +261,7 @@ var structureManager = {
     },
 
     tryBuyResources: function (resourceType, rooms, ignoreOtherRooms) {
-        //new Game.logger('trade').debug('Trying to cheaply buy some', resourceType);
+        //hivemind.log('trade').debug('Trying to cheaply buy some', resourceType);
 
         let npcPrice = 1;
         if (resourceType == RESOURCE_ENERGY) {
@@ -276,7 +276,7 @@ var structureManager = {
                 return true;
             }
         }).length > 0) {
-            // new Game.logger('trade').debug('Already buying', resourceType);
+            //hivemind.log('trade').debug('Already buying', resourceType);
             return;
         }
 
@@ -301,17 +301,17 @@ var structureManager = {
 
         let offerPrice;
         if (bestBuyOrder && bestSellOrder) {
-            new Game.logger('trade', bestRoom).log(resourceType, 'is currently being bought for', bestBuyOrder.price, 'and sold for', bestSellOrder.price, 'credits.');
+            hivemind.log('trade', bestRoom).info(resourceType, 'is currently being bought for', bestBuyOrder.price, 'and sold for', bestSellOrder.price, 'credits.');
             offerPrice = Math.min(bestBuyOrder.price * 0.9, bestSellOrder.price * 0.9);
         }
         else if (bestBuyOrder) {
             // Nobody is selling this resource, so adapt to the current buy price.
-            new Game.logger('trade', bestRoom).log(resourceType, 'is currently being bought for', bestBuyOrder.price);
+            hivemind.log('trade', bestRoom).info(resourceType, 'is currently being bought for', bestBuyOrder.price);
             offerPrice = bestBuyOrder.price * 0.9;
         }
         else {
             // Nobody is buying this resource, try to get NPC price for it.
-            new Game.logger('trade', bestRoom).log('Nobody else is currently buying', resourceType);
+            hivemind.log('trade', bestRoom).info('Nobody else is currently buying', resourceType);
             offerPrice = npcPrice;
         }
 
@@ -319,11 +319,11 @@ var structureManager = {
         // offerPrice = Math.max(offerPrice, npcPrice * 1.05);
         // offerPrice = Math.min(offerPrice, npcPrice * 3);
 
-        new Game.logger('trade', bestRoom).debug('Offering to buy for', offerPrice);
+        hivemind.log('trade', bestRoom).debug('Offering to buy for', offerPrice);
 
         // Make sure we have enough credits to actually buy this.
         if (Game.market.credits < 10000 * offerPrice) {
-            // new Game.logger('trade', bestRoom).debug('Not enough credits, no buy order created.');
+            //hivemind.log('trade', bestRoom).debug('Not enough credits, no buy order created.');
             return;
         }
 
@@ -331,12 +331,12 @@ var structureManager = {
     },
 
     trySellResources: function (resourceType, rooms) {
-        //new Game.logger('trade').debug('Trying to profitably sell some', resourceType);
+        //hivemind.log('trade').debug('Trying to profitably sell some', resourceType);
 
         let npcPrice = 1;
 
         if (_.filter(Game.market.orders, (order) => order.type == ORDER_SELL && order.resourceType == resourceType).length > 0) {
-            // new Game.logger('trade').debug('Already selling', resourceType);
+            //hivemind.log('trade').debug('Already selling', resourceType);
             return;
         }
 
@@ -360,17 +360,17 @@ var structureManager = {
 
         let offerPrice;
         if (bestBuyOrder && bestSellOrder) {
-            new Game.logger('trade', bestRoom).log(resourceType, 'is currently being bought for', bestBuyOrder.price, 'and sold for', bestSellOrder.price, 'credits.');
+            hivemind.log('trade', bestRoom).info(resourceType, 'is currently being bought for', bestBuyOrder.price, 'and sold for', bestSellOrder.price, 'credits.');
             offerPrice = Math.max(bestBuyOrder.price / 0.9, bestSellOrder.price / 0.9);
         }
         else if (bestSellOrder) {
             // Nobody is buying this resource, so adapt to the current sell price.
-            new Game.logger('trade', bestRoom).log(resourceType, 'is currently being sold for', bestSellOrder.price);
+            hivemind.log('trade', bestRoom).info(resourceType, 'is currently being sold for', bestSellOrder.price);
             offerPrice = bestSellOrder.price / 0.9;
         }
         else {
             // Nobody is selling this resource, try to get a greedy price for it.
-            new Game.logger('trade', bestRoom).log('Nobody else is currently selling', resourceType);
+            hivemind.log('trade', bestRoom).info('Nobody else is currently selling', resourceType);
             offerPrice = npcPrice * 5;
         }
 
@@ -378,11 +378,11 @@ var structureManager = {
         // offerPrice = Math.max(offerPrice, npcPrice * 1.2);
         // offerPrice = Math.min(offerPrice, npcPrice * 5);
 
-        new Game.logger('trade', bestRoom).debug('Offering to sell for', offerPrice);
+        hivemind.log('trade', bestRoom).debug('Offering to sell for', offerPrice);
 
         // Make sure we have enough credits to actually sell this.
         if (Game.market.credits < 10000 * offerPrice * 0.05) {
-            // new Game.logger('trade', bestRoom).debug('Not enough credits, no sell order created.');
+            //hivemind.log('trade', bestRoom).debug('Not enough credits, no sell order created.');
             return;
         }
 
@@ -396,7 +396,7 @@ var structureManager = {
 
             if (age > 100000 || order.remainingAmount < 100) {
                 // Nobody seems to be buying or selling this order, cancel it.
-                new Game.logger('trade', order.roomName).log('Cancelling old trade', order.type + 'ing', order.remainingAmount, order.resourceType, 'for', order.price, 'each after', age, 'ticks.');
+                hivemind.log('trade', order.roomName).debug('Cancelling old trade', order.type + 'ing', order.remainingAmount, order.resourceType, 'for', order.price, 'each after', age, 'ticks.');
                 Game.market.cancelOrder(order.id);
             }
         }
@@ -670,7 +670,7 @@ var structureManager = {
 
                 room.memory.currentReaction = bestReaction;
                 if (bestReaction) {
-                    new Game.logger('labs', roomName).log('now producing', REACTIONS[bestReaction[0]][bestReaction[1]]);
+                    hivemind.log('labs', roomName).info('now producing', REACTIONS[bestReaction[0]][bestReaction[1]]);
                 }
             }
         }
@@ -690,20 +690,20 @@ var structureManager = {
             let storage = room.storage;
             if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
                 let result = terminal.send(best.resourceType, 5000, best.target, "Resource equalizing");
-                new Game.logger('trade').log("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
+                hivemind.log('trade').info("sending", best.resourceType, "from", best.source, "to", best.target, ":", result);
             }
             else if (room.isEvacuating() && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
                 let amount = terminal.store[best.resourceType];
                 let result = terminal.send(best.resourceType, amount, best.target, "Resource equalizing");
-                new Game.logger('trade').log("sending", amount, best.resourceType, "from", best.source, "to", best.target, ":", result);
+                hivemind.log('trade').info("sending", amount, best.resourceType, "from", best.source, "to", best.target, ":", result);
             }
             else {
-                new Game.logger('trade').log("Preparing 5000", best.resourceType, 'for transport from', best.source, 'to', best.target);
+                hivemind.log('trade').info("Preparing 5000", best.resourceType, 'for transport from', best.source, 'to', best.target);
                 room.prepareForTrading(best.resourceType);
             }
         }
         else {
-            // new Game.logger('trade').log("Nothing to trade");
+            //hivemind.log('trade').info("Nothing to trade");
         }
 
         if (Game.time % 1500 == 981) {

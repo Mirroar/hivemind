@@ -137,7 +137,7 @@ Creep.prototype.calculateBuilderTarget = function () {
                 maxHealth: best.maxHealth,
             };
 
-            //new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now repairing', best.object);
+            //hivemind.log('creeps', this.pos.roomName).debug(creep.name, 'is now repairing', best.object);
         }
         else if (best.type == 'site') {
             creep.memory.order = {
@@ -145,7 +145,7 @@ Creep.prototype.calculateBuilderTarget = function () {
                 target: best.object.id,
             };
 
-            // new Game.logger('creeps', this.pos.roomName).debug(creep.name, 'is now building', best.object);
+            //hivemind.log('creeps', this.pos.roomName).debug(creep.name, 'is now building', best.object);
         }
     }
     else {
@@ -194,7 +194,7 @@ Creep.prototype.performRepair = function () {
     }
     else {
         // Unknown order type, recalculate!
-        new Game.logger('creep', this.pos.roomName).log('Unknown order type detected on', creep.name);
+        hivemind.log('creeps', this.pos.roomName).info('Unknown order type detected on', creep.name);
         creep.calculateBuilderTarget();
         return true;
     }

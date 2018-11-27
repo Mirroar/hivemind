@@ -62,7 +62,7 @@ Creep.prototype.followCachedPath = function () {
   this.memory.moveBlocked = false;
   if (!this.memory.cachedPath || !this.memory.cachedPath.path || _.size(this.memory.cachedPath.path) == 0) {
     this.clearCachedPath();
-    new Game.logger('creeps', this.room.name).error(this.name, 'Trying to follow non-existing path');
+    hivemind.log('creeps', this.room.name).error(this.name, 'Trying to follow non-existing path');
     return;
   }
   var path = this.memory.cachedPath.path;
@@ -317,12 +317,12 @@ Creep.prototype.goTo = function (target, options) {
 
     if (result && result.path) {
       //console.log('found path in', result.ops, 'operations', result.path);
-      //new Game.logger('creeps', this.room.name).debug('New path calculated from', this.pos, 'to', target, 'in', result.ops, 'operations');
+      //hivemind.log('creeps', this.room.name).debug('New path calculated from', this.pos, 'to', target, 'in', result.ops, 'operations');
 
       this.setCachedPath(utilities.serializePositionPath(result.path));
     }
     else {
-      new Game.logger('creeps', this.room.name).error('No path from', this.pos, 'to', target, 'found!');
+      hivemind.log('creeps', this.room.name).error('No path from', this.pos, 'to', target, 'found!');
       return false;
     }
   }
