@@ -1,5 +1,7 @@
 'use strict';
 
+var Logger = require('debug');
+
 /**
  * Kernel that can be used to run various processes.
  */
@@ -10,6 +12,8 @@ var Hivemind = function () {
     };
   }
   this.memory = Memory.hivemind;
+
+  this.loggers = {};
 };
 
 /**
@@ -38,6 +42,17 @@ Hivemind.prototype.initializeProcessStats = function (id) {
   }
 
   return this.memory.process[id];
+};
+
+/**
+ * Creates or gets an appropriate logger instance.
+ */
+Hivemind.prototype.log = function (channel, roomName) {
+  if (!roomName) roomName = 'global';
+  if (!this.loggers[roomName]) this.loggers[roomName] = {};
+  if (!this.loggers[roomName][channel]) this.loggers[roomName][channel] = new Logger(channel, roomName);
+
+  return this.loggers[roomName][channel];
 };
 
 module.exports = Hivemind;
