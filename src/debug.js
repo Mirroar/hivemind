@@ -30,6 +30,7 @@ var Logger = function (channel, roomName) {
   this.color = channels.default.color;
   this.roomName = roomName;
   this.active = true;
+  this.prefix = this.getOutputPrefix();
 
   if (channels[this.channel]) {
     this.channelName = ('          ' + channels[this.channel].name).slice(-10);
@@ -97,8 +98,7 @@ Logger.prototype.getOutputPrefix = function () {
 Logger.prototype.debug = function(...args) {
   if (!this.active) return;
 
-  var prefix = '<font color="#606060">';
-  prefix += this.getOutputPrefix();
+  var prefix = '<font color="#606060">' + this.prefix;
 
   console.log(prefix, ...args, '</font>');
 };
@@ -106,7 +106,7 @@ Logger.prototype.debug = function(...args) {
 Logger.prototype.info = function(...args) {
   if (!this.active) return;
 
-  var prefix = this.getOutputPrefix();
+  var prefix = this.prefix;
 
   console.log(prefix, ...args);
 };
@@ -114,8 +114,7 @@ Logger.prototype.info = function(...args) {
 Logger.prototype.error = function(...args) {
   //if (!this.active) return;
 
-  var prefix = '<font color="#ff8080">';
-  prefix += this.getOutputPrefix();
+  var prefix = '<font color="#ff8080">' + this.prefix;
 
   console.log(prefix, ...args, '</font>');
 };
