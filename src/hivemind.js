@@ -48,11 +48,11 @@ Hivemind.prototype.initializeProcessStats = function (id) {
  * Creates or gets an appropriate logger instance.
  */
 Hivemind.prototype.log = function (channel, roomName) {
-  if (!roomName) roomName = 'global';
-  if (!this.loggers[roomName]) this.loggers[roomName] = {};
-  if (!this.loggers[roomName][channel]) this.loggers[roomName][channel] = new Logger(channel, roomName);
+  let category = roomName || 'global';
+  if (!this.loggers[category]) this.loggers[category] = {};
+  if (!this.loggers[category][channel]) this.loggers[category][channel] = new Logger(channel, roomName);
 
-  return this.loggers[roomName][channel];
+  return this.loggers[category][channel];
 };
 
 module.exports = Hivemind;
