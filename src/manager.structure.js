@@ -6,17 +6,6 @@ StructureKeeperLair.prototype.isDangerous = function () {
     return !this.ticksToSpawn || this.ticksToSpawn < 20;
 };
 
-Room.prototype.prepareForTrading = function (resourceType, amount) {
-    if (!amount) amount = 10000;
-    this.memory.fillTerminal = resourceType;
-    this.memory.fillTerminalAmount = Math.min(amount, 50000);
-};
-
-Room.prototype.stopTradePreparation = function () {
-    delete this.memory.fillTerminal;
-    delete this.memory.fillTerminalAmount;
-};
-
 /**
  * Starts evacuation process for a room to prepare it for being abandoned.
  */

@@ -190,3 +190,14 @@ Room.prototype.getStorageLocation = function () {
 
   return room.memory.storage;
 };
+
+Room.prototype.prepareForTrading = function (resourceType, amount) {
+  if (!amount) amount = 10000;
+  this.memory.fillTerminal = resourceType;
+  this.memory.fillTerminalAmount = Math.min(amount, 50000);
+};
+
+Room.prototype.stopTradePreparation = function () {
+  delete this.memory.fillTerminal;
+  delete this.memory.fillTerminalAmount;
+};
