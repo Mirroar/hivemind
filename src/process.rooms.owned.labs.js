@@ -21,6 +21,7 @@ ManageLabsProcess.prototype.run = function () {
   var source1 = Game.getObjectById(memory.labs.source1);
   var source2 = Game.getObjectById(memory.labs.source2);
   if (!source1 || !source2) return;
+  if (source1.mineralType != memory.currentReaction[0] || source2.mineralType != memory.currentReaction[1]) return;
 
   var labs = memory.labs.reactor;
   if (!labs) return;
@@ -28,10 +29,8 @@ ManageLabsProcess.prototype.run = function () {
   for (let i in labs) {
     var reactor = Game.getObjectById(labs[i]);
 
-    if (source1 && source2 && reactor) {
-      if (reactor.cooldown <= 0 && source1.mineralType == memory.currentReaction[0] && source2.mineralType == memory.currentReaction[1]) {
-        reactor.runReaction(source1, source2);
-      }
+    if (reactor && reactor.cooldown <= 0) {
+      reactor.runReaction(source1, source2);
     }
   }
 };
