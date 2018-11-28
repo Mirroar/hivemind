@@ -16,8 +16,7 @@ ManageLabsProcess.prototype = Object.create(Process.prototype);
  */
 ManageLabsProcess.prototype.run = function () {
   let memory = this.room.memory;
-  // @todo Bucket guard should happen in process management.
-  if (Game.cpu.bucket < 5000 || !memory.canPerformReactions || !memory.currentReaction) return;
+  if (!memory.canPerformReactions || !memory.currentReaction) return;
 
   var source1 = Game.getObjectById(memory.labs.source1);
   var source2 = Game.getObjectById(memory.labs.source2);
