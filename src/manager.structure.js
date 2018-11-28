@@ -6,35 +6,6 @@ StructureKeeperLair.prototype.isDangerous = function () {
     return !this.ticksToSpawn || this.ticksToSpawn < 20;
 };
 
-Room.prototype.manageLabs = function () {
-    if (!this.controller || !this.controller.my || Game.cpu.bucket < 5000 || !this.memory.canPerformReactions || !this.memory.currentReaction) return;
-
-    var source1 = Game.getObjectById(this.memory.labs.source1);
-    var source2 = Game.getObjectById(this.memory.labs.source2);
-    if (!source1 || !source2) return;
-
-    if (this.visual) {
-        this.visual.circle(source1.pos, {fill: '#4080ff'});
-        this.visual.circle(source2.pos, {fill: '#4080ff'});
-    }
-
-    var labs = this.memory.labs.reactor;
-    if (!labs) return;
-    if (typeof labs == 'string') {
-        labs = [labs];
-        this.memory.labs.reactor = labs;
-    }
-    for (let i in labs) {
-        var reactor = Game.getObjectById(labs[i]);
-
-        if (source1 && source2 && reactor) {
-            if (reactor.cooldown <= 0 && source1.mineralType == this.memory.currentReaction[0] && source2.mineralType == this.memory.currentReaction[1]) {
-                reactor.runReaction(source1, source2);
-            }
-        }
-    }
-};
-
 Room.prototype.prepareForTrading = function (resourceType, amount) {
     if (!amount) amount = 10000;
     this.memory.fillTerminal = resourceType;

@@ -2,8 +2,10 @@
 
 var Process = require('process');
 var RoomPlanner = require('roomplanner');
-var RoomDefenseProcess = require('process.rooms.owned.defense');
+
+var ManageLabsProcess = require('process.rooms.owned.labs');
 var ManageLinksProcess = require('process.rooms.owned.links');
+var RoomDefenseProcess = require('process.rooms.owned.defense');
 
 var OwnedRoomProcess = function (params, data) {
   Process.call(this, params, data);
@@ -32,8 +34,9 @@ OwnedRoomProcess.prototype.run = function () {
     room: this.room,
   });
 
-  // Manage labs.
-  this.room.manageLabs();
+  hivemind.runProcess(this.room.name + '_labs', ManageLabsProcess, {
+    room: this.room,
+  });
 
   // Process power in power spawns.
   let powerSpawn = this.room.powerSpawn;

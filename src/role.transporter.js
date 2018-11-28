@@ -444,11 +444,6 @@ Creep.prototype.getAvailableSources = function () {
 
     if (creep.room.memory.canPerformReactions && !creep.room.isEvacuating()) {
         let labs = creep.room.memory.labs.reactor;
-        if (typeof labs == 'string') {
-            labs = [labs];
-            creep.room.memory.labs.reactor = labs;
-        }
-
         for (let i in labs) {
             // Clear out reaction labs.
             let lab = Game.getObjectById(labs[i]);
