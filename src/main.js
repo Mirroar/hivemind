@@ -36,13 +36,7 @@ module.exports = {
     // @todo Remove old "main" code eventually.
     oldMain.loop();
 
-    try {
-      hivemind.runProcess('rooms', RoomsProcess);
-    }
-    catch (e) {
-      console.log('Error when running room process:', e);
-      console.log(e.stack);
-    }
+    hivemind.runProcess('rooms', RoomsProcess);
 
     this.recordStats();
   },
