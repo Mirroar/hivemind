@@ -16,6 +16,7 @@ var oldMain = require('main.old');
 
 // Allow profiling of code.
 var profiler = require('profiler');
+var stats = require('stats');
 
 module.exports = {
 
@@ -42,6 +43,21 @@ module.exports = {
       console.log('Error when running room process:', e);
       console.log(e.stack);
     }
+
+    this.recordStats();
+  },
+
+  recordStats: function () {
+    let time = Game.cpu.getUsed();
+
+    if (time > Game.cpu.limit * 1.2) {
+      var linePrefix = '                     ';
+      hivemind.log('cpu').info('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
+    }
+
+    stats.recordStat('cpu_total', time);
+    stats.recordStat('bucket', Game.cpu.bucket);
+    stats.recordStat('creeps', _.size(Game.creeps));
   },
 
 };

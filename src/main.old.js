@@ -20,13 +20,11 @@ require('role.upgrader');
 var roleRemoteBuilder = require('role.builder.remote');
 
 var Logger = require('debug');
-var RoomPlanner = require('roomplanner');
 var BoostManager = require('manager.boost');
 var intelManager = require('manager.intel');
 var strategyManager = require('manager.strategy');
 var roleplay = require('manager.roleplay');
 var spawnManager = require('manager.spawn');
-var stats = require('stats');
 var structureManager = require('manager.structure');
 var utilities = require('utilities');
 
@@ -544,17 +542,6 @@ var main = {
                     console.log('Error in roomSongs:', e);
                 }
             }
-
-            time = Game.cpu.getUsed();
-
-            if (time > Game.cpu.limit * 1.2) {
-                var linePrefix = '                     ';
-                hivemind.log('cpu').info('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
-            }
-
-            stats.recordStat('cpu_total', time);
-            stats.recordStat('bucket', Game.cpu.bucket);
-            stats.recordStat('creeps', _.size(Game.creeps));
         };
 
         mainLoop();
