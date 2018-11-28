@@ -507,16 +507,6 @@ var main = {
                 }
             }
 
-            for (let roomName in Game.rooms) {
-                try {
-                    Game.rooms[roomName].manageLabs();
-                }
-                catch (e) {
-                    console.log('error in manageLabs:');
-                    console.log(e.stack);
-                }
-            }
-
             try {
                 intelManager.scout();
             }

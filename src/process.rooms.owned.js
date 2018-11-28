@@ -21,15 +21,19 @@ OwnedRoomProcess.prototype.run = function () {
     console.log(e.stack);
   }
 
-  // @todo Only run processes based on current room level.
-  this.room.generateLinkNetwork();
+  // @todo Only run processes based on current room level or existing structures.
   hivemind.runProcess(this.room.name + '_defense', RoomDefenseProcess, {
     room: this.room,
   });
+
+  this.room.generateLinkNetwork();
   hivemind.runProcess(this.room.name + '_links', ManageLinksProcess, {
     interval: 10,
     room: this.room,
   });
+
+  // Manage labs.
+  this.room.manageLabs();
 
   // Process power in power spawns.
   let powerSpawn = this.room.powerSpawn;
