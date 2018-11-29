@@ -1,6 +1,7 @@
 'use strict';
 
 var Logger = require('debug');
+var Relations = require('relations')
 
 /**
  * Kernel that can be used to run various processes.
@@ -12,6 +13,7 @@ var Hivemind = function () {
     };
   }
   this.memory = Memory.hivemind;
+  this.relations = new Relations();
 
   this.loggers = {};
 };

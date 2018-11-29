@@ -32,23 +32,6 @@ var Bay = require('manager.bay');
 var Exploit = require('manager.exploit');
 var Squad = require('manager.squad');
 
-var relations = {
-  allies: [],
-};
-
-try {
-  var localRelations = require('relations.local');
-
-  if (localRelations.allies) {
-    for (var i in localRelations.allies) {
-      relations.allies.push(localRelations.allies[i]);
-    }
-  }
-}
-catch (e) {
-  // No local relations declared, ignore.
-}
-
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 
 // @todo Do not send any remote harvesters or claimers until enemies in a room should have expired. Maybe scout from time to time.
@@ -425,11 +408,6 @@ var main = {
      */
     loop: function () {
         var mainLoop = function () {
-            Game.relations = relations;
-            Game.isAlly = function (username) {
-                return Game.relations.allies.indexOf(username) !== -1;
-            };
-
             if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
                 hivemind.log('main').info('Bucket:', Game.cpu.bucket);
             }

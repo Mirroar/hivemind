@@ -7,7 +7,7 @@ if (!Creep.prototype.__enhancementsLoaded) {
    * Determines if a creep is dangerous and should be attacked.
    */
   Creep.prototype.isDangerous = function () {
-    if (Game.isAlly && Game.isAlly(this.owner.username)) return false;
+    if (hivemind.relations.isAlly(this.owner.username)) return false;
 
     for (let j in this.body) {
       let type = this.body[j].type;
