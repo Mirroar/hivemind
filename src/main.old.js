@@ -23,7 +23,6 @@ var Logger = require('debug');
 var BoostManager = require('manager.boost');
 var intelManager = require('manager.intel');
 var strategyManager = require('manager.strategy');
-var roleplay = require('manager.roleplay');
 var spawnManager = require('manager.spawn');
 var structureManager = require('manager.structure');
 var utilities = require('utilities');
@@ -467,15 +466,6 @@ var main = {
                 catch (e) {
                     console.log('error in strategyManager:');
                     console.log(e.stack);
-                }
-            }
-
-            if (Game.cpu.bucket > 5000) {
-                try {
-                    roleplay.roomSongs();
-                }
-                catch (e) {
-                    console.log('Error in roomSongs:', e);
                 }
             }
         };

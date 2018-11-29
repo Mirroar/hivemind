@@ -6,6 +6,7 @@ var RoomPlanner = require('roomplanner');
 var ManageLabsProcess = require('process.rooms.owned.labs');
 var ManageLinksProcess = require('process.rooms.owned.links');
 var RoomDefenseProcess = require('process.rooms.owned.defense');
+var RoomSongsProcess = require('process.rooms.owned.songs');
 
 var OwnedRoomProcess = function (params, data) {
   Process.call(this, params, data);
@@ -43,6 +44,12 @@ OwnedRoomProcess.prototype.run = function () {
   if (powerSpawn && powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
     powerSpawn.processPower();
   }
+
+  // Sing a song.
+  hivemind.runProcess(this.room.name + '_song', RoomSongsProcess, {
+    room: this.room,
+    // priority: PRIORITY_LOW,
+  });
 };
 
 module.exports = OwnedRoomProcess;
