@@ -8,12 +8,6 @@ var RoomDefenseProcess = function (params, data) {
 };
 RoomDefenseProcess.prototype = Object.create(Process.prototype);
 
-/**
- * Moves energy between links.
- *
- * Determines which links serve as energy input or output, and transfers
- * dynamically between those and neutral links.
- */
 RoomDefenseProcess.prototype.run = function () {
   // Handle towers.
   var towers = this.room.find(FIND_MY_STRUCTURES, {
