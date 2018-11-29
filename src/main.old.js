@@ -408,21 +408,6 @@ var main = {
      */
     loop: function () {
         var mainLoop = function () {
-            if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
-                hivemind.log('main').info('Bucket:', Game.cpu.bucket);
-            }
-
-            var time = Game.cpu.getUsed();
-
-            // Clean up flag memory from time to time.
-            if (Game.time % 1000 == 725) {
-                for (let flagName in Memory.flags) {
-                    if (!Game.flags[flagName]) {
-                        delete Memory.flags[flagName];
-                    }
-                }
-            }
-
             Game.squads = {};
             Game.exploits = {};
             Game.creepsByRole = {};
@@ -444,26 +429,9 @@ var main = {
                 Game.rooms[roomName].enhanceData();
             }
 
-            // Always place this memory cleaning code at the very top of your main loop!
-            for (var name in Memory.creeps) {
-                if (!Game.creeps[name]) {
-                    //console.log(Memory.creeps[name].role, name, 'has died. :(');
-                    delete Memory.creeps[name];
-                }
-            }
-
-            var initCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
             spawnManager.manageSpawns();
 
-            var spawnCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
-
             main.manageCreeps();
-
-            var creepsCPUUsage = Game.cpu.getUsed() - time;
-            time = Game.cpu.getUsed();
 
             if (Game.time % 10 == 1) {
                 try {

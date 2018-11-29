@@ -38,6 +38,7 @@ module.exports = {
 
     hivemind.runProcess('rooms', RoomsProcess);
 
+    this.cleanup();
     this.recordStats();
   },
 
@@ -52,6 +53,30 @@ module.exports = {
     stats.recordStat('cpu_total', time);
     stats.recordStat('bucket', Game.cpu.bucket);
     stats.recordStat('creeps', _.size(Game.creeps));
+
+    if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
+      hivemind.log('main').info('Bucket:', Game.cpu.bucket);
+    }
+  },
+
+  cleanup: function () {
+    // Clean creep memory.
+    if (Game.time % 16 == 7) {
+      for (var name in Memory.creeps) {
+        if (!Game.creeps[name]) {
+          delete Memory.creeps[name];
+        }
+      }
+    }
+
+    // Clean up flag memory from time to time.
+    if (Game.time % 1000 == 725) {
+      for (let flagName in Memory.flags) {
+        if (!Game.flags[flagName]) {
+          delete Memory.flags[flagName];
+        }
+      }
+    }
   },
 
 };
