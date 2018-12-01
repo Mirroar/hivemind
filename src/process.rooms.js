@@ -14,7 +14,8 @@ RoomsProcess.prototype.run = function () {
     let room = Game.rooms[roomName];
     hivemind.runProcess('rooms_intel', RoomIntelProcess, {
       room: room,
-    })
+      priority: PROCESS_PRIORITY_ALWAYS,
+    });
 
     // Manage owned rooms.
     // @todo Keep a list of managed rooms in memory so we can notice when
@@ -23,6 +24,7 @@ RoomsProcess.prototype.run = function () {
       // @todo
       hivemind.runProcess('owned_rooms', OwnedRoomProcess, {
         room: room,
+        priority: PROCESS_PRIORITY_ALWAYS,
       });
     }
   }

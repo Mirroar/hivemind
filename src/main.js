@@ -33,16 +33,24 @@ module.exports = {
   },
 
   runTick: function () {
+    hivemind.onTickStart();
+
     // @todo Remove old "main" code eventually.
     oldMain.loop();
 
-    hivemind.runProcess('rooms', RoomsProcess);
+    hivemind.runProcess('rooms', RoomsProcess, {
+      priority: PROCESS_PRIORITY_ALWAYS,
+    });
 
     this.cleanup();
     this.recordStats();
   },
 
   recordStats: function () {
+    if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
+      hivemind.log('main').info('Bucket:', Game.cpu.bucket);
+    }
+
     let time = Game.cpu.getUsed();
 
     if (time > Game.cpu.limit * 1.2) {
@@ -54,9 +62,6 @@ module.exports = {
     stats.recordStat('bucket', Game.cpu.bucket);
     stats.recordStat('creeps', _.size(Game.creeps));
 
-    if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
-      hivemind.log('main').info('Bucket:', Game.cpu.bucket);
-    }
   },
 
   cleanup: function () {

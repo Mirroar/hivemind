@@ -27,6 +27,7 @@ OwnedRoomProcess.prototype.run = function () {
   // @todo Only run processes based on current room level or existing structures.
   hivemind.runProcess(this.room.name + '_defense', RoomDefenseProcess, {
     room: this.room,
+    priority: PROCESS_PRIORITY_HIGH,
   });
 
   this.room.generateLinkNetwork();
@@ -48,7 +49,7 @@ OwnedRoomProcess.prototype.run = function () {
   // Sing a song.
   hivemind.runProcess(this.room.name + '_song', RoomSongsProcess, {
     room: this.room,
-    // priority: PRIORITY_LOW,
+    priority: PROCESS_PRIORITY_LOW,
   });
 };
 
