@@ -115,17 +115,35 @@ ScoutProcess.prototype.run = function () {
 ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   let intel = Memory.rooms[roomName].intel;
 
-  // @todo Factor in amount of mineral sources we have to prefer rooms with rarer minerals.
+  // More sources is better.
   let score = intel.sources.length;
+
+  // Having a mineral source is good.
   if (intel.mineral) {
     score++;
   }
 
-  // @todo Having rooms with many sources nearby is good.
-  // @todo Having fewer exit sides is good.
+  // Having fewer exit sides is good.
+  let exits = intel.exits || [];
+  score += 1 - intel.exits.length * 0.25;
+  for (let i in exits) {
+    let adjacentRoom = exits[i];
+    let adjacentIntel = Memory.rooms[adjacentRoom] && Memory.rooms[adjacentRoom].intel || {};
+
+    if (adjacentIntel.owner) {
+      // Try not to expand too close to other players.
+      // @todo Also check for room reservation.
+      score -= 0.5;
+    }
+    else {
+      // Adjacent rooms having more sources is good.
+      score += adjacentIntel.sources && adjacentIntel.sources.length * 0.1 || 0;
+    }
+  }
+
+  // @todo Prefer rooms with minerals we have little sources of.
   // @todo Having dead ends / safe rooms nearby is similarly good.
   // @todo Having fewer exit tiles is good.
-  // @todo Being close to other player's rooms / reserved rooms is bad.
   return score;
 };
 
