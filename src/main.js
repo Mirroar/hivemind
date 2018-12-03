@@ -18,6 +18,7 @@ var oldMain = require('main.old');
 // Allow profiling of code.
 var profiler = require('profiler');
 var stats = require('stats');
+var utilities = require('utilities');
 
 module.exports = {
 
@@ -34,6 +35,10 @@ module.exports = {
   },
 
   runTick: function () {
+    if (Memory.isAccountThrottled) {
+      Game.cpu.limit = 20;
+    }
+
     hivemind.onTickStart();
 
     // @todo Remove old "main" code eventually.
