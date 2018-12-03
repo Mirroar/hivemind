@@ -10,7 +10,7 @@ global.hivemind = new Hivemind();
 
 // Load top-level processes.
 var RoomsProcess = require('process.rooms');
-var ScoutProcess = require('process.scout');
+var ScoutProcess = require('process.strategy.scout');
 
 // @todo Refactor old main code away.
 var oldMain = require('main.old');
