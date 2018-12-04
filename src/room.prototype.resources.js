@@ -1,5 +1,7 @@
 'use strict';
 
+var utilities = require('utilities');
+
 Room.prototype.getStorageLimit = function () {
   let total = 0;
   if (this.storage) {
