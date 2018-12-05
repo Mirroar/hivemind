@@ -153,41 +153,16 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 ScoutProcess.prototype.generateScoutTargets = function () {
   let roomList = {};
 
-  let openList = {};
+  let openList = this.getScoutOrigins();
   let closedList = {};
 
-  let observers = {};
-
-  // Starting point for scouting operations are owned rooms.
-  for (let roomName in Game.rooms) {
-    let room = Game.rooms[roomName];
-    if (!room.controller || !room.controller.my || !room.memory.intel) continue;
-
-    openList[roomName] = {
-      range: 0,
-      origin: roomName,
-    };
-
-    if (room.observer) {
-      observers[roomName] = room.observer;
-    }
-  }
+  let observers = this.getObservers();
 
   // Flood fill from own rooms and add rooms we need intel of.
   while (_.size(openList) > 0) {
-    let minDist = null;
-    let nextRoom = null;
-    for (let rName in openList) {
-      let info = openList[rName];
-      if (minDist === null || info.range < minDist) {
-        minDist = info.range;
-        nextRoom = rName;
-      }
-    }
+    let nextRoom = this.getNextRoomCandidate(openList);
 
-    if (!nextRoom) {
-      break;
-    }
+    if (!nextRoom) break;
 
     let info = openList[nextRoom];
 
@@ -228,6 +203,55 @@ ScoutProcess.prototype.generateScoutTargets = function () {
   }
 
   return roomList;
+};
+
+/**
+ * Generates a list of rooms that can serve as a starting point for scouting.
+ */
+ScoutProcess.prototype.getScoutOrigins = function () {
+  let openList = {};
+
+  // Starting point for scouting operations are owned rooms.
+  for (let roomName in Game.rooms) {
+    let room = Game.rooms[roomName];
+    if (!room.controller || !room.controller.my || !room.memory.intel) continue;
+
+    openList[roomName] = {
+      range: 0,
+      origin: roomName,
+    };
+  }
+
+  return openList;
+};
+
+/**
+ * Generates a list of observer structures keyed by room name.
+ */
+ScoutProcess.prototype.getObservers = function () {
+  for (let roomName in Game.rooms) {
+    let room = Game.rooms[roomName];
+    if (!room.controller || !room.controller.my || !room.observer) continue;
+
+    observers[roomName] = room.observer;
+  }
+};
+
+/**
+ * Gets a the room from the list that has the lowest range from an origin point.
+ */
+ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
+  let minDist = null;
+  let nextRoom = null;
+  for (let rName in openList) {
+    let info = openList[rName];
+    if (minDist === null || info.range < minDist) {
+      minDist = info.range;
+      nextRoom = rName;
+    }
+  }
+
+  return nextRoom;
 };
 
 module.exports = ScoutProcess;
