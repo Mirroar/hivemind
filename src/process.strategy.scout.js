@@ -13,97 +13,99 @@ var ScoutProcess = function (params, data) {
 ScoutProcess.prototype = Object.create(Process.prototype);
 
 ScoutProcess.prototype.run = function () {
-  let memory = Memory.strategy;
-
-  var roomList = this.generateScoutTargets();
-  memory.roomList = roomList;
+  Memory.strategy.roomList = this.generateScoutTargets();
 
   // Add data to scout list for creating priorities.
-  // @todo Add harvestPriority for rooms with harvest flags.
-  for (let roomName in roomList) {
-    let info = roomList[roomName];
+  for (let roomName in Memory.strategy.roomList) {
+    this.calculateRoomPriorities(roomName);
+  }
+};
 
-    info.scoutPriority = 0;
-    info.expansionScore = 0;
-    info.harvestPriority = 0;
-    info.roomName = roomName;
+ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
+  let roomList = Memory.strategy.roomList;
 
-    if (info.range > 0 && info.range <= 2) {
-      // This is a potential room for remote mining.
-      let scoutPriority = 0;
-      if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) {
-        scoutPriority = 3;
+  let info = roomList[roomName];
+
+  info.roomName = roomName;
+  info.scoutPriority = 0;
+  info.expansionScore = 0;
+  info.harvestPriority = 0;
+
+  if (info.range > 0 && info.range <= 2) {
+    // This is a potential room for remote mining.
+    let scoutPriority = 0;
+    if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) {
+      scoutPriority = 3;
+    }
+    else {
+      let intel = Memory.rooms[roomName].intel;
+      if (Game.time - intel.lastScan > 5000) {
+        scoutPriority = 2;
       }
-      else {
-        let intel = Memory.rooms[roomName].intel;
-        if (Game.time - intel.lastScan > 5000) {
-          scoutPriority = 2;
-        }
-        else if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername())) {
-          let income = -2000; // Flat cost for room reservation
-          let pathLength = 0;
-          for (let i in intel.sources) {
-            income += 3000;
-            pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
-            if (typeof(intel.sources[i]) == 'object') {
-              let sourcePos = new RoomPosition(intel.sources[i].x, intel.sources[i].y, roomName);
-              utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
+      else if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername())) {
+        let income = -2000; // Flat cost for room reservation
+        let pathLength = 0;
+        for (let i in intel.sources) {
+          income += 3000;
+          pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
+          if (typeof(intel.sources[i]) == 'object') {
+            let sourcePos = new RoomPosition(intel.sources[i].x, intel.sources[i].y, roomName);
+            utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
 
-              if (Memory.rooms[info.origin].remoteHarvesting) {
-                let harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
-                if (harvestMemory && harvestMemory.cachedPath) {
-                  pathLength -= info.range * 50;
-                  pathLength += harvestMemory.cachedPath.path.length;
-                }
+            if (Memory.rooms[info.origin].remoteHarvesting) {
+              let harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
+              if (harvestMemory && harvestMemory.cachedPath) {
+                pathLength -= info.range * 50;
+                pathLength += harvestMemory.cachedPath.path.length;
               }
             }
           }
+        }
 
-          if (pathLength > 0) {
-            info.harvestPriority = income / pathLength;
-          }
+        if (pathLength > 0) {
+          info.harvestPriority = income / pathLength;
         }
       }
-
-      if (scoutPriority > info.scoutPriority) {
-        info.scoutPriority = scoutPriority;
-      }
-    }
-    else if (info.range > 2 && info.range <= 5) {
-      // This room might be interesting for expansions.
-      if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 5000) {
-        info.scoutPriority = 1;
-      }
-      else {
-        // Check if we could reasonably expand to this room.
-        let intel = Memory.rooms[roomName].intel;
-        if (!intel.hasController) continue;
-        if (intel.owner) continue;
-        if (Memory.rooms[info.origin].intel.rcl < 5) continue;
-
-        info.expansionScore = this.calculateExpansionScore(roomName);
-      }
     }
 
-    if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || (Game.time - Memory.rooms[roomName].intel.lastScan > 1000))) {
-      // Corridor rooms get scouted more often to look for power banks.
-      info.scoutPriority = 2;
+    if (scoutPriority > info.scoutPriority) {
+      info.scoutPriority = scoutPriority;
     }
+  }
+  else if (info.range > 2 && info.range <= 5) {
+    // This room might be interesting for expansions.
+    if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 5000) {
+      info.scoutPriority = 1;
+    }
+    else {
+      // Check if we could reasonably expand to this room.
+      let intel = Memory.rooms[roomName].intel;
+      if (!intel.hasController) continue;
+      if (intel.owner) continue;
+      if (Memory.rooms[info.origin].intel.rcl < 5) continue;
 
-    if (info.scoutPriority > 0 && info.observer) {
-      // Only observe if last Scan was longer ago than intel manager delay,
-      // so we don't get stuck scanning the same room for some reason.
-      if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 500) {
-        // No need to manually scout rooms in range of an observer.
-        info.scoutPriority = 0.5;
+      info.expansionScore = this.calculateExpansionScore(roomName);
+    }
+  }
 
-        // Let observer scout one room per run at maximum.
-        // @todo Move this to structure management so we can scan one open room per tick.
-        let observer = Game.getObjectById(info.observer);
-        if (observer && !observer.hasScouted) {
-          observer.observeRoom(roomName);
-          observer.hasScouted = true;
-        }
+  if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || (Game.time - Memory.rooms[roomName].intel.lastScan > 1000))) {
+    // Corridor rooms get scouted more often to look for power banks.
+    info.scoutPriority = 2;
+  }
+
+  if (info.scoutPriority > 0 && info.observer) {
+    // Only observe if last Scan was longer ago than intel manager delay,
+    // so we don't get stuck scanning the same room for some reason.
+    if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 500) {
+      // No need to manually scout rooms in range of an observer.
+      info.scoutPriority = 0.5;
+
+      // Let observer scout one room per run at maximum.
+      // @todo Move this to structure management so we can scan one open room per tick.
+      let observer = Game.getObjectById(info.observer);
+      if (observer && !observer.hasScouted) {
+        observer.observeRoom(roomName);
+        observer.hasScouted = true;
       }
     }
   }
