@@ -23,6 +23,8 @@ ScoutProcess.prototype.run = function () {
 
 ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   let roomList = Memory.strategy.roomList;
+  let roomMemory = Memory.rooms[roomName];
+  let intel = roomMemory && roomMemory.intel;
 
   let info = roomList[roomName];
 
@@ -31,40 +33,20 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   info.expansionScore = 0;
   info.harvestPriority = 0;
 
+  let timeSinceLastScan = intel && Game.time - intel.lastScan || 99999;
+
   if (info.range > 0 && info.range <= 2) {
     // This is a potential room for remote mining.
     let scoutPriority = 0;
-    if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) {
+    if (!intel) {
       scoutPriority = 3;
     }
     else {
-      let intel = Memory.rooms[roomName].intel;
-      if (Game.time - intel.lastScan > 5000) {
+      if (timeSinceLastScan > 5000) {
         scoutPriority = 2;
       }
       else if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername())) {
-        let income = -2000; // Flat cost for room reservation
-        let pathLength = 0;
-        for (let i in intel.sources) {
-          income += 3000;
-          pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
-          if (typeof(intel.sources[i]) == 'object') {
-            let sourcePos = new RoomPosition(intel.sources[i].x, intel.sources[i].y, roomName);
-            utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
-
-            if (Memory.rooms[info.origin].remoteHarvesting) {
-              let harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
-              if (harvestMemory && harvestMemory.cachedPath) {
-                pathLength -= info.range * 50;
-                pathLength += harvestMemory.cachedPath.path.length;
-              }
-            }
-          }
-        }
-
-        if (pathLength > 0) {
-          info.harvestPriority = income / pathLength;
-        }
+        info.harvestPriority = this.calculateHarvestScore();
       }
     }
 
@@ -74,21 +56,18 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   }
   else if (info.range > 2 && info.range <= 5) {
     // This room might be interesting for expansions.
-    if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 5000) {
+    if (timeSinceLastScan > 5000) {
       info.scoutPriority = 1;
     }
     else {
       // Check if we could reasonably expand to this room.
-      let intel = Memory.rooms[roomName].intel;
-      if (!intel.hasController) continue;
-      if (intel.owner) continue;
-      if (Memory.rooms[info.origin].intel.rcl < 5) continue;
-
-      info.expansionScore = this.calculateExpansionScore(roomName);
+      if (intel.hasController && intel.owner && Memory.rooms[info.origin].intel.rcl >= 5) {
+        info.expansionScore = this.calculateExpansionScore(roomName);
+      }
     }
   }
 
-  if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || (Game.time - Memory.rooms[roomName].intel.lastScan > 1000))) {
+  if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && timeSinceLastScan > 1000) {
     // Corridor rooms get scouted more often to look for power banks.
     info.scoutPriority = 2;
   }
@@ -96,7 +75,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   if (info.scoutPriority > 0 && info.observer) {
     // Only observe if last Scan was longer ago than intel manager delay,
     // so we don't get stuck scanning the same room for some reason.
-    if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel || Game.time - Memory.rooms[roomName].intel.lastScan > 500) {
+    if (timeSinceLastScan > 500) {
       // No need to manually scout rooms in range of an observer.
       info.scoutPriority = 0.5;
 
@@ -109,6 +88,35 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
       }
     }
   }
+};
+
+/**
+ * Determines how worthwile a room is for remote mining.
+ */
+ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
+  let intel = Memory.rooms[roomName].intel;
+
+  let income = -2000; // Flat cost for room reservation
+  let pathLength = 0;
+  for (let i in intel.sources) {
+    income += 3000;
+    pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
+    if (typeof(intel.sources[i]) == 'object') {
+      let sourcePos = new RoomPosition(intel.sources[i].x, intel.sources[i].y, roomName);
+      utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
+
+      if (Memory.rooms[info.origin].remoteHarvesting) {
+        let harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
+        if (harvestMemory && harvestMemory.cachedPath) {
+          pathLength -= info.range * 50;
+          pathLength += harvestMemory.cachedPath.path.length;
+        }
+      }
+    }
+  }
+
+  if (pathLength <= 0) return 0;
+  return income / pathLength;
 };
 
 /**
