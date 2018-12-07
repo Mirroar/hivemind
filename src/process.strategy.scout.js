@@ -156,7 +156,7 @@ ScoutProcess.prototype.generateScoutTargets = function () {
   let openList = this.getScoutOrigins();
   let closedList = {};
 
-  let observers = this.getObservers();
+  this.findObservers();
 
   // Flood fill from own rooms and add rooms we need intel of.
   while (_.size(openList) > 0) {
@@ -171,15 +171,7 @@ ScoutProcess.prototype.generateScoutTargets = function () {
 
     // Add current room as a candidate for scouting.
     if (!roomList[nextRoom] || roomList[nextRoom].range > info.range) {
-      let observer = null;
-      for (let roomName in observers) {
-        let roomDist = Game.map.getRoomLinearDistance(roomName, nextRoom);
-        if (roomDist <= OBSERVER_RANGE) {
-          if (!observer || roomDist < Game.map.getRoomLinearDistance(observer.pos.roomName, nextRoom)) {
-            observer = observers[roomName];
-          }
-        }
-      }
+      let observer = this.getClosestObserver(nextRoom);
 
       roomList[nextRoom] = {
         range: info.range,
@@ -215,12 +207,13 @@ ScoutProcess.prototype.getScoutOrigins = function () {
 /**
  * Generates a list of observer structures keyed by room name.
  */
-ScoutProcess.prototype.getObservers = function () {
+ScoutProcess.prototype.findObservers = function () {
+  this.observers = [];
   for (let roomName in Game.rooms) {
     let room = Game.rooms[roomName];
     if (!room.controller || !room.controller.my || !room.observer) continue;
 
-    observers[roomName] = room.observer;
+    this.observers[roomName] = room.observer;
   }
 };
 
@@ -244,11 +237,11 @@ ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
 /**
  * Adds unhandled adjacent rooms to open list.
  */
-ScoutProcess.prototype.addAdjacentRooms = function (nextRoom, openList, closedList) {
-  let info = openList[nextRoom];
-  if (Memory.rooms[nextRoom] && Memory.rooms[nextRoom].intel && Memory.rooms[nextRoom].intel.exits) {
-    for (let i in Memory.rooms[nextRoom].intel.exits) {
-      let exit = Memory.rooms[nextRoom].intel.exits[i];
+ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedList) {
+  let info = openList[roomName];
+  if (Memory.rooms[roomName] && Memory.rooms[roomName].intel && Memory.rooms[roomName].intel.exits) {
+    for (let i in Memory.rooms[roomName].intel.exits) {
+      let exit = Memory.rooms[roomName].intel.exits[i];
       if (openList[exit] || closedList[exit]) continue;
 
       openList[exit] = {
@@ -257,6 +250,23 @@ ScoutProcess.prototype.addAdjacentRooms = function (nextRoom, openList, closedLi
       };
     }
   }
-}
+};
+
+/**
+ * Finds the closest observer to a given room.
+ */
+ScoutProcess.prototype.getClosestObserver = function (roomName) {
+  let observer = null;
+  for (let observerRoom in this.observers) {
+    let roomDist = Game.map.getRoomLinearDistance(observerRoom, roomName);
+    if (roomDist <= OBSERVER_RANGE) {
+      if (!observer || roomDist < Game.map.getRoomLinearDistance(observer.pos.roomName, roomName)) {
+        observer = this.observers[observerRoom];
+      }
+    }
+  }
+
+  return observer;
+};
 
 module.exports = ScoutProcess;
