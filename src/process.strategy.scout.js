@@ -164,21 +164,8 @@ ScoutProcess.prototype.generateScoutTargets = function () {
 
     if (!nextRoom) break;
 
+    this.addAdjacentRooms(nextRoom, openList, closedList);
     let info = openList[nextRoom];
-
-    // Add unhandled adjacent rooms to open list.
-    if (Memory.rooms[nextRoom] && Memory.rooms[nextRoom].intel && Memory.rooms[nextRoom].intel.exits) {
-      for (let i in Memory.rooms[nextRoom].intel.exits) {
-        let exit = Memory.rooms[nextRoom].intel.exits[i];
-        if (openList[exit] || closedList[exit]) continue;
-
-        openList[exit] = {
-          range: info.range + 1,
-          origin: info.origin,
-        };
-      }
-    }
-
     delete openList[nextRoom];
     closedList[nextRoom] = true;
 
@@ -253,5 +240,23 @@ ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
 
   return nextRoom;
 };
+
+/**
+ * Adds unhandled adjacent rooms to open list.
+ */
+ScoutProcess.prototype.addAdjacentRooms = function (nextRoom, openList, closedList) {
+  let info = openList[nextRoom];
+  if (Memory.rooms[nextRoom] && Memory.rooms[nextRoom].intel && Memory.rooms[nextRoom].intel.exits) {
+    for (let i in Memory.rooms[nextRoom].intel.exits) {
+      let exit = Memory.rooms[nextRoom].intel.exits[i];
+      if (openList[exit] || closedList[exit]) continue;
+
+      openList[exit] = {
+        range: info.range + 1,
+        origin: info.origin,
+      };
+    }
+  }
+}
 
 module.exports = ScoutProcess;
