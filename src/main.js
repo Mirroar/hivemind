@@ -10,8 +10,9 @@ global.hivemind = new Hivemind();
 
 // Load top-level processes.
 var RoomsProcess = require('process.rooms');
-var ScoutProcess = require('process.strategy.scout');
 var ExpandProcess = require('process.strategy.expand');
+var RemoteMiningProcess = require('process.strategy.mining');
+var ScoutProcess = require('process.strategy.scout');
 
 // @todo Refactor old main code away.
 var oldMain = require('main.old');
@@ -48,14 +49,17 @@ module.exports = {
     hivemind.runProcess('rooms', RoomsProcess, {
       priority: PROCESS_PRIORITY_ALWAYS,
     });
-    hivemind.runProcess('scout', ScoutProcess, {
+    hivemind.runProcess('strategy.scout', ScoutProcess, {
       interval: 50,
       priority: PROCESS_PRIORITY_LOW,
     });
     // @todo This process could be split up - decisions about when and where to expand can be executed at low priority. But management of actual expansions is high priority.
-    hivemind.runProcess('expand', ExpandProcess, {
+    hivemind.runProcess('strategy.expand', ExpandProcess, {
       interval: 50,
       priority: PROCESS_PRIORITY_HIGH,
+    });
+    hivemind.runProcess('strategy.remote_mining', RemoteMiningProcess, {
+      interval: 100,
     });
 
     this.cleanup();

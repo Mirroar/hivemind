@@ -41,6 +41,8 @@ var Hivemind = function () {
   this.relations = new Relations();
 
   this.loggers = {};
+
+  // @todo Periodically clean old process memory.
 };
 
 /**
