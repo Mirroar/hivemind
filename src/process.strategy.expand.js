@@ -1,6 +1,7 @@
 'use strict';
 
 var Process = require('process');
+var stats = require('stats');
 
 var ExpandProcess = function (params, data) {
   Process.call(this, params, data);

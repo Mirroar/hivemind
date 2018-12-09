@@ -98,7 +98,7 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
 
   let income = -2000; // Flat cost for room reservation
   let pathLength = 0;
-  for (let i in intel.sources) {
+  for (let i in intel.sources || []) {
     income += 3000;
     pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
     if (typeof(intel.sources[i]) == 'object') {
