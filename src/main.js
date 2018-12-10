@@ -12,6 +12,7 @@ global.hivemind = new Hivemind();
 var RoomsProcess = require('process.rooms');
 var ExpandProcess = require('process.strategy.expand');
 var RemoteMiningProcess = require('process.strategy.mining');
+var PowerMiningProcess = require('process.strategy.power');
 var ScoutProcess = require('process.strategy.scout');
 
 // @todo Refactor old main code away.
@@ -59,6 +60,9 @@ module.exports = {
       priority: PROCESS_PRIORITY_HIGH,
     });
     hivemind.runProcess('strategy.remote_mining', RemoteMiningProcess, {
+      interval: 100,
+    });
+    hivemind.runProcess('strategy.power_mining', PowerMiningProcess, {
       interval: 100,
     });
 
