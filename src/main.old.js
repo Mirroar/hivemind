@@ -22,7 +22,6 @@ var roleRemoteBuilder = require('role.builder.remote');
 var Logger = require('debug');
 var BoostManager = require('manager.boost');
 var intelManager = require('manager.intel');
-var strategyManager = require('manager.strategy');
 var spawnManager = require('manager.spawn');
 var structureManager = require('manager.structure');
 var utilities = require('utilities');
@@ -457,16 +456,6 @@ var main = {
             }
             catch (e) {
                 console.log('Error in intelManager.scout:', e);
-            }
-
-            if (Game.time % 50 == 13) {
-                try {
-                    strategyManager.runLogic();
-                }
-                catch (e) {
-                    console.log('error in strategyManager:');
-                    console.log(e.stack);
-                }
             }
         };
 

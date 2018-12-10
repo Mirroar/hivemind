@@ -203,3 +203,26 @@ Room.prototype.stopTradePreparation = function () {
   delete this.memory.fillTerminal;
   delete this.memory.fillTerminalAmount;
 };
+
+/**
+ * Gets a list of remote mining targets designated for this room.
+ */
+Room.prototype.getRemoteHarvestTargets = function () {
+  // @todo Cache this if we use it during spawning.
+
+  if (!Memory.strategy) return [];
+  let memory = Memory.strategy;
+
+  let targets = {};
+
+  for (let i in memory.roomList) {
+    let info = memory.roomList[i];
+
+    if (info.origin !== this.name) continue;
+    if (!info.harvestActive) continue;
+
+    targets[info.roomName] = info;
+  }
+
+  return targets;
+};
