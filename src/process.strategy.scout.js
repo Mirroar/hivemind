@@ -94,7 +94,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
  * Determines how worthwile a room is for remote mining.
  */
 ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
-  let intel = Memory.rooms[roomName].intel;
+  let intel = Memory.rooms[roomName].intel || {};
 
   let income = -2000; // Flat cost for room reservation
   let pathLength = 0;
