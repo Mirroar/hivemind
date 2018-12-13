@@ -32,27 +32,6 @@ var intelManager = {
         return intel.inaccessible;
     },
 
-    /**
-     * Gathers intel in several possible ways.
-     */
-    scout: function () {
-        // Check all currently visible rooms.
-        for (let i in Game.rooms) {
-            try {
-                Game.rooms[i].gatherIntel();
-            }
-            catch (e) {
-                console.log(e);
-                console.log(e.stack);
-            }
-        }
-
-        // From time to time, prune very old room data.
-        if (Game.time % 3738 === 2100) {
-            intelManager.pruneRoomMemory();
-        }
-    },
-
     pruneRoomMemory: function () {
         let count = 0;
         for (let i in Memory.rooms) {

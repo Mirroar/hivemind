@@ -21,7 +21,6 @@ var roleRemoteBuilder = require('role.builder.remote');
 
 var Logger = require('debug');
 var BoostManager = require('manager.boost');
-var intelManager = require('manager.intel');
 var spawnManager = require('manager.spawn');
 var structureManager = require('manager.structure');
 var utilities = require('utilities');
@@ -449,13 +448,6 @@ var main = {
                     console.log('error in manageTrade:');
                     console.log(e.stack);
                 }
-            }
-
-            try {
-                intelManager.scout();
-            }
-            catch (e) {
-                console.log('Error in intelManager.scout:', e);
             }
         };
 
