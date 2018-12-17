@@ -15,6 +15,7 @@ var RemoteMiningProcess = require('process.strategy.mining');
 var PowerMiningProcess = require('process.strategy.power');
 var ScoutProcess = require('process.strategy.scout');
 var TradeProcess = require('process.empire.trade');
+var ResourcesProcess = require('process.empire.resources');
 
 // @todo Refactor old main code away.
 var oldMain = require('main.old');
@@ -70,6 +71,9 @@ module.exports = {
     hivemind.runProcess('empire.trade', TradeProcess, {
       interval: 50,
       priority: PROCESS_PRIORITY_LOW,
+    });
+    hivemind.runProcess('empire.resources', ResourcesProcess, {
+      interval: 50,
     });
 
     this.cleanup();

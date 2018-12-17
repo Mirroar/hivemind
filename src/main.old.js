@@ -429,16 +429,6 @@ var main = {
             spawnManager.manageSpawns();
 
             main.manageCreeps();
-
-            if (Game.time % 10 == 1) {
-                try {
-                    structureManager.manageResources();
-                }
-                catch (e) {
-                    console.log('error in manageResources:');
-                    console.log(e.stack);
-                }
-            }
         };
 
         mainLoop();
