@@ -415,34 +415,6 @@ var utilities = {
         }
     },
 
-    generateCPUStats: function () {
-        /*//
-        Memory.stats['cpu.CreepManagers'] = spawnCPUUsage;
-        Memory.stats['cpu.Towers'] = towersCPUUsage;
-        Memory.stats['cpu.Creeps'] = creepsCPUUsage;
-        Memory.stats['cpu.Start'] = initCPUUsage;
-        Memory.stats['cpu.stats'] = Game.cpu.getUsed() - totalTime;
-        Memory.stats['cpu.getUsed'] = Game.cpu.getUsed();
-        //*/
-
-        let limit = Game.cpu.limit;
-
-        let output = '';
-
-        function formatStat(amount, label) {
-            var percent = 100 * amount / limit;
-            return '[' + label + ':' + ('    ' + Math.round(percent)).slice(-4) + '%]';
-        }
-        output += formatStat(Memory.stats['cpu.getUsed'], 'Total');
-        output += formatStat(Memory.stats['cpu.Start'], 'Init');
-        output += formatStat(Memory.stats['cpu.CreepManagers'], 'Spawns');
-        output += formatStat(Memory.stats['cpu.Creeps'], 'Creeps');
-        output += formatStat(Memory.stats['cpu.Towers'], 'Towers');
-        output += formatStat(Memory.stats['cpu.stats'], 'Stats');
-
-        return output;
-    },
-
 };
 
 module.exports = utilities;

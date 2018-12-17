@@ -93,14 +93,12 @@ module.exports = {
     let time = Game.cpu.getUsed();
 
     if (time > Game.cpu.limit * 1.2) {
-      var linePrefix = '                     ';
-      hivemind.log('cpu').info('High CPU:', time + '/' + Game.cpu.limit, "\n" + linePrefix + utilities.generateCPUStats());
+      hivemind.log('cpu').info('High CPU:', time + '/' + Game.cpu.limit);
     }
 
     stats.recordStat('cpu_total', time);
     stats.recordStat('bucket', Game.cpu.bucket);
     stats.recordStat('creeps', _.size(Game.creeps));
-
   },
 
   cleanup: function () {
