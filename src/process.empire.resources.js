@@ -35,10 +35,6 @@ ResourcesProcess.prototype.run = function () {
       room.prepareForTrading(best.resourceType);
     }
   }
-
-  if (Game.time % 1500 == 981) {
-    structureManager.chooseReactions(rooms.rooms);
-  }
 };
 
 /**
