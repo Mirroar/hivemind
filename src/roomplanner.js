@@ -1617,6 +1617,15 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
         newStatus[dir2] = newStatus[dir1] && newStatus[dir2];
       }
     }
+
+    // Keep a list of rooms declared as safe in memory.
+    this.memory.adjacentSafeRooms = [];
+    for (let roomName in closedList) {
+      let roomDir = closedList[roomName].origin;
+      if (newStatus[roomDir]) {
+        this.memory.adjacentSafeRooms.push(roomName);
+      }
+    }
   }
 
   // Check if status changed since last check.
@@ -1636,6 +1645,10 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
       break;
     }
   }
-}
+};
+
+RoomPlanner.prototype.getAdjacentSafeRooms = function () {
+  return this.memory.adjacentSafeRooms || [];
+};
 
 module.exports = RoomPlanner;

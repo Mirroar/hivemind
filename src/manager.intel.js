@@ -32,6 +32,17 @@ var intelManager = {
         return intel.inaccessible;
     },
 
+    getControllerPosition: function (roomName) {
+        if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) return;
+        let intel = Memory.rooms[roomName].intel;
+        if (!intel.structures || !intel.structures[STRUCTURE_CONTROLLER]) return;
+
+        let controllers = intel.structures[STRUCTURE_CONTROLLER];
+        for (let i in controllers) {
+            return new RoomPosition(controllers[i].x, controllers[i].y, roomName);
+        }
+    },
+
     pruneRoomMemory: function () {
         let count = 0;
         for (let i in Memory.rooms) {

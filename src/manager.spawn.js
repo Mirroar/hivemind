@@ -1131,14 +1131,17 @@ Room.prototype.manageSpawns = function () {
             }
 
             for (var i in remoteHarvestTargets) {
-                let roomName = remoteHarvestTargets[i].roomName;
-                if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) continue;
-                let intel = Memory.rooms[roomName].intel;
-                if (!intel.structures || !intel.structures[STRUCTURE_CONTROLLER]) continue;
+                let position = intelManager.getControllerPosition(remoteHarvestTargets[i].roomName);
+                if (position) {
+                    reservePositions.push(position);
+                }
+            }
 
-                let controllers = intel.structures[STRUCTURE_CONTROLLER];
-                for (let j in controllers) {
-                    reservePositions.push(new RoomPosition(controllers[j].x, controllers[j].y, roomName));
+            let safeRooms = this.roomPlanner && this.roomPlanner.getAdjacentSafeRooms() || [];
+            for (var i in safeRooms) {
+                let position = intelManager.getControllerPosition(safeRooms[i]);
+                if (position) {
+                    reservePositions.push(position);
                 }
             }
 
