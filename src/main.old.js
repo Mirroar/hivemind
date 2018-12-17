@@ -439,16 +439,6 @@ var main = {
                     console.log(e.stack);
                 }
             }
-
-            if (Game.time % 50 == 3) {
-                try {
-                    structureManager.manageTrade();
-                }
-                catch (e) {
-                    console.log('error in manageTrade:');
-                    console.log(e.stack);
-                }
-            }
         };
 
         mainLoop();
