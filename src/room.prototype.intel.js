@@ -62,7 +62,7 @@ Room.prototype.scan = function () {
         if (closeLabs.length < 2) continue;
 
         for (let j in closeLabs) {
-          lab2 = closeLabs[j];
+          let lab2 = closeLabs[j];
 
           let reactors = [];
           for (let k in closeLabs) {
