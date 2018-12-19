@@ -226,3 +226,86 @@ Room.prototype.getRemoteHarvestTargets = function () {
 
   return targets;
 };
+
+/**
+ * Gathers resource amounts for a room.
+ */
+Room.prototype.getResourceState = function () {
+  if (!this.controller || !this.controller.my) return;
+
+  let storage = this.storage;
+  let terminal = this.terminal;
+
+  let roomData = {
+    totalResources: {},
+    state: {},
+    canTrade: false,
+  };
+  if (storage && terminal) {
+    roomData.canTrade = true;
+  }
+
+  // @todo Remove in favor of function.
+  roomData.isEvacuating = this.isEvacuating();
+
+  if (storage && !roomData.isEvacuating) {
+    for (let resourceType in storage.store) {
+      roomData.totalResources[resourceType] = storage.store[resourceType];
+    }
+  }
+  if (terminal) {
+    for (let resourceType in terminal.store) {
+      roomData.totalResources[resourceType] = (roomData.totalResources[resourceType] || 0) + terminal.store[resourceType];
+    }
+  }
+
+  if (room.mineral && !roomData.isEvacuating) {
+    // @todo Only count if there is an extractor on this mineral.
+    roomData.mineralType = room.mineral.mineralType;
+  }
+
+  // Add resources in labs as well.
+  if (room.memory.labs && !roomData.isEvacuating) {
+    let ids = [];
+    if (room.memory.labs.source1) {
+      ids.push(room.memory.labs.source1);
+    }
+    if (room.memory.labs.source2) {
+      ids.push(room.memory.labs.source2);
+    }
+    if (room.memory.labs.reactor) {
+      for (let i in room.memory.labs.reactor) {
+        ids.push(room.memory.labs.reactor[i]);
+      }
+    }
+
+    for (let i in ids) {
+      let lab = Game.getObjectById(ids[i]);
+      if (lab && lab.mineralType && lab.mineralAmount > 0) {
+        roomData.totalResources[lab.mineralType] = (roomData.totalResources[lab.mineralType] || 0) + lab.mineralAmount;
+      }
+    }
+  }
+
+  for (let resourceType in roomData.totalResources) {
+    let amount = roomData.totalResources[resourceType];
+    if (resourceType == RESOURCE_ENERGY) {
+      amount /= 2.5;
+    }
+
+    if (amount >= 220000) {
+      roomData.state[resourceType] = 'excessive';
+    }
+    else if (amount >= 30000) {
+      roomData.state[resourceType] = 'high';
+    }
+    else if (amount >= 10000) {
+      roomData.state[resourceType] = 'medium';
+    }
+    else {
+      roomData.state[resourceType] = 'low';
+    }
+  }
+
+  return roomData;
+};
