@@ -22,7 +22,6 @@ var roleRemoteBuilder = require('role.builder.remote');
 var Logger = require('debug');
 var BoostManager = require('manager.boost');
 var spawnManager = require('manager.spawn');
-var structureManager = require('manager.structure');
 var utilities = require('utilities');
 
 var Bay = require('manager.bay');

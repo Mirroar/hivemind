@@ -1,7 +1,6 @@
 'use strict';
 
 var Process = require('process');
-var structureManager = require('manager.structure');
 
 var ReactionsProcess = function (params, data) {
   Process.call(this, params, data);

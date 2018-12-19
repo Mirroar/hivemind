@@ -27,13 +27,11 @@ if (useProfiler) {
   var roleplay = require('manager.roleplay');
   var spawnManager = require('manager.spawn');
   var stats = require('stats');
-  var structureManager = require('manager.structure');
   var utilities = require('utilities');
   profiler.registerObject(intelManager, 'intelManager');
   profiler.registerObject(roleplay, 'roleplay');
   profiler.registerObject(spawnManager, 'spawnManager');
   profiler.registerObject(stats, 'stats');
-  profiler.registerObject(structureManager, 'structureManager');
   profiler.registerObject(utilities, 'utilities');
 }
 

@@ -1,7 +1,6 @@
 'use strict';
 
 var Process = require('process');
-var structureManager = require('manager.structure');
 var utilities = require('utilities');
 
 var ResourcesProcess = function (params, data) {

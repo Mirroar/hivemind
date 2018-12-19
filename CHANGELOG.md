@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added this changelog.
 - Power mining can now be disabled by setting `Memory.disablePowerHarvesting = true`.
 - Throttling to 20 cpu can be activated by setting `Memory.isAccountThrottled = true`.
 - Added Hivemind class that functions as a kernel to start processes, handle throttling, etc.
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pathfinding.js` has been removed in favor of `creep.prototype.movement.js`.
 - `creep.general.js` has been removed in favor of prototype files.
 - `manager.strategy.js` has been removed in favor of `process.strategy.*.js` files.
+- `manager.structure.js` has been removed in favor of `process.empire.*.js` files.
 - `Game.isAlly()` has been removed in favor of `Relations.isAlly()`.
 
 ## [1.0.4] - 2018-11-10

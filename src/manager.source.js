@@ -209,6 +209,10 @@ Mineral.prototype.getNearbyLair = function () {
     return getNearbyLair.call(this);
 };
 
+StructureKeeperLair.prototype.isDangerous = function () {
+    return !this.ticksToSpawn || this.ticksToSpawn < 20;
+};
+
 /**
  * Checks if being close to this source is currently dangerous.
  */
