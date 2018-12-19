@@ -13,8 +13,7 @@ ResourcesProcess.prototype = Object.create(Process.prototype);
  * Transports resources between owned rooms if needed.
  */
 ResourcesProcess.prototype.run = function () {
-  let rooms = structureManager.getRoomResourceStates();
-  let routes = this.getAvailableTransportRoutes(rooms.rooms);
+  let routes = this.getAvailableTransportRoutes();
   let best = utilities.getBestOption(routes);
 
   if (best) {
@@ -40,24 +39,33 @@ ResourcesProcess.prototype.run = function () {
 /**
  * Determines when it makes sense to transport resources between rooms.
  */
-ResourcesProcess.prototype.getAvailableTransportRoutes = function (rooms) {
-  var options = [];
+ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
+  let options = [];
+  let rooms = [];
 
-  for (var roomName in rooms) {
-    var roomState = rooms[roomName];
+  // Collect room resource states.
+  for (let roomName in Game.rooms) {
+    let roomData = Game.rooms[roomName].getResourceState();
+    if (roomData) {
+      rooms[roomName] = roomData;
+    }
+  }
+
+  for (let roomName in rooms) {
+    let roomState = rooms[roomName];
     if (!roomState.canTrade) continue;
 
     // Do not try transferring from a room that is already preparing a transfer.
     if (Game.rooms[roomName].memory.fillTerminal && !roomState.isEvacuating) continue;
 
-    for (var resourceType in roomState.state) {
+    for (let resourceType in roomState.state) {
       if (roomState.state[resourceType] == 'high' || roomState.state[resourceType] == 'excessive' || roomState.isEvacuating) {
         // Make sure we have enough to send (while evacuating).
         if (roomState.totalResources[resourceType] < 100) continue;
         if (resourceType == RESOURCE_ENERGY && roomState.totalResources[resourceType] < 10000) continue;
 
         // Look for other rooms that are low on this resource.
-        for (var roomName2 in rooms) {
+        for (let roomName2 in rooms) {
           if (!rooms[roomName2].canTrade) continue;
           if (rooms[roomName2].isEvacuating) continue;
 
@@ -68,7 +76,7 @@ ResourcesProcess.prototype.getAvailableTransportRoutes = function (rooms) {
               continue;
             }
 
-            var option = {
+            let option = {
               priority: 3,
               weight: (roomState.totalResources[resourceType] - rooms[roomName2].totalResources[resourceType]) / 100000 - Game.map.getRoomLinearDistance(roomName, roomName2),
               resourceType: resourceType,

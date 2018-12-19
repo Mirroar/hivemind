@@ -12,10 +12,10 @@ ReactionsProcess.prototype = Object.create(Process.prototype);
  * Sets appropriate reactions for each room depending on available resources.
  */
 ReactionsProcess.prototype.run = function () {
-  let rooms = structureManager.getRoomResourceStates().rooms;
-  for (let roomName in rooms) {
+  for (let roomName in Game.rooms) {
     let room = Game.rooms[roomName];
-    let roomData = rooms[roomName];
+    let roomData = room.getResourceState();
+    if (!roomData) continue;
 
     if (room && room.isEvacuating()) {
       room.memory.bestReaction = null;

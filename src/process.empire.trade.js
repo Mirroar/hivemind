@@ -14,7 +14,7 @@ TradeProcess.prototype = Object.create(Process.prototype);
 TradeProcess.prototype.run = function () {
   this.removeOldTrades();
 
-  var resources = structureManager.getRoomResourceStates();
+  var resources = this.getRoomResourceStates();
   var total = resources.total;
 
   for (let i in RESOURCES_ALL) {
@@ -66,6 +66,36 @@ TradeProcess.prototype.run = function () {
       this.tryBuyResources(RESOURCE_ENERGY, temp, true);
     }
   }
+};
+
+/**
+ * Determines the amount of available resources in each room.
+ */
+TradeProcess.prototype.getRoomResourceStates = function () {
+  var rooms = {};
+  var total = {
+    resources: {},
+    sources: {},
+    rooms: 0,
+  };
+
+  for (let roomId in Game.rooms) {
+    let room = Game.rooms[roomId];
+    let roomData = room.getResourceState();
+    if (!roomData) continue;
+
+    total.rooms++;
+    for (let resourceType in roomData.totalResources) {
+      total.resources[resourceType] = (total.resources[resourceType] || 0) + roomData.totalResources[resourceType];
+    }
+    total.sources[roomData.mineralType] = (total.sources[roomData.mineralType] || 0) + 1;
+    rooms[room.name] = roomData;
+  }
+
+  return {
+    rooms: rooms,
+    total: total,
+  };
 };
 
 /**

@@ -36,36 +36,6 @@ Room.prototype.isClearingTerminal = function () {
 
 var structureManager = {
 
-    /**
-     * Determines the amount of available resources in each room.
-     */
-    getRoomResourceStates: function () {
-        var rooms = {};
-        var total = {
-            resources: {},
-            sources: {},
-            rooms: 0,
-        };
-
-        for (let roomId in Game.rooms) {
-            let room = Game.rooms[roomId];
-            let roomData = room.getResourceState();
-            if (!roomData) continue;
-
-            total.rooms++;
-            for (let resourceType in roomData.totalResources) {
-                total.resources[resourceType] = (total.resources[resourceType] || 0) + roomData.totalResources[resourceType];
-            }
-            total.sources[roomData.mineralType] = (total.sources[roomData.mineralType] || 0) + 1;
-            rooms[room.name] = roomData;
-        }
-
-        return {
-            rooms: rooms,
-            total: total,
-        };
-    },
-
 };
 
 module.exports = structureManager;
