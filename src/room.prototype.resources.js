@@ -259,23 +259,23 @@ Room.prototype.getResourceState = function () {
     }
   }
 
-  if (room.mineral && !roomData.isEvacuating) {
+  if (this.mineral && !roomData.isEvacuating) {
     // @todo Only count if there is an extractor on this mineral.
-    roomData.mineralType = room.mineral.mineralType;
+    roomData.mineralType = this.mineral.mineralType;
   }
 
   // Add resources in labs as well.
-  if (room.memory.labs && !roomData.isEvacuating) {
+  if (this.memory.labs && !roomData.isEvacuating) {
     let ids = [];
-    if (room.memory.labs.source1) {
-      ids.push(room.memory.labs.source1);
+    if (this.memory.labs.source1) {
+      ids.push(this.memory.labs.source1);
     }
-    if (room.memory.labs.source2) {
-      ids.push(room.memory.labs.source2);
+    if (this.memory.labs.source2) {
+      ids.push(this.memory.labs.source2);
     }
-    if (room.memory.labs.reactor) {
-      for (let i in room.memory.labs.reactor) {
-        ids.push(room.memory.labs.reactor[i]);
+    if (this.memory.labs.reactor) {
+      for (let i in this.memory.labs.reactor) {
+        ids.push(this.memory.labs.reactor[i]);
       }
     }
 
