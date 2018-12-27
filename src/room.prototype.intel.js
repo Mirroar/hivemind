@@ -125,9 +125,6 @@ Room.prototype.gatherIntel = function () {
   hivemind.log('intel', this.name).debug('Gathering intel after', intel.lastScan && Game.time - intel.lastScan || 'infinite', 'ticks.');
   intel.lastScan = Game.time;
 
-  // @todo Check if this could cause problems.
-  intel.inaccessible = false;
-
   // Check room controller.
   intel.owner = null;
   intel.rcl = 0;

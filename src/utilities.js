@@ -70,7 +70,7 @@ var utilities = {
                 let room = Game.rooms[roomName];
 
                 // If a room is considered inaccessible, don't look for paths through it.
-                if (!allowDanger && intelManager.isRoomInaccessible(roomName)) {
+                if (!allowDanger && hivemind.roomIntel(roomName).isOwned()) {
                     if (!addOptions || !addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) == -1) {
                         return false;
                     }

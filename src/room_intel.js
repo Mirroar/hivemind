@@ -31,7 +31,7 @@ RoomIntel.prototype.isClaimed = function () {
 };
 
 RoomIntel.prototype.isOwned = function () {
-  if (this.memory.owner) return true;
+  if (this.memory.owner != utilities.getUsername()) return true;
 
   return false;
 };

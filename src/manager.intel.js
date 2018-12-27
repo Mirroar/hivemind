@@ -2,36 +2,6 @@
 
 var intelManager = {
 
-    setRoomInaccessible: function (roomName) {
-        if (!Memory.rooms[roomName]) {
-            Memory.rooms[roomName] = {};
-        }
-        if (!Memory.rooms[roomName].intel) {
-            Memory.rooms[roomName].intel = {};
-        }
-
-        var intel = Memory.rooms[roomName].intel;
-
-        intel.lastScan = Game.time;
-        intel.inaccessible = true;
-    },
-
-    isRoomInaccessible: function (roomName) {
-        if (!Memory.rooms[roomName]) {
-            return false;
-        }
-        if (!Memory.rooms[roomName].intel) {
-            return false;
-        }
-
-        var intel = Memory.rooms[roomName].intel;
-        if (_.size(Game.spawns) > 0 && intel.owner && intel.owner != _.sample(Game.spawns).owner.username) {
-            return true;
-        }
-
-        return intel.inaccessible;
-    },
-
     getControllerPosition: function (roomName) {
         if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) return;
         let intel = Memory.rooms[roomName].intel;
