@@ -46,7 +46,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
         scoutPriority = 2;
       }
       else if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername())) {
-        info.harvestPriority = this.calculateHarvestScore();
+        info.harvestPriority = this.calculateHarvestScore(roomName);
       }
     }
 
@@ -54,14 +54,14 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
       info.scoutPriority = scoutPriority;
     }
   }
-  else if (info.range > 2 && info.range <= 5) {
+  else if (info.range > 2 && info.range <= 7) {
     // This room might be interesting for expansions.
     if (timeSinceLastScan > 5000) {
       info.scoutPriority = 1;
     }
     else {
       // Check if we could reasonably expand to this room.
-      if (intel.hasController && intel.owner && Memory.rooms[info.origin].intel.rcl >= 5) {
+      if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername()) && Memory.rooms[info.origin].intel.rcl >= 5) {
         info.expansionScore = this.calculateExpansionScore(roomName);
       }
     }
@@ -95,6 +95,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
  */
 ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
   let intel = Memory.rooms[roomName].intel || {};
+  let info = Memory.strategy.roomList[roomName];
 
   let income = -2000; // Flat cost for room reservation
   let pathLength = 0;
@@ -134,8 +135,8 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   }
 
   // Having fewer exit sides is good.
-  let exits = intel.exits || [];
-  score += 1 - intel.exits.length * 0.25;
+  let exits = intel.exits || {};
+  score += 1 - _.size(intel.exits) * 0.25;
   for (let i in exits) {
     let adjacentRoom = exits[i];
     let adjacentIntel = Memory.rooms[adjacentRoom] && Memory.rooms[adjacentRoom].intel || {};
@@ -147,7 +148,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
     }
     else {
       // Adjacent rooms having more sources is good.
-      score += adjacentIntel.sources && adjacentIntel.sources.length * 0.1 || 0;
+      score += (adjacentIntel.sources || []).length * 0.1;
     }
   }
 
