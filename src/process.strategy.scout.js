@@ -83,18 +83,18 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
  * Determines how worthwile a room is for remote mining.
  */
 ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
-  let intel = Memory.rooms[roomName].intel || {};
   let info = Memory.strategy.roomList[roomName];
 
   if (!info.safePath) return 0;
 
   let income = -2000; // Flat cost for room reservation
   let pathLength = 0;
-  for (let i in intel.sources || []) {
+  let sourcePositions = hivemind.roomIntel(roomName).getSourcePositions();
+  for (let i in sourcePositions) {
     income += 3000;
     pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
-    if (typeof(intel.sources[i]) == 'object') {
-      let sourcePos = new RoomPosition(intel.sources[i].x, intel.sources[i].y, roomName);
+    if (typeof(sourcePositions[i]) == 'object') {
+      let sourcePos = new RoomPosition(sourcePositions[i].x, sourcePositions[i].y, roomName);
       utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
 
       if (Memory.rooms[info.origin].remoteHarvesting) {
@@ -115,31 +115,31 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
  * Determines how worthwile a room is for expanding.
  */
 ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
-  let intel = Memory.rooms[roomName].intel;
+  let roomIntel = hivemind.roomIntel(roomName);
 
   // More sources is better.
-  let score = intel.sources.length;
+  let score = roomIntel.getSourcePositions().length;
 
   // Having a mineral source is good.
-  if (intel.mineral) {
+  if (roomIntel.getMineralType()) {
     score++;
   }
 
   // Having fewer exit sides is good.
-  let exits = intel.exits || {};
-  score += 1 - _.size(intel.exits) * 0.25;
+  let exits = roomIntel.getExits();
+  score += 1 - _.size(exits) * 0.25;
   for (let i in exits) {
     let adjacentRoom = exits[i];
-    let adjacentIntel = Memory.rooms[adjacentRoom] && Memory.rooms[adjacentRoom].intel || {};
+    let adjacentIntel = hivemind.roomIntel(adjacentRoom);
 
-    if (adjacentIntel.owner) {
+    if (adjacentIntel.isOwned()) {
       // Try not to expand too close to other players.
       // @todo Also check for room reservation.
       score -= 0.5;
     }
     else {
       // Adjacent rooms having more sources is good.
-      score += (adjacentIntel.sources || []).length * 0.1;
+      score += adjacentIntel.getSourcePositions().length * 0.1;
     }
   }
 
@@ -196,7 +196,7 @@ ScoutProcess.prototype.getScoutOrigins = function () {
   // Starting point for scouting operations are owned rooms.
   for (let roomName in Game.rooms) {
     let room = Game.rooms[roomName];
-    if (!room.controller || !room.controller.my || !room.memory.intel) continue;
+    if (!room.controller || !room.controller.my) continue;
 
     openList[roomName] = {
       range: 0,
@@ -243,22 +243,18 @@ ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
  */
 ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedList) {
   let info = openList[roomName];
-  let intel = Memory.rooms[roomName] && Memory.rooms[roomName].intel || {};
-  if (intel.exits) {
-    for (let i in intel.exits) {
-      let exit = intel.exits[i];
-      if (openList[exit] || closedList[exit]) continue;
+  let exits = hivemind.roomIntel(roomName).getExits();
+  for (let i in exits) {
+    let exit = exits[i];
+    if (openList[exit] || closedList[exit]) continue;
 
-      let exitIntel = Memory.rooms[exit] && Memory.rooms[exit].intel || {};
+    let roomIsSafe = !hivemind.roomIntel(exit).isClaimed();
 
-      let roomIsSafe = !exitIntel.hasController || (!exitIntel.owner && (!exitIntel.reservation || !exitIntel.reservation.username || exitIntel.reservation.username == utilities.getUsername()));
-
-      openList[exit] = {
-        range: info.range + 1,
-        origin: info.origin,
-        safePath: info.safePath && roomIsSafe,
-      };
-    }
+    openList[exit] = {
+      range: info.range + 1,
+      origin: info.origin,
+      safePath: info.safePath && roomIsSafe,
+    };
   }
 };
 
