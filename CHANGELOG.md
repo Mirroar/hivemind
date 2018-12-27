@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Several function have been refactored for better readability and to reduce duplication.
 - We no longer create a new instace of the Logger class for almost every log message. Instead, the Hivemind class has a factory method for getting a Logger.
 - Expansions to other rooms will now avoid being close to other players, and prefer rooms that have many energy sources in adjacent rooms but few exit sides.
+- Military creeps will now attack unowned structures if a flag has been placed directly on it.
 
 ### Removed
 - `pathfinding.js` has been removed in favor of `creep.prototype.movement.js`.

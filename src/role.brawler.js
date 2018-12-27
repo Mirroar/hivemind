@@ -46,6 +46,12 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
                 });
                 if (!creep.room.controller || !creep.room.controller.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) structures = [];
 
+                // Attack structures under target flag (even if non-hostile, like walls).
+                let directStrutures = targetPosition.lookFor(LOOK_STRUCTURES);
+                for (let i in directStrutures || []) {
+                    structures.push(directStrutures[i]);
+                }
+
                 if (structures && structures.length > 0) {
                     for (var i in structures) {
                         var structure = structures[i];
@@ -409,6 +415,9 @@ Creep.prototype.performMilitaryMove = function () {
 
             return true;
         }
+        else {
+            creep.moveTo(targetPosition);
+        }
     }
 
     if (creep.memory.order) {
@@ -485,7 +494,7 @@ Creep.prototype.performMilitaryAttack = function () {
                 }
             }
         }
-        else if (target && (!target.my && !hivemind.relations.isAlly(target.owner.username))) {
+        else if (target && (!target.my && (!target.owner || !hivemind.relations.isAlly(target.owner.username)))) {
             var result = creep.attack(target);
             if (result == OK) {
                 attacked = true;
