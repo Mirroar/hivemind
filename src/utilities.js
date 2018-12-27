@@ -27,7 +27,7 @@ var utilities = {
         }
         var harvestMemory = room.memory.remoteHarvesting[flagPosition];
 
-        if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 4060) {
+        if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 500) {
             // No need to recalculate path.
             return;
         }
@@ -94,6 +94,7 @@ var utilities = {
                 });
 
                 // @todo Try not to drive too close to sources / minerals / controllers.
+                // @todo Avoid source keepers.
 
                 return costs;
             },
@@ -109,8 +110,15 @@ var utilities = {
     },
 
     costMatrixCache: {},
+    costMatrixCacheAge: Game.time,
 
     getCostMatrix: function (roomName, options) {
+        // Clear cost matrix cache from time to time.
+        if (utilities.costMatrixCacheAge < Game.time - 500) {
+            utilities.costMatrixCache = {};
+            utilities.costMatrixCacheAge = Game.time;
+        }
+
         if (!options) {
             options = {};
         }
