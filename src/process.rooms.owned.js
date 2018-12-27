@@ -1,7 +1,6 @@
 'use strict';
 
 var Process = require('process');
-var RoomPlanner = require('roomplanner');
 
 var ManageLabsProcess = require('process.rooms.owned.labs');
 var ManageLinksProcess = require('process.rooms.owned.links');
@@ -15,14 +14,7 @@ var OwnedRoomProcess = function (params, data) {
 OwnedRoomProcess.prototype = Object.create(Process.prototype);
 
 OwnedRoomProcess.prototype.run = function () {
-  try {
-    this.room.roomPlanner = new RoomPlanner(this.room.name);
-    this.room.roomPlanner.runLogic();
-  }
-  catch (e) {
-    console.log('Error when running RoomPlanner:', e);
-    console.log(e.stack);
-  }
+  this.room.roomPlanner.runLogic();
 
   // @todo Only run processes based on current room level or existing structures.
   hivemind.runProcess(this.room.name + '_defense', RoomDefenseProcess, {

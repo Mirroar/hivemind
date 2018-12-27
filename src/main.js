@@ -9,6 +9,7 @@ var Hivemind = require('hivemind');
 global.hivemind = new Hivemind();
 
 // Load top-level processes.
+var InitProcess = require('process.init');
 var RoomsProcess = require('process.rooms');
 var ExpandProcess = require('process.strategy.expand');
 var RemoteMiningProcess = require('process.strategy.mining');
@@ -46,6 +47,10 @@ module.exports = {
     }
 
     hivemind.onTickStart();
+
+    hivemind.runProcess('init', InitProcess, {
+      priority: PROCESS_PRIORITY_ALWAYS,
+    });
 
     // @todo Remove old "main" code eventually.
     oldMain.loop();
