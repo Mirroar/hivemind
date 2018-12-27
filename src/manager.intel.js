@@ -13,26 +13,6 @@ var intelManager = {
         }
     },
 
-    pruneRoomMemory: function () {
-        let count = 0;
-        for (let i in Memory.rooms) {
-            if (Memory.rooms[i].intel && Memory.rooms[i].intel.lastScan < Game.time - 100000) {
-                delete Memory.rooms[i];
-                count++;
-                continue;
-            }
-
-            if (Memory.rooms[i].roomPlanner && (!Game.rooms[i] || !Game.rooms[i].controller || !Game.rooms[i].controller.my)) {
-                delete Memory.rooms[i].roomPlanner;
-                count++;
-            }
-        }
-
-        if (count > 0) {
-            console.log('Pruned old memory for', count, 'rooms.');
-        }
-    },
-
 };
 
 module.exports = intelManager;

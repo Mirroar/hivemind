@@ -16,12 +16,6 @@ RoomIntelProcess.prototype.run = function () {
 RoomIntelProcess.prototype.findHostiles = function () {
   this.room.gatherIntel();
 
-  // From time to time, prune very old room data.
-  // @todo remove when intelManager gets removed.
-  if (Game.time % 3738 === 2100) {
-      intelManager.pruneRoomMemory();
-  }
-
   let hostiles = this.room.find(FIND_HOSTILE_CREEPS);
   let parts = {};
   let lastSeen = this.room.memory.enemies && this.room.memory.enemies.lastSeen || 0;

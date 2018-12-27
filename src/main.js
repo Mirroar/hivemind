@@ -4,6 +4,8 @@
 require('creep.prototype');
 require('room.prototype');
 
+console.log('new global reset');
+
 // Create kernel object.
 var Hivemind = require('hivemind');
 global.hivemind = new Hivemind();
@@ -86,6 +88,8 @@ module.exports = {
       priority: PROCESS_PRIORITY_LOW,
     });
 
+    // hivemind.runCreeps();
+
     this.cleanup();
     this.recordStats();
   },
@@ -107,7 +111,7 @@ module.exports = {
   },
 
   cleanup: function () {
-    // Clean creep memory.
+    // Periodically clean creep memory.
     if (Game.time % 16 == 7) {
       for (var name in Memory.creeps) {
         if (!Game.creeps[name]) {
@@ -116,12 +120,33 @@ module.exports = {
       }
     }
 
-    // Clean up flag memory from time to time.
+    // Periodically clean flag memory.
     if (Game.time % 1000 == 725) {
       for (let flagName in Memory.flags) {
         if (!Game.flags[flagName]) {
           delete Memory.flags[flagName];
         }
+      }
+    }
+
+    // Preiodically clean old room memory.
+    if (Game.time % 3738 === 2100) {
+      let count = 0;
+      for (let i in Memory.rooms) {
+        if (Memory.rooms[i].intel && Memory.rooms[i].intel.lastScan < Game.time - 100000) {
+          delete Memory.rooms[i];
+          count++;
+          continue;
+        }
+
+        if (Memory.rooms[i].roomPlanner && (!Game.rooms[i] || !Game.rooms[i].controller || !Game.rooms[i].controller.my)) {
+          delete Memory.rooms[i].roomPlanner;
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
       }
     }
   },
