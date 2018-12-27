@@ -2,6 +2,7 @@
 
 var Logger = require('debug');
 var Relations = require('relations');
+var RoomIntel = require('room_intel');
 var stats = require('stats');
 
 global.PROCESS_PRIORITY_LOW = 1;
@@ -41,6 +42,7 @@ var Hivemind = function () {
   this.relations = new Relations();
 
   this.loggers = {};
+  this.intel = {};
 
   // @todo Periodically clean old process memory.
 };
@@ -51,6 +53,9 @@ var Hivemind = function () {
 Hivemind.prototype.onTickStart = function () {
   this.bucket = Game.cpu.bucket;
   this.cpuUsage = stats.getStat('cpu_total', 10) / Game.cpu.limit;
+
+  // Clear possibly outdated intel objects from last tick.
+  this.intel = {};
 };
 
 /**
@@ -120,6 +125,17 @@ Hivemind.prototype.log = function (channel, roomName) {
   if (!this.loggers[category][channel]) this.loggers[category][channel] = new Logger(channel, roomName);
 
   return this.loggers[category][channel];
+};
+
+/**
+ * Factory method for room intel objects.
+ */
+Hivemind.prototype.roomIntel = function (roomName) {
+  if (!this.intel[roomName]) {
+    this.intel[roomName] = new RoomIntel(roomName);
+  }
+
+  return this.intel[roomName];
 };
 
 module.exports = Hivemind;

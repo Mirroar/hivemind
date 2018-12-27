@@ -23,8 +23,7 @@ ScoutProcess.prototype.run = function () {
 
 ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   let roomList = Memory.strategy.roomList;
-  let roomMemory = Memory.rooms[roomName];
-  let intel = roomMemory && roomMemory.intel;
+  let roomIntel = hivemind.roomIntel(roomName);
 
   let info = roomList[roomName];
 
@@ -33,25 +32,15 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   info.expansionScore = 0;
   info.harvestPriority = 0;
 
-  let timeSinceLastScan = intel && Game.time - intel.lastScan || 99999;
+  let timeSinceLastScan = roomIntel.getAge();
 
   if (info.range > 0 && info.range <= 2) {
     // This is a potential room for remote mining.
-    let scoutPriority = 0;
-    if (!intel) {
-      scoutPriority = 3;
+    if (timeSinceLastScan > 5000) {
+      info.scoutPriority = 2;
     }
-    else {
-      if (timeSinceLastScan > 5000) {
-        scoutPriority = 2;
-      }
-      else if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername())) {
-        info.harvestPriority = this.calculateHarvestScore(roomName);
-      }
-    }
-
-    if (scoutPriority > info.scoutPriority) {
-      info.scoutPriority = scoutPriority;
+    else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
+      info.harvestPriority = this.calculateHarvestScore(roomName);
     }
   }
   else if (info.range > 2 && info.range <= 7) {
@@ -61,7 +50,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
     }
     else {
       // Check if we could reasonably expand to this room.
-      if (intel.hasController && !intel.owner && (!intel.reservation || !intel.reservation.username || intel.reservation.username == utilities.getUsername()) && Memory.rooms[info.origin].intel.rcl >= 5) {
+      if (roomIntel.isClaimable() && !roomIntel.isClaimed() && hivemind.roomIntel(info.origin).getRcl() >= 5) {
         info.expansionScore = this.calculateExpansionScore(roomName);
       }
     }
