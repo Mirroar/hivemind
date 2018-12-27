@@ -1,6 +1,7 @@
 'use strict';
 
 var Process = require('process');
+var Squad = require('manager.squad');
 var stats = require('stats');
 
 var ExpandProcess = function (params, data) {
@@ -80,6 +81,7 @@ ExpandProcess.prototype.run = function () {
       squad.clearUnits();
       squad.setUnitCount('singleClaim', 1);
       squad.setUnitCount('builder', 2);
+      squad.setPath(null);
       memory.expand.started = true;
     }
     else {
