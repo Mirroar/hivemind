@@ -1,6 +1,5 @@
 var stats = require('stats');
 var utilities = require('utilities');
-var intelManager = require('manager.intel');
 
 var Squad = require('manager.squad');
 
@@ -1131,7 +1130,7 @@ Room.prototype.manageSpawns = function () {
             }
 
             for (var i in remoteHarvestTargets) {
-                let position = intelManager.getControllerPosition(remoteHarvestTargets[i].roomName);
+                let position = hivemind.roomIntel(remoteHarvestTargets[i].roomName).getControllerPosition();
                 if (position) {
                     reservePositions.push(position);
                 }
@@ -1139,7 +1138,7 @@ Room.prototype.manageSpawns = function () {
 
             let safeRooms = this.roomPlanner && this.roomPlanner.getAdjacentSafeRooms() || [];
             for (var i in safeRooms) {
-                let position = intelManager.getControllerPosition(safeRooms[i]);
+                let position = hivemind.roomIntel(safeRooms[i]).getControllerPosition();
                 if (position) {
                     reservePositions.push(position);
                 }

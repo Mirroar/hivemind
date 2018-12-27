@@ -1,7 +1,6 @@
 'use strict';
 
 var Process = require('process');
-var intelManager = require('manager.intel');
 
 var RoomIntelProcess = function (params, data) {
   Process.call(this, params, data);

@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - `pathfinding.js` has been removed in favor of `creep.prototype.movement.js`.
 - `creep.general.js` has been removed in favor of prototype files.
+- `manager.intel.js` has been removed in favor of RoomIntel.
 - `manager.strategy.js` has been removed in favor of `process.strategy.*.js` files.
 - `manager.structure.js` has been removed in favor of `process.empire.*.js` files.
 - `Game.isAlly()` has been removed in favor of `Relations.isAlly()`.

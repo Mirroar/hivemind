@@ -23,12 +23,10 @@ if (useProfiler) {
   profiler.registerClass(RoomPlanner, 'RoomPlanner');
   profiler.registerClass(Squad, 'Squad');
 
-  var intelManager = require('manager.intel');
   var roleplay = require('manager.roleplay');
   var spawnManager = require('manager.spawn');
   var stats = require('stats');
   var utilities = require('utilities');
-  profiler.registerObject(intelManager, 'intelManager');
   profiler.registerObject(roleplay, 'roleplay');
   profiler.registerObject(spawnManager, 'spawnManager');
   profiler.registerObject(stats, 'stats');

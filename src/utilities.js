@@ -1,5 +1,3 @@
-var intelManager = require('manager.intel');
-
 var utilities = {
 
     /**

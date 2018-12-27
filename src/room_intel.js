@@ -52,4 +52,11 @@ RoomIntel.prototype.getExits = function () {
   return this.memory.exits || {};
 };
 
+RoomIntel.prototype.getControllerPosition = function () {
+  if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return;
+
+  let controller = intel.structures[STRUCTURE_CONTROLLER][0];
+  return new RoomPosition(controller.x, controller.y, this.roomName);
+};
+
 module.exports = RoomIntel;
