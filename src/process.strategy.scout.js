@@ -97,6 +97,8 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
   let intel = Memory.rooms[roomName].intel || {};
   let info = Memory.strategy.roomList[roomName];
 
+  if (!info.safePath) return 0;
+
   let income = -2000; // Flat cost for room reservation
   let pathLength = 0;
   for (let i in intel.sources || []) {
@@ -188,6 +190,7 @@ ScoutProcess.prototype.generateScoutTargets = function () {
         range: info.range,
         origin: info.origin,
         observer: observer && observer.id,
+        safePath: info.safePath,
       };
     }
   }
@@ -209,6 +212,7 @@ ScoutProcess.prototype.getScoutOrigins = function () {
     openList[roomName] = {
       range: 0,
       origin: roomName,
+      safePath: true,
     };
   }
 
@@ -250,14 +254,20 @@ ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
  */
 ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedList) {
   let info = openList[roomName];
-  if (Memory.rooms[roomName] && Memory.rooms[roomName].intel && Memory.rooms[roomName].intel.exits) {
-    for (let i in Memory.rooms[roomName].intel.exits) {
-      let exit = Memory.rooms[roomName].intel.exits[i];
+  let intel = Memory.rooms[roomName] && Memory.rooms[roomName].intel || {};
+  if (intel.exits) {
+    for (let i in intel.exits) {
+      let exit = intel.exits[i];
       if (openList[exit] || closedList[exit]) continue;
+
+      let exitIntel = Memory.rooms[exit] && Memory.rooms[exit].intel || {};
+
+      let roomIsSafe = !exitIntel.hasController || (!exitIntel.owner && (!exitIntel.reservation || !exitIntel.reservation.username || exitIntel.reservation.username == utilities.getUsername()));
 
       openList[exit] = {
         range: info.range + 1,
         origin: info.origin,
+        safePath: info.safePath && roomIsSafe,
       };
     }
   }
