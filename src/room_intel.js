@@ -45,6 +45,7 @@ RoomIntel.prototype.isClaimed = function () {
  * Checks if the room is owned by another player.
  */
 RoomIntel.prototype.isOwned = function () {
+  if (!this.memory.owner) return false;
   if (this.memory.owner != utilities.getUsername()) return true;
 
   return false;

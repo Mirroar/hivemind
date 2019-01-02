@@ -408,7 +408,7 @@ Creep.prototype.performMilitaryMove = function () {
         var targetPosition = utilities.decodePosition(creep.memory.target);
         if (creep.pos.roomName != targetPosition.roomName) {
             if (!this.moveToRoom(targetPosition.roomName)) {
-                console.log(this.pos.roomName, targetPosition.roomName);
+                hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPosition.roomName);
                 // @todo This is cross-room movement and should therefore only calculate a path once.
                 creep.moveToRange(targetPosition, 3);
             }
