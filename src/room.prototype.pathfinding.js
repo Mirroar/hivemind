@@ -1,5 +1,7 @@
 'use strict';
 
+let utilities = require('utilities');
+
 Room.prototype.getCostMatrix = function () {
   return utilities.getCostMatrix(this.name);
 };
@@ -90,12 +92,8 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
         if (Memory.rooms[exit] && Memory.rooms[exit].intel) {
           let intel = Memory.rooms[exit].intel;
           if (intel.owner != utilities.getUsername()) continue;
+          // @todo Allow pathing through source keeper rooms if we can safely avoid them.
           if (intel.structures && _.size(intel.structures[STRUCTURE_KEEPER_LAIR]) > 0) continue;
-
-          // Don't send scouts through rooms owned by other players, either.
-          if (intel.owner && intel.owner != 'Mirroar') {
-              continue;
-          }
         }
 
         let path = [];

@@ -2,7 +2,7 @@
 
 var utilities = require('utilities');
 
-RoomIntel = function (roomName) {
+var RoomIntel = function (roomName) {
   this.roomName = roomName;
 
   if (!Memory.rooms[roomName]) {
@@ -84,7 +84,7 @@ RoomIntel.prototype.getExits = function () {
 RoomIntel.prototype.getControllerPosition = function () {
   if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return;
 
-  let controller = intel.structures[STRUCTURE_CONTROLLER][0];
+  let controller = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
   return new RoomPosition(controller.x, controller.y, this.roomName);
 };
 
