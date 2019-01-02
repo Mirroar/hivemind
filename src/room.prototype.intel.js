@@ -117,6 +117,7 @@ Room.prototype.gatherIntel = function () {
   var intel = room.memory.intel;
 
   let lastScanThreshold = 500;
+  // @todo Have process logic handle throttling of this task .
   if (Game.cpu.bucket < 5000) {
     lastScanThreshold = 2500;
   }
@@ -172,6 +173,38 @@ Room.prototype.gatherIntel = function () {
     intel.mineralType = minerals[i].mineralType;
   }
 
+  // Check terrain.
+  intel.terrain = {
+    exit: 0,
+    wall: 0,
+    swamp: 0,
+    plain: 0,
+  };
+  let terrain = new Room.Terrain(this.name);
+  for (let x = 0; x < 50; x++) {
+    for (let y = 0; y < 50; y++) {
+      let tileType = terrain.get(x, y);
+      // Check border tiles.
+      if (x == 0 || y == 0 || x == 49 || y == 49) {
+        if (tileType | TERRAIN_MASK_WALL == 0) {
+          intel.terrain.exit++;
+        }
+        continue;
+      }
+
+      // Check non-border tiles.
+      if (tileType | TERRAIN_MASK_WALL > 0) {
+        intel.terrain.wall++;
+      }
+      else if (tileType | TERRAIN_MASK_SWAMP > 0) {
+        intel.terrain.swamp++;
+      }
+      else {
+        intel.terrain.plain++;
+      }
+    }
+  }
+
   // Check structures.
   intel.structures = {};
   delete intel.power;
@@ -186,7 +219,6 @@ Room.prototype.gatherIntel = function () {
       hivemind.log('intel', this.name).info('Power bank found!');
 
       // Find out how many access points are around this power bank.
-      let terrain = new Room.Terrain(this.name);
       let numFreeTiles = 0;
       for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {

@@ -191,7 +191,7 @@ Creep.prototype.militaryRoomReached = function () {
         this.memory.starting = false;
         this.memory.singleRoom = this.pos.roomName;
     }
-}
+};
 
 /**
  * Makes a creep move towards its designated target.

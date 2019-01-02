@@ -138,14 +138,30 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
       score -= 0.5;
     }
     else {
+      let sourceFactor = 0.1;
+      if (adjacentIntel.isClaimed()) {
+        // If another player has reserved the adjacent room, we can't profit all that well.
+        sourceFactor = 0.05;
+      }
+
       // Adjacent rooms having more sources is good.
-      score += adjacentIntel.getSourcePositions().length * 0.1;
+      score += adjacentIntel.getSourcePositions().length * sourceFactor;
+
+      // @todo factor in path length to sources.
+      // @todo If we're close to one of our own rooms, do not count double-used remote harvesting.
     }
   }
 
+  // Having fewer exit tiles is good.
+  score -= roomIntel.countTiles('exit') * 0.01;
+  // Having lots of open space is good (easier room layout).
+  score -= roomIntel.countTiles('wall') * 0.002;
+  // Having few swamp tiles is good (less cost for road maintenance, easier setup).
+  score -= roomIntel.countTiles('swamp') * 0.001;
+
   // @todo Prefer rooms with minerals we have little sources of.
-  // @todo Having dead ends / safe rooms nearby is similarly good.
-  // @todo Having fewer exit tiles is good.
+  // @todo Having dead ends / safe rooms nearby is similarly good. Counts
+  // double if expanding here creates a safe direction for another of our rooms.
   return score;
 };
 
