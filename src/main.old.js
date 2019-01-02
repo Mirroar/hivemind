@@ -291,6 +291,13 @@ Room.prototype.enhanceData = function () {
     this.addStructureReference(STRUCTURE_OBSERVER);
     this.addStructureReference(STRUCTURE_POWER_SPAWN);
 
+    if (this.terminal && !this.terminal.isActive()) {
+        delete this.terminal;
+    }
+    if (this.storage && !this.storage.isActive()) {
+        delete this.storage;
+    }
+
     this.sources = [];
 
     // Prepare memory for creep cache (filled globally later).
