@@ -55,6 +55,7 @@ ExpandProcess.prototype.run = function () {
 
   if (memory.expand.currentTarget) {
     let info = memory.expand.currentTarget;
+    let squad = new Squad('expand');
     if (!memory.expand.started) {
       // Spawn expanstion squad at origin.
       let key = 'SpawnSquad:expand';
@@ -77,12 +78,11 @@ ExpandProcess.prototype.run = function () {
       }
 
       // @todo Place flags to guide squad through safe rooms and make pathfinding easier.
-      let squad = new Squad('expand');
       squad.clearUnits();
       squad.setUnitCount('singleClaim', 1);
       squad.setUnitCount('builder', 2);
       squad.setPath(null);
-      memory.expand.started = true;
+      memory.expand.started = Game.time;
     }
     else {
       // Remove claimer from composition once room has been claimed.
@@ -91,25 +91,36 @@ ExpandProcess.prototype.run = function () {
         Game.flags['AttackSquad:expand'].setPosition(room.controller.pos);
 
         if (room.controller.my) {
-          let squad = new Squad('expand');
           squad.setUnitCount('singleClaim', 0);
 
           if (room.controller.level > 3 && room.storage) {
-            memory.expand = {};
-            squad.clearUnits();
-
-            if (Game.flags['AttackSquad:expand']) {
-              Game.flags['AttackSquad:expand'].remove();
-            }
-            if (Game.flags['SpawnSquad:expand']) {
-              Game.flags['SpawnSquad:expand'].remove();
-            }
-
+            this.stopExpansion(squad);
             return;
           }
         }
       }
+
+      // If a lot of time has passed, let the room fend for itself anyways,
+      // either it will be lost or fix itself.
+      if (Game.time - memory.expand.started > 50 * CREEP_LIFE_TIME) {
+        this.stopExpansion(squad);
+      }
     }
+  }
+};
+
+/**
+ * Sends a squad for expanding to a new room if GCL and CPU allow.
+ */
+ExpandProcess.prototype.stopExpansion = function (squad) {
+  Memory.strategy.expand = {};
+  squad.clearUnits();
+
+  if (Game.flags['AttackSquad:expand']) {
+    Game.flags['AttackSquad:expand'].remove();
+  }
+  if (Game.flags['SpawnSquad:expand']) {
+    Game.flags['SpawnSquad:expand'].remove();
   }
 };
 
