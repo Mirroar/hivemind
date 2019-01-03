@@ -119,29 +119,7 @@ RoomPlanner.prototype.runLogic = function () {
   this.newStructures = 0;
   let doneBuilding = true;
 
-  // For bot debugging purposes, remove all roads not part of current room plan.
-  var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
-  for (let i = 0; i < roomRoads.length; i++) {
-    let road = roomRoads[i];
-    if (!this.memory.locations.road || !this.memory.locations.road[utilities.encodePosition(road.pos)]) {
-      road.destroy();
-    }
-  }
-
-  // Remove unwanted walls.
-  var roomWalls = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_WALL);
-  for (let i = 0; i < roomWalls.length; i++) {
-    let wall = roomWalls[i];
-    if (!this.memory.locations.wall || !this.memory.locations.wall[utilities.encodePosition(wall.pos)]) {
-      wall.destroy();
-    }
-  }
-
-  // Remove hostile structures.
-  let hostileStructures = this.room.find(FIND_HOSTILE_STRUCTURES);
-  for (let i = 0; i < hostileStructures.length; i++) {
-    hostileStructures[i].destroy();
-  }
+  this.cleanRoom(roomStructures);
 
   // Build road to sources asap to make getting energy easier.
   for (let posName in this.memory.locations['road.source'] || []) {
@@ -525,6 +503,32 @@ RoomPlanner.prototype.runLogic = function () {
     if (!doneBuilding) return;
   }
 
+};
+
+RoomPlanner.prototype.cleanRoom = function (roomStructures) {
+  // Remove all roads not part of current room plan.
+  var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
+  for (let i = 0; i < roomRoads.length; i++) {
+    let road = roomRoads[i];
+    if (!this.memory.locations.road || !this.memory.locations.road[utilities.encodePosition(road.pos)]) {
+      road.destroy();
+    }
+  }
+
+  // Remove unwanted walls.
+  var roomWalls = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_WALL);
+  for (let i = 0; i < roomWalls.length; i++) {
+    let wall = roomWalls[i];
+    if (!this.memory.locations.wall || !this.memory.locations.wall[utilities.encodePosition(wall.pos)]) {
+      wall.destroy();
+    }
+  }
+
+  // Remove hostile structures.
+  let hostileStructures = this.room.find(FIND_HOSTILE_STRUCTURES);
+  for (let i = 0; i < hostileStructures.length; i++) {
+    hostileStructures[i].destroy();
+  }
 };
 
 /**
