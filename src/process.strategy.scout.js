@@ -55,6 +55,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
       }
     }
   }
+  // @todo For higher ranges (7-10), only scout if we have memory to spare.
 
   if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && timeSinceLastScan > 1000) {
     // Corridor rooms get scouted more often to look for power banks.
