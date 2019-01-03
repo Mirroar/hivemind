@@ -16,6 +16,9 @@ var RoomPlanner = function (roomName) {
   this.drawDebug();
 };
 
+/**
+ * Draws a simple representation of the room layout using RoomVisuals.
+ */
 RoomPlanner.prototype.drawDebug = function () {
   let debugSymbols = {
     lab: '🔬',
@@ -24,6 +27,7 @@ RoomPlanner.prototype.drawDebug = function () {
     rampart: '#',
     nuker: '☢',
     powerSpawn: '⚡',
+    spawn: '⭕',
   };
 
   let visual = new RoomVisual(this.roomName);
@@ -43,7 +47,7 @@ RoomPlanner.prototype.drawDebug = function () {
 };
 
 /**
- *
+ * Tries to place a construction site.
  */
 RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionSites) {
   // Check if there's a structure here already.
@@ -87,14 +91,19 @@ RoomPlanner.prototype.runLogic = function () {
 
   this.checkAdjacentRooms();
 
+  // Recalculate room layout if using a new version.
   if (!this.memory.plannerVersion || this.memory.plannerVersion != this.roomPlannerVersion) {
     delete this.memory.locations;
     this.memory.plannerVersion = this.roomPlannerVersion;
   }
 
-  if (!this.memory.locations || !this.memory.locations.observer) {
+  // Sometimes room planning can't be finished successfully. Try a maximum of 10
+  // times in that case.
+  if (!this.memory.planningTries) this.memory.planningTries = 1;
+  if (!this.memory.locations || (!this.memory.locations.observer && this.memory.planningTries <= 10)) {
     if (Game.cpu.getUsed() < 100) {
       this.placeFlags();
+      this.memory.planningTries++;
     }
     return;
   }
