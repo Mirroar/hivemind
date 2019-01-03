@@ -1067,32 +1067,24 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   matrix.set(roomCenter.x, roomCenter.y, 255);
 
   // Flood fill from the center to place buildings that need to be accessible.
-  var openList = {};
+  this.openList = {};
   let startPath = {};
   startPath[utilities.encodePosition(roomCenter)] = true;
-  openList[utilities.encodePosition(roomCenter)] = {
+  this.openList[utilities.encodePosition(roomCenter)] = {
     range: 0,
     path: startPath,
   };
-
-  let filterOpenList = function (targetPos) {
-    for (let posName in openList) {
-      if (openList[posName].path[targetPos]) {
-        delete openList[posName]
-      }
-    }
-  }
 
   var closedList = {};
   var buildingsPlaced = false;
   var bayCount = 0;
   var helperPlaced = false;
-  while (!buildingsPlaced && _.size(openList) > 0) {
+  while (!buildingsPlaced && _.size(this.openList) > 0) {
     let minDist = null;
     let nextPos = null;
     let nextInfo = null;
-    for (let posName in openList) {
-      let info = openList[posName];
+    for (let posName in this.openList) {
+      let info = this.openList[posName];
       let pos = utilities.decodePosition(posName);
       if (!minDist || info.range < minDist) {
         minDist = info.range;
@@ -1104,7 +1096,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     if (!nextPos) {
       break;
     }
-    delete openList[utilities.encodePosition(nextPos)];
+    delete this.openList[utilities.encodePosition(nextPos)];
     closedList[utilities.encodePosition(nextPos)] = true;
 
     // Add unhandled adjacent tiles to open list.
@@ -1121,14 +1113,14 @@ RoomPlanner.prototype.placeFlags = function (visible) {
         if (exitDistanceMatrix.get(pos.x, pos.y) < 6) continue;
 
         let posName = utilities.encodePosition(pos);
-        if (openList[posName] || closedList[posName]) continue;
+        if (this.openList[posName] || closedList[posName]) continue;
 
         let newPath = {};
         for (let oldPos in nextInfo.path) {
           newPath[oldPos] = true;
         }
         newPath[posName] = true;
-        openList[posName] = {
+        this.openList[posName] = {
           range: minDist + 1,
           path: newPath,
         };
@@ -1148,7 +1140,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
-      filterOpenList(utilities.encodePosition(nextPos));
+      this.filterOpenList(utilities.encodePosition(nextPos));
       this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName), 'road', visible);
       matrix.set(nextPos.x - 1, nextPos.y, 1);
       this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName), 'road', visible);
@@ -1173,7 +1165,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       }
       this.placeFlag(nextPos, 'road', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
-      filterOpenList(utilities.encodePosition(nextPos));
+      this.filterOpenList(utilities.encodePosition(nextPos));
       helperPlaced = true;
     }
     else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[maxRoomLevel]) {
@@ -1207,7 +1199,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
           this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension', visible);
           matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
-          filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
+          this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
         }
       }
 
@@ -1243,22 +1235,22 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       // Place center area.
       matrix.set(nextPos.x - 1, nextPos.y, 255);
       this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab', visible);
-      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName)));
+      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName)));
       matrix.set(nextPos.x, nextPos.y, 1); // Road.
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', visible);
 
       matrix.set(nextPos.x + 1, nextPos.y, 255);
       this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab', visible);
-      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName)));
+      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName)));
       matrix.set(nextPos.x - 1, nextPos.y + 1, 255);
       this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab', visible);
-      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y + 1, this.roomName)));
+      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y + 1, this.roomName)));
       matrix.set(nextPos.x, nextPos.y + 1, 1); // Road.
       this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', visible);
 
       matrix.set(nextPos.x + 1, nextPos.y + 1, 255);
       this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab', visible);
-      filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y + 1, this.roomName)));
+      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y + 1, this.roomName)));
 
       // Plan road out of labs.
       let labRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
@@ -1273,7 +1265,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
           if (tileFreeForBuilding(nextPos.x + dx, nextPos.y + dy)) {
             matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
             this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab', visible);
-            filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
+            this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
           }
         }
       }
@@ -1284,7 +1276,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
       this.placeFlag(nextPos, 'powerSpawn', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
-      filterOpenList(utilities.encodePosition(nextPos));
+      this.filterOpenList(utilities.encodePosition(nextPos));
 
       // Plan road out of power spawn.
       let psRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
@@ -1299,7 +1291,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
       this.placeFlag(nextPos, 'observer', visible);
       matrix.set(nextPos.x, nextPos.y, 255);
-      filterOpenList(utilities.encodePosition(nextPos));
+      this.filterOpenList(utilities.encodePosition(nextPos));
     }
     else {
       buildingsPlaced = true;
@@ -1350,6 +1342,17 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
+};
+
+/**
+ * Removes all pathfinding options that use the given position.
+ */
+RoomPlanner.prototype.filterOpenList = function (targetPos) {
+  for (let posName in this.openList) {
+    if (this.openList[posName].path[targetPos]) {
+      delete this.openList[posName]
+    }
+  }
 };
 
 /**
