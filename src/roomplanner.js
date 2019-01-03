@@ -119,6 +119,21 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
 
+  // Remove unwanted walls.
+  var roomWalls = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_WALL);
+  for (let i = 0; i < roomWalls.length; i++) {
+    let wall = roomWalls[i];
+    if (!this.memory.locations.wall || !this.memory.locations.wall[utilities.encodePosition(wall.pos)]) {
+      wall.destroy();
+    }
+  }
+
+  // Remove hostile structures.
+  let hostileStructures = this.room.find(FIND_HOSTILE_STRUCTURES);
+  for (let i = 0; i < hostileStructures.length; i++) {
+    hostileStructures[i].destroy();
+  }
+
   // Build road to sources asap to make getting energy easier.
   for (let posName in this.memory.locations['road.source'] || []) {
     let pos = utilities.decodePosition(posName);
