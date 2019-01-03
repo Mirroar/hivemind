@@ -38,6 +38,13 @@ OwnedRoomProcess.prototype.run = function () {
     powerSpawn.processPower();
   }
 
+  // Use observers if requested.
+  if (this.room.observer && this.room.memory.observeTargets && this.room.memory.observeTargets.length > 0) {
+    let target = this.room.memory.observeTargets.pop();
+    this.room.observer.observeRoom(target);
+    this.room.observer.hasScouted = true;
+  }
+
   // Sing a song.
   hivemind.runProcess(this.room.name + '_song', RoomSongsProcess, {
     room: this.room,

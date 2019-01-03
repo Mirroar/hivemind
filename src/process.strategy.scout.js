@@ -75,6 +75,12 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
         observer.observeRoom(roomName);
         observer.hasScouted = true;
       }
+      else {
+        if (!Memory.rooms[info.observerRoom].observeTargets) {
+          Memory.rooms[info.observerRoom].observeTargets = [];
+        }
+        Memory.rooms[info.observerRoom].observeTargets.push(roomName);
+      }
     }
   }
 };
@@ -195,6 +201,7 @@ ScoutProcess.prototype.generateScoutTargets = function () {
         range: info.range,
         origin: info.origin,
         observer: observer && observer.id,
+        observerRoom: observer && observer.pos.roomName,
         safePath: info.safePath,
       };
     }
