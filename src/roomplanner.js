@@ -105,7 +105,7 @@ RoomPlanner.prototype.runLogic = function () {
   // times in that case.
   if (!this.memory.planningTries) this.memory.planningTries = 1;
   if (!this.memory.locations || (!this.memory.locations.observer && this.memory.planningTries <= 10)) {
-    if (Game.cpu.getUsed() < 100) {
+    if (Game.cpu.getUsed() < Game.cpu.tickLimit / 2) {
       this.placeFlags();
       this.memory.planningTries++;
     }
