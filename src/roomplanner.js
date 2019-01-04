@@ -97,6 +97,7 @@ RoomPlanner.prototype.runLogic = function () {
   // Recalculate room layout if using a new version.
   if (!this.memory.plannerVersion || this.memory.plannerVersion != this.roomPlannerVersion) {
     delete this.memory.locations;
+    delete this.memory.planningTries;
     this.memory.plannerVersion = this.roomPlannerVersion;
   }
 
@@ -908,20 +909,9 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
   }
 
-  let tileFreeForBuilding = function (x, y, allowRoads) {
-    if (x < 2 || x > 47 || y < 2 || y > 47) return false;
-
-    let matrixValue = matrix.get(x, y);
-    if (matrixValue > 100) return false;
-    if (wallDistanceMatrix.get(x, y) > 100) return false;
-    if (matrixValue == 10 && wallDistanceMatrix.get(x, y) == 1) return true;
-    if (matrixValue > 1) return false;
-    if (matrixValue == 1 && !allowRoads) return false;
-
-    return true;
-  }
-
   let planner = this;
+  let tileFreeForBuilding = function(x, y, allowRoads) { return planner.isBuildableTile(x, y, allowRoads) };
+
   let placeLink = function (sourceRoads) {
     let linkPlaced = false;
     for (let i in sourceRoads) {
@@ -1048,7 +1038,9 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y, this.roomName), 'nuker', visible);
   matrix.set(roomCenter.x, roomCenter.y, 255);
 
+  this.startBuildingPlacement();
   this.placeSpawns();
+  this.placeHelperParkingLot();
 
   // Flood fill from the center to place buildings that need to be accessible.
   this.openList = {};
@@ -1062,7 +1054,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   var closedList = {};
   var buildingsPlaced = false;
   var bayCount = 0;
-  var helperPlaced = false;
   while (!buildingsPlaced && _.size(this.openList) > 0) {
     let minDist = null;
     let nextPos = null;
@@ -1114,23 +1105,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     // Handle current position.
     if (nextPos.getRangeTo(roomCenter) < 3) continue;
 
-    if (!helperPlaced) {
-      // Place parking spot for helper creep.
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
-
-      let flagKey = 'Helper:' + nextPos.roomName;
-      if (Game.flags[flagKey]) {
-        Game.flags[flagKey].setPosition(nextPos);
-      }
-      else {
-        nextPos.createFlag(flagKey);
-      }
-      this.placeFlag(nextPos, 'road', visible);
-      matrix.set(nextPos.x, nextPos.y, 255);
-      this.filterOpenList(utilities.encodePosition(nextPos));
-      helperPlaced = true;
-    }
-    else if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[MAX_ROOM_LEVEL]) {
+    if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[MAX_ROOM_LEVEL]) {
       // Don't build too close to exits.
       if (exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
 
@@ -1310,7 +1285,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
  * Place spawns in closest available positions.
  */
 RoomPlanner.prototype.placeSpawns = function () {
-  this.startBuildingPlacement();
   let nextPos = this.getNextAvailableBuildSpot();
   while (this.canPlaceMore('spawn') && nextPos) {
     this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn');
@@ -1319,6 +1293,24 @@ RoomPlanner.prototype.placeSpawns = function () {
 
     nextPos = this.getNextAvailableBuildSpot();
   }
+};
+
+/**
+ * Places parking spot for helper creep.
+ */
+RoomPlanner.prototype.placeHelperParkingLot = function () {
+  let nextPos = this.getNextAvailableBuildSpot();
+
+  let flagKey = 'Helper:' + nextPos.roomName;
+  if (Game.flags[flagKey]) {
+    Game.flags[flagKey].setPosition(nextPos);
+  }
+  else {
+    nextPos.createFlag(flagKey);
+  }
+  this.placeFlag(nextPos, 'road');
+  this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
+  this.filterOpenList(utilities.encodePosition(nextPos));
 };
 
 /**
@@ -1366,14 +1358,7 @@ RoomPlanner.prototype.getNextAvailableBuildSpot = function () {
         if (dx == 0 && dy == 0) continue;
         let pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
 
-        // Can't build on exit tiles.
-        if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) continue;
-
-        // Only build on valid terrain.
-        if (this.wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
-
-        // Don't build too close to exits.
-        if (this.exitDistanceMatrix.get(pos.x, pos.y) < 6) continue;
+        if (!this.isBuildableTile(pos.x, pos.y, true)) continue;
 
         let posName = utilities.encodePosition(pos);
         if (this.openList[posName] || this.closedList[posName]) continue;
@@ -1393,8 +1378,37 @@ RoomPlanner.prototype.getNextAvailableBuildSpot = function () {
     // Don't build to close to room center.
     if (nextPos.getRangeTo(this.roomCenter) < 3) continue;
 
+    // Don't build on roads.
+    if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
+
     return nextPos;
   }
+};
+
+/**
+ * Checks if a structure can be placed on the given tile.
+ */
+RoomPlanner.prototype.isBuildableTile = function (x, y, allowRoads) {
+  // Only build on valid terrain.
+  if (this.wallDistanceMatrix.get(x, y) > 100) return false;
+
+  // Don't build too close to exits.
+  if (this.exitDistanceMatrix.get(x, y) < 6) return false;
+
+  let matrixValue = this.buildingMatrix.get(x, y);
+  // Can't build on other buildings.
+  if (matrixValue > 100) return false;
+
+  // Tiles next to walls are fine for building, just not so much for pathing.
+  if (matrixValue == 10 && this.wallDistanceMatrix.get(x, y) == 1) return true;
+
+  // @todo Find out why this check was initially introduced.
+  if (matrixValue > 1) return false;
+
+  // Don't build on roads if not allowed.
+  if (matrixValue == 1 && !allowRoads) return false;
+
+  return true;
 };
 
 /**
