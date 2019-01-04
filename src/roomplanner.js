@@ -778,6 +778,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   };
   let walls = [];
   let roads = [];
+  this.roads = roads;
   let centerPositions = [];
   let terrain = new Room.Terrain(this.roomName);
   for (let x = 0; x < 50; x++) {
@@ -901,6 +902,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     new RoomPosition(roomCenter.x, roomCenter.y + 2, this.roomName),
     new RoomPosition(roomCenter.x, roomCenter.y - 2, this.roomName),
   ];
+  this.roomCenterEntrances = centerEntrances;
 
   // Find paths from each exit towards the room center for making roads.
   for (let dir in exitCenters) {
@@ -1041,6 +1043,8 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   this.startBuildingPlacement();
   this.placeSpawns();
   this.placeHelperParkingLot();
+  this.placeBays();
+  this.placeLabs();
 
   // Flood fill from the center to place buildings that need to be accessible.
   this.openList = {};
@@ -1105,109 +1109,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     // Handle current position.
     if (nextPos.getRangeTo(roomCenter) < 3) continue;
 
-    if (!this.memory.locations.extension || _.size(this.memory.locations.extension) < CONTROLLER_STRUCTURES.extension[MAX_ROOM_LEVEL]) {
-      // Don't build too close to exits.
-      if (exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
-
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y)) continue;
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y - 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y - 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y - 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y + 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 1)) continue;
-
-      // Leave a road to room center.
-      let extensionRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
-      for (let i in extensionRoads) {
-        this.placeFlag(extensionRoads[i], 'road', visible);
-        matrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
-      }
-      // Make sure there is a road in the center of the bay.
-      this.placeFlag(nextPos, 'road', visible);
-      matrix.set(nextPos.x, nextPos.y, 1);
-
-      // Fill other unused spots with extensions.
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (!tileFreeForBuilding(nextPos.x + dx, nextPos.y + dy)) continue;
-
-          this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension', visible);
-          matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
-          this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
-        }
-      }
-
-      // Place a flag to mark this bay.
-      let flagKey = 'Bay:' + nextPos.roomName + ':' + bayCount;
-      if (Game.flags[flagKey]) {
-        Game.flags[flagKey].setPosition(nextPos);
-      }
-      else {
-        nextPos.createFlag(flagKey);
-      }
-      bayCount++;
-    }
-    else if (!this.memory.locations.lab || _.size(this.memory.locations.lab) < CONTROLLER_STRUCTURES.lab[MAX_ROOM_LEVEL]) {
-      // Don't build too close to exits.
-      if (exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
-
-      // @todo Dynamically generate lab layout for servers where 10 labs is not the max.
-      // @todo Allow rotating this blueprint for better access.
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y)) continue;
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y - 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y - 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y - 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y + 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 1)) continue;
-      if (!tileFreeForBuilding(nextPos.x - 1, nextPos.y + 2)) continue;
-      if (!tileFreeForBuilding(nextPos.x, nextPos.y + 2)) continue;
-      if (!tileFreeForBuilding(nextPos.x + 1, nextPos.y + 2)) continue;
-
-      // Place center area.
-      matrix.set(nextPos.x - 1, nextPos.y, 255);
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab', visible);
-      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y, this.roomName)));
-      matrix.set(nextPos.x, nextPos.y, 1); // Road.
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', visible);
-
-      matrix.set(nextPos.x + 1, nextPos.y, 255);
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab', visible);
-      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y, this.roomName)));
-      matrix.set(nextPos.x - 1, nextPos.y + 1, 255);
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab', visible);
-      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x - 1, nextPos.y + 1, this.roomName)));
-      matrix.set(nextPos.x, nextPos.y + 1, 1); // Road.
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', visible);
-
-      matrix.set(nextPos.x + 1, nextPos.y + 1, 255);
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab', visible);
-      this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + 1, nextPos.y + 1, this.roomName)));
-
-      // Plan road out of labs.
-      let labRoads = this.scanAndAddRoad(nextPos, centerEntrances, matrix, roads);
-      for (let i in labRoads) {
-        this.placeFlag(labRoads[i], 'road', visible);
-        matrix.set(labRoads[i].x, labRoads[i].y, 1);
-      }
-
-      // Add top and bottom buildings.
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 2; dy += 3) {
-          if (tileFreeForBuilding(nextPos.x + dx, nextPos.y + dy)) {
-            matrix.set(nextPos.x + dx, nextPos.y + dy, 255);
-            this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab', visible);
-            this.filterOpenList(utilities.encodePosition(new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName)));
-          }
-        }
-      }
-    }
-    else if (!this.memory.locations.powerSpawn || _.size(this.memory.locations.powerSpawn) < CONTROLLER_STRUCTURES.powerSpawn[MAX_ROOM_LEVEL]) {
+    if (!this.memory.locations.powerSpawn || _.size(this.memory.locations.powerSpawn) < CONTROLLER_STRUCTURES.powerSpawn[MAX_ROOM_LEVEL]) {
       // Place power spawn.
       if (!tileFreeForBuilding(nextPos.x, nextPos.y)) continue;
 
@@ -1232,14 +1134,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
     else {
       buildingsPlaced = true;
-    }
-  }
-
-  // Remove other bay flags in room that might be left over.
-  for (let i = bayCount; i < 30; i++) {
-    let flagKey = 'Bay:' + this.roomName + ':' + i;
-    if (Game.flags[flagKey]) {
-      Game.flags[flagKey].remove();
     }
   }
 
@@ -1285,13 +1179,20 @@ RoomPlanner.prototype.placeFlags = function (visible) {
  * Place spawns in closest available positions.
  */
 RoomPlanner.prototype.placeSpawns = function () {
-  let nextPos = this.getNextAvailableBuildSpot();
-  while (this.canPlaceMore('spawn') && nextPos) {
+  while (this.canPlaceMore('spawn')) {
+    let nextPos = this.getNextAvailableBuildSpot();
+    if (!nextPos) break;
+
     this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn');
     this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
     this.filterOpenList(utilities.encodePosition(nextPos));
 
-    nextPos = this.getNextAvailableBuildSpot();
+    // Leave a road to room center.
+    let extensionRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
+    for (let i in extensionRoads) {
+      this.placeFlag(extensionRoads[i], 'road');
+      this.buildingMatrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
+    }
   }
 };
 
@@ -1300,6 +1201,7 @@ RoomPlanner.prototype.placeSpawns = function () {
  */
 RoomPlanner.prototype.placeHelperParkingLot = function () {
   let nextPos = this.getNextAvailableBuildSpot();
+  if (!nextPos) return;
 
   let flagKey = 'Helper:' + nextPos.roomName;
   if (Game.flags[flagKey]) {
@@ -1310,7 +1212,144 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
   }
   this.placeFlag(nextPos, 'road');
   this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
+
+  // Leave a road to room center.
+  let extensionRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
+  for (let i in extensionRoads) {
+    this.placeFlag(extensionRoads[i], 'road');
+    this.buildingMatrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
+  }
+
   this.filterOpenList(utilities.encodePosition(nextPos));
+};
+
+/**
+ * Places extension bays.
+ */
+RoomPlanner.prototype.placeBays = function () {
+  let bayCount = 0;
+  while (this.canPlaceMore('extension')) {
+    let nextPos = this.getNextAvailableBuildSpot();
+    if (!nextPos) break;
+
+    // Don't build too close to exits.
+    if (this.exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+
+    if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y)) continue;
+    if (!this.isBuildableTile(nextPos.x, nextPos.y - 1)) continue;
+    if (!this.isBuildableTile(nextPos.x, nextPos.y + 1)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
+
+    // Leave a road to room center.
+    let extensionRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
+    for (let i in extensionRoads) {
+      this.placeFlag(extensionRoads[i], 'road');
+      this.buildingMatrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
+    }
+    // Make sure there is a road in the center of the bay.
+    this.placeFlag(nextPos, 'road');
+    this.buildingMatrix.set(nextPos.x, nextPos.y, 1);
+
+    // Fill other unused spots with extensions.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (!this.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) continue;
+
+        this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension');
+        this.buildingMatrix.set(nextPos.x + dx, nextPos.y + dy, 255);
+      }
+    }
+
+    // Place a flag to mark this bay.
+    let flagKey = 'Bay:' + nextPos.roomName + ':' + bayCount;
+    if (Game.flags[flagKey]) {
+      Game.flags[flagKey].setPosition(nextPos);
+    }
+    else {
+      nextPos.createFlag(flagKey);
+    }
+    bayCount++;
+
+    // Reinitialize pathfinding.
+    this.startBuildingPlacement();
+  }
+
+  // Remove other bay flags in room that might be left over.
+  for (let i = bayCount; i < 30; i++) {
+    let flagKey = 'Bay:' + this.roomName + ':' + i;
+    if (Game.flags[flagKey]) {
+      Game.flags[flagKey].remove();
+    }
+  }
+};
+
+/**
+ * Place labs in big compounds.
+ */
+RoomPlanner.prototype.placeLabs = function () {
+  while (this.canPlaceMore('lab')) {
+    let nextPos = this.getNextAvailableBuildSpot();
+    if (!nextPos) break;
+
+    // Don't build too close to exits.
+    if (this.exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+
+    // @todo Dynamically generate lab layout for servers where 10 labs is not the max.
+    // @todo Allow rotating this blueprint for better access.
+    if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y)) continue;
+    if (!this.isBuildableTile(nextPos.x, nextPos.y - 1)) continue;
+    if (!this.isBuildableTile(nextPos.x, nextPos.y + 1)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
+    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 2)) continue;
+    if (!this.isBuildableTile(nextPos.x, nextPos.y + 2)) continue;
+    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 2)) continue;
+
+    // Place center area.
+    this.buildingMatrix.set(nextPos.x - 1, nextPos.y, 255);
+    this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab');
+    this.buildingMatrix.set(nextPos.x, nextPos.y, 1); // Road.
+    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road');
+
+    this.buildingMatrix.set(nextPos.x + 1, nextPos.y, 255);
+    this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab');
+    this.buildingMatrix.set(nextPos.x - 1, nextPos.y + 1, 255);
+    this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab');
+    this.buildingMatrix.set(nextPos.x, nextPos.y + 1, 1); // Road.
+    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road');
+
+    this.buildingMatrix.set(nextPos.x + 1, nextPos.y + 1, 255);
+    this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab');
+
+    // Plan road out of labs.
+    let labRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
+    for (let i in labRoads) {
+      this.placeFlag(labRoads[i], 'road');
+      this.buildingMatrix.set(labRoads[i].x, labRoads[i].y, 1);
+    }
+
+    // Add top and bottom buildings.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 2; dy += 3) {
+        if (this.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) {
+          this.buildingMatrix.set(nextPos.x + dx, nextPos.y + dy, 255);
+          this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab');
+        }
+      }
+    }
+
+    // Reinitialize pathfinding.
+    this.startBuildingPlacement();
+  }
 };
 
 /**
