@@ -593,7 +593,7 @@ Structure.prototype.needsDismantling = function () {
 /**
  * Places a room planner flag of a certain type.
  */
-RoomPlanner.prototype.placeFlag = function (pos, flagType, visible) {
+RoomPlanner.prototype.placeFlag = function (pos, flagType) {
   let posName = utilities.encodePosition(pos);
 
   if (!this.memory.locations) {
@@ -603,45 +603,6 @@ RoomPlanner.prototype.placeFlag = function (pos, flagType, visible) {
     this.memory.locations[flagType] = {};
   }
   this.memory.locations[flagType][posName] = 1;
-
-  if (visible) {
-    let flagName = 'RP:' + posName + ':' + flagType;
-
-    let color = COLOR_WHITE;
-    let color2 = COLOR_WHITE;
-
-    if (flagType == 'wall') {
-      color = COLOR_GREY;
-      color2 = COLOR_GREY;
-    }
-    else if (flagType == 'rampart') {
-      color = COLOR_GREY;
-      color2 = COLOR_GREEN;
-    }
-    else if (flagType == 'road') {
-      color = COLOR_GREY;
-      color2 = COLOR_WHITE;
-    }
-    else if (flagType == 'exit') {
-      color = COLOR_RED;
-      color2 = COLOR_RED;
-    }
-    else if (flagType == 'center') {
-      color = COLOR_GREEN;
-      color2 = COLOR_GREEN;
-    }
-    else if (flagType == 'test') {
-      color = COLOR_YELLOW;
-      color2 = COLOR_GREY;
-    }
-
-    if (Game.flags[flagName]) {
-      Game.flags[flagName].setColor(color, color2);
-    }
-    else {
-      pos.createFlag(flagName, color, color2);
-    }
-  }
 };
 
 /**
@@ -1510,17 +1471,6 @@ RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
 
   return newRoads;
 }
-
-/**
- * Clears all flags placed in a room by the room planner.
- */
-RoomPlanner.prototype.clearFlags = function () {
-  var flags = _.filter(Game.flags, (flag) => flag.pos.roomName == this.roomName && flag.name.startsWith('RP:'));
-
-  for (let i in flags) {
-    flags[i].remove();
-  }
-};
 
 /**
  * Checks which adjacent rooms are owned by ourselves or
