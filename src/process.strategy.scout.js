@@ -41,6 +41,10 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
     }
     else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
       info.harvestPriority = this.calculateHarvestScore(roomName);
+      // Check if we could reasonably expand to this room.
+      if (hivemind.roomIntel(info.origin).getRcl() >= 5) {
+        // info.expansionScore = this.calculateExpansionScore(roomName);
+      }
     }
   }
   else if (info.range > 2 && info.range <= 7) {
@@ -114,6 +118,9 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
     }
   }
 
+  // @todo Add score if this is a safe room (that will be reserved
+  // anyways and can't be attacked).
+
   if (pathLength <= 0) return 0;
   return income / pathLength;
 };
@@ -160,11 +167,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   }
 
   // Having fewer exit tiles is good.
-  score -= roomIntel.countTiles('exit') * 0.01;
+  score += 0.4 - roomIntel.countTiles('exit') * 0.002;
   // Having lots of open space is good (easier room layout).
-  score -= roomIntel.countTiles('wall') * 0.002;
+  score += 1 - roomIntel.countTiles('wall') * 0.0005;
   // Having few swamp tiles is good (less cost for road maintenance, easier setup).
-  score -= roomIntel.countTiles('swamp') * 0.001;
+  score += 0.5 - roomIntel.countTiles('swamp') * 0.0002;
 
   // @todo Prefer rooms with minerals we have little sources of.
   // @todo Having dead ends / safe rooms nearby is similarly good. Counts
