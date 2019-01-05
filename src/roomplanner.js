@@ -1187,12 +1187,7 @@ RoomPlanner.prototype.placeSpawns = function () {
     this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
     this.filterOpenList(utilities.encodePosition(nextPos));
 
-    // Leave a road to room center.
-    let extensionRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
-    for (let i in extensionRoads) {
-      this.placeFlag(extensionRoads[i], 'road');
-      this.buildingMatrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
-    }
+    this.placeAccessRoad(nextPos);
   }
 };
 
@@ -1213,12 +1208,7 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
   this.placeFlag(nextPos, 'road');
   this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
 
-  // Leave a road to room center.
-  let extensionRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
-  for (let i in extensionRoads) {
-    this.placeFlag(extensionRoads[i], 'road');
-    this.buildingMatrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
-  }
+  this.placeAccessRoad(nextPos);
 
   this.filterOpenList(utilities.encodePosition(nextPos));
 };
@@ -1245,12 +1235,8 @@ RoomPlanner.prototype.placeBays = function () {
     if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
     if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
 
-    // Leave a road to room center.
-    let extensionRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
-    for (let i in extensionRoads) {
-      this.placeFlag(extensionRoads[i], 'road');
-      this.buildingMatrix.set(extensionRoads[i].x, extensionRoads[i].y, 1);
-    }
+    this.placeAccessRoad(nextPos);
+
     // Make sure there is a road in the center of the bay.
     this.placeFlag(nextPos, 'road');
     this.buildingMatrix.set(nextPos.x, nextPos.y, 1);
@@ -1330,12 +1316,7 @@ RoomPlanner.prototype.placeLabs = function () {
     this.buildingMatrix.set(nextPos.x + 1, nextPos.y + 1, 255);
     this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab');
 
-    // Plan road out of labs.
-    let labRoads = this.scanAndAddRoad(nextPos, this.roomCenterEntrances, this.buildingMatrix, this.roads);
-    for (let i in labRoads) {
-      this.placeFlag(labRoads[i], 'road');
-      this.buildingMatrix.set(labRoads[i].x, labRoads[i].y, 1);
-    }
+    this.placeAccessRoad(nextPos);
 
     // Add top and bottom buildings.
     for (let dx = -1; dx <= 1; dx++) {
@@ -1351,6 +1332,18 @@ RoomPlanner.prototype.placeLabs = function () {
     this.startBuildingPlacement();
   }
 };
+
+/**
+ * Plans a road from the given position to the room's center.
+ */
+RoomPlanner.prototype.placeAccessRoad = function (position) {
+  // Plan road out of labs.
+  let accessRoads = this.scanAndAddRoad(position, this.roomCenterEntrances, this.buildingMatrix, this.roads);
+  for (let i in accessRoads) {
+    this.placeFlag(accessRoads[i], 'road');
+    this.buildingMatrix.set(accessRoads[i].x, accessRoads[i].y, 1);
+  }
+}
 
 /**
  * Initializes pathfinding for finding building placement spots.
