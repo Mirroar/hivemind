@@ -597,7 +597,7 @@ Structure.prototype.needsDismantling = function () {
 /**
  * Places a room planner flag of a certain type.
  */
-RoomPlanner.prototype.placeFlag = function (pos, flagType) {
+RoomPlanner.prototype.placeFlag = function (pos, flagType, pathFindingCost) {
   let posName = utilities.encodePosition(pos);
 
   if (!this.memory.locations) {
@@ -607,6 +607,14 @@ RoomPlanner.prototype.placeFlag = function (pos, flagType) {
     this.memory.locations[flagType] = {};
   }
   this.memory.locations[flagType][posName] = 1;
+
+  if (typeof pathFindingCost === 'undefined') {
+    pathFindingCost = 255;
+  }
+
+  if (pathFindingCost) {
+    this.buildingMatrix.set(pos.x, pos.y, pathFindingCost);
+  }
 };
 
 /**
@@ -862,7 +870,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
 
     for (let i in exitCenters[dir]) {
-      this.placeFlag(exitCenters[dir][i], 'exit', visible);
+      this.placeFlag(exitCenters[dir][i], 'exit', null);
     }
   }
 
@@ -883,7 +891,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   // Find closest position with distance from walls around there.
   let roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(centerPositions);
   this.roomCenter = roomCenter;
-  this.placeFlag(roomCenter, 'center', visible);
+  this.placeFlag(roomCenter, 'center', null);
 
   // Do another flood fill pass from interesting positions to remove walls that don't protect anything.
   this.pruneWalls(walls, roomCenter, wallDistanceMatrix);
@@ -891,7 +899,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   // Actually place ramparts.
   for (let i in walls) {
     if (walls[i].isRelevant) {
-      this.placeFlag(walls[i], 'rampart', visible);
+      this.placeFlag(walls[i], 'rampart', null);
     }
   }
 
@@ -922,8 +930,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
           if (dx == 0 && dy == 0) continue;
 
           if (tileFreeForBuilding(sourceRoads[i].x + dx, sourceRoads[i].y + dy)) {
-            planner.placeFlag(new RoomPosition(sourceRoads[i].x + dx, sourceRoads[i].y + dy, sourceRoads[i].roomName), 'link', visible);
-            matrix.set(sourceRoads[i].x + dx, sourceRoads[i].y + dy, 255);
+            planner.placeFlag(new RoomPosition(sourceRoads[i].x + dx, sourceRoads[i].y + dy, sourceRoads[i].roomName), 'link');
             linkPlaced = true;
             break;
           }
@@ -961,10 +968,9 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
     if (targetPos) {
       if (containerType) {
-        planner.placeFlag(targetPos, 'container.' + containerType, visible);
+        planner.placeFlag(targetPos, 'container.' + containerType, null);
       }
-      planner.placeFlag(targetPos, 'container', visible);
-      matrix.set(targetPos.x, targetPos.y, 1);
+      planner.placeFlag(targetPos, 'container', 1);
     }
   }
 
@@ -975,7 +981,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       let controllerRoads = this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
       for (let i in controllerRoads) {
         if (i == 0) continue;
-        this.placeFlag(controllerRoads[i], 'road.controller', visible);
+        this.placeFlag(controllerRoads[i], 'road.controller', null);
       }
       placeContainer(controllerRoads, 'controller');
 
@@ -984,10 +990,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     }
 
     if (this.room.mineral) {
-      this.placeFlag(this.room.mineral.pos, 'extractor', visible);
+      this.placeFlag(this.room.mineral.pos, 'extractor');
       let mineralRoads = this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
       for (let i in mineralRoads) {
-        this.placeFlag(mineralRoads[i], 'road.mineral', visible);
+        this.placeFlag(mineralRoads[i], 'road.mineral', null);
       }
       placeContainer(mineralRoads, 'mineral');
 
@@ -999,7 +1005,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
       for (let i in this.room.sources) {
         let sourceRoads = this.scanAndAddRoad(this.room.sources[i].pos, centerEntrances, matrix, roads);
         for (let i in sourceRoads) {
-          this.placeFlag(sourceRoads[i], 'road.source', visible);
+          this.placeFlag(sourceRoads[i], 'road.source', null);
         }
         placeContainer(sourceRoads, 'source');
 
@@ -1013,7 +1019,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   }
 
   for (let i in roads) {
-    this.placeFlag(roads[i], 'road', visible);
+    this.placeFlag(roads[i], 'road', 1);
   }
 
   this.placeRoomCore();
@@ -1053,12 +1059,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     let towerRoads = this.scanAndAddRoad(info.pos, centerEntrances, matrix, roads);
     for (let i in towerRoads) {
       //if (i == 0) continue;
-      this.placeFlag(towerRoads[i], 'road', visible);
-      matrix.set(towerRoads[i].x, towerRoads[i].y, 1);
+      this.placeFlag(towerRoads[i], 'road', 1);
     }
 
-    this.placeFlag(new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName), 'tower', visible);
-    matrix.set(info.pos.x + 1, info.pos.y + 2, 255);
+    this.placeFlag(new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName), 'tower');
   }
 
   var end = Game.cpu.getUsed();
@@ -1070,26 +1074,17 @@ RoomPlanner.prototype.placeFlags = function (visible) {
  */
 RoomPlanner.prototype.placeRoomCore = function () {
   // Fill center cross with roads.
-  this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'road');
-  this.buildingMatrix.set(this.roomCenter.x - 1, this.roomCenter.y, 1);
-  this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'road');
-  this.buildingMatrix.set(this.roomCenter.x + 1, this.roomCenter.y, 1);
-  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'road');
-  this.buildingMatrix.set(this.roomCenter.x, this.roomCenter.y - 1, 1);
-  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'road');
-  this.buildingMatrix.set(this.roomCenter.x, this.roomCenter.y + 1, 1);
-  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y, this.roomName), 'road');
-  this.buildingMatrix.set(this.roomCenter.x, this.roomCenter.y, 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'road', 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'road', 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'road', 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'road', 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y, this.roomName), 'road', 1);
 
   // Mark center buildings for construction.
   this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y + 1, this.roomName), 'storage');
-  this.buildingMatrix.set(this.roomCenter.x - 1, this.roomCenter.y + 1, 255);
   this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'terminal');
-  this.buildingMatrix.set(this.roomCenter.x - 1, this.roomCenter.y - 1, 255);
   this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab');
-  this.buildingMatrix.set(this.roomCenter.x + 1, this.roomCenter.y + 1, 255);
   this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link');
-  this.buildingMatrix.set(this.roomCenter.x + 1, this.roomCenter.y - 1, 255);
 };
 
 /**
@@ -1106,8 +1101,7 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
   else {
     nextPos.createFlag(flagKey);
   }
-  this.placeFlag(nextPos, 'road');
-  this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
+  this.placeFlag(nextPos, 'road', 255);
 
   this.placeAccessRoad(nextPos);
 
@@ -1139,8 +1133,7 @@ RoomPlanner.prototype.placeBays = function () {
     this.placeAccessRoad(nextPos);
 
     // Make sure there is a road in the center of the bay.
-    this.placeFlag(nextPos, 'road');
-    this.buildingMatrix.set(nextPos.x, nextPos.y, 1);
+    this.placeFlag(nextPos, 'road', 1);
 
     // Fill other unused spots with extensions.
     for (let dx = -1; dx <= 1; dx++) {
@@ -1148,7 +1141,6 @@ RoomPlanner.prototype.placeBays = function () {
         if (!this.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) continue;
 
         this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension');
-        this.buildingMatrix.set(nextPos.x + dx, nextPos.y + dy, 255);
       }
     }
 
@@ -1202,19 +1194,13 @@ RoomPlanner.prototype.placeLabs = function () {
     if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 2)) continue;
 
     // Place center area.
-    this.buildingMatrix.set(nextPos.x - 1, nextPos.y, 255);
     this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab');
-    this.buildingMatrix.set(nextPos.x, nextPos.y, 1); // Road.
-    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road');
+    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', 1);
 
-    this.buildingMatrix.set(nextPos.x + 1, nextPos.y, 255);
     this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab');
-    this.buildingMatrix.set(nextPos.x - 1, nextPos.y + 1, 255);
     this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab');
-    this.buildingMatrix.set(nextPos.x, nextPos.y + 1, 1); // Road.
-    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road');
+    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', 1);
 
-    this.buildingMatrix.set(nextPos.x + 1, nextPos.y + 1, 255);
     this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab');
 
     this.placeAccessRoad(nextPos);
@@ -1223,7 +1209,6 @@ RoomPlanner.prototype.placeLabs = function () {
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 2; dy += 3) {
         if (this.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) {
-          this.buildingMatrix.set(nextPos.x + dx, nextPos.y + dy, 255);
           this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab');
         }
       }
@@ -1243,7 +1228,6 @@ RoomPlanner.prototype.placeAll = function (structureType, addRoad) {
     if (!nextPos) break;
 
     this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), structureType);
-    this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
     this.filterOpenList(utilities.encodePosition(nextPos));
 
     if (addRoad) this.placeAccessRoad(nextPos);
@@ -1257,8 +1241,7 @@ RoomPlanner.prototype.placeAccessRoad = function (position) {
   // Plan road out of labs.
   let accessRoads = this.scanAndAddRoad(position, this.roomCenterEntrances, this.buildingMatrix, this.roads);
   for (let i in accessRoads) {
-    this.placeFlag(accessRoads[i], 'road');
-    this.buildingMatrix.set(accessRoads[i].x, accessRoads[i].y, 1);
+    this.placeFlag(accessRoads[i], 'road', 1);
   }
 };
 
