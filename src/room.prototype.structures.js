@@ -54,7 +54,6 @@ Room.prototype.generateLinkNetwork = function () {
 
 Room.prototype.addStructureReference = function (structureType) {
   if (!this.controller) return;
-  if (CONTROLLER_STRUCTURES[structureType][this.controller.level] == 0) return;
 
   if (!this.memory.structureCache) {
     this.memory.structureCache = {};
@@ -65,6 +64,8 @@ Room.prototype.addStructureReference = function (structureType) {
     cache[structureType] = {
       lastCheck: Game.time,
     };
+
+    if (CONTROLLER_STRUCTURES[structureType][this.controller.level] == 0) return;
 
     // @todo Cache filtered find requests in room.
     let structures = this.find(FIND_STRUCTURES, {filter: {structureType: structureType}});

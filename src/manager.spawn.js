@@ -57,14 +57,15 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 
     var enoughEnergy = true;
     var minCost = this.room.energyCapacityAvailable * 0.9;
+    let energyAvailable = Math.min(this.room.energyAvailable, this.room.energyCapacityAvailable);
     if (options.minCost) {
         minCost = options.minCost;
     }
-    if (this.room.energyAvailable < minCost) {
+    if (energyAvailable < minCost) {
         enoughEnergy = false;
     }
 
-    var maxCost = Math.max(minCost, this.room.energyAvailable);
+    var maxCost = Math.max(minCost, energyAvailable);
     if (!options.body) {
         if (!options.bodyWeights) {
             throw "No body definition for creep found.";
@@ -96,7 +97,7 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
         maxCost = Math.min(maxCost, maxPartsCost);
     }
 
-    if (this.room.energyAvailable >= maxCost) {
+    if (energyAvailable >= maxCost) {
         enoughEnergy = true;
     }
 
@@ -175,6 +176,7 @@ Room.prototype.manageSpawnsPriority = function () {
     var allSpawning = true;
     var activeSpawn;
     for (let i in roomSpawns) {
+        if (!roomSpawns[i].isActive()) continue;
         if (!roomSpawns[i].spawning) {
             allSpawning = false;
             activeSpawn = roomSpawns[i];
@@ -734,7 +736,7 @@ Room.prototype.manageSpawns = function () {
     var minerals = room.find(FIND_MINERALS, {
         filter: (mineral) => {
             var extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
-                filter: (structure) => structure.structureType == STRUCTURE_EXTRACTOR && structure.pos.x == mineral.pos.x && structure.pos.y == mineral.pos.y
+                filter: (structure) => structure.structureType == STRUCTURE_EXTRACTOR && structure.pos.x == mineral.pos.x && structure.pos.y == mineral.pos.y && structure.isActive()
             });
 
             if (extractors.length > 0) {

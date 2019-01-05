@@ -48,7 +48,7 @@ Room.prototype.scan = function () {
     room.memory.canPerformReactions = false;
 
     var labs = room.find(FIND_STRUCTURES, {
-      filter: (structure) => structure.structureType == STRUCTURE_LAB
+      filter: (structure) => structure.structureType == STRUCTURE_LAB && structure.isActive()
     });
     if (labs.length >= 3) {
       // Find best 2 source labs for other labs to perform reactions.
