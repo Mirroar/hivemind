@@ -1016,27 +1016,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     this.placeFlag(roads[i], 'road', visible);
   }
 
-  // Fill center cross with roads.
-  this.placeFlag(new RoomPosition(roomCenter.x - 1, roomCenter.y, this.roomName), 'road', visible);
-  matrix.set(roomCenter.x - 1, roomCenter.y, 1);
-  this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y, this.roomName), 'road', visible);
-  matrix.set(roomCenter.x + 1, roomCenter.y, 1);
-  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y - 1, this.roomName), 'road', visible);
-  matrix.set(roomCenter.x, roomCenter.y - 1, 1);
-  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y + 1, this.roomName), 'road', visible);
-  matrix.set(roomCenter.x, roomCenter.y + 1, 1);
-  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y, this.roomName), 'road', visible);
-  matrix.set(roomCenter.x, roomCenter.y, 1);
-
-  // Mark center buildings for construction.
-  this.placeFlag(new RoomPosition(roomCenter.x - 1, roomCenter.y + 1, this.roomName), 'storage', visible);
-  matrix.set(roomCenter.x - 1, roomCenter.y + 1, 255);
-  this.placeFlag(new RoomPosition(roomCenter.x - 1, roomCenter.y - 1, this.roomName), 'terminal', visible);
-  matrix.set(roomCenter.x - 1, roomCenter.y - 1, 255);
-  this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y + 1, this.roomName), 'lab', visible);
-  matrix.set(roomCenter.x + 1, roomCenter.y + 1, 255);
-  this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y - 1, this.roomName), 'link', visible);
-  matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
+  this.placeRoomCore();
 
   this.startBuildingPlacement();
   this.placeAll('spawn', true);
@@ -1049,7 +1029,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   // Determine where towers should be.
   let positions = this.findTowerPositions(exits, matrix);
-  while (_.size(this.memory.locations.tower) < CONTROLLER_STRUCTURES.tower[MAX_ROOM_LEVEL]) {
+  while (this.canPlaceMore('tower')) {
     let info = null;
     let bestDir = null;
     for (let dir in positions) {
@@ -1083,6 +1063,33 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
+};
+
+/**
+ * Places structures that are fixed to the room's center.
+ */
+RoomPlanner.prototype.placeRoomCore = function () {
+  // Fill center cross with roads.
+  this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'road');
+  this.buildingMatrix.set(this.roomCenter.x - 1, this.roomCenter.y, 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'road');
+  this.buildingMatrix.set(this.roomCenter.x + 1, this.roomCenter.y, 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'road');
+  this.buildingMatrix.set(this.roomCenter.x, this.roomCenter.y - 1, 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'road');
+  this.buildingMatrix.set(this.roomCenter.x, this.roomCenter.y + 1, 1);
+  this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y, this.roomName), 'road');
+  this.buildingMatrix.set(this.roomCenter.x, this.roomCenter.y, 1);
+
+  // Mark center buildings for construction.
+  this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y + 1, this.roomName), 'storage');
+  this.buildingMatrix.set(this.roomCenter.x - 1, this.roomCenter.y + 1, 255);
+  this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'terminal');
+  this.buildingMatrix.set(this.roomCenter.x - 1, this.roomCenter.y - 1, 255);
+  this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab');
+  this.buildingMatrix.set(this.roomCenter.x + 1, this.roomCenter.y + 1, 255);
+  this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link');
+  this.buildingMatrix.set(this.roomCenter.x + 1, this.roomCenter.y - 1, 255);
 };
 
 /**
