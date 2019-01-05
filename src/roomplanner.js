@@ -1037,8 +1037,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   matrix.set(roomCenter.x + 1, roomCenter.y + 1, 255);
   this.placeFlag(new RoomPosition(roomCenter.x + 1, roomCenter.y - 1, this.roomName), 'link', visible);
   matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
-  this.placeFlag(new RoomPosition(roomCenter.x, roomCenter.y, this.roomName), 'nuker', visible);
-  matrix.set(roomCenter.x, roomCenter.y, 255);
 
   this.startBuildingPlacement();
   this.placeSpawns();
@@ -1271,6 +1269,22 @@ RoomPlanner.prototype.placeObserver = function () {
     this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'observer');
     this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
     this.filterOpenList(utilities.encodePosition(nextPos));
+  }
+};
+
+/**
+ * Place nuker in closest available positions.
+ */
+RoomPlanner.prototype.placeNuker = function () {
+  while (this.canPlaceMore('nuker')) {
+    let nextPos = this.getNextAvailableBuildSpot();
+    if (!nextPos) break;
+
+    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'nuker');
+    this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
+    this.filterOpenList(utilities.encodePosition(nextPos));
+
+    this.placeAccessRoad(nextPos);
   }
 };
 
