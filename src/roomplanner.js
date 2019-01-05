@@ -415,7 +415,10 @@ RoomPlanner.prototype.cleanRoom = function (roomStructures) {
   var roomWalls = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_WALL);
   for (let i = 0; i < roomWalls.length; i++) {
     let wall = roomWalls[i];
-    if (!this.memory.locations.wall || !this.memory.locations.wall[utilities.encodePosition(wall.pos)]) {
+    if (this.memory.locations.road[utilities.encodePosition(wall.pos)]
+      || this.memory.locations.spawn[utilities.encodePosition(wall.pos)]
+      || this.memory.locations.storage[utilities.encodePosition(wall.pos)]
+      || this.memory.locations.extension[utilities.encodePosition(wall.pos)]) {
       wall.destroy();
     }
   }
