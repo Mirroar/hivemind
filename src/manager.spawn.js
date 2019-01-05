@@ -1494,25 +1494,6 @@ StructureSpawn.prototype.spawnMineralHarvester = function (source) {
 /**
  * Spawns a new repairer.
  */
-/*StructureSpawn.prototype.spawnRepairer = function (size) {
-    var maxParts = {work: 5};
-    if (size) {
-        maxParts.work = size;
-    }
-
-    return this.createManagedCreep({
-        role: 'repairer',
-        bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
-        maxParts: maxParts,
-        memory: {
-            singleRoom: this.pos.roomName,
-        },
-    });
-};//*/
-
-/**
- * Spawns a new repairer.
- */
 StructureSpawn.prototype.spawnBuilder = function (size) {
     var maxParts = {};
     if (size) {
