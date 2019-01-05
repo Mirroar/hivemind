@@ -1039,12 +1039,13 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   matrix.set(roomCenter.x + 1, roomCenter.y - 1, 255);
 
   this.startBuildingPlacement();
-  this.placeSpawns();
+  this.placeAll('spawn', true);
   this.placeHelperParkingLot();
   this.placeBays();
   this.placeLabs();
-  this.placePowerSpawn();
-  this.placeObserver();
+  this.placeAll('powerSpawn', true);
+  this.placeAll('nuker', true);
+  this.placeAll('observer', false);
 
   // Determine where towers should be.
   let positions = this.findTowerPositions(exits, matrix);
@@ -1082,22 +1083,6 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
-};
-
-/**
- * Place spawns in closest available positions.
- */
-RoomPlanner.prototype.placeSpawns = function () {
-  while (this.canPlaceMore('spawn')) {
-    let nextPos = this.getNextAvailableBuildSpot();
-    if (!nextPos) break;
-
-    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'spawn');
-    this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
-    this.filterOpenList(utilities.encodePosition(nextPos));
-
-    this.placeAccessRoad(nextPos);
-  }
 };
 
 /**
@@ -1243,48 +1228,18 @@ RoomPlanner.prototype.placeLabs = function () {
 };
 
 /**
- * Place power spawn in closest available positions.
+ * Places all remaining structures of a given type.
  */
-RoomPlanner.prototype.placePowerSpawn = function () {
-  while (this.canPlaceMore('powerSpawn')) {
+RoomPlanner.prototype.placeAll = function (structureType, addRoad) {
+  while (this.canPlaceMore(structureType)) {
     let nextPos = this.getNextAvailableBuildSpot();
     if (!nextPos) break;
 
-    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'powerSpawn');
+    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), structureType);
     this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
     this.filterOpenList(utilities.encodePosition(nextPos));
 
-    this.placeAccessRoad(nextPos);
-  }
-};
-
-/**
- * Place observer in closest available positions.
- */
-RoomPlanner.prototype.placeObserver = function () {
-  while (this.canPlaceMore('observer')) {
-    let nextPos = this.getNextAvailableBuildSpot();
-    if (!nextPos) break;
-
-    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'observer');
-    this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
-    this.filterOpenList(utilities.encodePosition(nextPos));
-  }
-};
-
-/**
- * Place nuker in closest available positions.
- */
-RoomPlanner.prototype.placeNuker = function () {
-  while (this.canPlaceMore('nuker')) {
-    let nextPos = this.getNextAvailableBuildSpot();
-    if (!nextPos) break;
-
-    this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), 'nuker');
-    this.buildingMatrix.set(nextPos.x, nextPos.y, 255);
-    this.filterOpenList(utilities.encodePosition(nextPos));
-
-    this.placeAccessRoad(nextPos);
+    if (addRoad) this.placeAccessRoad(nextPos);
   }
 };
 
@@ -1298,7 +1253,7 @@ RoomPlanner.prototype.placeAccessRoad = function (position) {
     this.placeFlag(accessRoads[i], 'road');
     this.buildingMatrix.set(accessRoads[i].x, accessRoads[i].y, 1);
   }
-}
+};
 
 /**
  * Initializes pathfinding for finding building placement spots.
