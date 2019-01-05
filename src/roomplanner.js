@@ -119,6 +119,7 @@ RoomPlanner.prototype.runLogic = function () {
   delete this.memory.exitDistanceMatrix;
 
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
+  this.roomConstructionSites = roomConstructionSites;
   var roomStructures = this.room.find(FIND_STRUCTURES);
   this.newStructures = 0;
   let doneBuilding = true;
@@ -126,14 +127,7 @@ RoomPlanner.prototype.runLogic = function () {
   this.cleanRoom(roomStructures);
 
   // Build road to sources asap to make getting energy easier.
-  for (let posName in this.memory.locations['road.source'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
+  if (this.tryBuildAll('road.source', STRUCTURE_ROAD)) return;
 
   // Make sure all current spawns have been built.
   var roomSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_SPAWN);
@@ -178,47 +172,19 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
   else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
-    for (let posName in this.memory.locations.spawn || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_SPAWN, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('spawn', STRUCTURE_SPAWN)) return;
   }
 
   // Build road to controller for easier upgrading.
-  for (let posName in this.memory.locations['road.controller'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
+  if (this.tryBuildAll('road.controller', STRUCTURE_ROAD)) return;
 
   if (this.room.controller.level < 2) return;
 
   // At level 2, we can start building containers at sources.
-  for (let posName in this.memory.locations['container.source'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
+  if (this.tryBuildAll('container.source', STRUCTURE_CONTAINER)) return;
 
   // Next priority is a container at the controller.
-  for (let posName in this.memory.locations['container.controller'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
+  if (this.tryBuildAll('container.controller', STRUCTURE_CONTAINER)) return;
 
   // Make sure containers are built in the right place, remove otherwise.
   var roomContainers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_CONTAINER);
@@ -248,14 +214,7 @@ RoomPlanner.prototype.runLogic = function () {
 
   // Make sure all current towers have been built.
   if (roomTowers.length + roomTowerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
-    for (let posName in this.memory.locations.tower || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_TOWER, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('tower', STRUCTURE_TOWER)) return;
   }
 
   // Make sure extensions are built in the right place, remove otherwise.
@@ -273,38 +232,17 @@ RoomPlanner.prototype.runLogic = function () {
 
   // Make sure all current extensions have been built.
   if (roomExtensions.length + roomExtensionSites.length < CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][this.room.controller.level]) {
-    for (let posName in this.memory.locations.extension || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_EXTENSION, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('extension', STRUCTURE_EXTENSION)) return;
   }
 
   // Build storage ASAP.
   if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0) {
-    for (let posName in this.memory.locations['storage'] || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_STORAGE, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('storage', STRUCTURE_STORAGE)) return;
   }
 
   // Also build terminal when available.
   if (CONTROLLER_STRUCTURES[STRUCTURE_TERMINAL][this.room.controller.level] > 0) {
-    for (let posName in this.memory.locations['terminal'] || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_TERMINAL, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('terminal', STRUCTURE_TERMINAL)) return;
   }
 
   // Make sure links are built in the right place, remove otherwise.
@@ -324,46 +262,19 @@ RoomPlanner.prototype.runLogic = function () {
 
   // Make sure all current links have been built.
   if (roomLinks.length + roomLinkSites.length < CONTROLLER_STRUCTURES[STRUCTURE_LINK][this.room.controller.level]) {
-    for (let posName in this.memory.locations.link || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_LINK, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('link', STRUCTURE_LINK)) return;
   }
 
   // Build extractor and related container if available.
   if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
-    for (let posName in this.memory.locations['extractor'] || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_EXTRACTOR, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    for (let posName in this.memory.locations['container.mineral'] || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('extractor', STRUCTURE_EXTRACTOR)) return;
+    if (this.tryBuildAll('container.mineral', STRUCTURE_CONTAINER)) return;
   }
 
   if (this.room.controller.level < 3) return;
 
   // At level 3, we can build all remaining roads.
-  for (let posName in this.memory.locations['road'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
+  if (this.tryBuildAll('road', STRUCTURE_ROAD)) return;
 
   if (this.room.controller.level < 4) return;
 
@@ -464,48 +375,28 @@ RoomPlanner.prototype.runLogic = function () {
       }
     }
     if (!doneBuilding) return;
+    if (this.tryBuildAll('lab', STRUCTURE_LAB)) return;
   }
 
   // Make sure all current nukers have been built.
   var roomNukers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_NUKER);
   var roomNukerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_NUKER);
   if (roomNukers.length + roomNukerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_NUKER][this.room.controller.level]) {
-    for (let posName in this.memory.locations.nuker || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_NUKER, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('nuker', STRUCTURE_NUKER)) return;
   }
 
   // Make sure all current power spawns have been built.
   var roomPSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_POWER_SPAWN);
   var roomPSpawnSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_POWER_SPAWN);
   if (roomPSpawns.length + roomPSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][this.room.controller.level]) {
-    for (let posName in this.memory.locations.powerSpawn || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_POWER_SPAWN, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
   }
 
   // Make sure all current observers have been built.
   var roomObservers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_OBSERVER);
   var roomObserverSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_OBSERVER);
   if (roomObservers.length + roomObserverSites.length < CONTROLLER_STRUCTURES[STRUCTURE_OBSERVER][this.room.controller.level]) {
-    for (let posName in this.memory.locations.observer || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_OBSERVER, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
+    if (this.tryBuildAll('observer', STRUCTURE_OBSERVER)) return;
   }
 
 };
@@ -534,6 +425,22 @@ RoomPlanner.prototype.cleanRoom = function (roomStructures) {
   for (let i = 0; i < hostileStructures.length; i++) {
     hostileStructures[i].destroy();
   }
+};
+
+/**
+ * Try placing construction sites of the given type at all locations.
+ */
+RoomPlanner.prototype.tryBuildAll = function (locationType, structureType) {
+  let isBuilding = false;
+  for (let posName in this.memory.locations[locationType] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, structureType, roomConstructionSites)) {
+      isBuilding = true;
+    }
+  }
+
+  return isBuilding;
 };
 
 /**
