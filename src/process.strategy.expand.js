@@ -44,7 +44,7 @@ ExpandProcess.prototype.run = function () {
       if (!info.expansionScore || info.expansionScore <= 0) continue;
 
       // Don't try to expand to a room that can't be reached safely.
-      if (!Game.rooms[info.origin] || !Game.rooms[origin].calculateRoomPath(info.roomName)) continue;
+      if (!Game.rooms[info.origin] || !Game.rooms[info.origin].calculateRoomPath(info.roomName)) continue;
 
       if (!bestTarget || bestTarget.expansionScore < info.expansionScore) {
         bestTarget = info;
