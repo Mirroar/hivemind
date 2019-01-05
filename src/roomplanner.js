@@ -114,7 +114,7 @@ RoomPlanner.prototype.runLogic = function () {
   if (Game.time % 100 != 3 && !this.memory.runNextTick) return;
   delete this.memory.runNextTick;
 
-  // Prune old planning cost matrixes. They will be regenerated if needed
+  // Prune old planning cost matrixes. They will be regenerated if needed.
   delete this.memory.wallDistanceMatrix;
   delete this.memory.exitDistanceMatrix;
 
@@ -188,10 +188,30 @@ RoomPlanner.prototype.runLogic = function () {
     if (!doneBuilding) return;
   }
 
+  // Build road to controller for easier upgrading.
+  for (let posName in this.memory.locations['road.controller'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
   if (this.room.controller.level < 2) return;
 
   // At level 2, we can start building containers at sources.
   for (let posName in this.memory.locations['container.source'] || []) {
+    let pos = utilities.decodePosition(posName);
+
+    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
+      doneBuilding = false;
+    }
+  }
+  if (!doneBuilding) return;
+
+  // Next priority is a container at the controller.
+  for (let posName in this.memory.locations['container.controller'] || []) {
     let pos = utilities.decodePosition(posName);
 
     if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
@@ -332,25 +352,6 @@ RoomPlanner.prototype.runLogic = function () {
     }
     if (!doneBuilding) return;
   }
-
-  // Next priority is a container and road at the controller.
-  for (let posName in this.memory.locations['container.controller'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_CONTAINER, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
-
-  for (let posName in this.memory.locations['road.controller'] || []) {
-    let pos = utilities.decodePosition(posName);
-
-    if (!this.tryBuild(pos, STRUCTURE_ROAD, roomConstructionSites)) {
-      doneBuilding = false;
-    }
-  }
-  if (!doneBuilding) return;
 
   if (this.room.controller.level < 3) return;
 
