@@ -55,7 +55,7 @@ RoomPlanner.prototype.drawDebug = function () {
 /**
  * Tries to place a construction site.
  */
-RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionSites) {
+RoomPlanner.prototype.tryBuild = function (pos, structureType) {
   // Check if there's a structure here already.
   let structures = pos.lookFor(LOOK_STRUCTURES);
   for (let i in structures) {
@@ -74,14 +74,15 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType, roomConstructionS
     }
   }
 
-  if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
+  if (this.newStructures + this.roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
     if (pos.createConstructionSite(structureType) == OK) {
       this.newStructures++;
       // Structure is being built, wait until finished.
       return false;
     }
 
-    // Some other structure is blocking. Building logic should continue for now so it might be moved.
+    // Some other structure is blocking or we can't build more of this structure.
+    // Building logic should continue for now.
     return true;
   }
 
@@ -123,18 +124,21 @@ RoomPlanner.prototype.runLogic = function () {
 
   var roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
   this.roomConstructionSites = roomConstructionSites;
+  this.constructionSitesByType = _.groupBy(roomConstructionSites, 'structureType');
   var roomStructures = this.room.find(FIND_STRUCTURES);
+  this.roomStructures = roomStructures;
+  this.structuresByType = _.groupBy(roomStructures, 'structureType');
   this.newStructures = 0;
   let doneBuilding = true;
 
-  this.cleanRoom(roomStructures);
+  this.cleanRoom();
 
   // Build road to sources asap to make getting energy easier.
   if (this.tryBuildAll('road.source', STRUCTURE_ROAD)) return;
 
   // Make sure all current spawns have been built.
-  var roomSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_SPAWN);
-  var roomSpawnSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_SPAWN);
+  var roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
+  var roomSpawnSites =  this.constructionSitesByType[STRUCTURE_SPAWN] || [];
 
   // Make sure spawns are built in the right place, remove otherwise.
   delete this.memory.hasMisplacedSpawn;
@@ -183,90 +187,28 @@ RoomPlanner.prototype.runLogic = function () {
 
   if (this.room.controller.level < 2) return;
 
-  // At level 2, we can start building containers at sources.
+  // At level 2, we can start building containers at sources and controller.
+  this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
   if (this.tryBuildAll('container.source', STRUCTURE_CONTAINER)) return;
-
-  // Next priority is a container at the controller.
   if (this.tryBuildAll('container.controller', STRUCTURE_CONTAINER)) return;
 
-  // Make sure containers are built in the right place, remove otherwise.
-  var roomContainers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_CONTAINER);
-  if (this.memory.locations.container) {
-    for (let i = 0; i < roomContainers.length; i++) {
-      let container = roomContainers[i];
-      if (!this.memory.locations.container[utilities.encodePosition(container.pos)]) {
-        container.destroy();
-      }
-    }
-  }
-
   // Make sure towers are built in the right place, remove otherwise.
-  var roomTowers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_TOWER);
-  var roomTowerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_TOWER);
-  if (this.memory.locations.tower) {
-    for (let i = 0; i < roomTowers.length; i++) {
-      let tower = roomTowers[i];
-      if (!this.memory.locations.tower[utilities.encodePosition(tower.pos)] && roomTowers.length == CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
-        tower.destroy();
-
-        // Only kill of one tower for each call of runLogic.
-        break;
-      }
-    }
-  }
-
-  // Make sure all current towers have been built.
-  if (roomTowers.length + roomTowerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]) {
-    if (this.tryBuildAll('tower', STRUCTURE_TOWER)) return;
-  }
+  this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
+  if (this.tryBuildAll('tower', STRUCTURE_TOWER)) return;
 
   // Make sure extensions are built in the right place, remove otherwise.
-  var roomExtensions = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_EXTENSION);
-  var roomExtensionSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_EXTENSION);
-  for (let i = 0; i < roomExtensions.length; i++) {
-    let extension = roomExtensions[i];
-    if (!this.memory.locations.extension[utilities.encodePosition(extension.pos)] && roomExtensions.length > CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][this.room.controller.level] - 5) {
-      extension.destroy();
-
-      // Only kill of one extension for each call of runLogic, it takes a while to rebuild anyway.
-      break;
-    }
-  }
-
-  // Make sure all current extensions have been built.
-  if (roomExtensions.length + roomExtensionSites.length < CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][this.room.controller.level]) {
-    if (this.tryBuildAll('extension', STRUCTURE_EXTENSION)) return;
-  }
+  this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
+  if (this.tryBuildAll('extension', STRUCTURE_EXTENSION)) return;
 
   // Build storage ASAP.
-  if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0) {
-    if (this.tryBuildAll('storage', STRUCTURE_STORAGE)) return;
-  }
+  if (this.tryBuildAll('storage', STRUCTURE_STORAGE)) return;
 
   // Also build terminal when available.
-  if (CONTROLLER_STRUCTURES[STRUCTURE_TERMINAL][this.room.controller.level] > 0) {
-    if (this.tryBuildAll('terminal', STRUCTURE_TERMINAL)) return;
-  }
+  if (this.tryBuildAll('terminal', STRUCTURE_TERMINAL)) return;
 
   // Make sure links are built in the right place, remove otherwise.
-  var roomLinks = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_LINK);
-  var roomLinkSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_LINK);
-  if (this.memory.locations.link) {
-    for (let i = 0; i < roomLinks.length; i++) {
-      let link = roomLinks[i];
-      if (!this.memory.locations.link[utilities.encodePosition(link.pos)]) {
-        link.destroy();
-
-        // Only kill of one link for each call of runLogic.
-        break;
-      }
-    }
-  }
-
-  // Make sure all current links have been built.
-  if (roomLinks.length + roomLinkSites.length < CONTROLLER_STRUCTURES[STRUCTURE_LINK][this.room.controller.level]) {
-    if (this.tryBuildAll('link', STRUCTURE_LINK)) return;
-  }
+  this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
+  if (this.tryBuildAll('link', STRUCTURE_LINK)) return;
 
   // Build extractor and related container if available.
   if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
@@ -356,57 +298,25 @@ RoomPlanner.prototype.runLogic = function () {
   }
 
   // Make sure labs are built in the right place, remove otherwise.
-  var roomLabs = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_LAB);
-  var roomLabSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_LAB);
-  for (let i = 0; i < roomLabs.length; i++) {
-    let lab = roomLabs[i];
-    if (!this.memory.locations.lab[utilities.encodePosition(lab.pos)] && roomLabs.length == CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]) {
-      lab.destroy();
-
-      // Only kill of one lab at a time to rebuild.
-      break;
-    }
-  }
-
-  // Make sure all current labs have been built.
-  if (roomLabs.length + roomLabSites.length < CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level]) {
-    for (let posName in this.memory.locations.lab || []) {
-      let pos = utilities.decodePosition(posName);
-
-      if (!this.tryBuild(pos, STRUCTURE_LAB, roomConstructionSites)) {
-        doneBuilding = false;
-      }
-    }
-    if (!doneBuilding) return;
-    if (this.tryBuildAll('lab', STRUCTURE_LAB)) return;
-  }
+  this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
+  if (this.tryBuildAll('lab', STRUCTURE_LAB)) return;
 
   // Make sure all current nukers have been built.
-  var roomNukers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_NUKER);
-  var roomNukerSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_NUKER);
-  if (roomNukers.length + roomNukerSites.length < CONTROLLER_STRUCTURES[STRUCTURE_NUKER][this.room.controller.level]) {
-    if (this.tryBuildAll('nuker', STRUCTURE_NUKER)) return;
-  }
+  if (this.tryBuildAll('nuker', STRUCTURE_NUKER)) return;
 
   // Make sure all current power spawns have been built.
-  var roomPSpawns = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_POWER_SPAWN);
-  var roomPSpawnSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_POWER_SPAWN);
-  if (roomPSpawns.length + roomPSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][this.room.controller.level]) {
-    if (this.tryBuildAll('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
-  }
+  if (this.tryBuildAll('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
 
   // Make sure all current observers have been built.
-  var roomObservers = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_OBSERVER);
-  var roomObserverSites = _.filter(roomConstructionSites, (site) => site.structureType == STRUCTURE_OBSERVER);
-  if (roomObservers.length + roomObserverSites.length < CONTROLLER_STRUCTURES[STRUCTURE_OBSERVER][this.room.controller.level]) {
-    if (this.tryBuildAll('observer', STRUCTURE_OBSERVER)) return;
-  }
-
+  if (this.tryBuildAll('observer', STRUCTURE_OBSERVER)) return;
 };
 
-RoomPlanner.prototype.cleanRoom = function (roomStructures) {
+/**
+ * Removes structures that might prevent the room's construction.
+ */
+RoomPlanner.prototype.cleanRoom = function () {
   // Remove all roads not part of current room plan.
-  var roomRoads = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_ROAD);
+  var roomRoads =  this.structuresByType[STRUCTURE_ROAD] || [];;
   for (let i = 0; i < roomRoads.length; i++) {
     let road = roomRoads[i];
     if (!this.memory.locations.road || !this.memory.locations.road[utilities.encodePosition(road.pos)]) {
@@ -415,7 +325,7 @@ RoomPlanner.prototype.cleanRoom = function (roomStructures) {
   }
 
   // Remove unwanted walls.
-  var roomWalls = _.filter(roomStructures, (structure) => structure.structureType == STRUCTURE_WALL);
+  var roomWalls =  this.structuresByType[STRUCTURE_WALL] || [];;
   for (let i = 0; i < roomWalls.length; i++) {
     let wall = roomWalls[i];
     if (this.memory.locations.road[utilities.encodePosition(wall.pos)]
@@ -441,7 +351,7 @@ RoomPlanner.prototype.tryBuildAll = function (locationType, structureType) {
   for (let posName in this.memory.locations[locationType] || []) {
     let pos = utilities.decodePosition(posName);
 
-    if (!this.tryBuild(pos, structureType, roomConstructionSites)) {
+    if (!this.tryBuild(pos, structureType)) {
       isBuilding = true;
     }
   }
@@ -450,13 +360,37 @@ RoomPlanner.prototype.tryBuildAll = function (locationType, structureType) {
 };
 
 /**
+ * Remove structures that are not part of the current building plan.
+ */
+RoomPlanner.prototype.removeUnplannedStructures = function (locationType, structureType, amount) {
+  let structures = this.structuresByType[structureType] || [];
+  let sites = this.constructionSitesByType[structureType] || [];
+
+  let limit = CONTROLLER_STRUCTURES[structureType][this.room.controller.level];
+  if (amount) {
+    limit = amount + structures.length + sites.length - limit;
+  }
+
+  let count = 0;
+  if (this.memory.locations[locationType]) {
+    for (let i = 0; i < structures.length; i++) {
+      let structure = structures[i];
+      if (!this.memory.locations[locationType][utilities.encodePosition(structure.pos)]) {
+        if (count < limit) {
+          structure.destroy();
+          count++;
+        }
+        else break;
+      }
+    }
+  }
+};
+
+/**
  * Decides whether a dismantler is needed in the current room.
  */
 RoomPlanner.prototype.needsDismantling = function () {
-  if (_.size(this.memory.dismantle) > 0) {
-    return true;
-  }
-  return false;
+  return _.size(this.memory.dismantle) > 0;
 };
 
 /**
