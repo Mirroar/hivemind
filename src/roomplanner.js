@@ -53,44 +53,6 @@ RoomPlanner.prototype.drawDebug = function () {
 };
 
 /**
- * Tries to place a construction site.
- */
-RoomPlanner.prototype.tryBuild = function (pos, structureType) {
-  // Check if there's a structure here already.
-  let structures = pos.lookFor(LOOK_STRUCTURES);
-  for (let i in structures) {
-    if (structures[i].structureType == structureType) {
-      // Structure is here, continue.
-      return true;
-    }
-  }
-
-  // Check if there's a construction site here already.
-  let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-  for (let i in sites) {
-    if (sites[i].structureType == structureType) {
-      // Structure is being built, wait until finished.
-      return false;
-    }
-  }
-
-  if (this.newStructures + this.roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
-    if (pos.createConstructionSite(structureType) == OK) {
-      this.newStructures++;
-      // Structure is being built, wait until finished.
-      return false;
-    }
-
-    // Some other structure is blocking or we can't build more of this structure.
-    // Building logic should continue for now.
-    return true;
-  }
-
-  // We can't build anymore in this room right now.
-  return false;
-};
-
-/**
  * Allows this room planner to give commands in controlled rooms.
  */
 RoomPlanner.prototype.runLogic = function () {
@@ -134,7 +96,7 @@ RoomPlanner.prototype.runLogic = function () {
   this.cleanRoom();
 
   // Build road to sources asap to make getting energy easier.
-  if (this.tryBuildAll('road.source', STRUCTURE_ROAD)) return;
+  if (this.buildPlannedStructures('road.source', STRUCTURE_ROAD)) return;
 
   // Make sure all current spawns have been built.
   var roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
@@ -179,47 +141,47 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
   else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
-    if (this.tryBuildAll('spawn', STRUCTURE_SPAWN)) return;
+    if (this.buildPlannedStructures('spawn', STRUCTURE_SPAWN)) return;
   }
 
   // Build road to controller for easier upgrading.
-  if (this.tryBuildAll('road.controller', STRUCTURE_ROAD)) return;
+  if (this.buildPlannedStructures('road.controller', STRUCTURE_ROAD)) return;
 
   if (this.room.controller.level < 2) return;
 
   // At level 2, we can start building containers at sources and controller.
   this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
-  if (this.tryBuildAll('container.source', STRUCTURE_CONTAINER)) return;
-  if (this.tryBuildAll('container.controller', STRUCTURE_CONTAINER)) return;
+  if (this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER)) return;
+  if (this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER)) return;
 
   // Make sure towers are built in the right place, remove otherwise.
   this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
-  if (this.tryBuildAll('tower', STRUCTURE_TOWER)) return;
+  if (this.buildPlannedStructures('tower', STRUCTURE_TOWER)) return;
 
   // Make sure extensions are built in the right place, remove otherwise.
   this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
-  if (this.tryBuildAll('extension', STRUCTURE_EXTENSION)) return;
+  if (this.buildPlannedStructures('extension', STRUCTURE_EXTENSION)) return;
 
   // Build storage ASAP.
-  if (this.tryBuildAll('storage', STRUCTURE_STORAGE)) return;
+  if (this.buildPlannedStructures('storage', STRUCTURE_STORAGE)) return;
 
   // Also build terminal when available.
-  if (this.tryBuildAll('terminal', STRUCTURE_TERMINAL)) return;
+  if (this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL)) return;
 
   // Make sure links are built in the right place, remove otherwise.
   this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
-  if (this.tryBuildAll('link', STRUCTURE_LINK)) return;
+  if (this.buildPlannedStructures('link', STRUCTURE_LINK)) return;
 
   // Build extractor and related container if available.
   if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
-    if (this.tryBuildAll('extractor', STRUCTURE_EXTRACTOR)) return;
-    if (this.tryBuildAll('container.mineral', STRUCTURE_CONTAINER)) return;
+    if (this.buildPlannedStructures('extractor', STRUCTURE_EXTRACTOR)) return;
+    if (this.buildPlannedStructures('container.mineral', STRUCTURE_CONTAINER)) return;
   }
 
   if (this.room.controller.level < 3) return;
 
   // At level 3, we can build all remaining roads.
-  if (this.tryBuildAll('road', STRUCTURE_ROAD)) return;
+  if (this.buildPlannedStructures('road', STRUCTURE_ROAD)) return;
 
   if (this.room.controller.level < 4) return;
 
@@ -299,16 +261,16 @@ RoomPlanner.prototype.runLogic = function () {
 
   // Make sure labs are built in the right place, remove otherwise.
   this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
-  if (this.tryBuildAll('lab', STRUCTURE_LAB)) return;
+  if (this.buildPlannedStructures('lab', STRUCTURE_LAB)) return;
 
   // Make sure all current nukers have been built.
-  if (this.tryBuildAll('nuker', STRUCTURE_NUKER)) return;
+  if (this.buildPlannedStructures('nuker', STRUCTURE_NUKER)) return;
 
   // Make sure all current power spawns have been built.
-  if (this.tryBuildAll('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
+  if (this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
 
   // Make sure all current observers have been built.
-  if (this.tryBuildAll('observer', STRUCTURE_OBSERVER)) return;
+  if (this.buildPlannedStructures('observer', STRUCTURE_OBSERVER)) return;
 };
 
 /**
@@ -346,7 +308,7 @@ RoomPlanner.prototype.cleanRoom = function () {
 /**
  * Try placing construction sites of the given type at all locations.
  */
-RoomPlanner.prototype.tryBuildAll = function (locationType, structureType) {
+RoomPlanner.prototype.buildPlannedStructures = function (locationType, structureType) {
   let isBuilding = false;
   for (let posName in this.memory.locations[locationType] || []) {
     let pos = utilities.decodePosition(posName);
@@ -357,6 +319,44 @@ RoomPlanner.prototype.tryBuildAll = function (locationType, structureType) {
   }
 
   return isBuilding;
+};
+
+/**
+ * Tries to place a construction site.
+ */
+RoomPlanner.prototype.tryBuild = function (pos, structureType) {
+  // Check if there's a structure here already.
+  let structures = pos.lookFor(LOOK_STRUCTURES);
+  for (let i in structures) {
+    if (structures[i].structureType == structureType) {
+      // Structure is here, continue.
+      return true;
+    }
+  }
+
+  // Check if there's a construction site here already.
+  let sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+  for (let i in sites) {
+    if (sites[i].structureType == structureType) {
+      // Structure is being built, wait until finished.
+      return false;
+    }
+  }
+
+  if (this.newStructures + this.roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
+    if (pos.createConstructionSite(structureType) == OK) {
+      this.newStructures++;
+      // Structure is being built, wait until finished.
+      return false;
+    }
+
+    // Some other structure is blocking or we can't build more of this structure.
+    // Building logic should continue for now.
+    return true;
+  }
+
+  // We can't build anymore in this room right now.
+  return false;
 };
 
 /**
