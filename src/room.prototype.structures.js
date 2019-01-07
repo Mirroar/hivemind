@@ -7,9 +7,7 @@ var LinkNetwork = require('link_network');
  */
 Room.prototype.generateLinkNetwork = function () {
   var links = this.find(FIND_MY_STRUCTURES, {
-    filter: {
-      structureType: STRUCTURE_LINK,
-    },
+    filter: (s) => s.structureType ==  STRUCTURE_LINK && s.isActive()
   });
 
   if (links.length <= 0) {

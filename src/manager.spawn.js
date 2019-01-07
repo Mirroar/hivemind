@@ -726,7 +726,7 @@ Room.prototype.manageSpawns = function () {
         return;
     }
 
-    var roomSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name);
+    var roomSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == this.name && spawn.isActive());
 
     var room = this;
 

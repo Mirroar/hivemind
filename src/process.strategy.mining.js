@@ -36,7 +36,7 @@ RemoteMiningProcess.prototype.run = function () {
     let room = Game.rooms[roomName];
     if (!room.controller || !room.controller.my) continue;
 
-    let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == roomName).length;
+    let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == roomName && spawn.isActive()).length;
     if (numSpawns == 0) continue;
 
     numRooms++;
