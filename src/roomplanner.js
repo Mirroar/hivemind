@@ -23,23 +23,26 @@ var RoomPlanner = function (roomName) {
  */
 RoomPlanner.prototype.drawDebug = function () {
   let debugSymbols = {
+    container: '⊔',
+    extension: '⚬',
     lab: '🔬',
-    tower: '⚔',
     link: '🔗',
-    rampart: '#',
     nuker: '☢',
     powerSpawn: '⚡',
+    rampart: '#',
     spawn: '⭕',
-    extension: '⚬',
+    storage: '⬓',
+    terminal: '⛋',
+    tower: '⚔',
   };
 
   let visual = new RoomVisual(this.roomName);
 
   if (this.memory.locations) {
     for (let locationType in this.memory.locations) {
-      let positions = this.memory.locations[locationType];
       if (!debugSymbols[locationType]) continue;
 
+      let positions = this.memory.locations[locationType];
       for (let posName in positions) {
         let pos = utilities.decodePosition(posName);
 
