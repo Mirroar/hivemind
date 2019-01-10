@@ -10,6 +10,9 @@ Creep.prototype.performUpgrade = function () {
     }
     else {
         this.upgradeController(this.room.controller);
+        if (this.pos.getRangeTo(this.room.controller) > 1) {
+            this.moveToRange(this.room.controller, 1);
+        }
     }
 
     // Keep syphoning energy from link or controller to ideally never stop upgrading.
