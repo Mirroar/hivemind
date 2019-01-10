@@ -82,19 +82,27 @@ ExpandProcess.prototype.run = function () {
 
       // @todo Place flags to guide squad through safe rooms and make pathfinding easier.
       squad.clearUnits();
+      squad.setUnitCount('brawler', 1);
       squad.setUnitCount('singleClaim', 1);
-      squad.setUnitCount('builder', 2);
+      squad.setUnitCount('builder', 1);
       squad.setPath(null);
       memory.expand.started = Game.time;
     }
     else {
       // Remove claimer from composition once room has been claimed.
       if (Game.rooms[info.roomName]) {
+        // @todo If path to controller is blocked, send dismantlers to dismantle
+        // blocking buildings, or construct a tunnel to the controller.
+
         let room = Game.rooms[info.roomName];
         Game.flags['AttackSquad:expand'].setPosition(room.controller.pos);
 
         if (room.controller.my) {
-          squad.setUnitCount('singleClaim', 0);
+          if (!memory.expand.claimed) {
+            memory.expand.claimed = Game.time;
+            squad.setUnitCount('builder', 2);
+            squad.setUnitCount('singleClaim', 0);
+          }
 
           if (room.controller.level > 3 && room.storage) {
             this.stopExpansion(squad);
@@ -103,9 +111,12 @@ ExpandProcess.prototype.run = function () {
         }
       }
 
+      // @todo Abort if claiming takes too long and we don't have anything
+      // to dismantle in the way of the controller.
+
       // If a lot of time has passed, let the room fend for itself anyways,
       // either it will be lost or fix itself.
-      if (Game.time - memory.expand.started > 50 * CREEP_LIFE_TIME) {
+      if (Game.time - memory.expand.claimed > 50 * CREEP_LIFE_TIME) {
         this.stopExpansion(squad);
       }
     }

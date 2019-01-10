@@ -425,9 +425,10 @@ Creep.prototype.performMilitaryMove = function () {
 
         if (target) {
             if (creep.memory.body.attack) {
+                let ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
                 var result = creep.moveTo(target, {
                     reusePath: 5,
-                    ignoreDestructibleStructures: (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username))),
+                    ignoreDestructibleStructures: ignore,
                 });
             }
             else {

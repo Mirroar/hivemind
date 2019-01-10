@@ -682,7 +682,7 @@ Room.prototype.addDismantlerSpawnOptions = function () {
         let flag = flags[0];
         let numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep) => creep.memory.targetRoom == flag.pos.roomName && creep.memory.sourceRoom == this.name).length;
 
-        if (numDismantlers < 1) {
+        if (numDismantlers < flags.length) {
             memory.options.push({
                 priority: 4,
                 weight: 0,
