@@ -298,37 +298,21 @@ Room.prototype.enhanceData = function () {
         delete this.storage;
     }
 
-    this.sources = [];
-
     // Prepare memory for creep cache (filled globally later).
     if (!this.creeps) {
         this.creeps = {};
         this.creepsByRole = {};
     }
 
-    // Register sources from intelManager.
-    if (this.memory.intel) {
-        let intel = this.memory.intel;
-
-        if (intel.sources) {
-            for (let i in intel.sources) {
-                let source;
-                if (typeof intel.sources[i] == 'object') {
-                    source = Game.getObjectById(intel.sources[i].id);
-                }
-                else {
-                    source = Game.getObjectById(intel.sources[i]);
-                }
-                this.sources.push(source);
-                source.enhanceData();
-            }
-        }
-
-        if (intel.mineral) {
-            let mineral = Game.getObjectById(intel.mineral);
-            this.mineral = mineral;
-            mineral.enhanceData();
-        }
+    // Register sources and minerals.
+    this.sources = this.find(FIND_SOURCES);
+    for (let i in this.sources) {
+        this.sources[i].enhanceData();
+    }
+    let minerals = this.find(FIND_MINERALS);
+    if (minerals.length > 0) {
+        this.mineral = minerals[0];
+        this.mineral.enhanceData();
     }
 
     // Register bays.
