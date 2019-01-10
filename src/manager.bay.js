@@ -37,7 +37,7 @@ var Bay = function (flagName) {
     if (this.memory.extensions) {
         for (let i in this.memory.extensions) {
             let extension = Game.getObjectById(this.memory.extensions[i]);
-            if (extension) {
+            if (extension && extension.isActive()) {
                 this.extensions.push(extension);
                 this.energy += extension.energy;
                 this.energyCapacity += extension.energyCapacity;
