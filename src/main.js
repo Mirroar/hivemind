@@ -132,15 +132,15 @@ module.exports = {
     // Preiodically clean old room memory.
     if (Game.time % 3738 === 2100) {
       let count = 0;
-      for (let i in Memory.rooms) {
-        if (Memory.rooms[i].intel && Memory.rooms[i].intel.lastScan < Game.time - 100000) {
-          delete Memory.rooms[i];
+      for (let roomName in Memory.rooms) {
+        if (hivemind.roomIntel(roomName).getAge() > 100000) {
+          delete Memory.rooms[roomName];
           count++;
           continue;
         }
 
-        if (Memory.rooms[i].roomPlanner && (!Game.rooms[i] || !Game.rooms[i].controller || !Game.rooms[i].controller.my)) {
-          delete Memory.rooms[i].roomPlanner;
+        if (Memory.rooms[roomName].roomPlanner && (!Game.rooms[roomName] || !Game.rooms[roomName].controller || !Game.rooms[roomName].controller.my)) {
+          delete Memory.rooms[roomName].roomPlanner;
           count++;
         }
       }
