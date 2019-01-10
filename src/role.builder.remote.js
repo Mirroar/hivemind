@@ -65,6 +65,10 @@ var roleRemoteBuilder = {
             // Try and prevent controller downgrades.
             if ((creep.room.controller && creep.room.controller.level < 2) || creep.room.controller.my && creep.room.controller.ticksToDowngrade < 500) creep.memory.upgrading = true;
 
+            if (creep.room.controller.level == 0) {
+                creep.memory.upgrading = false;
+            }
+
             if (!creep.memory.upgrading) {
                 // Check for claim flags.
                 var claimFlags = creep.room.find(FIND_FLAGS, {
@@ -126,7 +130,7 @@ var roleRemoteBuilder = {
                 }
 
                 // Build structures.
-                var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+                var targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
                 if (targets.length > 0) {
                     if (!creep.memory.buildTarget) {
                         creep.memory.resourceTarget = null;

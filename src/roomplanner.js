@@ -147,6 +147,11 @@ RoomPlanner.prototype.runLogic = function () {
   // Build road to controller for easier upgrading.
   if (this.buildPlannedStructures('road.controller', STRUCTURE_ROAD)) return;
 
+  if (this.room.controller.level == 0) {
+    // If we're waiting for a claim, busy ourselves by building roads.
+    if (this.buildPlannedStructures('road', STRUCTURE_ROAD)) return;
+  }
+
   if (this.room.controller.level < 2) return;
 
   // At level 2, we can start building containers at sources and controller.
