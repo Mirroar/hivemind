@@ -269,12 +269,15 @@ RoomPlanner.prototype.runLogic = function () {
   if (this.buildPlannedStructures('lab', STRUCTURE_LAB)) return;
 
   // Make sure all current nukers have been built.
+  if (_.size(roomConstructionSites) == 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
   if (this.buildPlannedStructures('nuker', STRUCTURE_NUKER)) return;
 
   // Make sure all current power spawns have been built.
+  if (_.size(roomConstructionSites) == 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
   if (this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
 
   // Make sure all current observers have been built.
+  if (_.size(roomConstructionSites) == 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
   if (this.buildPlannedStructures('observer', STRUCTURE_OBSERVER)) return;
 };
 
