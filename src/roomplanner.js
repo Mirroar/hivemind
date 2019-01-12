@@ -3,7 +3,7 @@ var utilities = require('utilities');
 var MAX_ROOM_LEVEL = 8;
 
 var RoomPlanner = function (roomName) {
-  this.roomPlannerVersion = 19;
+  this.roomPlannerVersion = 21;
   this.roomName = roomName;
   this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -980,43 +980,62 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
 RoomPlanner.prototype.placeBays = function () {
   let bayCount = 0;
   while (this.canPlaceMore('extension')) {
-    let nextPos = this.getNextAvailableBuildSpot();
-    if (!nextPos) break;
+    let maxExtensions = 0;
+    let bestPos = null;
+    let bestScore = 0;
 
-    // Don't build too close to exits.
-    if (this.exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+    while (maxExtensions < 8) {
+      let nextPos = this.getNextAvailableBuildSpot();
+      if (!nextPos) break;
 
-    if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
-    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y)) continue;
-    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y)) continue;
-    if (!this.isBuildableTile(nextPos.x, nextPos.y - 1)) continue;
-    if (!this.isBuildableTile(nextPos.x, nextPos.y + 1)) continue;
-    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) continue;
-    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) continue;
-    if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
-    if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
+      // Don't build too close to exits.
+      if (this.exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
 
-    this.placeAccessRoad(nextPos);
+      if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
+
+      // @todo One tile is allowed to be a road.
+      let tileCount = 0;
+      if (this.isBuildableTile(nextPos.x - 1, nextPos.y)) tileCount++;
+      if (this.isBuildableTile(nextPos.x + 1, nextPos.y)) tileCount++;
+      if (this.isBuildableTile(nextPos.x, nextPos.y - 1)) tileCount++;
+      if (this.isBuildableTile(nextPos.x, nextPos.y + 1)) tileCount++;
+      if (this.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) tileCount++;
+      if (this.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) tileCount++;
+      if (this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) tileCount++;
+      if (this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) tileCount++;
+
+      if (tileCount <= maxExtensions) continue;
+
+      maxExtensions = tileCount;
+      let score = tileCount / (this.getCurrentBuildSpotInfo().range + 10);
+      if (score > bestScore && tileCount >= 4) {
+        bestPos = nextPos;
+        bestScore = score;
+      }
+    }
+    if (maxExtensions < 4) break;
+
+    this.placeAccessRoad(bestPos);
 
     // Make sure there is a road in the center of the bay.
-    this.placeFlag(nextPos, 'road', 1);
+    this.placeFlag(bestPos, 'road', 1);
 
     // Fill other unused spots with extensions.
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        if (!this.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) continue;
+        if (!this.isBuildableTile(bestPos.x + dx, bestPos.y + dy)) continue;
 
-        this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'extension');
+        this.placeFlag(new RoomPosition(bestPos.x + dx, bestPos.y + dy, bestPos.roomName), 'extension');
       }
     }
 
     // Place a flag to mark this bay.
-    let flagKey = 'Bay:' + nextPos.roomName + ':' + bayCount;
+    let flagKey = 'Bay:' + bestPos.roomName + ':' + bayCount;
     if (Game.flags[flagKey]) {
-      Game.flags[flagKey].setPosition(nextPos);
+      Game.flags[flagKey].setPosition(bestPos);
     }
     else {
-      nextPos.createFlag(flagKey);
+      bestPos.createFlag(flagKey);
     }
     bayCount++;
 
@@ -1179,8 +1198,16 @@ RoomPlanner.prototype.getNextAvailableBuildSpot = function () {
     // Don't build on roads.
     if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
 
+    this.currentBuildSpot = {
+      pos: nextPos,
+      info: nextInfo,
+    };
     return nextPos;
   }
+};
+
+RoomPlanner.prototype.getCurrentBuildSpotInfo = function () {
+  return this.currentBuildSpot.info;
 };
 
 /**
