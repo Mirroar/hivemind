@@ -934,12 +934,9 @@ Room.prototype.manageSpawns = function () {
             let remoteHarvestTargets = spawn.room.getRemoteHarvestTargets();
             for (var i in remoteHarvestTargets) {
                 let roomName = remoteHarvestTargets[i].roomName;
-                if (!Memory.rooms[roomName] || !Memory.rooms[roomName].intel) continue;
-                let sources = Memory.rooms[roomName].intel.sources;
+                let sources = hivemind.roomIntel(roomName).getSourcePositions();
                 for (let j in sources) {
-                    if (typeof sources[j] == 'object') {
-                        harvestPositions.push(new RoomPosition(sources[j].x, sources[j].y, roomName));
-                    }
+                    harvestPositions.push(new RoomPosition(sources[j].x, sources[j].y, roomName));
                 }
             }
 

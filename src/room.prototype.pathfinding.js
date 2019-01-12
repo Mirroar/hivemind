@@ -84,31 +84,28 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
     }
 
     // Add unhandled adjacent rooms to open list.
-    if (Memory.rooms[nextRoom] && Memory.rooms[nextRoom].intel && Memory.rooms[nextRoom].intel.exits) {
-      for (let i in Memory.rooms[nextRoom].intel.exits) {
-        let exit = Memory.rooms[nextRoom].intel.exits[i];
-        if (openList[exit] || closedList[exit]) continue;
+    let exits = hivemind.roomIntel(nextRoom).getExits();
+    for (let i in exits) {
+      let exit = exits[i];
+      if (openList[exit] || closedList[exit]) continue;
 
-        if (Memory.rooms[exit] && Memory.rooms[exit].intel) {
-          let intel = Memory.rooms[exit].intel;
-          if (intel.owner && intel.owner != utilities.getUsername()) continue;
-          // @todo Allow pathing through source keeper rooms if we can safely avoid them.
-          if (intel.structures && _.size(intel.structures[STRUCTURE_KEEPER_LAIR]) > 0) continue;
-        }
+      let exitIntel = hivemind.roomIntel(exit);
+      if (exitIntel.isOwned()) continue;
+      // @todo Allow pathing through source keeper rooms if we can safely avoid them.
+      if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
 
-        let path = [];
-        for (let i in info.path) {
-          path.push(info.path[i]);
-        }
-        path.push(exit);
-
-        openList[exit] = {
-          range: info.range + 1,
-          dist: Game.map.getRoomLinearDistance(exit, targetRoom),
-          origin: info.origin,
-          path: path,
-        };
+      let path = [];
+      for (let i in info.path) {
+        path.push(info.path[i]);
       }
+      path.push(exit);
+
+      openList[exit] = {
+        range: info.range + 1,
+        dist: Game.map.getRoomLinearDistance(exit, targetRoom),
+        origin: info.origin,
+        path: path,
+      };
     }
 
     delete openList[nextRoom];

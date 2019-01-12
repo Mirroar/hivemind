@@ -90,6 +90,14 @@ RoomIntel.prototype.getControllerPosition = function () {
 };
 
 /**
+ * Returns position and id of certain structures.
+ */
+RoomIntel.prototype.getStructures = function (structureType) {
+  if (!this.memory.structures || !this.memory.structures[structureType]) return [];
+  return this.memory.structures[structureType];
+};
+
+/**
  * Returns number of tiles of a certain type in a room.
  */
 RoomIntel.prototype.countTiles = function (type) {
