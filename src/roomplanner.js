@@ -561,7 +561,7 @@ RoomPlanner.prototype.generateDistanceMatrixes = function () {
 /**
  * Find positions from where many exit tiles are in short range.
  */
-RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
+RoomPlanner.prototype.findTowerPositions = function () {
   let positions = {
     N: {count: 0, tiles: []},
     E: {count: 0, tiles: []},
@@ -572,7 +572,7 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
   let terrain = new Room.Terrain(this.roomName);
   for (let x = 1; x < 49; x++) {
     for (let y = 1; y < 49; y++) {
-      if (matrix.get(x, y) != 0 && matrix.get(x, y) != 10) continue;
+      if (this.buildingMatrix.get(x, y) != 0 && this.buildingMatrix.get(x, y) != 10) continue;
       if (this.safetyMatrix.get(x, y) != 1) continue;
       if (terrain.get(x, y) == TERRAIN_MASK_WALL) continue;
       let score = 0;
@@ -590,17 +590,17 @@ RoomPlanner.prototype.findTowerPositions = function (exits, matrix) {
       }
 
       // No need to check in directions where there is no exit.
-      if (_.size(exits[tileDir]) == 0) continue;
+      if (_.size(this.exitTiles[tileDir]) == 0) continue;
 
       // Don't count exits toward "safe" rooms or dead ends.
       if (this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
 
-      for (let dir in exits) {
+      for (let dir in this.exitTiles) {
         // Don't score distance to exits toward "safe" rooms or dead ends.
         if (this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
 
-        for (let i in exits[dir]) {
-          score += 1 / exits[dir][i].getRangeTo(x, y);
+        for (let i in this.exitTiles[dir]) {
+          score += 1 / this.exitTiles[dir][i].getRangeTo(x, y);
         }
       }
 
@@ -643,6 +643,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
     W: [],
     E: [],
   };
+  this.exitTiles = exits;
   let walls = [];
   let roads = [];
   this.roads = roads;
@@ -891,45 +892,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
   this.placeAll('powerSpawn', true);
   this.placeAll('nuker', true);
   this.placeAll('observer', false);
-
-  // Determine where towers should be.
-  let positions = this.findTowerPositions(exits, matrix);
-  while (this.canPlaceMore('tower')) {
-    let info = null;
-    let bestDir = null;
-    for (let dir in positions) {
-      for (let i in positions[dir].tiles) {
-        let tile = positions[dir].tiles[i];
-        if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count == positions[dir].count)) {
-          info = tile;
-          bestDir = dir;
-        }
-      }
-    }
-
-    if (!info) break;
-
-    info.score = -1;
-
-    // Make sure it's possible to refill this tower.
-    let result = PathFinder.search(info.pos, this.roomCenterEntrances, {
-      roomCallback: (roomName) => matrix,
-      maxRooms: 1,
-      plainCost: 1,
-      swampCost: 1, // We don't care about cost, just about possibility.
-    });
-    if (result.incomplete) continue;
-
-    positions[bestDir].count++;
-    this.placeFlag(new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName), 'tower');
-  }
-
-  // Also create roads to all towers.
-  for (let posName in this.memory.locations.tower || []) {
-    let pos = utilities.decodePosition(posName);
-
-    this.placeAccessRoad(pos);
-  }
+  this.placeTowers();
 
   var end = Game.cpu.getUsed();
   console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
@@ -1101,6 +1064,50 @@ RoomPlanner.prototype.placeLabs = function () {
 
     // Reinitialize pathfinding.
     this.startBuildingPlacement();
+  }
+};
+
+/**
+ * Places towers so exits are well covered.
+ */
+RoomPlanner.prototype.placeTowers = function () {
+  let positions = this.findTowerPositions();
+  while (this.canPlaceMore('tower')) {
+    let info = null;
+    let bestDir = null;
+    for (let dir in positions) {
+      for (let i in positions[dir].tiles) {
+        let tile = positions[dir].tiles[i];
+        if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count == positions[dir].count)) {
+          info = tile;
+          bestDir = dir;
+        }
+      }
+    }
+
+    if (!info) break;
+
+    info.score = -1;
+
+    // Make sure it's possible to refill this tower.
+    let matrix = this.buildingMatrix;
+    let result = PathFinder.search(info.pos, this.roomCenterEntrances, {
+      roomCallback: (roomName) => matrix,
+      maxRooms: 1,
+      plainCost: 1,
+      swampCost: 1, // We don't care about cost, just about possibility.
+    });
+    if (result.incomplete) continue;
+
+    positions[bestDir].count++;
+    this.placeFlag(new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName), 'tower');
+  }
+
+  // Also create roads to all towers.
+  for (let posName in this.memory.locations.tower || []) {
+    let pos = utilities.decodePosition(posName);
+
+    this.placeAccessRoad(pos);
   }
 };
 
