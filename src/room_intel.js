@@ -112,7 +112,7 @@ RoomIntel.prototype.countTiles = function (type) {
  * This is usually when they are dead ends or link up with other rooms
  * owned by us that are sufficiently defensible.
  */
-RoomIntel.prototype.calculateAdjacentRoomSafety = function () {
+RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
   if (!this.memory.exits) return {
     directions: {
       N: false,
@@ -140,6 +140,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function () {
   let openList = {};
   let closedList = {};
   let joinedDirs = {};
+  let otherSafeRooms = options && options.safe || [];
   // Add initial directions to open list.
   for (let moveDir in this.memory.exits) {
     let dir = dirMap[moveDir];
@@ -147,10 +148,11 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function () {
 
     if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
       // This is one of our own rooms, and as such is safe.
-      if ((Game.rooms[roomName].controller.level >= Math.min(5, this.room.controller.level - 1)) && !Game.rooms[roomName].isEvacuating()) {
+      if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) {
         continue;
       }
     }
+    if (otherSafeRooms.indexOf(roomName) > -1) continue;
 
     openList[roomName] = {
       range: 1,
@@ -208,6 +210,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function () {
           continue;
         }
       }
+      if (otherSafeRooms.indexOf(roomName) > -1) continue;
 
       // Room has not been checked yet.
       openList[roomName] = {

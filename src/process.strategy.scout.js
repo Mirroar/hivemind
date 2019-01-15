@@ -43,7 +43,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
       info.harvestPriority = this.calculateHarvestScore(roomName);
       // Check if we could reasonably expand to this room.
       if (hivemind.roomIntel(info.origin).getRcl() >= 5) {
-        // info.expansionScore = this.calculateExpansionScore(roomName);
+        info.expansionScore = this.calculateExpansionScore(roomName);
       }
     }
   }
@@ -52,11 +52,9 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
     if (timeSinceLastScan > 5000) {
       info.scoutPriority = 1;
     }
-    else {
-      // Check if we could reasonably expand to this room.
-      if (roomIntel.isClaimable() && !roomIntel.isClaimed() && hivemind.roomIntel(info.origin).getRcl() >= 5) {
-        info.expansionScore = this.calculateExpansionScore(roomName);
-      }
+    // Check if we could reasonably expand to this room.
+    else if (roomIntel.isClaimable() && !roomIntel.isClaimed() && hivemind.roomIntel(info.origin).getRcl() >= 5) {
+      info.expansionScore = this.calculateExpansionScore(roomName);
     }
   }
   // @todo For higher ranges (7-10), only scout if we have memory to spare.
@@ -140,34 +138,51 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   }
 
   // Having fewer exit sides is good.
+  // Having dead ends / safe rooms nearby is similarly good.
   let exits = roomIntel.getExits();
   let safety = roomIntel.calculateAdjacentRoomSafety();
   score += _.sum(safety.directions) * 0.25;
+
+  // Add score for harvest room sources.
   for (let i in exits) {
     let adjacentRoom = exits[i];
-    let adjacentIntel = hivemind.roomIntel(adjacentRoom);
+    score += this.getHarvestRoomScore(adjacentRoom);
+  }
 
-    if (adjacentIntel.isOwned()) {
-      // Try not to expand too close to other players.
-      // @todo Also check for room reservation.
-      score -= 0.5;
-    }
-    else {
-      let sourceFactor = 0.1;
-      if (adjacentIntel.isClaimed()) {
-        // If another player has reserved the adjacent room, we can't profit all that well.
-        sourceFactor = 0.05;
+  // Check if expanding here creates a safe direction for another of our rooms.
+  for (let otherRoomName in Game.rooms) {
+    let otherRoom = Game.rooms[otherRoomName];
+    if (!otherRoom.controller || !otherRoom.controller.my) continue;
+
+    let roomDistance = Game.map.getRoomLinearDistance(roomName, otherRoomName);
+    if (roomDistance > 3) continue;
+
+    let otherRoomIntel = hivemind.roomIntel(otherRoomName);
+    let currentSafety = otherRoomIntel.calculateAdjacentRoomSafety();
+    let adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety({safe: [roomName]});
+
+    // If after expanding there are more safe directions, improve score.
+    let newSafeExits = (_.sum(adjustedSafety.directions) - _.sum(currentSafety.directions));
+    score += newSafeExits * 0.25;
+    // Also, there will be less exit tiles to cover.
+    let otherRoomExits = otherRoomIntel.getExits();
+    let exitRatio = newSafeExits / _.size(otherRoomExits);
+    score += otherRoomIntel.countTiles('exit') * 0.002 * exitRatio;
+
+    if (roomDistance > 2) continue;
+    // Check if we need to share adjacent harvest rooms.
+    for (let i in otherRoomExits) {
+      let adjacentRoom = otherRoomExits[i];
+      if (adjacentRoom == roomName) score -= this.getHarvestRoomScore(adjacentRoom);
+      for (let j in exits) {
+        if (exits[j] == adjacentRoom) score -= this.getHarvestRoomScore(adjacentRoom);
       }
-
-      // Adjacent rooms having more sources is good.
-      score += adjacentIntel.getSourcePositions().length * sourceFactor;
-
-      // @todo factor in path length to sources.
-      // @todo If we're close to one of our own rooms, do not count double-used remote harvesting.
     }
   }
 
-  // Having fewer exit tiles is good.
+  // Having fewer exit tiles is good. Safe exits reduce the number of tiles
+  // we need to cover.
+  // @todo We could gather exact amounts per direction in intel.
   let unsafeRatio = (4 - _.sum(safety.directions)) / _.size(exits);
   score += 0.4 - roomIntel.countTiles('exit') * 0.002 * unsafeRatio;
   // Having lots of open space is good (easier room layout).
@@ -176,9 +191,31 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   score += 0.5 - roomIntel.countTiles('swamp') * 0.0002;
 
   // @todo Prefer rooms with minerals we have little sources of.
-  // @todo Having dead ends / safe rooms nearby is similarly good. Counts
-  // double if expanding here creates a safe direction for another of our rooms.
   return score;
+};
+
+/**
+ * Calculate value of harvest rooms for expansion purposes.
+ */
+ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
+  let roomIntel = hivemind.roomIntel(roomName);
+
+  // We don't care about rooms without controllers.
+  // @todo Once automated, we might care for exploiting source keeper rooms.
+  if (!roomIntel.isClaimable()) return 0;
+
+  // Try not to expand too close to other players.
+  if (roomIntel.isOwned()) return -0.5;
+
+  // Can't remote harvest from my own room.
+  if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) return 0;
+
+  let sourceFactor = 0.1;
+  // If another player has reserved the adjacent room, we can't profit all that well.
+  if (roomIntel.isClaimed()) sourceFactor = 0.05;
+
+  // @todo factor in path length to sources.
+  return roomIntel.getSourcePositions().length * sourceFactor;
 };
 
 /**
