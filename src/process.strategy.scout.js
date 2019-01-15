@@ -141,7 +141,8 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
   // Having fewer exit sides is good.
   let exits = roomIntel.getExits();
-  score += 1 - _.size(exits) * 0.25;
+  let safety = roomIntel.calculateAdjacentRoomSafety();
+  score += _.sum(safety.directions) * 0.25;
   for (let i in exits) {
     let adjacentRoom = exits[i];
     let adjacentIntel = hivemind.roomIntel(adjacentRoom);
@@ -167,7 +168,8 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   }
 
   // Having fewer exit tiles is good.
-  score += 0.4 - roomIntel.countTiles('exit') * 0.002;
+  let unsafeRatio = (4 - _.sum(safety.directions)) / _.size(exits);
+  score += 0.4 - roomIntel.countTiles('exit') * 0.002 * unsafeRatio;
   // Having lots of open space is good (easier room layout).
   score += 1 - roomIntel.countTiles('wall') * 0.0005;
   // Having few swamp tiles is good (less cost for road maintenance, easier setup).
