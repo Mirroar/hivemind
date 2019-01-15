@@ -28,6 +28,7 @@ RoomPlanner.prototype.drawDebug = function () {
     lab: '🔬',
     link: '🔗',
     nuker: '☢',
+    observer: '👁',
     powerSpawn: '⚡',
     rampart: '#',
     spawn: '⭕',
@@ -1439,144 +1440,23 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
     };
   }
 
-  let newStatus = {
-    N: false,
-    E: false,
-    S: false,
-    W: false,
-  };
-
-  let dirMap = {
-    1: 'N',
-    3: 'E',
-    5: 'S',
-    7: 'W',
-  }
-
-  // @todo Do processing.
-  if (this.room.memory.intel) {
-    let intel = this.room.memory.intel;
-
-    newStatus = {
-      N: true,
-      E: true,
-      S: true,
-      W: true,
-    };
-
-    let openList = {};
-    let closedList = {};
-    let joinedDirs = {};
-    // Add initial directions to open list.
-    for (let moveDir in intel.exits || []) {
-      let dir = dirMap[moveDir];
-      let roomName = intel.exits[moveDir];
-
-      if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
-        // This is one of our own rooms, and as such is safe.
-        if ((Game.rooms[roomName].controller.level >= Math.min(5, this.room.controller.level - 1)) && !Game.rooms[roomName].isEvacuating()) {
-          continue;
-        }
-      }
-
-      openList[roomName] = {
-        range: 1,
-        origin: dir,
-        room: roomName,
-      };
-    }
-
-    // Process adjacent rooms until range has been reached.
-    while (_.size(openList) > 0) {
-      let minRange = null;
-      for (let roomName in openList) {
-        if (!minRange || minRange.range > openList[roomName].range) {
-          minRange = openList[roomName];
-        }
-      }
-
-      delete openList[minRange.room];
-      closedList[minRange.room] = minRange;
-
-      if (Memory.rooms[minRange.room] && Memory.rooms[minRange.room].intel) {
-        let roomIntel = Memory.rooms[minRange.room].intel;
-        // Add new adjacent rooms to openList if available.
-        for (let moveDir in roomIntel.exits || []) {
-          let roomName = roomIntel.exits[moveDir];
-
-          if (minRange.range >= 3) {
-            // Room has open exits more than 3 rooms away.
-            // Mark as unsafe.
-            newStatus[minRange.origin] = false;
-            break;
-          }
-
-          let found = openList[roomName] || closedList[roomName] || false;
-          if (found) {
-            if (found.origin != minRange.origin) {
-              // Two different exit directions are joined here.
-              // Treat them as the same.
-              if (!joinedDirs[found.origin]) {
-                joinedDirs[found.origin] = {};
-              }
-              joinedDirs[found.origin][minRange.origin] = true;
-            }
-            continue;
-          }
-
-          if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
-            // This is one of our own rooms, and as such is safe.
-            if (Game.rooms[roomName].controller.level >= 5 && !Game.rooms[roomName].isEvacuating() || roomName == this.room.name) {
-              continue;
-            }
-          }
-
-          // Room has not been checked yet.
-          openList[roomName] = {
-            range: minRange.range + 1,
-            origin: minRange.origin,
-            room: roomName,
-          };
-        }
-      }
-      else {
-        // Room has no intel, declare it as unsafe.
-        newStatus[minRange.origin] = false;
-      }
-    }
-
-    // Unify status of directions which meet up somewhere.
-    for (let dir1 in joinedDirs) {
-      for (let dir2 in joinedDirs[dir1]) {
-        newStatus[dir1] = newStatus[dir1] && newStatus[dir2];
-        newStatus[dir2] = newStatus[dir1] && newStatus[dir2];
-      }
-    }
-
-    // Keep a list of rooms declared as safe in memory.
-    this.memory.adjacentSafeRooms = [];
-    for (let roomName in closedList) {
-      let roomDir = closedList[roomName].origin;
-      if (newStatus[roomDir]) {
-        this.memory.adjacentSafeRooms.push(roomName);
-      }
-    }
-  }
+  let newStatus = hivemind.roomIntel(this.roomName).calculateAdjacentRoomSafety();
+  this.memory.adjacentSafeRooms = newStatus.safeRooms;
 
   // Check if status changed since last check.
-  for (let dir in newStatus) {
-    if (newStatus[dir] != this.memory.adjacentSafe[dir]) {
+  for (let dir in newStatus.directions) {
+    if (newStatus.directions[dir] != this.memory.adjacentSafe[dir]) {
       // Status has changed, recalculate building positioning.
       hivemind.log('room plan', this.roomName).debug('changed adjacent room status!');
       Game.notify(
         'Exit safety has changed for room ' + this.room.name + '!' + "\n\n" +
-        'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.N ? 'safe' : 'not safe') + "\n" +
-        'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.E ? 'safe' : 'not safe') + "\n" +
-        'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.S ? 'safe' : 'not safe') + "\n" +
-        'W: ' + (this.memory.adjacentSafe.W ? 'safe' : 'not safe') + ' -> ' + (newStatus.W ? 'safe' : 'not safe') + "\n"
+        'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.N ? 'safe' : 'not safe') + "\n" +
+        'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.E ? 'safe' : 'not safe') + "\n" +
+        'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.S ? 'safe' : 'not safe') + "\n" +
+        'W: ' + (this.memory.adjacentSafe.W ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.W ? 'safe' : 'not safe') + "\n"
       );
       delete this.memory.locations;
-      this.memory.adjacentSafe = newStatus;
+      this.memory.adjacentSafe = newStatus.directions;
       break;
     }
   }
