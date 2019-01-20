@@ -573,6 +573,7 @@ RoomPlanner.prototype.findTowerPositions = function () {
     W: {count: 0, tiles: []},
   };
 
+  let allDirectionsSafe = _.sum(this.memory.adjacentSafe) == 4;
   let terrain = new Room.Terrain(this.roomName);
   for (let x = 1; x < 49; x++) {
     for (let y = 1; y < 49; y++) {
@@ -597,11 +598,12 @@ RoomPlanner.prototype.findTowerPositions = function () {
       if (_.size(this.exitTiles[tileDir]) == 0) continue;
 
       // Don't count exits toward "safe" rooms or dead ends.
-      if (this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
+      if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
 
       for (let dir in this.exitTiles) {
         // Don't score distance to exits toward "safe" rooms or dead ends.
-        if (this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
+        // Unless all directions are safe.
+        if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
 
         for (let i in this.exitTiles[dir]) {
           score += 1 / this.exitTiles[dir][i].getRangeTo(x, y);
