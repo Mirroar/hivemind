@@ -98,7 +98,7 @@ var roleRemoteBuilder = {
                 }
 
                 // Help by filling spawn with energy.
-                var spawns = creep.room.find(FIND_STRUCTURES, {
+                var spawns = creep.room.find(FIND_MY_STRUCTURES, {
                     filter: (structure) => structure.structureType == STRUCTURE_SPAWN
                 });
                 if (spawns && spawns.length > 0 && spawns[0].energy < spawns[0].energyCapacity * 0.8) {
@@ -110,7 +110,7 @@ var roleRemoteBuilder = {
 
                 if (!creep.memory.repairTarget) {
                     // Make sure ramparts don't break.
-                    var targets = creep.room.find(FIND_STRUCTURES, {
+                    var targets = creep.room.find(FIND_MY_STRUCTURES, {
                         filter: (structure) => structure.structureType == STRUCTURE_RAMPART && structure.hits < 10000
                     });
                     if (targets.length > 0) {
@@ -147,7 +147,10 @@ var roleRemoteBuilder = {
                                 creep.memory.buildTarget = towerSites[0].id;
                             }
                             else {
-                                creep.memory.buildTarget = utilities.getClosest(creep, targets);
+                                let target = creep.pos.findClosestByPath(targets);
+                                if (target) {
+                                    creep.memory.buildTarget = target.id;
+                                }
                             }
                         }
                     }
@@ -161,7 +164,10 @@ var roleRemoteBuilder = {
                     }
 
                     if (creep.build(target) == ERR_NOT_IN_RANGE) {
-                        creep.moveToRange(target, 3);
+                        if (!creep.moveToRange(target, 3)) {
+                            creep.memory.buildTarget = null;
+                            return false;
+                        }
                     }
                     return true;
                 }
@@ -178,7 +184,7 @@ var roleRemoteBuilder = {
             return false;
         }
         else {
-            var dropped = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, {
+            var dropped = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
                 filter: (drop) => drop.resourceType == RESOURCE_ENERGY && (drop.amount > creep.carryCapacity * 0.3 || creep.pos.getRangeTo(dropped) <= 1),
             });
             if (dropped) {
@@ -193,7 +199,7 @@ var roleRemoteBuilder = {
 
             if (!creep.memory.resourceTarget) {
                 // Try getting energy from full containers.
-                var container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                var container = creep.pos.findClosestByPath(FIND_STRUCTURES, {
                     filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && (structure.store.energy || 0) > 500,
                 });
                 if (container) {
@@ -206,15 +212,10 @@ var roleRemoteBuilder = {
                     return true;
                 }
 
-                // If the room has no sources, there's nothing we can do.
-                if (!creep.room.sources || creep.room.sources.length <= 0) {
-                    return false;
-                }
-
                 // Try get energy from a source.
-                var sources = creep.room.find(FIND_SOURCES_ACTIVE);
-                if (sources.length > 0) {
-                    creep.memory.resourceTarget = sources[Math.floor(Math.random() * sources.length)].id;
+                let source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+                if (source) {
+                    creep.memory.resourceTarget = source.id;
                     creep.memory.deliverTarget = null;
                 }
                 else {
