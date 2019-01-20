@@ -164,12 +164,12 @@ RoomPlanner.prototype.runLogic = function () {
   this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
   if (this.buildPlannedStructures('tower', STRUCTURE_TOWER)) return;
 
+  // Build storage ASAP.
+  if (this.buildPlannedStructures('storage', STRUCTURE_STORAGE)) return;
+
   // Make sure extensions are built in the right place, remove otherwise.
   this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
   if (this.buildPlannedStructures('extension', STRUCTURE_EXTENSION)) return;
-
-  // Build storage ASAP.
-  if (this.buildPlannedStructures('storage', STRUCTURE_STORAGE)) return;
 
   // Also build terminal when available.
   if (this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL)) return;
