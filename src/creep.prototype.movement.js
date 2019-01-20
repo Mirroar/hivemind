@@ -341,6 +341,9 @@ Creep.prototype.goTo = function (target, options) {
         let result = this.moveTo(target);
         if (result == ERR_NO_PATH) return false;
       }
+      else if (this.pos.roomName == targetPos.roomName) {
+        return false;
+      }
     }
   }
   else {
