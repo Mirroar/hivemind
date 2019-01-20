@@ -21,6 +21,9 @@ ScoutProcess.prototype.run = function () {
   }
 };
 
+/**
+ * Calculates scout, harvest and expand priotities for all known rooms.
+ */
 ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
   let roomList = Memory.strategy.roomList;
   let roomIntel = hivemind.roomIntel(roomName);
@@ -201,6 +204,9 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   return result;
 };
 
+/**
+ * Stores expansion priority score along with reasoning.
+ */
 ScoutProcess.prototype.addExpansionScore = function (result, amount, reason) {
   result.score += amount;
   result.reasons[reason] = amount;
