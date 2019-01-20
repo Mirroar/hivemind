@@ -238,4 +238,31 @@ Squad.prototype.setPath = function (pathName) {
   // @todo If there are creeps already spawned, send them on the path.
 };
 
+/**
+ * Orders squad to spawn in the given room.
+ */
+Squad.prototype.setSpawn = function (roomName) {
+  let key = 'SpawnSquad:' + this.name;
+  let spawnPos = new RoomPosition(25, 25, roomName);
+  if (Game.flags[key]) {
+    Game.flags[key].setPosition(spawnPos);
+  }
+  else {
+    spawnPos.createFlag(key);
+  }
+};
+
+/**
+ * Orders squad to move toward the given position.
+ */
+Squad.prototype.setTarget = function (targetPos) {
+  let key = 'AttackSquad:' + this.name;
+  if (Game.flags[key]) {
+    Game.flags[key].setPosition(targetPos);
+  }
+  else {
+    targetPos.createFlag(key);
+  }
+};
+
 module.exports = Squad;
