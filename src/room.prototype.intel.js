@@ -186,17 +186,17 @@ Room.prototype.gatherIntel = function () {
       let tileType = terrain.get(x, y);
       // Check border tiles.
       if (x == 0 || y == 0 || x == 49 || y == 49) {
-        if (tileType | TERRAIN_MASK_WALL == 0) {
+        if (tileType != TERRAIN_MASK_WALL) {
           intel.terrain.exit++;
         }
         continue;
       }
 
       // Check non-border tiles.
-      if (tileType | TERRAIN_MASK_WALL > 0) {
+      if (tileType == TERRAIN_MASK_WALL) {
         intel.terrain.wall++;
       }
-      else if (tileType | TERRAIN_MASK_SWAMP > 0) {
+      else if (tileType == TERRAIN_MASK_SWAMP) {
         intel.terrain.swamp++;
       }
       else {
