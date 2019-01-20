@@ -231,11 +231,6 @@ RoomPlanner.prototype.runLogic = function () {
     }
   }
 
-  // Further constructions should only happen in safe rooms.
-  if (this.room && this.room.isEvacuating()) return;
-  if (!wallsBuilt) return;
-  hivemind.log('room plan', this.roomName).debug('walls are finished');
-
   // Slate all unmanaged walls and ramparts for deconstruction.
   var unwantedDefenses = this.room.find(FIND_STRUCTURES, {
     filter: (structure) => {
@@ -243,7 +238,7 @@ RoomPlanner.prototype.runLogic = function () {
       if (structure.structureType == STRUCTURE_RAMPART) {
         // Keep rampart if it is one we have placed.
         let pos = utilities.encodePosition(structure.pos);
-        if (this.memory.locations.rampart[pos]) return false;
+        if (this.memory.locations.rampart && this.memory.locations.rampart[pos]) return false;
 
         // Keep rampart if anything important is below it.
         let structures = structure.pos.lookFor(LOOK_STRUCTURES);
@@ -264,6 +259,11 @@ RoomPlanner.prototype.runLogic = function () {
   for (let i in unwantedDefenses) {
     this.memory.dismantle[unwantedDefenses[i].id] = 1;
   }
+
+  // Further constructions should only happen in safe rooms.
+  if (this.room && this.room.isEvacuating()) return;
+  if (!wallsBuilt) return;
+  hivemind.log('room plan', this.roomName).debug('walls are finished');
 
   // Make sure labs are built in the right place, remove otherwise.
   this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
