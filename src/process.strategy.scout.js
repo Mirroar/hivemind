@@ -41,10 +41,11 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
     }
     else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
       info.harvestPriority = this.calculateHarvestScore(roomName);
+
       // Check if we could reasonably expand to this room.
-      if (hivemind.roomIntel(info.origin).getRcl() >= 5) {
-        info.expansionScore = this.calculateExpansionScore(roomName);
-      }
+      let expansionInfo = this.calculateExpansionScore(roomName);
+      info.expansionScore = expansionInfo.score;
+      info.expansionReasons = expansionInfo.reasons;
     }
   }
   else if (info.range > 2 && info.range <= 7) {
@@ -52,9 +53,11 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
     if (timeSinceLastScan > 5000) {
       info.scoutPriority = 1;
     }
-    // Check if we could reasonably expand to this room.
-    else if (roomIntel.isClaimable() && !roomIntel.isClaimed() && hivemind.roomIntel(info.origin).getRcl() >= 5) {
-      info.expansionScore = this.calculateExpansionScore(roomName);
+    else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
+      // Check if we could reasonably expand to this room.
+      let expansionInfo = this.calculateExpansionScore(roomName);
+      info.expansionScore = expansionInfo.score;
+      info.expansionReasons = expansionInfo.reasons;
     }
   }
   // @todo For higher ranges (7-10), only scout if we have memory to spare.
@@ -127,26 +130,30 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
  * Determines how worthwile a room is for expanding.
  */
 ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
+  let result = {
+    score: 0,
+    reasons: {},
+  };
   let roomIntel = hivemind.roomIntel(roomName);
 
   // More sources is better.
-  let score = roomIntel.getSourcePositions().length;
+  this.addExpansionScore(result, roomIntel.getSourcePositions().length, 'numSources');
 
   // Having a mineral source is good.
   if (roomIntel.getMineralType()) {
-    score++;
+    this.addExpansionScore(result, 1, 'numMinerals');
   }
 
   // Having fewer exit sides is good.
   // Having dead ends / safe rooms nearby is similarly good.
   let exits = roomIntel.getExits();
   let safety = roomIntel.calculateAdjacentRoomSafety();
-  score += _.sum(safety.directions) * 0.25;
+  this.addExpansionScore(result, _.sum(safety.directions) * 0.25, 'safeExits');
 
   // Add score for harvest room sources.
   for (let i in exits) {
     let adjacentRoom = exits[i];
-    score += this.getHarvestRoomScore(adjacentRoom);
+    this.addExpansionScore(result, this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
   }
 
   // Check if expanding here creates a safe direction for another of our rooms.
@@ -163,19 +170,19 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
     // If after expanding there are more safe directions, improve score.
     let newSafeExits = (_.sum(adjustedSafety.directions) - _.sum(currentSafety.directions));
-    score += newSafeExits * 0.25;
+    this.addExpansionScore(result, newSafeExits * 0.25, 'newSafeExits' + otherRoomName);
     // Also, there will be less exit tiles to cover.
     let otherRoomExits = otherRoomIntel.getExits();
     let exitRatio = newSafeExits / _.size(otherRoomExits);
-    score += otherRoomIntel.countTiles('exit') * 0.002 * exitRatio;
+    this.addExpansionScore(result, otherRoomIntel.countTiles('exit') * 0.005 * exitRatio, 'exitTiles' + otherRoomName);
 
     if (roomDistance > 2) continue;
     // Check if we need to share adjacent harvest rooms.
     for (let i in otherRoomExits) {
       let adjacentRoom = otherRoomExits[i];
-      if (adjacentRoom == roomName) score -= this.getHarvestRoomScore(adjacentRoom);
+      if (adjacentRoom == roomName) this.addExpansionScore(result, -this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
       for (let j in exits) {
-        if (exits[j] == adjacentRoom) score -= this.getHarvestRoomScore(adjacentRoom);
+        if (exits[j] == adjacentRoom) this.addExpansionScore(result, -this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
       }
     }
   }
@@ -184,14 +191,19 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
   // we need to cover.
   // @todo We could gather exact amounts per direction in intel.
   let unsafeRatio = (4 - _.sum(safety.directions)) / _.size(exits);
-  score += 0.4 - roomIntel.countTiles('exit') * 0.002 * unsafeRatio;
+  this.addExpansionScore(result, 1 - roomIntel.countTiles('exit') * 0.005 * unsafeRatio, 'exitTiles');
   // Having lots of open space is good (easier room layout).
-  score += 1 - roomIntel.countTiles('wall') * 0.0005;
+  this.addExpansionScore(result, 0.5 - roomIntel.countTiles('wall') * 0.0002, 'wallTiles');
   // Having few swamp tiles is good (less cost for road maintenance, easier setup).
-  score += 0.5 - roomIntel.countTiles('swamp') * 0.0002;
+  this.addExpansionScore(result, 0.25 - roomIntel.countTiles('swamp') * 0.0001, 'swampTiles');
 
   // @todo Prefer rooms with minerals we have little sources of.
-  return score;
+  return result;
+};
+
+ScoutProcess.prototype.addExpansionScore = function (result, amount, reason) {
+  result.score += amount;
+  result.reasons[reason] = amount;
 };
 
 /**
@@ -210,9 +222,9 @@ ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
   // Can't remote harvest from my own room.
   if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) return 0;
 
-  let sourceFactor = 0.1;
+  let sourceFactor = 0.25;
   // If another player has reserved the adjacent room, we can't profit all that well.
-  if (roomIntel.isClaimed()) sourceFactor = 0.05;
+  if (roomIntel.isClaimed()) sourceFactor = 0.1;
 
   // @todo factor in path length to sources.
   return roomIntel.getSourcePositions().length * sourceFactor;
