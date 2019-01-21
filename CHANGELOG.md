@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added RoomIntel class that replaces direct accesses to data in `Memory.rooms[roomName].intel`.
 - Added creep role "gift" that takes excess resources and runs them around the map for other players to hunt.
 - Spawn reserver creeps for rooms that are deemed "safe" by the room planner, because they cannot be accessed from outside our empire.
+- Other nearby rooms will send remote builders to help out with expansion.
+- When the controller of an expansion is not direcly reahable (because structures are in the way), tunnels are built to reach it.
+- We start building roads and containers in new rooms even before they are claimed.
+- Automatic expansion is now aborted if the room does not grow fast enough.
 
 ### Changed
 - Game object prototype enhancements have been moved into separate files like `room.prototype.intel.js`.
@@ -26,13 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Observers may now observe multiple rooms during successive ticks if scout process deems it necessary.
 - Expansions to other rooms will now be selected using more criteria:
   - avoid being close to other players
+  - avoid expanding too close to our own rooms if it restricts remote harvesting
   - prefer rooms that have many energy sources in adjacent rooms
   - prefer rooms with few exit sides and tiles
+  - prefer rooms that create safe exits for other nearby rooms
   - prefer rooms with open space and few swamp tiles
-- Expansions are now taken up to 7 rooms away (up from 5).
+- Expansions are now taken up to 7 rooms away (up from 5) and no longer have a minimum distance.
 - Expansions are now only taken if a safe path to the target room exists.
-- We start building roads and containers in new rooms even before they are claimed.
-- Automatic expansion is now aborted if the room does not grow fast enough.
+- Spawn room for expansion squad is now chosen dynamically.
+- When the path to an expansion is blocked, a new spawn room is chosen, or expansion is aborted.
 - Military creeps will now attack unowned structures if a flag has been placed directly on it.
 - Upgraders will move as close to their controller as possible for less of a chance of blocking other creeps.
 - Remote mining will try not to run paths through rooms owned or reserved by other players.
