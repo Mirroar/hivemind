@@ -70,7 +70,11 @@ Hivemind.prototype.runProcess = function (id, processConstructor, options) {
 
   if (this.isProcessAllowedToRun(stats, options) && process.shouldRun()) {
     stats.lastRun = Game.time;
+    let cpuBefore = Game.cpu.getUsed();
     process.run();
+    let cpuUsage = Game.cpu.getUsed() - cpuBefore;
+
+    this.memory.process[id].cpu = (this.memory.process[id].cpu || cpuUsage) * 0.99 + cpuUsage * 0.01;
   }
 };
 
