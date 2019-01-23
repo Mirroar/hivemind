@@ -129,6 +129,19 @@ module.exports = {
       }
     }
 
+    // Check if memory is getting too bloated.
+    if (Game.time % 836 == 0) {
+      if (RawMemory.get().length > 1800000) {
+        Memory.hivemind.maxScoutDistance = (Memory.hivemind.maxScoutDistance || 7) - 1;
+        for (let roomName in Memory.strategy.roomList) {
+          if (Memory.strategy.roomList[roomName].range > Memory.hivemind.maxScoutDistance) {
+            delete Memory.rooms[roomName];
+            delete Memory.strategy.roomList[roomName];
+          }
+        }
+      }
+    }
+
     // Preiodically clean old room memory.
     if (Game.time % 3738 === 2100) {
       let count = 0;

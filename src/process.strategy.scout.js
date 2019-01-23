@@ -51,7 +51,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
       info.expansionReasons = expansionInfo.reasons;
     }
   }
-  else if (info.range > 2 && info.range <= 7) {
+  else if (info.range > 2 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
     // This room might be interesting for expansions.
     if (timeSinceLastScan > 5000) {
       info.scoutPriority = 1;
