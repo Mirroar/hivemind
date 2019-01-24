@@ -1,29 +1,34 @@
 {
-  "name": "screeps-bot-hivemind",
-  "version": "1.0.4",
-  "description": "",
-  "main": "src/main.js",
-  "screeps_bot": true,
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/Mirroar/hivemind.git"
-  },
-  "author": "David Franke",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/Mirroar/hivemind/issues"
-  },
-  "scripts": {
-    "test": "xo && ava"
-  },
-  "devDependencies": {
-    "ava": "^1.1.0",
-    "xo": "^0.24.0"
-  },
-  "xo": {
-    "globals": [
-      "_",
-      "Game"
-    ]
-  }
+	"name": "screeps-bot-hivemind",
+	"version": "1.0.4",
+	"description": "",
+	"main": "src/main.js",
+	"screeps_bot": true,
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/Mirroar/hivemind.git"
+	},
+	"author": "David Franke",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/Mirroar/hivemind/issues"
+	},
+	"scripts": {
+		"test": "xo && ava"
+	},
+	"devDependencies": {
+		"ava": "^1.1.0",
+		"xo": "^0.24.0"
+	},
+	"xo": {
+		"rules": {
+			"brace-style": ["error", "stroustrup"],
+			"comma-dangle": ["error", "always-multiline"]
+		},
+		"globals": [
+			"_",
+			"Game",
+			"Memory"
+		]
+	}
 }

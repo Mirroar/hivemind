@@ -2,8 +2,9 @@
 
 /**
  * Manages a group of link structures.
+ * @constructor
  */
-var LinkNetwork = function () {
+const LinkNetwork = function () {
 	this.links = [];
 	this.neutralLinks = [];
 	this.underfullLinks = [];
@@ -16,25 +17,30 @@ var LinkNetwork = function () {
 
 /**
  * Adds a link with specified desired energy level to the network.
+ *
+ * @param {StructureLink} link
+ *   The link structure to add to the network.
+ * @param {number} desiredEnergyLevel
+ *   The amount of energy this link should try to maintain.
  */
 LinkNetwork.prototype.__addLink = function (link, desiredEnergyLevel) {
 	this.links.push(link);
 	this.energyCapacity += link.energyCapacity;
 	this.energy += link.energy;
 
-	if (typeof(desiredEnergyLevel) === 'number') {
+	if (typeof desiredEnergyLevel === 'number') {
 		this.minEnergy += desiredEnergyLevel;
 		this.maxEnergy += desiredEnergyLevel;
 
 		if (link.energy < desiredEnergyLevel) {
 			this.underfullLinks.push({
-				link: link,
+				link,
 				delta: desiredEnergyLevel - link.energy,
 			});
 		}
 		else if (link.energy > desiredEnergyLevel) {
 			this.overfullLinks.push({
-				link: link,
+				link,
 				delta: link.energy - desiredEnergyLevel,
 			});
 		}
@@ -46,7 +52,10 @@ LinkNetwork.prototype.__addLink = function (link, desiredEnergyLevel) {
 };
 
 /**
- * Adds a normal link.
+ * Adds a normal link with no preferred energy level.
+ *
+ * @param {StructureLink} link
+ *   The link structure to add to the network.
  */
 LinkNetwork.prototype.addNeutralLink = function (link) {
 	this.__addLink(link, null);
@@ -54,6 +63,9 @@ LinkNetwork.prototype.addNeutralLink = function (link) {
 
 /**
  * Adds a link that continuously gets energy inserted.
+ *
+ * @param {StructureLink} link
+ *   The link structure to add to the network.
  */
 LinkNetwork.prototype.addInLink = function (link) {
 	this.__addLink(link, 0);
@@ -61,6 +73,9 @@ LinkNetwork.prototype.addInLink = function (link) {
 
 /**
  * Adds a link that continuously has energy removed.
+ *
+ * @param {StructureLink} link
+ *   The link structure to add to the network.
  */
 LinkNetwork.prototype.addOutLink = function (link) {
 	this.__addLink(link, link.energyCapacity);
@@ -68,6 +83,9 @@ LinkNetwork.prototype.addOutLink = function (link) {
 
 /**
  * Adds a link that serves as both input and output.
+ *
+ * @param {StructureLink} link
+ *   The link structure to add to the network.
  */
 LinkNetwork.prototype.addInOutLink = function (link) {
 	this.__addLink(link, link.energyCapacity / 2);

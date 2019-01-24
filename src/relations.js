@@ -1,22 +1,35 @@
 'use strict';
 
-var Relations = function () {
+/**
+ * Relations determine how we act towards other users.
+ * @constructor
+ */
+const Relations = function () {
 	this.allies = [];
 
 	try {
-		let localRelations = require('relations.local');
+		// eslint-disable-next-line import/no-unresolved
+		const localRelations = require('relations.local');
 
 		if (localRelations.allies) {
-			for (let i in localRelations.allies) {
-				this.allies.push(localRelations.allies[i]);
+			for (const ally of localRelations.allies) {
+				this.allies.push(ally);
 			}
 		}
 	}
-	catch (e) {
+	catch (error) {
 		// No local relations declared, ignore.
 	}
 };
 
+/**
+ * Checks if a user is considered our ally.
+ *
+ * @param {string} username
+ *   The name of the user to check.
+ *
+ * @return {boolean} true if the user is our ally.
+ */
 Relations.prototype.isAlly = function (username) {
 	return this.allies.indexOf(username) !== -1;
 };
