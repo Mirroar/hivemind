@@ -19,7 +19,7 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
     constructionSites = this.find(FIND_MY_CONSTRUCTION_SITES);
   }
 
-  structures.forEach(function (structure) {
+  _.each(structures, function (structure) {
     if (structure.structureType === STRUCTURE_ROAD) {
       // Only do this if no structure is on the road.
       if (costs.get(structure.pos.x, structure.pos.y) <= 0) {
@@ -32,7 +32,7 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
     }
   });
 
-  constructionSites.forEach(function (structure) {
+  _.each(constructionSites, function (structure) {
     if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER && structure.structureType !== STRUCTURE_RAMPART) {
       // Can't walk through non-walkable construction sites.
       costs.set(structure.pos.x, structure.pos.y, 0xff);
