@@ -14,6 +14,7 @@ ScoutProcess.prototype = Object.create(Process.prototype);
 
 ScoutProcess.prototype.run = function () {
   Memory.strategy.roomList = this.generateScoutTargets();
+  this.generateMineralStatus();
 
   // Add data to scout list for creating priorities.
   for (let roomName in Memory.strategy.roomList) {
@@ -37,26 +38,13 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 
   let timeSinceLastScan = roomIntel.getAge();
 
-  if (info.range > 0 && info.range <= 2) {
-    // This is a potential room for remote mining.
-    if (timeSinceLastScan > 5000) {
-      info.scoutPriority = 2;
-    }
-    else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
-      info.harvestPriority = this.calculateHarvestScore(roomName);
-
-      // Check if we could reasonably expand to this room.
-      let expansionInfo = this.calculateExpansionScore(roomName);
-      info.expansionScore = expansionInfo.score;
-      info.expansionReasons = expansionInfo.reasons;
-    }
-  }
-  else if (info.range > 2 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
-    // This room might be interesting for expansions.
+  if (info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
     if (timeSinceLastScan > 5000) {
       info.scoutPriority = 1;
     }
     else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
+      info.harvestPriority = this.calculateHarvestScore(roomName);
+
       // Check if we could reasonably expand to this room.
       let expansionInfo = this.calculateExpansionScore(roomName);
       info.expansionScore = expansionInfo.score;
@@ -101,6 +89,7 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
   let info = Memory.strategy.roomList[roomName];
 
   if (!info.safePath) return 0;
+  if (info.range == 0 || info.range > 2) return 0;
 
   let income = -2000; // Flat cost for room reservation
   let pathLength = 0;
@@ -144,7 +133,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
   // Having a mineral source is good.
   if (roomIntel.getMineralType()) {
-    this.addExpansionScore(result, 1, 'numMinerals');
+    this.addExpansionScore(result, 1 / ((this.mineralCount[roomIntel.getMineralType()] || 0) + 1), 'numMinerals');
   }
 
   // Having fewer exit sides is good.
@@ -361,6 +350,18 @@ ScoutProcess.prototype.getClosestObserver = function (roomName) {
   }
 
   return observer;
+};
+
+ScoutProcess.prototype.generateMineralStatus = function () {
+  this.mineralCount = {};
+  let mineralCount = this.mineralCount;
+  _.each(Game.rooms, function (room) {
+    if (!room.controller || !room.controller.my) return;
+    let roomIntel = hivemind.roomIntel(room.name);
+    let mineralType = roomIntel.getMineralType();
+
+    mineralCount[mineralType] = (mineralCount[mineralType] || 0) + 1;
+  })
 };
 
 module.exports = ScoutProcess;
