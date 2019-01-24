@@ -9,12 +9,13 @@ var RoomIntelProcess = function (params, data) {
 RoomIntelProcess.prototype = Object.create(Process.prototype);
 
 RoomIntelProcess.prototype.run = function () {
+  hivemind.roomIntel(this.room.name).gatherIntel();
+  this.room.scan();
+
   this.findHostiles();
 };
 
 RoomIntelProcess.prototype.findHostiles = function () {
-  this.room.gatherIntel();
-
   let hostiles = this.room.find(FIND_HOSTILE_CREEPS);
   let parts = {};
   let lastSeen = this.room.memory.enemies && this.room.memory.enemies.lastSeen || 0;

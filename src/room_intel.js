@@ -16,6 +16,195 @@ var RoomIntel = function (roomName) {
 };
 
 /**
+ * Updates intel for a room.
+ */
+RoomIntel.prototype.gatherIntel = function () {
+  let room = Game.rooms[this.roomName];
+  if (!room) return;
+
+  var intel = this.memory;
+
+  // @todo Have process logic handle throttling of this task .
+  let lastScanThreshold = 500;
+  if (Game.cpu.bucket < 5000) {
+    lastScanThreshold = 2500;
+  }
+
+  if (intel.lastScan && Game.time - intel.lastScan < lastScanThreshold) return;
+  hivemind.log('intel', room.name).debug('Gathering intel after', intel.lastScan && Game.time - intel.lastScan || 'infinite', 'ticks.');
+  intel.lastScan = Game.time;
+
+  this.gatherControllerIntel(room);
+  this.gatherResourceIntel(room);
+  this.gatherTerrainIntel();
+
+  let structures = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
+  this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK]);
+  this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
+  this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
+
+  // Remember room exits.
+  this.memory.exits = Game.map.describeExits(room.name);
+
+  // At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
+  this.memory.costMatrix = room.generateCostMatrix().serialize();
+
+  // @todo Check for portals.
+
+  // @todo Check enemy structures.
+
+  // @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
+};
+
+/**
+ * Commits controller status to memory.
+ */
+RoomIntel.prototype.gatherControllerIntel = function (room) {
+  this.memory.owner = null;
+  this.memory.rcl = 0;
+  this.memory.ticksToDowngrade = 0;
+  this.memory.ticksToNeutral = 0;
+  this.memory.hasController = (room.controller ? true : false);
+  if (room.controller && room.controller.owner) {
+    this.memory.owner = room.controller.owner.username;
+    this.memory.rcl = room.controller.level;
+    this.memory.ticksToDowngrade = room.controller.ticksToDowngrade;
+    this.memory.ticksToNeutral = this.memory.ticksToDowngrade;
+    for (let i = 1; i < this.memory.rcl; i++) {
+      this.memory.ticksToNeutral += CONTROLLER_DOWNGRADE[i];
+    }
+  }
+
+  this.memory.reservation = room.controller && room.controller.reservation || {
+    username: null,
+    ticksToEnd: 0,
+  };
+};
+
+/**
+ * Commits room resources to memory.
+ */
+RoomIntel.prototype.gatherResourceIntel = function (room) {
+  // Check sources.
+  this.memory.sources = _.map(
+    room.find(FIND_SOURCES),
+    function (source) {
+      return {
+        x: source.pos.x,
+        y: source.pos.y,
+        id: source.id,
+      }
+    }
+  );
+
+  // Check minerals.
+  var mineral = _.first(room.find(FIND_MINERALS));
+  this.memory.mineral = mineral && mineral.id;
+  this.memory.mineralType = mineral && mineral.mineralType;
+};
+
+/**
+ * Commits basic terrain metrics to memory.
+ */
+RoomIntel.prototype.gatherTerrainIntel = function () {
+  // Check terrain.
+  this.memory.terrain = {
+    exit: 0,
+    wall: 0,
+    swamp: 0,
+    plain: 0,
+  };
+  let terrain = new Room.Terrain(this.roomName);
+  for (let x = 0; x < 50; x++) {
+    for (let y = 0; y < 50; y++) {
+      let tileType = terrain.get(x, y);
+      // Check border tiles.
+      if (x == 0 || y == 0 || x == 49 || y == 49) {
+        if (tileType != TERRAIN_MASK_WALL) {
+          this.memory.terrain.exit++;
+        }
+        continue;
+      }
+
+      // Check non-border tiles.
+      switch (tileType) {
+        case TERRAIN_MASK_WALL:
+          this.memory.terrain.wall++;
+          break;
+
+        case TERRAIN_MASK_SWAMP:
+          this.memory.terrain.swamp++;
+          break;
+
+        default:
+          this.memory.terrain.plain++;
+      }
+    }
+  }
+};
+
+/**
+ * Commits power bank status to memory.
+ */
+RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
+  delete this.memory.power;
+
+  let powerBank = _.first(powerBanks);
+  if (!powerBank) return;
+
+  // For now, send a notification!
+  hivemind.log('intel', this.roomName).info('Power bank containing', powerBank.amount, 'power found!');
+
+  // Find out how many access points there are around this power bank.
+  let terrain = new Room.Terrain(this.roomName);
+  let numFreeTiles = 0;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx == 0 && dy == 0) continue;
+      if (terrain.get(powerBank.pos.x + dx, powerBank.pos.y + dy) != TERRAIN_MASK_WALL) {
+        numFreeTiles++;
+      }
+    }
+  }
+
+  this.memory.power = {
+    amount: powerBank.power,
+    hits: powerBank.hits,
+    decays: Game.time + (powerBank.ticksToDecay || POWER_BANK_DECAY),
+    freeTiles: numFreeTiles,
+  };
+
+  // Also store room in strategy memory for easy access.
+  if (Memory.strategy) {
+    if (!Memory.strategy.power) {
+      Memory.strategy.power = {};
+    }
+    if (!Memory.strategy.power.rooms) {
+      Memory.strategy.power.rooms = {};
+    }
+    if (!Memory.strategy.power.rooms[this.roomName] || !Memory.strategy.power.rooms[this.roomName].isActive) {
+      Memory.strategy.power.rooms[this.roomName] = this.memory.power;
+    }
+  }
+};
+
+/**
+ * Commits structure status to memory.
+ */
+RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) {
+  if (!this.memory.structures) this.memory.structures = {};
+  this.memory.structures[structureType] = {};
+  for (let structure of structures[structureType] || []) {
+    this.memory.structures[structureType][structure.id] = {
+      x: structure.pos.x,
+      y: structure.pos.y,
+      hits: structure.hits,
+      hitsMax: structure.hitsMax,
+    };
+  }
+};
+
+/**
  * Returns number of ticks since intel on this room was last gathered.
  */
 RoomIntel.prototype.getAge = function () {
