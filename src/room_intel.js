@@ -372,14 +372,15 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
     delete openList[minRange.room];
     closedList[minRange.room] = minRange;
 
-    let roomExits = hivemind.roomIntel(minRange.room).getExits();
-    if (_.size(roomExits) == 0) {
+    let roomIntel = hivemind.roomIntel(minRange.room);
+    if (roomIntel.getAge() > 100000) {
       // Room has no intel, declare it as unsafe.
       newStatus[minRange.origin] = false;
       continue;
     }
 
     // Add new adjacent rooms to openList if available.
+    let roomExits = roomIntel.getExits();
     for (let moveDir in roomExits) {
       let roomName = roomExits[moveDir];
 
