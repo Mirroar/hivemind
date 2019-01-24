@@ -159,8 +159,15 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
     supportSquad.setUnitCount('builder', 1);
     supportSquad.setPath(null);
   }
+
+  // Remove support squads from older rooms.
+  _.each(_.filter(Game.flags, (f) => f.name.startsWith('AttackSquad:expandSupport.') && !f.name.startsWith('AttackSquad:expandSupport.' + info.roomName)), (f) => f.remove());
+  _.each(_.filter(Game.flags, (f) => f.name.startsWith('SpawnSquad:expandSupport.') && !f.name.startsWith('SpawnSquad:expandSupport.' + info.roomName)), (f) => f.remove());
 };
 
+/**
+ * Checks if creeps can reach the rooms controller, builds tunnels otherwise.
+ */
 ExpandProcess.prototype.checkClaimPath = function () {
   let info = Memory.strategy.expand.currentTarget;
   if (!info) return;
@@ -253,6 +260,9 @@ ExpandProcess.prototype.checkClaimPath = function () {
   }
 };
 
+/**
+ * Checks if there is a safe path to the current expansion for spawned creeps.
+ */
 ExpandProcess.prototype.checkAccessPath = function () {
   let info = Memory.strategy.expand.currentTarget;
   if (!info) return;
@@ -286,6 +296,9 @@ ExpandProcess.prototype.checkAccessPath = function () {
   }
 };
 
+/**
+ * Finds the closest valid spawn location for an expansion.
+ */
 ExpandProcess.prototype.findClosestSpawn = function (targetRoom) {
   let bestRoom = null;
   let bestLength = 0;
