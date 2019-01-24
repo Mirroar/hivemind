@@ -73,6 +73,16 @@ RoomIntel.prototype.getMineralType = function () {
 };
 
 /**
+ * Returns a cost matrix for the given room.
+ */
+RoomIntel.prototype.getCostMatrix = function () {
+  if (this.memory.costMatrix) return PathFinder.CostMatrix.deserialize(this.memory.costMatrix);
+  if (Game.rooms[this.roomName]) return Game.rooms[this.roomName].generateCostMatrix();
+
+  return new PathFinder.CostMatrix();
+};
+
+/**
  * Returns a list of rooms connected to this one, keyed by direction.
  */
 RoomIntel.prototype.getExits = function () {

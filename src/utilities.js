@@ -124,16 +124,8 @@ var utilities = {
         let cacheKey = roomName;
         let matrix;
         if (!utilities.costMatrixCache[cacheKey]) {
-            if (Memory.rooms[roomName] && Memory.rooms[roomName].intel && Memory.rooms[roomName].intel.costMatrix) {
-                matrix = PathFinder.CostMatrix.deserialize(Memory.rooms[roomName].intel.costMatrix);
-            }
-            else if (Game.rooms[roomName]) {
-                matrix = Game.rooms[roomName].generateCostMatrix();
-            }
-            else {
-                matrix = new PathFinder.CostMatrix();
-            }
-
+            let roomIntel = hivemind.roomIntel(roomName);
+            matrix = roomIntel.getCostMatrix();
             utilities.costMatrixCache[cacheKey] = matrix;
         }
         matrix = utilities.costMatrixCache[cacheKey];
