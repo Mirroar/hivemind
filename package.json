@@ -4,7 +4,6 @@
   "description": "",
   "main": "src/main.js",
   "screeps_bot": true,
-  "dependencies": {},
   "repository": {
     "type": "git",
     "url": "git://github.com/Mirroar/hivemind.git"
@@ -13,5 +12,18 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/Mirroar/hivemind/issues"
+  },
+  "scripts": {
+    "test": "xo && ava"
+  },
+  "devDependencies": {
+    "ava": "^1.1.0",
+    "xo": "^0.24.0"
+  },
+  "xo": {
+    "globals": [
+      "_",
+      "Game"
+    ]
   }
 }
