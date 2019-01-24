@@ -193,6 +193,36 @@ Creep.prototype.performBuildRoad = function() {
     return false;
 };
 
+Creep.prototype.removeObstacles = function () {
+    let creep = this;
+    let workParts = creep.memory.body.work;
+
+    if (workParts < 1) return false;
+
+    if (!creep.memory.cachedPath) return false;
+
+    let pos = creep.memory.cachedPath.position;
+    let i = pos + 1;
+
+    if (i >= creep.memory.cachedPath.path.length) return false;
+
+    let position = utilities.decodePosition(creep.memory.cachedPath.path[i]);
+    if (!position || position.roomName != creep.pos.roomName) return false;
+
+    // Check for obstacles on the next position to destroy.
+    let tileHasObstacle = false;
+    let structures = position.lookFor(LOOK_STRUCTURES);
+    if (structures.length == 0) return false;
+
+    for (let j in structures) {
+        if (structures[j].structureType != STRUCTURE_ROAD && structures[j].structureType != STRUCTURE_CONTAINER && !structures[j].my) {
+            this.dismantle(structures[j]);
+            console.log('dismantle', structures[j]);
+            return true;
+        }
+    }
+};
+
 /**
  * Makes the creep harvest resources outside of owned rooms.
  */
@@ -207,7 +237,7 @@ Creep.prototype.performRemoteHarvest = function () {
             this.clearCachedPath();
         }
         else {
-            this.followCachedPath();
+            if (!this.removeObstacles()) this.followCachedPath();
             return;
         }
     }
