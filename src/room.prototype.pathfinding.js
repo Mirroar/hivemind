@@ -3,115 +3,115 @@
 let utilities = require('utilities');
 
 Room.prototype.getCostMatrix = function () {
-  return utilities.getCostMatrix(this.name);
+	return utilities.getCostMatrix(this.name);
 };
 
 /**
  * Generates a new CostMatrix for pathfinding in this room.
  */
 Room.prototype.generateCostMatrix = function (structures, constructionSites) {
-  let costs = new PathFinder.CostMatrix;
+	let costs = new PathFinder.CostMatrix;
 
-  if (!structures) {
-    structures = this.find(FIND_STRUCTURES);
-  }
-  if (!constructionSites) {
-    constructionSites = this.find(FIND_MY_CONSTRUCTION_SITES);
-  }
+	if (!structures) {
+		structures = this.find(FIND_STRUCTURES);
+	}
+	if (!constructionSites) {
+		constructionSites = this.find(FIND_MY_CONSTRUCTION_SITES);
+	}
 
-  _.each(structures, function (structure) {
-    if (structure.structureType === STRUCTURE_ROAD) {
-      // Only do this if no structure is on the road.
-      if (costs.get(structure.pos.x, structure.pos.y) <= 0) {
-        // Favor roads over plain tiles.
-        costs.set(structure.pos.x, structure.pos.y, 1);
-      }
-    } else if (structure.structureType !== STRUCTURE_CONTAINER && (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
-      // Can't walk through non-walkable buildings.
-      costs.set(structure.pos.x, structure.pos.y, 0xff);
-    }
-  });
+	_.each(structures, function (structure) {
+		if (structure.structureType === STRUCTURE_ROAD) {
+			// Only do this if no structure is on the road.
+			if (costs.get(structure.pos.x, structure.pos.y) <= 0) {
+				// Favor roads over plain tiles.
+				costs.set(structure.pos.x, structure.pos.y, 1);
+			}
+		} else if (structure.structureType !== STRUCTURE_CONTAINER && (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
+			// Can't walk through non-walkable buildings.
+			costs.set(structure.pos.x, structure.pos.y, 0xff);
+		}
+	});
 
-  _.each(constructionSites, function (structure) {
-    if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER && structure.structureType !== STRUCTURE_RAMPART) {
-      // Can't walk through non-walkable construction sites.
-      costs.set(structure.pos.x, structure.pos.y, 0xff);
-    }
-  });
+	_.each(constructionSites, function (structure) {
+		if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER && structure.structureType !== STRUCTURE_RAMPART) {
+			// Can't walk through non-walkable construction sites.
+			costs.set(structure.pos.x, structure.pos.y, 0xff);
+		}
+	});
 
-  return costs;
+	return costs;
 };
 
 /**
  * Calculates a list of room names for traveling to a target room.
  */
 Room.prototype.calculateRoomPath = function (targetRoom) {
-  let roomName = this.name;
+	let roomName = this.name;
 
-  let openList = {};
-  let closedList = {};
+	let openList = {};
+	let closedList = {};
 
-  openList[roomName] = {
-    range: 0,
-    dist: Game.map.getRoomLinearDistance(roomName, targetRoom),
-    origin: roomName,
-    path: [],
-  };
+	openList[roomName] = {
+		range: 0,
+		dist: Game.map.getRoomLinearDistance(roomName, targetRoom),
+		origin: roomName,
+		path: [],
+	};
 
-  // A* from here to targetRoom.
-  // @todo Avoid unsafe rooms.
-  let finalPath = null;
-  while (_.size(openList) > 0) {
-    let minDist = null;
-    let nextRoom = null;
-    for (let rName in openList) {
-      let info = openList[rName];
-      if (!minDist || info.range + info.dist < minDist) {
-        minDist = info.range + info.dist;
-        nextRoom = rName;
-      }
-    }
+	// A* from here to targetRoom.
+	// @todo Avoid unsafe rooms.
+	let finalPath = null;
+	while (_.size(openList) > 0) {
+		let minDist = null;
+		let nextRoom = null;
+		for (let rName in openList) {
+			let info = openList[rName];
+			if (!minDist || info.range + info.dist < minDist) {
+				minDist = info.range + info.dist;
+				nextRoom = rName;
+			}
+		}
 
-    if (!nextRoom) {
-      break;
-    }
+		if (!nextRoom) {
+			break;
+		}
 
-    let info = openList[nextRoom];
+		let info = openList[nextRoom];
 
-    // We're done if we reached targetRoom.
-    if (nextRoom == targetRoom) {
-      finalPath = info.path;
-    }
+		// We're done if we reached targetRoom.
+		if (nextRoom == targetRoom) {
+			finalPath = info.path;
+		}
 
-    // Add unhandled adjacent rooms to open list.
-    let exits = hivemind.roomIntel(nextRoom).getExits();
-    for (let i in exits) {
-      let exit = exits[i];
-      if (openList[exit] || closedList[exit]) continue;
+		// Add unhandled adjacent rooms to open list.
+		let exits = hivemind.roomIntel(nextRoom).getExits();
+		for (let i in exits) {
+			let exit = exits[i];
+			if (openList[exit] || closedList[exit]) continue;
 
-      let exitIntel = hivemind.roomIntel(exit);
-      if (exitIntel.isOwned()) continue;
-      // @todo Allow pathing through source keeper rooms if we can safely avoid them.
-      if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
+			let exitIntel = hivemind.roomIntel(exit);
+			if (exitIntel.isOwned()) continue;
+			// @todo Allow pathing through source keeper rooms if we can safely avoid them.
+			if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
 
-      let path = [];
-      for (let i in info.path) {
-        path.push(info.path[i]);
-      }
-      path.push(exit);
+			let path = [];
+			for (let i in info.path) {
+				path.push(info.path[i]);
+			}
+			path.push(exit);
 
-      openList[exit] = {
-        range: info.range + 1,
-        dist: Game.map.getRoomLinearDistance(exit, targetRoom),
-        origin: info.origin,
-        path: path,
-      };
-    }
+			openList[exit] = {
+				range: info.range + 1,
+				dist: Game.map.getRoomLinearDistance(exit, targetRoom),
+				origin: info.origin,
+				path: path,
+			};
+		}
 
-    delete openList[nextRoom];
-    closedList[nextRoom] = true;
-  }
+		delete openList[nextRoom];
+		closedList[nextRoom] = true;
+	}
 
-  return finalPath;
+	return finalPath;
 };
 
