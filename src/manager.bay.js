@@ -1,28 +1,37 @@
-var Bay = function (flagName) {
+'use strict';
+
+/* global RoomVisual StructureExtension COLOR_GREY FIND_STRUCTURES
+STRUCTURE_EXTENSION OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
+
+/**
+ * Bays collect extensions into a single entity for more efficient refilling.
+ * @constructor
+ */
+const Bay = function (flagName) {
 	this.flag = Game.flags[flagName];
 	this.memory = this.flag.memory;
 	this.pos = this.flag.pos;
 	this.name = this.flag.name;
 
-	if (this.flag.color != COLOR_GREY) {
+	if (this.flag.color !== COLOR_GREY) {
 		this.flag.setColor(COLOR_GREY);
 	}
 
-	if (!this.memory.extensions || Game.time % 100 == 38) {
-		let extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-			filter: (structure) => structure.structureType == STRUCTURE_EXTENSION
+	if (!this.memory.extensions || Game.time % 100 === 38) {
+		const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
+			filter: structure => structure.structureType === STRUCTURE_EXTENSION,
 		});
 		this.memory.extensions = [];
-		for (let i in extensions) {
-			this.memory.extensions.push(extensions[i].id);
+		for (const extension of extensions) {
+			this.memory.extensions.push(extension.id);
 		}
 	}
 
 	// Do not add extensions to bay if center is blocked by a structure.
-	var posStructures = this.pos.lookFor(LOOK_STRUCTURES);
-	var blocked = false;
-	for (var i in posStructures) {
-		if (OBSTACLE_OBJECT_TYPES.indexOf(posStructures[i].structureType) !== -1) {
+	const posStructures = this.pos.lookFor(LOOK_STRUCTURES);
+	let blocked = false;
+	for (const structure of posStructures) {
+		if (OBSTACLE_OBJECT_TYPES.indexOf(structure.structureType) !== -1) {
 			blocked = true;
 			break;
 		}
@@ -36,7 +45,7 @@ var Bay = function (flagName) {
 
 	if (this.memory.extensions) {
 		for (let i in this.memory.extensions) {
-			let extension = Game.getObjectById(this.memory.extensions[i]);
+			const extension = Game.getObjectById(this.memory.extensions[i]);
 			if (extension && extension.isActive()) {
 				this.extensions.push(extension);
 				this.energy += extension.energy;
@@ -47,7 +56,7 @@ var Bay = function (flagName) {
 
 	// Draw bay.
 	if (typeof RoomVisual !== 'undefined') {
-		let visual = new RoomVisual(this.pos.roomName);
+		const visual = new RoomVisual(this.pos.roomName);
 		visual.rect(this.pos.x - 1.4, this.pos.y - 1.4, 2.8, 2.8, {
 			fill: 'rgba(255, 255, 128, 0.2)',
 			opacity: 0.5,
@@ -58,14 +67,15 @@ var Bay = function (flagName) {
 
 Bay.prototype.hasExtension = function (extension) {
 	for (let i in this.extensions) {
-		if (this.extensions[i].id == extension.id) return true;
+		if (this.extensions[i].id === extension.id) return true;
 	}
+
 	return false;
 };
 
 Bay.prototype.refillFrom = function (creep) {
 	for (let i in this.extensions) {
-		let extension = this.extensions[i];
+		const extension = this.extensions[i];
 		if (extension.energy < extension.energyCapacity) {
 			creep.transfer(extension, RESOURCE_ENERGY);
 			break;
@@ -89,7 +99,7 @@ StructureExtension.prototype.isBayExtension = function () {
 		}
 	}
 
-	return this.bay != null;
-}
+	return this.bay !== null;
+};
 
 module.exports = Bay;

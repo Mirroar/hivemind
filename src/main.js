@@ -1,5 +1,8 @@
 'use strict';
 
+/* global hivemind PROCESS_PRIORITY_ALWAYS PROCESS_PRIORITY_LOW
+PROCESS_PRIORITY_HIGH */
+
 // Make sure game object prototypes are enhanced.
 require('creep.prototype');
 require('room.prototype');
@@ -7,34 +10,34 @@ require('room.prototype');
 console.log('new global reset');
 
 // Create kernel object.
-var Hivemind = require('hivemind');
+const Hivemind = require('hivemind');
+
 global.hivemind = new Hivemind();
 
 // Load top-level processes.
-var InitProcess = require('process.init');
-var RoomsProcess = require('process.rooms');
-var ExpandProcess = require('process.strategy.expand');
-var RemoteMiningProcess = require('process.strategy.mining');
-var PowerMiningProcess = require('process.strategy.power');
-var ScoutProcess = require('process.strategy.scout');
-var TradeProcess = require('process.empire.trade');
-var ResourcesProcess = require('process.empire.resources');
-var ReactionsProcess = require('process.empire.reactions');
+const InitProcess = require('process.init');
+const RoomsProcess = require('process.rooms');
+const ExpandProcess = require('process.strategy.expand');
+const RemoteMiningProcess = require('process.strategy.mining');
+const PowerMiningProcess = require('process.strategy.power');
+const ScoutProcess = require('process.strategy.scout');
+const TradeProcess = require('process.empire.trade');
+const ResourcesProcess = require('process.empire.resources');
+const ReactionsProcess = require('process.empire.reactions');
 
 // @todo Refactor old main code away.
-var oldMain = require('main.old');
+const oldMain = require('main.old');
 
 // Allow profiling of code.
-var profiler = require('profiler');
-var stats = require('stats');
-var utilities = require('utilities');
+const profiler = require('profiler');
+const stats = require('stats');
 
 module.exports = {
 
 	/**
 	 * Runs main game loop.
 	 */
-	loop: function () {
+	loop() {
 		if (profiler) {
 			profiler.wrap(this.runTick);
 		}
@@ -43,7 +46,7 @@ module.exports = {
 		}
 	},
 
-	runTick: function () {
+	runTick() {
 		if (Memory.isAccountThrottled) {
 			Game.cpu.limit = 20;
 		}
@@ -88,18 +91,16 @@ module.exports = {
 			priority: PROCESS_PRIORITY_LOW,
 		});
 
-		// hivemind.runCreeps();
-
 		this.cleanup();
 		this.recordStats();
 	},
 
-	recordStats: function () {
-		if (Game.time % 10 == 0 && Game.cpu.bucket < 9800) {
+	recordStats() {
+		if (Game.time % 10 === 0 && Game.cpu.bucket < 9800) {
 			hivemind.log('main').info('Bucket:', Game.cpu.bucket);
 		}
 
-		let time = Game.cpu.getUsed();
+		const time = Game.cpu.getUsed();
 
 		if (time > Game.cpu.limit * 1.2) {
 			hivemind.log('cpu').info('High CPU:', time + '/' + Game.cpu.limit);
@@ -110,9 +111,9 @@ module.exports = {
 		stats.recordStat('creeps', _.size(Game.creeps));
 	},
 
-	cleanup: function () {
+	cleanup() {
 		// Periodically clean creep memory.
-		if (Game.time % 16 == 7) {
+		if (Game.time % 16 === 7) {
 			for (var name in Memory.creeps) {
 				if (!Game.creeps[name]) {
 					delete Memory.creeps[name];
@@ -121,7 +122,7 @@ module.exports = {
 		}
 
 		// Periodically clean flag memory.
-		if (Game.time % 1000 == 725) {
+		if (Game.time % 1000 === 725) {
 			for (let flagName in Memory.flags) {
 				if (!Game.flags[flagName]) {
 					delete Memory.flags[flagName];
@@ -130,7 +131,7 @@ module.exports = {
 		}
 
 		// Check if memory is getting too bloated.
-		if (Game.time % 836 == 0) {
+		if (Game.time % 836 === 0) {
 			if (RawMemory.get().length > 1800000) {
 				Memory.hivemind.maxScoutDistance = (Memory.hivemind.maxScoutDistance || 7) - 1;
 				for (let roomName in Memory.strategy.roomList) {

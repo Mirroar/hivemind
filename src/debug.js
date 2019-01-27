@@ -1,4 +1,7 @@
-var channels = {
+'use strict';
+
+/* Default logger channels and their settings. */
+const channels = {
 	default: {
 		name: 'Default',
 		color: '#dddddd',
@@ -25,7 +28,15 @@ var channels = {
 	},
 };
 
-var Logger = function (channel, roomName) {
+/**
+ * Loggers are used for simple, prettified output to the console.
+ *
+ * @param {string} channel
+ *   The name of the channel to get a logger for.
+ * @param {string|null} roomName
+ *   The name of the room to log this message for, or null if logging globally.
+ */
+const Logger = function (channel, roomName) {
 	this.channel = channel;
 	this.color = channels.default.color;
 	this.roomName = roomName;
@@ -45,6 +56,7 @@ var Logger = function (channel, roomName) {
 	if (!Memory.logger) {
 		Memory.logger = {};
 	}
+
 	if (!Memory.logger.channelSettings) {
 		Memory.logger.channelSettings = {};
 	}
@@ -55,23 +67,42 @@ var Logger = function (channel, roomName) {
 	}
 };
 
+/**
+ * Decides whether this logger channel should be displayed.
+ *
+ * @param {boolean} enabled
+ *   True to show this channel in the console.
+ */
 Logger.prototype.setEnabled = function (enabled) {
 	if (!Memory.logger.channelSettings[this.channel]) {
 		Memory.logger.channelSettings[this.channel] = {};
 	}
+
 	Memory.logger.channelSettings[this.channel].disabled = !enabled;
 };
 
+/**
+ * Enables displaying of this channel.
+ */
 Logger.prototype.enable = function () {
 	this.setEnabled(true);
 };
 
+/**
+ * Disables displaying of this channel.
+ */
 Logger.prototype.disable = function () {
 	this.setEnabled(false);
 };
 
+/**
+ * Determines prefix of lines logged through this channel.
+ *
+ * @return {string}
+ *   Line prefix containing pretty channel name, colors and room name.
+ */
 Logger.prototype.getOutputPrefix = function () {
-	var prefix = '[<font color="'+ this.color +'">' + this.channelName + '</font>';
+	let prefix = '[<font color="' + this.color + '">' + this.channelName + '</font>';
 	prefix += ']';
 	if (this.roomName) {
 		let roomColor = 'ffff80';
@@ -86,6 +117,7 @@ Logger.prototype.getOutputPrefix = function () {
 				roomColor = 'ff8080';
 			}
 		}
+
 		prefix += '[<font color="#' + roomColor + '">' + this.roomName + '</font>]';
 	}
 	else {
@@ -95,26 +127,33 @@ Logger.prototype.getOutputPrefix = function () {
 	return prefix;
 };
 
-Logger.prototype.debug = function(...args) {
+/**
+ * Logs a degub line.
+ */
+Logger.prototype.debug = function (...args) {
 	if (!this.active) return;
 
-	var prefix = '<font color="#606060">' + this.prefix;
+	const prefix = '<font color="#606060">' + this.prefix;
 
 	console.log(prefix, ...args, '</font>');
 };
 
-Logger.prototype.info = function(...args) {
+/**
+ * Logs a normal line.
+ */
+Logger.prototype.info = function (...args) {
 	if (!this.active) return;
 
-	var prefix = this.prefix;
+	const prefix = this.prefix;
 
 	console.log(prefix, ...args);
 };
 
-Logger.prototype.error = function(...args) {
-	//if (!this.active) return;
-
-	var prefix = '<font color="#ff8080">' + this.prefix;
+/**
+ * Logs an error.
+ */
+Logger.prototype.error = function (...args) {
+	const prefix = '<font color="#ff8080">' + this.prefix;
 
 	console.log(prefix, ...args, '</font>');
 };

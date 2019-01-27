@@ -1,3 +1,8 @@
+'use strict';
+
+/* global hivemind Creep Room RoomPosition TOP RIGHT BOTTOM LEFT STRUCTURE_NUKER
+STRUCTURE_OBSERVER STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
+
 require('manager.military');
 require('manager.source');
 require('role.brawler');
@@ -17,16 +22,15 @@ require('role.helper');
 require('role.scout');
 require('role.transporter');
 require('role.upgrader');
-var roleRemoteBuilder = require('role.builder.remote');
+const roleRemoteBuilder = require('role.builder.remote');
 
-var Logger = require('debug');
-var BoostManager = require('manager.boost');
-var spawnManager = require('manager.spawn');
-var utilities = require('utilities');
+const BoostManager = require('manager.boost');
+const spawnManager = require('manager.spawn');
+const utilities = require('utilities');
 
-var Bay = require('manager.bay');
-var Exploit = require('manager.exploit');
-var Squad = require('manager.squad');
+const Bay = require('manager.bay');
+const Exploit = require('manager.exploit');
+const Squad = require('manager.squad');
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 
@@ -37,7 +41,7 @@ var Squad = require('manager.squad');
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
-var creepThrottleLevels = {
+const creepThrottleLevels = {
 	// Military creeps are always fully active!
 	brawler: {
 		max: 0,
@@ -86,8 +90,8 @@ var creepThrottleLevels = {
 /**
  * Runs a creeps logic depending on role and other factors.
  */
-Creep.prototype.runLogic = function() {
-	var creep = this;
+Creep.prototype.runLogic = function () {
+	const creep = this;
 
 	if (!Game.creepPerformance[this.memory.role]) {
 		Game.creepPerformance[this.memory.role] = {
@@ -101,8 +105,8 @@ Creep.prototype.runLogic = function() {
 	let minBucket = null;
 	let maxBucket = null;
 	if (creepThrottleLevels[this.memory.role]) {
-		let min = creepThrottleLevels[this.memory.role].min;
-		let max = creepThrottleLevels[this.memory.role].max;
+		const min = creepThrottleLevels[this.memory.role].min;
+		const max = creepThrottleLevels[this.memory.role].max;
 
 		if (min && Memory.throttleInfo.bucket[min]) {
 			minBucket = Memory.throttleInfo.bucket[min];
@@ -110,6 +114,7 @@ Creep.prototype.runLogic = function() {
 		else {
 			minBucket = min;
 		}
+
 		if (max && Memory.throttleInfo.bucket[max]) {
 			maxBucket = Memory.throttleInfo.bucket[max];
 		}
@@ -119,7 +124,7 @@ Creep.prototype.runLogic = function() {
 	}
 
 	if (utilities.throttle(this.memory.throttleOffset, minBucket, maxBucket)) {
-		if (creep.pos.x == 0 || creep.pos.x == 49 || creep.pos.y == 0 || creep.pos.y == 49) {
+		if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) {
 			// Do not throttle creeps at room borders, so they don't get stuck between rooms.
 		}
 		else {
@@ -129,27 +134,28 @@ Creep.prototype.runLogic = function() {
 		}
 	}
 
-	if (this.memory.singleRoom && this.pos.roomName != this.memory.singleRoom) {
+	if (this.memory.singleRoom && this.pos.roomName !== this.memory.singleRoom) {
 		this.moveTo(new RoomPosition(25, 25, this.memory.singleRoom));
 	}
 
-	if (this.memory.singleRoom && this.pos.roomName == this.memory.singleRoom) {
+	if (this.memory.singleRoom && this.pos.roomName === this.memory.singleRoom) {
 		let stuck = true;
-		if (this.pos.x == 0) {
+		if (this.pos.x === 0) {
 			this.move(RIGHT);
 		}
-		else if (this.pos.y == 0) {
+		else if (this.pos.y === 0) {
 			this.move(BOTTOM);
 		}
-		else if (this.pos.x == 49) {
+		else if (this.pos.x === 49) {
 			this.move(LEFT);
 		}
-		else if (this.pos.y == 49) {
+		else if (this.pos.y === 49) {
 			this.move(TOP);
 		}
 		else {
 			stuck = false;
 		}
+
 		if (stuck) {
 			this.say('unstuck!');
 			delete this.memory.go;
@@ -159,7 +165,7 @@ Creep.prototype.runLogic = function() {
 	}
 
 	Game.creepPerformance[this.memory.role].count++;
-	let startTime = Game.cpu.getUsed();
+	const startTime = Game.cpu.getUsed();
 
 	try {
 		if (creep.room.boostManager && creep.room.boostManager.overrideCreepLogic(creep)) {
@@ -167,67 +173,67 @@ Creep.prototype.runLogic = function() {
 		}
 
 		// @todo Condense this mess, please!
-		if (creep.memory.role == 'harvester') {
+		if (creep.memory.role === 'harvester') {
 			creep.runHarvesterLogic();
 		}
-		else if (creep.memory.role == 'harvester.minerals') {
+		else if (creep.memory.role === 'harvester.minerals') {
 			creep.runHarvesterLogic();
 		}
-		else if (creep.memory.role == 'upgrader') {
+		else if (creep.memory.role === 'upgrader') {
 			creep.runUpgraderLogic();
 		}
-		else if (creep.memory.role == 'builder' || creep.memory.role == 'repairer') {
+		else if (creep.memory.role === 'builder' || creep.memory.role === 'repairer') {
 			creep.runBuilderLogic();
 		}
-		else if (creep.memory.role == 'transporter') {
+		else if (creep.memory.role === 'transporter') {
 			creep.runTransporterLogic();
 		}
-		else if (creep.memory.role == 'gift') {
+		else if (creep.memory.role === 'gift') {
 			creep.performGiftCollection();
 		}
-		else if (creep.memory.role == 'harvester.remote') {
+		else if (creep.memory.role === 'harvester.remote') {
 			creep.runRemoteHarvesterLogic();
 		}
-		else if (creep.memory.role == 'harvester.exploit') {
+		else if (creep.memory.role === 'harvester.exploit') {
 			creep.runExploitHarvesterLogic();
 		}
-		else if (creep.memory.role == 'harvester.power') {
+		else if (creep.memory.role === 'harvester.power') {
 			creep.runPowerHarvesterLogic();
 		}
-		else if (creep.memory.role == 'claimer') {
+		else if (creep.memory.role === 'claimer') {
 			creep.runClaimerLogic();
 		}
-		else if (creep.memory.role == 'dismantler') {
+		else if (creep.memory.role === 'dismantler') {
 			creep.runDismantlerLogic();
 		}
-		else if (creep.memory.role == 'hauler') {
+		else if (creep.memory.role === 'hauler') {
 			creep.runHaulerLogic();
 		}
-		else if (creep.memory.role == 'hauler.exploit') {
+		else if (creep.memory.role === 'hauler.exploit') {
 			creep.runExploitHaulerLogic();
 		}
-		else if (creep.memory.role == 'hauler.power') {
+		else if (creep.memory.role === 'hauler.power') {
 			creep.runPowerHaulerLogic();
 		}
-		else if (creep.memory.role == 'brawler') {
+		else if (creep.memory.role === 'brawler') {
 			creep.runBrawlerLogic();
 		}
-		else if (creep.memory.role == 'builder.remote') {
+		else if (creep.memory.role === 'builder.remote') {
 			roleRemoteBuilder.run(creep);
 		}
-		else if (creep.memory.role == 'builder.exploit') {
+		else if (creep.memory.role === 'builder.exploit') {
 			creep.runExploitBuilderLogic();
 		}
-		else if (creep.memory.role == 'helper') {
+		else if (creep.memory.role === 'helper') {
 			creep.runHelperLogic();
 		}
-		else if (creep.memory.role == 'scout') {
+		else if (creep.memory.role === 'scout') {
 			creep.runScoutLogic();
 		}
 	}
-	catch (e) {
-		console.log('Error when managing creep', creep.name, ':', e);
-		console.log(e.stack);
+	catch (error) {
+		console.log('Error when managing creep', creep.name, ':', error);
+		console.log(error.stack);
 	}
 
 	if (!Game.creepPerformance[this.memory.role]) {
@@ -237,6 +243,7 @@ Creep.prototype.runLogic = function() {
 			cpu: 0,
 		};
 	}
+
 	Game.creepPerformance[this.memory.role].cpu += Game.cpu.getUsed() - startTime;
 };
 
@@ -244,32 +251,36 @@ Creep.prototype.runLogic = function() {
  * Add additional data for each creep.
  */
 Creep.prototype.enhanceData = function () {
-	let role = this.memory.role;
+	const role = this.memory.role;
 
 	// Store creeps by role in global and room data.
 	if (!Game.creepsByRole[role]) {
 		Game.creepsByRole[role] = {};
 	}
+
 	Game.creepsByRole[role][this.name] = this;
 
-	let room = this.room;
+	const room = this.room;
 	if (!room.creeps) {
 		room.creeps = {};
 		room.creepsByRole = {};
 	}
+
 	room.creeps[this.name] = this;
 	if (!room.creepsByRole[role]) {
 		room.creepsByRole[role] = {};
 	}
+
 	room.creepsByRole[role][this.name] = this;
 
 	// Store creeps that are part of a squad in their respectice squads.
 	if (this.memory.squadName) {
-		var squad = Game.squads[this.memory.squadName];
+		const squad = Game.squads[this.memory.squadName];
 		if (squad) {
 			if (!squad.units[this.memory.squadUnitType]) {
 				squad.units[this.memory.squadUnitType] = [];
 			}
+
 			squad.units[this.memory.squadUnitType].push(this);
 		}
 	}
@@ -279,6 +290,7 @@ Creep.prototype.enhanceData = function () {
 		if (!Game.exploitTemp[this.memory.exploitName]) {
 			Game.exploitTemp[this.memory.exploitName] = [];
 		}
+
 		Game.exploitTemp[this.memory.exploitName].push(this.id);
 	}
 };
@@ -294,6 +306,7 @@ Room.prototype.enhanceData = function () {
 	if (this.terminal && !this.terminal.isActive()) {
 		delete this.terminal;
 	}
+
 	if (this.storage && !this.storage.isActive()) {
 		delete this.storage;
 	}
@@ -309,7 +322,8 @@ Room.prototype.enhanceData = function () {
 	for (let i in this.sources) {
 		this.sources[i].enhanceData();
 	}
-	let minerals = this.find(FIND_MINERALS);
+
+	const minerals = this.find(FIND_MINERALS);
 	if (minerals.length > 0) {
 		this.mineral = minerals[0];
 		this.mineral.enhanceData();
@@ -318,16 +332,16 @@ Room.prototype.enhanceData = function () {
 	// Register bays.
 	this.bays = {};
 	if (this.controller && this.controller.my) {
-		let flags = this.find(FIND_FLAGS, {
+		const flags = this.find(FIND_FLAGS, {
 			filter: (flag) => flag.name.startsWith('Bay:')
 		});
 		for (let i in flags) {
 			try {
 				this.bays[flags[i].name] = new Bay(flags[i].name);
 			}
-			catch (e) {
-				console.log('Error when initializing Bays:', e);
-				console.log(e.stack);
+			catch (error) {
+				console.log('Error when initializing Bays:', error);
+				console.log(error.stack);
 			}
 		}
 	}
@@ -335,15 +349,15 @@ Room.prototype.enhanceData = function () {
 	// Register exploits.
 	this.exploits = {};
 	if (this.controller && this.controller.level >= 7) {
-		flags = _.filter(Game.flags, (flag) => flag.name.startsWith('Exploit:' + this.name + ':'));
+		const flags = _.filter(Game.flags, (flag) => flag.name.startsWith('Exploit:' + this.name + ':'));
 		for (let i in flags) {
 			try {
 				this.exploits[flags[i].pos.roomName] = new Exploit(this, flags[i].name);
 				Game.exploits[flags[i].pos.roomName] = this.exploits[flags[i].pos.roomName];
 			}
-			catch (e) {
-				console.log('Error when initializing Exploits:', e);
-				console.log(e.stack);
+			catch (error) {
+				console.log('Error when initializing Exploits:', error);
+				console.log(error.stack);
 			}
 		}
 	}
@@ -354,36 +368,27 @@ Room.prototype.enhanceData = function () {
 	}
 };
 
-var main = {
+const main = {
 
 	/**
 	 * Manages logic for all creeps.
 	 */
-	manageCreeps: function () {
+	manageCreeps() {
 		Game.numThrottledCreeps = 0;
 		Game.creepPerformance = {};
-		for (var name in Game.creeps) {
-			var creep = Game.creeps[name];
+		for (const name in Game.creeps) {
+			const creep = Game.creeps[name];
 
-			if (creep.spawning) {
-				continue;
-			}
+			if (creep.spawning) continue;
 
-			let temp = function () {
-				creep.runLogic();
-			}
-
-			// if (useProfiler) {
-			//     temp = profiler.registerFN(temp, creep.pos.roomName + '.runCreepLogic');
-			// }
-
-			temp();
+			creep.runLogic();
 		}
+
 		if (Game.numThrottledCreeps > 0) {
 			hivemind.log('creeps').info(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
 		}
 
-		for (let role in Game.creepPerformance) {
+		for (const role in Game.creepPerformance) {
 			if (Game.creepPerformance[role].count > 0) {
 				Game.creepPerformance[role].avg = Game.creepPerformance[role].cpu / Game.creepPerformance[role].count;
 			}
@@ -393,26 +398,25 @@ var main = {
 	/**
 	 * Main game loop.
 	 */
-	loop: function () {
-		var mainLoop = function () {
+	loop() {
+		const mainLoop = function () {
 			Game.squads = {};
 			Game.exploits = {};
 			Game.creepsByRole = {};
 			Game.exploitTemp = {};
 
 			// Add data to global Game object.
-			for (var squadName in Memory.squads) {
+			for (const squadName in Memory.squads) {
 				Game.squads[squadName] = new Squad(squadName);
 			}
 
 			// Cache creeps per room and role.
-			for (let creepName in Game.creeps) {
-				let creep = Game.creeps[creepName];
-				creep.enhanceData();
+			for (const creepName in Game.creeps) {
+				Game.creeps[creepName].enhanceData();
 			}
 
 			// Add data to room objects.
-			for (let roomName in Game.rooms) {
+			for (const roomName in Game.rooms) {
 				Game.rooms[roomName].enhanceData();
 			}
 
@@ -422,7 +426,7 @@ var main = {
 		};
 
 		mainLoop();
-	}
+	},
 
 };
 

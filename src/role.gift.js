@@ -1,23 +1,30 @@
+/* global Creep */
+
 /**
  * Makes this creep take excess resources from storage.
  */
 Creep.prototype.performGiftCollection = function () {
-	let storage = this.room.storage;
+	const storage = this.room.storage;
 	if (!storage) {
 		// Nothing to gift if we have no storage.
-		return this.performGiftTransport();
+		this.performGiftTransport();
+		return;
 	}
+
 	if (_.sum(this.carry) >= this.carryCapacity * 0.95) {
 		// If we're (nearly) full, embark.
-		return this.performGiftTransport();
+		this.performGiftTransport();
+		return;
 	}
 
 	if (!this.memory.targetResource) {
-		return this.chooseGiftResource();
+		this.chooseGiftResource();
+		return;
 	}
 
 	if (!storage.store[this.memory.targetResource] || storage.store[this.memory.targetResource] <= 0) {
-		return this.chooseGiftResource();
+		this.chooseGiftResource();
+		return;
 	}
 
 	if (this.pos.getRangeTo(storage) > 1) {
@@ -35,11 +42,12 @@ Creep.prototype.performGiftCollection = function () {
 Creep.prototype.chooseGiftResource = function () {
 	let tryCount = 0;
 	let resourceType = null;
-	let resourceTypes = Object.keys(this.room.storage.store);
+	const resourceTypes = Object.keys(this.room.storage.store);
 	do {
 		resourceType = _.sample(resourceTypes);
 		tryCount++;
 	} while (tryCount < 10 && !this.room.isFullOn(resourceType));
+
 	this.memory.targetResource = resourceType;
 };
 
@@ -47,7 +55,7 @@ Creep.prototype.chooseGiftResource = function () {
  * Move the creep out of the room by letting it scout.
  */
 Creep.prototype.performGiftTransport = function () {
-	// Do not send notifications when attacket - we mean to suicide.
+	// Do not send notifications when attacked - we mean to suicide.
 	this.notifyWhenAttacked(false);
 
 	// @todo Move to a known enemy room and suicide.
