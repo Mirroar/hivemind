@@ -57,9 +57,11 @@ RoomDefenseProcess.prototype.run = function () {
 			});
 			if (closestHostileHealer) {
 				tower.attack(closestHostileHealer);
+				return true;
 			}
 			else if (closestHostile) {
 				tower.attack(closestHostile);
+				return true;
 			}
 		}
 
