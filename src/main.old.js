@@ -3,34 +3,34 @@
 /* global hivemind Creep Room RoomPosition TOP RIGHT BOTTOM LEFT STRUCTURE_NUKER
 STRUCTURE_OBSERVER STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
 
-require('manager.military');
-require('manager.source');
-require('role.brawler');
-require('role.builder');
-require('role.builder.exploit');
-require('role.claimer');
-require('role.dismantler');
-require('role.gift');
-require('role.harvester');
-require('role.harvester.exploit');
-require('role.harvester.power');
-require('role.harvester.remote');
-require('role.hauler');
-require('role.hauler.exploit');
-require('role.hauler.power');
-require('role.helper');
-require('role.scout');
-require('role.transporter');
-require('role.upgrader');
-const roleRemoteBuilder = require('role.builder.remote');
+require('./manager.military');
+require('./manager.source');
+require('./role.brawler');
+require('./role.builder');
+require('./role.builder.exploit');
+require('./role.claimer');
+require('./role.dismantler');
+require('./role.gift');
+require('./role.harvester');
+require('./role.harvester.exploit');
+require('./role.harvester.power');
+require('./role.harvester.remote');
+require('./role.hauler');
+require('./role.hauler.exploit');
+require('./role.hauler.power');
+require('./role.helper');
+require('./role.scout');
+require('./role.transporter');
+require('./role.upgrader');
+const roleRemoteBuilder = require('./role.builder.remote');
 
-const BoostManager = require('manager.boost');
-const spawnManager = require('manager.spawn');
-const utilities = require('utilities');
+const BoostManager = require('./manager.boost');
+const spawnManager = require('./manager.spawn');
+const utilities = require('./utilities');
 
-const Bay = require('manager.bay');
-const Exploit = require('manager.exploit');
-const Squad = require('manager.squad');
+const Bay = require('./manager.bay');
+const Exploit = require('./manager.exploit');
+const Squad = require('./manager.squad');
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 
@@ -319,7 +319,7 @@ Room.prototype.enhanceData = function () {
 
 	// Register sources and minerals.
 	this.sources = this.find(FIND_SOURCES);
-	for (let i in this.sources) {
+	for (const i in this.sources) {
 		this.sources[i].enhanceData();
 	}
 
@@ -333,9 +333,9 @@ Room.prototype.enhanceData = function () {
 	this.bays = {};
 	if (this.controller && this.controller.my) {
 		const flags = this.find(FIND_FLAGS, {
-			filter: (flag) => flag.name.startsWith('Bay:')
+			filter: flag => flag.name.startsWith('Bay:'),
 		});
-		for (let i in flags) {
+		for (const i in flags) {
 			try {
 				this.bays[flags[i].name] = new Bay(flags[i].name);
 			}
@@ -349,8 +349,8 @@ Room.prototype.enhanceData = function () {
 	// Register exploits.
 	this.exploits = {};
 	if (this.controller && this.controller.level >= 7) {
-		const flags = _.filter(Game.flags, (flag) => flag.name.startsWith('Exploit:' + this.name + ':'));
-		for (let i in flags) {
+		const flags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + this.name + ':'));
+		for (const i in flags) {
 			try {
 				this.exploits[flags[i].pos.roomName] = new Exploit(this, flags[i].name);
 				Game.exploits[flags[i].pos.roomName] = this.exploits[flags[i].pos.roomName];

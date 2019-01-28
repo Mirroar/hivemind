@@ -1,6 +1,10 @@
-var utilities = require('utilities');
+'use strict';
 
-var Squad = function(squadName) {
+/* global RoomPosition COLOR_GREEN COLOR_RED MOVE CLAIM */
+
+const utilities = require('utilities');
+
+const Squad = function(squadName) {
 	this.name = squadName;
 	this.units = {};
 
@@ -15,12 +19,12 @@ var Squad = function(squadName) {
 		};
 	}
 
-	let spawnFlag = Game.flags['SpawnSquad:' + squadName];
+	const spawnFlag = Game.flags['SpawnSquad:' + squadName];
 	if (spawnFlag && spawnFlag.color != COLOR_GREEN) {
 		spawnFlag.setColor(COLOR_GREEN);
 	}
 
-	let attackFlag = Game.flags['AttackSquad:' + squadName];
+	const attackFlag = Game.flags['AttackSquad:' + squadName];
 	if (attackFlag && attackFlag.color != COLOR_RED) {
 		attackFlag.setColor(COLOR_RED);
 	}
@@ -35,6 +39,7 @@ Squad.prototype.addUnit = function (unitType) {
 	if (!this.memory.composition[unitType]) {
 		this.memory.composition[unitType] = 0;
 	}
+
 	this.memory.composition[unitType]++;
 
 	return this.memory.composition[unitType];
@@ -47,6 +52,7 @@ Squad.prototype.removeUnit = function (unitType) {
 	if (!this.memory.composition[unitType]) {
 		return;
 	}
+
 	this.memory.composition[unitType]--;
 
 	return this.memory.composition[unitType];
@@ -70,7 +76,7 @@ Squad.prototype.clearUnits = function () {
  * Decides whether this squad needs additional units spawned.
  */
 Squad.prototype.needsSpawning = function () {
-	for (var unitType in this.memory.composition) {
+	for (const unitType in this.memory.composition) {
 		if (this.memory.composition[unitType] > _.size(this.units[unitType])) {
 			return unitType;
 		}
@@ -84,11 +90,11 @@ Squad.prototype.needsSpawning = function () {
  * Spawns another unit for this squad.
  */
 Squad.prototype.spawnUnit = function (spawn) {
-	var toSpawn = this.needsSpawning();
+	const toSpawn = this.needsSpawning();
 
 	if (!toSpawn) return false;
 
-	if (toSpawn == 'ranger') {
+	if (toSpawn === 'ranger') {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			bodyWeights: {move: 0.5, ranged_attack: 0.3, heal: 0.2},
@@ -98,11 +104,11 @@ Squad.prototype.spawnUnit = function (spawn) {
 			},
 		});
 	}
-	else if (toSpawn == 'healer') {
-		var boosts = null;
+	else if (toSpawn === 'healer') {
+		let boosts = null;
 		if (spawn.room.canSpawnBoostedCreeps()) {
-			var availableBoosts = spawn.room.getAvailableBoosts('heal');
-			var bestBoost;
+			const availableBoosts = spawn.room.getAvailableBoosts('heal');
+			let bestBoost;
 			for (let resourceType in availableBoosts || []) {
 				if (availableBoosts[resourceType].available >= 50) {
 					if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
@@ -121,14 +127,14 @@ Squad.prototype.spawnUnit = function (spawn) {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			bodyWeights: {move: 0.52, heal: 0.48},
-			boosts: boosts,
+			boosts,
 			memory: {
 				squadName: this.name,
 				squadUnitType: toSpawn,
 			},
 		});
 	}
-	else if (toSpawn == 'claimer') {
+	else if (toSpawn === 'claimer') {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			bodyWeights: {move: 0.52, tough: 0.18, claim: 0.3},
@@ -138,7 +144,7 @@ Squad.prototype.spawnUnit = function (spawn) {
 			},
 		});
 	}
-	else if (toSpawn == 'singleClaim') {
+	else if (toSpawn === 'singleClaim') {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			body: [MOVE, MOVE, MOVE, MOVE, MOVE, CLAIM],
@@ -148,7 +154,7 @@ Squad.prototype.spawnUnit = function (spawn) {
 			},
 		});
 	}
-	else if (toSpawn == 'builder') {
+	else if (toSpawn === 'builder') {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			bodyWeights: {move: 0.52, carry: 0.38, work: 0.1},
@@ -158,11 +164,11 @@ Squad.prototype.spawnUnit = function (spawn) {
 			},
 		});
 	}
-	else if (toSpawn == 'attacker') {
-		var boosts = null;
+	else if (toSpawn === 'attacker') {
+		let boosts = null;
 		if (spawn.room.canSpawnBoostedCreeps()) {
-			var availableBoosts = spawn.room.getAvailableBoosts('attack');
-			var bestBoost;
+			const availableBoosts = spawn.room.getAvailableBoosts('attack');
+			let bestBoost;
 			for (let resourceType in availableBoosts || []) {
 				if (availableBoosts[resourceType].available >= 50) {
 					if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
@@ -187,7 +193,7 @@ Squad.prototype.spawnUnit = function (spawn) {
 			},
 		});
 	}
-	else if (toSpawn == 'test') {
+	else if (toSpawn === 'test') {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			body: [MOVE],
@@ -212,11 +218,11 @@ Squad.prototype.spawnUnit = function (spawn) {
 };
 
 Squad.prototype.getOrders = function () {
-	var options = [];
+	const options = [];
 
 	if (this.memory.fullySpawned) {
 		// Check if there is an attack flag for this squad.
-		var attackFlags = _.filter(Game.flags, (flag) => flag.name == 'AttackSquad:' + this.name);
+		const attackFlags = _.filter(Game.flags, flag => flag.name === 'AttackSquad:' + this.name);
 		if (attackFlags.length > 0) {
 			options.push({
 				priority: 5,
@@ -242,8 +248,8 @@ Squad.prototype.setPath = function (pathName) {
  * Orders squad to spawn in the given room.
  */
 Squad.prototype.setSpawn = function (roomName) {
-	let key = 'SpawnSquad:' + this.name;
-	let spawnPos = new RoomPosition(25, 25, roomName);
+	const key = 'SpawnSquad:' + this.name;
+	const spawnPos = new RoomPosition(25, 25, roomName);
 	if (Game.flags[key]) {
 		Game.flags[key].setPosition(spawnPos);
 	}
@@ -256,7 +262,7 @@ Squad.prototype.setSpawn = function (roomName) {
  * Orders squad to move toward the given position.
  */
 Squad.prototype.setTarget = function (targetPos) {
-	let key = 'AttackSquad:' + this.name;
+	const key = 'AttackSquad:' + this.name;
 	if (Game.flags[key]) {
 		Game.flags[key].setPosition(targetPos);
 	}

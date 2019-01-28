@@ -1,12 +1,18 @@
+'use strict';
+
+/* global Source Mineral StructureKeeperLair ENERGY_REGEN_TIME LOOK_TERRAIN
+FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR */
+
 /**
  * Adds some additional data to spawn objects. Should be invoked for each spawn early in the script's lifetime.
  */
-var enhanceData = function (collection, creepAttribute) {
-	var roomMemory = Memory.rooms[this.pos.roomName];
+const enhanceData = function (collection, creepAttribute) {
+	const roomMemory = Memory.rooms[this.pos.roomName];
 
 	if (!roomMemory[collection]) {
 		roomMemory[collection] = {};
 	}
+
 	if (!roomMemory[collection][this.id]) {
 		roomMemory[collection][this.id] = {};
 	}
@@ -16,16 +22,18 @@ var enhanceData = function (collection, creepAttribute) {
 	// Collect assigned harvesters.
 	this.harvesters = [];
 	for (let i in this.room.creepsByRole.harvester || []) {
-		let harvester = this.room.creepsByRole.harvester[i];
+		const harvester = this.room.creepsByRole.harvester[i];
 
-		if (harvester.memory[creepAttribute] == this.id) {
+		if (harvester.memory[creepAttribute] === this.id) {
 			this.harvesters.push(harvester);
 		}
 	}
 };
+
 Source.prototype.enhanceData = function () {
 	enhanceData.call(this, 'sources', 'fixedSource');
 };
+
 Mineral.prototype.enhanceData = function () {
 	enhanceData.call(this, 'minerals', 'fixedMineral');
 };
@@ -41,16 +49,16 @@ Source.prototype.getMaxWorkParts = function () {
 /**
  * Finds all adjacent squares that are not blocked by walls.
  */
-var getAdjacentFreeSquares = function () {
-	var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
-	var adjacentTerrain = [];
-	for (var t in terrain) {
-		var tile = terrain[t];
-		if (tile.x == this.pos.x && tile.y == this.pos.y) {
+const getAdjacentFreeSquares = function () {
+	const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
+	const adjacentTerrain = [];
+	for (let t in terrain) {
+		let tile = terrain[t];
+		if (tile.x === this.pos.x && tile.y === this.pos.y) {
 			continue;
 		}
 
-		if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
+		if (tile.terrain === 'plain' || tile.terrain === 'swamp') {
 			// @todo Make sure no structures are blocking this tile.
 			adjacentTerrain.push(this.room.getPositionAt(tile.x, tile.y));
 		}
@@ -58,9 +66,11 @@ var getAdjacentFreeSquares = function () {
 
 	return adjacentTerrain;
 };
+
 Source.prototype.getAdjacentFreeSquares = function () {
 	return getAdjacentFreeSquares.call(this);
 };
+
 Mineral.prototype.getAdjacentFreeSquares = function () {
 	return getAdjacentFreeSquares.call(this);
 };
@@ -72,27 +82,20 @@ Source.prototype.getDropoffSpot = function () {
 	// Decide on a dropoff-spot that will eventually have a container built.
 	// @todo Maybe recalculate once in a while in case structures no block some tiles.
 	if (!this.memory.dropoffSpot) {
-		var best;
-		var bestCount = 0;
-		var terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 2, this.pos.x - 2, this.pos.y + 2, this.pos.x + 2, true);
-		var adjacentTerrain = this.getAdjacentFreeSquares();
+		let best;
+		let bestCount = 0;
+		const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 2, this.pos.x - 2, this.pos.y + 2, this.pos.x + 2, true);
+		const adjacentTerrain = this.getAdjacentFreeSquares();
 
-		for (var t in terrain) {
-			var tile = terrain[t];
+		for (let t in terrain) {
+			let tile = terrain[t];
 			if (this.pos.getRangeTo(tile.x, tile.y) <= 1) {
 				continue;
 			}
 
-			if (tile.terrain == 'plain' || tile.terrain == 'swamp') {
+			if (tile.terrain === 'plain' || tile.terrain === 'swamp') {
 				// @todo Make sure no structures are blocking this tile.
-				var count = 0;
-				for (var u in adjacentTerrain) {
-					var aTile = adjacentTerrain[u];
-
-					if (aTile.getRangeTo(tile.x, tile.y) <= 1) {
-						count++;
-					}
-				}
+				const count = _.size(_.filter(adjacentTerrain, aTile => aTile.getRangeTo(tile.x, tile.y) <= 1));
 
 				if (count > bestCount) {
 					bestCount = count;
@@ -112,7 +115,7 @@ Source.prototype.getDropoffSpot = function () {
 /**
  * Calculates the number of walkable tiles around a source.
  */
-var getNumHarvestSpots = function () {
+const getNumHarvestSpots = function () {
 	if (!this.memory.maxHarvestersCalculated || this.memory.maxHarvestersCalculated < Game.time - 1000) {
 		this.memory.maxHarvestersCalculated = Game.time;
 		this.memory.maxHarvesters = this.getAdjacentFreeSquares().length;
@@ -120,9 +123,11 @@ var getNumHarvestSpots = function () {
 
 	return this.memory.maxHarvesters;
 };
+
 Source.prototype.getNumHarvestSpots = function () {
 	return getNumHarvestSpots.call(this);
 };
+
 Mineral.prototype.getNumHarvestSpots = function () {
 	return getNumHarvestSpots.call(this);
 };
@@ -130,17 +135,17 @@ Mineral.prototype.getNumHarvestSpots = function () {
 /**
  * Finds a container in close proximity to this source, for dropping off energy.
  */
-var getNearbyContainer = function () {
+const getNearbyContainer = function () {
 	if (!this.memory.nearbyContainerCalculated || this.memory.nearbyContainerCalculated < Game.time - 150) {
 		this.memory.nearbyContainerCalculated = Game.time;
 		this.memory.targetContainer = null;
 
 		// Check if there is a container nearby.
-		var structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
-			filter: (structure) => structure.structureType == STRUCTURE_CONTAINER
+		const structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
 		});
 		if (structures.length > 0) {
-			var structure = this.pos.findClosestByRange(structures);
+			const structure = this.pos.findClosestByRange(structures);
 			this.memory.targetContainer = structure.id;
 		}
 	}
@@ -149,9 +154,11 @@ var getNearbyContainer = function () {
 		return Game.getObjectById(this.memory.targetContainer);
 	}
 };
+
 Source.prototype.getNearbyContainer = function () {
 	return getNearbyContainer.call(this);
 };
+
 Mineral.prototype.getNearbyContainer = function () {
 	return getNearbyContainer.call(this);
 };
@@ -165,11 +172,11 @@ Source.prototype.getNearbyLink = function () {
 		this.memory.targetLink = null;
 
 		// Check if there is a link nearby.
-		var structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
-			filter: (structure) => structure.structureType == STRUCTURE_LINK
+		const structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
+			filter: (structure) => structure.structureType === STRUCTURE_LINK,
 		});
 		if (structures.length > 0) {
-			var structure = this.pos.findClosestByRange(structures);
+			const structure = this.pos.findClosestByRange(structures);
 			this.memory.targetLink = structure.id;
 		}
 	}
@@ -182,18 +189,18 @@ Source.prototype.getNearbyLink = function () {
 /**
  * Finds a source keeper lair in close proximity to this source.
  */
-var getNearbyLair = function () {
+const getNearbyLair = function () {
 	if (!this.memory.nearbyLairCalculated || this.memory.nearbyLairCalculated < Game.time - 123456) {
 		// This information really shouldn't ever change.
 		this.memory.nearbyLairCalculated = Game.time;
 		this.memory.nearbyLair = null;
 
 		// Check if there is a link nearby.
-		var structures = this.pos.findInRange(FIND_STRUCTURES, 10, {
-			filter: (structure) => structure.structureType == STRUCTURE_KEEPER_LAIR
+		const structures = this.pos.findInRange(FIND_STRUCTURES, 10, {
+			filter: structure => structure.structureType === STRUCTURE_KEEPER_LAIR,
 		});
 		if (structures.length > 0) {
-			var structure = this.pos.findClosestByRange(structures);
+			const structure = this.pos.findClosestByRange(structures);
 			this.memory.nearbyLair = structure.id;
 		}
 	}
@@ -202,9 +209,11 @@ var getNearbyLair = function () {
 		return Game.getObjectById(this.memory.nearbyLair);
 	}
 };
+
 Source.prototype.getNearbyLair = function () {
 	return getNearbyLair.call(this);
 };
+
 Mineral.prototype.getNearbyLair = function () {
 	return getNearbyLair.call(this);
 };
@@ -216,14 +225,14 @@ StructureKeeperLair.prototype.isDangerous = function () {
 /**
  * Checks if being close to this source is currently dangerous.
  */
-var isDangerous = function () {
-	var lair = this.getNearbyLair();
+const isDangerous = function () {
+	const lair = this.getNearbyLair();
 	if (lair && lair.isDangerous()) {
 		// It's still safe if a guardian with sufficient lifespan is nearby to take care of any source keepers.
 		if (this.room.creepsByRole.brawler) {
 			for (let i in this.room.creepsByRole.brawler) {
-				let guardian = this.room.creepsByRole.brawler[i];
-				if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30 && guardian.memory.exploitUnitType == 'guardian') {
+				const guardian = this.room.creepsByRole.brawler[i];
+				if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30 && guardian.memory.exploitUnitType === 'guardian') {
 					return false;
 				}
 			}
@@ -232,9 +241,11 @@ var isDangerous = function () {
 		return true;
 	}
 };
+
 Source.prototype.isDangerous = function () {
 	return isDangerous.call(this);
 };
+
 Mineral.prototype.isDangerous = function () {
 	return isDangerous.call(this);
 };

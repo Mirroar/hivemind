@@ -25,7 +25,13 @@
 			"brace-style": ["error", "stroustrup"],
 			"comma-dangle": ["error", "always-multiline"],
 			"curly": ["error", "multi-line"],
-			"prefer-destructuring": ["error", {"array": true, "object": false}]
+			"import/no-unassigned-import": ["error", {
+				"allow": ["**/*.prototype", "**/*.prototype.*"]
+			}],
+			"prefer-destructuring": ["error", {
+				"array": true,
+				"object": false
+			}]
 		},
 		"globals": [
 			"_",

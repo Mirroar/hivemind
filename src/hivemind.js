@@ -2,10 +2,10 @@
 
 /* global PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_ALWAYS */
 
-const Logger = require('debug');
-const Relations = require('relations');
-const RoomIntel = require('room_intel');
-const stats = require('stats');
+const Logger = require('./debug');
+const Relations = require('./relations');
+const RoomIntel = require('./room_intel');
+const stats = require('./stats');
 
 global.PROCESS_PRIORITY_LOW = 1;
 global.PROCESS_PRIORITY_DEFAULT = 2;

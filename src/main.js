@@ -1,36 +1,36 @@
 'use strict';
 
-/* global hivemind PROCESS_PRIORITY_ALWAYS PROCESS_PRIORITY_LOW
+/* global hivemind RawMemory PROCESS_PRIORITY_ALWAYS PROCESS_PRIORITY_LOW
 PROCESS_PRIORITY_HIGH */
 
 // Make sure game object prototypes are enhanced.
-require('creep.prototype');
-require('room.prototype');
+require('./creep.prototype');
+require('./room.prototype');
 
 console.log('new global reset');
 
 // Create kernel object.
-const Hivemind = require('hivemind');
+const Hivemind = require('./hivemind');
 
 global.hivemind = new Hivemind();
 
 // Load top-level processes.
-const InitProcess = require('process.init');
-const RoomsProcess = require('process.rooms');
-const ExpandProcess = require('process.strategy.expand');
-const RemoteMiningProcess = require('process.strategy.mining');
-const PowerMiningProcess = require('process.strategy.power');
-const ScoutProcess = require('process.strategy.scout');
-const TradeProcess = require('process.empire.trade');
-const ResourcesProcess = require('process.empire.resources');
-const ReactionsProcess = require('process.empire.reactions');
+const InitProcess = require('./process.init');
+const RoomsProcess = require('./process.rooms');
+const ExpandProcess = require('./process.strategy.expand');
+const RemoteMiningProcess = require('./process.strategy.mining');
+const PowerMiningProcess = require('./process.strategy.power');
+const ScoutProcess = require('./process.strategy.scout');
+const TradeProcess = require('./process.empire.trade');
+const ResourcesProcess = require('./process.empire.resources');
+const ReactionsProcess = require('./process.empire.reactions');
 
 // @todo Refactor old main code away.
-const oldMain = require('main.old');
+const oldMain = require('./main.old');
 
 // Allow profiling of code.
-const profiler = require('profiler');
-const stats = require('stats');
+const profiler = require('./profiler');
+const stats = require('./stats');
 
 module.exports = {
 
@@ -114,7 +114,7 @@ module.exports = {
 	cleanup() {
 		// Periodically clean creep memory.
 		if (Game.time % 16 === 7) {
-			for (var name in Memory.creeps) {
+			for (const name in Memory.creeps) {
 				if (!Game.creeps[name]) {
 					delete Memory.creeps[name];
 				}
@@ -123,7 +123,7 @@ module.exports = {
 
 		// Periodically clean flag memory.
 		if (Game.time % 1000 === 725) {
-			for (let flagName in Memory.flags) {
+			for (const flagName in Memory.flags) {
 				if (!Game.flags[flagName]) {
 					delete Memory.flags[flagName];
 				}
@@ -134,7 +134,7 @@ module.exports = {
 		if (Game.time % 836 === 0) {
 			if (RawMemory.get().length > 1800000) {
 				Memory.hivemind.maxScoutDistance = (Memory.hivemind.maxScoutDistance || 7) - 1;
-				for (let roomName in Memory.strategy.roomList) {
+				for (const roomName in Memory.strategy.roomList) {
 					if (Memory.strategy.roomList[roomName].range > Memory.hivemind.maxScoutDistance) {
 						delete Memory.rooms[roomName];
 						delete Memory.strategy.roomList[roomName];
@@ -143,10 +143,10 @@ module.exports = {
 			}
 		}
 
-		// Preiodically clean old room memory.
+		// Periodically clean old room memory.
 		if (Game.time % 3738 === 2100) {
 			let count = 0;
-			for (let roomName in Memory.rooms) {
+			for (const roomName in Memory.rooms) {
 				if (hivemind.roomIntel(roomName).getAge() > 100000) {
 					delete Memory.rooms[roomName];
 					count++;

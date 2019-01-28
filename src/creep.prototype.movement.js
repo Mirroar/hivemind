@@ -1,9 +1,10 @@
 'use strict';
 
-/* global hivemind Creep LOOK_CREEPS LOOK_STRUCTURES STRUCTURE_ROAD
-STRUCTURE_CONTAINER LOOK_CONSTRUCTION_SITES STRUCTURE_RAMPART */
+/* global hivemind Creep RoomVisual RoomPosition LOOK_CREEPS LOOK_STRUCTURES
+STRUCTURE_ROAD STRUCTURE_CONTAINER LOOK_CONSTRUCTION_SITES STRUCTURE_RAMPART
+ERR_NO_PATH */
 
-const utilities = require('utilities');
+const utilities = require('./utilities');
 
 // @todo For multi-room movement we could save which rooms we're travelling through, and recalculate (part of) the path when a CostMatrix changes.
 // That info should probably live in global memory, we don't want that serialized...
@@ -155,7 +156,7 @@ Creep.prototype.followCachedPath = function () {
 		// Try to get to the closest part of the path.
 		if (this.pos.x === target.x && this.pos.y === target.y) {
 			// We've arrived on the path, time to get moving along it!
-			for (let i in decodedPath) {
+			for (const i in decodedPath) {
 				if (this.pos.x === decodedPath[i].x && this.pos.y === decodedPath[i].y && this.pos.roomName === decodedPath[i].roomName) {
 					this.memory.cachedPath.position = i;
 					break;
@@ -216,12 +217,12 @@ Creep.prototype.followCachedPath = function () {
 		if (_.size(this.memory.cachedPath.lastPositions) > 5 / 2) {
 			let last = null;
 			stuck = true;
-			for (let i in this.memory.cachedPath.lastPositions) {
+			for (const i in this.memory.cachedPath.lastPositions) {
 				if (!last) {
 					last = this.memory.cachedPath.lastPositions[i];
 				}
 
-				if (last != this.memory.cachedPath.lastPositions[i]) {
+				if (last !== this.memory.cachedPath.lastPositions[i]) {
 					stuck = false;
 					break;
 				}
@@ -232,26 +233,26 @@ Creep.prototype.followCachedPath = function () {
 			let i = this.memory.cachedPath.position + 1;
 			while (i < path.length) {
 				const step = utilities.decodePosition(path[i]);
-				if (step.roomName != this.pos.roomName) {
+				if (step.roomName !== this.pos.roomName) {
 					// Skip past exit tile in next room.
 					i++;
 					break;
 				}
 
 				// Only try to get to paths where no creep is positioned.
-				let creeps = step.lookFor(LOOK_CREEPS);
-				let structures = step.lookFor(LOOK_STRUCTURES);
-				let sites = step.lookFor(LOOK_CONSTRUCTION_SITES);
+				const creeps = step.lookFor(LOOK_CREEPS);
+				const structures = step.lookFor(LOOK_STRUCTURES);
+				const sites = step.lookFor(LOOK_CONSTRUCTION_SITES);
 
-				let blocked = creeps.length > 0 && creeps[0].name != this.name;
-				for (let i in structures) {
-					if (structures[i].structureType != STRUCTURE_ROAD && structures[i].structureType != STRUCTURE_CONTAINER) {
+				let blocked = creeps.length > 0 && creeps[0].name !== this.name;
+				for (const structure of structures) {
+					if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER) {
 						blocked = true;
 					}
 				}
 
-				for (let i in sites) {
-					if (sites[i].structureType != STRUCTURE_ROAD && sites[i].structureType != STRUCTURE_CONTAINER) {
+				for (const site of sites) {
+					if (site.structureType !== STRUCTURE_ROAD && site.structureType !== STRUCTURE_CONTAINER) {
 						blocked = true;
 					}
 				}
@@ -317,15 +318,16 @@ Creep.prototype.goTo = function (target, options) {
 		range = options.range;
 	}
 
-	let targetPos = utilities.encodePosition(target);
-	if (!this.memory.go.target || this.memory.go.target != targetPos || !this.hasCachedPath()) {
+	const targetPos = utilities.encodePosition(target);
+	if (!this.memory.go.target || this.memory.go.target !== targetPos || !this.hasCachedPath()) {
 		this.memory.go.target = targetPos;
 
-		let pfOptions = {};
+		const pfOptions = {};
 		if (this.memory.singleRoom) {
-			if (this.pos.roomName == this.memory.singleRoom) {
+			if (this.pos.roomName === this.memory.singleRoom) {
 				pfOptions.maxRooms = 1;
 			}
+
 			pfOptions.singleRoom = this.memory.singleRoom;
 		}
 
@@ -337,12 +339,9 @@ Creep.prototype.goTo = function (target, options) {
 		pfOptions.whiteListRooms = [this.pos.roomName];
 
 		// Calculate a path to take.
-		var result = utilities.getPath(this.pos, {pos: target, range: range}, false, pfOptions);
+		const result = utilities.getPath(this.pos, {pos: target, range}, false, pfOptions);
 
 		if (result && result.path) {
-			//console.log('found path in', result.ops, 'operations', result.path);
-			//hivemind.log('creeps', this.room.name).debug('New path calculated from', this.pos, 'to', target, 'in', result.ops, 'operations');
-
 			this.setCachedPath(utilities.serializePositionPath(result.path));
 		}
 		else {
@@ -350,9 +349,13 @@ Creep.prototype.goTo = function (target, options) {
 			return false;
 		}
 	}
+
 	this.memory.go.lastAccess = Game.time;
 
-	if (!this.hasArrived()) {
+	if (this.hasArrived()) {
+		this.clearCachedPath();
+	}
+	else {
 		this.followCachedPath();
 
 		// Debug creep movement.
@@ -362,17 +365,15 @@ Creep.prototype.goTo = function (target, options) {
 			// Seems like we can't move on the target space for some reason right now.
 			// This should be rare, so we use the default pathfinder to get us the rest of the way there.
 			if (this.pos.getRangeTo(target) > range && this.pos.getRangeTo(target) < range + 5) {
-				let result = this.moveTo(target);
-				if (result == ERR_NO_PATH) return false;
+				const result = this.moveTo(target);
+				if (result === ERR_NO_PATH) return false;
 			}
-			else if (this.pos.roomName == targetPos.roomName) {
+			else if (this.pos.roomName === targetPos.roomName) {
 				return false;
 			}
 		}
 	}
-	else {
-		this.clearCachedPath();
-	}
+
 	return true;
 };
 
@@ -381,9 +382,9 @@ Creep.prototype.goTo = function (target, options) {
  */
 Creep.prototype.moveToRoom = function (roomName) {
 	// Check which room to go to next.
-	let inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
-	if (!this.memory.nextRoom || (this.pos.roomName == this.memory.nextRoom && inRoom)) {
-		let path = this.calculateRoomPath(roomName);
+	const inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
+	if (!this.memory.nextRoom || (this.pos.roomName === this.memory.nextRoom && inRoom)) {
+		const path = this.calculateRoomPath(roomName);
 		if (_.size(path) < 1) {
 			return false;
 		}
@@ -392,7 +393,7 @@ Creep.prototype.moveToRoom = function (roomName) {
 	}
 
 	// Move to next room.
-	let target = new RoomPosition(25, 25, this.memory.nextRoom);
+	const target = new RoomPosition(25, 25, this.memory.nextRoom);
 	if (this.pos.getRangeTo(target) > 15) {
 		this.moveToRange(target, 15);
 	}

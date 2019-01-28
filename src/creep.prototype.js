@@ -4,7 +4,7 @@
 RESOURCE_ENERGY STRUCTURE_LINK */
 
 if (!Creep.prototype.__enhancementsLoaded) {
-	require('creep.prototype.movement');
+	require('./creep.prototype.movement');
 
 	/**
 	 * Determines if a creep is dangerous and should be attacked.
