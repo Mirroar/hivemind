@@ -1,15 +1,18 @@
 'use strict';
 
-var Process = require('process');
-var utilities = require('utilities');
+/* global hivemind RoomPosition OBSERVER_RANGE */
 
-var ScoutProcess = function (params, data) {
+const Process = require('./process');
+const utilities = require('./utilities');
+
+const ScoutProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	if (!Memory.strategy) {
 		Memory.strategy = {};
 	}
 };
+
 ScoutProcess.prototype = Object.create(Process.prototype);
 
 ScoutProcess.prototype.run = function () {
@@ -17,7 +20,7 @@ ScoutProcess.prototype.run = function () {
 	this.generateMineralStatus();
 
 	// Add data to scout list for creating priorities.
-	for (let roomName in Memory.strategy.roomList) {
+	for (const roomName in Memory.strategy.roomList) {
 		this.calculateRoomPriorities(roomName);
 	}
 };
@@ -26,17 +29,17 @@ ScoutProcess.prototype.run = function () {
  * Calculates scout, harvest and expand priotities for all known rooms.
  */
 ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
-	let roomList = Memory.strategy.roomList;
-	let roomIntel = hivemind.roomIntel(roomName);
+	const roomList = Memory.strategy.roomList;
+	const roomIntel = hivemind.roomIntel(roomName);
 
-	let info = roomList[roomName];
+	const info = roomList[roomName];
 
 	info.roomName = roomName;
 	info.scoutPriority = 0;
 	info.expansionScore = 0;
 	info.harvestPriority = 0;
 
-	let timeSinceLastScan = roomIntel.getAge();
+	const timeSinceLastScan = roomIntel.getAge();
 
 	if (info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 		if (timeSinceLastScan > 5000) {
@@ -46,14 +49,14 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 			info.harvestPriority = this.calculateHarvestScore(roomName);
 
 			// Check if we could reasonably expand to this room.
-			let expansionInfo = this.calculateExpansionScore(roomName);
+			const expansionInfo = this.calculateExpansionScore(roomName);
 			info.expansionScore = expansionInfo.score;
 			info.expansionReasons = expansionInfo.reasons;
 		}
 	}
 	// @todo For higher ranges (7-10), only scout if we have memory to spare.
 
-	if (info.observer && info.range <= 6 && (/^[EW][0-9]*0[NS][0-9]+$/.test(roomName) || /^[EW][0-9]+[NS][0-9]*0$/.test(roomName)) && timeSinceLastScan > 1000) {
+	if (info.observer && info.range <= 6 && (/^[EW]\d*0[NS]\d+$/.test(roomName) || /^[EW]\d+[NS]\d*0$/.test(roomName)) && timeSinceLastScan > 1000) {
 		// Corridor rooms get scouted more often to look for power banks.
 		info.scoutPriority = 2;
 	}
@@ -67,7 +70,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 
 			// Let observer scout one room per run at maximum.
 			// @todo Move this to structure management so we can scan one open room per tick.
-			let observer = Game.getObjectById(info.observer);
+			const observer = Game.getObjectById(info.observer);
 			if (observer && !observer.hasScouted) {
 				observer.observeRoom(roomName);
 				observer.hasScouted = true;
@@ -76,6 +79,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 				if (!Memory.rooms[info.observerRoom].observeTargets) {
 					Memory.rooms[info.observerRoom].observeTargets = [];
 				}
+
 				Memory.rooms[info.observerRoom].observeTargets.push(roomName);
 			}
 		}
@@ -86,23 +90,23 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
  * Determines how worthwile a room is for remote mining.
  */
 ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
-	let info = Memory.strategy.roomList[roomName];
+	const info = Memory.strategy.roomList[roomName];
 
 	if (!info.safePath) return 0;
 	if (info.range == 0 || info.range > 2) return 0;
 
 	let income = -2000; // Flat cost for room reservation
 	let pathLength = 0;
-	let sourcePositions = hivemind.roomIntel(roomName).getSourcePositions();
-	for (let i in sourcePositions) {
+	const sourcePositions = hivemind.roomIntel(roomName).getSourcePositions();
+	for (const i in sourcePositions) {
 		income += 3000;
 		pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
-		if (typeof(sourcePositions[i]) == 'object') {
-			let sourcePos = new RoomPosition(sourcePositions[i].x, sourcePositions[i].y, roomName);
+		if (typeof sourcePositions[i] === 'object') {
+			const sourcePos = new RoomPosition(sourcePositions[i].x, sourcePositions[i].y, roomName);
 			utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
 
 			if (Memory.rooms[info.origin].remoteHarvesting) {
-				let harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
+				const harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
 				if (harvestMemory && harvestMemory.cachedPath) {
 					pathLength -= info.range * 50;
 					pathLength += harvestMemory.cachedPath.path.length;
@@ -122,11 +126,11 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
  * Determines how worthwile a room is for expanding.
  */
 ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
-	let result = {
+	const result = {
 		score: 0,
 		reasons: {},
 	};
-	let roomIntel = hivemind.roomIntel(roomName);
+	const roomIntel = hivemind.roomIntel(roomName);
 
 	// More sources is better.
 	this.addExpansionScore(result, roomIntel.getSourcePositions().length, 'numSources');
@@ -138,43 +142,43 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
 	// Having fewer exit sides is good.
 	// Having dead ends / safe rooms nearby is similarly good.
-	let exits = roomIntel.getExits();
-	let safety = roomIntel.calculateAdjacentRoomSafety();
+	const exits = roomIntel.getExits();
+	const safety = roomIntel.calculateAdjacentRoomSafety();
 	this.addExpansionScore(result, _.sum(safety.directions) * 0.25, 'safeExits');
 
 	// Add score for harvest room sources.
-	for (let i in exits) {
-		let adjacentRoom = exits[i];
+	for (const i in exits) {
+		const adjacentRoom = exits[i];
 		this.addExpansionScore(result, this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
 	}
 
 	// Check if expanding here creates a safe direction for another of our rooms.
-	for (let otherRoomName in Game.rooms) {
-		let otherRoom = Game.rooms[otherRoomName];
+	for (const otherRoomName in Game.rooms) {
+		const otherRoom = Game.rooms[otherRoomName];
 		if (!otherRoom.controller || !otherRoom.controller.my) continue;
 
-		let roomDistance = Game.map.getRoomLinearDistance(roomName, otherRoomName);
+		const roomDistance = Game.map.getRoomLinearDistance(roomName, otherRoomName);
 		if (roomDistance > 3) continue;
 
-		let otherRoomIntel = hivemind.roomIntel(otherRoomName);
-		let currentSafety = otherRoomIntel.calculateAdjacentRoomSafety();
-		let adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety({safe: [roomName]});
+		const otherRoomIntel = hivemind.roomIntel(otherRoomName);
+		const currentSafety = otherRoomIntel.calculateAdjacentRoomSafety();
+		const adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety({safe: [roomName]});
 
 		// If after expanding there are more safe directions, improve score.
-		let newSafeExits = (_.sum(adjustedSafety.directions) - _.sum(currentSafety.directions));
+		const newSafeExits = (_.sum(adjustedSafety.directions) - _.sum(currentSafety.directions));
 		this.addExpansionScore(result, newSafeExits * 0.25, 'newSafeExits' + otherRoomName);
 		// Also, there will be less exit tiles to cover.
-		let otherRoomExits = otherRoomIntel.getExits();
-		let exitRatio = newSafeExits / _.size(otherRoomExits);
+		const otherRoomExits = otherRoomIntel.getExits();
+		const exitRatio = newSafeExits / _.size(otherRoomExits);
 		this.addExpansionScore(result, otherRoomIntel.countTiles('exit') * 0.005 * exitRatio, 'exitTiles' + otherRoomName);
 
 		if (roomDistance > 2) continue;
 		// Check if we need to share adjacent harvest rooms.
-		for (let i in otherRoomExits) {
-			let adjacentRoom = otherRoomExits[i];
-			if (adjacentRoom == roomName) this.addExpansionScore(result, -this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
-			for (let j in exits) {
-				if (exits[j] == adjacentRoom) this.addExpansionScore(result, -this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
+		for (const i in otherRoomExits) {
+			const adjacentRoom = otherRoomExits[i];
+			if (adjacentRoom === roomName) this.addExpansionScore(result, -this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
+			for (const j in exits) {
+				if (exits[j] === adjacentRoom) this.addExpansionScore(result, -this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
 			}
 		}
 	}
@@ -182,12 +186,12 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	// Having fewer exit tiles is good. Safe exits reduce the number of tiles
 	// we need to cover.
 	// @todo We could gather exact amounts per direction in intel.
-	let unsafeRatio = (4 - _.sum(safety.directions)) / _.size(exits);
-	this.addExpansionScore(result, 1 - roomIntel.countTiles('exit') * 0.005 * unsafeRatio, 'exitTiles');
+	const unsafeRatio = (4 - _.sum(safety.directions)) / _.size(exits);
+	this.addExpansionScore(result, 1 - (roomIntel.countTiles('exit') * 0.005 * unsafeRatio), 'exitTiles');
 	// Having lots of open space is good (easier room layout).
-	this.addExpansionScore(result, 0.5 - roomIntel.countTiles('wall') * 0.0002, 'wallTiles');
+	this.addExpansionScore(result, 0.5 - (roomIntel.countTiles('wall') * 0.0002), 'wallTiles');
 	// Having few swamp tiles is good (less cost for road maintenance, easier setup).
-	this.addExpansionScore(result, 0.25 - roomIntel.countTiles('swamp') * 0.0001, 'swampTiles');
+	this.addExpansionScore(result, 0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
 	// @todo Prefer rooms with minerals we have little sources of.
 	return result;
@@ -205,7 +209,7 @@ ScoutProcess.prototype.addExpansionScore = function (result, amount, reason) {
  * Calculate value of harvest rooms for expansion purposes.
  */
 ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
-	let roomIntel = hivemind.roomIntel(roomName);
+	const roomIntel = hivemind.roomIntel(roomName);
 
 	// We don't care about rooms without controllers.
 	// @todo Once automated, we might care for exploiting source keeper rooms.
@@ -229,27 +233,27 @@ ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
  * Generates a list of rooms originating from owned rooms.
  */
 ScoutProcess.prototype.generateScoutTargets = function () {
-	let roomList = {};
+	const roomList = {};
 
-	let openList = this.getScoutOrigins();
-	let closedList = {};
+	const openList = this.getScoutOrigins();
+	const closedList = {};
 
 	this.findObservers();
 
 	// Flood fill from own rooms and add rooms we need intel of.
 	while (_.size(openList) > 0) {
-		let nextRoom = this.getNextRoomCandidate(openList);
+		const nextRoom = this.getNextRoomCandidate(openList);
 
 		if (!nextRoom) break;
 
 		this.addAdjacentRooms(nextRoom, openList, closedList);
-		let info = openList[nextRoom];
+		const info = openList[nextRoom];
 		delete openList[nextRoom];
 		closedList[nextRoom] = true;
 
 		// Add current room as a candidate for scouting.
 		if (!roomList[nextRoom] || roomList[nextRoom].range > info.range) {
-			let observer = this.getClosestObserver(nextRoom);
+			const observer = this.getClosestObserver(nextRoom);
 
 			roomList[nextRoom] = {
 				range: info.range,
@@ -268,11 +272,11 @@ ScoutProcess.prototype.generateScoutTargets = function () {
  * Generates a list of rooms that can serve as a starting point for scouting.
  */
 ScoutProcess.prototype.getScoutOrigins = function () {
-	let openList = {};
+	const openList = {};
 
 	// Starting point for scouting operations are owned rooms.
-	for (let roomName in Game.rooms) {
-		let room = Game.rooms[roomName];
+	for (const roomName in Game.rooms) {
+		const room = Game.rooms[roomName];
 		if (!room.controller || !room.controller.my) continue;
 
 		openList[roomName] = {
@@ -290,8 +294,8 @@ ScoutProcess.prototype.getScoutOrigins = function () {
  */
 ScoutProcess.prototype.findObservers = function () {
 	this.observers = [];
-	for (let roomName in Game.rooms) {
-		let room = Game.rooms[roomName];
+	for (const roomName in Game.rooms) {
+		const room = Game.rooms[roomName];
 		if (!room.controller || !room.controller.my || !room.observer) continue;
 
 		this.observers[roomName] = room.observer;
@@ -304,11 +308,11 @@ ScoutProcess.prototype.findObservers = function () {
 ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
 	let minDist = null;
 	let nextRoom = null;
-	for (let rName in openList) {
-		let info = openList[rName];
+	for (const roomName in openList) {
+		const info = openList[roomName];
 		if (minDist === null || info.range < minDist) {
 			minDist = info.range;
-			nextRoom = rName;
+			nextRoom = roomName;
 		}
 	}
 
@@ -319,13 +323,13 @@ ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
  * Adds unhandled adjacent rooms to open list.
  */
 ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedList) {
-	let info = openList[roomName];
-	let exits = hivemind.roomIntel(roomName).getExits();
-	for (let i in exits) {
-		let exit = exits[i];
+	const info = openList[roomName];
+	const exits = hivemind.roomIntel(roomName).getExits();
+	for (const i in exits) {
+		const exit = exits[i];
 		if (openList[exit] || closedList[exit]) continue;
 
-		let roomIsSafe = !hivemind.roomIntel(exit).isClaimed();
+		const roomIsSafe = !hivemind.roomIntel(exit).isClaimed();
 
 		openList[exit] = {
 			range: info.range + 1,
@@ -340,8 +344,8 @@ ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedLi
  */
 ScoutProcess.prototype.getClosestObserver = function (roomName) {
 	let observer = null;
-	for (let observerRoom in this.observers) {
-		let roomDist = Game.map.getRoomLinearDistance(observerRoom, roomName);
+	for (const observerRoom in this.observers) {
+		const roomDist = Game.map.getRoomLinearDistance(observerRoom, roomName);
 		if (roomDist <= OBSERVER_RANGE) {
 			if (!observer || roomDist < Game.map.getRoomLinearDistance(observer.pos.roomName, roomName)) {
 				observer = this.observers[observerRoom];
@@ -354,14 +358,14 @@ ScoutProcess.prototype.getClosestObserver = function (roomName) {
 
 ScoutProcess.prototype.generateMineralStatus = function () {
 	this.mineralCount = {};
-	let mineralCount = this.mineralCount;
-	_.each(Game.rooms, function (room) {
+	const mineralCount = this.mineralCount;
+	_.each(Game.rooms, room => {
 		if (!room.controller || !room.controller.my) return;
-		let roomIntel = hivemind.roomIntel(room.name);
-		let mineralType = roomIntel.getMineralType();
+		const roomIntel = hivemind.roomIntel(room.name);
+		const mineralType = roomIntel.getMineralType();
 
 		mineralCount[mineralType] = (mineralCount[mineralType] || 0) + 1;
-	})
+	});
 };
 
 module.exports = ScoutProcess;

@@ -1,7 +1,7 @@
 'use strict';
 
-const Process = require('process');
-const RoomPlanner = require('roomplanner');
+const Process = require('./process');
+const RoomPlanner = require('./roomplanner');
 
 /**
  * Initializes member variables that should be available to all processes.
@@ -13,18 +13,18 @@ const RoomPlanner = require('roomplanner');
 const InitProcess = function (params, data) {
 	Process.call(this, params, data);
 };
+
 InitProcess.prototype = Object.create(Process.prototype);
 
 /**
  * @override
  */
 InitProcess.prototype.run = function () {
-	for (let roomName in Game.rooms) {
-		let room = Game.rooms[roomName];
-		if (!room.controller || !room.controller.my) continue;
+	_.each(Game.rooms, room => {
+		if (!room.controller || !room.controller.my) return;
 
 		room.roomPlanner = new RoomPlanner(room.name);
-	}
+	});
 };
 
 module.exports = InitProcess;

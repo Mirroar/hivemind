@@ -7,8 +7,8 @@ SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY
 CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY ATTACK HEAL
 CONTROLLER_MAX_UPGRADE_PER_TICK */
 
-const stats = require('stats');
-const utilities = require('utilities');
+const stats = require('./stats');
+const utilities = require('./utilities');
 
 const roleNameMap = {
 	builder: 'B',

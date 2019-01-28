@@ -1,35 +1,41 @@
-var utilities = require('utilities');
+'use strict';
+
+/* global hivemind Creep StructureController FIND_HOSTILE_CREEPS
+STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
+LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
+FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL */
+
+const utilities = require('./utilities');
 
 /**
  * Get a priority list of military targets for this creep.
  */
-Creep.prototype.getAvailableMilitaryTargets = function (creep) {
-	var creep = this;
-	var options = [];
+Creep.prototype.getAvailableMilitaryTargets = function () {
+	const creep = this;
+	const options = [];
 
 	if (creep.memory.target) {
-		var targetPosition = utilities.decodePosition(creep.memory.target);
+		const targetPosition = utilities.decodePosition(creep.memory.target);
 		if (!targetPosition) {
 			delete creep.memory.target;
 			return options;
 		}
 
-		if (creep.pos.roomName == targetPosition.roomName) {
-
+		if (creep.pos.roomName === targetPosition.roomName) {
 			// Find enemies to attack.
 			if (creep.memory.body.attack) {
-				var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+				const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
 
 				if (enemies && enemies.length > 0) {
-					for (var i in enemies) {
-						var enemy = enemies[i];
+					for (const i in enemies) {
+						const enemy = enemies[i];
 
 						// Check if enemy is harmless, and ignore it.
 						if (!enemy.isDangerous()) continue;
 
-						var option = {
+						const option = {
 							priority: 5,
-							weight: 1 - creep.pos.getRangeTo(enemy) / 50,
+							weight: 1 - (creep.pos.getRangeTo(enemy) / 50),
 							type: 'hostilecreep',
 							object: enemy,
 						};
@@ -41,22 +47,22 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 				}
 
 				// Find structures to attack.
-				var structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
-					filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.hits
+				let structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
+					filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.hits,
 				});
 				if (!creep.room.controller || !creep.room.controller.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) structures = [];
 
 				// Attack structures under target flag (even if non-hostile, like walls).
-				let directStrutures = targetPosition.lookFor(LOOK_STRUCTURES);
-				for (let i in directStrutures || []) {
+				const directStrutures = targetPosition.lookFor(LOOK_STRUCTURES);
+				for (const i in directStrutures || []) {
 					structures.push(directStrutures[i]);
 				}
 
 				if (structures && structures.length > 0) {
-					for (var i in structures) {
-						var structure = structures[i];
+					for (const i in structures) {
+						const structure = structures[i];
 
-						var option = {
+						const option = {
 							priority: 2,
 							weight: 0,
 							type: 'hostilestructure',
@@ -64,10 +70,11 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 						};
 
 						// @todo Calculate weight / priority from distance, HP left, parts.
-						if (structure.structureType == STRUCTURE_SPAWN) {
+						if (structure.structureType === STRUCTURE_SPAWN) {
 							option.priority = 4;
 						}
-						if (structure.structureType == STRUCTURE_TOWER) {
+
+						if (structure.structureType === STRUCTURE_TOWER) {
 							option.priority = 3;
 						}
 
@@ -77,15 +84,15 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 
 				// Find walls in front of controller.
 				if (creep.room.controller && creep.room.controller.owner && !creep.room.controller.my) {
-					var structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
-						filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER
+					const structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
+						filter: structure => structure.structureType !== STRUCTURE_CONTROLLER,
 					});
 
 					if (structures && structures.length > 0) {
-						for (var i in structures) {
-							var structure = structures[i];
+						for (const i in structures) {
+							const structure = structures[i];
 
-							var option = {
+							const option = {
 								priority: 0,
 								weight: 0,
 								type: 'hostilestructure',
@@ -100,20 +107,20 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 
 			// Find friendlies to heal.
 			if (creep.memory.body.heal) {
-				var damaged = creep.room.find(FIND_MY_CREEPS, {
-					filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax))
+				let damaged = creep.room.find(FIND_MY_CREEPS, {
+					filter: friendly => ((friendly.id !== creep.id) && (friendly.hits < friendly.hitsMax)),
 				});
-				if (!damaged || damaged.length == 0) {
+				if (_.size(damaged) === 0) {
 					damaged = creep.room.find(FIND_HOSTILE_CREEPS, {
-						filter: (friendly) => ((friendly.id != creep.id) && (friendly.hits < friendly.hitsMax) && hivemind.relations.isAlly(friendly.owner.username))
+						filter: friendly => ((friendly.id !== creep.id) && (friendly.hits < friendly.hitsMax) && hivemind.relations.isAlly(friendly.owner.username)),
 					});
 				}
 
 				if (damaged && damaged.length > 0) {
-					for (var i in damaged) {
-						var friendly = damaged[i];
+					for (const i in damaged) {
+						const friendly = damaged[i];
 
-						var option = {
+						const option = {
 							priority: 3,
 							weight: 0,
 							type: 'creep',
@@ -138,6 +145,7 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 					});
 				}
 			}
+
 			if (creep.memory.body.claim && !creep.room.controller.owner) {
 				options.push({
 					priority: 4,
@@ -157,22 +165,22 @@ Creep.prototype.getAvailableMilitaryTargets = function (creep) {
 /**
  * Sets a good military target for this creep.
  */
-Creep.prototype.calculateMilitaryTarget = function (creep) {
-	var creep = this;
-	var best = utilities.getBestOption(creep.getAvailableMilitaryTargets());
+Creep.prototype.calculateMilitaryTarget = function () {
+	const creep = this;
+	const best = utilities.getBestOption(creep.getAvailableMilitaryTargets());
 
 	if (best) {
-		//console.log('best target for this', creep.memory.role , ':', best.object.id, '@ priority', best.priority, best.weight, 'HP:', best.object.hits, '/', best.object.hitsMax);
-		var action = 'heal';
-		if (best.type == 'hostilecreep' || best.type == 'hostilestructure') {
+		let action = 'heal';
+		if (best.type === 'hostilecreep' || best.type === 'hostilestructure') {
 			action = 'attack';
 		}
-		else if (best.type == 'controller') {
+		else if (best.type === 'controller') {
 			action = 'claim';
 		}
+
 		creep.memory.order = {
 			type: action,
-			target: best.object.id
+			target: best.object.id,
 		};
 	}
 	else {
@@ -184,7 +192,7 @@ Creep.prototype.calculateMilitaryTarget = function (creep) {
  * Potentially modifies a creep when target room has been reached.
  */
 Creep.prototype.militaryRoomReached = function () {
-	if (this.memory.squadUnitType == 'builder') {
+	if (this.memory.squadUnitType === 'builder') {
 		// Rebrand as remote builder to work in this room from now on.
 		this.memory.role = 'builder.remote';
 		this.memory.target = utilities.encodePosition(this.pos);
@@ -197,69 +205,68 @@ Creep.prototype.militaryRoomReached = function () {
  * Makes a creep move towards its designated target.
  */
 Creep.prototype.performMilitaryMove = function () {
-	var creep = this;
+	const creep = this;
 
 	if (this.memory.fillWithEnergy) {
 		if (_.sum(this.carry) < this.carryCapacity) {
 			this.performGetEnergy();
 			return true;
 		}
-		else {
-			delete this.memory.fillWithEnergy;
-		}
+
+		delete this.memory.fillWithEnergy;
 	}
 
 	if (this.memory.pathName) {
 		// @todo Decide if squad should be fully spawned / have an order or attack flag before moving along path.
-		var flagName ='Path:' + this.memory.pathName + ':' + this.memory.pathStep;
-		var flag = Game.flags[flagName];
+		const flagName = 'Path:' + this.memory.pathName + ':' + this.memory.pathStep;
+		const flag = Game.flags[flagName];
 
-		if (!flag) {
-			console.log(this.name, 'reached end of path', this.memory.pathName, 'at step', this.memory.pathStep, 'and has', this.ticksToLive, 'ticks left to live.');
-
-			delete this.memory.pathName;
-			delete this.memory.pathStep;
-
-			this.militaryRoomReached();
-		}
-		else {
+		if (flag) {
 			this.moveTo(flag);
 			if (this.pos.getRangeTo(flag) < 5) {
 				console.log(this.name, 'reached waypoint', this.memory.pathStep, 'of path', this.memory.pathName, 'and has', this.ticksToLive, 'ticks left to live.');
 
 				this.memory.pathStep++;
 			}
+
 			return true;
 		}
+
+		console.log(this.name, 'reached end of path', this.memory.pathName, 'at step', this.memory.pathStep, 'and has', this.ticksToLive, 'ticks left to live.');
+
+		delete this.memory.pathName;
+		delete this.memory.pathStep;
+
+		this.militaryRoomReached();
 	}
 
 	if (this.memory.exploitName) {
-		var exploit = Game.exploits[this.memory.exploitName];
+		const exploit = Game.exploits[this.memory.exploitName];
 		if (exploit) {
 			// If an enemy is close by, move to attack it.
-			let enemies = this.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
-				filter: (enemy) => enemy.isDangerous()
+			const enemies = this.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
+				filter: enemy => enemy.isDangerous(),
 			});
 			if (enemies.length > 0) {
 				this.memory.exploitTarget = enemies[0].id;
 				this.moveTo(enemies[0]);
 				return;
 			}
-			else if (this.memory.exploitTarget) {
-				let target = Game.getObjectById(this.memory.exploitTarget);
 
-				if (!target) {
-					delete this.memory.exploitTarget;
-				}
-				else {
+			if (this.memory.exploitTarget) {
+				const target = Game.getObjectById(this.memory.exploitTarget);
+
+				if (target) {
 					this.moveTo(target);
 					return;
 				}
+
+				delete this.memory.exploitTarget;
 			}
 
 			// Clear cached path if we've gotton close to goal.
 			if (this.memory.patrolPoint && this.hasCachedPath()) {
-				let lair = Game.getObjectById(this.memory.patrolPoint);
+				const lair = Game.getObjectById(this.memory.patrolPoint);
 				if (this.pos.getRangeTo(lair) <= 7) {
 					this.clearCachedPath();
 				}
@@ -276,14 +283,7 @@ Creep.prototype.performMilitaryMove = function () {
 				}
 			}
 
-			if (this.pos.roomName != exploit.roomName) {
-				// Follow cached path to target room.
-				if (!this.hasCachedPath() && exploit.memory.pathToRoom) {
-					this.setCachedPath(exploit.memory.pathToRoom);
-					return;
-				}
-			}
-			else {
+			if (this.pos.roomName === exploit.roomName) {
 				// In-room movement.
 
 				// Start at closest patrol point to entrance
@@ -292,7 +292,7 @@ Creep.prototype.performMilitaryMove = function () {
 						this.memory.patrolPoint = exploit.memory.closestLairToEntrance;
 					}
 					else if (exploit.memory.lairs) {
-						for (let id in exploit.memory.lairs) {
+						for (const id in exploit.memory.lairs) {
 							this.memory.patrolPoint = id;
 							break;
 						}
@@ -301,7 +301,7 @@ Creep.prototype.performMilitaryMove = function () {
 
 				if (this.memory.patrolPoint) {
 					this.memory.target = this.memory.patrolPoint;
-					let lair = Game.getObjectById(this.memory.patrolPoint);
+					const lair = Game.getObjectById(this.memory.patrolPoint);
 					if (!lair) return;
 
 					// Seems we have arrived at a patrol Point, and no enemies are immediately nearby.
@@ -309,14 +309,14 @@ Creep.prototype.performMilitaryMove = function () {
 					let best = null;
 					let bestTime = null;
 
-					let id = this.memory.patrolPoint;
-					for (let id2 in exploit.memory.lairs) {
-						let otherLair = Game.getObjectById(id2);
+					const id = this.memory.patrolPoint;
+					for (const id2 in exploit.memory.lairs) {
+						const otherLair = Game.getObjectById(id2);
 						if (!otherLair) continue;
 
 						let time = otherLair.ticksToSpawn || 0;
 
-						if (id != id2) {
+						if (id !== id2) {
 							if (exploit.memory.lairs[id].paths[id2].path) {
 								time = Math.max(time, exploit.memory.lairs[id].paths[id2].path.length);
 							}
@@ -332,7 +332,7 @@ Creep.prototype.performMilitaryMove = function () {
 					}
 
 					if (best) {
-						if (best == this.memory.patrolPoint) {
+						if (best === this.memory.patrolPoint) {
 							// We're at the correct control point. Move to intercept potentially spawning source keepers.
 							if (exploit.memory.lairs[best].sourcePath) {
 								this.moveTo(utilities.decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
@@ -354,19 +354,22 @@ Creep.prototype.performMilitaryMove = function () {
 
 					return;
 				}
-				else {
-					// @todo No patrol points available, what now?
-				}
 
+				// @todo No patrol points available, what now?
+			}
+			else if (!this.hasCachedPath() && exploit.memory.pathToRoom) {
+				// Follow cached path to target room.
+				this.setCachedPath(exploit.memory.pathToRoom);
+				return;
 			}
 		}
 	}
 
 	if (creep.memory.squadName) {
 		// Check if there are orders and set a target accordingly.
-		var squad = Game.squads[creep.memory.squadName];
+		const squad = Game.squads[creep.memory.squadName];
 		if (squad) {
-			var orders = squad.getOrders();
+			const orders = squad.getOrders();
 			if (orders.length > 0) {
 				creep.memory.target = orders[0].target;
 			}
@@ -377,20 +380,21 @@ Creep.prototype.performMilitaryMove = function () {
 
 		if (!creep.memory.target) {
 			// Movement is dictated by squad orders.
-			var spawnFlags = _.filter(Game.flags, (flag) => flag.name == 'SpawnSquad:' + creep.memory.squadName);
+			const spawnFlags = _.filter(Game.flags, flag => flag.name === 'SpawnSquad:' + creep.memory.squadName);
 			if (spawnFlags.length > 0) {
-				var flag = spawnFlags[0];
-				if (creep.pos.roomName == flag.pos.roomName) {
+				const flag = spawnFlags[0];
+				if (creep.pos.roomName === flag.pos.roomName) {
 					// Refresh creep if it's getting low, so that it has high lifetime when a mission finally starts.
 					if (creep.ticksToLive < CREEP_LIFE_TIME * 0.66) {
-						var spawn = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-							filter: (structure) => structure.structureType == STRUCTURE_SPAWN
+						const spawn = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+							filter: structure => structure.structureType === STRUCTURE_SPAWN,
 						});
 
 						if (spawn) {
 							if (spawn.renewCreep(creep) !== OK) {
 								creep.moveTo(spawn);
 							}
+
 							return true;
 						}
 					}
@@ -405,8 +409,8 @@ Creep.prototype.performMilitaryMove = function () {
 	}
 
 	if (creep.memory.target) {
-		var targetPosition = utilities.decodePosition(creep.memory.target);
-		if (creep.pos.roomName != targetPosition.roomName) {
+		const targetPosition = utilities.decodePosition(creep.memory.target);
+		if (creep.pos.roomName !== targetPosition.roomName) {
 			if (!this.moveToRoom(targetPosition.roomName)) {
 				hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPosition.roomName);
 				// @todo This is cross-room movement and should therefore only calculate a path once.
@@ -415,24 +419,23 @@ Creep.prototype.performMilitaryMove = function () {
 
 			return true;
 		}
-		else {
-			creep.moveTo(targetPosition);
-		}
+
+		creep.moveTo(targetPosition);
 	}
 
 	if (creep.memory.order) {
-		var target = Game.getObjectById(creep.memory.order.target);
+		const target = Game.getObjectById(creep.memory.order.target);
 
 		if (target) {
 			if (creep.memory.body.attack) {
-				let ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
-				var result = creep.moveTo(target, {
+				const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
+				creep.moveTo(target, {
 					reusePath: 5,
 					ignoreDestructibleStructures: ignore,
 				});
 			}
 			else {
-				var result = creep.goTo(target, {
+				creep.goTo(target, {
 					range: 1,
 					maxRooms: 1,
 				});
@@ -441,11 +444,11 @@ Creep.prototype.performMilitaryMove = function () {
 	}
 	else {
 		if (creep.memory.squadName) {
-			var attackFlags = _.filter(Game.flags, (flag) => flag.name == 'AttackSquad:' + creep.memory.squadName);
+			const attackFlags = _.filter(Game.flags, flag => flag.name === 'AttackSquad:' + creep.memory.squadName);
 			if (attackFlags.length > 0) {
 				creep.moveTo(attackFlags[0]);
 
-				if (creep.pos.roomName == attackFlags[0].pos.roomName) {
+				if (creep.pos.roomName === attackFlags[0].pos.roomName) {
 					creep.militaryRoomReached();
 				}
 				else {
@@ -466,52 +469,47 @@ Creep.prototype.performMilitaryMove = function () {
  * Makes a creep try to attack its designated target or nearby enemies.
  */
 Creep.prototype.performMilitaryAttack = function () {
-	var creep = this;
+	const creep = this;
 	if (creep.memory.order) {
-		var target = Game.getObjectById(creep.memory.order.target);
-		var attacked = false;
+		const target = Game.getObjectById(creep.memory.order.target);
+		let attacked = false;
 
 		if (target && target instanceof StructureController) {
-			//console.log('claim!');
 			if (target.owner && !target.my) {
-				var result = creep.attackController(target);
-				if (result == OK) {
+				if (creep.attackController(target) === OK) {
 					attacked = true;
 				}
 			}
 			else if (!target.my) {
 				// If attack flag is directly on controller, claim it, otherwise just reserve.
-				if (creep.memory.squadName && Game.flags['AttackSquad:' + creep.memory.squadName] && Game.flags['AttackSquad:' + creep.memory.squadName].pos.getRangeTo(target) == 0) {
-					var result = creep.claimController(target);
-					if (result == OK) {
+				if (creep.memory.squadName && Game.flags['AttackSquad:' + creep.memory.squadName] && Game.flags['AttackSquad:' + creep.memory.squadName].pos.getRangeTo(target) === 0) {
+					if (creep.claimController(target) === OK) {
 						attacked = true;
 					}
 				}
 				else {
-					var result = creep.reserveController(target);
-					if (result == OK) {
+					if (creep.reserveController(target) === OK) {
 						attacked = true;
 					}
 				}
 			}
 		}
 		else if (target && (!target.my && (!target.owner || !hivemind.relations.isAlly(target.owner.username)))) {
-			var result = creep.attack(target);
-			if (result == OK) {
+			if (creep.attack(target) === OK) {
 				attacked = true;
 			}
 		}
 
 		if (!attacked) {
 			// See if enemies are nearby, attack one of those.
-			var hostile = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
+			const hostile = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
 			if (hostile.length > 0) {
-				for (let i in hostile) {
+				for (const i in hostile) {
 					// Check if enemy is harmless, and ignore it.
 					if (!hostile[i].isDangerous()) continue;
 					if (hostile[i].owner && hivemind.relations.isAlly(hostile[i].owner.username)) continue;
 
-					if (creep.attack(hostile[i]) == OK) {
+					if (creep.attack(hostile[i]) === OK) {
 						attacked = true;
 						break;
 					}
@@ -520,19 +518,20 @@ Creep.prototype.performMilitaryAttack = function () {
 
 			if (!attacked) {
 				// See if enemy structures are nearby, attack one of those.
-				var hostile = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
-					filter: (structure) => structure.structureType != STRUCTURE_CONTROLLER && structure.structureType != STRUCTURE_STORAGE && structure.structureType != STRUCTURE_TERMINAL
+				let hostile = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
+					filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.structureType !== STRUCTURE_TERMINAL,
 				});
 				if (creep.room.controller && creep.room.controller.owner && hivemind.relations.isAlly(creep.room.controller.owner.username)) hostile = [];
 				if (hostile && hostile.length > 0) {
 					// Find target with lowest HP to kill off (usually relevant while trying to break through walls).
 					let minHits;
-					for (let i in hostile) {
+					for (const i in hostile) {
 						if (hostile[i].hits && (!minHits || hostile[i].hits < hostile[minHits].hits)) {
 							minHits = i;
 						}
 					}
-					if (creep.attack(hostile[minHits]) == OK) {
+
+					if (creep.attack(hostile[minHits]) === OK) {
 						attacked = true;
 					}
 				}
@@ -547,14 +546,13 @@ Creep.prototype.performMilitaryAttack = function () {
  * Makes a creep heal itself or nearby injured creeps.
  */
 Creep.prototype.performMilitaryHeal = function () {
-	var creep = this;
-	var healed = false;
+	const creep = this;
+	let healed = false;
 	if (creep.memory.order) {
-		var target = Game.getObjectById(creep.memory.order.target);
+		const target = Game.getObjectById(creep.memory.order.target);
 
 		if (target && (target.my || (target.owner && hivemind.relations.isAlly(target.owner.username)))) {
-			var result = creep.heal(target);
-			if (result == OK) {
+			if (creep.heal(target) === OK) {
 				healed = true;
 			}
 		}
@@ -562,11 +560,11 @@ Creep.prototype.performMilitaryHeal = function () {
 
 	if (!healed) {
 		// See if damaged creeps are adjacent, heal those.
-		var damaged = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-			filter: (creep) => creep.hits < creep.hitsMax
+		const damaged = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+			filter: creep => creep.hits < creep.hitsMax,
 		});
-		if (damaged && damaged.length > 0) {
-			if (creep.heal(damaged[0]) == OK) {
+		if (_.size(damaged) > 0) {
+			if (creep.heal(damaged[0]) === OK) {
 				healed = true;
 			}
 		}
@@ -574,18 +572,18 @@ Creep.prototype.performMilitaryHeal = function () {
 
 	if (!healed && creep.hits < creep.hitsMax) {
 		// Heal self.
-		if (creep.heal(creep) == OK) {
+		if (creep.heal(creep) === OK) {
 			healed = true;
 		}
 	}
 
 	if (!healed) {
 		// See if damaged creeps are in range, heal those.
-		var damaged = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
-			filter: (creep) => creep.hits < creep.hitsMax
+		const damaged = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
+			filter: creep => creep.hits < creep.hitsMax,
 		});
-		if (damaged && damaged.length > 0) {
-			if (creep.rangedHeal(damaged[0]) == OK) {
+		if (_.size(damaged) > 0) {
+			if (creep.rangedHeal(damaged[0]) === OK) {
 				healed = true;
 			}
 		}
@@ -598,14 +596,14 @@ Creep.prototype.initBrawlerState = function () {
 	this.memory.initialized = true;
 
 	if (this.memory.squadName) {
-		var squad = Game.squads[this.memory.squadName];
+		const squad = Game.squads[this.memory.squadName];
 		if (squad && squad.memory.pathName) {
 			this.memory.pathName = squad.memory.pathName;
 			this.memory.pathStep = 1;
 		}
 	}
 
-	if (this.memory.squadUnitType == 'builder') {
+	if (this.memory.squadUnitType === 'builder') {
 		this.memory.fillWithEnergy = true;
 	}
 

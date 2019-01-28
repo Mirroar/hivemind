@@ -1,16 +1,20 @@
 'use strict';
 
-var Process = require('process');
+/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_ALWAYS
+POWER_SPAWN_ENERGY_RATIO */
 
-var ManageLabsProcess = require('process.rooms.owned.labs');
-var ManageLinksProcess = require('process.rooms.owned.links');
-var RoomDefenseProcess = require('process.rooms.owned.defense');
-var RoomSongsProcess = require('process.rooms.owned.songs');
+const Process = require('./process');
 
-var OwnedRoomProcess = function (params, data) {
+const ManageLabsProcess = require('./process.rooms.owned.labs');
+const ManageLinksProcess = require('./process.rooms.owned.links');
+const RoomDefenseProcess = require('./process.rooms.owned.defense');
+const RoomSongsProcess = require('./process.rooms.owned.songs');
+
+const OwnedRoomProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
 };
+
 OwnedRoomProcess.prototype = Object.create(Process.prototype);
 
 OwnedRoomProcess.prototype.run = function () {
@@ -33,14 +37,14 @@ OwnedRoomProcess.prototype.run = function () {
 	});
 
 	// Process power in power spawns.
-	let powerSpawn = this.room.powerSpawn;
+	const powerSpawn = this.room.powerSpawn;
 	if (powerSpawn && powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
 		powerSpawn.processPower();
 	}
 
 	// Use observers if requested.
 	if (this.room.observer && this.room.memory.observeTargets && this.room.memory.observeTargets.length > 0) {
-		let target = this.room.memory.observeTargets.pop();
+		const target = this.room.memory.observeTargets.pop();
 		this.room.observer.observeRoom(target);
 		this.room.observer.hasScouted = true;
 	}

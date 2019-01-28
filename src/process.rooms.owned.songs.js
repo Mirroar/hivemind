@@ -1,8 +1,9 @@
 'use strict';
 
-var Process = require('process');
+const Process = require('./process');
 
-var songs = {
+/* eslint-disable array-element-newline */
+const songs = {
 	harder: {
 		roles: ['harvester', 'harvester.mineral', 'transporter', 'upgrader', 'repairer', 'builder', 'hauler'],
 		lines: [
@@ -21,8 +22,8 @@ var songs = {
 			'work it', 'harder', 'make it', 'better', 'do it', 'faster', 'makes us', 'stronger', 'more than', 'ever', 'hour', 'after', 'hour', 'work is', 'never', 'over',
 			'work it', 'harder', 'make it', 'better', 'do it', 'faster', 'makes us', 'stronger', 'more than', 'ever', 'hour', 'after', 'hour', 'work is', 'never', 'over',
 			'work it', 'harder', 'make it', 'better', 'do it', 'faster', 'makes us', 'stronger', 'more than', 'ever', 'hour', 'after', 'hour', 'work is', 'never', 'over',
-			// drums
-			// drums
+			// Drums
+			// Drums
 			'work it', 'harder', 'make it', 'better', 'do it', 'faster', 'makes us', 'stronger', 'more than', 'ever', 'hour', 'after', 'hour', 'work is', 'never', 'over',
 			'work it', 'harder', 'make it', 'better', 'do it', 'faster', 'makes us', 'stronger', 'more than', 'ever', 'hour', 'after', 'hour', 'work is', 'never', 'over',
 			'work it', 'harder', 'make it', 'better', 'do it', 'faster', 'makes us', 'stronger', 'more than', 'ever', 'hour', 'after', 'hour', 'work is', 'never', 'over',
@@ -33,8 +34,9 @@ var songs = {
 		],
 	},
 };
+/* eslint-enable array-element-newline */
 
-var RoomSongsProcess = function (params, data) {
+const RoomSongsProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
 
@@ -43,25 +45,26 @@ var RoomSongsProcess = function (params, data) {
 	if (!this.room.memory.roleplay.roomSong) this.room.memory.roleplay.roomSong = {};
 	this.memory = this.room.memory.roleplay.roomSong;
 };
+
 RoomSongsProcess.prototype = Object.create(Process.prototype);
 
 RoomSongsProcess.prototype.run = function () {
 	// @todo Choose from multiple songs.
 	if (!this.memory.name) this.memory.name = 'harder';
 	if (!songs[this.memory.name]) return;
-	let song = songs[this.memory.name];
+	const song = songs[this.memory.name];
 
 	// Increment beat.
 	if (!this.memory.currentBeat) this.memory.currentBeat = 0;
 	this.memory.currentBeat++;
 	if (this.memory.currentBeat >= song.lines.length) this.memory.currentBeat = 0;
 
-	if (!song.lines[this.memory.currentBeat] || song.lines[this.memory.currentBeat] == '') return;
+	if (!song.lines[this.memory.currentBeat] || song.lines[this.memory.currentBeat] === '') return;
 
-	var creeps = _.filter(this.room.creeps, (creep) => song.roles.includes(creep.memory.role));
+	const creeps = _.filter(this.room.creeps, creep => song.roles.includes(creep.memory.role));
 	if (creeps.length <= 0) return;
 
-	var creep = creeps[Math.floor(Math.random() * creeps.length)];
+	const creep = creeps[Math.floor(Math.random() * creeps.length)];
 	creep.say(song.lines[this.memory.currentBeat], true);
 };
 

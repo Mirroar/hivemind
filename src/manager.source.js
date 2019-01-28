@@ -230,7 +230,7 @@ const isDangerous = function () {
 	if (lair && lair.isDangerous()) {
 		// It's still safe if a guardian with sufficient lifespan is nearby to take care of any source keepers.
 		if (this.room.creepsByRole.brawler) {
-			for (let i in this.room.creepsByRole.brawler) {
+			for (const i in this.room.creepsByRole.brawler) {
 				const guardian = this.room.creepsByRole.brawler[i];
 				if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30 && guardian.memory.exploitUnitType === 'guardian') {
 					return false;

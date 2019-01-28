@@ -1,11 +1,14 @@
 'use strict';
 
-var Process = require('process');
+/* global hivemind FIND_HOSTILE_CREEPS */
 
-var RoomIntelProcess = function (params, data) {
+const Process = require('./process');
+
+const RoomIntelProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
 };
+
 RoomIntelProcess.prototype = Object.create(Process.prototype);
 
 RoomIntelProcess.prototype.run = function () {
@@ -16,8 +19,8 @@ RoomIntelProcess.prototype.run = function () {
 };
 
 RoomIntelProcess.prototype.findHostiles = function () {
-	let hostiles = this.room.find(FIND_HOSTILE_CREEPS);
-	let parts = {};
+	const hostiles = this.room.find(FIND_HOSTILE_CREEPS);
+	const parts = {};
 	let lastSeen = this.room.memory.enemies && this.room.memory.enemies.lastSeen || 0;
 	let safe = true;
 
@@ -27,26 +30,28 @@ RoomIntelProcess.prototype.findHostiles = function () {
 
 	if (hostiles.length > 0) {
 		// Count body parts for strength estimation.
-		for (let j in hostiles) {
+		for (const j in hostiles) {
 			if (hostiles[j].isDangerous()) {
 				safe = false;
 				lastSeen = Game.time;
 			}
-			for (let k in hostiles[j].body) {
-				let type = hostiles[j].body[k].type;
+
+			for (const k in hostiles[j].body) {
+				const type = hostiles[j].body[k].type;
 				if (!parts[type]) {
 					parts[type] = 0;
 				}
+
 				parts[type]++;
 			}
 		}
 	}
 
 	this.room.memory.enemies = {
-		parts: parts,
-		lastSeen: lastSeen,
-		safe: safe,
+		parts,
+		lastSeen,
+		safe,
 	};
-}
+};
 
 module.exports = RoomIntelProcess;

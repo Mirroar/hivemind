@@ -1,21 +1,21 @@
 'use strict';
 
-var useProfiler = false;
-var profiler = null;
+const useProfiler = false;
+let profiler;
 
 if (useProfiler) {
-	profiler = require('screeps-profiler');
+	profiler = require('./screeps-profiler');
 	// Enable profiling of all methods in Game object prototypes defined up to now.
 	profiler.enable();
 	profiler.registerClass(Game.map, 'Map');
 	profiler.registerClass(Game.market, 'Market');
 
-	var Bay = require('manager.bay');
-	var BoostManager = require('manager.boost');
-	var Exploit = require('manager.exploit');
-	var Logger = require('debug');
-	var RoomPlanner = require('roomplanner');
-	var Squad = require('manager.squad');
+	const Bay = require('./manager.bay');
+	const BoostManager = require('./manager.boost');
+	const Exploit = require('./manager.exploit');
+	const Logger = require('./debug');
+	const RoomPlanner = require('./roomplanner');
+	const Squad = require('./manager.squad');
 	profiler.registerClass(Bay, 'Bay');
 	profiler.registerClass(BoostManager, 'BoostManager');
 	profiler.registerClass(Exploit, 'Exploit');
@@ -23,10 +23,10 @@ if (useProfiler) {
 	profiler.registerClass(RoomPlanner, 'RoomPlanner');
 	profiler.registerClass(Squad, 'Squad');
 
-	var roleplay = require('manager.roleplay');
-	var spawnManager = require('manager.spawn');
-	var stats = require('stats');
-	var utilities = require('utilities');
+	const roleplay = require('./manager.roleplay');
+	const spawnManager = require('./manager.spawn');
+	const stats = require('./stats');
+	const utilities = require('./utilities');
 	profiler.registerObject(roleplay, 'roleplay');
 	profiler.registerObject(spawnManager, 'spawnManager');
 	profiler.registerObject(stats, 'stats');

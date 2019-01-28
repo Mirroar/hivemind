@@ -1,17 +1,22 @@
 'use strict';
 
-var Process = require('process');
+/* global hivemind CREEP_SPAWN_TIME MAX_CREEP_SIZE CONTROLLER_STRUCTURES
+STRUCTURE_POWER_SPAWN ERR_NO_PATH ATTACK_POWER */
 
-var PowerMiningProcess = function (params, data) {
+const Process = require('./process');
+
+const PowerMiningProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	if (!Memory.strategy) {
 		Memory.strategy = {};
 	}
+
 	if (!Memory.strategy.power) {
 		Memory.strategy.power = {};
 	}
 };
+
 PowerMiningProcess.prototype = Object.create(Process.prototype);
 
 PowerMiningProcess.prototype.shouldRun = function () {
@@ -26,11 +31,11 @@ PowerMiningProcess.prototype.shouldRun = function () {
  */
 PowerMiningProcess.prototype.run = function () {
 	// @todo Add throttle like with remote harvesting.
-	let memory = Memory.strategy.power;
+	const memory = Memory.strategy.power;
 
-	for (let roomName in memory.rooms || []) {
+	for (const roomName in memory.rooms || []) {
 		// @todo Skip room if we already decided to harvest it.
-		let info = memory.rooms[roomName];
+		const info = memory.rooms[roomName];
 		// Calculate DPS we'd need to do to harvest this power.
 		let timeRemaining = info.decays - Game.time;
 
@@ -39,6 +44,7 @@ PowerMiningProcess.prototype.run = function () {
 			if (timeRemaining <= 0) {
 				delete memory.rooms[roomName];
 			}
+
 			continue;
 		}
 
@@ -53,18 +59,12 @@ PowerMiningProcess.prototype.run = function () {
 			continue;
 		}
 
-		let dps = info.hits / timeRemaining;
-
-		/*let attackParts = dps / ATTACK_POWER;
-		let healParts = (dps / 2) / HEAL_POWER;
-		let moveParts = attackParts + healParts;
-
-		let numCreeps = Math.ceil((attackParts + healParts + moveParts) / MAX_CREEP_SIZE);//*/
+		const dps = info.hits / timeRemaining;
 
 		// @todo Maybe adjust strategy to use dedicated attackers and healers if space is limited.
 
-		let partsPerDPS = 2 / ATTACK_POWER;
-		let numCreeps = Math.ceil(dps * partsPerDPS / MAX_CREEP_SIZE);
+		const partsPerDPS = 2 / ATTACK_POWER;
+		const numCreeps = Math.ceil(dps * partsPerDPS / MAX_CREEP_SIZE);
 
 		if (numCreeps > Math.min(5, info.freeTiles)) {
 			delete memory.rooms[roomName];
@@ -75,15 +75,15 @@ PowerMiningProcess.prototype.run = function () {
 
 		// Determine which rooms need to spawn creeps.
 		let potentialSpawns = [];
-		for (let myRoomName in Game.rooms) {
-			let room = Game.rooms[myRoomName];
+		for (const myRoomName in Game.rooms) {
+			const room = Game.rooms[myRoomName];
 			if (!room.controller || !room.controller.my) continue;
 			if (room.isFullOnPower()) continue;
 			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) continue;
 			if (Game.map.getRoomLinearDistance(roomName, myRoomName) > 5) continue;
 
-			let roomRoute = Game.map.findRoute(myRoomName, roomName);
-			if (roomRoute == ERR_NO_PATH || roomRoute.length > 10) continue;
+			const roomRoute = Game.map.findRoute(myRoomName, roomName);
+			if (roomRoute === ERR_NO_PATH || roomRoute.length > 10) continue;
 
 			hivemind.log('strategy').debug('Could spawn creeps in', myRoomName, 'with distance', roomRoute.length);
 
@@ -99,18 +99,18 @@ PowerMiningProcess.prototype.run = function () {
 		let maxAttackers = 0;
 		let travelTime = 0;
 		let failed = true;
-		let neededRooms = {};
+		const neededRooms = {};
 		let finalDps = 0;
-		for (let i in potentialSpawns) {
-			let spawnInfo = potentialSpawns[i];
+		for (const i in potentialSpawns) {
+			const spawnInfo = potentialSpawns[i];
 
 			maxAttackers += 2;
 			// Estimate travel time at 50 ticks per room.
 			travelTime = spawnInfo.distance * 50;
 
-			let neededDps = info.hits / (timeRemaining - travelTime);
+			const neededDps = info.hits / (timeRemaining - travelTime);
 			// @todo Needed Dps multiplier is this high because currently creeps can only attack every 2 ticks.
-			let numCreeps = Math.ceil(neededDps * 1.2 * partsPerDPS / MAX_CREEP_SIZE);
+			const numCreeps = Math.ceil(neededDps * 1.2 * partsPerDPS / MAX_CREEP_SIZE);
 
 			if (numCreeps > Math.min(6, info.freeTiles)) {
 				// Would need too many creeps at this distance.
@@ -128,7 +128,6 @@ PowerMiningProcess.prototype.run = function () {
 		}
 
 		if (failed) {
-			// delete memory.rooms[roomName];
 			continue;
 		}
 

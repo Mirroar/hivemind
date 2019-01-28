@@ -1,20 +1,23 @@
 'use strict';
 
-var Process = require('process');
-var OwnedRoomProcess = require('process.rooms.owned');
-var RoomIntelProcess = require('process.rooms.intel');
-var RoomPlanner = require('roomplanner');
+/* global hivemind PROCESS_PRIORITY_ALWAYS */
 
-var RoomsProcess = function (params, data) {
+const Process = require('./process');
+const OwnedRoomProcess = require('./process.rooms.owned');
+const RoomIntelProcess = require('./process.rooms.intel');
+const RoomPlanner = require('./roomplanner');
+
+const RoomsProcess = function (params, data) {
 	Process.call(this, params, data);
 };
+
 RoomsProcess.prototype = Object.create(Process.prototype);
 
 RoomsProcess.prototype.run = function () {
-	for (let roomName in Game.rooms) {
-		let room = Game.rooms[roomName];
+	for (const roomName in Game.rooms) {
+		const room = Game.rooms[roomName];
 		hivemind.runProcess('rooms_intel', RoomIntelProcess, {
-			room: room,
+			room,
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
@@ -24,7 +27,7 @@ RoomsProcess.prototype.run = function () {
 		if (room.controller && room.controller.my) {
 			// @todo
 			hivemind.runProcess('owned_rooms', OwnedRoomProcess, {
-				room: room,
+				room,
 				priority: PROCESS_PRIORITY_ALWAYS,
 			});
 		}

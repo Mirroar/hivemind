@@ -9,7 +9,7 @@ const Relations = function () {
 
 	try {
 		// eslint-disable-next-line import/no-unresolved
-		const localRelations = require('relations.local');
+		const localRelations = require('./relations.local');
 
 		if (localRelations.allies) {
 			for (const ally of localRelations.allies) {

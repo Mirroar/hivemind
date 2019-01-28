@@ -2,7 +2,7 @@
 
 /* global RoomPosition COLOR_GREEN COLOR_RED MOVE CLAIM */
 
-const utilities = require('utilities');
+const utilities = require('./utilities');
 
 const Squad = function(squadName) {
 	this.name = squadName;

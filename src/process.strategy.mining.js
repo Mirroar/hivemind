@@ -1,9 +1,9 @@
 'use strict';
 
-var Process = require('process');
-var stats = require('stats');
+const Process = require('./process');
+const stats = require('./stats');
 
-var RemoteMiningProcess = function (params, data) {
+const RemoteMiningProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	if (!Memory.strategy) {
@@ -18,28 +18,27 @@ var RemoteMiningProcess = function (params, data) {
 		};
 	}
 };
+
 RemoteMiningProcess.prototype = Object.create(Process.prototype);
 
 /**
  * Determines optimal number of remote mining rooms based on CPU and expansion plans.
  */
 RemoteMiningProcess.prototype.run = function () {
-	let memory = Memory.strategy;
+	const memory = Memory.strategy;
 
 	let max = 0;
-	let numRooms = 0;
 
-	let sourceRooms = {};
+	const sourceRooms = {};
 
 	// Determine how much remote mining each room can handle.
 	for (let roomName in Game.rooms) {
 		let room = Game.rooms[roomName];
 		if (!room.controller || !room.controller.my) continue;
 
-		let numSpawns = _.filter(Game.spawns, (spawn) => spawn.pos.roomName == roomName && spawn.isActive()).length;
-		if (numSpawns == 0) continue;
+		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === roomName && spawn.isActive()).length;
+		if (numSpawns === 0) continue;
 
-		numRooms++;
 		max += 2 * numSpawns;
 
 		sourceRooms[roomName] = {
@@ -49,20 +48,21 @@ RemoteMiningProcess.prototype.run = function () {
 	}
 
 	// Create ordered list of best harvest rooms.
-	let harvestRooms = [];
-	for (let roomName in memory.roomList) {
-		let info = memory.roomList[roomName];
+	const harvestRooms = [];
+	for (const roomName in memory.roomList) {
+		const info = memory.roomList[roomName];
 		if (!info.harvestPriority || info.harvestPriority <= 0.1) continue;
 
 		info.harvestActive = false;
 		harvestRooms.push(info);
 	}
-	let sortedRooms = _.sortBy(harvestRooms, (o) => -o.harvestPriority);
+
+	const sortedRooms = _.sortBy(harvestRooms, o => -o.harvestPriority);
 
 	// Decide which are active.
 	let total = 0;
 	for (let i = 0; i < sortedRooms.length; i++) {
-		let info = sortedRooms[i];
+		const info = sortedRooms[i];
 		if (!sourceRooms[info.origin]) continue;
 		if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
 
@@ -92,7 +92,6 @@ RemoteMiningProcess.prototype.run = function () {
 	}
 
 	// @todo Reduce remote harvesting if we want to expand.
-
 };
 
 module.exports = RemoteMiningProcess;
