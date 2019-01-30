@@ -1,14 +1,20 @@
+'use strict';
+
+/* global Creep FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY
+STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_CONTAINER
+FIND_CONSTRUCTION_SITES */
+
+const utilities = require('./utilities');
+
 // @todo Rewrite delivery part using priority queue.
 // @todo Just make the harvester build a container when none is available.
-
-var utilities = require('utilities');
 
 /**
  * Makes the creep gather resources in the current room.
  */
 Creep.prototype.performHarvest = function () {
-	var creep = this;
-	var source;
+	const creep = this;
+	let source;
 	if (creep.memory.fixedSource) {
 		source = Game.getObjectById(creep.memory.fixedSource);
 		// @todo Just in case, handle source not existing anymore.
@@ -26,10 +32,12 @@ Creep.prototype.performHarvest = function () {
 			creep.memory.resourceTarget = creep.room.sources[Math.floor(Math.random() * creep.room.sources.length)].id;
 			creep.memory.deliverTarget = null;
 		}
-		var best = creep.memory.resourceTarget;
+
+		const best = creep.memory.resourceTarget;
 		if (!best) {
 			return false;
 		}
+
 		source = Game.getObjectById(best);
 		if (!source) {
 			creep.memory.resourceTarget = null;
@@ -40,26 +48,26 @@ Creep.prototype.performHarvest = function () {
 		creep.moveToRange(source, 1);
 	}
 	else {
-		var result = creep.harvest(source);
+		creep.harvest(source);
 	}
 
 	// If there's a link or controller nearby, directly deposit resources.
 	if (_.sum(creep.carry) > creep.carryCapacity * 0.5) {
-		var target = source.getNearbyContainer();
+		let target = source.getNearbyContainer();
 		if (creep.carry.energy > 0) {
-			let link = source.getNearbyLink();
+			const link = source.getNearbyLink();
 			if (link && link.energy < link.energyCapacity) {
 				target = link;
 			}
 			else {
 				// Check for other nearby links.
-				let links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: (structure) => structure.structureType == STRUCTURE_LINK && structure.energy < structure.energyCapacity});
-				for (var i in links) {
-					target = links[i];
-					break;
+				const links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
+				if (links.length > 0) {
+					target = links[0];
 				}
 			}
 		}
+
 		if (target) {
 			if (creep.pos.getRangeTo(target) > 1) {
 				creep.moveToRange(target, 1);
@@ -77,10 +85,10 @@ Creep.prototype.performHarvest = function () {
  * Dumps minerals a harvester creep has gathered.
  */
 Creep.prototype.performMineralHarvesterDeliver = function () {
-	var creep = this;
-	var source = Game.getObjectById(creep.memory.fixedMineralSource);
-	var container = source.getNearbyContainer();
-	var target;
+	const creep = this;
+	const source = Game.getObjectById(creep.memory.fixedMineralSource);
+	const container = source.getNearbyContainer();
+	let target;
 	// By default, deliver to room's terminal if there's space.
 	if (container && _.sum(container.store) + creep.carryCapacity <= container.storeCapacity) {
 		target = container;
@@ -112,14 +120,18 @@ Creep.prototype.performHarvesterDeliver = function () {
 		return this.performMineralHarvesterDeliver();
 	}
 
-	var creep = this;
-	var target;
+	const creep = this;
+	let source;
+	let target;
+	let targetLink;
+	let targetContainer;
+	let dropOffSpot;
 
 	if (this.memory.fixedSource) {
-		var source = Game.getObjectById(creep.memory.fixedSource);
-		var targetLink = source.getNearbyLink();
-		var targetContainer = source.getNearbyContainer();
-		var dropOffSpot = source.getDropoffSpot();
+		source = Game.getObjectById(creep.memory.fixedSource);
+		targetLink = source.getNearbyLink();
+		targetContainer = source.getNearbyContainer();
+		dropOffSpot = source.getDropoffSpot();
 
 		this.memory.fixedDropoffSpot = dropOffSpot;
 		this.memory.fixedTarget = source.memory.targetContainer; // @todo this should not work well...
@@ -134,11 +146,13 @@ Creep.prototype.performHarvesterDeliver = function () {
 			target = targetContainer;
 		}
 		else if (dropOffSpot) {
-			if (true || creep.pos.x == dropOffSpot.x && creep.pos.y == dropOffSpot.y) {
+			if (true || creep.pos.x === dropOffSpot.x && creep.pos.y === dropOffSpot.y) {
 				creep.drop(RESOURCE_ENERGY);
-			} else {
+			}
+			else {
 				creep.moveTo(dropOffSpot.x, dropOffSpot.y);
 			}
+
 			return true;
 		}
 	}
@@ -146,19 +160,19 @@ Creep.prototype.performHarvesterDeliver = function () {
 	if (!target) {
 		// @todo Use transporter drop off logic.
 		if (!creep.memory.deliverTarget) {
-			var targets = creep.room.find(FIND_STRUCTURES, {
-				filter: (structure) => {
-					return (structure.structureType == STRUCTURE_EXTENSION ||
-							structure.structureType == STRUCTURE_SPAWN ||
-							structure.structureType == STRUCTURE_TOWER) && structure.energy < structure.energyCapacity;
-				}
+			let targets = creep.room.find(FIND_STRUCTURES, {
+				filter: structure => {
+					return (structure.structureType === STRUCTURE_EXTENSION ||
+							structure.structureType === STRUCTURE_SPAWN ||
+							structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity;
+				},
 			});
 			if (targets.length <= 0) {
 				// Containers get filled when all other structures are full.
 				targets = creep.room.find(FIND_STRUCTURES, {
-					filter: (structure) => {
-						return (structure.structureType == STRUCTURE_CONTAINER) && structure.storeCapacity && _.sum(structure.store) < structure.storeCapacity;
-					}
+					filter: structure => {
+						return (structure.structureType === STRUCTURE_CONTAINER) && structure.storeCapacity && _.sum(structure.store) < structure.storeCapacity;
+					},
 				});
 				if (targets.length <= 0) {
 					return false;
@@ -168,10 +182,12 @@ Creep.prototype.performHarvesterDeliver = function () {
 			creep.memory.resourceTarget = null;
 			creep.memory.deliverTarget = utilities.getClosest(creep, targets);
 		}
-		var best = creep.memory.deliverTarget;
+
+		const best = creep.memory.deliverTarget;
 		if (!best) {
 			return false;
 		}
+
 		target = Game.getObjectById(best);
 		if (!target) {
 			creep.memory.deliverTarget = null;
@@ -181,8 +197,8 @@ Creep.prototype.performHarvesterDeliver = function () {
 
 	if (source && !targetContainer && creep.pos.getRangeTo(source) <= 1) {
 		// Check if there is a container construction site nearby and help build it.
-		let sites = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
-			filter: (site) => site.structureType == STRUCTURE_CONTAINER
+		const sites = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
+			filter: site => site.structureType === STRUCTURE_CONTAINER,
 		});
 
 		if (sites.length > 0) {
@@ -201,13 +217,15 @@ Creep.prototype.performHarvesterDeliver = function () {
 	if (target.energy >= target.energyCapacity) {
 		creep.memory.deliverTarget = null;
 	}
+
 	if (target.store && _.sum(target.store) >= target.storeCapacity) {
-		if (creep.memory.fixedTarget && target.id == creep.memory.fixedTarget) {
+		if (creep.memory.fixedTarget && target.id === creep.memory.fixedTarget) {
 			// Container is full, drop energy instead.
 			if (false && creep.memory.fixedDropoffSpot) {
-				if (creep.pos.x == creep.memory.fixedDropoffSpot.x && creep.pos.y == creep.memory.fixedDropoffSpot.y) {
+				if (creep.pos.x === creep.memory.fixedDropoffSpot.x && creep.pos.y === creep.memory.fixedDropoffSpot.y) {
 					creep.drop(RESOURCE_ENERGY);
-				} else {
+				}
+				else {
 					creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
 				}
 			}
@@ -220,6 +238,7 @@ Creep.prototype.performHarvesterDeliver = function () {
 			creep.memory.deliverTarget = null;
 		}
 	}
+
 	return true;
 };
 
@@ -246,7 +265,6 @@ Creep.prototype.runHarvesterLogic = function () {
 	if (this.memory.harvesting) {
 		return this.performHarvest();
 	}
-	else {
-		return this.performHarvesterDeliver();
-	}
+
+	return this.performHarvesterDeliver();
 };

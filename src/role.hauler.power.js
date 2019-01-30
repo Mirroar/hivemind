@@ -1,20 +1,25 @@
+'use strict';
 
-Creep.prototype.runPowerHaulerLogic = function() {
+/* global Creep RESOURCE_POWER FIND_STRUCTURES STRUCTURE_POWER_BANK
+FIND_DROPPED_RESOURCES */
+
+Creep.prototype.runPowerHaulerLogic = function () {
 	if (this.memory.isReturning) {
-		if (this.pos.roomName != this.memory.sourceRoom) {
+		if (this.pos.roomName !== this.memory.sourceRoom) {
 			this.moveToRoom(this.memory.sourceRoom);
 			return;
 		}
 
 		// @todo Put power in storage.
 		if ((this.carry[RESOURCE_POWER] || 0) > 0) {
-			let target = this.room.getBestStorageTarget(this.carry[RESOURCE_POWER], RESOURCE_POWER);
+			const target = this.room.getBestStorageTarget(this.carry[RESOURCE_POWER], RESOURCE_POWER);
 
 			if (target) {
 				if (this.pos.getRangeTo(target) > 1) {
 					this.moveToRange(target, 1);
 					return;
 				}
+
 				this.transferAny(target);
 				return;
 			}
@@ -29,29 +34,30 @@ Creep.prototype.runPowerHaulerLogic = function() {
 		return;
 	}
 
-	if (this.pos.roomName != this.memory.targetRoom) {
+	if (this.pos.roomName !== this.memory.targetRoom) {
 		this.moveToRoom(this.memory.targetRoom);
 		return;
 	}
 
-	var powerBanks = this.room.find(FIND_STRUCTURES, {
-		filter: (structure) => structure.structureType == STRUCTURE_POWER_BANK,
+	const powerBanks = this.room.find(FIND_STRUCTURES, {
+		filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
 	});
 
 	if (powerBanks.length > 0) {
 		// Wait close by until power bank is destroyed.
-		var powerBank = powerBanks[0];
+		const powerBank = powerBanks[0];
 		if (this.pos.getRangeTo(powerBank) > 5) {
 			this.moveToRange(powerBank, 5);
 		}
+
 		return;
 	}
 
-	var powerResources = this.room.find(FIND_DROPPED_RESOURCES, {
-		filter: (resource) => resource.resourceType == RESOURCE_POWER,
+	const powerResources = this.room.find(FIND_DROPPED_RESOURCES, {
+		filter: resource => resource.resourceType === RESOURCE_POWER,
 	});
 
-	if (_.sum(this.carry) >= this.carryCapacity || powerResources.length < 1) {
+	if (_.sum(this.carry) >= this.carryCapacity || powerResources.length === 0) {
 		// Return home.
 		this.memory.isReturning = true;
 		return;
@@ -76,5 +82,6 @@ Creep.prototype.runPowerHaulerLogic = function() {
 		this.moveToRange(powerResources[0], 1);
 		return;
 	}
+
 	this.pickup(powerResources[0]);
 };

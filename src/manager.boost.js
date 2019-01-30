@@ -93,7 +93,7 @@ Room.prototype.getBoostLabs = function () {
 		}
 	}
 
-	for (let id in this.memory.boostManager.labs || []) {
+	for (const id in this.memory.boostManager.labs || []) {
 		const lab = Game.getObjectById(id);
 		if (lab) {
 			boostLabs.push(lab);
@@ -136,7 +136,7 @@ BoostManager.prototype.markForBoosting = function (creepName, boosts) {
 	memory.needsBoosting = true;
 	this.memory.creepsToBoost[creepName] = {};
 
-	for (let bodyPart in boosts) {
+	for (const bodyPart in boosts) {
 		const resourceType = boosts[bodyPart];
 		const numParts = memory.body[bodyPart] || 0;
 

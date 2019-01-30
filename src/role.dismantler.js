@@ -1,27 +1,29 @@
-var utilities = require('utilities');
+'use strict';
+
+/* global Creep RoomPosition FIND_FLAGS LOOK_STRUCTURES */
 
 /**
  * Makes the creep use energy to finish construction sites in the current room.
  */
 Creep.prototype.performDismantle = function () {
 	// First, get to target room.
-	if (this.pos.roomName != this.memory.targetRoom) {
+	if (this.pos.roomName !== this.memory.targetRoom) {
 		this.moveToRoom(this.memory.targetRoom);
 		return true;
 	}
 
-	var target;
+	let target;
 
 	// Look for dismantle flags.
-	var flags = this.room.find(FIND_FLAGS, {
-		filter: (flag) => flag.name.startsWith('Dismantle:')
+	const flags = this.room.find(FIND_FLAGS, {
+		filter: flag => flag.name.startsWith('Dismantle:'),
 	});
 	if (flags.length > 0) {
-		for (let i in flags) {
-			let flag = flags[i];
-			let structures = flag.pos.lookFor(LOOK_STRUCTURES);
+		for (const i in flags) {
+			const flag = flags[i];
+			const structures = flag.pos.lookFor(LOOK_STRUCTURES);
 
-			if (structures.length == 0) {
+			if (structures.length === 0) {
 				// Done dismantling.
 				flag.remove();
 				continue;
@@ -46,6 +48,7 @@ Creep.prototype.performDismantle = function () {
 		else {
 			this.dismantle(target);
 		}
+
 		return true;
 	}
 
@@ -54,7 +57,7 @@ Creep.prototype.performDismantle = function () {
 
 Creep.prototype.performDismantlerDeliver = function () {
 	// First, get to delivery room.
-	if (this.pos.roomName != this.memory.sourceRoom) {
+	if (this.pos.roomName !== this.memory.sourceRoom) {
 		this.moveTo(new RoomPosition(25, 25, this.memory.sourceRoom));
 		return true;
 	}
@@ -67,11 +70,12 @@ Creep.prototype.performDismantlerDeliver = function () {
 		else {
 			this.transferAny(this.room.storage);
 		}
+
 		return true;
 	}
 
-	let location = this.room.getStorageLocation();
-	let pos = new RoomPosition(location.x, location.y, this.pos.roomName);
+	const location = this.room.getStorageLocation();
+	const pos = new RoomPosition(location.x, location.y, this.pos.roomName);
 	if (this.pos.getRangeTo(pos) > 0) {
 		this.moveTo(pos);
 	}
@@ -96,6 +100,7 @@ Creep.prototype.runDismantlerLogic = function () {
 	if (!this.memory.sourceRoom) {
 		this.memory.sourceRoom = this.pos.roomName;
 	}
+
 	if (!this.memory.targetRoom) {
 		this.memory.targetRoom = this.pos.roomName;
 	}
@@ -103,15 +108,14 @@ Creep.prototype.runDismantlerLogic = function () {
 	if (this.memory.dismantling && this.carryCapacity > 0 && _.sum(this.carry) >= this.carryCapacity) {
 		this.setDismantlerState(false);
 	}
-	else if (!this.memory.dismantling && _.sum(this.carry) == 0) {
+	else if (!this.memory.dismantling && _.sum(this.carry) === 0) {
 		this.setDismantlerState(true);
 	}
 
 	if (this.memory.dismantling) {
 		return this.performDismantle();
 	}
-	else {
-		this.performDismantlerDeliver();
-		return true;
-	}
+
+	this.performDismantlerDeliver();
+	return true;
 };
