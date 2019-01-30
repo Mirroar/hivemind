@@ -1,13 +1,16 @@
-var utilities = require('utilities');
+'use strict';
 
-var roleRemoteBuilder = {
+const utilities = require('./utilities');
+
+const roleRemoteBuilder = {
 
 	/** @param {Creep} creep **/
-	run: function (creep) {
+	run(creep) {
 		if (creep.memory.starting) {
 			if (_.sum(creep.carry) < creep.carryCapacity) {
 				return creep.performGetEnergy();
 			}
+
 			delete creep.memory.starting;
 		}
 
@@ -17,19 +20,20 @@ var roleRemoteBuilder = {
 				return true;
 			}
 
-			let pos = utilities.decodePosition(creep.memory.extraEnergyTarget);
+			const pos = utilities.decodePosition(creep.memory.extraEnergyTarget);
 			if (creep.pos.getRangeTo(pos) > 1) {
-				if (creep.moveTo(pos) == ERR_NO_PATH) {
+				if (creep.moveTo(pos) === ERR_NO_PATH) {
 					delete creep.memory.extraEnergyTarget;
 				}
 			}
 			else {
-				let source = creep.pos.findClosestByRange(FIND_SOURCES);
+				const source = creep.pos.findClosestByRange(FIND_SOURCES);
 				creep.harvest(source);
 				if (source.energy <= 0) {
 					delete creep.memory.extraEnergyTarget;
 				}
 			}
+
 			return true;
 		}
 		if (!creep.memory.extraEnergyTarget && creep.memory.sourceRoom) {
