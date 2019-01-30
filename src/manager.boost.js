@@ -79,6 +79,7 @@ Room.prototype.getBoostLabs = function () {
 				if (this.memory.labs && _.contains(this.memory.labs.reactor, structure.id)) return false;
 				if (this.memory.labs && structure.id === this.memory.labs.source1) return false;
 				if (this.memory.labs && structure.id === this.memory.labs.source2) return false;
+				if (!structure.isActive()) return false;
 
 				return true;
 			},
