@@ -27,7 +27,7 @@ RoomDefenseProcess.prototype.run = function () {
 			const target = this.room.getTowerTarget(tower);
 			if (target) {
 				tower.attack(target);
-				return true;
+				continue;
 			}
 
 			const closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
@@ -47,12 +47,12 @@ RoomDefenseProcess.prototype.run = function () {
 
 			if (closestHostileHealer) {
 				tower.attack(closestHostileHealer);
-				return true;
+				continue;
 			}
 
 			if (closestHostile) {
 				tower.attack(closestHostile);
-				return true;
+				continue;
 			}
 		}
 
