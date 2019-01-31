@@ -1,11 +1,14 @@
-var stats = {
+'use strict';
 
-	initRemoteHarvestMemory: function (source, target) {
-		var memory = Memory.rooms[source];
+const stats = {
+
+	initRemoteHarvestMemory(source, target) {
+		const memory = Memory.rooms[source];
 
 		if (!memory.remoteHarvesting) {
 			memory.remoteHarvesting = {};
 		}
+
 		if (!memory.remoteHarvesting[target]) {
 			memory.remoteHarvesting[target] = {
 				creepCost: 0,
@@ -17,10 +20,10 @@ var stats = {
 		}
 	},
 
-	clearRemoteHarvestStats: function (source, target) {
+	clearRemoteHarvestStats(source, target) {
 		if (!Memory.rooms[source]) return;
 
-		var memory = Memory.rooms[source];
+		const memory = Memory.rooms[source];
 		stats.initRemoteHarvestMemory(source, target);
 
 		memory.remoteHarvesting[target].creepCost = 0;
@@ -29,19 +32,19 @@ var stats = {
 		memory.remoteHarvesting[target].revenue = 0;
 	},
 
-	addRemoteHarvestCost: function (source, target, cost) {
+	addRemoteHarvestCost(source, target, cost) {
 		if (!Memory.rooms[source]) return;
 
-		var memory = Memory.rooms[source];
+		const memory = Memory.rooms[source];
 		stats.initRemoteHarvestMemory(source, target);
 
 		memory.remoteHarvesting[target].creepCost += cost;
 	},
 
-	addRemoteHarvestDefenseCost: function (source, target, cost) {
+	addRemoteHarvestDefenseCost(source, target, cost) {
 		if (!Memory.rooms[source]) return;
 
-		var memory = Memory.rooms[source];
+		const memory = Memory.rooms[source];
 		stats.initRemoteHarvestMemory(source, target);
 
 		memory.remoteHarvesting[target].defenseCost += cost;
@@ -50,10 +53,11 @@ var stats = {
 	/**
 	 * Saves a new stat value for long term history tracking.
 	 */
-	recordStat: function (key, value) {
+	recordStat(key, value) {
 		if (!Memory.history) {
 			Memory.history = {};
 		}
+
 		if (!Memory.history[key]) {
 			Memory.history[key] = {};
 		}
@@ -64,8 +68,8 @@ var stats = {
 	/**
 	 * Recursively saves new data in long term history.
 	 */
-	saveStatValue: function (memory, multiplier, value) {
-		var increment = 10;
+	saveStatValue(memory, multiplier, value) {
+		const increment = 10;
 
 		if (typeof memory[multiplier] === 'undefined') {
 			memory[multiplier] = {
@@ -75,10 +79,11 @@ var stats = {
 		}
 
 		if (memory[multiplier].currentValues.length >= increment) {
-			var avg = 0;
-			for (var i in memory[multiplier].currentValues) {
+			let avg = 0;
+			for (const i in memory[multiplier].currentValues) {
 				avg += memory[multiplier].currentValues[i];
 			}
+
 			avg /= memory[multiplier].currentValues.length;
 
 			stats.saveStatValue(memory, multiplier * increment, avg);
@@ -93,7 +98,7 @@ var stats = {
 	/**
 	 * Retrieves long term history data.
 	 */
-	getStat: function (key, interval) {
+	getStat(key, interval) {
 		// @todo Allow intervals that are not directly stored, like 300.
 		if (!Memory.history || !Memory.history[key] || !Memory.history[key][interval]) {
 			return null;

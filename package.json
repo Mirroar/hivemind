@@ -37,6 +37,9 @@
 			"_",
 			"Game",
 			"Memory"
+		],
+		"ignores": [
+			"**/screeps-profiler.js"
 		]
 	}
 }

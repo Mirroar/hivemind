@@ -1,13 +1,13 @@
 'use strict';
 
-/* global hivemind PathFinder Room RoomVisual Structure
+/* global hivemind PathFinder Room RoomPosition RoomVisual Structure
 STRUCTURE_ROAD STRUCTURE_SPAWN CONTROLLER_STRUCTURES CONSTRUCTION_COST
 STRUCTURE_CONTAINER STRUCTURE_TOWER STRUCTURE_STORAGE STRUCTURE_EXTENSION
 STRUCTURE_TERMINAL STRUCTURE_LINK STRUCTURE_EXTRACTOR LOOK_STRUCTURES
 STRUCTURE_RAMPART LOOK_CONSTRUCTION_SITES MAX_CONSTRUCTION_SITES OK
 STRUCTURE_WALL CREEP_LIFE_TIME STRUCTURE_LAB STRUCTURE_NUKER FIND_STRUCTURES
 STRUCTURE_POWER_SPAWN STRUCTURE_OBSERVER FIND_HOSTILE_STRUCTURES
-FIND_MY_CONSTRUCTION_SITES TERRAIN_MASK_WALL */
+FIND_MY_CONSTRUCTION_SITES TERRAIN_MASK_WALL FIND_SOURCES FIND_MINERALS */
 
 const utilities = require('./utilities');
 
@@ -618,23 +618,23 @@ RoomPlanner.prototype.findTowerPositions = function () {
 			}
 
 			// No need to check in directions where there is no exit.
-			if (_.size(this.exitTiles[tileDir]) == 0) continue;
+			if (_.size(this.exitTiles[tileDir]) === 0) continue;
 
 			// Don't count exits toward "safe" rooms or dead ends.
 			if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
 
-			for (let dir in this.exitTiles) {
+			for (const dir in this.exitTiles) {
 				// Don't score distance to exits toward "safe" rooms or dead ends.
 				// Unless all directions are safe.
 				if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
 
-				for (let i in this.exitTiles[dir]) {
+				for (const i in this.exitTiles[dir]) {
 					score += 1 / this.exitTiles[dir][i].getRangeTo(x, y);
 				}
 			}
 
 			positions[tileDir].tiles.push({
-				score: score,
+				score,
 				pos: new RoomPosition(x, y, this.roomName),
 			});
 		}
@@ -646,9 +646,9 @@ RoomPlanner.prototype.findTowerPositions = function () {
 /**
  * Makes plans for a room and place flags to visualize.
  */
-RoomPlanner.prototype.placeFlags = function (visible) {
+RoomPlanner.prototype.placeFlags = function () {
 	// @todo Place some ramparts on spawns and maybe towers as a last protection if walls go down.
-	var start = Game.cpu.getUsed();
+	const start = Game.cpu.getUsed();
 
 	if (!this.memory.wallDistanceMatrix) {
 		this.generateDistanceMatrixes();
@@ -658,41 +658,44 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 	// Reset location memory, to be replaced with new flags.
 	this.memory.locations = {};
 
-	let wallDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.wallDistanceMatrix);
-	let exitDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.exitDistanceMatrix);
+	const wallDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.wallDistanceMatrix);
+	const exitDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.exitDistanceMatrix);
 	this.wallDistanceMatrix = wallDistanceMatrix;
 	this.exitDistanceMatrix = exitDistanceMatrix;
 
 	// Prepare CostMatrix and exit points.
-	var matrix = new PathFinder.CostMatrix();
+	const matrix = new PathFinder.CostMatrix();
 	this.buildingMatrix = matrix;
-	let exits = {
+	const exits = {
 		N: [],
 		S: [],
 		W: [],
 		E: [],
 	};
 	this.exitTiles = exits;
-	let walls = [];
-	let roads = [];
+	const walls = [];
+	const roads = [];
 	this.roads = roads;
-	let centerPositions = [];
-	let terrain = new Room.Terrain(this.roomName);
+	const centerPositions = [];
+	const terrain = new Room.Terrain(this.roomName);
 	for (let x = 0; x < 50; x++) {
 		for (let y = 0; y < 50; y++) {
 			// Treat exits as unwalkable for in-room pathfinding.
-			if (x == 0 || y == 0 || x == 49 || y == 49) {
-				if (terrain.get(x, y) != TERRAIN_MASK_WALL) {
-					if (x == 0) {
+			if (x === 0 || y === 0 || x === 49 || y === 49) {
+				if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+					if (x === 0) {
 						exits.W.push(new RoomPosition(x, y, this.roomName));
 					}
-					if (x == 49) {
+
+					if (x === 49) {
 						exits.E.push(new RoomPosition(x, y, this.roomName));
 					}
-					if (y == 0) {
+
+					if (y === 0) {
 						exits.N.push(new RoomPosition(x, y, this.roomName));
 					}
-					if (y == 49) {
+
+					if (y === 49) {
 						exits.S.push(new RoomPosition(x, y, this.roomName));
 					}
 				}
@@ -702,10 +705,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 			}
 
 			// Avoid pathfinding close to walls to keep space for dodging and building / wider roads.
-			let wallDistance = wallDistanceMatrix.get(x, y);
-			let exitDistance = exitDistanceMatrix.get(x, y);
+			const wallDistance = wallDistanceMatrix.get(x, y);
+			const exitDistance = exitDistanceMatrix.get(x, y);
 
-			if (wallDistance == 1) {
+			if (wallDistance === 1) {
 				matrix.set(x, y, 10);
 			}
 
@@ -717,12 +720,13 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 				// Avoid tiles we can't build ramparts on.
 				matrix.set(x, y, 20);
 			}
+
 			if (exitDistance > 2 && exitDistance <= 5) {
 				// Avoid area near exits and room walls to not get shot at.
 				matrix.set(x, y, 10);
 			}
 
-			if (exitDistance == 3) {
+			if (exitDistance === 3) {
 				matrix.set(x, y, 10);
 				walls.push(new RoomPosition(x, y, this.roomName));
 			}
@@ -730,35 +734,37 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 	}
 
 	// Decide where exit regions are and where walls should be placed.
-	let exitCenters = {};
-	for (let dir in exits) {
+	const exitCenters = {};
+	for (const dir in exits) {
 		exitCenters[dir] = [];
 
 		let startPos = null;
 		let prevPos = null;
-		for (let i in exits[dir]) {
-			let pos = exits[dir][i];
+		for (const i in exits[dir]) {
+			const pos = exits[dir][i];
 
 			if (!startPos) {
 				startPos = pos;
 			}
+
 			if (prevPos && pos.getRangeTo(prevPos) > 1) {
 				// New exit block started.
-				let middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
+				const middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
 				exitCenters[dir].push(middlePos);
 
 				startPos = pos;
 			}
+
 			prevPos = pos;
 		}
 
 		if (startPos) {
 			// Finish last wall run.
-			let middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
+			const middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
 			exitCenters[dir].push(middlePos);
 		}
 
-		for (let i in exitCenters[dir]) {
+		for (const i in exitCenters[dir]) {
 			this.placeFlag(exitCenters[dir][i], 'exit', null);
 		}
 	}
@@ -767,18 +773,19 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 	let cx = 0;
 	let cy = 0;
 	let count = 0;
-	for (let dir in exitCenters) {
-		for (let i in exitCenters[dir]) {
+	for (const dir in exitCenters) {
+		for (const i in exitCenters[dir]) {
 			count++;
 			cx += exitCenters[dir][i].x;
 			cy += exitCenters[dir][i].y;
 		}
 	}
+
 	cx = Math.floor(cx / count);
 	cy = Math.floor(cy / count);
 
 	// Find closest position with distance from walls around there.
-	let roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(centerPositions);
+	const roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(centerPositions);
 	this.roomCenter = roomCenter;
 	this.placeFlag(roomCenter, 'center', null);
 
@@ -786,14 +793,14 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 	this.pruneWalls(walls, roomCenter, wallDistanceMatrix);
 
 	// Actually place ramparts.
-	for (let i in walls) {
+	for (const i in walls) {
 		if (walls[i].isRelevant) {
 			this.placeFlag(walls[i], 'rampart', null);
 		}
 	}
 
 	// Center is accessible via the 4 cardinal directions.
-	let centerEntrances = [
+	const centerEntrances = [
 		new RoomPosition(roomCenter.x + 2, roomCenter.y, this.roomName),
 		new RoomPosition(roomCenter.x - 2, roomCenter.y, this.roomName),
 		new RoomPosition(roomCenter.x, roomCenter.y + 2, this.roomName),
@@ -802,21 +809,23 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 	this.roomCenterEntrances = centerEntrances;
 
 	// Find paths from each exit towards the room center for making roads.
-	for (let dir in exitCenters) {
-		for (let i in exitCenters[dir]) {
+	for (const dir in exitCenters) {
+		for (const i in exitCenters[dir]) {
 			this.scanAndAddRoad(exitCenters[dir][i], centerEntrances, matrix, roads);
 		}
 	}
 
-	let planner = this;
-	let tileFreeForBuilding = function(x, y, allowRoads) { return planner.isBuildableTile(x, y, allowRoads) };
+	const planner = this;
+	const tileFreeForBuilding = function (x, y, allowRoads) {
+		return planner.isBuildableTile(x, y, allowRoads);
+	};
 
-	let placeLink = function (sourceRoads) {
+	const placeLink = function (sourceRoads) {
 		let linkPlaced = false;
-		for (let i in sourceRoads) {
+		for (const i in sourceRoads) {
 			for (let dx = -1; dx <= 1; dx++) {
 				for (let dy = -1; dy <= 1; dy++) {
-					if (dx == 0 && dy == 0) continue;
+					if (dx === 0 && dy === 0) continue;
 
 					if (tileFreeForBuilding(sourceRoads[i].x + dx, sourceRoads[i].y + dy)) {
 						planner.placeFlag(new RoomPosition(sourceRoads[i].x + dx, sourceRoads[i].y + dy, sourceRoads[i].roomName), 'link');
@@ -824,13 +833,15 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 						break;
 					}
 				}
+
 				if (linkPlaced) break;
 			}
+
 			if (linkPlaced) break;
 		}
-	}
+	};
 
-	let placeContainer = function (sourceRoads, containerType) {
+	const placeContainer = function (sourceRoads, containerType) {
 		let targetPos = null;
 		if (tileFreeForBuilding(sourceRoads[1].x, sourceRoads[1].y, true)) {
 			targetPos = sourceRoads[1];
@@ -839,7 +850,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 			targetPos = sourceRoads[0];
 		}
 		else {
-			for (let i in sourceRoads) {
+			for (const i in sourceRoads) {
 				for (let dx = -1; dx <= 1; dx++) {
 					for (let dy = -1; dy <= 1; dy++) {
 						if (i > 3) continue;
@@ -849,8 +860,10 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 							break;
 						}
 					}
+
 					if (targetPos) break;
 				}
+
 				if (targetPos) break;
 			}
 		}
@@ -859,19 +872,21 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 			if (containerType) {
 				planner.placeFlag(targetPos, 'container.' + containerType, null);
 			}
+
 			planner.placeFlag(targetPos, 'container', 1);
 		}
-	}
+	};
 
 	if (this.room) {
 		// @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
 		// We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
 		if (this.room.controller) {
-			let controllerRoads = this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
-			for (let i in controllerRoads) {
-				if (i == 0) continue;
+			const controllerRoads = this.scanAndAddRoad(this.room.controller.pos, centerEntrances, matrix, roads);
+			for (const i in controllerRoads) {
+				if (i === 0) continue;
 				this.placeFlag(controllerRoads[i], 'road.controller', null);
 			}
+
 			placeContainer(controllerRoads, 'controller');
 
 			// Place a link near controller, but off the calculated path.
@@ -880,10 +895,11 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 
 		if (this.room.mineral) {
 			this.placeFlag(this.room.mineral.pos, 'extractor');
-			let mineralRoads = this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
-			for (let i in mineralRoads) {
+			const mineralRoads = this.scanAndAddRoad(this.room.mineral.pos, centerEntrances, matrix, roads);
+			for (const i in mineralRoads) {
 				this.placeFlag(mineralRoads[i], 'road.mineral', null);
 			}
+
 			placeContainer(mineralRoads, 'mineral');
 
 			// Make sure no other paths get led through harvester position.
@@ -891,11 +907,12 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 		}
 
 		if (this.room.sources) {
-			for (let i in this.room.sources) {
-				let sourceRoads = this.scanAndAddRoad(this.room.sources[i].pos, centerEntrances, matrix, roads);
-				for (let i in sourceRoads) {
+			for (const i in this.room.sources) {
+				const sourceRoads = this.scanAndAddRoad(this.room.sources[i].pos, centerEntrances, matrix, roads);
+				for (const i in sourceRoads) {
 					this.placeFlag(sourceRoads[i], 'road.source', null);
 				}
+
 				placeContainer(sourceRoads, 'source');
 
 				// Place a link near sources, but off the calculated path.
@@ -907,7 +924,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 		}
 	}
 
-	for (let i in roads) {
+	for (const i in roads) {
 		this.placeFlag(roads[i], 'road', 1);
 	}
 
@@ -923,7 +940,7 @@ RoomPlanner.prototype.placeFlags = function (visible) {
 	this.placeAll('observer', false);
 	this.placeTowers();
 
-	var end = Game.cpu.getUsed();
+	const end = Game.cpu.getUsed();
 	console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
 };
 
@@ -949,16 +966,17 @@ RoomPlanner.prototype.placeRoomCore = function () {
  * Places parking spot for helper creep.
  */
 RoomPlanner.prototype.placeHelperParkingLot = function () {
-	let nextPos = this.getNextAvailableBuildSpot();
+	const nextPos = this.getNextAvailableBuildSpot();
 	if (!nextPos) return;
 
-	let flagKey = 'Helper:' + nextPos.roomName;
+	const flagKey = 'Helper:' + nextPos.roomName;
 	if (Game.flags[flagKey]) {
 		Game.flags[flagKey].setPosition(nextPos);
 	}
 	else {
 		nextPos.createFlag(flagKey);
 	}
+
 	this.placeFlag(nextPos, 'road', 255);
 
 	this.placeAccessRoad(nextPos);
@@ -977,7 +995,7 @@ RoomPlanner.prototype.placeBays = function () {
 		let bestScore = 0;
 
 		while (maxExtensions < 8) {
-			let nextPos = this.getNextAvailableBuildSpot();
+			const nextPos = this.getNextAvailableBuildSpot();
 			if (!nextPos) break;
 
 			// Don't build too close to exits.
@@ -999,12 +1017,13 @@ RoomPlanner.prototype.placeBays = function () {
 			if (tileCount <= maxExtensions) continue;
 
 			maxExtensions = tileCount;
-			let score = tileCount / (this.getCurrentBuildSpotInfo().range + 10);
+			const score = tileCount / (this.getCurrentBuildSpotInfo().range + 10);
 			if (score > bestScore && tileCount >= 4) {
 				bestPos = nextPos;
 				bestScore = score;
 			}
 		}
+
 		if (maxExtensions < 4) break;
 
 		this.placeAccessRoad(bestPos);
@@ -1022,13 +1041,14 @@ RoomPlanner.prototype.placeBays = function () {
 		}
 
 		// Place a flag to mark this bay.
-		let flagKey = 'Bay:' + bestPos.roomName + ':' + bayCount;
+		const flagKey = 'Bay:' + bestPos.roomName + ':' + bayCount;
 		if (Game.flags[flagKey]) {
 			Game.flags[flagKey].setPosition(bestPos);
 		}
 		else {
 			bestPos.createFlag(flagKey);
 		}
+
 		bayCount++;
 
 		// Reinitialize pathfinding.
@@ -1037,7 +1057,7 @@ RoomPlanner.prototype.placeBays = function () {
 
 	// Remove other bay flags in room that might be left over.
 	for (let i = bayCount; i < 30; i++) {
-		let flagKey = 'Bay:' + this.roomName + ':' + i;
+		const flagKey = 'Bay:' + this.roomName + ':' + i;
 		if (Game.flags[flagKey]) {
 			Game.flags[flagKey].remove();
 		}
@@ -1049,7 +1069,7 @@ RoomPlanner.prototype.placeBays = function () {
  */
 RoomPlanner.prototype.placeLabs = function () {
 	while (this.canPlaceMore('lab')) {
-		let nextPos = this.getNextAvailableBuildSpot();
+		const nextPos = this.getNextAvailableBuildSpot();
 		if (!nextPos) break;
 
 		// Don't build too close to exits.
@@ -1100,14 +1120,14 @@ RoomPlanner.prototype.placeLabs = function () {
  * Places towers so exits are well covered.
  */
 RoomPlanner.prototype.placeTowers = function () {
-	let positions = this.findTowerPositions();
+	const positions = this.findTowerPositions();
 	while (this.canPlaceMore('tower')) {
 		let info = null;
 		let bestDir = null;
-		for (let dir in positions) {
-			for (let i in positions[dir].tiles) {
-				let tile = positions[dir].tiles[i];
-				if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count == positions[dir].count)) {
+		for (const dir in positions) {
+			for (const i in positions[dir].tiles) {
+				const tile = positions[dir].tiles[i];
+				if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count === positions[dir].count)) {
 					info = tile;
 					bestDir = dir;
 				}
@@ -1119,9 +1139,9 @@ RoomPlanner.prototype.placeTowers = function () {
 		info.score = -1;
 
 		// Make sure it's possible to refill this tower.
-		let matrix = this.buildingMatrix;
-		let result = PathFinder.search(info.pos, this.roomCenterEntrances, {
-			roomCallback: (roomName) => matrix,
+		const matrix = this.buildingMatrix;
+		const result = PathFinder.search(info.pos, this.roomCenterEntrances, {
+			roomCallback: roomName => matrix,
 			maxRooms: 1,
 			plainCost: 1,
 			swampCost: 1, // We don't care about cost, just about possibility.
@@ -1133,8 +1153,8 @@ RoomPlanner.prototype.placeTowers = function () {
 	}
 
 	// Also create roads to all towers.
-	for (let posName in this.memory.locations.tower || []) {
-		let pos = utilities.decodePosition(posName);
+	for (const posName in this.memory.locations.tower || []) {
+		const pos = utilities.decodePosition(posName);
 
 		this.placeAccessRoad(pos);
 	}
@@ -1145,7 +1165,7 @@ RoomPlanner.prototype.placeTowers = function () {
  */
 RoomPlanner.prototype.placeAll = function (structureType, addRoad) {
 	while (this.canPlaceMore(structureType)) {
-		let nextPos = this.getNextAvailableBuildSpot();
+		const nextPos = this.getNextAvailableBuildSpot();
 		if (!nextPos) break;
 
 		this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), structureType);
@@ -1160,8 +1180,8 @@ RoomPlanner.prototype.placeAll = function (structureType, addRoad) {
  */
 RoomPlanner.prototype.placeAccessRoad = function (position) {
 	// Plan road out of labs.
-	let accessRoads = this.scanAndAddRoad(position, this.roomCenterEntrances, this.buildingMatrix, this.roads);
-	for (let i in accessRoads) {
+	const accessRoads = this.scanAndAddRoad(position, this.roomCenterEntrances, this.buildingMatrix, this.roads);
+	for (const i in accessRoads) {
 		this.placeFlag(accessRoads[i], 'road', 1);
 	}
 };
@@ -1173,7 +1193,7 @@ RoomPlanner.prototype.startBuildingPlacement = function () {
 	// Flood fill from the center to place buildings that need to be accessible.
 	this.openList = {};
 	this.closedList = {};
-	let startPath = {};
+	const startPath = {};
 	startPath[utilities.encodePosition(this.roomCenter)] = true;
 	this.openList[utilities.encodePosition(this.roomCenter)] = {
 		range: 0,
@@ -1189,9 +1209,9 @@ RoomPlanner.prototype.getNextAvailableBuildSpot = function () {
 		let minDist = null;
 		let nextPos = null;
 		let nextInfo = null;
-		for (let posName in this.openList) {
-			let info = this.openList[posName];
-			let pos = utilities.decodePosition(posName);
+		for (const posName in this.openList) {
+			const info = this.openList[posName];
+			const pos = utilities.decodePosition(posName);
 			if (!minDist || info.range < minDist) {
 				minDist = info.range;
 				nextPos = pos;
@@ -1199,27 +1219,27 @@ RoomPlanner.prototype.getNextAvailableBuildSpot = function () {
 			}
 		}
 
-		if (!nextPos) {
-			break;
-		}
+		if (!nextPos) break;
+
 		delete this.openList[utilities.encodePosition(nextPos)];
 		this.closedList[utilities.encodePosition(nextPos)] = true;
 
 		// Add unhandled adjacent tiles to open list.
 		for (let dx = -1; dx <= 1; dx++) {
 			for (let dy = -1; dy <= 1; dy++) {
-				if (dx == 0 && dy == 0) continue;
-				let pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
+				if (dx === 0 && dy === 0) continue;
+				const pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
 
 				if (!this.isBuildableTile(pos.x, pos.y, true)) continue;
 
-				let posName = utilities.encodePosition(pos);
+				const posName = utilities.encodePosition(pos);
 				if (this.openList[posName] || this.closedList[posName]) continue;
 
-				let newPath = {};
-				for (let oldPos in nextInfo.path) {
+				const newPath = {};
+				for (const oldPos in nextInfo.path) {
 					newPath[oldPos] = true;
 				}
+
 				newPath[posName] = true;
 				this.openList[posName] = {
 					range: minDist + 1,
@@ -1256,18 +1276,18 @@ RoomPlanner.prototype.isBuildableTile = function (x, y, allowRoads) {
 	// Don't build too close to exits.
 	if (this.exitDistanceMatrix.get(x, y) < 6) return false;
 
-	let matrixValue = this.buildingMatrix.get(x, y);
+	const matrixValue = this.buildingMatrix.get(x, y);
 	// Can't build on other buildings.
 	if (matrixValue > 100) return false;
 
 	// Tiles next to walls are fine for building, just not so much for pathing.
-	if (matrixValue == 10 && this.wallDistanceMatrix.get(x, y) == 1) return true;
+	if (matrixValue === 10 && this.wallDistanceMatrix.get(x, y) === 1) return true;
 
 	// @todo Find out why this check was initially introduced.
 	if (matrixValue > 1) return false;
 
 	// Don't build on roads if not allowed.
-	if (matrixValue == 1 && !allowRoads) return false;
+	if (matrixValue === 1 && !allowRoads) return false;
 
 	return true;
 };
@@ -1283,7 +1303,7 @@ RoomPlanner.prototype.canPlaceMore = function (structureType) {
  * Removes all pathfinding options that use the given position.
  */
 RoomPlanner.prototype.filterOpenList = function (targetPos) {
-	for (let posName in this.openList) {
+	for (const posName in this.openList) {
 		if (this.openList[posName].path[targetPos]) {
 			delete this.openList[posName];
 		}
@@ -1294,18 +1314,18 @@ RoomPlanner.prototype.filterOpenList = function (targetPos) {
  * Removes any walls that can not be reached from the given list of coordinates.
  */
 RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, tiles, onlyRelevant) {
-	var openList = {};
-	var closedList = {};
+	const openList = {};
+	const closedList = {};
 	let safetyValue = 1;
 
-	for (var i in tiles) {
+	for (const i in tiles) {
 		openList[tiles[i]] = true;
 	}
 
 	// If we're doing an additionall pass, unmark walls first.
 	if (onlyRelevant) {
 		safetyValue = 2;
-		for (var i in walls) {
+		for (const i in walls) {
 			walls[i].wasRelevant = false;
 			if (walls[i].isRelevant) {
 				walls[i].wasRelevant = true;
@@ -1317,9 +1337,8 @@ RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, 
 	// Flood fill, marking all walls we touch as relevant.
 	while (_.size(openList) > 0) {
 		let nextPos = null;
-		for (let posName in openList) {
-			let pos = utilities.decodePosition(posName);
-			nextPos = pos;
+		for (const posName in openList) {
+			nextPos = utilities.decodePosition(posName);
 			break;
 		}
 
@@ -1332,20 +1351,20 @@ RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, 
 		// Add unhandled adjacent tiles to open list.
 		for (let dx = -1; dx <= 1; dx++) {
 			for (let dy = -1; dy <= 1; dy++) {
-				if (dx == 0 && dy == 0) continue;
-				let pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
+				if (dx === 0 && dy === 0) continue;
+				const pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
 				if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) continue;
 
 				// Ignore walls.
 				if (wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
 
-				let posName = utilities.encodePosition(pos);
+				const posName = utilities.encodePosition(pos);
 				if (openList[posName] || closedList[posName]) continue;
 
 				// If there's a rampart to be built there, mark it and move on.
-				var wallFound = false;
-				for (var i in walls) {
-					if (walls[i].x == pos.x && walls[i].y == pos.y) {
+				let wallFound = false;
+				for (const i in walls) {
+					if (walls[i].x === pos.x && walls[i].y === pos.y) {
 						// Skip walls that might have been discarded in a previous pass.
 						if (onlyRelevant && !walls[i].wasRelevant) continue;
 
@@ -1362,7 +1381,7 @@ RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, 
 			}
 		}
 	}
-}
+};
 
 /**
  * Marks all walls which are adjacent to the "inner area" of the room.
@@ -1370,55 +1389,61 @@ RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, 
 RoomPlanner.prototype.pruneWalls = function (walls, roomCenter, wallDistanceMatrix) {
 	this.safetyMatrix = new PathFinder.CostMatrix();
 
-	var openList = [];
-	openList.push (utilities.encodePosition(roomCenter));
+	const openList = [];
+	openList.push(utilities.encodePosition(roomCenter));
 	// @todo Include sources, minerals, controller.
 	if (this.room) {
 		openList.push(utilities.encodePosition(this.room.controller.pos));
-		var sources = this.room.find(FIND_SOURCES);
-		for (var i in sources) {
-			openList.push(utilities.encodePosition(sources[i].pos));
+		const sources = this.room.find(FIND_SOURCES);
+		for (const source of sources) {
+			openList.push(utilities.encodePosition(source.pos));
 		}
-		var minerals = this.room.find(FIND_MINERALS);
-		for (var i in sources) {
-			openList.push(utilities.encodePosition(sources[i].pos));
+
+		const minerals = this.room.find(FIND_MINERALS);
+		for (const mineral of minerals) {
+			openList.push(utilities.encodePosition(mineral.pos));
 		}
 	}
+
 	this.pruneWallFromTiles(walls, wallDistanceMatrix, openList);
 
 	// Do a second pass, checking which walls get touched by unsafe exits.
 
 	// Prepare CostMatrix and exit points.
-	let exits = [];
-	let terrain = new Room.Terrain(this.roomName);
+	const exits = [];
+	const terrain = new Room.Terrain(this.roomName);
 
 	for (let i = 0; i < 50; i++) {
 		if (terrain.get(0, i) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.W)) {
 			exits.push(utilities.encodePosition(new RoomPosition(0, i, this.roomName)));
 		}
+
 		if (terrain.get(49, i) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.E)) {
 			exits.push(utilities.encodePosition(new RoomPosition(49, i, this.roomName)));
 		}
+
 		if (terrain.get(i, 0) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.N)) {
 			exits.push(utilities.encodePosition(new RoomPosition(i, 0, this.roomName)));
 		}
+
 		if (terrain.get(i, 49) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.S)) {
 			exits.push(utilities.encodePosition(new RoomPosition(i, 49, this.roomName)));
 		}
 	}
+
 	this.pruneWallFromTiles(walls, wallDistanceMatrix, exits, true);
 
 	// Safety matrix has been filled, now mark any tiles unsafe that can be reached by a ranged attacker.
 	for (let x = 0; x < 50; x++) {
 		for (let y = 0; y < 50; y++) {
 			// Only check around unsafe tiles.
-			if (this.safetyMatrix.get(x, y) != 2) continue;
+			if (this.safetyMatrix.get(x, y) !== 2) continue;
 
 			for (let dx = -3; dx <= 3; dx++) {
 				for (let dy = -3; dy <= 3; dy++) {
-					if (dx == 0 && dy == 0) continue;
+					if (dx === 0 && dy === 0) continue;
 					if (x + dx < 0 || x + dx > 49 || y + dy < 0 || y + dy > 49) continue;
-					if (this.safetyMatrix.get(x + dx, y + dy) == 1) {
+					if (this.safetyMatrix.get(x + dx, y + dy) === 1) {
 						// Safe tile in range of an unsafe tile, mark as neutral.
 						this.safetyMatrix.set(x + dx, y + dy, 0);
 					}
@@ -1426,21 +1451,21 @@ RoomPlanner.prototype.pruneWalls = function (walls, roomCenter, wallDistanceMatr
 			}
 		}
 	}
-}
+};
 
 RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
-	let result = PathFinder.search(from, to, {
-		roomCallback: (roomName) => matrix,
+	const result = PathFinder.search(from, to, {
+		roomCallback: roomName => matrix,
 		maxRooms: 1,
 		plainCost: 2,
 		swampCost: 2, // Swamps are more expensive to build roads on, but once a road is on them, creeps travel at the same speed.
 		heuristicWeight: 0.9,
 	});
 
-	let newRoads = [];
+	const newRoads = [];
 	if (result.path) {
-		for (let j in result.path) {
-			let pos = result.path[j];
+		for (const j in result.path) {
+			const pos = result.path[j];
 			roads.push(pos);
 			newRoads.push(pos);
 
@@ -1450,7 +1475,7 @@ RoomPlanner.prototype.scanAndAddRoad = function (from, to, matrix, roads) {
 	}
 
 	return newRoads;
-}
+};
 
 /**
  * Checks which adjacent rooms are owned by ourselves or
@@ -1465,20 +1490,20 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
 		};
 	}
 
-	let newStatus = hivemind.roomIntel(this.roomName).calculateAdjacentRoomSafety();
+	const newStatus = hivemind.roomIntel(this.roomName).calculateAdjacentRoomSafety();
 	this.memory.adjacentSafeRooms = newStatus.safeRooms;
 
 	// Check if status changed since last check.
-	for (let dir in newStatus.directions) {
-		if (newStatus.directions[dir] != this.memory.adjacentSafe[dir]) {
+	for (const dir in newStatus.directions) {
+		if (newStatus.directions[dir] !== this.memory.adjacentSafe[dir]) {
 			// Status has changed, recalculate building positioning.
 			hivemind.log('room plan', this.roomName).debug('changed adjacent room status!');
 			Game.notify(
-				'Exit safety has changed for room ' + this.room.name + '!' + "\n\n" +
-				'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.N ? 'safe' : 'not safe') + "\n" +
-				'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.E ? 'safe' : 'not safe') + "\n" +
-				'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.S ? 'safe' : 'not safe') + "\n" +
-				'W: ' + (this.memory.adjacentSafe.W ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.W ? 'safe' : 'not safe') + "\n"
+				'Exit safety has changed for room ' + this.room.name + '!\n\n' +
+				'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.N ? 'safe' : 'not safe') + '\n' +
+				'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.E ? 'safe' : 'not safe') + '\n' +
+				'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.S ? 'safe' : 'not safe') + '\n' +
+				'W: ' + (this.memory.adjacentSafe.W ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.W ? 'safe' : 'not safe') + '\n'
 			);
 			delete this.memory.locations;
 			this.memory.adjacentSafe = newStatus.directions;
