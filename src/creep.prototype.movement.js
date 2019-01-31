@@ -1,8 +1,7 @@
 'use strict';
 
 /* global hivemind Creep RoomVisual RoomPosition LOOK_CREEPS LOOK_STRUCTURES
-STRUCTURE_ROAD STRUCTURE_CONTAINER LOOK_CONSTRUCTION_SITES STRUCTURE_RAMPART
-ERR_NO_PATH */
+LOOK_CONSTRUCTION_SITES ERR_NO_PATH */
 
 const utilities = require('./utilities');
 
@@ -108,162 +107,27 @@ Creep.prototype.followCachedPath = function () {
 		delete this.memory.cachedPath.forceGoTo;
 	}
 	else if (!this.memory.cachedPath.position) {
-		const decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
-		const target = this.pos.findClosestByRange(decodedPath, {
-			filter: pos => {
-				if (pos.roomName !== this.room.name) return false;
-				if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) {
-					return false;
-				}
-
-				// Only try to get to paths where no creep is positioned.
-				const creeps = pos.lookFor(LOOK_CREEPS);
-				if (creeps.length > 0 && creeps[0].name !== this.name) return false;
-
-				const structures = pos.lookFor(LOOK_STRUCTURES);
-				for (const structure of structures) {
-					if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER && structure.structureType !== STRUCTURE_RAMPART) {
-						return false;
-					}
-				}
-
-				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-				for (const site of sites) {
-					if (site.structureType !== STRUCTURE_ROAD && site.structureType !== STRUCTURE_CONTAINER && site.structureType !== STRUCTURE_RAMPART) {
-						return false;
-					}
-				}
-
-				return true;
-			},
-		});
-
-		if (!target) {
-			// We're not in the correct room to move on this path. Kind of sucks, but try to get there using the default pathfinder anyway.
-			// @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
-			if (this.pos.roomName === decodedPath[0].roomName) {
-				this.say('Blocked');
-			}
-			else {
-				this.moveTo(decodedPath[0]);
-				this.say('Searching');
-			}
-
-			this.memory.moveBlocked = true;
-			return;
-		}
-
-		// Try to get to the closest part of the path.
-		if (this.pos.x === target.x && this.pos.y === target.y) {
-			// We've arrived on the path, time to get moving along it!
-			for (const i in decodedPath) {
-				if (this.pos.x === decodedPath[i].x && this.pos.y === decodedPath[i].y && this.pos.roomName === decodedPath[i].roomName) {
-					this.memory.cachedPath.position = i;
-					break;
-				}
-			}
-
-			if (!this.memory.cachedPath.position) {
-				return;
-			}
-		}
-		else {
-			// Get closer to the path.
-			this.moveTo(target);
-			this.say('getonit');
-			return;
-		}
+		if (this.getOntoCachedPath()) return;
 	}
 
 	// Make sure we don't have a string on our hands...
 	this.memory.cachedPath.position = Number(this.memory.cachedPath.position);
 
-	this.checkIfMovedOnNextPosition(path);
+	this.incrementCachedPathPosition();
 	if (this.memory.cachedPath.arrived) return;
 
 	this.say('Pos: ' + this.memory.cachedPath.position);
 
-	// @todo Check if we've been blocked for a while and try to move around the blockade.
-	// Check if we've moved at all during the previous ticks.
-	if (!this.memory.cachedPath.lastPositions) {
-		this.memory.cachedPath.lastPositions = {};
-	}
+	if (this.moveAroundObstacles()) return;
 
-	this.memory.cachedPath.lastPositions[Game.time % 5] = utilities.encodePosition(this.pos);
-
-	// Go around obstacles if necessary.
-	if (!this.memory.cachedPath.forceGoTo) {
-		let stuck = false;
-		if (_.size(this.memory.cachedPath.lastPositions) > 5 / 2) {
-			let last = null;
-			stuck = true;
-			_.each(this.memory.cachedPath.lastPositions, position => {
-				if (!last) last = position;
-				if (last !== position) {
-					stuck = false;
-					return false;
-				}
-			});
-		}
-
-		if (stuck) {
-			let i = this.memory.cachedPath.position + 1;
-			while (i < path.length) {
-				const step = utilities.decodePosition(path[i]);
-				if (step.roomName !== this.pos.roomName) {
-					// Skip past exit tile in next room.
-					i++;
-					break;
-				}
-
-				// Only try to get to paths where no creep is positioned.
-				const creeps = step.lookFor(LOOK_CREEPS);
-				const structures = step.lookFor(LOOK_STRUCTURES);
-				const sites = step.lookFor(LOOK_CONSTRUCTION_SITES);
-
-				let blocked = creeps.length > 0 && creeps[0].name !== this.name;
-				for (const structure of structures) {
-					if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER) {
-						blocked = true;
-					}
-				}
-
-				for (const site of sites) {
-					if (site.structureType !== STRUCTURE_ROAD && site.structureType !== STRUCTURE_CONTAINER) {
-						blocked = true;
-					}
-				}
-
-				if (!blocked) break;
-
-				i++;
-			}
-
-			if (i >= path.length) {
-				// No free spots until end of path. Let normal pathfinder take over.
-				this.memory.cachedPath.arrived = true;
-				return;
-			}
-
-			this.memory.cachedPath.forceGoTo = i;
-			delete this.memory.cachedPath.lastPositions;
-		}
-
-		// Check if we've arrived at the end of our path.
-		if (this.memory.cachedPath.position >= path.length - 1) {
-			this.memory.cachedPath.arrived = true;
-			return;
-		}
-	}
-
-	// Move towards next position.
-	const next = utilities.decodePosition(path[this.memory.cachedPath.position + 1]);
-	if (!next) {
-		// Out of range, so we're probably at the end of the path.
+	// Check if we've arrived at the end of our path.
+	if (this.memory.cachedPath.position >= path.length - 1) {
 		this.memory.cachedPath.arrived = true;
 		return;
 	}
 
+	// Move towards next position.
+	const next = utilities.decodePosition(path[this.memory.cachedPath.position + 1]);
 	if (next.roomName !== this.pos.roomName) {
 		// Something went wrong, we must have gone off the path.
 		delete this.memory.cachedPath.position;
@@ -274,12 +138,69 @@ Creep.prototype.followCachedPath = function () {
 };
 
 /**
+ * Moves a creep onto its cached path if possible.
+ *
+ * @return {boolean}
+ *   True if we're currently trying to move onto the path, false if we
+ *   reached it.
+ */
+Creep.prototype.getOntoCachedPath = function () {
+	const creep = this;
+	const decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
+	const target = this.pos.findClosestByRange(decodedPath, {
+		filter: pos => {
+			// Try to move to a position on the path that is in the current room.
+			if (pos.roomName !== this.room.name) return false;
+			// Don't move onto exit tiles when looking to find our path.
+			if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) return false;
+
+			// Only try to get to paths where no creep is positioned.
+			return creep.canMoveOnto(pos);
+		},
+	});
+
+	if (!target) {
+		// We're not in the correct room to move on this path. Kind of sucks, but try to get there using the default pathfinder anyway.
+		// @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
+		if (this.pos.roomName === decodedPath[0].roomName) {
+			this.say('Blocked');
+		}
+		else {
+			this.say('Searching');
+		}
+
+		this.moveTo(decodedPath[0]);
+		this.memory.moveBlocked = true;
+		return true;
+	}
+
+	// Try to get to the closest part of the path.
+	if (this.pos.x === target.x && this.pos.y === target.y) {
+		// We've arrived on the path, time to get moving along it!
+		for (const i in decodedPath) {
+			if (this.pos.x === decodedPath[i].x && this.pos.y === decodedPath[i].y && this.pos.roomName === decodedPath[i].roomName) {
+				this.memory.cachedPath.position = i;
+				break;
+			}
+		}
+	}
+	else {
+		// Get closer to the path.
+		this.moveTo(target);
+		this.say('getonit');
+		return true;
+	}
+};
+
+/**
  * Checks if movement last tick brought us on the next position of our path.
  *
  * @param {string[]} path
  *   An array of encoded room positions.
  */
-Creep.prototype.checkIfMovedOnNextPosition = function (path) {
+Creep.prototype.incrementCachedPathPosition = function () {
+	const path = this.memory.cachedPath.path;
+
 	// Check if we've already moved onto the next position.
 	const next = utilities.decodePosition(path[this.memory.cachedPath.position + 1]);
 	if (!next) {
@@ -302,6 +223,97 @@ Creep.prototype.checkIfMovedOnNextPosition = function (path) {
 		else if (!afterNext) {
 			delete this.memory.cachedPath.forceGoTo;
 			delete this.memory.cachedPath.lastPositions;
+		}
+	}
+};
+
+/**
+ * Checks if we've been blocked for a while and tries to move around the blockade.
+ *
+ * @return {boolean}
+ *   True if we're currently moving around an obstacle.
+ */
+Creep.prototype.moveAroundObstacles = function () {
+	const REMEMBER_POSITION_COUNT = 5;
+	const path = this.memory.cachedPath.path;
+
+	// Record recent positions the creep has been on.
+	// @todo Using Game.time here is unwise in case the creep is being throttled.
+	if (!this.memory.cachedPath.lastPositions) {
+		this.memory.cachedPath.lastPositions = {};
+	}
+
+	this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = utilities.encodePosition(this.pos);
+
+	// Go around obstacles if necessary.
+	if (this.memory.cachedPath.forceGoTo) return;
+
+	// Check if we've moved at all during the previous ticks.
+	let stuck = false;
+	if (_.size(this.memory.cachedPath.lastPositions) > REMEMBER_POSITION_COUNT / 2) {
+		let last = null;
+		stuck = true;
+		_.each(this.memory.cachedPath.lastPositions, position => {
+			if (!last) last = position;
+			if (last !== position) {
+				// We have been on 2 different positions recently.
+				stuck = false;
+				return false;
+			}
+		});
+	}
+
+	if (!stuck) return;
+
+	// Try to find next free tile on the path.
+	let i = this.memory.cachedPath.position + 1;
+	while (i < path.length) {
+		const pos = utilities.decodePosition(path[i]);
+		if (pos.roomName !== this.pos.roomName) {
+			// Skip past exit tile in next room.
+			i++;
+			break;
+		}
+
+		if (this.canMoveOnto(pos)) break;
+
+		i++;
+	}
+
+	if (i >= path.length) {
+		// No free spots until end of path. Let normal pathfinder take over.
+		this.memory.cachedPath.arrived = true;
+		return true;
+	}
+
+	this.memory.cachedPath.forceGoTo = i;
+	delete this.memory.cachedPath.lastPositions;
+};
+
+/**
+ * Checks if a creep could occupy the given position.
+ *
+ * @param {RoomPosition} pos
+ *   The position to check.
+ *
+ * @return {boolean}
+ *   True if the creep could occupy this position.
+ */
+Creep.prototype.canMoveOnto = function (pos) {
+	const creeps = pos.lookFor(LOOK_CREEPS);
+	if (creeps.length > 0 && creeps[0].id !== this.id) return false;
+
+	const structures = pos.lookFor(LOOK_STRUCTURES);
+	for (const structure of structures) {
+		if (!structure.isWalkable()) {
+			return false;
+		}
+	}
+
+	const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+	for (const site of sites) {
+		if (!site.isWalkable()) {
+			return false;
 		}
 	}
 };

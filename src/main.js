@@ -6,6 +6,8 @@ PROCESS_PRIORITY_HIGH */
 // Make sure game object prototypes are enhanced.
 require('./creep.prototype');
 require('./room.prototype');
+require('./prototype.structure');
+require('./prototype.construction-site');
 
 console.log('new global reset');
 

@@ -26,7 +26,7 @@
 			"comma-dangle": ["error", "always-multiline"],
 			"curly": ["error", "multi-line"],
 			"import/no-unassigned-import": ["error", {
-				"allow": ["**/*.prototype", "**/*.prototype.*"]
+				"allow": ["**/*.prototype", "**/*.prototype.*", "**/prototype.*"]
 			}],
 			"prefer-destructuring": ["error", {
 				"array": false,
