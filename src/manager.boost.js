@@ -67,6 +67,8 @@ Room.prototype.canSpawnBoostedCreeps = function () {
  * Gets labs used for boosting creeps in this room.
  */
 Room.prototype.getBoostLabs = function () {
+	// @todo Make room planner decide which are boost labs, or hijack
+	// reaction labs when necessary.
 	const boostLabs = [];
 	if (!this.boostManager) return boostLabs;
 
@@ -95,8 +97,11 @@ Room.prototype.getBoostLabs = function () {
 
 	for (const id in this.memory.boostManager.labs || []) {
 		const lab = Game.getObjectById(id);
-		if (lab) {
+		if (lab && lab.isActive()) {
 			boostLabs.push(lab);
+		}
+		else {
+			delete this.memory.boostManager.labs[id];
 		}
 	}
 
