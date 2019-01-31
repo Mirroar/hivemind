@@ -1,7 +1,9 @@
-'use strict';
 /**
  * Contains room prototype enhancements concerned with managing creeps.
  */
+
+'use strict';
+
 /* global Room */
 
 /**
@@ -13,6 +15,7 @@
  *   The target of the order.
  *
  * @return {Creep[]}
+ *   An array of creeps that have a matching order.
  */
 Room.prototype.getCreepsWithOrder = function (type, target) {
 	return _.filter(this.creeps, creep => {

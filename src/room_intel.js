@@ -1,13 +1,19 @@
 'use strict';
 
-var utilities = require('utilities');
+/* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES
+STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
+FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
+STRUCTURE_POWER_BANK */
 
-var RoomIntel = function (roomName) {
+const utilities = require('./utilities');
+
+const RoomIntel = function (roomName) {
 	this.roomName = roomName;
 
 	if (!Memory.rooms[roomName]) {
 		Memory.rooms[roomName] = {};
 	}
+
 	if (!Memory.rooms[roomName].intel) {
 		Memory.rooms[roomName].intel = {};
 	}
@@ -19,10 +25,10 @@ var RoomIntel = function (roomName) {
  * Updates intel for a room.
  */
 RoomIntel.prototype.gatherIntel = function () {
-	let room = Game.rooms[this.roomName];
+	const room = Game.rooms[this.roomName];
 	if (!room) return;
 
-	var intel = this.memory;
+	const intel = this.memory;
 
 	// @todo Have process logic handle throttling of this task .
 	let lastScanThreshold = 500;
@@ -31,14 +37,14 @@ RoomIntel.prototype.gatherIntel = function () {
 	}
 
 	if (intel.lastScan && Game.time - intel.lastScan < lastScanThreshold) return;
-	hivemind.log('intel', room.name).debug('Gathering intel after', intel.lastScan && Game.time - intel.lastScan || 'infinite', 'ticks.');
+	hivemind.log('intel', room.name).debug('Gathering intel after', intel.lastScan ? Game.time - intel.lastScan : 'infinite', 'ticks.');
 	intel.lastScan = Game.time;
 
 	this.gatherControllerIntel(room);
 	this.gatherResourceIntel(room);
 	this.gatherTerrainIntel();
 
-	let structures = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
+	const structures = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
 	this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK]);
 	this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 	this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
@@ -64,7 +70,7 @@ RoomIntel.prototype.gatherControllerIntel = function (room) {
 	this.memory.rcl = 0;
 	this.memory.ticksToDowngrade = 0;
 	this.memory.ticksToNeutral = 0;
-	this.memory.hasController = (room.controller ? true : false);
+	this.memory.hasController = typeof room.controller !== 'undefined';
 	if (room.controller && room.controller.owner) {
 		this.memory.owner = room.controller.owner.username;
 		this.memory.rcl = room.controller.level;
@@ -75,7 +81,7 @@ RoomIntel.prototype.gatherControllerIntel = function (room) {
 		}
 	}
 
-	this.memory.reservation = room.controller && room.controller.reservation || {
+	this.memory.reservation = room.controller ? room.controller.reservation : {
 		username: null,
 		ticksToEnd: 0,
 	};
@@ -88,17 +94,17 @@ RoomIntel.prototype.gatherResourceIntel = function (room) {
 	// Check sources.
 	this.memory.sources = _.map(
 		room.find(FIND_SOURCES),
-		function (source) {
+		source => {
 			return {
 				x: source.pos.x,
 				y: source.pos.y,
 				id: source.id,
-			}
+			};
 		}
 	);
 
 	// Check minerals.
-	var mineral = _.first(room.find(FIND_MINERALS));
+	const mineral = _.first(room.find(FIND_MINERALS));
 	this.memory.mineral = mineral && mineral.id;
 	this.memory.mineralType = mineral && mineral.mineralType;
 };
@@ -114,15 +120,16 @@ RoomIntel.prototype.gatherTerrainIntel = function () {
 		swamp: 0,
 		plain: 0,
 	};
-	let terrain = new Room.Terrain(this.roomName);
+	const terrain = new Room.Terrain(this.roomName);
 	for (let x = 0; x < 50; x++) {
 		for (let y = 0; y < 50; y++) {
-			let tileType = terrain.get(x, y);
+			const tileType = terrain.get(x, y);
 			// Check border tiles.
-			if (x == 0 || y == 0 || x == 49 || y == 49) {
-				if (tileType != TERRAIN_MASK_WALL) {
+			if (x === 0 || y === 0 || x === 49 || y === 49) {
+				if (tileType !== TERRAIN_MASK_WALL) {
 					this.memory.terrain.exit++;
 				}
+
 				continue;
 			}
 
@@ -149,19 +156,19 @@ RoomIntel.prototype.gatherTerrainIntel = function () {
 RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	delete this.memory.power;
 
-	let powerBank = _.first(powerBanks);
+	const powerBank = _.first(powerBanks);
 	if (!powerBank) return;
 
 	// For now, send a notification!
 	hivemind.log('intel', this.roomName).info('Power bank containing', powerBank.amount, 'power found!');
 
 	// Find out how many access points there are around this power bank.
-	let terrain = new Room.Terrain(this.roomName);
+	const terrain = new Room.Terrain(this.roomName);
 	let numFreeTiles = 0;
 	for (let dx = -1; dx <= 1; dx++) {
 		for (let dy = -1; dy <= 1; dy++) {
-			if (dx == 0 && dy == 0) continue;
-			if (terrain.get(powerBank.pos.x + dx, powerBank.pos.y + dy) != TERRAIN_MASK_WALL) {
+			if (dx === 0 && dy === 0) continue;
+			if (terrain.get(powerBank.pos.x + dx, powerBank.pos.y + dy) !== TERRAIN_MASK_WALL) {
 				numFreeTiles++;
 			}
 		}
@@ -179,9 +186,11 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 		if (!Memory.strategy.power) {
 			Memory.strategy.power = {};
 		}
+
 		if (!Memory.strategy.power.rooms) {
 			Memory.strategy.power.rooms = {};
 		}
+
 		if (!Memory.strategy.power.rooms[this.roomName] || !Memory.strategy.power.rooms[this.roomName].isActive) {
 			Memory.strategy.power.rooms[this.roomName] = this.memory.power;
 		}
@@ -194,7 +203,7 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) {
 	if (!this.memory.structures) this.memory.structures = {};
 	this.memory.structures[structureType] = {};
-	for (let structure of structures[structureType] || []) {
+	for (const structure of structures[structureType] || []) {
 		this.memory.structures[structureType][structure.id] = {
 			x: structure.pos.x,
 			y: structure.pos.y,
@@ -225,7 +234,7 @@ RoomIntel.prototype.isClaimable = function () {
  */
 RoomIntel.prototype.isClaimed = function () {
 	if (this.isOwned()) return true;
-	if (this.memory.reservation && this.memory.reservation.username && this.memory.reservation.username != utilities.getUsername()) return true;
+	if (this.memory.reservation && this.memory.reservation.username && this.memory.reservation.username !== utilities.getUsername()) return true;
 
 	return false;
 };
@@ -235,7 +244,7 @@ RoomIntel.prototype.isClaimed = function () {
  */
 RoomIntel.prototype.isOwned = function () {
 	if (!this.memory.owner) return false;
-	if (this.memory.owner != utilities.getUsername()) return true;
+	if (this.memory.owner !== utilities.getUsername()) return true;
 
 	return false;
 };
@@ -284,7 +293,7 @@ RoomIntel.prototype.getExits = function () {
 RoomIntel.prototype.getControllerPosition = function () {
 	if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return;
 
-	let controller = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
+	const controller = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
 	return new RoomPosition(controller.x, controller.y, this.roomName);
 };
 
@@ -312,38 +321,40 @@ RoomIntel.prototype.countTiles = function (type) {
  * owned by us that are sufficiently defensible.
  */
 RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
-	if (!this.memory.exits) return {
-		directions: {
-			N: false,
-			E: false,
-			S: false,
-			W: false,
-		},
-		safeRooms: [],
-	};
+	if (!this.memory.exits) {
+		return {
+			directions: {
+				N: false,
+				E: false,
+				S: false,
+				W: false,
+			},
+			safeRooms: [],
+		};
+	}
 
-	let dirMap = {
+	const dirMap = {
 		1: 'N',
 		3: 'E',
 		5: 'S',
 		7: 'W',
-	}
+	};
 
-	let newStatus = {
+	const newStatus = {
 		N: true,
 		E: true,
 		S: true,
 		W: true,
 	};
 
-	let openList = {};
-	let closedList = {};
-	let joinedDirs = {};
-	let otherSafeRooms = options && options.safe || [];
+	const openList = {};
+	const closedList = {};
+	const joinedDirs = {};
+	const otherSafeRooms = options ? options.safe : [];
 	// Add initial directions to open list.
-	for (let moveDir in this.memory.exits) {
-		let dir = dirMap[moveDir];
-		let roomName = this.memory.exits[moveDir];
+	for (const moveDir in this.memory.exits) {
+		const dir = dirMap[moveDir];
+		const roomName = this.memory.exits[moveDir];
 
 		if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
 			// This is one of our own rooms, and as such is safe.
@@ -351,6 +362,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 				continue;
 			}
 		}
+
 		if (otherSafeRooms.indexOf(roomName) > -1) continue;
 
 		openList[roomName] = {
@@ -363,7 +375,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	// Process adjacent rooms until range has been reached.
 	while (_.size(openList) > 0) {
 		let minRange = null;
-		for (let roomName in openList) {
+		for (const roomName in openList) {
 			if (!minRange || minRange.range > openList[roomName].range) {
 				minRange = openList[roomName];
 			}
@@ -372,7 +384,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 		delete openList[minRange.room];
 		closedList[minRange.room] = minRange;
 
-		let roomIntel = hivemind.roomIntel(minRange.room);
+		const roomIntel = hivemind.roomIntel(minRange.room);
 		if (roomIntel.getAge() > 100000) {
 			// Room has no intel, declare it as unsafe.
 			newStatus[minRange.origin] = false;
@@ -380,9 +392,9 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 		}
 
 		// Add new adjacent rooms to openList if available.
-		let roomExits = roomIntel.getExits();
-		for (let moveDir in roomExits) {
-			let roomName = roomExits[moveDir];
+		const roomExits = roomIntel.getExits();
+		for (const moveDir in roomExits) {
+			const roomName = roomExits[moveDir];
 
 			if (minRange.range >= 3) {
 				// Room has open exits more than 3 rooms away.
@@ -391,25 +403,28 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 				break;
 			}
 
-			let found = openList[roomName] || closedList[roomName] || false;
+			const found = openList[roomName] || closedList[roomName] || false;
 			if (found) {
-				if (found.origin != minRange.origin) {
+				if (found.origin !== minRange.origin) {
 					// Two different exit directions are joined here.
 					// Treat them as the same.
 					if (!joinedDirs[found.origin]) {
 						joinedDirs[found.origin] = {};
 					}
+
 					joinedDirs[found.origin][minRange.origin] = true;
 				}
+
 				continue;
 			}
 
 			if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
 				// This is one of our own rooms, and as such is safe.
-				if (Game.rooms[roomName].controller.level >= 5 && !Game.rooms[roomName].isEvacuating() || roomName == this.roomName) {
+				if ((Game.rooms[roomName].controller.level >= 5 && !Game.rooms[roomName].isEvacuating()) || roomName === this.roomName) {
 					continue;
 				}
 			}
+
 			if (otherSafeRooms.indexOf(roomName) > -1) continue;
 
 			// Room has not been checked yet.
@@ -422,17 +437,17 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	}
 
 	// Unify status of directions which meet up somewhere.
-	for (let dir1 in joinedDirs) {
-		for (let dir2 in joinedDirs[dir1]) {
+	for (const dir1 in joinedDirs) {
+		for (const dir2 in joinedDirs[dir1]) {
 			newStatus[dir1] = newStatus[dir1] && newStatus[dir2];
 			newStatus[dir2] = newStatus[dir1] && newStatus[dir2];
 		}
 	}
 
 	// Keep a list of rooms declared as safe in memory.
-	let safeRooms = [];
-	for (let roomName in closedList) {
-		let roomDir = closedList[roomName].origin;
+	const safeRooms = [];
+	for (const roomName in closedList) {
+		const roomDir = closedList[roomName].origin;
 		if (newStatus[roomDir]) {
 			safeRooms.push(roomName);
 		}
@@ -440,7 +455,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 
 	return {
 		directions: newStatus,
-		safeRooms: safeRooms,
+		safeRooms,
 	};
 };
 
