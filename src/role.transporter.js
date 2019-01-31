@@ -907,7 +907,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 			options.push(option);
 		}
 
-		if (!creep.room.isEvacuating()) {
+		if (!creep.room.isEvacuating() && creep.room.getCurrentResourceAmount(RESOURCE_ENERGY) > 100000) {
 			// Supply nukers and power spawns with energy.
 			const targets = creep.room.find(FIND_STRUCTURES, {
 				filter: structure => {
