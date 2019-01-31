@@ -30,6 +30,7 @@ const channels = {
 
 /**
  * Loggers are used for simple, prettified output to the console.
+ * @constructor
  *
  * @param {string} channel
  *   The name of the channel to get a logger for.
@@ -38,6 +39,7 @@ const channels = {
  */
 const Logger = function (channel, roomName) {
 	this.channel = channel;
+	this.channelName = ('          ' + this.channel).slice(-10);
 	this.color = channels.default.color;
 	this.roomName = roomName;
 	this.active = true;
@@ -48,9 +50,6 @@ const Logger = function (channel, roomName) {
 		if (channels[this.channel].color) {
 			this.color = channels[this.channel].color;
 		}
-	}
-	else {
-		this.channelName = ('          ' + this.channel).slice(-10);
 	}
 
 	if (!Memory.logger) {

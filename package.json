@@ -29,7 +29,7 @@
 				"allow": ["**/*.prototype", "**/*.prototype.*"]
 			}],
 			"prefer-destructuring": ["error", {
-				"array": true,
+				"array": false,
 				"object": false
 			}]
 		},
