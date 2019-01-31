@@ -305,17 +305,15 @@ Creep.prototype.canMoveOnto = function (pos) {
 
 	const structures = pos.lookFor(LOOK_STRUCTURES);
 	for (const structure of structures) {
-		if (!structure.isWalkable()) {
-			return false;
-		}
+		if (!structure.isWalkable()) return false;
 	}
 
 	const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
 	for (const site of sites) {
-		if (!site.isWalkable()) {
-			return false;
-		}
+		if (!site.isWalkable()) return false;
 	}
+
+	return true;
 };
 
 /**

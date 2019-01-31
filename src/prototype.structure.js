@@ -10,7 +10,7 @@ if (!Structure.prototype.__enhancementsLoaded) {
 	 *   True if a creep can move onto this structure.
 	 */
 	Structure.prototype.isWalkable = function () {
-		if (OBSTACLE_OBJECT_TYPES[this.structureType]) return false;
+		if (_.includes(OBSTACLE_OBJECT_TYPES, this.structureType)) return false;
 		if (this.structureType === STRUCTURE_RAMPART) {
 			return this.my || this.isPublic();
 		}

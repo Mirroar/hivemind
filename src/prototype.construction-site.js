@@ -11,7 +11,7 @@ if (!ConstructionSite.prototype.__enhancementsLoaded) {
 	 */
 	ConstructionSite.prototype.isWalkable = function () {
 		if (!this.my) return true;
-		if (OBSTACLE_OBJECT_TYPES[this.structureType]) return false;
+		if (_.includes(OBSTACLE_OBJECT_TYPES, this.structureType)) return false;
 		return true;
 	};
 }
