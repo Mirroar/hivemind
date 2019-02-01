@@ -3,6 +3,7 @@
 /* global hivemind Creep Room RoomPosition TOP RIGHT BOTTOM LEFT STRUCTURE_NUKER
 STRUCTURE_OBSERVER STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
 
+/* eslint-disable import/no-unassigned-import */
 require('./manager.military');
 require('./manager.source');
 require('./role.brawler');
@@ -22,6 +23,7 @@ require('./role.helper');
 require('./role.scout');
 require('./role.transporter');
 require('./role.upgrader');
+/* eslint-enable import/no-unassigned-import */
 const roleRemoteBuilder = require('./role.builder.remote');
 
 const BoostManager = require('./manager.boost');
@@ -41,6 +43,7 @@ const Squad = require('./manager.squad');
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
+// Information about how throttling works for each creep role.
 const creepThrottleLevels = {
 	// Military creeps are always fully active!
 	brawler: {
@@ -85,6 +88,28 @@ const creepThrottleLevels = {
 		max: 'normal',
 		min: 0,
 	},
+};
+
+const creepLogicFunctions = {
+	harvester: 'runHarvesterLogic',
+	'harvester.minerals': 'runHarvesterLogic',
+	upgrader: 'runUpgraderLogic',
+	repairer: 'runBuilderLogic',
+	builder: 'runBuilderLogic',
+	transporter: 'runTransporterLogic',
+	gift: 'performGiftCollection',
+	'harvester.remote': 'runRemoteHarvesterLogic',
+	'harvester.exploit': 'runExploitHarvesterLogic',
+	'harvester.power': 'runPowerHarvesterLogic',
+	claimer: 'runClaimerLogic',
+	dismantler: 'runDismantlerLogic',
+	hauler: 'runHaulerLogic',
+	'hauler.exploit': 'runExploitHaulerLogic',
+	'hauler.power': 'runPowerHaulerLogic',
+	brawler: 'runBrawlerLogic',
+	'builder.exploit': 'runExploitBuilderLogic',
+	helper: 'runHelperLogic',
+	scout: 'runScoutLogic',
 };
 
 /**
@@ -134,8 +159,34 @@ Creep.prototype.runLogic = function () {
 		}
 	}
 
+	if (this.containSingleRoomCreep()) return;
+
+	Game.creepPerformance[this.memory.role].count++;
+	const startTime = Game.cpu.getUsed();
+
+	this.runLogicByRole();
+
+	if (!Game.creepPerformance[this.memory.role]) {
+		Game.creepPerformance[this.memory.role] = {
+			throttled: 0,
+			count: 0,
+			cpu: 0,
+		};
+	}
+
+	Game.creepPerformance[this.memory.role].cpu += Game.cpu.getUsed() - startTime;
+};
+
+/**
+ * Ensures that creeps which are restricted to a single room stay there.
+ *
+ * @return {boolean}
+ *   True if creep is busy getting back to its room.
+ */
+Creep.prototype.containSingleRoomCreep = function () {
 	if (this.memory.singleRoom && this.pos.roomName !== this.memory.singleRoom) {
 		this.moveTo(new RoomPosition(25, 25, this.memory.singleRoom));
+		return true;
 	}
 
 	if (this.memory.singleRoom && this.pos.roomName === this.memory.singleRoom) {
@@ -160,91 +211,36 @@ Creep.prototype.runLogic = function () {
 			this.say('unstuck!');
 			delete this.memory.go;
 			this.clearCachedPath();
-			return;
+			return true;
 		}
 	}
+};
 
-	Game.creepPerformance[this.memory.role].count++;
-	const startTime = Game.cpu.getUsed();
+/**
+ * Runs a creep's logic code depending on role.
+ */
+Creep.prototype.runLogicByRole = function () {
+	const creep = this;
 
 	try {
 		if (creep.room.boostManager && creep.room.boostManager.overrideCreepLogic(creep)) {
 			return;
 		}
 
-		// @todo Condense this mess, please!
-		if (creep.memory.role === 'harvester') {
-			creep.runHarvesterLogic();
-		}
-		else if (creep.memory.role === 'harvester.minerals') {
-			creep.runHarvesterLogic();
-		}
-		else if (creep.memory.role === 'upgrader') {
-			creep.runUpgraderLogic();
-		}
-		else if (creep.memory.role === 'builder' || creep.memory.role === 'repairer') {
-			creep.runBuilderLogic();
-		}
-		else if (creep.memory.role === 'transporter') {
-			creep.runTransporterLogic();
-		}
-		else if (creep.memory.role === 'gift') {
-			creep.performGiftCollection();
-		}
-		else if (creep.memory.role === 'harvester.remote') {
-			creep.runRemoteHarvesterLogic();
-		}
-		else if (creep.memory.role === 'harvester.exploit') {
-			creep.runExploitHarvesterLogic();
-		}
-		else if (creep.memory.role === 'harvester.power') {
-			creep.runPowerHarvesterLogic();
-		}
-		else if (creep.memory.role === 'claimer') {
-			creep.runClaimerLogic();
-		}
-		else if (creep.memory.role === 'dismantler') {
-			creep.runDismantlerLogic();
-		}
-		else if (creep.memory.role === 'hauler') {
-			creep.runHaulerLogic();
-		}
-		else if (creep.memory.role === 'hauler.exploit') {
-			creep.runExploitHaulerLogic();
-		}
-		else if (creep.memory.role === 'hauler.power') {
-			creep.runPowerHaulerLogic();
-		}
-		else if (creep.memory.role === 'brawler') {
-			creep.runBrawlerLogic();
+		if (creepLogicFunctions(creep.memory.role)) {
+			creep[creepLogicFunctions(creep.memory.role)]();
 		}
 		else if (creep.memory.role === 'builder.remote') {
 			roleRemoteBuilder.run(creep);
 		}
-		else if (creep.memory.role === 'builder.exploit') {
-			creep.runExploitBuilderLogic();
-		}
-		else if (creep.memory.role === 'helper') {
-			creep.runHelperLogic();
-		}
-		else if (creep.memory.role === 'scout') {
-			creep.runScoutLogic();
+		else {
+			hivemind.log('creeps').error('Creep', creep.name, 'has an unknown role:', creep.memory.role);
 		}
 	}
 	catch (error) {
 		console.log('Error when managing creep', creep.name, ':', error);
 		console.log(error.stack);
 	}
-
-	if (!Game.creepPerformance[this.memory.role]) {
-		Game.creepPerformance[this.memory.role] = {
-			throttled: 0,
-			count: 0,
-			cpu: 0,
-		};
-	}
-
-	Game.creepPerformance[this.memory.role].cpu += Game.cpu.getUsed() - startTime;
 };
 
 /**
@@ -319,13 +315,13 @@ Room.prototype.enhanceData = function () {
 
 	// Register sources and minerals.
 	this.sources = this.find(FIND_SOURCES);
-	for (const i in this.sources) {
-		this.sources[i].enhanceData();
+	for (const source of this.sources) {
+		source.enhanceData();
 	}
 
 	const minerals = this.find(FIND_MINERALS);
-	if (minerals.length > 0) {
-		this.mineral = minerals[0];
+	for (const mineral of minerals) {
+		this.mineral = mineral;
 		this.mineral.enhanceData();
 	}
 
@@ -335,9 +331,9 @@ Room.prototype.enhanceData = function () {
 		const flags = this.find(FIND_FLAGS, {
 			filter: flag => flag.name.startsWith('Bay:'),
 		});
-		for (const i in flags) {
+		for (const flag of flags) {
 			try {
-				this.bays[flags[i].name] = new Bay(flags[i].name);
+				this.bays[flag.name] = new Bay(flag.name);
 			}
 			catch (error) {
 				console.log('Error when initializing Bays:', error);
@@ -350,10 +346,10 @@ Room.prototype.enhanceData = function () {
 	this.exploits = {};
 	if (this.controller && this.controller.level >= 7) {
 		const flags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + this.name + ':'));
-		for (const i in flags) {
+		for (const flag of flags) {
 			try {
-				this.exploits[flags[i].pos.roomName] = new Exploit(this, flags[i].name);
-				Game.exploits[flags[i].pos.roomName] = this.exploits[flags[i].pos.roomName];
+				this.exploits[flag.pos.roomName] = new Exploit(this, flag.name);
+				Game.exploits[flag.pos.roomName] = this.exploits[flag.pos.roomName];
 			}
 			catch (error) {
 				console.log('Error when initializing Exploits:', error);
@@ -376,13 +372,9 @@ const main = {
 	manageCreeps() {
 		Game.numThrottledCreeps = 0;
 		Game.creepPerformance = {};
-		for (const name in Game.creeps) {
-			const creep = Game.creeps[name];
-
-			if (creep.spawning) continue;
-
-			creep.runLogic();
-		}
+		_.each(Game.creeps, creep => {
+			if (!creep.spawning) creep.runLogic();
+		});
 
 		if (Game.numThrottledCreeps > 0) {
 			hivemind.log('creeps').info(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
@@ -406,19 +398,19 @@ const main = {
 			Game.exploitTemp = {};
 
 			// Add data to global Game object.
-			for (const squadName in Memory.squads) {
+			_.each(Memory.squads, (data, squadName) => {
 				Game.squads[squadName] = new Squad(squadName);
-			}
+			});
 
 			// Cache creeps per room and role.
-			for (const creepName in Game.creeps) {
-				Game.creeps[creepName].enhanceData();
-			}
+			_.each(Game.creeps, creep => {
+				creep.enhanceData();
+			});
 
 			// Add data to room objects.
-			for (const roomName in Game.rooms) {
-				Game.rooms[roomName].enhanceData();
-			}
+			_.each(Game.rooms, room => {
+				room.enhanceData();
+			});
 
 			spawnManager.manageSpawns();
 

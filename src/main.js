@@ -37,7 +37,7 @@ const stats = require('./stats');
 module.exports = {
 
 	/**
-	 * Runs main game loop.
+	 * Wrapper for main game loop to optionally use profiler.
 	 */
 	loop() {
 		if (profiler) {
@@ -48,6 +48,9 @@ module.exports = {
 		}
 	},
 
+	/**
+	 * Runs main game loop.
+	 */
 	runTick() {
 		if (Memory.isAccountThrottled) {
 			Game.cpu.limit = 20;
@@ -97,6 +100,9 @@ module.exports = {
 		this.recordStats();
 	},
 
+	/**
+	 * Saves CPU stats for the current tick to memory.
+	 */
 	recordStats() {
 		if (Game.time % 10 === 0 && Game.cpu.bucket < 9800) {
 			hivemind.log('main').info('Bucket:', Game.cpu.bucket);
@@ -113,6 +119,9 @@ module.exports = {
 		stats.recordStat('creeps', _.size(Game.creeps));
 	},
 
+	/**
+	 * Periodically deletes unused data from memory.
+	 */
 	cleanup() {
 		// Periodically clean creep memory.
 		if (Game.time % 16 === 7) {
@@ -148,18 +157,18 @@ module.exports = {
 		// Periodically clean old room memory.
 		if (Game.time % 3738 === 2100) {
 			let count = 0;
-			for (const roomName in Memory.rooms) {
+			_.each(Memory.rooms, (memory, roomName) => {
 				if (hivemind.roomIntel(roomName).getAge() > 100000) {
 					delete Memory.rooms[roomName];
 					count++;
-					continue;
+					return;
 				}
 
-				if (Memory.rooms[roomName].roomPlanner && (!Game.rooms[roomName] || !Game.rooms[roomName].controller || !Game.rooms[roomName].controller.my)) {
-					delete Memory.rooms[roomName].roomPlanner;
+				if (memory.roomPlanner && (!Game.rooms[roomName] || !Game.rooms[roomName].controller || !Game.rooms[roomName].controller.my)) {
+					delete memory.roomPlanner;
 					count++;
 				}
-			}
+			});
 
 			if (count > 0) {
 				hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
