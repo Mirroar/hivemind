@@ -1,7 +1,7 @@
 'use strict';
 
 const Process = require('./process');
-const RoomPlanner = require('./roomplanner');
+const RoomPlanner = require('./room-planner');
 
 /**
  * Initializes member variables that should be available to all processes.

@@ -4,7 +4,7 @@
 
 const Logger = require('./debug');
 const Relations = require('./relations');
-const RoomIntel = require('./room_intel');
+const RoomIntel = require('./room-intel');
 const stats = require('./stats');
 
 global.PROCESS_PRIORITY_LOW = 1;

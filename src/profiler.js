@@ -14,7 +14,7 @@ if (useProfiler) {
 	const BoostManager = require('./manager.boost');
 	const Exploit = require('./manager.exploit');
 	const Logger = require('./debug');
-	const RoomPlanner = require('./roomplanner');
+	const RoomPlanner = require('./room-planner');
 	const Squad = require('./manager.squad');
 	profiler.registerClass(Bay, 'Bay');
 	profiler.registerClass(BoostManager, 'BoostManager');

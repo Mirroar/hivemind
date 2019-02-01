@@ -3,7 +3,7 @@
 /* global Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
 FIND_STRUCTURES */
 
-const LinkNetwork = require('./link_network');
+const LinkNetwork = require('./link-network');
 
 /**
  * Moves creep within a certain range of a target.
