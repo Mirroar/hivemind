@@ -227,8 +227,8 @@ Creep.prototype.runLogicByRole = function () {
 			return;
 		}
 
-		if (creepLogicFunctions(creep.memory.role)) {
-			creep[creepLogicFunctions(creep.memory.role)]();
+		if (creepLogicFunctions[creep.memory.role]) {
+			creep[creepLogicFunctions[creep.memory.role]]();
 		}
 		else if (creep.memory.role === 'builder.remote') {
 			roleRemoteBuilder.run(creep);

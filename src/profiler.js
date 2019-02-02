@@ -23,11 +23,9 @@ if (useProfiler) {
 	profiler.registerClass(RoomPlanner, 'RoomPlanner');
 	profiler.registerClass(Squad, 'Squad');
 
-	const roleplay = require('./manager.roleplay');
 	const spawnManager = require('./manager.spawn');
 	const stats = require('./stats');
 	const utilities = require('./utilities');
-	profiler.registerObject(roleplay, 'roleplay');
 	profiler.registerObject(spawnManager, 'spawnManager');
 	profiler.registerObject(stats, 'stats');
 	profiler.registerObject(utilities, 'utilities');

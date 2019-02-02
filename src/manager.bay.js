@@ -1,11 +1,14 @@
 'use strict';
 
-/* global RoomVisual StructureExtension COLOR_GREY FIND_STRUCTURES
-STRUCTURE_EXTENSION OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
+/* global RoomVisual COLOR_GREY FIND_STRUCTURES STRUCTURE_EXTENSION
+OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
 
 /**
  * Bays collect extensions into a single entity for more efficient refilling.
  * @constructor
+ *
+ * @param {string} flagName
+ *   Name of the flag around which this bay is positioned.
  */
 const Bay = function (flagName) {
 	this.flag = Game.flags[flagName];
@@ -21,10 +24,7 @@ const Bay = function (flagName) {
 		const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
 			filter: structure => structure.structureType === STRUCTURE_EXTENSION,
 		});
-		this.memory.extensions = [];
-		for (const extension of extensions) {
-			this.memory.extensions.push(extension.id);
-		}
+		this.memory.extensions = _.map(extensions, 'id');
 	}
 
 	// Do not add extensions to bay if center is blocked by a structure.
@@ -44,8 +44,8 @@ const Bay = function (flagName) {
 	if (blocked) return;
 
 	if (this.memory.extensions) {
-		for (let i in this.memory.extensions) {
-			const extension = Game.getObjectById(this.memory.extensions[i]);
+		for (const id of this.memory.extensions) {
+			const extension = Game.getObjectById(id);
 			if (extension && extension.isActive()) {
 				this.extensions.push(extension);
 				this.energy += extension.energy;
@@ -65,41 +65,36 @@ const Bay = function (flagName) {
 	}
 };
 
+/**
+ * Checks if an extension is part of this bay.
+ *
+ * @param {Structure} extension
+ *   The structure to check.
+ *
+ * @return {boolean}
+ *   True if this extension is registered with this bay.
+ */
 Bay.prototype.hasExtension = function (extension) {
-	for (let i in this.extensions) {
-		if (this.extensions[i].id === extension.id) return true;
+	for (const ourExtension of this.extensions) {
+		if (ourExtension.id === extension.id) return true;
 	}
 
 	return false;
 };
 
+/**
+ * Refills this bay using energy carried by the given creep.
+ *
+ * @param {Creep} creep
+ *   A creep with carry parts and energy in store.
+ */
 Bay.prototype.refillFrom = function (creep) {
-	for (let i in this.extensions) {
-		const extension = this.extensions[i];
+	for (const extension of this.extensions) {
 		if (extension.energy < extension.energyCapacity) {
 			creep.transfer(extension, RESOURCE_ENERGY);
 			break;
 		}
 	}
-};
-
-/**
- * Checks whether this extension belongs to any bay.
- */
-StructureExtension.prototype.isBayExtension = function () {
-	if (!this.bayChecked) {
-		this.bayChecked = true;
-		this.bay = null;
-
-		for (let i in this.room.bays) {
-			if (this.room.bays[i].hasExtension(this)) {
-				this.bay = this.room.bays[i];
-				break;
-			}
-		}
-	}
-
-	return this.bay !== null;
 };
 
 module.exports = Bay;
