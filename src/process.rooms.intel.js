@@ -25,7 +25,7 @@ RoomIntelProcess.prototype.findHostiles = function () {
 	let safe = true;
 
 	if (hostiles.length > 0) {
-		this.room.assertMilitarySituation();
+		// this.room.assertMilitarySituation();
 	}
 
 	if (hostiles.length > 0) {

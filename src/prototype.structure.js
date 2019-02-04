@@ -1,6 +1,7 @@
 'use strict';
 
-/* global Structure StructureExtension OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
+/* global Structure StructureExtension StructureTower OBSTACLE_OBJECT_TYPES
+STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF */
 
 if (!Structure.prototype.__enhancementsLoaded) {
 	/**
@@ -38,5 +39,21 @@ if (!Structure.prototype.__enhancementsLoaded) {
 		}
 
 		return this.bay !== null;
+	};
+
+	/**
+	 * Calculates relative tower power at a certain range.
+	 *
+	 * @param {number} range
+	 *   Tile distance between tower and target.
+	 *
+	 * @return {number}
+	 *   Relative power between 0 and 1.
+	 */
+	StructureTower.prototype.getPowerAtRange = function (range) {
+		if (range < TOWER_OPTIMAL_RANGE) range = TOWER_OPTIMAL_RANGE;
+		if (range > TOWER_FALLOFF_RANGE) range = TOWER_FALLOFF_RANGE;
+
+		return 1 - (((range - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE)) * TOWER_FALLOFF);
 	};
 }

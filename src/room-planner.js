@@ -647,7 +647,10 @@ RoomPlanner.prototype.findTowerPositions = function () {
  * Makes plans for a room and place flags to visualize.
  */
 RoomPlanner.prototype.placeFlags = function () {
-	// @todo Place some ramparts on spawns and maybe towers as a last protection if walls go down.
+	// @todo Place some ramparts on spawns and maybe towers as a last protection
+	// if walls go down.
+	// @todo Build small ramparts on spawns and on paths close to exit
+	// where enemy ranged creeps might reach.
 	const start = Game.cpu.getUsed();
 
 	if (!this.memory.wallDistanceMatrix) {
