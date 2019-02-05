@@ -326,14 +326,14 @@ Room.prototype.enhanceData = function () {
 	}
 
 	// Register bays.
-	this.bays = {};
+	this.bays = [];
 	if (this.controller && this.controller.my) {
 		const flags = this.find(FIND_FLAGS, {
 			filter: flag => flag.name.startsWith('Bay:'),
 		});
 		for (const flag of flags) {
 			try {
-				this.bays[flag.name] = new Bay(flag.name);
+				this.bays.push(new Bay(flag.name));
 			}
 			catch (error) {
 				console.log('Error when initializing Bays:', error);

@@ -5,7 +5,7 @@
 const Process = require('./process');
 const OwnedRoomProcess = require('./process.rooms.owned');
 const RoomIntelProcess = require('./process.rooms.intel');
-const RoomPlanner = require('./roomp-lanner');
+const RoomPlanner = require('./room-planner');
 
 const RoomsProcess = function (params, data) {
 	Process.call(this, params, data);

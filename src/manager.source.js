@@ -28,7 +28,7 @@ const enhanceData = function (collection, creepAttribute) {
 
 	// Collect assigned harvesters.
 	this.harvesters = [];
-	for (const harvester of this.room.creepsByRole.harvester || []) {
+	for (const harvester of _.values(this.room.creepsByRole.harvester) || []) {
 		if (harvester.memory[creepAttribute] === this.id) {
 			this.harvesters.push(harvester);
 		}

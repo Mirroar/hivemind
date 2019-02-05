@@ -799,8 +799,8 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 		}
 
 		// Fill bays.
-		for (const i in creep.room.bays) {
-			const target = creep.room.bays[i];
+		for (const bay of creep.room.bays) {
+			const target = bay;
 
 			if (target.energy >= target.energyCapacity) continue;
 
@@ -1182,7 +1182,7 @@ Creep.prototype.performDeliver = function () {
 	}
 
 	if (best.type === 'bay') {
-		const target = creep.room.bays[creep.memory.order.target];
+		const target = _.find(creep.room.bays, bay => bay.flag.name === creep.memory.order.target);
 		if (!target) {
 			creep.calculateDeliveryTarget();
 			return true;
@@ -1251,15 +1251,14 @@ Creep.prototype.setTransporterState = function (delivering) {
 
 Creep.prototype.bayUnstuck = function () {
 	// If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
-	for (const i in this.room.bays) {
-		const bay = this.room.bays[i];
+	for (const bay of this.room.bays) {
 		if (bay.extensions.length < 7) continue;
 
 		if (this.pos.x !== bay.pos.x || this.pos.y !== bay.pos.y) continue;
 
 		const best = this.memory.deliverTarget;
 
-		if (best && typeof best !== 'string' && best.type === 'bay' && this.memory.order.target === i) continue;
+		if (best && typeof best !== 'string' && best.type === 'bay' && this.memory.order.target === bay.flag.name) continue;
 
 		// We're standing in a bay that we're not delivering to.
 		const terrain = new Room.Terrain(this.pos.roomName);
