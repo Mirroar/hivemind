@@ -1376,6 +1376,7 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
  * Spawns a new dismantler.
  */
 StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
+	let boosts;
 	if (this.room.canSpawnBoostedCreeps()) {
 		const availableBoosts = this.room.getAvailableBoosts('dismantle');
 		let bestBoost;
@@ -1400,6 +1401,7 @@ StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
 		memory: {
 			sourceRoom: this.pos.roomName,
 			targetRoom,
+			boosts,
 		},
 	});
 };
