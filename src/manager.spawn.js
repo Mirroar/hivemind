@@ -748,55 +748,16 @@ Room.prototype.manageSpawns = function () {
 		// We've got nothing to do, how about some remote harvesting?
 		const harvestPositions = [];
 		const remoteHarvestTargets = spawn.room.getRemoteHarvestTargets();
-		for (const i in remoteHarvestTargets) {
-			const roomName = remoteHarvestTargets[i].roomName;
-			const sources = hivemind.roomIntel(roomName).getSourcePositions();
-			for (const j in sources) {
-				harvestPositions.push(new RoomPosition(sources[j].x, sources[j].y, roomName));
+		for (const info of remoteHarvestTargets) {
+			const sources = hivemind.roomIntel(info.roomName).getSourcePositions();
+			for (const pos of sources) {
+				harvestPositions.push(new RoomPosition(pos.x, pos.y, info.roomName));
 			}
 		}
 
-		for (const i in harvestPositions) {
-			const pos = harvestPositions[i];
-
+		for (const pos of harvestPositions) {
 			// First of all, if it's not safe, send a bruiser.
-			const roomMemory = Memory.rooms[pos.roomName];
-			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
-				let position = spawn.pos;
-				if (spawn.room.storage) {
-					position = spawn.room.storage.pos;
-				}
-
-				// Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
-				const brawlPosition = new RoomPosition(25, 25, pos.roomName);
-
-				const maxBrawlers = 1;
-				const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => {
-					if (creep.memory.storage === utilities.encodePosition(position) && creep.memory.target === utilities.encodePosition(brawlPosition)) {
-						return true;
-					}
-
-					return false;
-				});
-
-				if (!brawlers || brawlers.length < maxBrawlers) {
-					const result = spawn.spawnBrawler(brawlPosition, 4, utilities.encodePosition(pos));
-					if (result) {
-						const position = utilities.encodePosition(pos);
-						console.log('Spawning new brawler to defend', position, ':', result);
-
-						let cost = 0;
-						for (const partType in Memory.creeps[result].body) {
-							cost += BODYPART_COST[partType] * Memory.creeps[result].body[partType];
-						}
-
-						stats.addRemoteHarvestDefenseCost(spawn.room.name, position, cost);
-					}
-
-					// Do not continue trying to spawn other creeps when defense is needed.
-					return true;
-				}
-			}
+			if (spawn.spawnRemoteHarvestDefense(pos)) return true;
 
 			// If it's safe or brawler is sent, start harvesting.
 			let doSpawn = true;
@@ -1057,6 +1018,12 @@ Room.prototype.manageSpawns = function () {
 	}
 };
 
+/**
+ * Spawns harvesters to gather energy in other rooms.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
+ */
 StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
 	let bodyWeights = {move: 0.5, work: 0.2, carry: 0.3};
 	const maxParts = {work: 3};
@@ -1091,6 +1058,61 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
 	});
 };
 
+/**
+ * Spawns brawlers to defend remote harvest rooms agains invaders.
+ *
+ * @param {RoomPosition} harvestPosition
+ *   Position of the source that needs defending.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
+ */
+StructureSpawn.prototype.spawnRemoteHarvestDefense = function (harvestPosition) {
+	const roomMemory = Memory.rooms[harvestPosition.roomName];
+	if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
+		let position = this.pos;
+		if (this.room.storage) {
+			position = this.room.storage.pos;
+		}
+
+		// Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
+		const brawlPosition = new RoomPosition(25, 25, harvestPosition.roomName);
+
+		const maxBrawlers = 1;
+		const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => {
+			if (creep.memory.storage === utilities.encodePosition(position) && creep.memory.target === utilities.encodePosition(brawlPosition)) {
+				return true;
+			}
+
+			return false;
+		});
+
+		if (!brawlers || brawlers.length < maxBrawlers) {
+			const result = this.spawnBrawler(brawlPosition, 4, utilities.encodePosition(harvestPosition));
+			if (result) {
+				const position = utilities.encodePosition(harvestPosition);
+				console.log('Spawning new brawler to defend', position, ':', result);
+
+				let cost = 0;
+				_.each(Memory.creeps[result].body, (count, partType) => {
+					cost += BODYPART_COST[partType] * count;
+				});
+
+				stats.addRemoteHarvestDefenseCost(this.room.name, position, cost);
+			}
+
+			// Do not continue trying to spawn other creeps when defense is needed.
+			return true;
+		}
+	}
+};
+
+/**
+ * Spawns a brawler to attacka a certain position.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
+ */
 StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts, pathTarget) {
 	let maxParts = null;
 	if (maxAttackParts) {
@@ -1114,6 +1136,12 @@ StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts
 	});
 };
 
+/**
+ * Spawns a claimer to reserve or claim a room.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
+ */
 StructureSpawn.prototype.spawnClaimer = function (targetPosition, mission) {
 	const setCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
 
@@ -1142,6 +1170,9 @@ StructureSpawn.prototype.getHaulerBodyWeights = function () {
 
 /**
  * Spawns a new hauler.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) {
 	let maxParts = null;
@@ -1169,6 +1200,9 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 
 /**
  * Spawns a new dismantler.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
 	let boosts;
@@ -1203,6 +1237,9 @@ StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
 
 /**
  * Spawns a new harvester.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnHarvester = function (force, maxSize, sourceID) {
 	let minCost = null;
@@ -1224,6 +1261,9 @@ StructureSpawn.prototype.spawnHarvester = function (force, maxSize, sourceID) {
 
 /**
  * Spawns a new power harvester.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnPowerHarvester = function (targetRoom, isHealer) {
 	const bodyParts = [];
@@ -1255,6 +1295,9 @@ StructureSpawn.prototype.spawnPowerHarvester = function (targetRoom, isHealer) {
 
 /**
  * Spawns a new power hauler.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
 	return this.createManagedCreep({
@@ -1269,6 +1312,9 @@ StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
 
 /**
  * Spawns a new gifter.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnGift = function () {
 	return this.createManagedCreep({

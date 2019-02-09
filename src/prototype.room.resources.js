@@ -214,6 +214,9 @@ Room.prototype.stopTradePreparation = function () {
 
 /**
  * Gets a list of remote mining targets designated for this room.
+ *
+ * @return {Array}
+ *   An array of objects containing information about remote harvest stargets.
  */
 Room.prototype.getRemoteHarvestTargets = function () {
 	// @todo Cache this if we use it during spawning.
@@ -221,15 +224,13 @@ Room.prototype.getRemoteHarvestTargets = function () {
 	if (!Memory.strategy) return [];
 	const memory = Memory.strategy;
 
-	const targets = {};
+	const targets = [];
 
-	for (const i in memory.roomList) {
-		const info = memory.roomList[i];
-
+	for (const info of _.values(memory.roomList)) {
 		if (info.origin !== this.name) continue;
 		if (!info.harvestActive) continue;
 
-		targets[info.roomName] = info;
+		targets.push(info);
 	}
 
 	return targets;
