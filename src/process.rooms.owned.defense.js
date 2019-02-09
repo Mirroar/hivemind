@@ -24,11 +24,11 @@ RoomDefenseProcess.prototype.run = function () {
 	for (const tower of towers) {
 		// Attack enemies.
 		if (hostileCreeps.length > 0) {
-			const target = this.room.getTowerTarget(tower);
-			if (target) {
-				tower.attack(target);
-				continue;
-			}
+			// const target = this.room.getTowerTarget(tower);
+			// if (target) {
+			// 	tower.attack(target);
+			// 	continue;
+			// }
 
 			const closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
 				filter: creep => {

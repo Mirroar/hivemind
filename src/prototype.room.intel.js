@@ -1,7 +1,85 @@
 'use strict';
 
-/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK
-STRUCTURE_LAB */
+/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER
+STRUCTURE_LINK STRUCTURE_LAB STRUCTURE_NUKER STRUCTURE_OBSERVER
+STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
+
+const Bay = require('./manager.bay');
+const BoostManager = require('./manager.boost');
+const Exploit = require('./manager.exploit');
+
+/**
+ * Adds some additional data to room objects.
+ */
+Room.prototype.enhanceData = function () {
+	this.addStructureReference(STRUCTURE_NUKER);
+	this.addStructureReference(STRUCTURE_OBSERVER);
+	this.addStructureReference(STRUCTURE_POWER_SPAWN);
+
+	if (this.terminal && !this.terminal.isActive()) {
+		delete this.terminal;
+	}
+
+	if (this.storage && !this.storage.isActive()) {
+		delete this.storage;
+	}
+
+	// Prepare memory for creep cache (filled globally later).
+	if (!this.creeps) {
+		this.creeps = {};
+		this.creepsByRole = {};
+	}
+
+	// Register sources and minerals.
+	this.sources = this.find(FIND_SOURCES);
+	for (const source of this.sources) {
+		source.enhanceData();
+	}
+
+	const minerals = this.find(FIND_MINERALS);
+	for (const mineral of minerals) {
+		this.mineral = mineral;
+		this.mineral.enhanceData();
+	}
+
+	// Register bays.
+	this.bays = [];
+	if (this.controller && this.controller.my) {
+		const flags = this.find(FIND_FLAGS, {
+			filter: flag => flag.name.startsWith('Bay:'),
+		});
+		for (const flag of flags) {
+			try {
+				this.bays.push(new Bay(flag.name));
+			}
+			catch (error) {
+				console.log('Error when initializing Bays:', error);
+				console.log(error.stack);
+			}
+		}
+	}
+
+	// Register exploits.
+	this.exploits = {};
+	if (this.controller && this.controller.level >= 7) {
+		const flags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + this.name + ':'));
+		for (const flag of flags) {
+			try {
+				this.exploits[flag.pos.roomName] = new Exploit(this, flag.name);
+				Game.exploits[flag.pos.roomName] = this.exploits[flag.pos.roomName];
+			}
+			catch (error) {
+				console.log('Error when initializing Exploits:', error);
+				console.log(error.stack);
+			}
+		}
+	}
+
+	// Initialize boost manager.
+	if (BoostManager) {
+		this.boostManager = new BoostManager(this.name);
+	}
+};
 
 /**
 * Gathers information about a rooms sources and saves it to memory for faster access.

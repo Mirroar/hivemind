@@ -31,9 +31,7 @@ Room.prototype.generateLinkNetwork = function () {
 	}
 
 	// Add links to network.
-	for (const i in links) {
-		const link = links[i];
-
+	for (const link of links) {
 		if (link.id === controllerLinkId) {
 			if (sourceLinkIds.indexOf(link.id) >= 0) {
 				this.linkNetwork.addInOutLink(link);
@@ -86,6 +84,9 @@ Room.prototype.addStructureReference = function (structureType) {
 
 /**
  * Starts evacuation process for a room to prepare it for being abandoned.
+ *
+ * @param {boolean} evacuate
+ *   Whether to evacuate this room or not.
  */
 Room.prototype.setEvacuating = function (evacuate) {
 	this.memory.isEvacuating = evacuate;
@@ -93,6 +94,9 @@ Room.prototype.setEvacuating = function (evacuate) {
 
 /**
 * Checks if a room is currently evacuating.
+*
+* @return {boolean}
+*   Whether this room should be evacuated.
 */
 Room.prototype.isEvacuating = function () {
 	return this.memory.isEvacuating;
@@ -100,6 +104,9 @@ Room.prototype.isEvacuating = function () {
 
 /**
 * Starts emptying a rooms terminal and keeps it empty.
+*
+* @param {boolean} clear
+*   Whether to clear this room's terminal.
 */
 Room.prototype.setClearingTerminal = function (clear) {
 	this.memory.isClearingTerminal = clear;
@@ -107,6 +114,9 @@ Room.prototype.setClearingTerminal = function (clear) {
 
 /**
 * Checks if a room's terminal should be emptied.
+*
+* @return {boolean}
+*   Whether this room's terminal is being cleared.
 */
 Room.prototype.isClearingTerminal = function () {
 	return this.memory.isClearingTerminal;

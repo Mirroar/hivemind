@@ -240,7 +240,7 @@ const utilities = {
 		const body = [];
 
 		if (newParts.tough) {
-			for (const i = 0; i < newParts.tough; i++) {
+			for (let i = 0; i < newParts.tough; i++) {
 				body.push(TOUGH);
 			}
 

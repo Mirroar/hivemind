@@ -38,7 +38,7 @@ const roleNameMap = {
 /**
  * Intelligently tries to create a creep.
  *
- * @param options
+ * @param {pbject} options
  *   An object containing conditions for creating this creep:
  *   - body: An array of body part constants to create the creep from.
  *   - bodyWeights: Alternative to body, an array keyed by body part names,
@@ -50,25 +50,20 @@ const roleNameMap = {
  *   - maxParts: An array keyed by body part names containing the maximum
  *     amount of parts of that type to spawn the creep with.
  *
- * @return
+ * @return {string|boolean}
  *   The name of the creep if it could be spawned, false otherwise.
  */
 StructureSpawn.prototype.createManagedCreep = function (options) {
 	if (!options) {
-		throw "No options for creep spawning defined.";
+		throw new Error('No options for creep spawning defined.');
 	}
 
-	if (this.spawning) {
-		return false;
-	}
+	if (this.spawning) return false;
 
 	let enoughEnergy = true;
-	let minCost = this.room.energyCapacityAvailable * 0.9;
-	const energyAvailable = Math.min(this.room.energyAvailable, this.room.energyCapacityAvailable);
-	if (options.minCost) {
-		minCost = options.minCost;
-	}
+	const minCost = options.minCost || this.room.energyCapacityAvailable * 0.9;
 
+	const energyAvailable = Math.min(this.room.energyAvailable, this.room.energyCapacityAvailable);
 	if (energyAvailable < minCost) {
 		enoughEnergy = false;
 	}
@@ -77,15 +72,15 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 	if (options.body) {
 		// Use the actual cost of a creep with this body.
 		let maxPartsCost = 0;
-		for (const i in options.body) {
-			maxPartsCost += BODYPART_COST[options.body[i]];
+		for (const part of options.body) {
+			maxPartsCost += BODYPART_COST[part];
 		}
 
 		maxCost = Math.min(maxCost, maxPartsCost);
 	}
 	else {
 		if (!options.bodyWeights) {
-			throw "No body definition for creep found.";
+			throw new Error('No body definition for creep found.');
 		}
 
 		// Creep might be requested with a maximum energy cost.
@@ -97,8 +92,8 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 		let maxPartsCost = 0;
 		// With theoretically unlimited energy, check how expensive the creep can become with maxSize.
 		const tempBody = utilities.generateCreepBody(options.bodyWeights, this.room.energyCapacityAvailable, options.maxParts);
-		for (const i in tempBody) {
-			maxPartsCost += BODYPART_COST[tempBody[i]];
+		for (const part of tempBody) {
+			maxPartsCost += BODYPART_COST[part];
 		}
 
 		maxCost = Math.min(maxCost, maxPartsCost);
@@ -118,21 +113,11 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 	const memory = options.memory || {};
 
 	if (!memory.role) {
-		memory.role = 'unknown';
-		if (options.role) {
-			memory.role = options.role;
-		}
+		memory.role = options.role || 'unknown';
 	}
 
 	// Store creep's body definition in memory for easier access.
-	memory.body = {};
-	for (const i in options.body) {
-		if (!memory.body[options.body[i]]) {
-			memory.body[options.body[i]] = 0;
-		}
-
-		memory.body[options.body[i]]++;
-	}
+	memory.body = _.countBy(options.body);
 
 	// Generate creep name.
 	if (!Memory.creepCounter) {
@@ -143,41 +128,38 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 		Memory.creepCounter[memory.role] = 0;
 	}
 
-	let roleName = memory.role;
-	if (roleNameMap[roleName]) {
-		roleName = roleNameMap[roleName];
-	}
-
+	const roleName = roleNameMap[memory.role] || memory.role;
 	const newName = roleName + '_' + Memory.creepCounter[memory.role].toString(36);
 
 	// Actually try to spawn this creep.
 	const result = this.createCreep(options.body, newName, memory);
 
-	if (result === newName) {
-		// Spawning successful.
-		Memory.creepCounter[memory.role]++;
-		hivemind.log('creeps', this.pos.roomName).info('Spawning new creep:', newName);
+	if (result !== newName) return false;
 
-		// Also notify room's boost manager if necessary.
-		if (options.boosts && this.room.boostManager) {
-			this.room.boostManager.markForBoosting(newName, options.boosts);
-		}
+	// Spawning successful.
+	Memory.creepCounter[memory.role]++;
+	hivemind.log('creeps', this.pos.roomName).info('Spawning new creep:', newName);
 
-		// Store role of spawning creep for visualization.
-		this.memory.spawnRole = memory.role;
-
-		return result;
+	// Also notify room's boost manager if necessary.
+	if (options.boosts && this.room.boostManager) {
+		this.room.boostManager.markForBoosting(newName, options.boosts);
 	}
 
-	return false;
+	// Store role of spawning creep for visualization.
+	this.memory.spawnRole = memory.role;
+
+	return result;
 };
 
 /**
  * WIP Replacement of manageSpawns using a priority queue and more caches.
+ *
+ * @return {boolean}
+ *   True if a creep was spawned.
  */
 Room.prototype.manageSpawnsPriority = function () {
 	if (!this.controller || !this.controller.my) {
-		return;
+		return false;
 	}
 
 	this.spawnOptions = {};
@@ -248,7 +230,8 @@ Room.prototype.manageSpawnsPriority = function () {
 
 	if (memory.options.length > 0) {
 		// Try to spawn the most needed creep.
-		return this.spawnCreepByPriority(activeSpawn);
+		this.spawnCreepByPriority(activeSpawn);
+		return true;
 	}
 
 	return false;
@@ -256,6 +239,9 @@ Room.prototype.manageSpawnsPriority = function () {
 
 /**
  * Spawns the most needed creep from the priority queue.
+ *
+ * @param {StructureSpawn} activeSpawn
+ *   A spawn that is not currently spawning a creep.
  */
 Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	const memory = this.memory.spawnQueue;
@@ -297,8 +283,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
 	}
-
-	return true;
 };
 
 /**
@@ -315,8 +299,7 @@ Room.prototype.addHarvesterSpawnOptions = function () {
 
 	if (!force && this.isFullOnEnergy()) return;
 
-	for (const i in this.sources) {
-		const source = this.sources[i];
+	for (const source of this.sources) {
 		const maxParts = source.getMaxWorkParts();
 		// Make sure at least one harvester is spawned for each source.
 		if (source.harvesters.length === 0) {
@@ -333,12 +316,12 @@ Room.prototype.addHarvesterSpawnOptions = function () {
 			// If there's still space at this source, spawn additional harvesters until the maximum number of work parts has been reached.
 			// Starting from RCL 4, 1 harvester per source should always be enough.
 			let totalWorkParts = 0;
-			for (const j in source.harvesters) {
-				totalWorkParts += source.harvesters[j].memory.body.work || 0;
+			for (const creep of source.harvesters) {
+				totalWorkParts += creep.memory.body.work || 0;
 			}
 
-			for (const j in this.creepsByRole['builder.remote'] || []) {
-				totalWorkParts += (this.creepsByRole['builder.remote'][j].memory.body.work || 0) / 2;
+			for (const creep of _.values(this.creepsByRole['builder.remote']) || {}) {
+				totalWorkParts += (creep.memory.body.work || 0) / 2;
 			}
 
 			if (totalWorkParts < maxParts) {
@@ -460,21 +443,19 @@ Room.prototype.addUpgraderSpawnOptions = function () {
 			maxUpgraders = 0;
 		}
 	}
+	else if (this.getStoredEnergy() < 100000) {
+		maxUpgraders = 0;
+	}
+	else if (this.getStoredEnergy() < 300000) {
+		maxUpgraders = 1;
+	}
+	else if (this.getStoredEnergy() < 500000) {
+		maxUpgraders = 2;
+	}
 	else {
-		if (this.getStoredEnergy() < 100000) {
-			maxUpgraders = 0;
-		}
-		else if (this.getStoredEnergy() < 300000) {
-			maxUpgraders = 1;
-		}
-		else if (this.getStoredEnergy() < 500000) {
-			maxUpgraders = 2;
-		}
-		else {
-			// @todo Have maximum depend on number of work parts.
-			// @todo Make sure enough energy is brought by.
-			maxUpgraders = 3;
-		}
+		// @todo Have maximum depend on number of work parts.
+		// @todo Make sure enough energy is brought by.
+		maxUpgraders = 3;
 	}
 
 	if (this.isEvacuating()) maxUpgraders = 0;
@@ -567,15 +548,19 @@ Room.prototype.addBuilderSpawnOptions = function () {
 	}
 };
 
+/**
+ * Adds creeps that need to be spawned for exploits to spawn queue.
+ */
 Room.prototype.addExploitSpawnOptions = function () {
-	if (_.size(this.exploits) === 0) {
-		return;
-	}
+	if (_.size(this.exploits) === 0) return;
 
 	const memory = this.memory.spawnQueue;
 	_.each(this.exploits, exploit => exploit.addSpawnOptions(memory.options));
 };
 
+/**
+ * Adds helper creeps the boost manager might need to spawn queue.
+ */
 Room.prototype.addBoostManagerSpawnOptions = function () {
 	if (!this.boostManager) return;
 
@@ -602,10 +587,8 @@ Room.prototype.addPowerSpawnOptions = function () {
 	const memory = this.memory.spawnQueue;
 	const myRoomName = this.name;
 
-	for (const roomName in Memory.strategy.power.rooms) {
-		const info = Memory.strategy.power.rooms[roomName];
-
-		if (!info.isActive) continue;
+	_.each(Memory.strategy.power.rooms, (info, roomName) => {
+		if (!info.isActive) return;
 
 		// @todo Determine supposed time until we crack open the power bank.
 		// Then we can stop spawning attackers and spawn haulers instead.
@@ -657,11 +640,11 @@ Room.prototype.addPowerSpawnOptions = function () {
 
 			if (timeToKill < (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + (CREEP_LIFE_TIME / 3)) {
 				// Time to spawn haulers!
-				const powerHaulers = _.filter(Game.creepsByRole['hauler.power'] || [], creep => creep.memory.targetRoom === roomName);
+				const powerHaulers = _.filter(Game.creepsByRole['hauler.power'] || {}, creep => creep.memory.targetRoom === roomName);
 				let totalCapacity = 0;
-				for (const i in powerHaulers) {
-					totalCapacity += powerHaulers[i].carryCapacity;
-				}
+				_.each(powerHaulers, creep => {
+					totalCapacity += creep.carryCapacity;
+				});
 
 				if (totalCapacity < info.amount * 1.2) {
 					memory.options.push({
@@ -673,7 +656,7 @@ Room.prototype.addPowerSpawnOptions = function () {
 				}
 			}
 		}
-	}
+	});
 };
 
 Room.prototype.addGiftSpawnOptions = function () {
@@ -728,47 +711,18 @@ Room.prototype.addDismantlerSpawnOptions = function () {
  * Spawns creeps in a room whenever needed.
  */
 Room.prototype.manageSpawns = function () {
-	if (!this.controller || !this.controller.my) {
-		return;
-	}
-
 	if (!this.memory.throttleOffset) this.memory.throttleOffset = utilities.getThrottleOffset();
-
-	if (utilities.throttle(this.memory.throttleOffset, 0, Memory.throttleInfo.bucket.warning)) {
-		return;
-	}
+	if (utilities.throttle(this.memory.throttleOffset, 0, Memory.throttleInfo.bucket.warning)) return;
 
 	// If the new spawn code is trying to spawn something, give it priority.
-	if (this.manageSpawnsPriority()) {
-		return;
-	}
+	if (this.manageSpawnsPriority()) return;
 
 	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name && spawn.isActive());
-
 	const room = this;
 
-	// Gather some information.
-	// @todo This could be done on script startup and partially kept in room memory.
-	const mineralHarvesters = this.creepsByRole['harvester.minerals'] || [];
-	const minerals = room.find(FIND_MINERALS, {
-		filter: mineral => {
-			const extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
-				filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.pos.x === mineral.pos.x && structure.pos.y === mineral.pos.y && structure.isActive(),
-			});
-
-			if (extractors.length > 0) {
-				return true;
-			}
-
-			return false;
-		},
-	});
-
 	let spawnerUsed = false;
-	for (const spawnID in roomSpawns) {
+	for (const spawn of _.values(roomSpawns)) {
 		if (spawnerUsed) break;
-
-		const spawn = roomSpawns[spawnID];
 
 		// @todo Stop spawning for a bit if creeps are queued for renewing.
 
@@ -777,90 +731,68 @@ Room.prototype.manageSpawns = function () {
 			spawn.memory.wasSpawning = true;
 			continue;
 		}
-		else if (spawn.memory.wasSpawning) {
+
+		if (spawn.memory.wasSpawning) {
 			spawn.memory.wasSpawning = false;
 			room.scan();
 		}
 
 		spawnerUsed = true;
 
-		{
-			// Harvest minerals.
-			if (mineralHarvesters.length < minerals.length && minerals[0].mineralAmount > 0 && !this.isFullOnMinerals()) {
-				// We assume there is always at most one mineral deposit in a room.
-				if (spawn.spawnMineralHarvester(minerals[0])) {
-					return true;
-				}
-			}
+		// Harvest minerals.
+		if (spawn.spawnMineralHarvester()) return true;
 
-			// Send forces to other rooms.
-			const brawlFlags = _.filter(Game.flags, flag => {
-				if (flag.name.startsWith('Brawler@')) {
-					const parts = flag.name.match(/^([^@]*)@([^@]*)@/);
-					if (parts && parts[2] === spawn.pos.roomName) {
-						return true;
+		// Spawn squads.
+		if (spawn.spawnSquadUnits()) return true;
+
+		// If possible, we could claim new rooms!
+		const claimFlags = _.filter(Game.flags, flag => flag.name.startsWith('ClaimRoom'));
+		if (claimFlags.length > 0) {
+			for (const i in claimFlags) {
+				const flag = claimFlags[i];
+
+				if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
+					// Room is already claimed.
+					continue;
+				}
+				// @todo Only if controller is neutral or about to be neutral.
+
+				// Make sure only the closest room spawns a claimer!
+				let min = null;
+				for (const j in Game.rooms) {
+					if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
+						if (!min || Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName) < min) {
+							min = Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName);
+						}
 					}
 				}
-			});
-			if (brawlFlags.length > 0) {
-				let position = spawn.pos;
-				if (spawn.room.storage) {
-					position = spawn.room.storage.pos;
-				}
 
-				for (const i in brawlFlags) {
-					const flag = brawlFlags[i];
-					if (Memory.rooms[flag.pos.roomName].enemies.safe) {
-						continue;
-					}
-
-					const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => {
-						if (creep.memory.storage === utilities.encodePosition(position) && creep.memory.target === utilities.encodePosition(flag.pos)) {
+				if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
+					const claimers = _.filter(Game.creepsByRole.claimer || [], creep => {
+						if (creep.memory.mission === 'claim' && creep.memory.target === utilities.encodePosition(flag.pos)) {
 							return true;
 						}
 
 						return false;
 					});
 
-					if (_.size(brawlers) === 0) {
-						if (spawn.spawnBrawler(flag.pos)) {
+					if (_.size(claimers) === 0) {
+						if (spawn.spawnClaimer(flag.pos, 'claim')) {
+							console.log('sending new claimer to', utilities.encodePosition(flag.pos));
 							return true;
 						}
 					}
 				}
 			}
+		}
 
-			// Spawn squads.
-			const spawnFlags = room.find(FIND_FLAGS, {
-				filter: flag => flag.name.startsWith('SpawnSquad:'),
-			});
-			for (const i in spawnFlags) {
-				const flag = spawnFlags[i];
-				const commandParts = flag.name.split(':');
-				const squadName = commandParts[1];
+		if (claimFlags.length > 0) {
+			// Check if there are rooms marked for claiming, that belong to us, but have no spawn yet.
+			for (const i in claimFlags) {
+				const flag = claimFlags[i];
 
-				if (!Memory.squads || !Memory.squads[squadName]) continue;
-
-				// @todo Initialize Game.squads in main loop and use that.
-				const squad = Game.squads[squadName];
-				if (squad.spawnUnit(spawn)) {
-					return true;
-				}
-			}
-
-			// If possible, we could claim new rooms!
-			const claimFlags = _.filter(Game.flags, flag => flag.name.startsWith('ClaimRoom'));
-			if (claimFlags.length > 0) {
-				for (const i in claimFlags) {
-					const flag = claimFlags[i];
-
-					if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
-						// Room is already claimed.
-						continue;
-					}
-					// @todo Only if controller is neutral or about to be neutral.
-
-					// Make sure only the closest room spawns a claimer!
+				if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
+					// Make sure only the closest room spawn builders!
 					let min = null;
 					for (const j in Game.rooms) {
 						if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
@@ -871,249 +803,199 @@ Room.prototype.manageSpawns = function () {
 					}
 
 					if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
-						const claimers = _.filter(Game.creepsByRole.claimer || [], creep => {
-							if (creep.memory.mission === 'claim' && creep.memory.target === utilities.encodePosition(flag.pos)) {
+						const maxRemoteBuilders = 2;
+						const builders = _.filter(Game.creepsByRole['builder.remote'] || [], creep => {
+							if (creep.memory.target === utilities.encodePosition(flag.pos)) {
 								return true;
 							}
 
 							return false;
 						});
 
-						if (_.size(claimers) === 0) {
-							if (spawn.spawnClaimer(flag.pos, 'claim')) {
-								console.log('sending new claimer to', utilities.encodePosition(flag.pos));
+						if (!builders || builders.length < maxRemoteBuilders) {
+							if (spawn.spawnRemoteBuilder(flag.pos)) {
+								console.log('sending new remote builder to', utilities.encodePosition(flag.pos));
 								return true;
 							}
 						}
 					}
 				}
 			}
+		}
 
-			if (claimFlags.length > 0) {
-				// Check if there are rooms marked for claiming, that belong to us, but have no spawn yet.
-				for (const i in claimFlags) {
-					const flag = claimFlags[i];
+		// We've got nothing to do, how about some remote harvesting?
+		const harvestPositions = [];
+		const harvestFlags = _.filter(Game.flags, flag => flag.name.startsWith('HarvestRemote'));
 
-					if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
-						// Make sure only the closest room spawn builders!
-						let min = null;
-						for (const j in Game.rooms) {
-							if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
-								if (!min || Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName) < min) {
-									min = Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName);
-								}
-							}
-						}
+		for (const i in harvestFlags) {
+			const flag = harvestFlags[i];
+			let isSpecificFlag = false;
 
-						if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
-							const maxRemoteBuilders = 2;
-							const builders = _.filter(Game.creepsByRole['builder.remote'] || [], creep => {
-								if (creep.memory.target === utilities.encodePosition(flag.pos)) {
-									return true;
-								}
-
-								return false;
-							});
-
-							if (!builders || builders.length < maxRemoteBuilders) {
-								if (spawn.spawnRemoteBuilder(flag.pos)) {
-									console.log('sending new remote builder to', utilities.encodePosition(flag.pos));
-									return true;
-								}
-							}
-						}
-					}
-				}
-			}
-
-			// We've got nothing to do, how about some remote harvesting?
-			const harvestPositions = [];
-			const harvestFlags = _.filter(Game.flags, flag => flag.name.startsWith('HarvestRemote'));
-
-			for (const i in harvestFlags) {
-				const flag = harvestFlags[i];
-				let isSpecificFlag = false;
-
-				// Make sure not to harvest from wrong rooms.
-				if (flag.name.startsWith('HarvestRemote:')) {
-					const parts = flag.name.split(':');
-					if (parts[1] && parts[1] !== spawn.pos.roomName) {
-						continue;
-					}
-
-					isSpecificFlag = true;
-				}
-
-				if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
+			// Make sure not to harvest from wrong rooms.
+			if (flag.name.startsWith('HarvestRemote:')) {
+				const parts = flag.name.split(':');
+				if (parts[1] && parts[1] !== spawn.pos.roomName) {
 					continue;
 				}
 
-				harvestPositions.push(flag.pos);
+				isSpecificFlag = true;
 			}
 
-			const remoteHarvestTargets = spawn.room.getRemoteHarvestTargets();
-			for (const i in remoteHarvestTargets) {
-				const roomName = remoteHarvestTargets[i].roomName;
-				const sources = hivemind.roomIntel(roomName).getSourcePositions();
-				for (const j in sources) {
-					harvestPositions.push(new RoomPosition(sources[j].x, sources[j].y, roomName));
-				}
+			if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
+				continue;
 			}
 
-			for (const i in harvestPositions) {
-				const pos = harvestPositions[i];
+			harvestPositions.push(flag.pos);
+		}
 
-				// First of all, if it's not safe, send a bruiser.
-				const roomMemory = Memory.rooms[pos.roomName];
-				if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
-					let position = spawn.pos;
-					if (spawn.room.storage) {
-						position = spawn.room.storage.pos;
-					}
+		const remoteHarvestTargets = spawn.room.getRemoteHarvestTargets();
+		for (const i in remoteHarvestTargets) {
+			const roomName = remoteHarvestTargets[i].roomName;
+			const sources = hivemind.roomIntel(roomName).getSourcePositions();
+			for (const j in sources) {
+				harvestPositions.push(new RoomPosition(sources[j].x, sources[j].y, roomName));
+			}
+		}
 
-					// Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
-					const brawlPosition = new RoomPosition(25, 25, pos.roomName);
+		for (const i in harvestPositions) {
+			const pos = harvestPositions[i];
 
-					const maxBrawlers = 1;
-					const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => {
-						if (creep.memory.storage === utilities.encodePosition(position) && creep.memory.target === utilities.encodePosition(brawlPosition)) {
-							return true;
-						}
-
-						return false;
-					});
-
-					if (!brawlers || brawlers.length < maxBrawlers) {
-						const result = spawn.spawnBrawler(brawlPosition, 4, utilities.encodePosition(pos));
-						if (result) {
-							const position = utilities.encodePosition(pos);
-							console.log('Spawning new brawler to defend', position, ':', result);
-
-							let cost = 0;
-							for (const partType in Memory.creeps[result].body) {
-								cost += BODYPART_COST[partType] * Memory.creeps[result].body[partType];
-							}
-
-							stats.addRemoteHarvestDefenseCost(spawn.room.name, position, cost);
-						}
-
-						// Do not continue trying to spawn other creeps when defense is needed.
-						return true;
-					}
-				}
-
-				// If it's safe or brawler is sent, start harvesting.
-				let doSpawn = true;
-				const flagPosition = utilities.encodePosition(pos);
+			// First of all, if it's not safe, send a bruiser.
+			const roomMemory = Memory.rooms[pos.roomName];
+			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
 				let position = spawn.pos;
 				if (spawn.room.storage) {
 					position = spawn.room.storage.pos;
 				}
 
-				position = utilities.encodePosition(position);
+				// Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
+				const brawlPosition = new RoomPosition(25, 25, pos.roomName);
 
-				// Cache path when possible.
-				try {
-					utilities.precalculatePaths(spawn.room, pos);
+				const maxBrawlers = 1;
+				const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => {
+					if (creep.memory.storage === utilities.encodePosition(position) && creep.memory.target === utilities.encodePosition(brawlPosition)) {
+						return true;
+					}
+
+					return false;
+				});
+
+				if (!brawlers || brawlers.length < maxBrawlers) {
+					const result = spawn.spawnBrawler(brawlPosition, 4, utilities.encodePosition(pos));
+					if (result) {
+						const position = utilities.encodePosition(pos);
+						console.log('Spawning new brawler to defend', position, ':', result);
+
+						let cost = 0;
+						for (const partType in Memory.creeps[result].body) {
+							cost += BODYPART_COST[partType] * Memory.creeps[result].body[partType];
+						}
+
+						stats.addRemoteHarvestDefenseCost(spawn.room.name, position, cost);
+					}
+
+					// Do not continue trying to spawn other creeps when defense is needed.
+					return true;
 				}
-				catch (error) {
-					console.log('Error in pathfinding:', error);
-					console.log(error.stack);
-				}
+			}
 
-				if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[flagPosition]) {
-					const memory = spawn.room.memory.remoteHarvesting[flagPosition];
-					doSpawn = false;
+			// If it's safe or brawler is sent, start harvesting.
+			let doSpawn = true;
+			const flagPosition = utilities.encodePosition(pos);
+			let position = spawn.pos;
+			if (spawn.room.storage) {
+				position = spawn.room.storage.pos;
+			}
 
-					memory.harvesters = [];
-					let haulCount = 0;
-					const harvesters = _.filter(Game.creepsByRole['harvester.remote'] || [], creep => creep.memory.storage === position && creep.memory.source === flagPosition);
-					const haulers = _.filter(Game.creepsByRole.hauler || [], creep => creep.memory.storage === position && creep.memory.source === flagPosition);
+			position = utilities.encodePosition(position);
 
-					const maxRemoteHarvesters = 1;
-					let maxRemoteHaulers = 0;
-					if (memory.revenue > 0 || memory.hasContainer) {
-						// @todo Calculate number of needed haulers.
-						maxRemoteHaulers = 1;
+			// Cache path when possible.
+			try {
+				utilities.precalculatePaths(spawn.room, pos);
+			}
+			catch (error) {
+				console.log('Error in pathfinding:', error);
+				console.log(error.stack);
+			}
 
-						if (Game.rooms[pos.roomName]) {
-							const room = Game.rooms[pos.roomName];
-							if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == utilities.getUsername()))) {
-								maxRemoteHaulers = 2;
-							}
-						}
-					}
+			if (spawn.room.memory.remoteHarvesting && spawn.room.memory.remoteHarvesting[flagPosition]) {
+				const memory = spawn.room.memory.remoteHarvesting[flagPosition];
+				doSpawn = false;
 
-					let maxCarryParts;
-					let travelTime;
-					let travelTimeSpawn;
-					if (memory.travelTime) {
-						travelTime = memory.travelTime;
-						travelTimeSpawn = memory.travelTime;
-					}
+				memory.harvesters = [];
+				let haulCount = 0;
+				const harvesters = _.filter(Game.creepsByRole['harvester.remote'] || [], creep => creep.memory.storage === position && creep.memory.source === flagPosition);
+				const haulers = _.filter(Game.creepsByRole.hauler || [], creep => creep.memory.storage === position && creep.memory.source === flagPosition);
 
-					if (memory.cachedPath && memory.cachedPath.path) {
-						// Path length is more accurate than observed travel time, because it's calculated between storage and source, not spawn and source.
-						travelTime = memory.cachedPath.path.length;
+				const maxRemoteHarvesters = 1;
+				let maxRemoteHaulers = 0;
+				if (memory.revenue > 0 || memory.hasContainer) {
+					// @todo Calculate number of needed haulers.
+					maxRemoteHaulers = 1;
 
-						if (!travelTimeSpawn) {
-							travelTimeSpawn = memory.cachedPath.path.length;
-						}
-					}
-
-					if (travelTime) {
-						maxCarryParts = Math.ceil(travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
-
-						// If we cannot create big enough haulers (yet), create more of them!
-						const bodyWeights = spawn.getHaulerBodyWeights();
-						const maxHauler = utilities.generateCreepBody(bodyWeights, spawn.room.energyCapacityAvailable, {carry: maxCarryParts});
-						let carryCount = 0;
-						for (const j in maxHauler) {
-							if (maxHauler[j] === CARRY) {
-								carryCount++;
-							}
-						}
-
-						const multiplier = Math.min(maxCarryParts / carryCount, 3);
-						maxRemoteHaulers *= multiplier;
-					}
-
-					for (const j in harvesters) {
-						const creep = harvesters[j];
-						if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
-							memory.harvesters.push(creep.id);
-						}
-					}
-
-					if (memory.harvesters.length < maxRemoteHarvesters) {
-						doSpawn = true;
-					}
-
-					for (const j in haulers) {
-						const creep = haulers[j];
-						if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
-							haulCount++;
-						}
-					}
-
-					if (haulCount < maxRemoteHaulers && !doSpawn) {
-						// Spawn hauler if necessary, but not if harvester is needed first.
-						const result = spawn.spawnHauler(pos, maxCarryParts);
-						if (result) {
-							let cost = 0;
-							for (const part in Memory.creeps[result].body) {
-								const count = Memory.creeps[result].body[part];
-								cost += BODYPART_COST[part] * count;
-							}
-
-							stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(pos), cost);
-							return true;
+					if (Game.rooms[pos.roomName]) {
+						const room = Game.rooms[pos.roomName];
+						if (room.controller && (room.controller.my || (room.controller.reservation && room.controller.reservation.username == utilities.getUsername()))) {
+							maxRemoteHaulers = 2;
 						}
 					}
 				}
 
-				if (doSpawn) {
-					const result = spawn.spawnRemoteHarvester(pos);
+				let maxCarryParts;
+				let travelTime;
+				let travelTimeSpawn;
+				if (memory.travelTime) {
+					travelTime = memory.travelTime;
+					travelTimeSpawn = memory.travelTime;
+				}
+
+				if (memory.cachedPath && memory.cachedPath.path) {
+					// Path length is more accurate than observed travel time, because it's calculated between storage and source, not spawn and source.
+					travelTime = memory.cachedPath.path.length;
+
+					if (!travelTimeSpawn) {
+						travelTimeSpawn = memory.cachedPath.path.length;
+					}
+				}
+
+				if (travelTime) {
+					maxCarryParts = Math.ceil(travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
+
+					// If we cannot create big enough haulers (yet), create more of them!
+					const bodyWeights = spawn.getHaulerBodyWeights();
+					const maxHauler = utilities.generateCreepBody(bodyWeights, spawn.room.energyCapacityAvailable, {carry: maxCarryParts});
+					let carryCount = 0;
+					for (const j in maxHauler) {
+						if (maxHauler[j] === CARRY) {
+							carryCount++;
+						}
+					}
+
+					const multiplier = Math.min(maxCarryParts / carryCount, 3);
+					maxRemoteHaulers *= multiplier;
+				}
+
+				for (const j in harvesters) {
+					const creep = harvesters[j];
+					if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
+						memory.harvesters.push(creep.id);
+					}
+				}
+
+				if (memory.harvesters.length < maxRemoteHarvesters) {
+					doSpawn = true;
+				}
+
+				for (const j in haulers) {
+					const creep = haulers[j];
+					if (!travelTimeSpawn || creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500 || creep.spawning) {
+						haulCount++;
+					}
+				}
+
+				if (haulCount < maxRemoteHaulers && !doSpawn) {
+					// Spawn hauler if necessary, but not if harvester is needed first.
+					const result = spawn.spawnHauler(pos, maxCarryParts);
 					if (result) {
 						let cost = 0;
 						for (const part in Memory.creeps[result].body) {
@@ -1127,137 +1009,151 @@ Room.prototype.manageSpawns = function () {
 				}
 			}
 
-			// No harvester spawned? How about some claimers?
-			// @todo Move from flags to positions for automation.
-			const reservePositions = [];
-			const reserveFlags = _.filter(Game.flags, flag => flag.name.startsWith('ReserveRoom'));
-			for (const i in reserveFlags) {
-				const flag = reserveFlags[i];
-				let isSpecificFlag = false;
-
-				// Make sure not to harvest from wrong rooms.
-				if (flag.name.startsWith('ReserveRoom:')) {
-					const parts = flag.name.split(':');
-					if (parts[1] && parts[1] !== spawn.pos.roomName) {
-						continue;
+			if (doSpawn) {
+				const result = spawn.spawnRemoteHarvester(pos);
+				if (result) {
+					let cost = 0;
+					for (const part in Memory.creeps[result].body) {
+						const count = Memory.creeps[result].body[part];
+						cost += BODYPART_COST[part] * count;
 					}
 
-					isSpecificFlag = true;
-				}
-
-				if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
-					continue;
-				}
-
-				reservePositions.push(flag.pos);
-			}
-
-			for (const i in remoteHarvestTargets) {
-				const position = hivemind.roomIntel(remoteHarvestTargets[i].roomName).getControllerPosition();
-				if (position) {
-					reservePositions.push(position);
-				}
-			}
-
-			const safeRooms = this.roomPlanner ? this.roomPlanner.getAdjacentSafeRooms() : [];
-			for (const i in safeRooms) {
-				const position = hivemind.roomIntel(safeRooms[i]).getControllerPosition();
-				if (position) {
-					reservePositions.push(position);
-				}
-			}
-
-			for (const i in reservePositions) {
-				const pos = reservePositions[i];
-
-				// Cache path when possible.
-				try {
-					utilities.precalculatePaths(spawn.room, pos);
-				}
-				catch (error) {
-					console.log('Error in pathfinding:', error);
-					console.log(error.stack);
-				}
-
-				let doSpawn = false;
-
-				const claimerIds = [];
-				const claimers = _.filter(Game.creepsByRole.claimer || [], creep => creep.memory.mission === 'reserve');
-				const maxClaimers = 1;
-
-				for (const j in claimers) {
-					const creep = claimers[j];
-
-					if (creep.memory.target === utilities.encodePosition(pos)) {
-						claimerIds.push(creep.id);
-					}
-				}
-
-				if (claimerIds.length < maxClaimers) {
-					doSpawn = true;
-				}
-
-				if (Memory.rooms[pos.roomName] &&
-					Memory.rooms[pos.roomName].lastClaim &&
-					Memory.rooms[pos.roomName].lastClaim.value + (Memory.rooms[pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.5
-				) {
-					doSpawn = false;
-				}
-
-				if (doSpawn) {
-					const result = spawn.spawnClaimer(pos, 'reserve');
-
-					if (result) {
-						// Add cost to a random harvest flag in the room.
-						// @todo Now that we don't always use flags, find a better way to associate.
-						const harvestFlags = _.filter(Game.flags, flag2 => {
-							if (flag2.name.startsWith('HarvestRemote') && flag2.pos.roomName === pos.roomName) {
-								// Make sure not to harvest from wrong rooms.
-								if (flag2.name.startsWith('HarvestRemote:')) {
-									const parts = flag2.name.split(':');
-									if (parts[1] && parts[1] !== spawn.pos.roomName) {
-										return false;
-									}
-								}
-
-								return true;
-							}
-
-							return false;
-						});
-
-						if (harvestFlags.length > 0) {
-							let cost = 0;
-							for (const part in Memory.creeps[result].body) {
-								const count = Memory.creeps[result].body[part];
-								cost += BODYPART_COST[part] * count;
-							}
-
-							stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(_.sample(harvestFlags).pos), cost);
-						}
-
-						return true;
-					}
-				}
-			}
-
-			// Last but not least: Scouts.
-			let found = false;
-			for (const i in Game.creepsByRole.scout || []) {
-				if (Game.creepsByRole.scout[i].memory.origin === spawn.pos.roomName) {
-					found = true;
-					break;
-				}
-			}
-
-			if (!found && spawn.room.needsScout()) {
-				if (spawn.spawnScout()) {
+					stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(pos), cost);
 					return true;
 				}
 			}
 		}
 
-		// Let only one spawner spawn each tick to prevent confusion.
+		// No harvester spawned? How about some claimers?
+		// @todo Move from flags to positions for automation.
+		const reservePositions = [];
+		const reserveFlags = _.filter(Game.flags, flag => flag.name.startsWith('ReserveRoom'));
+		for (const i in reserveFlags) {
+			const flag = reserveFlags[i];
+			let isSpecificFlag = false;
+
+			// Make sure not to harvest from wrong rooms.
+			if (flag.name.startsWith('ReserveRoom:')) {
+				const parts = flag.name.split(':');
+				if (parts[1] && parts[1] !== spawn.pos.roomName) {
+					continue;
+				}
+
+				isSpecificFlag = true;
+			}
+
+			if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
+				continue;
+			}
+
+			reservePositions.push(flag.pos);
+		}
+
+		for (const i in remoteHarvestTargets) {
+			const position = hivemind.roomIntel(remoteHarvestTargets[i].roomName).getControllerPosition();
+			if (position) {
+				reservePositions.push(position);
+			}
+		}
+
+		const safeRooms = this.roomPlanner ? this.roomPlanner.getAdjacentSafeRooms() : [];
+		for (const i in safeRooms) {
+			const position = hivemind.roomIntel(safeRooms[i]).getControllerPosition();
+			if (position) {
+				reservePositions.push(position);
+			}
+		}
+
+		for (const i in reservePositions) {
+			const pos = reservePositions[i];
+
+			// Cache path when possible.
+			try {
+				utilities.precalculatePaths(spawn.room, pos);
+			}
+			catch (error) {
+				console.log('Error in pathfinding:', error);
+				console.log(error.stack);
+			}
+
+			let doSpawn = false;
+
+			const claimerIds = [];
+			const claimers = _.filter(Game.creepsByRole.claimer || [], creep => creep.memory.mission === 'reserve');
+			const maxClaimers = 1;
+
+			for (const j in claimers) {
+				const creep = claimers[j];
+
+				if (creep.memory.target === utilities.encodePosition(pos)) {
+					claimerIds.push(creep.id);
+				}
+			}
+
+			if (claimerIds.length < maxClaimers) {
+				doSpawn = true;
+			}
+
+			if (Memory.rooms[pos.roomName] &&
+				Memory.rooms[pos.roomName].lastClaim &&
+				Memory.rooms[pos.roomName].lastClaim.value + (Memory.rooms[pos.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.5
+			) {
+				doSpawn = false;
+			}
+
+			if (doSpawn) {
+				const result = spawn.spawnClaimer(pos, 'reserve');
+
+				if (result) {
+					// Add cost to a random harvest flag in the room.
+					// @todo Now that we don't always use flags, find a better way to associate.
+					const harvestFlags = _.filter(Game.flags, flag2 => {
+						if (flag2.name.startsWith('HarvestRemote') && flag2.pos.roomName === pos.roomName) {
+							// Make sure not to harvest from wrong rooms.
+							if (flag2.name.startsWith('HarvestRemote:')) {
+								const parts = flag2.name.split(':');
+								if (parts[1] && parts[1] !== spawn.pos.roomName) {
+									return false;
+								}
+							}
+
+							return true;
+						}
+
+						return false;
+					});
+
+					if (harvestFlags.length > 0) {
+						let cost = 0;
+						for (const part in Memory.creeps[result].body) {
+							const count = Memory.creeps[result].body[part];
+							cost += BODYPART_COST[part] * count;
+						}
+
+						stats.addRemoteHarvestCost(spawn.room.name, utilities.encodePosition(_.sample(harvestFlags).pos), cost);
+					}
+
+					return true;
+				}
+			}
+		}
+
+		// Last but not least: Scouts.
+		let found = false;
+		for (const i in Game.creepsByRole.scout || []) {
+			if (Game.creepsByRole.scout[i].memory.origin === spawn.pos.roomName) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found && spawn.room.needsScout()) {
+			if (spawn.spawnScout()) {
+				return true;
+			}
+		}
+
+		// Let only one spawner start spawning each tick to prevent confusion.
 		break;
 	}
 };
@@ -1487,8 +1383,33 @@ StructureSpawn.prototype.spawnGift = function () {
 
 /**
  * Spawns a new mineral harvester.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
-StructureSpawn.prototype.spawnMineralHarvester = function (source) {
+StructureSpawn.prototype.spawnMineralHarvester = function () {
+	if (this.isFullOnMinerals()) return false;
+
+	// Gather some information.
+	// @todo This could be done on script startup and partially kept in room memory.
+	const mineralHarvesters = this.creepsByRole['harvester.minerals'] || {};
+	const minerals = this.room.find(FIND_MINERALS, {
+		filter: mineral => {
+			const extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
+				filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.isActive(),
+			});
+
+			if (extractors.length > 0) {
+				return true;
+			}
+
+			return false;
+		},
+	});
+
+	// We assume there is always at most one mineral deposit in a room.
+	if (mineralHarvesters.length > 0 || minerals[0].mineralAmount === 0) return false;
+
 	let boosts = null;
 	if (this.room.canSpawnBoostedCreeps()) {
 		const availableBoosts = this.room.getAvailableBoosts('harvest');
@@ -1514,13 +1435,42 @@ StructureSpawn.prototype.spawnMineralHarvester = function (source) {
 		boosts,
 		memory: {
 			singleRoom: this.pos.roomName,
-			fixedMineralSource: source.id,
+			fixedMineralSource: minerals[0].id,
 		},
 	});
 };
 
 /**
+ * Spawns squad units at this spawn if needed.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
+ */
+StructureSpawn.prototype.spawnSquadUnits = function () {
+	const spawnFlags = this.room.find(FIND_FLAGS, {
+		filter: flag => flag.name.startsWith('SpawnSquad:'),
+	});
+	for (const flag of spawnFlags) {
+		const commandParts = flag.name.split(':');
+		const squadName = commandParts[1];
+
+		if (!Memory.squads || !Memory.squads[squadName]) continue;
+
+		// @todo Initialize Game.squads in main loop and use that.
+		const squad = Game.squads[squadName];
+		if (squad.spawnUnit(this)) {
+			return true;
+		}
+	}
+
+	return false;
+};
+
+/**
  * Spawns a new repairer.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnBuilder = function (size) {
 	const maxParts = {};
@@ -1560,6 +1510,9 @@ StructureSpawn.prototype.spawnBuilder = function (size) {
 
 /**
  * Spawns a new transporter.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnTransporter = function (force, size) {
 	let minCost = null;
@@ -1585,6 +1538,9 @@ StructureSpawn.prototype.spawnTransporter = function (force, size) {
 
 /**
  * Spawns a new upgrader.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnUpgrader = function () {
 	let bodyWeights = {move: 0.35, work: 0.3, carry: 0.35};
@@ -1624,6 +1580,9 @@ StructureSpawn.prototype.spawnUpgrader = function () {
 
 /**
  * Spawns a new remote builder.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnRemoteBuilder = function (targetPosition) {
 	return this.createManagedCreep({
@@ -1638,6 +1597,9 @@ StructureSpawn.prototype.spawnRemoteBuilder = function (targetPosition) {
 
 /**
  * Spawns a new scout.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnScout = function () {
 	return this.createManagedCreep({
@@ -1659,7 +1621,7 @@ const spawnManager = {
 	 * Manages spawning logic for all spawns.
 	 */
 	manageSpawns() {
-		for (const roomName in Game.rooms) {
+		for (const room of _.values(Game.rooms)) {
 			const room = Game.rooms[roomName];
 			if (room.controller && room.controller.my) {
 				room.manageSpawns();
