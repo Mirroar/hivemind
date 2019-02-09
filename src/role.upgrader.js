@@ -8,7 +8,7 @@
 Creep.prototype.performUpgrade = function () {
 	// Upgrade controller.
 	if (this.pos.getRangeTo(this.room.controller) > 3) {
-		this.moveToRange(this.room.controller, 3);
+		this.moveToRange(this.room.controller, 1);
 	}
 	else {
 		this.upgradeController(this.room.controller);
