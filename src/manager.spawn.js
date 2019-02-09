@@ -745,109 +745,8 @@ Room.prototype.manageSpawns = function () {
 		// Spawn squads.
 		if (spawn.spawnSquadUnits()) return true;
 
-		// If possible, we could claim new rooms!
-		const claimFlags = _.filter(Game.flags, flag => flag.name.startsWith('ClaimRoom'));
-		if (claimFlags.length > 0) {
-			for (const i in claimFlags) {
-				const flag = claimFlags[i];
-
-				if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
-					// Room is already claimed.
-					continue;
-				}
-				// @todo Only if controller is neutral or about to be neutral.
-
-				// Make sure only the closest room spawns a claimer!
-				let min = null;
-				for (const j in Game.rooms) {
-					if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
-						if (!min || Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName) < min) {
-							min = Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName);
-						}
-					}
-				}
-
-				if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
-					const claimers = _.filter(Game.creepsByRole.claimer || [], creep => {
-						if (creep.memory.mission === 'claim' && creep.memory.target === utilities.encodePosition(flag.pos)) {
-							return true;
-						}
-
-						return false;
-					});
-
-					if (_.size(claimers) === 0) {
-						if (spawn.spawnClaimer(flag.pos, 'claim')) {
-							console.log('sending new claimer to', utilities.encodePosition(flag.pos));
-							return true;
-						}
-					}
-				}
-			}
-		}
-
-		if (claimFlags.length > 0) {
-			// Check if there are rooms marked for claiming, that belong to us, but have no spawn yet.
-			for (const i in claimFlags) {
-				const flag = claimFlags[i];
-
-				if (Game.rooms[flag.pos.roomName] && Game.rooms[flag.pos.roomName].controller.my) {
-					// Make sure only the closest room spawn builders!
-					let min = null;
-					for (const j in Game.rooms) {
-						if (Game.rooms[j].controller && Game.rooms[j].controller.my) {
-							if (!min || Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName) < min) {
-								min = Game.map.getRoomLinearDistance(Game.rooms[j].name, flag.pos.roomName);
-							}
-						}
-					}
-
-					if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) <= min) {
-						const maxRemoteBuilders = 2;
-						const builders = _.filter(Game.creepsByRole['builder.remote'] || [], creep => {
-							if (creep.memory.target === utilities.encodePosition(flag.pos)) {
-								return true;
-							}
-
-							return false;
-						});
-
-						if (!builders || builders.length < maxRemoteBuilders) {
-							if (spawn.spawnRemoteBuilder(flag.pos)) {
-								console.log('sending new remote builder to', utilities.encodePosition(flag.pos));
-								return true;
-							}
-						}
-					}
-				}
-			}
-		}
-
 		// We've got nothing to do, how about some remote harvesting?
 		const harvestPositions = [];
-		const harvestFlags = _.filter(Game.flags, flag => flag.name.startsWith('HarvestRemote'));
-
-		for (const i in harvestFlags) {
-			const flag = harvestFlags[i];
-			let isSpecificFlag = false;
-
-			// Make sure not to harvest from wrong rooms.
-			if (flag.name.startsWith('HarvestRemote:')) {
-				const parts = flag.name.split(':');
-				if (parts[1] && parts[1] !== spawn.pos.roomName) {
-					continue;
-				}
-
-				isSpecificFlag = true;
-			}
-
-			if (Game.map.getRoomLinearDistance(spawn.pos.roomName, flag.pos.roomName) > 1 && !isSpecificFlag) {
-				continue;
-			}
-
-			harvestPositions.push(flag.pos);
-		}
-
 		const remoteHarvestTargets = spawn.room.getRemoteHarvestTargets();
 		for (const i in remoteHarvestTargets) {
 			const roomName = remoteHarvestTargets[i].roomName;
@@ -1622,7 +1521,6 @@ const spawnManager = {
 	 */
 	manageSpawns() {
 		for (const room of _.values(Game.rooms)) {
-			const room = Game.rooms[roomName];
 			if (room.controller && room.controller.my) {
 				room.manageSpawns();
 			}
