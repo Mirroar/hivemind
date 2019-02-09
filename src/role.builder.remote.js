@@ -205,7 +205,7 @@ const roleRemoteBuilder = {
 		}
 
 		const dropped = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > creep.carryCapacity * 0.3 || creep.pos.getRangeTo(dropped) <= 1),
+			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > creep.carryCapacity * 0.3 || creep.pos.getRangeTo(drop) <= 1),
 		});
 		if (dropped) {
 			if (creep.pos.getRangeTo(dropped) > 1) {
