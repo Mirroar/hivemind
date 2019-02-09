@@ -1515,6 +1515,12 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
 	}
 };
 
+/**
+ * Gets list of safe neighboring rooms.
+ *
+ * @return {string[]}
+ *   An array of room names.
+ */
 RoomPlanner.prototype.getAdjacentSafeRooms = function () {
 	return this.memory.adjacentSafeRooms || [];
 };

@@ -1,7 +1,8 @@
 'use strict';
 
-/* global Structure StructureExtension StructureTower OBSTACLE_OBJECT_TYPES
-STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF */
+/* global Structure StructureExtension StructureSpawn StructureTower
+STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF
+OBSTACLE_OBJECT_TYPES BODYPART_COST */
 
 if (!Structure.prototype.__enhancementsLoaded) {
 	/**
@@ -55,5 +56,23 @@ if (!Structure.prototype.__enhancementsLoaded) {
 		if (range > TOWER_FALLOFF_RANGE) range = TOWER_FALLOFF_RANGE;
 
 		return 1 - (((range - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE)) * TOWER_FALLOFF);
+	};
+
+	/**
+	 * Calculates the cost of a creep's body parts.
+	 *
+	 * @param {object} bodyMemory
+	 *   An object keyed by body part type, with number of parts as values.
+	 *
+	 * @return {number}
+	 *   The total cost in energy units.
+	 */
+	StructureSpawn.prototype.calculateCreepBodyCost = function (bodyMemory) {
+		let cost = 0;
+		_.each(bodyMemory, (count, partType) => {
+			cost += BODYPART_COST[partType] * count;
+		});
+
+		return cost;
 	};
 }
