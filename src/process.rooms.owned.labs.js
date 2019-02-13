@@ -1,7 +1,19 @@
 'use strict';
 
-const Process = require('./process');
+/* global hivemind PROCESS_PRIORITY_LOW */
 
+const Process = require('./process');
+const ReactionsProcess = require('./process.rooms.owned.labs.reactions');
+
+/**
+ * Runs reactions in a room's labs.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const ManageLabsProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
@@ -10,14 +22,19 @@ const ManageLabsProcess = function (params, data) {
 ManageLabsProcess.prototype = Object.create(Process.prototype);
 
 /**
- * Moves energy between links.
- *
- * Determines which links serve as energy input or output, and transfers
- * dynamically between those and neutral links.
+ * Runs reactions in a room's labs.
  */
 ManageLabsProcess.prototype.run = function () {
 	const memory = this.room.memory;
-	if (!memory.canPerformReactions || !memory.currentReaction) return;
+	if (!memory.canPerformReactions) return;
+	// Make sure reactions are chosen periodically.
+	hivemind.runProcess(this.room.name + '_reactions', ReactionsProcess, {
+		interval: 1500,
+		priority: PROCESS_PRIORITY_LOW,
+		room: this.room,
+	});
+
+	if (!memory.currentReaction) return;
 
 	const source1 = Game.getObjectById(memory.labs.source1);
 	const source2 = Game.getObjectById(memory.labs.source2);
@@ -27,8 +44,8 @@ ManageLabsProcess.prototype.run = function () {
 	const labs = memory.labs.reactor;
 	if (!labs) return;
 
-	for (const i in labs) {
-		const reactor = Game.getObjectById(labs[i]);
+	for (const reactorID of labs) {
+		const reactor = Game.getObjectById(reactorID);
 
 		if (reactor && reactor.cooldown <= 0) {
 			reactor.runReaction(source1, source2);

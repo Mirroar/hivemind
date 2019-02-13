@@ -1,10 +1,17 @@
 'use strict';
 
-/* global RoomPosition COLOR_GREEN COLOR_RED MOVE CLAIM */
+/* global RoomPosition COLOR_GREEN COLOR_RED MOVE CLAIM HEAL RANGED_ATTACK */
 
 const utilities = require('./utilities');
 
-const Squad = function(squadName) {
+/**
+ * Squads are sets of creeps spawned in a single room.
+ * @constructor
+ *
+ * @param {string}squadName
+ *   Identifier of this squad for memory and flag names.
+ */
+const Squad = function (squadName) {
 	this.name = squadName;
 	this.units = {};
 
@@ -20,12 +27,12 @@ const Squad = function(squadName) {
 	}
 
 	const spawnFlag = Game.flags['SpawnSquad:' + squadName];
-	if (spawnFlag && spawnFlag.color != COLOR_GREEN) {
+	if (spawnFlag && spawnFlag.color !== COLOR_GREEN) {
 		spawnFlag.setColor(COLOR_GREEN);
 	}
 
 	const attackFlag = Game.flags['AttackSquad:' + squadName];
-	if (attackFlag && attackFlag.color != COLOR_RED) {
+	if (attackFlag && attackFlag.color !== COLOR_RED) {
 		attackFlag.setColor(COLOR_RED);
 	}
 
@@ -34,6 +41,12 @@ const Squad = function(squadName) {
 
 /**
  * Adds one unit of a certain type to the squad's composition.
+ *
+ * @param {string} unitType
+ *   Type identifier of the unit to add.
+ *
+ * @return {number}
+ *   New amount of units of the specified type in the squad.
  */
 Squad.prototype.addUnit = function (unitType) {
 	if (!this.memory.composition[unitType]) {
@@ -47,6 +60,12 @@ Squad.prototype.addUnit = function (unitType) {
 
 /**
  * Removes one unit of a certain type from the squad's composition.
+ *
+ * @param {string} unitType
+ *   Type identifier of the unit to remove.
+ *
+ * @return {number}
+ *   New amount of units of the specified type in the squad.
  */
 Squad.prototype.removeUnit = function (unitType) {
 	if (!this.memory.composition[unitType]) {
@@ -60,13 +79,18 @@ Squad.prototype.removeUnit = function (unitType) {
 
 /**
  * Set the number of requested units of a certain type.
+ *
+ * @param {string} unitType
+ *   Type identifier of the unit to modify.
+ * @param {number} count
+ *   Number of units of the chosen type that should be in this squad.
  */
 Squad.prototype.setUnitCount = function (unitType, count) {
 	this.memory.composition[unitType] = count;
 };
 
 /**
- * Clears registered units for this squad.
+ * Clears all registered units for this squad.
  */
 Squad.prototype.clearUnits = function () {
 	this.memory.composition = {};
@@ -74,6 +98,9 @@ Squad.prototype.clearUnits = function () {
 
 /**
  * Decides whether this squad needs additional units spawned.
+ *
+ * @return {string|null}
+ *   Type of the unit that needs spawning.
  */
 Squad.prototype.needsSpawning = function () {
 	for (const unitType in this.memory.composition) {
@@ -88,6 +115,12 @@ Squad.prototype.needsSpawning = function () {
 
 /**
  * Spawns another unit for this squad.
+ *
+ * @param {StructureSpawn} spawn
+ *   Spawn to use for creating creeps.
+ *
+ * @return {boolean}
+ *   Whether a new unit is being spawned.
  */
 Squad.prototype.spawnUnit = function (spawn) {
 	const toSpawn = this.needsSpawning();
@@ -97,7 +130,11 @@ Squad.prototype.spawnUnit = function (spawn) {
 	if (toSpawn === 'ranger') {
 		spawn.createManagedCreep({
 			role: 'brawler',
-			bodyWeights: {move: 0.5, ranged_attack: 0.3, heal: 0.2},
+			bodyWeights: {
+				[MOVE]: 0.5,
+				[RANGED_ATTACK]: 0.3,
+				[HEAL]: 0.2,
+			},
 			memory: {
 				squadName: this.name,
 				squadUnitType: toSpawn,
@@ -109,13 +146,13 @@ Squad.prototype.spawnUnit = function (spawn) {
 		if (spawn.room.canSpawnBoostedCreeps()) {
 			const availableBoosts = spawn.room.getAvailableBoosts('heal');
 			let bestBoost;
-			for (let resourceType in availableBoosts || []) {
-				if (availableBoosts[resourceType].available >= 50) {
-					if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+			_.each(availableBoosts, (info, resourceType) => {
+				if (info.available >= 50) {
+					if (!bestBoost || info.effect > availableBoosts[bestBoost].effect) {
 						bestBoost = resourceType;
 					}
 				}
-			}
+			});
 
 			if (bestBoost) {
 				boosts = {
@@ -165,17 +202,17 @@ Squad.prototype.spawnUnit = function (spawn) {
 		});
 	}
 	else if (toSpawn === 'attacker') {
-		let boosts = null;
+		let boosts;
 		if (spawn.room.canSpawnBoostedCreeps()) {
 			const availableBoosts = spawn.room.getAvailableBoosts('attack');
 			let bestBoost;
-			for (let resourceType in availableBoosts || []) {
-				if (availableBoosts[resourceType].available >= 50) {
-					if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+			_.each(availableBoosts, (info, resourceType) => {
+				if (info.available >= 50) {
+					if (!bestBoost || info.effect > availableBoosts[bestBoost].effect) {
 						bestBoost = resourceType;
 					}
 				}
-			}
+			});
 
 			if (bestBoost) {
 				boosts = {
@@ -187,6 +224,7 @@ Squad.prototype.spawnUnit = function (spawn) {
 		spawn.createManagedCreep({
 			role: 'brawler',
 			bodyWeights: {move: 0.5, attack: 0.5},
+			boosts,
 			memory: {
 				squadName: this.name,
 				squadUnitType: toSpawn,
@@ -217,6 +255,12 @@ Squad.prototype.spawnUnit = function (spawn) {
 	return true;
 };
 
+/**
+ * Gets current squad orders with priorities.
+ *
+ * @return {Array}
+ *   An array of objects containing squad orders.
+ */
 Squad.prototype.getOrders = function () {
 	const options = [];
 
@@ -237,6 +281,9 @@ Squad.prototype.getOrders = function () {
 
 /**
  * Sets a waypoint path for all units of this squad to follow after spawning.
+ *
+ * @param {string} pathName
+ *   Name of the waypoint path to follow.
  */
 Squad.prototype.setPath = function (pathName) {
 	this.memory.pathName = pathName;
@@ -246,6 +293,9 @@ Squad.prototype.setPath = function (pathName) {
 
 /**
  * Orders squad to spawn in the given room.
+ *
+ * @param {string} roomName
+ *   Name of the room to spawn in.
  */
 Squad.prototype.setSpawn = function (roomName) {
 	const key = 'SpawnSquad:' + this.name;
@@ -260,6 +310,9 @@ Squad.prototype.setSpawn = function (roomName) {
 
 /**
  * Orders squad to move toward the given position.
+ *
+ * @param {RoomPosition} targetPos
+ *   Position the squad is supposed to move to.
  */
 Squad.prototype.setTarget = function (targetPos) {
 	const key = 'AttackSquad:' + this.name;

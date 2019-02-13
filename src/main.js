@@ -25,7 +25,6 @@ const PowerMiningProcess = require('./process.strategy.power');
 const ScoutProcess = require('./process.strategy.scout');
 const TradeProcess = require('./process.empire.trade');
 const ResourcesProcess = require('./process.empire.resources');
-const ReactionsProcess = require('./process.empire.reactions');
 
 // @todo Refactor old main code away.
 const oldMain = require('./main.old');
@@ -90,10 +89,6 @@ module.exports = {
 		});
 		hivemind.runProcess('empire.resources', ResourcesProcess, {
 			interval: 50,
-		});
-		hivemind.runProcess('empire.reactions', ReactionsProcess, {
-			interval: 1500,
-			priority: PROCESS_PRIORITY_LOW,
 		});
 
 		this.cleanup();
