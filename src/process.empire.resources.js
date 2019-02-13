@@ -5,6 +5,15 @@
 const Process = require('./process');
 const utilities = require('./utilities');
 
+/**
+ * Sends resources between owned rooms when needed.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const ResourcesProcess = function (params, data) {
 	Process.call(this, params, data);
 };
@@ -39,69 +48,92 @@ ResourcesProcess.prototype.run = function () {
 
 /**
  * Determines when it makes sense to transport resources between rooms.
+ *
+ * @return {Array}
+ *   An array of option objects with priorities.
  */
 ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
 	const options = [];
+	const rooms = this.getResourceStates();
+
+	_.each(rooms, (roomState, roomName) => {
+		const room = Game.rooms[roomName];
+		if (!roomState.canTrade) return;
+
+		// Do not try transferring from a room that is already preparing a transfer.
+		if (room.memory.fillTerminal && !roomState.isEvacuating) return;
+
+		for (const resourceType of _.keys(roomState.state)) {
+			const resourceLevel = roomState.state[resourceType] || 'low';
+			if (!_.includes(['high', 'excessive'], resourceLevel) && !roomState.isEvacuating) continue;
+
+			// Make sure we have enough to send (while evacuating).
+			if (roomState.totalResources[resourceType] < 100) continue;
+			if (resourceType === RESOURCE_ENERGY && roomState.totalResources[resourceType] < 10000) continue;
+
+			// Look for other rooms that are low on this resource.
+			_.each(rooms, (roomState2, roomName2) => {
+				const room2 = Game.rooms[roomName2];
+				const resourceLevel2 = roomState2.state[resourceType] || 'low';
+
+				if (!roomState2.canTrade) return;
+				if (roomState2.isEvacuating) return;
+
+				const isLow = resourceLevel2 === 'low';
+				const isLowEnough = _.includes(['medium', 'high'], resourceLevel2);
+				const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
+
+				if (!roomState.isEvacuating && !shouldReceiveResources) return;
+
+				// Make sure target has space left.
+				if (_.sum(room2.terminal.store) > room2.terminal.storeCapacity - 5000) return;
+
+				const option = {
+					priority: 3,
+					weight: ((roomState.totalResources[resourceType] - roomState2.totalResources[resourceType]) / 100000) - Game.map.getRoomLinearDistance(roomName, roomName2),
+					resourceType,
+					source: roomName,
+					target: roomName2,
+				};
+
+				if (roomState.isEvacuating && resourceType !== RESOURCE_ENERGY) {
+					option.priority++;
+					if (room.terminal.store[resourceType] && room.terminal.store[resourceType] >= 5000) {
+						option.priority++;
+					}
+				}
+				else if (!isLow) {
+					option.priority--;
+				}
+
+				options.push(option);
+			});
+		}
+	});
+
+	return options;
+};
+
+/**
+ * Collects resource states of all available rooms.
+ *
+ * @return {object}
+ *   Resource states, keyed by room name.
+ */
+ResourcesProcess.prototype.getResourceStates = function () {
 	const rooms = [];
 
 	// Collect room resource states.
-	for (const roomName in Game.rooms) {
-		const roomData = Game.rooms[roomName].getResourceState();
+	for (const room of _.values(Game.rooms)) {
+		if (!room.controller || !room.controller.my) continue;
+
+		const roomData = room.getResourceState();
 		if (roomData) {
-			rooms[roomName] = roomData;
+			rooms[room.name] = roomData;
 		}
 	}
 
-	for (const roomName in rooms) {
-		const roomState = rooms[roomName];
-		if (!roomState.canTrade) continue;
-
-		// Do not try transferring from a room that is already preparing a transfer.
-		if (Game.rooms[roomName].memory.fillTerminal && !roomState.isEvacuating) continue;
-
-		for (const resourceType in roomState.state) {
-			if (roomState.state[resourceType] === 'high' || roomState.state[resourceType] === 'excessive' || roomState.isEvacuating) {
-				// Make sure we have enough to send (while evacuating).
-				if (roomState.totalResources[resourceType] < 100) continue;
-				if (resourceType === RESOURCE_ENERGY && roomState.totalResources[resourceType] < 10000) continue;
-
-				// Look for other rooms that are low on this resource.
-				for (const roomName2 in rooms) {
-					if (!rooms[roomName2].canTrade) continue;
-					if (rooms[roomName2].isEvacuating) continue;
-
-					if (roomState.isEvacuating || !rooms[roomName2].state[resourceType] || rooms[roomName2].state[resourceType] === 'low' || (roomState.state[resourceType] === 'excessive' && (rooms[roomName2].state[resourceType] === 'medium' || rooms[roomName2].state[resourceType] === 'high'))) {
-						// Make sure target has space left.
-						if (_.sum(Game.rooms[roomName2].terminal.store) > Game.rooms[roomName2].terminal.storeCapacity - 5000) {
-							continue;
-						}
-
-						const option = {
-							priority: 3,
-							weight: ((roomState.totalResources[resourceType] - rooms[roomName2].totalResources[resourceType]) / 100000) - Game.map.getRoomLinearDistance(roomName, roomName2),
-							resourceType,
-							source: roomName,
-							target: roomName2,
-						};
-
-						if (roomState.isEvacuating && resourceType !== RESOURCE_ENERGY) {
-							option.priority++;
-							if (Game.rooms[roomName].terminal.store[resourceType] && Game.rooms[roomName].terminal.store[resourceType] >= 5000) {
-								option.priority++;
-							}
-						}
-						else if (rooms[roomName2].state[resourceType] === 'medium') {
-							option.priority--;
-						}
-
-						options.push(option);
-					}
-				}
-			}
-		}
-	}
-
-	return options;
+	return rooms;
 };
 
 module.exports = ResourcesProcess;
