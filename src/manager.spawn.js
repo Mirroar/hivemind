@@ -1378,11 +1378,11 @@ StructureSpawn.prototype.spawnGift = function () {
  *   True if we started spawning a creep.
  */
 StructureSpawn.prototype.spawnMineralHarvester = function () {
-	if (this.isFullOnMinerals()) return false;
+	if (this.room.isFullOnMinerals()) return false;
 
 	// Gather some information.
 	// @todo This could be done on script startup and partially kept in room memory.
-	const mineralHarvesters = this.creepsByRole['harvester.minerals'] || {};
+	const mineralHarvesters = this.room.creepsByRole['harvester.minerals'] || {};
 	const minerals = this.room.find(FIND_MINERALS, {
 		filter: mineral => {
 			const extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
@@ -1398,7 +1398,7 @@ StructureSpawn.prototype.spawnMineralHarvester = function () {
 	});
 
 	// We assume there is always at most one mineral deposit in a room.
-	if (mineralHarvesters.length > 0 || minerals[0].mineralAmount === 0) return false;
+	if (mineralHarvesters.length > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return false;
 
 	let boosts = null;
 	if (this.room.canSpawnBoostedCreeps()) {
