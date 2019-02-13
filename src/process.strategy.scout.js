@@ -41,7 +41,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 
 	const timeSinceLastScan = roomIntel.getAge();
 
-	if (info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
+	if (info.range > 0 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 		if (timeSinceLastScan > 5000) {
 			info.scoutPriority = 1;
 		}

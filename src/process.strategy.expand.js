@@ -105,7 +105,7 @@ ExpandProcess.prototype.run = function () {
 				}
 
 				if (room.controller.level > 3 && room.storage) {
-					this.stopExpansion(squad);
+					this.stopExpansion();
 					return;
 				}
 			}
@@ -120,29 +120,26 @@ ExpandProcess.prototype.run = function () {
 		// If a lot of time has passed, let the room fend for itself anyways,
 		// either it will be lost or fix itself.
 		if (Game.time - memory.expand.claimed > 50 * CREEP_LIFE_TIME) {
-			this.stopExpansion(squad);
+			this.stopExpansion();
 		}
 	}
 };
 
 /**
- * Sends a squad for expanding to a new room if GCL and CPU allow.
+ * Stops current expansion plans by disbanding all related squads.
  */
-ExpandProcess.prototype.stopExpansion = function (squad) {
+ExpandProcess.prototype.stopExpansion = function () {
 	const roomName = Memory.strategy.expand.currentTarget.roomName;
+	const squad = new Squad('expand');
+	squad.disband();
+
+	_.each(Game.squads, (squad, squadName) => {
+		if (squadName.startsWith('expandSupport.' + roomName)) {
+			squad.disband();
+		}
+	});
+
 	Memory.strategy.expand = {};
-	squad.clearUnits();
-
-	if (Game.flags['AttackSquad:expand']) {
-		Game.flags['AttackSquad:expand'].remove();
-	}
-
-	if (Game.flags['SpawnSquad:expand']) {
-		Game.flags['SpawnSquad:expand'].remove();
-	}
-
-	_.each(_.filter(Game.flags, f => f.name.startsWith('AttackSquad:expandSupport.' + roomName)), f => f.remove());
-	_.each(_.filter(Game.flags, f => f.name.startsWith('SpawnSquad:expandSupport.' + roomName)), f => f.remove());
 };
 
 /**
@@ -303,7 +300,7 @@ ExpandProcess.prototype.checkAccessPath = function () {
 		}
 		else {
 			// No good spawn location available. Stop expanding, choose new target later.
-			this.stopExpansion(squad);
+			this.stopExpansion();
 		}
 	}
 };

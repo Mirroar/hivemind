@@ -97,6 +97,16 @@ Squad.prototype.clearUnits = function () {
 };
 
 /**
+ * Stops spawning units and removes a squad completely.
+ */
+Squad.prototype.disband = function () {
+	this.clearUnits();
+	this.setSpawn(null);
+	this.setTarget(null);
+	// @todo Recycle units, then clear memory.
+};
+
+/**
  * Decides whether this squad needs additional units spawned.
  *
  * @return {string|null}
@@ -299,9 +309,19 @@ Squad.prototype.setPath = function (pathName) {
  */
 Squad.prototype.setSpawn = function (roomName) {
 	const key = 'SpawnSquad:' + this.name;
+	const flag = Game.flags[key];
+	if (!roomName) {
+		if (flag) {
+			// Remove spawn flag.
+			flag.remove();
+		}
+
+		return;
+	}
+
 	const spawnPos = new RoomPosition(25, 25, roomName);
-	if (Game.flags[key]) {
-		Game.flags[key].setPosition(spawnPos);
+	if (flag) {
+		flag.setPosition(spawnPos);
 	}
 	else {
 		spawnPos.createFlag(key);
@@ -316,8 +336,18 @@ Squad.prototype.setSpawn = function (roomName) {
  */
 Squad.prototype.setTarget = function (targetPos) {
 	const key = 'AttackSquad:' + this.name;
-	if (Game.flags[key]) {
-		Game.flags[key].setPosition(targetPos);
+	const flag = Game.flags[key];
+	if (!targetPos) {
+		if (flag) {
+			// Remove spawn flag.
+			flag.remove();
+		}
+
+		return;
+	}
+
+	if (flag) {
+		flag.setPosition(targetPos);
 	}
 	else {
 		targetPos.createFlag(key);
