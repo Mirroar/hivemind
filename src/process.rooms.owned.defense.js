@@ -5,6 +5,15 @@ HEAL */
 
 const Process = require('./process');
 
+/**
+ * Manage defenses in a room.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const RoomDefenseProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
@@ -12,6 +21,9 @@ const RoomDefenseProcess = function (params, data) {
 
 RoomDefenseProcess.prototype = Object.create(Process.prototype);
 
+/**
+ * Manages defenses.
+ */
 RoomDefenseProcess.prototype.run = function () {
 	// Handle towers.
 	const towers = this.room.find(FIND_MY_STRUCTURES, {
@@ -24,6 +36,7 @@ RoomDefenseProcess.prototype.run = function () {
 	for (const tower of towers) {
 		// Attack enemies.
 		if (hostileCreeps.length > 0) {
+			// @todo Use new military manager when performance is stable.
 			// const target = this.room.getTowerTarget(tower);
 			// if (target) {
 			// 	tower.attack(target);

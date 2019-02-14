@@ -5,6 +5,15 @@ STRUCTURE_POWER_SPAWN ERR_NO_PATH ATTACK_POWER */
 
 const Process = require('./process');
 
+/**
+ * Decides on power sources to attack and loot.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const PowerMiningProcess = function (params, data) {
 	Process.call(this, params, data);
 
@@ -19,6 +28,12 @@ const PowerMiningProcess = function (params, data) {
 
 PowerMiningProcess.prototype = Object.create(Process.prototype);
 
+/**
+ * Decides whether this process is allowed to run.
+ *
+ * @return {boolean}
+ *   True if power harvesting is enabled.
+ */
 PowerMiningProcess.prototype.shouldRun = function () {
 	if (!Process.prototype.shouldRun.call(this)) return false;
 	if (Memory.disablePowerHarvesting) return false;
@@ -33,9 +48,8 @@ PowerMiningProcess.prototype.run = function () {
 	// @todo Add throttle like with remote harvesting.
 	const memory = Memory.strategy.power;
 
-	for (const roomName in memory.rooms || []) {
+	_.each(memory.rooms, (info, roomName) => {
 		// @todo Skip room if we already decided to harvest it.
-		const info = memory.rooms[roomName];
 		// Calculate DPS we'd need to do to harvest this power.
 		let timeRemaining = info.decays - Game.time;
 
@@ -45,7 +59,7 @@ PowerMiningProcess.prototype.run = function () {
 				delete memory.rooms[roomName];
 			}
 
-			continue;
+			return;
 		}
 
 		// Substract time we need to spawn first set of attackers.
@@ -56,7 +70,7 @@ PowerMiningProcess.prototype.run = function () {
 
 		if (timeRemaining <= 0) {
 			delete memory.rooms[roomName];
-			continue;
+			return;
 		}
 
 		const dps = info.hits / timeRemaining;
@@ -68,30 +82,29 @@ PowerMiningProcess.prototype.run = function () {
 
 		if (numCreeps > Math.min(5, info.freeTiles)) {
 			delete memory.rooms[roomName];
-			continue;
+			return;
 		}
 
 		hivemind.log('strategy').debug('Gathering ' + info.amount + ' power in ' + roomName + ' would need ' + dps + ' DPS, or ' + numCreeps + ' attack creeps.');
 
 		// Determine which rooms need to spawn creeps.
 		let potentialSpawns = [];
-		for (const myRoomName in Game.rooms) {
-			const room = Game.rooms[myRoomName];
-			if (!room.controller || !room.controller.my) continue;
-			if (room.isFullOnPower()) continue;
-			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) continue;
-			if (Game.map.getRoomLinearDistance(roomName, myRoomName) > 5) continue;
+		_.each(Game.rooms, room => {
+			if (!room.controller || !room.controller.my) return;
+			if (room.isFullOnPower()) return;
+			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) return;
+			if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) return;
 
-			const roomRoute = Game.map.findRoute(myRoomName, roomName);
-			if (roomRoute === ERR_NO_PATH || roomRoute.length > 10) continue;
+			const roomRoute = Game.map.findRoute(room.name, roomName);
+			if (roomRoute === ERR_NO_PATH || roomRoute.length > 10) return;
 
-			hivemind.log('strategy').debug('Could spawn creeps in', myRoomName, 'with distance', roomRoute.length);
+			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.length);
 
 			potentialSpawns.push({
-				room: myRoomName,
+				room: room.name,
 				distance: roomRoute.length,
 			});
-		}
+		});
 
 		potentialSpawns = _.sortBy(potentialSpawns, 'distance');
 
@@ -101,9 +114,7 @@ PowerMiningProcess.prototype.run = function () {
 		let failed = true;
 		const neededRooms = {};
 		let finalDps = 0;
-		for (const i in potentialSpawns) {
-			const spawnInfo = potentialSpawns[i];
-
+		for (const spawnInfo of potentialSpawns) {
 			maxAttackers += 2;
 			// Estimate travel time at 50 ticks per room.
 			travelTime = spawnInfo.distance * 50;
@@ -128,7 +139,7 @@ PowerMiningProcess.prototype.run = function () {
 		}
 
 		if (failed) {
-			continue;
+			return;
 		}
 
 		info.spawnRooms = neededRooms;
@@ -143,7 +154,7 @@ PowerMiningProcess.prototype.run = function () {
 		// @todo Start spawning.
 		Game.notify('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
 		hivemind.log('strategy').info('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
-	}
+	});
 };
 
 module.exports = PowerMiningProcess;

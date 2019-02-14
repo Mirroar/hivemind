@@ -3,6 +3,15 @@
 const Process = require('./process');
 const stats = require('./stats');
 
+/**
+ * Manages which and how many rooms may be remotely mined.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const RemoteMiningProcess = function (params, data) {
 	Process.call(this, params, data);
 
@@ -22,42 +31,39 @@ const RemoteMiningProcess = function (params, data) {
 RemoteMiningProcess.prototype = Object.create(Process.prototype);
 
 /**
- * Determines optimal number of remote mining rooms based on CPU and expansion plans.
+ * Determines optimal number of remote mining rooms based on CPU and expansion
+ * plans.
  */
 RemoteMiningProcess.prototype.run = function () {
 	const memory = Memory.strategy;
-
+	const sourceRooms = {};
 	let max = 0;
 
-	const sourceRooms = {};
-
 	// Determine how much remote mining each room can handle.
-	for (let roomName in Game.rooms) {
-		let room = Game.rooms[roomName];
-		if (!room.controller || !room.controller.my) continue;
+	_.each(Game.rooms, room => {
+		if (!room.controller || !room.controller.my) return;
 
-		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === roomName && spawn.isActive()).length;
-		if (numSpawns === 0) continue;
+		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isActive()).length;
+		if (numSpawns === 0) return;
 
 		max += 2 * numSpawns;
 
-		sourceRooms[roomName] = {
+		sourceRooms[room.name] = {
 			current: 0,
 			max: 2 * numSpawns,
 		};
-	}
+	});
 
 	// Create ordered list of best harvest rooms.
 	const harvestRooms = [];
-	for (const roomName in memory.roomList) {
-		const info = memory.roomList[roomName];
-		if (!info.harvestPriority || info.harvestPriority <= 0.1) continue;
+	_.each(memory.roomList, info => {
+		if (!info.harvestPriority || info.harvestPriority <= 0.1) return;
 
 		info.harvestActive = false;
 		harvestRooms.push(info);
-	}
+	});
 
-	const sortedRooms = _.sortBy(harvestRooms, o => -o.harvestPriority);
+	const sortedRooms = _.sortBy(harvestRooms, info => -info.harvestPriority);
 
 	// Decide which are active.
 	let total = 0;

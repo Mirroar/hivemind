@@ -4,6 +4,15 @@
 
 const Process = require('./process');
 
+/**
+ * Manages links in our room.s
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const ManageLinksProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
@@ -11,6 +20,12 @@ const ManageLinksProcess = function (params, data) {
 
 ManageLinksProcess.prototype = Object.create(Process.prototype);
 
+/**
+ * Makes sure this process only runs when a link network is available.
+ *
+ * @return {boolean}
+ *   True if this process may be run.
+ */
 ManageLinksProcess.prototype.shouldRun = function () {
 	if (!Process.prototype.shouldRun.call(this)) return false;
 	if (!this.room.linkNetwork) return false;
@@ -36,6 +51,7 @@ ManageLinksProcess.prototype.run = function () {
 			delta: info.delta,
 		});
 	}
+
 	for (const info of this.room.linkNetwork.underfullLinks) {
 		lowLinks.push({
 			link: info.link,

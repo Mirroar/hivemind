@@ -8,7 +8,9 @@ const RoomPlanner = require('./room-planner');
  * @constructor
  *
  * @param {object} params
+ *   Options on how to run this process.
  * @param {object} data
+ *   Memory object allocated for this process' stats.
  */
 const InitProcess = function (params, data) {
 	Process.call(this, params, data);

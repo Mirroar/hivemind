@@ -36,6 +36,15 @@ const songs = {
 };
 /* eslint-enable array-element-newline */
 
+/**
+ * Makes creeps sing songs.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const RoomSongsProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
@@ -48,6 +57,9 @@ const RoomSongsProcess = function (params, data) {
 
 RoomSongsProcess.prototype = Object.create(Process.prototype);
 
+/**
+ * Sings a song in our room.
+ */
 RoomSongsProcess.prototype.run = function () {
 	// @todo Choose from multiple songs.
 	if (!this.memory.name) this.memory.name = 'harder';

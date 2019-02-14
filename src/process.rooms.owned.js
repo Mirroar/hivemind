@@ -10,6 +10,15 @@ const ManageLinksProcess = require('./process.rooms.owned.links');
 const RoomDefenseProcess = require('./process.rooms.owned.defense');
 const RoomSongsProcess = require('./process.rooms.owned.songs');
 
+/**
+ * Manages rooms we own.
+ * @constructor
+ *
+ * @param {object} params
+ *   Options on how to run this process.
+ * @param {object} data
+ *   Memory object allocated for this process' stats.
+ */
 const OwnedRoomProcess = function (params, data) {
 	Process.call(this, params, data);
 	this.room = params.room;
@@ -17,6 +26,9 @@ const OwnedRoomProcess = function (params, data) {
 
 OwnedRoomProcess.prototype = Object.create(Process.prototype);
 
+/**
+ * Manages on of our rooms.
+ */
 OwnedRoomProcess.prototype.run = function () {
 	this.room.roomPlanner.runLogic();
 

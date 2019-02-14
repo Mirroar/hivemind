@@ -1473,7 +1473,7 @@ StructureSpawn.prototype.spawnBuilder = function (maxWorkParts) {
 		const availableBoosts = this.room.getAvailableBoosts('repair');
 		let bestBoost;
 		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available >= maxParts.work) {
+			if (availableBoosts[resourceType].available >= (maxWorkParts || 50)) {
 				if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
 					bestBoost = resourceType;
 				}
