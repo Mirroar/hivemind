@@ -642,7 +642,7 @@ Room.prototype.addPowerSpawnOptions = function () {
 
 			if (powerHarvesters.length < 2 && powerHarvesters.length <= powerHealers.length && timeToKill > 0) {
 				memory.options.push({
-					priority: 4,
+					priority: 3,
 					weight: 1,
 					role: 'harvester.power',
 					targetRoom: roomName,
@@ -652,7 +652,7 @@ Room.prototype.addPowerSpawnOptions = function () {
 			// Also spawn healers.
 			if (powerHealers.length < 2 && powerHarvesters.length >= powerHealers.length && timeToKill > 0) {
 				memory.options.push({
-					priority: 4,
+					priority: 3,
 					weight: 1,
 					role: 'harvester.power',
 					targetRoom: roomName,
@@ -670,7 +670,7 @@ Room.prototype.addPowerSpawnOptions = function () {
 
 				if (totalCapacity < info.amount * 1.2) {
 					memory.options.push({
-						priority: 4,
+						priority: 3,
 						weight: 0.5,
 						role: 'hauler.power',
 						targetRoom: roomName,
