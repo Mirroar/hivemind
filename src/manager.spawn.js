@@ -686,7 +686,7 @@ Room.prototype.addPowerSpawnOptions = function () {
  */
 Room.prototype.addGiftSpawnOptions = function () {
 	if (Game.time % 123 !== 67) return;
-	if (!this.storage || this.getStorageCapacity() > this.getStorageLimit() * 0.05) return;
+	if (!this.storage || this.getFreeStorage() > this.getStorageLimit() * 0.05) return;
 
 	const memory = this.memory.spawnQueue;
 	memory.options.push({

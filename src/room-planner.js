@@ -793,7 +793,7 @@ RoomPlanner.prototype.placeFlags = function () {
 	this.placeFlag(roomCenter, 'center', null);
 
 	// Do another flood fill pass from interesting positions to remove walls that don't protect anything.
-	this.pruneWalls(walls, roomCenter, wallDistanceMatrix);
+	this.pruneWalls(walls, wallDistanceMatrix);
 
 	// Actually place ramparts.
 	for (const i in walls) {
@@ -1389,7 +1389,8 @@ RoomPlanner.prototype.pruneWallFromTiles = function (walls, wallDistanceMatrix, 
 /**
  * Marks all walls which are adjacent to the "inner area" of the room.
  */
-RoomPlanner.prototype.pruneWalls = function (walls, roomCenter, wallDistanceMatrix) {
+RoomPlanner.prototype.pruneWalls = function (walls, wallDistanceMatrix) {
+	const roomCenter = this.getRoomCenter();
 	this.safetyMatrix = new PathFinder.CostMatrix();
 
 	const openList = [];
@@ -1523,6 +1524,20 @@ RoomPlanner.prototype.checkAdjacentRooms = function () {
  */
 RoomPlanner.prototype.getAdjacentSafeRooms = function () {
 	return this.memory.adjacentSafeRooms || [];
+};
+
+/**
+ * Gets the room's center position.
+ *
+ * @return {RoomPosition}
+ *   The center position determined by planning.
+ */
+RoomPlanner.prototype.getRoomCenter = function () {
+	if (this.memory.locations && this.memory.locations.center) {
+		for (const pos of _.keys(this.memory.locations.center)) {
+			return utilities.decodePosition(pos);
+		}
+	}
 };
 
 module.exports = RoomPlanner;

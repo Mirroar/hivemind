@@ -1,11 +1,14 @@
 'use strict';
 
 /* global Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES RESOURCES_ALL
-RESOURCE_POWER FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE FIND_STRUCTURES
-STRUCTURE_SPAWN */
+RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB */
 
-const utilities = require('./utilities');
-
+/**
+ * Determines maximum storage capacity within a room.
+ *
+ * @return {number}
+ *   The total storage limit.
+ */
 Room.prototype.getStorageLimit = function () {
 	let total = 0;
 	if (this.storage) {
@@ -23,7 +26,13 @@ Room.prototype.getStorageLimit = function () {
 	return total;
 };
 
-Room.prototype.getStorageCapacity = function () {
+/**
+ * Determines amount of currently available storage.
+ *
+ * @return {number}
+ *   The currently available free storage space.
+ */
+Room.prototype.getFreeStorage = function () {
 	// Determines amount of free space in storage.
 	let limit = this.getStorageLimit();
 	if (this.storage) {
@@ -37,6 +46,15 @@ Room.prototype.getStorageCapacity = function () {
 	return limit;
 };
 
+/**
+ * Determines the amount of a resource currently stored in this room.
+ *
+ * @param {string} resourceType
+ *   The resource in question.
+ *
+ * @return {number}
+ *   Amount of this resource in storage or terminal.
+ */
 Room.prototype.getCurrentResourceAmount = function (resourceType) {
 	let total = 0;
 	if (this.storage && this.storage.store[resourceType]) {
@@ -50,6 +68,12 @@ Room.prototype.getCurrentResourceAmount = function (resourceType) {
 	return total;
 };
 
+/**
+ * Gets amount of energy stored, taking into account energy on storage location.
+ *
+ * @return {number}
+ *   Amount of energy this room has available.
+ */
 Room.prototype.getStoredEnergy = function () {
 	// @todo Add caching, make sure it's fresh every tick.
 	let total = this.getCurrentResourceAmount(RESOURCE_ENERGY);
@@ -64,12 +88,17 @@ Room.prototype.getStoredEnergy = function () {
 	return total;
 };
 
+/**
+ * Gets amount of minerals and mineral compounds stored in a room.
+ *
+ * @return {number}
+ *   Amount of minerals stored in this room.
+ */
 Room.prototype.getCurrentMineralAmount = function () {
 	// @todo This could use caching.
 	let total = 0;
 
-	for (const i in RESOURCES_ALL) {
-		const resourceType = RESOURCES_ALL[i];
+	for (const resourceType of RESOURCES_ALL) {
 		if (resourceType === RESOURCE_ENERGY || resourceType === RESOURCE_POWER) continue;
 		total += this.getCurrentResourceAmount(resourceType);
 	}
@@ -77,18 +106,45 @@ Room.prototype.getCurrentMineralAmount = function () {
 	return total;
 };
 
+/**
+ * Decides whether a room's storage has too much energy.
+ *
+ * @return {boolean}
+ *   True if storage limit for energy has been reached.
+ */
 Room.prototype.isFullOnEnergy = function () {
 	return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 2;
 };
 
+/**
+ * Decides whether a room's storage has too much power.
+ *
+ * @return {boolean}
+ *   True if storage limit for power has been reached.
+ */
 Room.prototype.isFullOnPower = function () {
 	return this.getCurrentResourceAmount(RESOURCE_POWER) > this.getStorageLimit() / 6;
 };
 
+/**
+ * Decides whether a room's storage has too many minerals.
+ *
+ * @return {boolean}
+ *   True if storage limit for minerals has been reached.
+ */
 Room.prototype.isFullOnMinerals = function () {
 	return this.getCurrentMineralAmount() > this.getStorageLimit() / 3;
 };
 
+/**
+ * Decides whether a room's storage has too much of a resource.
+ *
+ * @param {string} resourceType
+ *   Type of the resource we want to check.
+ *
+ * @return {boolean}
+ *   True if storage limit for the resource has been reached.
+ */
 Room.prototype.isFullOn = function (resourceType) {
 	if (resourceType === RESOURCE_ENERGY) return this.isFullOnEnergy();
 	if (resourceType === RESOURCE_POWER) return this.isFullOnPower();
@@ -96,117 +152,34 @@ Room.prototype.isFullOn = function (resourceType) {
 };
 
 /**
- * Calculates a central room position with some free space around it for placing a storage later.
- * If a storage already exists, its position is returned.
+ * Determines a room's storage location, where we drop energy as long as no
+ * storage has been built yet.
+ *
+ * @return {RoomPosition}
+ *   Returns the room's storage location.
  */
 Room.prototype.getStorageLocation = function () {
-	const room = this;
-
-	if (!this.controller) {
-		return;
-	}
-
-	if (this.roomPlanner && this.roomPlanner.memory.locations && this.roomPlanner.memory.locations.center) {
-		for (const pos in this.roomPlanner.memory.locations.center) {
-			return utilities.decodePosition(pos);
-		}
-	}
-
-	if (!room.memory.storage) {
-		if (room.storage) {
-			room.memory.storage = {
-				x: room.storage.pos.x,
-				y: room.storage.pos.y,
-			};
-		}
-		else {
-			const sites = room.find(FIND_MY_CONSTRUCTION_SITES, {
-				filter: site => site.structureType === STRUCTURE_STORAGE,
-			});
-			if (sites && sites.length > 0) {
-				room.memory.storage = {
-					x: sites[0].pos.x,
-					y: sites[0].pos.y,
-				};
-			}
-			else {
-				// Determine decent storage spot by averaging source and spawner locations.
-				let count = 1;
-				let x = room.controller.pos.x;
-				let y = room.controller.pos.y;
-
-				for (const i in room.sources) {
-					x += room.sources[i].pos.x;
-					y += room.sources[i].pos.y;
-					count++;
-				}
-
-				const spawns = room.find(FIND_STRUCTURES, {
-					filter: structure => structure.structureType === STRUCTURE_SPAWN,
-				});
-				for (const spawn of spawns) {
-					x += spawn.pos.x;
-					y += spawn.pos.y;
-					count++;
-				}
-
-				x = Math.round(x / count);
-				y = Math.round(y / count);
-
-				// Now that we have a base position, try to find the
-				// closest spot that is surrounded by empty tiles.
-				let dist = 0;
-				let found = false;
-				while (!found && dist < 10) {
-					for (let tx = x - dist; tx <= x + dist; tx++) {
-						for (let ty = y - dist; ty <= y + dist; ty++) {
-							if (found) {
-								continue;
-							}
-
-							if (tx === x - dist || tx === x + dist || ty === y - dist || ty === y + dist) {
-								// Tile is only valid if it and all surrounding tiles are empty.
-								const contents = room.lookAtArea(ty - 1, tx - 1, ty + 1, tx + 1, true);
-								let clean = true;
-								for (const i in contents) {
-									const tile = contents[i];
-									if (tile.type === 'terrain' && tile.terrain !== 'plain' && tile.terrain !== 'swamp') {
-										clean = false;
-										break;
-									}
-									if (tile.type === 'structure' || tile.type === 'constructionSite') {
-										clean = false;
-										break;
-									}
-								}
-
-								if (clean) {
-									found = true;
-									room.memory.storage = {
-										x: tx,
-										y: ty,
-									};
-								}
-							}
-						}
-					}
-
-					// @todo Limit dist and find "worse" free spot otherwise.
-					dist++;
-				}
-			}
-		}
-	}
-
-	return room.memory.storage;
+	if (!this.controller) return;
+	if (this.roomPlanner) return this.roomPlanner.getRoomCenter();
 };
 
+/**
+ * Saves the order to move a certain amount of resources to the terminal.
+ *
+ * @param {string} resourceType
+ *   The type of resource to store.
+ * @param {number} amount
+ *   Amount of resources to store.
+ */
 Room.prototype.prepareForTrading = function (resourceType, amount) {
 	if (!amount) amount = 10000;
 	this.memory.fillTerminal = resourceType;
 	this.memory.fillTerminalAmount = Math.min(amount, 50000);
 };
 
+/**
+ * Stops deliberately storing resources in the room's terminal.
+ */
 Room.prototype.stopTradePreparation = function () {
 	delete this.memory.fillTerminal;
 	delete this.memory.fillTerminalAmount;
@@ -238,6 +211,13 @@ Room.prototype.getRemoteHarvestTargets = function () {
 
 /**
  * Gathers resource amounts for a room.
+ *
+ * @return {object}
+ *   An object containing information about this room's resources:
+ *   - totalResources: Resource amounts keyed by resource type.
+ *   - state: Resource thresholds, namely `low`, `medium`, `high` and
+ *     `excessive` keyed by resource type.
+ *   - canTrade: Whether the room can perform trades.
  */
 Room.prototype.getResourceState = function () {
 	if (!this.controller || !this.controller.my) return;
@@ -249,6 +229,9 @@ Room.prototype.getResourceState = function () {
 		totalResources: {},
 		state: {},
 		canTrade: false,
+		addResource(resourceType, amount) {
+			this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
+		},
 	};
 	if (storage && terminal) {
 		roomData.canTrade = true;
@@ -258,49 +241,33 @@ Room.prototype.getResourceState = function () {
 	roomData.isEvacuating = this.isEvacuating();
 
 	if (storage && !roomData.isEvacuating) {
-		for (const resourceType in storage.store) {
-			roomData.totalResources[resourceType] = storage.store[resourceType];
-		}
+		_.each(storage.store, (amount, resourceType) => {
+			roomData.addResource(resourceType, amount);
+		});
 	}
 
 	if (terminal) {
-		for (const resourceType in terminal.store) {
-			roomData.totalResources[resourceType] = (roomData.totalResources[resourceType] || 0) + terminal.store[resourceType];
-		}
+		_.each(terminal.store, (amount, resourceType) => {
+			roomData.addResource(resourceType, amount);
+		});
 	}
 
 	if (this.mineral && !roomData.isEvacuating) {
-		// @todo Only count if there is an extractor on this mineral.
 		roomData.mineralType = this.mineral.mineralType;
 	}
 
 	// Add resources in labs as well.
 	if (this.memory.labs && !roomData.isEvacuating) {
-		const ids = [];
-		if (this.memory.labs.source1) {
-			ids.push(this.memory.labs.source1);
-		}
+		const labs = this.find(FIND_STRUCTURES, s => s.structureType === STRUCTURE_LAB);
 
-		if (this.memory.labs.source2) {
-			ids.push(this.memory.labs.source2);
-		}
-
-		if (this.memory.labs.reactor) {
-			for (const i in this.memory.labs.reactor) {
-				ids.push(this.memory.labs.reactor[i]);
-			}
-		}
-
-		for (const i in ids) {
-			const lab = Game.getObjectById(ids[i]);
-			if (lab && lab.mineralType && lab.mineralAmount > 0) {
-				roomData.totalResources[lab.mineralType] = (roomData.totalResources[lab.mineralType] || 0) + lab.mineralAmount;
+		for (const lab of labs) {
+			if (lab.mineralType && lab.mineralAmount > 0) {
+				roomData.addResource(lab.mineralType, lab.mineralAmount);
 			}
 		}
 	}
 
-	for (const resourceType in roomData.totalResources) {
-		let amount = roomData.totalResources[resourceType];
+	_.each(roomData.totalResources, (amount, resourceType) => {
 		if (resourceType === RESOURCE_ENERGY) {
 			amount /= 2.5;
 		}
@@ -317,7 +284,7 @@ Room.prototype.getResourceState = function () {
 		else {
 			roomData.state[resourceType] = 'low';
 		}
-	}
+	});
 
 	return roomData;
 };

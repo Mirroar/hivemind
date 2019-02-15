@@ -11,6 +11,14 @@ Room.prototype.getCostMatrix = function () {
 
 /**
  * Generates a new CostMatrix for pathfinding in this room.
+ *
+ * @param {Array} structures
+ *   An array of structures to navigate around.
+ * @param {Array} constructionSites
+ *   An array of construction sites to navigate around.
+ *
+ * @return {PathFinder.CostMatrix}
+ *   A cost matrix representing this room.
  */
 Room.prototype.generateCostMatrix = function (structures, constructionSites) {
 	const costs = new PathFinder.CostMatrix();
@@ -49,6 +57,12 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
 
 /**
  * Calculates a list of room names for traveling to a target room.
+ *
+ * @param {string} targetRoom
+ *   Name of the room to navigate to.
+ *
+ * @return {string[]}
+ *   An array of room names a creep needs to move throught to reach targetRoom.
  */
 Room.prototype.calculateRoomPath = function (targetRoom) {
 	const roomName = this.name;
@@ -69,17 +83,14 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
 	while (_.size(openList) > 0) {
 		let minDist;
 		let nextRoom;
-		for (const rName in openList) {
-			const info = openList[rName];
+		_.each(openList, (info, rName) => {
 			if (!minDist || info.range + info.dist < minDist) {
 				minDist = info.range + info.dist;
 				nextRoom = rName;
 			}
-		}
+		});
 
-		if (!nextRoom) {
-			break;
-		}
+		if (!nextRoom) break;
 
 		const info = openList[nextRoom];
 
@@ -90,8 +101,7 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
 
 		// Add unhandled adjacent rooms to open list.
 		const exits = hivemind.roomIntel(nextRoom).getExits();
-		for (const i in exits) {
-			const exit = exits[i];
+		for (const exit of _.values(exits)) {
 			if (openList[exit] || closedList[exit]) continue;
 
 			const exitIntel = hivemind.roomIntel(exit);
@@ -100,8 +110,8 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
 			if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
 
 			const path = [];
-			for (const i in info.path) {
-				path.push(info.path[i]);
+			for (const step of info.path) {
+				path.push(step);
 			}
 
 			path.push(exit);
@@ -120,4 +130,3 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
 
 	return finalPath;
 };
-

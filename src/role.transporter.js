@@ -178,7 +178,7 @@ Creep.prototype.getAvailableEnergySources = function () {
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 		}
 
-		if (creep.room.getStorageCapacity() < target.amount) {
+		if (creep.room.getFreeStorage() < target.amount) {
 			// If storage is super full, try leaving stuff on the ground.
 			option.priority -= 2;
 		}
@@ -345,7 +345,7 @@ Creep.prototype.getAvailableSources = function () {
 			option.priority++;
 		}
 
-		if (creep.room.getStorageCapacity() < target.amount) {
+		if (creep.room.getFreeStorage() < target.amount) {
 			// If storage is super full, try leaving stuff on the ground.
 			option.priority -= 2;
 		}
