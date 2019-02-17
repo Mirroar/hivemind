@@ -109,7 +109,6 @@ Creep.prototype.performGetUpgraderEnergy = function () {
  */
 Creep.prototype.setUpgraderState = function (upgrading) {
 	this.memory.upgrading = upgrading;
-	delete this.memory.tempRole;
 };
 
 /**

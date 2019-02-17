@@ -1,4 +1,4 @@
-'ust strict';
+'use strict';
 
 /* global hivemind Creep FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
 STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER
@@ -20,15 +20,29 @@ const wallHealth = {
 
 /**
  * Collects information about all damaged or unfinished buildings in the current room.
+ *
+ * @return {Array}
+ *   An array of repair or build option objects.
  */
 Creep.prototype.getAvailableBuilderTargets = function () {
-	const creep = this;
 	const options = [];
 
-	let targets = creep.room.find(FIND_STRUCTURES, {
+	this.addRepairOptions(options);
+	this.addBuildOptions(options);
+
+	return options;
+};
+
+/**
+ * Collects damaged structures with priorities for repairing.
+ *
+ * @param {Array} options
+ *   An array of repair or build option objects to add to.
+ */
+Creep.prototype.addRepairOptions = function (options) {
+	const targets = this.room.find(FIND_STRUCTURES, {
 		filter: structure => structure.hits < structure.hitsMax && !structure.needsDismantling(),
 	});
-
 	for (const target of targets) {
 		const option = {
 			priority: 3,
@@ -80,6 +94,9 @@ Creep.prototype.getAvailableBuilderTargets = function () {
 			if (target.structureType === STRUCTURE_ROAD && target.hits > 1000) {
 				option.priority--;
 			}
+
+			// Slightly adjust weight so that closer structures get prioritized. Not for walls or Ramparts, though, we want those to be equally strong all arond.
+			option.weight -= this.pos.getRangeTo(target) / 100;
 		}
 
 		// For many decaying structures, we don't care if they're "almost" full.
@@ -89,17 +106,20 @@ Creep.prototype.getAvailableBuilderTargets = function () {
 			}
 		}
 
-		// Slightly adjust weight so that closer structures get prioritized. Not for walls or Ramparts, though, we want those to be equally strong all arond.
-		if (target.structureType !== STRUCTURE_RAMPART && target.structureType !== STRUCTURE_WALL) {
-			option.weight -= creep.pos.getRangeTo(target) / 100;
-		}
-
-		option.priority -= creep.room.getCreepsWithOrder('repair', target.id).length;
+		option.priority -= this.room.getCreepsWithOrder('repair', target.id).length;
 
 		options.push(option);
 	}
+};
 
-	targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+/**
+ * Collects construction sites with priorities for building.
+ *
+ * @param {Array} options
+ *   An array of repair or build option objects to add to.
+ */
+Creep.prototype.addBuildOptions = function (options) {
+	const targets = this.room.find(FIND_MY_CONSTRUCTION_SITES);
 	for (const target of targets) {
 		const option = {
 			priority: 4,
@@ -109,9 +129,9 @@ Creep.prototype.getAvailableBuilderTargets = function () {
 		};
 
 		// Slightly adjust weight so that closer sites get prioritized.
-		option.weight -= creep.pos.getRangeTo(target) / 100;
+		option.weight -= this.pos.getRangeTo(target) / 100;
 
-		option.priority -= creep.room.getCreepsWithOrder('build', target.id).length;
+		option.priority -= this.room.getCreepsWithOrder('build', target.id).length;
 
 		if (target.structureType === STRUCTURE_SPAWN) {
 			// Spawns have highest construction priority - we want to make
@@ -121,8 +141,6 @@ Creep.prototype.getAvailableBuilderTargets = function () {
 
 		options.push(option);
 	}
-
-	return options;
 };
 
 /**
@@ -154,6 +172,9 @@ Creep.prototype.calculateBuilderTarget = function () {
 
 /**
  * Makes the creep repair damaged buildings.
+ *
+ * @return {boolean}
+ *   True if an action was performed.
  */
 Creep.prototype.performRepair = function () {
 	const creep = this;
@@ -204,6 +225,9 @@ Creep.prototype.performRepair = function () {
 
 /**
  * Moves towards a target structure and repairs it once close enough.
+ *
+ * @param {Structure} target
+ *   The structure to repair.
  */
 Creep.prototype.repairTarget = function (target) {
 	if (this.pos.getRangeTo(target) > 3) {
@@ -221,6 +245,9 @@ Creep.prototype.repairTarget = function (target) {
 
 /**
  * Moves towards a target construction site and builds it once close enough.
+ *
+ * @param {ConstructionSite} target
+ *   The construction site to build.
  */
 Creep.prototype.buildTarget = function (target) {
 	if (this.pos.getRangeTo(target) > 3) {
@@ -241,7 +268,7 @@ Creep.prototype.buildTarget = function (target) {
  */
 Creep.prototype.repairNearby = function () {
 	const workParts = this.memory.body.work;
-	if (!workParts) return false;
+	if (!workParts) return;
 
 	const needsRepair = this.room.find(FIND_STRUCTURES);
 	for (const structure of needsRepair) {
@@ -258,17 +285,19 @@ Creep.prototype.repairNearby = function () {
 				this.repair(needsRepair[0]);
 			}
 
-			return true;
+			return;
 		}
 	}
 };
 
 /**
  * Puts this creep into or out of repair mode.
+ *
+ * @param {boolean} repairing
+ *   Whether to start building / repairing or not.
  */
 Creep.prototype.setBuilderState = function (repairing) {
 	this.memory.repairing = repairing;
-	delete this.memory.tempRole;
 	delete this.memory.order;
 };
 
@@ -284,13 +313,9 @@ Creep.prototype.runBuilderLogic = function () {
 	}
 
 	if (this.memory.repairing) {
-		if (Game.cpu.bucket < 500) {
-			return;
-		}
-
-		return this.performRepair();
+		this.performRepair();
+		return;
 	}
 
 	this.performGetEnergy();
-	return true;
 };

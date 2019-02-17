@@ -248,7 +248,6 @@ Creep.prototype.performHarvesterDeliver = function () {
 Creep.prototype.setHarvesterState = function (harvesting) {
 	this.memory.harvesting = harvesting;
 	delete this.memory.resourceTarget;
-	delete this.memory.tempRole;
 };
 
 /**

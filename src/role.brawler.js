@@ -206,7 +206,6 @@ Creep.prototype.militaryRoomReached = function () {
 		// Rebrand as remote builder to work in this room from now on.
 		this.memory.role = 'builder.remote';
 		this.memory.target = utilities.encodePosition(this.pos);
-		this.memory.starting = false;
 		this.memory.singleRoom = this.pos.roomName;
 	}
 };
