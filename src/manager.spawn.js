@@ -1398,7 +1398,7 @@ StructureSpawn.prototype.spawnMineralHarvester = function () {
 	});
 
 	// We assume there is always at most one mineral deposit in a room.
-	if (mineralHarvesters.length > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return false;
+	if (_.size(mineralHarvesters) > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return false;
 
 	let boosts = null;
 	if (this.room.canSpawnBoostedCreeps()) {
