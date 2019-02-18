@@ -6,6 +6,9 @@ FIND_DROPPED_RESOURCES RESOURCE_POWER */
 
 // @todo Once we're done harvesting power, switch to escorting the haulers.
 
+/**
+ * Makes a creep act like a power harvester.
+ */
 Creep.prototype.runPowerHarvesterLogic = function () {
 	if (this.pos.roomName !== this.memory.targetRoom) {
 		// @todo Call simple military defense code when necessary.
@@ -29,43 +32,7 @@ Creep.prototype.runPowerHarvesterLogic = function () {
 	}
 
 	if (powerBanks.length > 0) {
-		// Go forth and attack!
-		const powerBank = powerBanks[0];
-
-		if (this.memory.isHealer) {
-			const damagedCreep = this.pos.findClosestByRange(FIND_MY_CREEPS, {
-				filter: creep => creep.memory.role === 'harvester.power' && (creep.hits + (creep.incHealing || 0)) < creep.hitsMax,
-			});
-			// @todo Find most wounded in range 1, failing that, look further away.
-
-			if (damagedCreep) {
-				let healPower = HEAL_POWER;
-				if (this.pos.getRangeTo(damagedCreep) > 1) {
-					this.moveToRange(damagedCreep, 1);
-					healPower = RANGED_HEAL_POWER;
-				}
-
-				if (this.pos.getRangeTo(damagedCreep) <= 3) {
-					this.heal(damagedCreep);
-					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (this.memory.body[HEAL] * healPower);
-				}
-			}
-			else if (this.pos.getRangeTo(powerBank) > 5) {
-				this.moveToRange(powerBank, 5);
-				return;
-			}
-		}
-		else {
-			if (this.pos.getRangeTo(powerBank) > 1) {
-				this.moveToRange(powerBank, 1);
-				return;
-			}
-
-			if (this.hits >= this.hitsMax * 0.7) {
-				this.attack(powerBank);
-			}
-		}
-
+		this.attackPowerBank(powerBanks[0]);
 		return;
 	}
 
@@ -87,5 +54,46 @@ Creep.prototype.runPowerHarvesterLogic = function () {
 	const center = new RoomPosition(25, 25, this.pos.roomName);
 	if (this.pos.getRangeTo(center) > 5) {
 		this.moveToRange(center, 5);
+	}
+};
+
+/**
+ * Makes this creep attack a power bank.
+ *
+ * @param {StructurePowerBank} powerBank
+ *   The power bank to attack.
+ */
+Creep.prototype.attackPowerBank = function (powerBank) {
+	if (this.memory.isHealer) {
+		const damagedCreep = this.pos.findClosestByRange(FIND_MY_CREEPS, {
+			filter: creep => creep.memory.role === 'harvester.power' && (creep.hits + (creep.incHealing || 0)) < creep.hitsMax,
+		});
+		// @todo Find most wounded in range 1, failing that, look further away.
+
+		if (damagedCreep) {
+			let healPower = HEAL_POWER;
+			if (this.pos.getRangeTo(damagedCreep) > 1) {
+				this.moveToRange(damagedCreep, 1);
+				healPower = RANGED_HEAL_POWER;
+			}
+
+			if (this.pos.getRangeTo(damagedCreep) <= 3) {
+				this.heal(damagedCreep);
+				damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (this.memory.body[HEAL] * healPower);
+			}
+		}
+		else if (this.pos.getRangeTo(powerBank) > 5) {
+			this.moveToRange(powerBank, 5);
+		}
+	}
+	else {
+		if (this.pos.getRangeTo(powerBank) > 1) {
+			this.moveToRange(powerBank, 1);
+			return;
+		}
+
+		if (this.hits >= this.hitsMax * 0.7) {
+			this.attack(powerBank);
+		}
 	}
 };

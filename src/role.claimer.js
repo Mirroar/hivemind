@@ -12,7 +12,7 @@ Creep.prototype.performClaim = function () {
 
 	if (targetPosition.roomName !== this.pos.roomName) {
 		this.moveTo(targetPosition);
-		return true;
+		return;
 	}
 
 	const target = this.room.controller;
@@ -39,8 +39,6 @@ Creep.prototype.performClaim = function () {
 			this.reserveController(target);
 		}
 	}
-
-	return true;
 };
 
 /**
@@ -50,7 +48,7 @@ Creep.prototype.performReserve = function () {
 	const targetPosition = utilities.decodePosition(this.memory.target);
 	if (targetPosition.roomName !== this.pos.roomName) {
 		this.moveTo(targetPosition);
-		return true;
+		return;
 	}
 
 	const target = this.room.controller;
@@ -72,8 +70,6 @@ Creep.prototype.performReserve = function () {
 			};
 		}
 	}
-
-	return true;
 };
 
 /**
@@ -100,10 +96,9 @@ Creep.prototype.runClaimerLogic = function () {
 	}
 
 	if (this.memory.mission === 'reserve') {
-		return this.performReserve();
+		this.performReserve();
 	}
-
-	if (this.memory.mission === 'claim') {
-		return this.performClaim();
+	else if (this.memory.mission === 'claim') {
+		this.performClaim();
 	}
 };

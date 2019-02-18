@@ -1,10 +1,7 @@
 'use strict';
 
 /* global Creep FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY
-STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_CONTAINER
-FIND_CONSTRUCTION_SITES */
-
-const utilities = require('./utilities');
+STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES */
 
 // @todo Rewrite delivery part using priority queue.
 // @todo Just make the harvester build a container when none is available.
@@ -26,21 +23,21 @@ Creep.prototype.performHarvest = function () {
 	else {
 		if (!creep.memory.resourceTarget) {
 			if (!creep.room.sources || creep.room.sources.length <= 0) {
-				return false;
+				return;
 			}
 
 			creep.memory.resourceTarget = creep.room.sources[Math.floor(Math.random() * creep.room.sources.length)].id;
-			creep.memory.deliverTarget = null;
+			delete creep.memory.deliverTarget;
 		}
 
 		const best = creep.memory.resourceTarget;
 		if (!best) {
-			return false;
+			return;
 		}
 
 		source = Game.getObjectById(best);
 		if (!source) {
-			creep.memory.resourceTarget = null;
+			delete creep.memory.resourceTarget;
 		}
 	}
 
@@ -77,8 +74,6 @@ Creep.prototype.performHarvest = function () {
 			}
 		}
 	}
-
-	return true;
 };
 
 /**
@@ -108,8 +103,6 @@ Creep.prototype.performMineralHarvesterDeliver = function () {
 	else {
 		// @todo Drop on storage point, I guess? We probably shouldn't be collecting minerals if we have no place to store them.
 	}
-
-	return true;
 };
 
 /**
@@ -117,82 +110,34 @@ Creep.prototype.performMineralHarvesterDeliver = function () {
  */
 Creep.prototype.performHarvesterDeliver = function () {
 	if (this.memory.fixedMineralSource) {
-		return this.performMineralHarvesterDeliver();
+		this.performMineralHarvesterDeliver();
+		return;
 	}
+
+	if (!this.memory.fixedSource) return;
 
 	const creep = this;
-	let source;
+	const source = Game.getObjectById(creep.memory.fixedSource);
+	const targetLink = source.getNearbyLink();
+	const targetContainer = source.getNearbyContainer();
 	let target;
-	let targetLink;
-	let targetContainer;
-	let dropOffSpot;
 
-	if (this.memory.fixedSource) {
-		source = Game.getObjectById(creep.memory.fixedSource);
-		targetLink = source.getNearbyLink();
-		targetContainer = source.getNearbyContainer();
-		dropOffSpot = source.getDropoffSpot();
-
-		this.memory.fixedDropoffSpot = dropOffSpot;
-		this.memory.fixedTarget = source.memory.targetContainer; // @todo this should not work well...
+	if (_.size(creep.room.creepsByRole.transporter) === 0) {
+		// Use transporter drop off logic.
+		this.performDeliver();
+		return;
 	}
 
-	if (_.size(creep.room.creepsByRole.transporter) > 0) {
-		// Drop off in link or container.
-		if (targetLink && targetLink.energy < targetLink.energyCapacity && creep.room.getStoredEnergy() > 10000) {
-			target = targetLink;
-		}
-		else if (targetContainer && _.sum(targetContainer.store) < targetContainer.storeCapacity) {
-			target = targetContainer;
-		}
-		else if (dropOffSpot) {
-			if (true || creep.pos.x === dropOffSpot.x && creep.pos.y === dropOffSpot.y) {
-				creep.drop(RESOURCE_ENERGY);
-			}
-			else {
-				creep.moveTo(dropOffSpot.x, dropOffSpot.y);
-			}
-
-			return true;
-		}
+	// Drop off in link or container.
+	if (targetLink && targetLink.energy < targetLink.energyCapacity && creep.room.getStoredEnergy() > 10000) {
+		target = targetLink;
 	}
-
-	if (!target) {
-		// @todo Use transporter drop off logic.
-		if (!creep.memory.deliverTarget) {
-			let targets = creep.room.find(FIND_STRUCTURES, {
-				filter: structure => {
-					return (structure.structureType === STRUCTURE_EXTENSION ||
-							structure.structureType === STRUCTURE_SPAWN ||
-							structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity;
-				},
-			});
-			if (targets.length <= 0) {
-				// Containers get filled when all other structures are full.
-				targets = creep.room.find(FIND_STRUCTURES, {
-					filter: structure => {
-						return (structure.structureType === STRUCTURE_CONTAINER) && structure.storeCapacity && _.sum(structure.store) < structure.storeCapacity;
-					},
-				});
-				if (targets.length <= 0) {
-					return false;
-				}
-			}
-
-			creep.memory.resourceTarget = null;
-			creep.memory.deliverTarget = utilities.getClosest(creep, targets);
-		}
-
-		const best = creep.memory.deliverTarget;
-		if (!best) {
-			return false;
-		}
-
-		target = Game.getObjectById(best);
-		if (!target) {
-			creep.memory.deliverTarget = null;
-			return false;
-		}
+	else if (targetContainer && _.sum(targetContainer.store) < targetContainer.storeCapacity) {
+		target = targetContainer;
+	}
+	else {
+		creep.drop(RESOURCE_ENERGY);
+		return;
 	}
 
 	if (source && !targetContainer && creep.pos.getRangeTo(source) <= 1) {
@@ -203,7 +148,7 @@ Creep.prototype.performHarvesterDeliver = function () {
 
 		if (sites.length > 0) {
 			this.buildTarget(sites[0]);
-			return true;
+			return;
 		}
 	}
 
@@ -214,40 +159,22 @@ Creep.prototype.performHarvesterDeliver = function () {
 		creep.transfer(target, RESOURCE_ENERGY);
 	}
 
-	if (target.energy >= target.energyCapacity) {
-		creep.memory.deliverTarget = null;
-	}
-
 	if (target.store && _.sum(target.store) >= target.storeCapacity) {
-		if (creep.memory.fixedTarget && target.id === creep.memory.fixedTarget) {
-			// Container is full, drop energy instead.
-			if (false && creep.memory.fixedDropoffSpot) {
-				if (creep.pos.x === creep.memory.fixedDropoffSpot.x && creep.pos.y === creep.memory.fixedDropoffSpot.y) {
-					creep.drop(RESOURCE_ENERGY);
-				}
-				else {
-					creep.moveTo(creep.memory.fixedDropoffSpot.x, creep.memory.fixedDropoffSpot.y);
-				}
-			}
-			else {
-				// Drop on the spot, I guess.
-				creep.drop(RESOURCE_ENERGY);
-			}
-		}
-		else {
-			creep.memory.deliverTarget = null;
-		}
+		// Drop on the spot, I guess.
+		creep.drop(RESOURCE_ENERGY);
 	}
-
-	return true;
 };
 
 /**
  * Puts this creep into or out of harvesting mode.
+ *
+ * @param {boolean} harvesting
+ *   Whether this creep should be harvesting.
  */
 Creep.prototype.setHarvesterState = function (harvesting) {
 	this.memory.harvesting = harvesting;
 	delete this.memory.resourceTarget;
+	delete this.memory.deliverTarget;
 };
 
 /**
@@ -262,8 +189,9 @@ Creep.prototype.runHarvesterLogic = function () {
 	}
 
 	if (this.memory.harvesting) {
-		return this.performHarvest();
+		this.performHarvest();
+		return;
 	}
 
-	return this.performHarvesterDeliver();
+	this.performHarvesterDeliver();
 };

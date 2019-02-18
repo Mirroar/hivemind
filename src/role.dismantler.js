@@ -9,7 +9,7 @@ Creep.prototype.performDismantle = function () {
 	// First, get to target room.
 	if (this.pos.roomName !== this.memory.targetRoom) {
 		this.moveToRoom(this.memory.targetRoom);
-		return true;
+		return;
 	}
 
 	let target;
@@ -18,20 +18,17 @@ Creep.prototype.performDismantle = function () {
 	const flags = this.room.find(FIND_FLAGS, {
 		filter: flag => flag.name.startsWith('Dismantle:'),
 	});
-	if (flags.length > 0) {
-		for (const i in flags) {
-			const flag = flags[i];
-			const structures = flag.pos.lookFor(LOOK_STRUCTURES);
+	for (const flag of flags) {
+		const structures = flag.pos.lookFor(LOOK_STRUCTURES);
 
-			if (structures.length === 0) {
-				// Done dismantling.
-				flag.remove();
-				continue;
-			}
-
-			target = structures[0];
-			break;
+		if (structures.length === 0) {
+			// Done dismantling.
+			flag.remove();
+			continue;
 		}
+
+		target = structures[0];
+		break;
 	}
 
 	if (!target && this.room.roomPlanner && this.room.roomPlanner.needsDismantling()) {
@@ -48,18 +45,14 @@ Creep.prototype.performDismantle = function () {
 		else {
 			this.dismantle(target);
 		}
-
-		return true;
 	}
-
-	return true;
 };
 
 Creep.prototype.performDismantlerDeliver = function () {
 	// First, get to delivery room.
 	if (this.pos.roomName !== this.memory.sourceRoom) {
 		this.moveTo(new RoomPosition(25, 25, this.memory.sourceRoom));
-		return true;
+		return;
 	}
 
 	// Deliver to storage if possible.
@@ -71,7 +64,7 @@ Creep.prototype.performDismantlerDeliver = function () {
 			this.transferAny(this.room.storage);
 		}
 
-		return true;
+		return;
 	}
 
 	const location = this.room.getStorageLocation();
@@ -82,19 +75,20 @@ Creep.prototype.performDismantlerDeliver = function () {
 	else {
 		this.dropAny();
 	}
-
-	return true;
 };
 
 /**
- * Puts this creep into or out of build mode.
+ * Puts this creep into or out of dismantling mode.
+ *
+ * @param {boolean} dismantling
+ *   Whether this creep should be dismantling buildings.
  */
 Creep.prototype.setDismantlerState = function (dismantling) {
 	this.memory.dismantling = dismantling;
 };
 
 /**
- * Makes a creep behave like a builder.
+ * Makes a creep behave like a dismantler.
  */
 Creep.prototype.runDismantlerLogic = function () {
 	if (!this.memory.sourceRoom) {
@@ -113,9 +107,9 @@ Creep.prototype.runDismantlerLogic = function () {
 	}
 
 	if (this.memory.dismantling) {
-		return this.performDismantle();
+		this.performDismantle();
+		return;
 	}
 
 	this.performDismantlerDeliver();
-	return true;
 };

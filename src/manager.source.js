@@ -105,45 +105,6 @@ Mineral.prototype.getAdjacentFreeSquares = function () {
 };
 
 /**
- * Decides on a decent dropoff spot for energy close to the source and easily accessible by harvesters.
- *
- * @return {object}
- *   An object containing x and y coordinates for a source's dropoff spot.
- */
-Source.prototype.getDropoffSpot = function () {
-	// Decide on a dropoff-spot that will eventually have a container built.
-	// @todo Maybe recalculate once in a while in case structures no block some tiles.
-	if (!this.memory.dropoffSpot) {
-		let best;
-		let bestCount = 0;
-		const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 2, this.pos.x - 2, this.pos.y + 2, this.pos.x + 2, true);
-		const adjacentTerrain = this.getAdjacentFreeSquares();
-
-		for (const tile of terrain) {
-			if (this.pos.getRangeTo(tile.x, tile.y) <= 1) {
-				continue;
-			}
-
-			if (tile.terrain === 'plain' || tile.terrain === 'swamp') {
-				// @todo Make sure no structures are blocking this tile.
-				const count = _.size(_.filter(adjacentTerrain, aTile => aTile.getRangeTo(tile.x, tile.y) <= 1));
-
-				if (count > bestCount) {
-					bestCount = count;
-					best = tile;
-				}
-			}
-		}
-
-		if (best) {
-			this.memory.dropoffSpot = {x: best.x, y: best.y};
-		}
-	}
-
-	return this.memory.dropoffSpot;
-};
-
-/**
  * Calculates and caches the number of walkable tiles around a source.
  *
  * @return {number}
