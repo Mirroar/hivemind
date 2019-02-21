@@ -38,11 +38,17 @@ ExpandProcess.prototype.run = function () {
 	const memory = Memory.strategy;
 
 	const ownedRooms = _.size(_.filter(Game.rooms, room => room.controller && room.controller.my));
+	const harvestRooms = memory.remoteHarvesting ? memory.remoteHarvesting.currentCount : 0;
+
+	// If we have many rooms with remote harvesting, be a bit more lenient
+	// on CPU cap for claiming a new room. Remote harvesting can always be
+	// dialed back to the most efficient rooms to save CPU.
+	const cpuLimit = harvestRooms / (ownedRooms + 1) < 2 ? 0.8 : 1;
 
 	const canExpand = ownedRooms < Game.gcl.level &&
 		stats.getStat('cpu_total', 10000) &&
-		stats.getStat('cpu_total', 10000) < Game.cpu.limit * 0.8 &&
-		stats.getStat('cpu_total', 1000) < Game.cpu.limit * 0.8;
+		stats.getStat('cpu_total', 10000) < Game.cpu.limit * cpuLimit &&
+		stats.getStat('cpu_total', 1000) < Game.cpu.limit * cpuLimit;
 
 	if (!memory.expand.currentTarget && canExpand) {
 		// Choose a room to expand to.
