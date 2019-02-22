@@ -3,6 +3,9 @@
 /* global Creep RESOURCE_POWER FIND_STRUCTURES STRUCTURE_POWER_BANK
 FIND_DROPPED_RESOURCES */
 
+/**
+ * Makes a creep act like a power hauler.
+ */
 Creep.prototype.runPowerHaulerLogic = function () {
 	if (this.memory.isReturning) {
 		if (this.pos.roomName !== this.memory.sourceRoom) {

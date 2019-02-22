@@ -13,7 +13,7 @@ Creep.prototype.performScout = function () {
 			this.moveToRange(target, 3);
 		}
 
-		return true;
+		return;
 	}
 
 	if (typeof this.room.visual !== 'undefined') {
@@ -22,10 +22,7 @@ Creep.prototype.performScout = function () {
 
 	if (!this.moveToRoom(this.memory.scoutTarget)) {
 		this.chooseScoutTarget();
-		return false;
 	}
-
-	return true;
 };
 
 /**
@@ -33,21 +30,18 @@ Creep.prototype.performScout = function () {
  */
 Creep.prototype.chooseScoutTarget = function () {
 	this.memory.scoutTarget = null;
-	if (!Memory.strategy) {
-		return false;
-	}
+	if (!Memory.strategy) return;
 
 	const memory = Memory.strategy;
 
 	let best = null;
-	for (const roomName in memory.roomList) {
-		const info = memory.roomList[roomName];
-		if (roomName === this.pos.roomName) continue;
+	for (const info of _.values(memory.roomList)) {
+		if (info.roomName === this.pos.roomName) continue;
 
 		if (info.origin === this.memory.origin && info.scoutPriority > 0) {
 			if (!best || best.scoutPriority < info.scoutPriority) {
 				// Check distance / path to room.
-				const path = this.calculateRoomPath(roomName);
+				const path = this.calculateRoomPath(info.roomName);
 
 				if (path) {
 					best = info;

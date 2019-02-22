@@ -288,3 +288,126 @@ Room.prototype.getResourceState = function () {
 
 	return roomData;
 };
+
+/**
+ * Determines the best place to store resources.
+ *
+ * @param {number} amount
+ *   Amount of resources to store.
+ * @param {string} resourceType
+ *   Type of resource to store.
+ *
+ * @return {Structure}
+ *   The room's storage or terminal.
+ */
+Room.prototype.getBestStorageTarget = function (amount, resourceType) {
+	if (this.storage && this.terminal) {
+		const storageFree = this.storage.storeCapacity - _.sum(this.storage.store);
+		const terminalFree = this.terminal.storeCapacity - _.sum(this.terminal.store);
+		if (this.isEvacuating() && terminalFree > this.terminal.storeCapacity * 0.2) {
+			// If we're evacuating, store everything in terminal to be sent away.
+			return this.terminal;
+		}
+
+		if (this.isClearingTerminal() && storageFree > this.storage.storeCapacity * 0.2) {
+			// If we're clearing out the terminal, put everything into storage.
+			return this.storage;
+		}
+
+		if (!resourceType) {
+			if (_.sum(this.storage.store) / this.storage.storeCapacity < _.sum(this.terminal.store) / this.terminal.storeCapacity) {
+				return this.storage;
+			}
+
+			return this.terminal;
+		}
+
+		if (storageFree >= amount && terminalFree >= amount && (this.storage.store[resourceType] || 0) / storageFree < (this.terminal.store[resourceType] || 0) / terminalFree) {
+			return this.storage;
+		}
+
+		if (terminalFree >= amount) {
+			return this.terminal;
+		}
+
+		if (storageFree >= amount) {
+			return this.storage;
+		}
+	}
+	else if (this.storage) {
+		return this.storage;
+	}
+	else if (this.terminal) {
+		return this.terminal;
+	}
+};
+
+/**
+ * Determines the best place to get resources from.
+ *
+ * @param {string} resourceType
+ *   The type of resource to get.
+ *
+ * @return {Structure}
+ *   The room's storage or terminal.
+ */
+Room.prototype.getBestStorageSource = function (resourceType) {
+	if (this.storage && this.terminal) {
+		const specialSource = this.getBestCircumstancialStorageSource(resourceType);
+		if (specialSource) return specialSource;
+
+		if ((this.storage.store[resourceType] || 0) / this.storage.storeCapacity < (this.terminal.store[resourceType]) / this.terminal.storeCapacity) {
+			if (this.memory.fillTerminal !== resourceType) {
+				return this.terminal;
+			}
+		}
+
+		if ((this.storage.store[resourceType] || 0) > 0) {
+			return this.storage;
+		}
+	}
+	else if (this.storage && this.storage.store[resourceType]) {
+		return this.storage;
+	}
+	else if (this.terminal && this.terminal.store[resourceType] && this.memory.fillTerminal !== resourceType) {
+		return this.terminal;
+	}
+};
+
+/**
+ * Determines the best place to get resources from when special rules apply.
+ *
+ * This is the case when a room is evacuating or a terminal is being emptied.
+ *
+ * @param {string} resourceType
+ *   The type of resource to get.
+ *
+ * @return {Structure}
+ *   The room's storage or terminal.
+ */
+Room.prototype.getBestCircumstancialStorageSource = function (resourceType) {
+	let primarySource;
+	let secondarySource;
+	if (this.isEvacuating()) {
+		// Take resources out of storage if possible to empty it out.
+		primarySource = this.storage;
+		secondarySource = this.terminal;
+	}
+	else if (this.isClearingTerminal()) {
+		// Take resources out of terminal if possible to empty it out.
+		primarySource = this.terminal;
+		secondarySource = this.storage;
+	}
+
+	if (primarySource) {
+		const secondaryFull = _.sum(secondarySource.store) > secondarySource.storeCapacity * 0.8;
+
+		if (primarySource.store[resourceType] && (!secondaryFull || !secondarySource.store[resourceType])) {
+			return primarySource;
+		}
+
+		if (secondarySource.store[resourceType] && (resourceType === RESOURCE_ENERGY || secondaryFull)) {
+			return secondarySource;
+		}
+	}
+};

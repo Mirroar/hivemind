@@ -9,101 +9,10 @@ STRUCTURE_ROAD STRUCTURE_RAMPART LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK */
 const utilities = require('./utilities');
 
 /**
- * Determines the best place to store resources.
- */
-Room.prototype.getBestStorageTarget = function (amount, resourceType) {
-	if (this.storage && this.terminal) {
-		const storageFree = this.storage.storeCapacity - _.sum(this.storage.store);
-		const terminalFree = this.terminal.storeCapacity - _.sum(this.terminal.store);
-		if (this.isEvacuating() && terminalFree > this.terminal.storeCapacity * 0.2) {
-			// If we're evacuating, store everything in terminal to be sent away.
-			return this.terminal;
-		}
-
-		if (this.isClearingTerminal() && storageFree > this.storage.storeCapacity * 0.2) {
-			// If we're clearing out the terminal, put everything into storage.
-			return this.storage;
-		}
-
-		if (!resourceType) {
-			if (_.sum(this.storage.store) / this.storage.storeCapacity < _.sum(this.terminal.store) / this.terminal.storeCapacity) {
-				return this.storage;
-			}
-
-			return this.terminal;
-		}
-
-		if (storageFree >= amount && terminalFree >= amount && (this.storage.store[resourceType] || 0) / storageFree < (this.terminal.store[resourceType] || 0) / terminalFree) {
-			return this.storage;
-		}
-
-		if (terminalFree >= amount) {
-			return this.terminal;
-		}
-
-		if (storageFree >= amount) {
-			return this.storage;
-		}
-	}
-	else if (this.storage) {
-		return this.storage;
-	}
-	else if (this.terminal) {
-		return this.terminal;
-	}
-};
-
-/**
- * Determines the best place to get resources from.
- */
-Room.prototype.getBestStorageSource = function (resourceType) {
-	if (this.storage && this.terminal) {
-		if (this.isEvacuating()) {
-			// Take resources out of storage if possible to empty it out.
-			if (this.storage.store[resourceType] && (_.sum(this.terminal.store) < this.terminal.storeCapacity * 0.8 || !this.terminal.store[resourceType])) {
-				return this.storage;
-			}
-
-			if (this.terminal.store[resourceType] && (resourceType === RESOURCE_ENERGY || _.sum(this.terminal.store) > this.terminal.storeCapacity * 0.8)) {
-				return this.terminal;
-			}
-
-			return;
-		}
-
-		if (this.isClearingTerminal()) {
-			// Take resources out of terminal if possible to empty it out.
-			if (this.terminal.store[resourceType] && (_.sum(this.storage.store) < this.storage.storeCapacity * 0.8 || !this.storage.store[resourceType])) {
-				return this.terminal;
-			}
-
-			if (this.storage.store[resourceType] && (resourceType === RESOURCE_ENERGY || _.sum(this.storage.store) > this.storage.storeCapacity * 0.8)) {
-				return this.storage;
-			}
-
-			return;
-		}
-
-		if ((this.storage.store[resourceType] || 0) / this.storage.storeCapacity < (this.terminal.store[resourceType]) / this.terminal.storeCapacity) {
-			if (this.memory.fillTerminal !== resourceType) {
-				return this.terminal;
-			}
-		}
-
-		if ((this.storage.store[resourceType] || 0) > 0) {
-			return this.storage;
-		}
-	}
-	else if (this.storage && this.storage.store[resourceType]) {
-		return this.storage;
-	}
-	else if (this.terminal && this.terminal.store[resourceType] && this.memory.fillTerminal !== resourceType) {
-		return this.terminal;
-	}
-};
-
-/**
  * Creates a priority list of energy sources available to this creep.
+ *
+ * @return {Array}
+ *   A list of potential energy sources.
  */
 Creep.prototype.getAvailableEnergySources = function () {
 	const creep = this;
@@ -123,7 +32,7 @@ Creep.prototype.getAvailableEnergySources = function () {
 	const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 	if (storageTarget && storageTarget.store.energy >= creep.carryCapacity - _.sum(creep.carry)) {
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
-		if (creep.memory.role === 'transporter' || storageTarget.store.energy > 5000 || !creep.room.storage || storageTarget.id != creep.room.storage.id) {
+		if (creep.memory.role === 'transporter' || storageTarget.store.energy > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
 			options.push({
 				priority: creep.memory.role === 'transporter' ? storagePriority : 5,
 				weight: 0,
@@ -134,11 +43,52 @@ Creep.prototype.getAvailableEnergySources = function () {
 		}
 	}
 
+	this.addDroppedEnergySourceOptions(options, storagePriority);
+	this.addContainerEnergySourceOptions(options);
+
+	// Take energy from storage links.
+	if (creep.room.linkNetwork && creep.room.linkNetwork.energy > creep.room.linkNetwork.maxEnergy) {
+		for (const link of creep.room.linkNetwork.neutralLinks) {
+			if (link.energy > 0) {
+				const option = {
+					priority: 5,
+					weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
+					type: 'structure',
+					object: link,
+					resourceType: RESOURCE_ENERGY,
+				};
+
+				if (creep.pos.getRangeTo(link) > 10) {
+					// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
+					option.priority--;
+				}
+
+				option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
+
+				options.push(option);
+			}
+		}
+	}
+
+	return options;
+};
+
+/**
+ * Adds options for picking up dropped energy to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential energy sources.
+ * @param {number} storagePriority
+ *   Priority assigned for transporters picking up from storage.
+ */
+Creep.prototype.addDroppedEnergySourceOptions = function (options, storagePriority) {
+	const creep = this;
+
 	// Get storage location, since that is a low priority source for transporters.
 	const storagePosition = creep.room.getStorageLocation();
 
 	// Look for energy on the ground.
-	let targets = creep.room.find(FIND_DROPPED_RESOURCES, {
+	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => {
 			if (resource.resourceType === RESOURCE_ENERGY) {
 				if (creep.pos.findPathTo(resource)) return true;
@@ -148,8 +98,7 @@ Creep.prototype.getAvailableEnergySources = function () {
 		},
 	});
 
-	for (const i in targets) {
-		const target = targets[i];
+	for (const target of targets) {
 		const option = {
 			priority: 4,
 			weight: target.amount / 100, // @todo Also factor in distance.
@@ -185,22 +134,28 @@ Creep.prototype.getAvailableEnergySources = function () {
 
 		options.push(option);
 	}
+};
+
+/**
+ * Adds options for picking up dropped energy to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential energy sources.
+ */
+Creep.prototype.addContainerEnergySourceOptions = function (options) {
+	const creep = this;
 
 	// Look for energy in Containers.
-	targets = creep.room.find(FIND_STRUCTURES, {
+	const targets = creep.room.find(FIND_STRUCTURES, {
 		filter: structure => {
 			return (structure.structureType === STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > creep.carryCapacity * 0.1;
 		},
 	});
 
 	// Prefer containers used as harvester dropoff.
-	for (const i in targets) {
-		const target = targets[i];
-
+	for (const target of targets) {
 		// Don't use the controller container as a normal source if we're upgrading.
-		if (target.id === target.room.memory.controllerContainer && creep.room.creepsByRole.upgrader) {
-			continue;
-		}
+		if (target.id === target.room.memory.controllerContainer && creep.room.creepsByRole.upgrader) continue;
 
 		const option = {
 			priority: 1,
@@ -210,54 +165,29 @@ Creep.prototype.getAvailableEnergySources = function () {
 			resourceType: RESOURCE_ENERGY,
 		};
 
-		if (target.room.memory.sources) {
-			for (const id in target.room.memory.sources) {
-				if (target.room.memory.sources[id].targetContainer && target.room.memory.sources[id].targetContainer === target.id) {
-					option.priority = 2;
-					if (_.sum(target.store) >= creep.carryCapacity - _.sum(creep.carry)) {
-						// This container is filling up, prioritize emptying it.
-						option.priority += 2;
-					}
+		for (const sourceData of _.values(target.room.memory.sources)) {
+			if (sourceData.targetContainer !== target.id) continue;
 
-					break;
-				}
+			option.priority = 2;
+			if (_.sum(target.store) >= creep.carryCapacity - _.sum(creep.carry)) {
+				// This container is filling up, prioritize emptying it.
+				option.priority += 2;
 			}
+
+			break;
 		}
 
 		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 
 		options.push(option);
 	}
-
-	// Take energy from storage links.
-	if (creep.room.linkNetwork && creep.room.linkNetwork.energy > creep.room.linkNetwork.maxEnergy) {
-		for (const link of creep.room.linkNetwork.neutralLinks) {
-			if (link.energy > 0) {
-				const option = {
-					priority: 5,
-					weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: link,
-					resourceType: RESOURCE_ENERGY,
-				};
-
-				if (creep.pos.getRangeTo(link) > 10) {
-					// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
-					option.priority--;
-				}
-
-				option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
-
-				options.push(option);
-			}
-		}
-	}
-
-	return options;
 };
 
 /**
  * Creates a priority list of resources available to this creep.
+ *
+ * @return {Array}
+ *   A list of potential resource sources.
  */
 Creep.prototype.getAvailableSources = function () {
 	const creep = this;
@@ -272,10 +202,9 @@ Creep.prototype.getAvailableSources = function () {
 		let max = null;
 		let maxResourceType = null;
 		for (const resourceType in terminal.store) {
-			if (resourceType === RESOURCE_ENERGY && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) {
-				// Do not take out energy if there is enough in storage.
-				continue;
-			}
+			// Do not take out energy if there is enough in storage.
+			if (resourceType === RESOURCE_ENERGY && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
+			if (resourceType === creep.room.memory.fillTerminal) continue;
 
 			if (!max || terminal.store[resourceType] > max) {
 				max = terminal.store[resourceType];
@@ -322,7 +251,7 @@ Creep.prototype.getAvailableSources = function () {
 
 	// Look for resources on the ground.
 	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
-		filter: (resource) => {
+		filter: resource => {
 			if (resource.amount > 10 && creep.pos.findPathTo(resource)) {
 				return true;
 			}
@@ -331,8 +260,7 @@ Creep.prototype.getAvailableSources = function () {
 		},
 	});
 
-	for (const i in targets) {
-		const target = targets[i];
+	for (const target of targets) {
 		const option = {
 			priority: 4,
 			weight: target.amount / 30, // @todo Also factor in distance.
@@ -359,14 +287,14 @@ Creep.prototype.getAvailableSources = function () {
 			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
 		});
 
-		for (const i in containers) {
-			for (const resourceType in containers[i].store) {
-				if (resourceType !== RESOURCE_ENERGY && containers[i].store[resourceType] > 0) {
+		for (const container of containers) {
+			for (const resourceType in container.store) {
+				if (resourceType !== RESOURCE_ENERGY && container.store[resourceType] > 0) {
 					const option = {
 						priority: 3,
-						weight: containers[i].store[resourceType] / 20, // @todo Also factor in distance.
+						weight: container.store[resourceType] / 20, // @todo Also factor in distance.
 						type: 'structure',
-						object: containers[i],
+						object: container,
 						resourceType,
 					};
 
