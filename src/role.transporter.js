@@ -137,7 +137,7 @@ Creep.prototype.addDroppedEnergySourceOptions = function (options, storagePriori
 };
 
 /**
- * Adds options for picking up dropped energy to priority list.
+ * Adds options for picking up energy from containers to priority list.
  *
  * @param {Array} options
  *   A list of potential energy sources.
@@ -249,6 +249,24 @@ Creep.prototype.getAvailableSources = function () {
 		}
 	}
 
+	this.addDroppedResourceOptions(options);
+	this.addContainerResourceOptions(options);
+	this.addHighLevelResourceOptions(options);
+	this.addEvacuatingRoomResourceOptions(options);
+	this.addLabResourceOptions(options);
+
+	return options;
+};
+
+/**
+ * Adds options for picking up dropped energy to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+Creep.prototype.addDroppedResourceOptions = function (options) {
+	const creep = this;
+
 	// Look for resources on the ground.
 	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => {
@@ -280,29 +298,48 @@ Creep.prototype.getAvailableSources = function () {
 
 		options.push(option);
 	}
+};
+
+/**
+ * Adds options for picking up resources from containers to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+Creep.prototype.addContainerResourceOptions = function (options) {
+	// We need a decent place to store these resources.
+	if (!this.room.terminal && !this.room.storage) return;
 
 	// Take non-energy out of containers.
-	if (terminal || storage) {
-		const containers = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
-		});
+	const containers = this.room.find(FIND_STRUCTURES, {
+		filter: structure => structure.structureType === STRUCTURE_CONTAINER,
+	});
 
-		for (const container of containers) {
-			for (const resourceType in container.store) {
-				if (resourceType !== RESOURCE_ENERGY && container.store[resourceType] > 0) {
-					const option = {
-						priority: 3,
-						weight: container.store[resourceType] / 20, // @todo Also factor in distance.
-						type: 'structure',
-						object: container,
-						resourceType,
-					};
+	for (const container of containers) {
+		for (const resourceType in container.store) {
+			if (resourceType !== RESOURCE_ENERGY && container.store[resourceType] > 0) {
+				const option = {
+					priority: 3,
+					weight: container.store[resourceType] / 20, // @todo Also factor in distance.
+					type: 'structure',
+					object: container,
+					resourceType,
+				};
 
-					options.push(option);
-				}
+				options.push(option);
 			}
 		}
 	}
+};
+
+/**
+ * Adds options for picking up resources for nukers and power spawns.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+Creep.prototype.addHighLevelResourceOptions = function (options) {
+	const creep = this;
 
 	// Take ghodium if nuker needs it.
 	if (creep.room.nuker && creep.room.nuker.ghodium < creep.room.nuker.ghodiumCapacity) {
@@ -341,175 +378,181 @@ Creep.prototype.getAvailableSources = function () {
 			options.push(option);
 		}
 	}
+};
 
-	if (creep.room.isEvacuating()) {
-		// Take everything out of labs.
-		const labs = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_LAB,
-		});
+/**
+ * Adds options for picking up resources for moving to terminal.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+Creep.prototype.addEvacuatingRoomResourceOptions = function (options) {
+	const creep = this;
+	if (!creep.room.isEvacuating()) return;
 
-		for (const i in labs) {
-			const lab = labs[i];
-			if (lab.energy > 0) {
-				options.push({
-					priority: 4,
-					weight: 0,
-					type: 'structure',
-					object: lab,
-					resourceType: RESOURCE_ENERGY,
-				});
-			}
+	// Take everything out of labs.
+	const labs = creep.room.find(FIND_STRUCTURES, {
+		filter: structure => structure.structureType === STRUCTURE_LAB,
+	});
 
-			if (lab.mineralType) {
-				options.push({
-					priority: 4,
-					weight: 0,
-					type: 'structure',
-					object: lab,
-					resourceType: lab.mineralType,
-				});
-			}
+	for (const lab of labs) {
+		if (lab.energy > 0) {
+			options.push({
+				priority: 4,
+				weight: 0,
+				type: 'structure',
+				object: lab,
+				resourceType: RESOURCE_ENERGY,
+			});
 		}
 
-		// Also take everything out of storage.
-		if (storage && terminal && _.sum(terminal.store) < terminal.storeCapacity * 0.8) {
-			for (const resourceType in storage.store) {
-				if (storage.store[resourceType] <= 0) continue;
-
-				options.push({
-					priority: 3,
-					weight: 0,
-					type: 'structure',
-					object: storage,
-					resourceType,
-				});
-
-				break;
-			}
+		if (lab.mineralType) {
+			options.push({
+				priority: 4,
+				weight: 0,
+				type: 'structure',
+				object: lab,
+				resourceType: lab.mineralType,
+			});
 		}
-
-		// @todo Destroy nuker once storage is empty so we can pick up contained resources.
 	}
 
-	if (creep.room.memory.canPerformReactions && !creep.room.isEvacuating()) {
-		const labs = creep.room.memory.labs.reactor;
-		for (const i in labs) {
-			// Clear out reaction labs.
-			const lab = Game.getObjectById(labs[i]);
+	// Also take everything out of storage.
+	const storage = creep.room.storage;
+	const terminal = creep.room.terminal;
+	if (storage && terminal && _.sum(terminal.store) < terminal.storeCapacity * 0.8) {
+		for (const resourceType in storage.store) {
+			if (storage.store[resourceType] <= 0) continue;
 
-			if (lab && lab.mineralAmount > 0) {
-				const option = {
-					priority: 0,
-					weight: lab.mineralAmount / lab.mineralCapacity,
-					type: 'structure',
-					object: lab,
-					resourceType: lab.mineralType,
-				};
-
-				if (lab.mineralAmount > lab.mineralCapacity * 0.3) {
-					option.priority++;
-				}
-
-				if (lab.mineralAmount > lab.mineralCapacity * 0.6) {
-					option.priority++;
-				}
-
-				if (lab.mineralAmount > lab.mineralCapacity * 0.9) {
-					option.priority++;
-				}
-
-				if (creep.room.memory.currentReaction) {
-					// If we're doing a different reaction now, clean out faster!
-					if (REACTIONS[creep.room.memory.currentReaction[0]][creep.room.memory.currentReaction[1]] !== lab.mineralType) {
-						option.priority = 4;
-						option.weight = 0;
-					}
-				}
-
-				options.push(option);
-			}
-		}
-
-		// Clear out labs with wrong resources.
-		let lab = Game.getObjectById(creep.room.memory.labs.source1);
-		if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType !== creep.room.memory.currentReaction[0]) {
-			const option = {
+			options.push({
 				priority: 3,
 				weight: 0,
+				type: 'structure',
+				object: storage,
+				resourceType,
+			});
+
+			break;
+		}
+	}
+
+	// @todo Destroy nuker once storage is empty so we can pick up contained resources.
+};
+
+/**
+ * Adds options for picking up resources for lab management.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+Creep.prototype.addLabResourceOptions = function (options) {
+	const creep = this;
+	if (!creep.room.memory.canPerformReactions) return;
+	if (creep.room.isEvacuating()) return;
+
+	const labs = creep.room.memory.labs.reactor;
+	for (const labID of labs) {
+		// Clear out reaction labs.
+		const lab = Game.getObjectById(labID);
+
+		if (lab && lab.mineralAmount > 0) {
+			const option = {
+				priority: 0,
+				weight: lab.mineralAmount / lab.mineralCapacity,
 				type: 'structure',
 				object: lab,
 				resourceType: lab.mineralType,
 			};
 
-			options.push(option);
-		}
+			if (lab.mineralAmount > lab.mineralCapacity * 0.3) {
+				option.priority++;
+			}
 
-		lab = Game.getObjectById(creep.room.memory.labs.source2);
-		if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType !== creep.room.memory.currentReaction[1]) {
-			const option = {
-				priority: 3,
-				weight: 0,
-				type: 'structure',
-				object: lab,
-				resourceType: lab.mineralType,
-			};
+			if (lab.mineralAmount > lab.mineralCapacity * 0.6) {
+				option.priority++;
+			}
 
-			options.push(option);
-		}
+			if (lab.mineralAmount > lab.mineralCapacity * 0.9) {
+				option.priority++;
+			}
 
-		// Get reaction resources from terminal.
-		if (creep.room.memory.currentReaction) {
-			lab = Game.getObjectById(creep.room.memory.labs.source1);
-			if (lab && (!lab.mineralType || lab.mineralType === creep.room.memory.currentReaction[0]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
-				let source = terminal;
-				if (!terminal || !terminal.store[creep.room.memory.currentReaction[0]] || terminal.store[creep.room.memory.currentReaction[0]] <= 0) {
-					source = creep.room.storage;
-				}
-
-				if (source.store[creep.room.memory.currentReaction[0]] && source.store[creep.room.memory.currentReaction[0]] > 0) {
-					const option = {
-						priority: 3,
-						weight: 1 - (lab.mineralAmount / lab.mineralCapacity),
-						type: 'structure',
-						object: source,
-						resourceType: creep.room.memory.currentReaction[0],
-					};
-
-					if (lab.mineralAmount > lab.mineralCapacity * 0.2) {
-						option.priority--;
-					}
-
-					options.push(option);
+			if (creep.room.memory.currentReaction) {
+				// If we're doing a different reaction now, clean out faster!
+				if (REACTIONS[creep.room.memory.currentReaction[0]][creep.room.memory.currentReaction[1]] !== lab.mineralType) {
+					option.priority = 4;
+					option.weight = 0;
 				}
 			}
 
-			lab = Game.getObjectById(creep.room.memory.labs.source2);
-			if (lab && (!lab.mineralType || lab.mineralType === creep.room.memory.currentReaction[1]) && lab.mineralAmount < lab.mineralCapacity * 0.5) {
-				let source = terminal;
-				if (!terminal || !terminal.store[creep.room.memory.currentReaction[1]] || terminal.store[creep.room.memory.currentReaction[1]] <= 0) {
-					source = creep.room.storage;
-				}
-
-				const option = {
-					priority: 3,
-					weight: 1 - (lab.mineralAmount / lab.mineralCapacity),
-					type: 'structure',
-					object: source,
-					resourceType: creep.room.memory.currentReaction[1],
-				};
-
-				if (lab.mineralAmount > lab.mineralCapacity * 0.2) {
-					option.priority--;
-				}
-
-				options.push(option);
-			}
+			options.push(option);
 		}
-
-		// @todo Get reaction resources from storage.
 	}
 
-	return options;
+	// Clear out labs with wrong resources.
+	let lab = Game.getObjectById(creep.room.memory.labs.source1);
+	if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType !== creep.room.memory.currentReaction[0]) {
+		const option = {
+			priority: 3,
+			weight: 0,
+			type: 'structure',
+			object: lab,
+			resourceType: lab.mineralType,
+		};
+
+		options.push(option);
+	}
+
+	lab = Game.getObjectById(creep.room.memory.labs.source2);
+	if (lab && lab.mineralAmount > 0 && creep.room.memory.currentReaction && lab.mineralType !== creep.room.memory.currentReaction[1]) {
+		const option = {
+			priority: 3,
+			weight: 0,
+			type: 'structure',
+			object: lab,
+			resourceType: lab.mineralType,
+		};
+
+		options.push(option);
+	}
+
+	if (!creep.room.memory.currentReaction) return;
+
+	// Get reaction resources.
+	this.addSourceLabResourceOptions(options, Game.getObjectById(creep.room.memory.labs.source1), creep.room.memory.currentReaction[0]);
+	this.addSourceLabResourceOptions(options, Game.getObjectById(creep.room.memory.labs.source2), creep.room.memory.currentReaction[1]);
+};
+
+/**
+ * Adds options for getting reaction lab resources.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ * @param {StructureLab} lab
+ *   The lab to fill.
+ * @param {string} resourceType
+ *   The type of resource that should be put in the lab.
+ */
+Creep.prototype.addSourceLabResourceOptions = function (options, lab, resourceType) {
+	if (!lab) return;
+	if (lab.mineralType && lab.mineralType !== resourceType) return;
+	if (lab.mineralAmount > lab.mineralCapacity * 0.5) return;
+
+	const source = this.room.getBestStorageSource(resourceType);
+	if ((source.store[resourceType] || 0) === 0) return;
+
+	const option = {
+		priority: 3,
+		weight: 1 - (lab.mineralAmount / lab.mineralCapacity),
+		type: 'structure',
+		object: source,
+		resourceType,
+	};
+
+	if (lab.mineralAmount > lab.mineralCapacity * 0.2) {
+		option.priority--;
+	}
+
+	options.push(option);
 };
 
 /**
@@ -572,7 +615,7 @@ Creep.prototype.performGetEnergy = function () {
 			creep.setTransporterState(true);
 		}
 
-		return false;
+		return;
 	}
 
 	const target = Game.getObjectById(best);
@@ -601,8 +644,6 @@ Creep.prototype.performGetEnergy = function () {
 			}
 		}
 	}
-
-	return true;
 };
 
 /**
@@ -610,87 +651,61 @@ Creep.prototype.performGetEnergy = function () {
  */
 Creep.prototype.performGetResources = function () {
 	const creep = this;
-	if (!creep.memory.sourceTarget) {
-		creep.calculateSource();
-	}
 
-	const best = creep.memory.sourceTarget;
-	if (!best) {
+	if (!this.ensureValidResourceSource()) {
 		if (creep.memory.role === 'transporter' && _.sum(creep.carry) > 0) {
 			// Deliver what we already have stored, if no more can be found for picking up.
 			creep.setTransporterState(true);
 		}
 
-		return false;
+		return;
 	}
 
-	const target = Game.getObjectById(best);
-	if (!target || (target.store && _.sum(target.store) <= 0) || (target.amount && target.amount <= 0)) {
-		creep.calculateSource();
-	}
-	else if (creep.memory.order && creep.memory.order.resourceType !== RESOURCE_ENERGY && target.mineralAmount && (target.mineralAmount <= 0 || target.mineralType !== creep.memory.order.resourceType)) {
-		creep.calculateSource();
-	}
-	else if (target.store && (!target.store[creep.memory.order.resourceType] || target.store[creep.memory.order.resourceType] <= 0)) {
-		creep.calculateSource();
-	}
-	else if (target.energyCapacity && target.energy <= 0 && creep.memory.order.resourceType == RESOURCE_ENERGY) {
-		creep.calculateSource();
-	}
-	else if (target.store) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			const result = creep.withdraw(target, creep.memory.order.resourceType);
-			if (result === OK) {
-				creep.calculateEnergySource();
-			}
-		}
-	}
-	else if (target.amount) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			const result = creep.pickup(target);
-			if (result === OK) {
-				creep.calculateEnergySource();
-			}
-		}
-	}
-	else if (target.mineralAmount) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			const result = creep.withdraw(target, creep.memory.order.resourceType);
-			if (result === OK) {
-				creep.calculateSource();
-			}
-		}
-	}
-	else if (target.energyCapacity && creep.memory.order.resourceType === RESOURCE_ENERGY) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			const result = creep.withdraw(target, creep.memory.order.resourceType);
-			if (result === OK) {
-				creep.calculateSource();
-			}
-		}
-	}
-	else if (target.mineralCapacity) {
-		// Empty lab.
-		creep.calculateSource();
+	const target = Game.getObjectById(creep.memory.sourceTarget);
+	if (creep.pos.getRangeTo(target) > 1) {
+		creep.moveToRange(target, 1);
+		return;
 	}
 
-	return true;
+	const resourceType = creep.memory.order.resourceType;
+	let orderDone = false;
+	if (target.amount) {
+		orderDone = creep.pickup(target) === OK;
+	}
+	else {
+		orderDone = creep.withdraw(target, resourceType) === OK;
+	}
+
+	if (orderDone) creep.calculateSource();
+};
+
+/**
+ * Makes sure the creep has a valid target for resource pickup.
+ *
+ * @return {boolean}
+ *   True if the target is valid and contains the needed resource.
+ */
+Creep.prototype.ensureValidResourceSource = function () {
+	const creep = this;
+
+	if (!creep.memory.sourceTarget) creep.calculateSource();
+
+	const target = Game.getObjectById(creep.memory.sourceTarget);
+	const resourceType = creep.memory.order && creep.memory.order.resourceType;
+	if (!target) return false;
+	if (target.store && (target.store[resourceType] || 0) > 0) return true;
+	if (target.amount && target.amount > 0) return true;
+	if (resourceType === RESOURCE_ENERGY && target.energyCapacity && target.energy > 0) return true;
+	if (target.mineralCapacity && target.mineralType === resourceType && target.mineralAmount > 0) return true;
+
+	return false;
 };
 
 /**
  * Creates a priority list of possible delivery targets for this creep.
+ *
+ * @return {Array}
+ *   A list of potential delivery targets.
  */
 Creep.prototype.getAvailableDeliveryTargets = function () {
 	const creep = this;
@@ -699,218 +714,15 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 	const terminal = creep.room.terminal;
 
 	if (creep.carry.energy > creep.carryCapacity * 0.1) {
-		// Primarily fill spawn and extenstions.
-		let targets = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => {
-				return ((structure.structureType === STRUCTURE_EXTENSION && !structure.isBayExtension()) ||
-						structure.structureType === STRUCTURE_SPAWN) && structure.energy < structure.energyCapacity;
-			},
-		});
-
-		for (const i in targets) {
-			const target = targets[i];
-
-			const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
-
-			const option = {
-				priority: 5,
-				weight: canDeliver / creep.carryCapacity,
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
-			option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 3;
-
-			options.push(option);
-		}
-
-		// Fill bays.
-		for (const bay of creep.room.bays) {
-			const target = bay;
-
-			if (target.energy >= target.energyCapacity) continue;
-
-			const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
-
-			const option = {
-				priority: 5,
-				weight: canDeliver / creep.carryCapacity,
-				type: 'bay',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
-			option.priority -= creep.room.getCreepsWithOrder('deliver', target.name).length * 3;
-
-			options.push(option);
-		}
-
-		// Fill containers.
-		targets = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => {
-				if (structure.structureType === STRUCTURE_CONTAINER && structure.store.energy < structure.storeCapacity) {
-					// Do deliver to controller containers when it is needed.
-					if (structure.id === structure.room.memory.controllerContainer) {
-						if (creep.room.creepsByRole.upgrader) return true;
-						return false;
-					}
-
-					// Do not deliver to containers used as harvester drop off points.
-					if (structure.room.sources) {
-						for (const id in structure.room.sources) {
-							const container = structure.room.sources[id].getNearbyContainer();
-							if (container && container.id === structure.id) {
-								return false;
-							}
-						}
-
-						if (structure.room.mineral) {
-							const container = structure.room.mineral.getNearbyContainer();
-							if (container && container.id === structure.id) {
-								return false;
-							}
-						}
-					}
-
-					return true;
-				}
-
-				return false;
-			},
-		});
-
-		for (const i in targets) {
-			const target = targets[i];
-			const option = {
-				priority: 4,
-				weight: (target.storeCapacity - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			let prioFactor = 1;
-			if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.5) {
-				prioFactor = 2;
-			}
-			else if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.75) {
-				prioFactor = 3;
-			}
-
-			option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
-
-			options.push(option);
-		}
-
-		// Supply towers.
-		targets = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => {
-				return (structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity * 0.8;
-			},
-		});
-
-		for (const i in targets) {
-			const target = targets[i];
-			const option = {
-				priority: 3,
-				weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			if (creep.room.memory.enemies && !creep.room.memory.enemies.safe) {
-				option.priority++;
-			}
-
-			if (target.energy < target.energyCapacity * 0.2) {
-				option.priority++;
-			}
-
-			option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 2;
-
-			options.push(option);
-		}
-
-		if (!creep.room.isEvacuating() && creep.room.getCurrentResourceAmount(RESOURCE_ENERGY) > 100000) {
-			// Supply nukers and power spawns with energy.
-			const targets = creep.room.find(FIND_STRUCTURES, {
-				filter: structure => {
-					return (structure.structureType === STRUCTURE_NUKER || structure.structureType === STRUCTURE_POWER_SPAWN) && structure.energy < structure.energyCapacity;
-				},
-			});
-
-			for (const i in targets) {
-				const target = targets[i];
-				const option = {
-					priority: 1,
-					weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: target,
-					resourceType: RESOURCE_ENERGY,
-				};
-
-				if (target.structureType === STRUCTURE_POWER_SPAWN) {
-					option.priority += 2;
-				}
-
-				option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 2;
-
-				options.push(option);
-			}
-		}
-
-		// Put in storage if nowhere else needs it.
-		const storageTarget = creep.room.getBestStorageTarget(this.carry.energy, RESOURCE_ENERGY);
-		if (storageTarget) {
-			options.push({
-				priority: 0,
-				weight: 0,
-				type: 'structure',
-				object: storageTarget,
-				resourceType: RESOURCE_ENERGY,
-			});
-		}
-		else {
-			const storagePosition = creep.room.getStorageLocation();
-			if (storagePosition) {
-				options.push({
-					priority: 0,
-					weight: 0,
-					type: 'position',
-					object: creep.room.getPositionAt(storagePosition.x - 1, storagePosition.y),
-					resourceType: RESOURCE_ENERGY,
-				});
-			}
-		}
-
-		// Deliver energy to storage links.
-		if (creep.room.linkNetwork && creep.room.linkNetwork.energy < creep.room.linkNetwork.minEnergy) {
-			for (const link of creep.room.linkNetwork.neutralLinks) {
-				if (link.energy < link.energyCapacity) {
-					const option = {
-						priority: 5,
-						weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: link,
-						resourceType: RESOURCE_ENERGY,
-					};
-
-					if (creep.pos.getRangeTo(link) > 10) {
-						// Don't go out of your way to fill the link, do it when nearby, e.g. at storage.
-						option.priority--;
-					}
-
-					options.push(option);
-				}
-			}
-		}
+		this.addSpawnBuildingDeliveryOptions(options);
+		this.addContainerEnergyDeliveryOptions(options);
+		this.addTowerDeliveryOptions(options);
+		this.addHighLevelEnergyDeliveryOptions(options);
+		this.addStorageEnergyDeliveryOptions(options);
+		this.addLinkDeliveryOptions(options);
 	}
 
-	for (const resourceType in creep.carry) {
+	for (const resourceType of _.keys(creep.carry)) {
 		// If it's needed for transferring, store in terminal.
 		if (resourceType === creep.room.memory.fillTerminal && creep.carry[resourceType] > 0 && !creep.room.isClearingTerminal()) {
 			if (terminal && (!terminal.store[resourceType] || terminal.store[resourceType] < (creep.room.memory.fillTerminalAmount || 10000)) && _.sum(terminal.store) < terminal.storeCapacity) {
@@ -929,9 +741,7 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 		}
 
 		// The following only only concerns resources other than energy.
-		if (resourceType === RESOURCE_ENERGY || creep.carry[resourceType] <= 0) {
-			continue;
-		}
+		if (resourceType === RESOURCE_ENERGY || creep.carry[resourceType] <= 0) continue;
 
 		const storageTarget = creep.room.getBestStorageTarget(creep.carry[resourceType], resourceType);
 
@@ -946,66 +756,8 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 			});
 		}
 
-		// Put ghodium in nukers.
-		if (resourceType === RESOURCE_GHODIUM && !creep.room.isEvacuating()) {
-			const targets = creep.room.find(FIND_STRUCTURES, {
-				filter: structure => {
-					return (structure.structureType === STRUCTURE_NUKER) && structure.ghodium < structure.ghodiumCapacity;
-				},
-			});
-
-			for (const i in targets) {
-				options.push({
-					priority: 2,
-					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: targets[i],
-					resourceType,
-				});
-			}
-		}
-
-		// Put power in power spawns.
-		if (resourceType === RESOURCE_POWER && creep.room.powerSpawn && !creep.room.isEvacuating()) {
-			if (creep.room.powerSpawn.power < creep.room.powerSpawn.powerCapacity * 0.1) {
-				options.push({
-					priority: 4,
-					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: creep.room.powerSpawn,
-					resourceType,
-				});
-			}
-		}
-
-		// Put correct resources into labs.
-		if (creep.room.memory.currentReaction && !creep.room.isEvacuating()) {
-			if (resourceType === creep.room.memory.currentReaction[0]) {
-				const lab = Game.getObjectById(creep.room.memory.labs.source1);
-				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
-					options.push({
-						priority: 4,
-						weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: lab,
-						resourceType,
-					});
-				}
-			}
-
-			if (resourceType === creep.room.memory.currentReaction[1]) {
-				const lab = Game.getObjectById(creep.room.memory.labs.source2);
-				if (lab && (!lab.mineralType || lab.mineralType == resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
-					options.push({
-						priority: 4,
-						weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: lab,
-						resourceType,
-					});
-				}
-			}
-		}
+		this.addHighLevelResourceDeliveryOptions(options, resourceType);
+		this.addLabResourceDeliveryOptions(options, resourceType);
 
 		// As a last resort, simply drop the resource since it can't be put anywhere.
 		options.push({
@@ -1017,6 +769,343 @@ Creep.prototype.getAvailableDeliveryTargets = function () {
 	}
 
 	return options;
+};
+
+/**
+ * Adds spawns and single extensions as delivery targets.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ */
+Creep.prototype.addSpawnBuildingDeliveryOptions = function (options) {
+	const creep = this;
+
+	// Primarily fill spawn and extenstions.
+	const targets = creep.room.find(FIND_STRUCTURES, {
+		filter: structure => {
+			return ((structure.structureType === STRUCTURE_EXTENSION && !structure.isBayExtension()) ||
+					structure.structureType === STRUCTURE_SPAWN) && structure.energy < structure.energyCapacity;
+		},
+	});
+
+	for (const target of targets) {
+		const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
+
+		const option = {
+			priority: 5,
+			weight: canDeliver / creep.carryCapacity,
+			type: 'structure',
+			object: target,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
+		option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 3;
+
+		options.push(option);
+	}
+
+	// Fill bays.
+	for (const bay of creep.room.bays) {
+		const target = bay;
+
+		if (target.energy >= target.energyCapacity) continue;
+
+		const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
+
+		const option = {
+			priority: 5,
+			weight: canDeliver / creep.carryCapacity,
+			type: 'bay',
+			object: target,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		option.weight += 1 - (creep.pos.getRangeTo(target) / 100);
+		option.priority -= creep.room.getCreepsWithOrder('deliver', target.name).length * 3;
+
+		options.push(option);
+	}
+};
+
+/**
+ * Adds options for filling containers with energy.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ */
+Creep.prototype.addContainerEnergyDeliveryOptions = function (options) {
+	const creep = this;
+	const targets = creep.room.find(FIND_STRUCTURES, {
+		filter: structure => {
+			if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.energy >= structure.storeCapacity) return false;
+
+			// Do deliver to controller containers when it is needed.
+			if (structure.id === structure.room.memory.controllerContainer) {
+				if (creep.room.creepsByRole.upgrader) return true;
+				return false;
+			}
+
+			// Do not deliver to containers used as harvester drop off points.
+			if (structure.room.sources) {
+				for (const source of _.values(structure.room.sources)) {
+					const container = source.getNearbyContainer();
+					if (container && container.id === structure.id) {
+						return false;
+					}
+				}
+
+				if (structure.room.mineral) {
+					const container = structure.room.mineral.getNearbyContainer();
+					if (container && container.id === structure.id) {
+						return false;
+					}
+				}
+			}
+
+			return true;
+		},
+	});
+
+	for (const target of targets) {
+		const option = {
+			priority: 4,
+			weight: (target.storeCapacity - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
+			type: 'structure',
+			object: target,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		let prioFactor = 1;
+		if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.5) {
+			prioFactor = 2;
+		}
+		else if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.75) {
+			prioFactor = 3;
+		}
+
+		option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
+
+		options.push(option);
+	}
+};
+
+/**
+ * Adds options for filling towers with energy.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ */
+Creep.prototype.addTowerDeliveryOptions = function (options) {
+	const creep = this;
+	const targets = creep.room.find(FIND_STRUCTURES, {
+		filter: structure => {
+			return (structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity * 0.8;
+		},
+	});
+
+	for (const target of targets) {
+		const option = {
+			priority: 3,
+			weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+			type: 'structure',
+			object: target,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		if (creep.room.memory.enemies && !creep.room.memory.enemies.safe) {
+			option.priority++;
+		}
+
+		if (target.energy < target.energyCapacity * 0.2) {
+			option.priority++;
+		}
+
+		option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 2;
+
+		options.push(option);
+	}
+};
+
+/**
+ * Adds options for filling nukers and power spawns with energy.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ */
+Creep.prototype.addHighLevelEnergyDeliveryOptions = function (options) {
+	const creep = this;
+	if (creep.room.isEvacuating()) return;
+	if (creep.room.getCurrentResourceAmount(RESOURCE_ENERGY) < 100000) return;
+
+	const targets = creep.room.find(FIND_STRUCTURES, {
+		filter: structure => {
+			return (structure.structureType === STRUCTURE_NUKER || structure.structureType === STRUCTURE_POWER_SPAWN) && structure.energy < structure.energyCapacity;
+		},
+	});
+
+	for (const target of targets) {
+		const option = {
+			priority: 1,
+			weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
+			type: 'structure',
+			object: target,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		if (target.structureType === STRUCTURE_POWER_SPAWN) {
+			option.priority += 2;
+		}
+
+		option.priority -= creep.room.getCreepsWithOrder('deliver', target.id).length * 2;
+
+		options.push(option);
+	}
+};
+
+/**
+ * Adds options for storing energy.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ */
+Creep.prototype.addStorageEnergyDeliveryOptions = function (options) {
+	// Put in storage if nowhere else needs it.
+	const storageTarget = this.room.getBestStorageTarget(this.carry.energy, RESOURCE_ENERGY);
+	if (storageTarget) {
+		options.push({
+			priority: 0,
+			weight: 0,
+			type: 'structure',
+			object: storageTarget,
+			resourceType: RESOURCE_ENERGY,
+		});
+	}
+	else {
+		const storagePosition = this.room.getStorageLocation();
+		if (storagePosition) {
+			options.push({
+				priority: 0,
+				weight: 0,
+				type: 'position',
+				object: this.room.getPositionAt(storagePosition.x - 1, storagePosition.y),
+				resourceType: RESOURCE_ENERGY,
+			});
+		}
+	}
+};
+
+/**
+ * Adds options for filling links with energy.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ */
+Creep.prototype.addLinkDeliveryOptions = function (options) {
+	const creep = this;
+	// Deliver energy to storage links.
+	if (!creep.room.linkNetwork || creep.room.linkNetwork.energy >= creep.room.linkNetwork.minEnergy) return;
+
+	for (const link of creep.room.linkNetwork.neutralLinks) {
+		if (link.energy < link.energyCapacity) {
+			const option = {
+				priority: 5,
+				weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
+				type: 'structure',
+				object: link,
+				resourceType: RESOURCE_ENERGY,
+			};
+
+			if (creep.pos.getRangeTo(link) > 10) {
+				// Don't go out of your way to fill the link, do it when nearby, e.g. at storage.
+				option.priority--;
+			}
+
+			options.push(option);
+		}
+	}
+};
+
+/**
+ * Adds options for filling nukers and power spawns with resources.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ * @param {string} resourceType
+ *   The type of resource to deliver.
+ */
+Creep.prototype.addHighLevelResourceDeliveryOptions = function (options, resourceType) {
+	const creep = this;
+	// Put ghodium in nukers.
+	if (resourceType === RESOURCE_GHODIUM && !creep.room.isEvacuating()) {
+		const targets = creep.room.find(FIND_STRUCTURES, {
+			filter: structure => {
+				return (structure.structureType === STRUCTURE_NUKER) && structure.ghodium < structure.ghodiumCapacity;
+			},
+		});
+
+		for (const target of targets) {
+			options.push({
+				priority: 2,
+				weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+				type: 'structure',
+				object: target,
+				resourceType,
+			});
+		}
+	}
+
+	// Put power in power spawns.
+	if (resourceType === RESOURCE_POWER && creep.room.powerSpawn && !creep.room.isEvacuating()) {
+		if (creep.room.powerSpawn.power < creep.room.powerSpawn.powerCapacity * 0.1) {
+			options.push({
+				priority: 4,
+				weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+				type: 'structure',
+				object: creep.room.powerSpawn,
+				resourceType,
+			});
+		}
+	}
+};
+
+/**
+ * Adds options for filling labs with resources.
+ *
+ * @param {Array} options
+ *   A list of potential delivery targets.
+ * @param {string} resourceType
+ *   The type of resource to deliver.
+ */
+Creep.prototype.addLabResourceDeliveryOptions = function (options, resourceType) {
+	const creep = this;
+	if (creep.room.memory.currentReaction && !creep.room.isEvacuating()) {
+		if (resourceType === creep.room.memory.currentReaction[0]) {
+			const lab = Game.getObjectById(creep.room.memory.labs.source1);
+			if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
+				options.push({
+					priority: 4,
+					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+					type: 'structure',
+					object: lab,
+					resourceType,
+				});
+			}
+		}
+
+		if (resourceType === creep.room.memory.currentReaction[1]) {
+			const lab = Game.getObjectById(creep.room.memory.labs.source2);
+			if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
+				options.push({
+					priority: 4,
+					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+					type: 'structure',
+					object: lab,
+					resourceType,
+				});
+			}
+		}
+	}
 };
 
 /**
@@ -1073,15 +1162,13 @@ Creep.prototype.performDeliver = function () {
 	}
 
 	const best = creep.memory.deliverTarget;
-	if (!best) {
-		return false;
-	}
+	if (!best) return;
 
 	if (typeof best === 'string') {
 		const target = Game.getObjectById(best);
 		if (!target) {
 			creep.calculateDeliveryTarget();
-			return true;
+			return;
 		}
 
 		if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
@@ -1106,14 +1193,14 @@ Creep.prototype.performDeliver = function () {
 			creep.calculateDeliveryTarget();
 		}
 
-		return true;
+		return;
 	}
 
 	if (best.type === 'bay') {
 		const target = _.find(creep.room.bays, bay => bay.flag.name === creep.memory.order.target);
 		if (!target) {
 			creep.calculateDeliveryTarget();
-			return true;
+			return;
 		}
 
 		if (creep.pos.getRangeTo(target) > 0) {
@@ -1131,7 +1218,7 @@ Creep.prototype.performDeliver = function () {
 			creep.calculateDeliveryTarget();
 		}
 
-		return true;
+		return;
 	}
 
 	if (best.x) {
@@ -1157,7 +1244,7 @@ Creep.prototype.performDeliver = function () {
 			}
 		}
 
-		return true;
+		return;
 	}
 
 	// Unknown target type, reset!
@@ -1168,6 +1255,9 @@ Creep.prototype.performDeliver = function () {
 
 /**
  * Puts this creep into or out of delivery mode.
+ *
+ * @param {boolean} delivering
+ *   Whether this creep is delivering resources instead of collecting.
  */
 Creep.prototype.setTransporterState = function (delivering) {
 	this.memory.delivering = delivering;
@@ -1176,6 +1266,9 @@ Creep.prototype.setTransporterState = function (delivering) {
 	delete this.memory.deliverTarget;
 };
 
+/**
+ *a
+ */
 Creep.prototype.bayUnstuck = function () {
 	// If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
 	for (const bay of this.room.bays) {
@@ -1231,6 +1324,9 @@ Creep.prototype.bayUnstuck = function () {
 	return false;
 };
 
+/**
+ *a
+ */
 Creep.prototype.runTransporterLogic = function () {
 	if (this.memory.singleRoom && this.pos.roomName !== this.memory.singleRoom) {
 		this.moveToRange(new RoomPosition(25, 25, this.memory.singleRoom), 10);
@@ -1258,18 +1354,19 @@ Creep.prototype.runTransporterLogic = function () {
 		this.setTransporterState(false);
 	}
 
-	if (this.bayUnstuck()) {
-		return true;
-	}
+	if (this.bayUnstuck()) return;
 
-	if (this.memory.delivering) return this.performDeliver();
+	if (this.memory.delivering) {
+		this.performDeliver();
+		return;
+	}
 
 	// Make sure not to keep standing on resource drop stop.
 	const storagePosition = this.room.getStorageLocation();
 	if (!this.room.storage && storagePosition && this.pos.x === storagePosition.x && this.pos.y === storagePosition.y && (!this.memory.order || !this.memory.order.target)) {
 		this.move(_.random(1, 8));
-		return true;
+		return;
 	}
 
-	return this.performGetResources();
+	this.performGetResources();
 };

@@ -229,7 +229,7 @@ const roleRemoteBuilder = {
 			const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
 			if (source) {
 				creep.memory.resourceTarget = source.id;
-				creep.memory.deliverTarget = null;
+				delete creep.memory.deliverTarget;
 			}
 			else {
 				// Or even get energy from adjacent rooms if marked.
