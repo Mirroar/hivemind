@@ -76,7 +76,7 @@ Creep.prototype.addMilitaryAttackOptions = function (options) {
 	if (enemies && enemies.length > 0) {
 		for (const enemy of enemies) {
 			// Check if enemy is harmless, and ignore it.
-			if (!enemy.isDangerous()) continue;
+			if (!enemy.isDangerous() && (!this.room.controller || !this.room.controller.my)) continue;
 
 			const option = {
 				priority: 5,
