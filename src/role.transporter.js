@@ -1,10 +1,10 @@
 'use strict';
 
-/* global Creep Room RoomPosition RESOURCE_ENERGY FIND_DROPPED_RESOURCES
+/* global hivemind Creep Room RoomPosition FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
-STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER
-STRUCTURE_POWER_SPAWN ERR_NO_PATH TERRAIN_MASK_WALL LOOK_STRUCTURES
-STRUCTURE_ROAD STRUCTURE_RAMPART LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK */
+STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
+STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
+LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES */
 
 const utilities = require('./utilities');
 
@@ -653,6 +653,7 @@ Creep.prototype.performGetResources = function () {
 	const creep = this;
 
 	if (!this.ensureValidResourceSource()) {
+		delete creep.memory.sourceTarget;
 		if (creep.memory.role === 'transporter' && _.sum(creep.carry) > 0) {
 			// Deliver what we already have stored, if no more can be found for picking up.
 			creep.setTransporterState(true);
@@ -693,6 +694,8 @@ Creep.prototype.ensureValidResourceSource = function () {
 	const target = Game.getObjectById(creep.memory.sourceTarget);
 	const resourceType = creep.memory.order && creep.memory.order.resourceType;
 	if (!target) return false;
+	if (creep.memory.singleRoom && target.pos.roomName !== creep.memory.singleRoom) return false;
+
 	if (target.store && (target.store[resourceType] || 0) > 0) return true;
 	if (target.amount && target.amount > 0) return true;
 	if (resourceType === RESOURCE_ENERGY && target.energyCapacity && target.energy > 0) return true;
@@ -1157,23 +1160,16 @@ Creep.prototype.calculateDeliveryTarget = function () {
  */
 Creep.prototype.performDeliver = function () {
 	const creep = this;
-	if (!creep.memory.deliverTarget) {
-		creep.calculateDeliveryTarget();
+
+	if (!this.ensureValidDeliveryTarget()) {
+		delete creep.memory.deliverTarget;
+		return;
 	}
 
 	const best = creep.memory.deliverTarget;
-	if (!best) return;
 
 	if (typeof best === 'string') {
 		const target = Game.getObjectById(best);
-		if (!target) {
-			creep.calculateDeliveryTarget();
-			return;
-		}
-
-		if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
-			creep.calculateDeliveryTarget();
-		}
 
 		if (creep.pos.getRangeTo(target) > 1) {
 			creep.moveToRange(target, 1);
@@ -1182,40 +1178,17 @@ Creep.prototype.performDeliver = function () {
 			creep.transfer(target, creep.memory.order.resourceType);
 		}
 
-		if ((creep.memory.order.resourceType === RESOURCE_ENERGY && target.energy && target.energy >= target.energyCapacity) || (target.store && _.sum(target.store) >= target.storeCapacity) || (target.mineralAmount && target.mineralAmount >= target.mineralCapacity)) {
-			creep.calculateDeliveryTarget();
-		}
-		else if (creep.memory.order.resourceType === RESOURCE_POWER && target.power && target.power >= target.powerCapacity) {
-			creep.calculateDeliveryTarget();
-		}
-
-		else if (target.mineralAmount && target.mineralType !== creep.memory.order.resourceType) {
-			creep.calculateDeliveryTarget();
-		}
-
 		return;
 	}
 
 	if (best.type === 'bay') {
 		const target = _.find(creep.room.bays, bay => bay.flag.name === creep.memory.order.target);
-		if (!target) {
-			creep.calculateDeliveryTarget();
-			return;
-		}
 
 		if (creep.pos.getRangeTo(target) > 0) {
 			creep.moveToRange(target);
 		}
 		else {
 			target.refillFrom(creep);
-		}
-
-		if (target.energy >= target.energyCapacity) {
-			creep.calculateDeliveryTarget();
-		}
-
-		if (!creep.carry[creep.memory.order.resourceType] || creep.carry[creep.memory.order.resourceType] <= 0) {
-			creep.calculateDeliveryTarget();
 		}
 
 		return;
@@ -1248,9 +1221,60 @@ Creep.prototype.performDeliver = function () {
 	}
 
 	// Unknown target type, reset!
-	console.log('Unknown target type for delivery found!');
-	console.log(creep.memory.deliverTarget);
+	hivemind.log('default').error('Unknown target type for delivery found!', JSON.stringify(creep.memory.deliverTarget));
 	delete creep.memory.deliverTarget;
+};
+
+/**
+ * Makes sure the creep has a valid target for resource delivery.
+ *
+ * @return {boolean}
+ *   True if the target is valid and can receive the needed resource.
+ */
+Creep.prototype.ensureValidDeliveryTarget = function () {
+	const creep = this;
+
+	if (!creep.memory.deliverTarget) creep.calculateDeliveryTarget();
+
+	const resourceType = creep.memory.order && creep.memory.order.resourceType;
+	if ((creep.carry[resourceType] || 0) <= 0) return false;
+
+	if (typeof creep.memory.deliverTarget === 'string') {
+		return this.ensureValidDeliveryTargetObject(Game.getObjectById(creep.memory.deliverTarget));
+	}
+
+	if (creep.memory.deliverTarget.type === 'bay') {
+		const target = _.find(creep.room.bays, bay => bay.flag.name === creep.memory.order.target);
+		if (!target) return false;
+
+		if (target.energy < target.energyCapacity) return true;
+	}
+	else if (creep.memory.deliverTarget.x) {
+		return true;
+	}
+
+	return false;
+};
+
+/**
+ * Makes sure the creep has a valid target for resource delivery.
+ *
+ * @param {RoomObject} target
+ *   The target to deliver resources to.
+ * @param {string} resourceType
+ *   The type of resource that is being delivered.
+ *
+ * @return {boolean}
+ *   True if the target is valid and can receive the needed resource.
+ */
+Creep.prototype.ensureValidDeliveryTargetObject = function (target, resourceType) {
+	if (!target) return false;
+	if (this.memory.singleRoom && target.pos.roomName !== this.memory.singleRoom) return false;
+
+	if (target.store && _.sum(target.store) < target.storeCapacity) return true;
+	if (resourceType === RESOURCE_ENERGY && target.energyCapacity && target.energy < target.energyCapacity) return true;
+	if (resourceType === RESOURCE_POWER && target.powerCapacity && target.power < target.powerCapacity) return true;
+	if (target.mineralCapacity && ((target.mineralType || resourceType) === resourceType) && target.mineralAmount < target.mineralCapacity) return true;
 };
 
 /**
@@ -1267,17 +1291,23 @@ Creep.prototype.setTransporterState = function (delivering) {
 };
 
 /**
- *a
+ * Makes sure creeps don't get stuck in bays.
+ *
+ * @return {boolean}
+ *   True if the creep is trying to get free.
  */
 Creep.prototype.bayUnstuck = function () {
 	// If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
 	for (const bay of this.room.bays) {
+		// @todo Number of extensions is not really the correct measure, number of
+		// walkable tiles around center is.
 		if (bay.extensions.length < 7) continue;
 
 		if (this.pos.x !== bay.pos.x || this.pos.y !== bay.pos.y) continue;
 
 		const best = this.memory.deliverTarget;
 
+		// It's fine if we're explicitly delivering to this bay right now.
 		if (best && typeof best !== 'string' && best.type === 'bay' && this.memory.order.target === bay.flag.name) continue;
 
 		// We're standing in a bay that we're not delivering to.
@@ -1289,29 +1319,14 @@ Creep.prototype.bayUnstuck = function () {
 				if (terrain.get(this.pos.x + dx, this.pos.y + dy) === TERRAIN_MASK_WALL) continue;
 
 				const pos = new RoomPosition(this.pos.x + dx, this.pos.y + dy, this.pos.roomName);
-				let blocked = false;
 
 				// Check if there's a structure here already.
 				const structures = pos.lookFor(LOOK_STRUCTURES);
-				for (const i in structures) {
-					if (structures[i].structureType !== STRUCTURE_ROAD && structures[i].structureType !== STRUCTURE_CONTAINER && structures[i].structureType !== STRUCTURE_RAMPART) {
-						blocked = true;
-						break;
-					}
-				}
-
-				if (blocked) continue;
+				if (_.filter(structures, structure => _.contains(OBSTACLE_OBJECT_TYPES, structure.structureType)).length > 0) continue;
 
 				// Check if there's a construction site here already.
 				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-				for (const i in sites) {
-					if (sites[i].structureType !== STRUCTURE_ROAD && sites[i].structureType !== STRUCTURE_CONTAINER && sites[i].structureType !== STRUCTURE_RAMPART) {
-						blocked = true;
-						break;
-					}
-				}
-
-				if (blocked) continue;
+				if (_.filter(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType)).length > 0) continue;
 
 				const dir = this.pos.getDirectionTo(pos);
 				this.move(dir);
@@ -1325,25 +1340,20 @@ Creep.prototype.bayUnstuck = function () {
 };
 
 /**
- *a
+ * Makes this creep behave like a transporter.
  */
 Creep.prototype.runTransporterLogic = function () {
-	if (this.memory.singleRoom && this.pos.roomName !== this.memory.singleRoom) {
-		this.moveToRange(new RoomPosition(25, 25, this.memory.singleRoom), 10);
-		return;
-	}
-
-	if (this.memory.singleRoom && this.memory.order && this.memory.order.target) {
-		const target = Game.getObjectById(this.memory.order.target);
-		if (target && target.pos && target.pos.roomName !== this.memory.singleRoom) {
-			this.setTransporterState(this.memory.delivering);
+	if (this.memory.singleRoom) {
+		if (this.pos.roomName !== this.memory.singleRoom) {
+			this.moveToRange(new RoomPosition(25, 25, this.memory.singleRoom), 10);
+			return;
 		}
-	}
 
-	if (this.memory.singleRoom && this.memory.sourceTarget) {
-		const target = Game.getObjectById(this.memory.sourceTarget);
-		if (target && target.pos && target.pos.roomName !== this.memory.singleRoom) {
-			this.setTransporterState(this.memory.delivering);
+		if (this.memory.order && this.memory.order.target) {
+			const target = Game.getObjectById(this.memory.order.target);
+			if (target && target.pos && target.pos.roomName !== this.memory.singleRoom) {
+				this.setTransporterState(this.memory.delivering);
+			}
 		}
 	}
 
