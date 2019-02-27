@@ -39,8 +39,6 @@ Creep.prototype.performUpgrade = function () {
 			}
 		}
 	}
-
-	return true;
 };
 
 /**
@@ -59,7 +57,7 @@ Creep.prototype.performGetUpgraderEnergy = function () {
 				creep.withdraw(target, RESOURCE_ENERGY);
 			}
 
-			return true;
+			return;
 		}
 	}
 
@@ -73,7 +71,7 @@ Creep.prototype.performGetUpgraderEnergy = function () {
 				creep.withdraw(target, RESOURCE_ENERGY);
 			}
 
-			return true;
+			return;
 		}
 	}
 
@@ -89,23 +87,24 @@ Creep.prototype.performGetUpgraderEnergy = function () {
 			creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
 		}
 
-		return true;
+		return;
 	}
 
 	// Otherwise, get energy from anywhere.
 	if (creep.performGetEnergy()) {
-		return true;
+		return;
 	}
 
 	if (creep.carry.energy > 0) {
 		creep.setUpgraderState(true);
 	}
-
-	return false;
 };
 
 /**
  * Puts this creep into or out of upgrade mode.
+ *
+ * @param {boolean} upgrading
+ *   Whether the creep should be praising the controller.
  */
 Creep.prototype.setUpgraderState = function (upgrading) {
 	this.memory.upgrading = upgrading;
@@ -124,8 +123,9 @@ Creep.prototype.runUpgraderLogic = function () {
 	}
 
 	if (this.memory.upgrading) {
-		return this.performUpgrade();
+		this.performUpgrade();
+		return;
 	}
 
-	return this.performGetUpgraderEnergy();
+	this.performGetUpgraderEnergy();
 };

@@ -64,6 +64,9 @@ RoomIntel.prototype.gatherIntel = function () {
 
 /**
  * Commits controller status to memory.
+ *
+ * @param {Room} room
+ *   The room to gather controller intel on.
  */
 RoomIntel.prototype.gatherControllerIntel = function (room) {
 	this.memory.owner = null;
@@ -89,6 +92,9 @@ RoomIntel.prototype.gatherControllerIntel = function (room) {
 
 /**
  * Commits room resources to memory.
+ *
+ * @param {Room} room
+ *   The room to gather resource intel on.
  */
 RoomIntel.prototype.gatherResourceIntel = function (room) {
 	// Check sources.
@@ -152,6 +158,9 @@ RoomIntel.prototype.gatherTerrainIntel = function () {
 
 /**
  * Commits power bank status to memory.
+ *
+ * @param {Structure[]} powerBanks
+ *   An array containing all power banks for the room.
  */
 RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	delete this.memory.power;
@@ -199,6 +208,11 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 
 /**
  * Commits structure status to memory.
+ *
+ * @param {object} structures
+ *   An object containing Arrays of Structures, keyed by structure type.
+ * @param {string} structureType
+ *   The type of structure to gather intel on.
  */
 RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) {
 	if (!this.memory.structures) this.memory.structures = {};
@@ -215,6 +229,9 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
 
 /**
  * Returns number of ticks since intel on this room was last gathered.
+ *
+ * @return {number}
+ *   Number of ticks since intel was last gathered in this room.
  */
 RoomIntel.prototype.getAge = function () {
 	return Game.time - (this.memory.lastScan || 0);
@@ -222,6 +239,9 @@ RoomIntel.prototype.getAge = function () {
 
 /**
  * Checks whether this room could be claimed by a player.
+ *
+ * @return {boolean}
+ *   True if the room has a controller.
  */
 RoomIntel.prototype.isClaimable = function () {
 	if (this.memory.hasController) return true;
@@ -231,6 +251,9 @@ RoomIntel.prototype.isClaimable = function () {
  * Checks whether this room is claimed by another player.
  *
  * This checks ownership and reservations.
+ *
+ * @return {boolean}
+ *   True if the room is claimed by another player.
  */
 RoomIntel.prototype.isClaimed = function () {
 	if (this.isOwned()) return true;
@@ -241,6 +264,9 @@ RoomIntel.prototype.isClaimed = function () {
 
 /**
  * Checks if the room is owned by another player.
+ *
+ * @return {boolean}
+ *   True if the room is controlled by another player.
  */
 RoomIntel.prototype.isOwned = function () {
 	if (!this.memory.owner) return false;
@@ -251,6 +277,9 @@ RoomIntel.prototype.isOwned = function () {
 
 /**
  * Returns this room's last known rcl level.
+ *
+ * @return {number}
+ *   Controller level of this room.
  */
 RoomIntel.prototype.getRcl = function () {
 	return this.memory.rcl || 0;
@@ -258,6 +287,9 @@ RoomIntel.prototype.getRcl = function () {
 
 /**
  * Returns position of energy sources in the room.
+ *
+ * @return {object[]}
+ *   An Array of ob objects containing id, x and y position of the source.
  */
 RoomIntel.prototype.getSourcePositions = function () {
 	return this.memory.sources || [];
@@ -265,6 +297,9 @@ RoomIntel.prototype.getSourcePositions = function () {
 
 /**
  * Returns type of mineral source in the room, if available.
+ *
+ * @return {string}
+ *   Type of this room's mineral source.
  */
 RoomIntel.prototype.getMineralType = function () {
 	return this.memory.mineralType;
@@ -272,6 +307,9 @@ RoomIntel.prototype.getMineralType = function () {
 
 /**
  * Returns a cost matrix for the given room.
+ *
+ * @return {PathFinder.CostMatrix}
+ *   A cost matrix representing this room.
  */
 RoomIntel.prototype.getCostMatrix = function () {
 	if (this.memory.costMatrix) return PathFinder.CostMatrix.deserialize(this.memory.costMatrix);
@@ -282,6 +320,9 @@ RoomIntel.prototype.getCostMatrix = function () {
 
 /**
  * Returns a list of rooms connected to this one, keyed by direction.
+ *
+ * @return {object}
+ *   Exits as returned by Game.map.getExits().
  */
 RoomIntel.prototype.getExits = function () {
 	return this.memory.exits || {};
@@ -289,6 +330,9 @@ RoomIntel.prototype.getExits = function () {
 
 /**
  * Returns position of the Controller structure in this room.
+ *
+ * @return {RoomPosition}
+ *   Position of this room's controller.
  */
 RoomIntel.prototype.getControllerPosition = function () {
 	if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return;
@@ -299,6 +343,13 @@ RoomIntel.prototype.getControllerPosition = function () {
 
 /**
  * Returns position and id of certain structures.
+ *
+ * param {string} structureType
+ *   The type of structure to get info on.
+ *
+ * @return {object}
+ *   An object keyed by structure id. The stored objects contain the properties
+ *   x, y, hits and hitsMax.
  */
 RoomIntel.prototype.getStructures = function (structureType) {
 	if (!this.memory.structures || !this.memory.structures[structureType]) return [];
@@ -307,6 +358,12 @@ RoomIntel.prototype.getStructures = function (structureType) {
 
 /**
  * Returns number of tiles of a certain type in a room.
+ *
+ * @param {string} type
+ *   Tile type. Can be one of `plain`, `swamp`, `wall` or `exit`.
+ *
+ * @return {number}
+ *   Number of tiles of the given type in this room.
  */
 RoomIntel.prototype.countTiles = function (type) {
 	if (!this.memory.terrain) return 0;
@@ -352,24 +409,11 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	const joinedDirs = {};
 	const otherSafeRooms = options ? options.safe : [];
 	// Add initial directions to open list.
-	for (const moveDir in this.memory.exits) {
+	for (const moveDir of _.keys(this.memory.exits)) {
 		const dir = dirMap[moveDir];
 		const roomName = this.memory.exits[moveDir];
 
-		if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
-			// This is one of our own rooms, and as such is safe.
-			if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) {
-				continue;
-			}
-		}
-
-		if (otherSafeRooms.indexOf(roomName) > -1) continue;
-
-		openList[roomName] = {
-			range: 1,
-			origin: dir,
-			room: roomName,
-		};
+		this.addAdjacentRoomToCheck(roomName, otherSafeRooms, openList, {dir, range: 0});
 	}
 
 	// Process adjacent rooms until range has been reached.
@@ -393,9 +437,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 
 		// Add new adjacent rooms to openList if available.
 		const roomExits = roomIntel.getExits();
-		for (const moveDir in roomExits) {
-			const roomName = roomExits[moveDir];
-
+		for (const roomName of _.values(roomExits)) {
 			if (minRange.range >= 3) {
 				// Room has open exits more than 3 rooms away.
 				// Mark direction as unsafe.
@@ -418,27 +460,13 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 				continue;
 			}
 
-			if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
-				// This is one of our own rooms, and as such is safe.
-				if ((Game.rooms[roomName].controller.level >= 5 && !Game.rooms[roomName].isEvacuating()) || roomName === this.roomName) {
-					continue;
-				}
-			}
-
-			if (otherSafeRooms.indexOf(roomName) > -1) continue;
-
-			// Room has not been checked yet.
-			openList[roomName] = {
-				range: minRange.range + 1,
-				origin: minRange.origin,
-				room: roomName,
-			};
+			this.addAdjacentRoomToCheck(roomName, otherSafeRooms, openList, {minRange});
 		}
 	}
 
 	// Unify status of directions which meet up somewhere.
-	for (const dir1 in joinedDirs) {
-		for (const dir2 in joinedDirs[dir1]) {
+	for (const dir1 of _.keys(joinedDirs)) {
+		for (const dir2 of _.keys(joinedDirs[dir1])) {
 			newStatus[dir1] = newStatus[dir1] && newStatus[dir2];
 			newStatus[dir2] = newStatus[dir1] && newStatus[dir2];
 		}
@@ -446,7 +474,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 
 	// Keep a list of rooms declared as safe in memory.
 	const safeRooms = [];
-	for (const roomName in closedList) {
+	for (const roomName of _.keys(closedList)) {
 		const roomDir = closedList[roomName].origin;
 		if (newStatus[roomDir]) {
 			safeRooms.push(roomName);
@@ -456,6 +484,34 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	return {
 		directions: newStatus,
 		safeRooms,
+	};
+};
+
+/**
+ * Adds a room to check for adjacent safe rooms.
+ *
+ * @param {string} roomName
+ *   Name of the room to add.
+ * @param {string[]} otherSafeRooms
+ *   An Array of room names of rooms that are considered safe.
+ * @param {object} openList
+ *   List of rooms that still need checking.
+ * @param {object} base
+ *   Information about the room this operation is base on.
+ */
+RoomIntel.prototype.addAdjacentRoomToCheck = function (roomName, otherSafeRooms, openList, base) {
+	if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
+		// This is one of our own rooms, and as such is possibly safe.
+		if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return;
+		if (roomName === this.roomName) return;
+	}
+
+	if (otherSafeRooms.indexOf(roomName) > -1) return;
+
+	openList[roomName] = {
+		range: base.range + 1,
+		origin: base.dir,
+		room: roomName,
 	};
 };
 
