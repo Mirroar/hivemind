@@ -344,7 +344,7 @@ RoomIntel.prototype.getControllerPosition = function () {
 /**
  * Returns position and id of certain structures.
  *
- * param {string} structureType
+ * @param {string} structureType
  *   The type of structure to get info on.
  *
  * @return {object}
@@ -376,6 +376,16 @@ RoomIntel.prototype.countTiles = function (type) {
  *
  * This is usually when they are dead ends or link up with other rooms
  * owned by us that are sufficiently defensible.
+ *
+ * @param {object} options
+ *   Further options for calculation, possible keys are:
+ *   - safe: An array of room names which are considered safe no matter what.
+ *
+ * @return {object}
+ *   An object describing adjacent room status, containing the following keys:
+ *   - directions: An object with keys N, E, S, W of booleans describing
+ *     whether that exit direction is considered safe.
+ *   - safeRooms: An array of room names that are considered safe and nearby.
  */
 RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	if (!this.memory.exits) {
@@ -397,7 +407,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 		7: 'W',
 	};
 
-	const newStatus = {
+	this.newStatus = {
 		N: true,
 		E: true,
 		S: true,
@@ -406,14 +416,14 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 
 	const openList = {};
 	const closedList = {};
-	const joinedDirs = {};
-	const otherSafeRooms = options ? options.safe : [];
+	this.joinedDirs = {};
+	this.otherSafeRooms = options ? options.safe : [];
 	// Add initial directions to open list.
 	for (const moveDir of _.keys(this.memory.exits)) {
 		const dir = dirMap[moveDir];
 		const roomName = this.memory.exits[moveDir];
 
-		this.addAdjacentRoomToCheck(roomName, otherSafeRooms, openList, {dir, range: 0});
+		this.addAdjacentRoomToCheck(roomName, openList, {dir, range: 0});
 	}
 
 	// Process adjacent rooms until range has been reached.
@@ -428,47 +438,14 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 		delete openList[minRange.room];
 		closedList[minRange.room] = minRange;
 
-		const roomIntel = hivemind.roomIntel(minRange.room);
-		if (roomIntel.getAge() > 100000) {
-			// Room has no intel, declare it as unsafe.
-			newStatus[minRange.origin] = false;
-			continue;
-		}
-
-		// Add new adjacent rooms to openList if available.
-		const roomExits = roomIntel.getExits();
-		for (const roomName of _.values(roomExits)) {
-			if (minRange.range >= 3) {
-				// Room has open exits more than 3 rooms away.
-				// Mark direction as unsafe.
-				newStatus[minRange.origin] = false;
-				break;
-			}
-
-			const found = openList[roomName] || closedList[roomName] || false;
-			if (found) {
-				if (found.origin !== minRange.origin) {
-					// Two different exit directions are joined here.
-					// Treat them as the same.
-					if (!joinedDirs[found.origin]) {
-						joinedDirs[found.origin] = {};
-					}
-
-					joinedDirs[found.origin][minRange.origin] = true;
-				}
-
-				continue;
-			}
-
-			this.addAdjacentRoomToCheck(roomName, otherSafeRooms, openList, {minRange});
-		}
+		this.handleAdjacentRoom();
 	}
 
 	// Unify status of directions which meet up somewhere.
-	for (const dir1 of _.keys(joinedDirs)) {
-		for (const dir2 of _.keys(joinedDirs[dir1])) {
-			newStatus[dir1] = newStatus[dir1] && newStatus[dir2];
-			newStatus[dir2] = newStatus[dir1] && newStatus[dir2];
+	for (const dir1 of _.keys(this.joinedDirs)) {
+		for (const dir2 of _.keys(this.joinedDirs[dir1])) {
+			this.newStatus[dir1] = this.newStatus[dir1] && this.newStatus[dir2];
+			this.newStatus[dir2] = this.newStatus[dir1] && this.newStatus[dir2];
 		}
 	}
 
@@ -476,13 +453,13 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	const safeRooms = [];
 	for (const roomName of _.keys(closedList)) {
 		const roomDir = closedList[roomName].origin;
-		if (newStatus[roomDir]) {
+		if (this.newStatus[roomDir]) {
 			safeRooms.push(roomName);
 		}
 	}
 
 	return {
-		directions: newStatus,
+		directions: this.newStatus,
 		safeRooms,
 	};
 };
@@ -492,27 +469,72 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
  *
  * @param {string} roomName
  *   Name of the room to add.
- * @param {string[]} otherSafeRooms
- *   An Array of room names of rooms that are considered safe.
  * @param {object} openList
  *   List of rooms that still need checking.
  * @param {object} base
  *   Information about the room this operation is base on.
  */
-RoomIntel.prototype.addAdjacentRoomToCheck = function (roomName, otherSafeRooms, openList, base) {
+RoomIntel.prototype.addAdjacentRoomToCheck = function (roomName, openList, base) {
 	if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) {
 		// This is one of our own rooms, and as such is possibly safe.
 		if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return;
 		if (roomName === this.roomName) return;
 	}
 
-	if (otherSafeRooms.indexOf(roomName) > -1) return;
+	if (this.otherSafeRooms.indexOf(roomName) > -1) return;
 
 	openList[roomName] = {
 		range: base.range + 1,
 		origin: base.dir,
 		room: roomName,
 	};
+};
+
+/**
+ * Check if a room counts as safe room.
+ *
+ * @param {object} roomData
+ *   Info about the room we're checking.
+ * @param {object} openList
+ *   List of rooms that still need checking.
+ * @param {object} closedList
+ *   List of rooms that have been checked.
+ */
+RoomIntel.prototype.handleAdjacentRoom = function (roomData, openList, closedList) {
+	const roomIntel = hivemind.roomIntel(roomData.room);
+	if (roomIntel.getAge() > 100000) {
+		// Room has no intel, declare it as unsafe.
+		this.newStatus[roomData.origin] = false;
+		return;
+	}
+
+	// Add new adjacent rooms to openList if available.
+	const roomExits = roomIntel.getExits();
+	for (const roomName of _.values(roomExits)) {
+		if (roomData.range >= 3) {
+			// Room has open exits more than 3 rooms away.
+			// Mark direction as unsafe.
+			this.newStatus[roomData.origin] = false;
+			break;
+		}
+
+		const found = openList[roomName] || closedList[roomName] || false;
+		if (found) {
+			if (found.origin !== roomData.origin) {
+				// Two different exit directions are joined here.
+				// Treat them as the same.
+				if (!this.joinedDirs[found.origin]) {
+					this.joinedDirs[found.origin] = {};
+				}
+
+				this.joinedDirs[found.origin][roomData.origin] = true;
+			}
+
+			continue;
+		}
+
+		this.addAdjacentRoomToCheck(roomName, openList, {roomData});
+	}
 };
 
 module.exports = RoomIntel;

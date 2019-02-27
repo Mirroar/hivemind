@@ -13,6 +13,15 @@ const utilities = require('./utilities');
 
 const MAX_ROOM_LEVEL = 8;
 
+/**
+ * Creates a room layout and makes sure the room is built accordingly.
+ * @constructor
+ *
+ * @todo Split off RoomManager class.
+ *
+ * @param {string} roomName
+ *   Name of the room this room planner is assigned to.
+ */
 const RoomPlanner = function (roomName) {
 	this.roomPlannerVersion = 21;
 	this.roomName = roomName;
@@ -57,7 +66,7 @@ RoomPlanner.prototype.drawDebug = function () {
 			if (!debugSymbols[locationType]) continue;
 
 			const positions = this.memory.locations[locationType];
-			for (const posName in positions) {
+			for (const posName of _.keys(positions)) {
 				const pos = utilities.decodePosition(posName);
 
 				visual.text(debugSymbols[locationType], pos.x, pos.y + 0.2);
@@ -100,204 +109,14 @@ RoomPlanner.prototype.runLogic = function () {
 	delete this.memory.wallDistanceMatrix;
 	delete this.memory.exitDistanceMatrix;
 
-	const roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
-	this.roomConstructionSites = roomConstructionSites;
-	this.constructionSitesByType = _.groupBy(roomConstructionSites, 'structureType');
-	const roomStructures = this.room.find(FIND_STRUCTURES);
-	this.roomStructures = roomStructures;
-	this.structuresByType = _.groupBy(roomStructures, 'structureType');
+	this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
+	this.constructionSitesByType = _.groupBy(this.roomConstructionSites, 'structureType');
+	this.roomStructures = this.room.find(FIND_STRUCTURES);
+	this.structuresByType = _.groupBy(this.roomStructures, 'structureType');
 	this.newStructures = 0;
 
 	this.cleanRoom();
-
-	// Build road to sources asap to make getting energy easier.
-	if (this.buildPlannedStructures('road.source', STRUCTURE_ROAD)) return;
-
-	// Make sure all current spawns have been built.
-	const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
-	const roomSpawnSites = this.constructionSitesByType[STRUCTURE_SPAWN] || [];
-
-	// Make sure spawns are built in the right place, remove otherwise.
-	delete this.memory.hasMisplacedSpawn;
-	if (roomSpawns.length === CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level] && roomConstructionSites.length === 0) {
-		for (let i = 0; i < roomSpawns.length; i++) {
-			const spawn = roomSpawns[i];
-			if (!this.memory.locations.spawn || !this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) {
-				// Only destroy spawn if there are enough resources and builders available.
-				const resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
-				if ((resourcesAvailable || _.size(roomSpawns) > 1)) {
-					// This spawn is misplaced, set a flag for spawning more builders to help.
-					if (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 3) {
-						this.memory.hasMisplacedSpawn = true;
-					}
-
-					if (!spawn.spawning) {
-						let buildPower = 0;
-						for (const j in this.room.creepsByRole.builder) {
-							const creep = this.room.creepsByRole.builder[j];
-
-							if (creep.ticksToLive) {
-								buildPower += creep.memory.body.work * creep.ticksToLive / CREEP_LIFE_TIME;
-							}
-						}
-
-						if (buildPower > 10) {
-							spawn.destroy();
-							this.memory.runNextTick = true;
-							// Only kill of one spawn at a time, it should be rebuilt right away next tick!
-							return;
-						}
-					}
-				}
-
-				// No need to check for another misplaced spawn, it won't be moved either.
-				break;
-			}
-		}
-	}
-	else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
-		if (this.buildPlannedStructures('spawn', STRUCTURE_SPAWN)) return;
-	}
-
-	// Build road to controller for easier upgrading.
-	if (this.buildPlannedStructures('road.controller', STRUCTURE_ROAD)) return;
-
-	if (this.room.controller.level === 0) {
-		// If we're waiting for a claim, busy ourselves by building roads.
-		if (this.buildPlannedStructures('road', STRUCTURE_ROAD)) return;
-	}
-
-	if (this.room.controller.level < 2) return;
-
-	// At level 2, we can start building containers at sources and controller.
-	this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
-	if (this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER)) return;
-	if (this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER)) return;
-
-	// Make sure towers are built in the right place, remove otherwise.
-	this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
-	if (this.buildPlannedStructures('tower', STRUCTURE_TOWER)) return;
-
-	// Build storage ASAP.
-	if (this.buildPlannedStructures('storage', STRUCTURE_STORAGE)) return;
-
-	// Make sure extensions are built in the right place, remove otherwise.
-	this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
-	if (this.buildPlannedStructures('extension', STRUCTURE_EXTENSION)) return;
-
-	// Also build terminal when available.
-	if (this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL)) return;
-
-	// Make sure links are built in the right place, remove otherwise.
-	this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
-	if (this.buildPlannedStructures('link', STRUCTURE_LINK)) return;
-
-	// Build extractor and related container if available.
-	if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
-		if (this.buildPlannedStructures('extractor', STRUCTURE_EXTRACTOR)) return;
-		if (this.buildPlannedStructures('container.mineral', STRUCTURE_CONTAINER)) return;
-	}
-
-	if (this.room.controller.level < 3) return;
-
-	// At level 3, we can build all remaining roads.
-	if (this.buildPlannedStructures('road', STRUCTURE_ROAD)) return;
-
-	if (this.room.controller.level < 4) return;
-
-	// Make sure all requested ramparts are built.
-	let wallsBuilt = true;
-
-	for (const posName in this.memory.locations.rampart || []) {
-		const pos = utilities.decodePosition(posName);
-
-		let found = false;
-		// Check if there's a rampart here already.
-		const structures = pos.lookFor(LOOK_STRUCTURES);
-		for (const i in structures) {
-			if (structures[i].structureType === STRUCTURE_RAMPART) {
-				found = true;
-
-				if (structures[i].hits < 500000) {
-					wallsBuilt = false;
-				}
-
-				break;
-			}
-		}
-
-		// Check if there's a construction site here already.
-		const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-		for (const i in sites) {
-			if (sites[i].structureType === STRUCTURE_RAMPART) {
-				found = true;
-				break;
-			}
-		}
-
-		if (!found) {
-			wallsBuilt = false;
-
-			if (this.newStructures + roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.8) {
-				if (pos.createConstructionSite(STRUCTURE_RAMPART) === OK) {
-					this.newStructures++;
-				}
-			}
-		}
-	}
-
-	// Slate all unmanaged walls and ramparts for deconstruction.
-	const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
-		filter: structure => {
-			if (structure.structureType === STRUCTURE_WALL) return true;
-			if (structure.structureType === STRUCTURE_RAMPART) {
-				// Keep rampart if it is one we have placed.
-				const pos = utilities.encodePosition(structure.pos);
-				if (this.memory.locations.rampart && this.memory.locations.rampart[pos]) return false;
-
-				// Keep rampart if anything important is below it.
-				const structures = structure.pos.lookFor(LOOK_STRUCTURES);
-				for (const i in structures) {
-					if (structures[i].structureType !== STRUCTURE_RAMPART && structures[i].structureType !== STRUCTURE_ROAD) {
-						return false;
-					}
-				}
-
-				return true;
-			}
-
-			return false;
-		},
-	});
-
-	if (!this.memory.dismantle) {
-		this.memory.dismantle = {};
-	}
-
-	for (const structure of unwantedDefenses) {
-		this.memory.dismantle[structure.id] = 1;
-	}
-
-	// Further constructions should only happen in safe rooms.
-	if (this.room && this.room.isEvacuating()) return;
-	if (!wallsBuilt) return;
-	hivemind.log('room plan', this.roomName).debug('walls are finished');
-
-	// Make sure labs are built in the right place, remove otherwise.
-	this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
-	if (this.buildPlannedStructures('lab', STRUCTURE_LAB)) return;
-
-	// Make sure all current nukers have been built.
-	if (_.size(roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
-	if (this.buildPlannedStructures('nuker', STRUCTURE_NUKER)) return;
-
-	// Make sure all current power spawns have been built.
-	if (_.size(roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
-	if (this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN)) return;
-
-	// Make sure all current observers have been built.
-	if (_.size(roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
-	if (this.buildPlannedStructures('observer', STRUCTURE_OBSERVER)) return;
+	this.manageStructures();
 };
 
 /**
@@ -333,23 +152,152 @@ RoomPlanner.prototype.cleanRoom = function () {
 };
 
 /**
- * Try placing construction sites of the given type at all locations.
+ * Makes sure structures are built and removed as intended.
  */
-RoomPlanner.prototype.buildPlannedStructures = function (locationType, structureType) {
-	let isBuilding = false;
-	for (const posName in this.memory.locations[locationType] || []) {
-		const pos = utilities.decodePosition(posName);
+RoomPlanner.prototype.manageStructures = function () {
+	// Build road to sources asap to make getting energy easier.
+	this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
 
-		if (!this.tryBuild(pos, structureType)) {
-			isBuilding = true;
-		}
+	// Make sure all current spawns have been built.
+	const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
+	const roomSpawnSites = this.constructionSitesByType[STRUCTURE_SPAWN] || [];
+
+	// Make sure spawns are built in the right place, remove otherwise.
+	delete this.memory.hasMisplacedSpawn;
+	if (roomSpawns.length >= CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level] && this.roomConstructionSites.length === 0) {
+		this.removeMisplacedSpawn(roomSpawns);
+	}
+	else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
+		this.buildPlannedStructures('spawn', STRUCTURE_SPAWN);
 	}
 
-	return isBuilding;
+	// Build road to controller for easier upgrading.
+	this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
+
+	if (this.room.controller.level === 0) {
+		// If we're waiting for a claim, busy ourselves by building roads.
+		this.buildPlannedStructures('road', STRUCTURE_ROAD);
+	}
+
+	if (this.room.controller.level < 2) return;
+
+	// At level 2, we can start building containers at sources and controller.
+	this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
+	this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
+	this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER);
+
+	// Make sure towers are built in the right place, remove otherwise.
+	this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
+	this.buildPlannedStructures('tower', STRUCTURE_TOWER);
+
+	// Build storage ASAP.
+	this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
+
+	// Make sure extensions are built in the right place, remove otherwise.
+	this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
+	this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
+
+	// Also build terminal when available.
+	this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL);
+
+	// Make sure links are built in the right place, remove otherwise.
+	this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
+	this.buildPlannedStructures('link', STRUCTURE_LINK);
+
+	// Build extractor and related container if available.
+	if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
+		this.buildPlannedStructures('extractor', STRUCTURE_EXTRACTOR);
+		this.buildPlannedStructures('container.mineral', STRUCTURE_CONTAINER);
+	}
+
+	if (this.room.controller.level < 3) return;
+
+	// At level 3, we can build all remaining roads.
+	this.buildPlannedStructures('road', STRUCTURE_ROAD);
+
+	if (this.room.controller.level < 4) return;
+
+	// Make sure all requested ramparts are built.
+	this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
+
+	// Slate all unmanaged walls and ramparts for deconstruction.
+	const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
+		filter: structure => {
+			if (structure.structureType === STRUCTURE_WALL) return true;
+			if (structure.structureType === STRUCTURE_RAMPART) {
+				// Keep rampart if it is one we have placed.
+				const pos = utilities.encodePosition(structure.pos);
+				if (this.memory.locations.rampart && this.memory.locations.rampart[pos]) return false;
+
+				return true;
+			}
+
+			return false;
+		},
+	});
+
+	if (!this.memory.dismantle) {
+		this.memory.dismantle = {};
+	}
+
+	for (const structure of unwantedDefenses) {
+		this.memory.dismantle[structure.id] = 1;
+	}
+
+	// Further constructions should only happen in safe rooms.
+	if (this.room && this.room.isEvacuating()) return;
+	if (!this.checkWallIntegrity()) return;
+	hivemind.log('room plan', this.roomName).debug('walls are finished');
+
+	// Make sure labs are built in the right place, remove otherwise.
+	this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
+	this.buildPlannedStructures('lab', STRUCTURE_LAB);
+
+	// Make sure all current nukers have been built.
+	if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
+	this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
+
+	// Make sure all current power spawns have been built.
+	if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
+	this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
+
+	// Make sure all current observers have been built.
+	if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
+	this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
+};
+
+/**
+ * Try placing construction sites of the given type at all locations.
+ *
+ * @param {string} locationType
+ *   The type of location that should be checked.
+ * @param {string} structureType
+ *   The type of structure to place.
+ *
+ * @return {boolean}
+ *   True if we can continue building.
+ */
+RoomPlanner.prototype.buildPlannedStructures = function (locationType, structureType) {
+	let canBuildMore = true;
+	for (const posName of _.keys(this.memory.locations[locationType])) {
+		const pos = utilities.decodePosition(posName);
+
+		canBuildMore &= this.tryBuild(pos, structureType);
+	}
+
+	return canBuildMore;
 };
 
 /**
  * Tries to place a construction site.
+ *
+ * @param {RoomPosition} pos
+ *   The position at which to place the structure.
+ * @param {string} structureType
+ *   The type of structure to place.
+ *
+ * @return {boolean}
+ *   True if we can continue building.
  */
 RoomPlanner.prototype.tryBuild = function (pos, structureType) {
 	// Check if there's a structure here already.
@@ -371,7 +319,7 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType) {
 	}
 
 	if (this.newStructures + this.roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
-		if (pos.createConstructionSite(structureType) == OK) {
+		if (pos.createConstructionSite(structureType) === OK) {
 			this.newStructures++;
 			// Structure is being built, wait until finished.
 			return false;
@@ -383,6 +331,48 @@ RoomPlanner.prototype.tryBuild = function (pos, structureType) {
 	}
 
 	// We can't build anymore in this room right now.
+	return false;
+};
+
+/**
+ * Removes misplaced spawns for rebuilding at a new location.
+ *
+ * @param {StructureSpawn[]} roomSpawns
+ *   List of spawns in the room.
+ *
+ * @return {boolean}
+ *   True if a spawn was destroyed this tick.
+ */
+RoomPlanner.prototype.removeMisplacedSpawn = function (roomSpawns) {
+	for (let i = 0; i < roomSpawns.length; i++) {
+		const spawn = roomSpawns[i];
+		if (this.memory.locations.spawn && this.memory.locations.spawn[utilities.encodePosition(spawn.pos)]) continue;
+		if (spawn.spawning) continue;
+
+		// Only destroy spawn if there are enough resources and builders available.
+		const resourcesAvailable = (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2 && _.size(this.room.creepsByRole.builder) > 1);
+		if (!resourcesAvailable && _.size(roomSpawns) === 1) return false;
+
+		// This spawn is misplaced, set a flag for spawning more builders to help.
+		if (this.room.storage && this.room.storage.store.energy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 3) {
+			this.memory.hasMisplacedSpawn = true;
+		}
+
+		let buildPower = 0;
+		for (const creep of _.values(this.room.creepsByRole.builder)) {
+			if (creep.ticksToLive) {
+				buildPower += creep.memory.body.work * creep.ticksToLive / CREEP_LIFE_TIME;
+			}
+		}
+
+		if (buildPower > 10) {
+			spawn.destroy();
+			this.memory.runNextTick = true;
+			// Only kill of one spawn at a time, it should be rebuilt right away next tick!
+			return true;
+		}
+	}
+
 	return false;
 };
 
@@ -410,6 +400,26 @@ RoomPlanner.prototype.removeUnplannedStructures = function (locationType, struct
 			}
 		}
 	}
+};
+
+/**
+ * Checks if all ramparts in the room have at least 500.000 hits.
+ *
+ * @return {boolean}
+ *   True if walls are considered complete.
+ */
+RoomPlanner.prototype.checkWallIntegrity = function () {
+	for (const posName of _.keys(this.memory.locations.rampart)) {
+		const pos = utilities.decodePosition(posName);
+
+		// Check if there's a rampart here already.
+		const structures = pos.lookFor(LOOK_STRUCTURES);
+		if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= 500000).length === 0) {
+			return false;
+		}
+	}
+
+	return true;
 };
 
 /**
