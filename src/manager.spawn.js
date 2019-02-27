@@ -156,14 +156,16 @@ StructureSpawn.prototype.finalizeCreepBody = function (options, minCost, energyA
 	}
 
 	// Creep might be requested with a part limit.
-	let maxPartsCost = 0;
 	// With theoretically unlimited energy, check how expensive the creep can become with maxSize.
 	const tempBody = utilities.generateCreepBody(options.bodyWeights, this.room.energyCapacityAvailable, options.maxParts);
-	for (const part of tempBody) {
-		maxPartsCost += BODYPART_COST[part];
-	}
+	if (tempBody) {
+		let maxPartsCost = 0;
+		for (const part of tempBody) {
+			maxPartsCost += BODYPART_COST[part];
+		}
 
-	maxCost = Math.min(maxCost, maxPartsCost);
+		maxCost = Math.min(maxCost, maxPartsCost);
+	}
 
 	options.body = utilities.generateCreepBody(options.bodyWeights, maxCost, options.maxParts);
 
