@@ -637,6 +637,7 @@ Creep.prototype.addSourceLabResourceOptions = function (options, lab, resourceTy
 	if (lab.mineralAmount > lab.mineralCapacity * 0.5) return;
 
 	const source = this.room.getBestStorageSource(resourceType);
+	if (!source) return;
 	if ((source.store[resourceType] || 0) === 0) return;
 
 	const option = {

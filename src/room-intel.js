@@ -438,7 +438,7 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 		delete openList[minRange.room];
 		closedList[minRange.room] = minRange;
 
-		this.handleAdjacentRoom();
+		this.handleAdjacentRoom(minRange, openList, closedList);
 	}
 
 	// Unify status of directions which meet up somewhere.

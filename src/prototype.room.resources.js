@@ -79,6 +79,7 @@ Room.prototype.getStoredEnergy = function () {
 	let total = this.getCurrentResourceAmount(RESOURCE_ENERGY);
 
 	const storageLocation = this.getStorageLocation();
+	if (!storageLocation) return total;
 	const storagePosition = new RoomPosition(storageLocation.x, storageLocation.y, this.name);
 	const resources = _.filter(storagePosition.lookFor(LOOK_RESOURCES), resource => resource.resourceType === RESOURCE_ENERGY);
 	if (resources.length > 0) {
