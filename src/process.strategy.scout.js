@@ -161,6 +161,8 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 			this.reasons[reason] = amount;
 		},
 	};
+
+	if (!Memory.hivemind.canExpand) return result;
 	const roomIntel = hivemind.roomIntel(roomName);
 
 	// More sources is better.

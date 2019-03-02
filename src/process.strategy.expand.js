@@ -50,7 +50,9 @@ ExpandProcess.prototype.run = function () {
 		stats.getStat('cpu_total', 10000) < Game.cpu.limit * cpuLimit &&
 		stats.getStat('cpu_total', 1000) < Game.cpu.limit * cpuLimit;
 
+	Memory.hivemind.canExpand = false;
 	if (!memory.expand.currentTarget && canExpand) {
+		Memory.hivemind.canExpand = true;
 		// Choose a room to expand to.
 		// @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
 		let bestTarget = null;
