@@ -12,3 +12,6 @@ JSON.stringify(_.sortBy(Memory.strategy.roomList, 'expansionScore'));
 
 // Re-run room planner for a room.
 Memory.rooms.E49S51.roomPlanner.plannerVersion = 0;
+
+// Find out which processes use a lot of CPU
+JSON.stringify(_.sortBy(_.map(Memory.hivemind.process, (a, b) => {a.name = b; return a}), a => -a.cpu));

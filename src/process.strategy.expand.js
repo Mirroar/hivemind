@@ -53,25 +53,7 @@ ExpandProcess.prototype.run = function () {
 	Memory.hivemind.canExpand = false;
 	if (!memory.expand.currentTarget && canExpand) {
 		Memory.hivemind.canExpand = true;
-		// Choose a room to expand to.
-		// @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
-		let bestTarget = null;
-		for (const info of _.values(memory.roomList)) {
-			if (!info.expansionScore || info.expansionScore <= 0) continue;
-			if (bestTarget && bestTarget.expansionScore >= info.expansionScore) continue;
-
-			// Don't try to expand to a room that can't be reached safely.
-			const bestSpawn = this.findClosestSpawn(info.roomName);
-			if (!bestSpawn) continue;
-
-			info.spawnRoom = bestSpawn;
-
-			bestTarget = info;
-		}
-
-		if (bestTarget) {
-			this.startExpansion(bestTarget);
-		}
+		this.chooseNewExpansionTarget();
 	}
 
 	if (memory.expand.currentTarget) {
@@ -114,6 +96,31 @@ ExpandProcess.prototype.run = function () {
 		if (Game.time - memory.expand.claimed > 50 * CREEP_LIFE_TIME) {
 			this.stopExpansion();
 		}
+	}
+};
+
+/**
+ * Chooses a new target room to expand to.
+ */
+ExpandProcess.prototype.chooseNewExpansionTarget = function () {
+	// Choose a room to expand to.
+	// @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
+	let bestTarget = null;
+	for (const info of _.values(Memory.strategy.roomList)) {
+		if (!info.expansionScore || info.expansionScore <= 0) continue;
+		if (bestTarget && bestTarget.expansionScore >= info.expansionScore) continue;
+
+		// Don't try to expand to a room that can't be reached safely.
+		const bestSpawn = this.findClosestSpawn(info.roomName);
+		if (!bestSpawn) continue;
+
+		info.spawnRoom = bestSpawn;
+
+		bestTarget = info;
+	}
+
+	if (bestTarget) {
+		this.startExpansion(bestTarget);
 	}
 };
 

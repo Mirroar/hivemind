@@ -1342,7 +1342,7 @@ Creep.prototype.ensureValidDeliveryTarget = function () {
 	if ((creep.carry[resourceType] || 0) <= 0) return false;
 
 	if (typeof creep.memory.deliverTarget === 'string') {
-		return this.ensureValidDeliveryTargetObject(Game.getObjectById(creep.memory.deliverTarget));
+		return this.ensureValidDeliveryTargetObject(Game.getObjectById(creep.memory.deliverTarget), resourceType);
 	}
 
 	if (creep.memory.deliverTarget.type === 'bay') {

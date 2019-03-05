@@ -25,13 +25,13 @@ const roleRemoteBuilder = {
 			this.setBuilderState(true);
 		}
 
-		if (creep.memory.building) {
-			this.performRemoteBuild();
+		if (creep.memory.upgrading) {
+			this.performControllerUpgrade();
 			return;
 		}
 
-		if (creep.memory.upgrading) {
-			this.performControllerUpgrade();
+		if (creep.memory.building) {
+			this.performRemoteBuild();
 			return;
 		}
 

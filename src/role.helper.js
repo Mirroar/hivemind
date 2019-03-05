@@ -119,10 +119,7 @@ Creep.prototype.performHelperGather = function () {
 	for (const lab of labs) {
 		if (lab.energy + this.carryCapacity > lab.energyCapacity) continue;
 
-		let target = terminal;
-		if (storage && (storage.store[RESOURCE_ENERGY] || 0) > 0) {
-			target = storage;
-		}
+		const target = this.room.getBestStorageSource(RESOURCE_ENERGY);
 
 		if (this.pos.getRangeTo(target) > 1) {
 			this.moveToRange(target, 1);
@@ -178,10 +175,7 @@ Creep.prototype.performHelperLabGather = function () {
 				this.moveToRange(target, 1);
 			}
 			else {
-				let amount = Math.min(diff, this.carryCapacity - _.sum(this.carry));
-				amount = Math.min(amount, target.store[resourceType]);
-
-				if (!target.store[resourceType]) {
+				if (!target || !target.store[resourceType]) {
 					// Something went wrong, we don't actually have enough of this stuff.
 					// Delete any boost orders using this resource.
 					this.room.boostManager.memory.creepsToBoost = _.filter(
@@ -192,6 +186,8 @@ Creep.prototype.performHelperLabGather = function () {
 					return true;
 				}
 
+				let amount = Math.min(diff, this.carryCapacity - _.sum(this.carry));
+				amount = Math.min(amount, target.store[resourceType]);
 				this.withdraw(target, resourceType, amount);
 			}
 

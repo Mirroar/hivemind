@@ -1,33 +1,42 @@
 'use strict';
 
 /* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL
-BODYPART_COST TOUGH ATTACK RANGED_ATTACK HEAL */
+BODYPART_COST TOUGH ATTACK RANGED_ATTACK HEAL MAX_CREEP_SIZE */
 
 const utilities = {
 
 	/**
 	 * Dynamically determines the username of the current user.
+	 *
+	 * @return {string}
+	 *   The determined user name.
 	 */
 	getUsername() {
-		for (const i in Game.spawns) {
-			return Game.spawns[i].owner.username;
-		}
+		return _.first(Game.spawns).owner.username;
 	},
 
+	/**
+	 * Calculates and stores paths for remote harvesting.
+	 *
+	 * @param {Room} room
+	 *   Source room for the harvestint operation
+	 * @param {RoomPosition} sourcePos
+	 *   Position of the source to harvest.
+	 */
 	precalculatePaths(room, sourcePos) {
 		if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.5) return;
 
-		const flagPosition = utilities.encodePosition(sourcePos);
+		const sourceLocation = utilities.encodePosition(sourcePos);
 
 		if (!room.memory.remoteHarvesting) {
 			room.memory.remoteHarvesting = {};
 		}
 
-		if (!room.memory.remoteHarvesting[flagPosition]) {
-			room.memory.remoteHarvesting[flagPosition] = {};
+		if (!room.memory.remoteHarvesting[sourceLocation]) {
+			room.memory.remoteHarvesting[sourceLocation] = {};
 		}
 
-		const harvestMemory = room.memory.remoteHarvesting[flagPosition];
+		const harvestMemory = room.memory.remoteHarvesting[sourceLocation];
 
 		if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 500) {
 			// No need to recalculate path.
@@ -57,6 +66,21 @@ const utilities = {
 		}
 	},
 
+	/**
+	 * Finds a path using PathFinder.search.
+	 *
+	 * @param {RoomPosition} startPosition
+	 *   Position to start the search from.
+	 * @param {object} endPosition
+	 *   Position or Positions or object with information about path target.
+	 * @param {boolean} allowDanger
+	 *   If true, allow traversing unsafe rooms.
+	 * @param {object} addOptions
+	 *   Options to add to pathfinder options.
+	 *
+	 * @return {object}
+	 *   Result of the pathfinding operation.
+	 */
 	getPath(startPosition, endPosition, allowDanger, addOptions) {
 		const options = {
 			plainCost: 2,
@@ -64,8 +88,6 @@ const utilities = {
 			maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
 
 			roomCallback: roomName => {
-				const room = Game.rooms[roomName];
-
 				// If a room is considered inaccessible, don't look for paths through it.
 				if (!allowDanger && hivemind.roomIntel(roomName).isOwned()) {
 					if (!addOptions || !addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
@@ -98,9 +120,9 @@ const utilities = {
 		};
 
 		if (addOptions) {
-			for (const key in addOptions) {
-				options[key] = addOptions[key];
-			}
+			_.each(addOptions, (value, key) => {
+				options[key] = value;
+			});
 		}
 
 		return PathFinder.search(startPosition, endPosition, options);
@@ -109,6 +131,19 @@ const utilities = {
 	costMatrixCache: {},
 	costMatrixCacheAge: Game.time,
 
+	/**
+	 * Gets the pathfinding cost matrix for a room.
+	 *
+	 * @param {string} roomName
+	 *   Name of the room.
+	 * @param {object} options
+	 *   Further options regarding the matrix. Can have the following keys:
+	 *   - `singleRoom`: If true, return a matrix for creeps that cannot leave
+	 *     the room.
+	 *
+	 * @return {PathFinder.CostMatrix}
+	 *   The requested cost matrix.
+	 */
 	getCostMatrix(roomName, options) {
 		// Clear cost matrix cache from time to time.
 		if (utilities.costMatrixCacheAge < Game.time - 500) {
@@ -135,19 +170,7 @@ const utilities = {
 			cacheKey += ':singleRoom';
 
 			if (!utilities.costMatrixCache[cacheKey]) {
-				matrix = matrix.clone();
-				const terrain = new Room.Terrain(roomName);
-				for (let x = 0; x < 50; x++) {
-					for (let y = 0; y < 50; y++) {
-						if (x === 0 || y === 0 || x === 49 || y === 49) {
-							if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
-								matrix.set(x, y, 50);
-							}
-						}
-					}
-				}
-
-				utilities.costMatrixCache[cacheKey] = matrix;
+				utilities.costMatrixCache[cacheKey] = this.generateSingleRoomCostMatrix(matrix, roomName);
 			}
 		}
 
@@ -156,42 +179,117 @@ const utilities = {
 		return matrix;
 	},
 
-	getClosest(creep, targets) {
-		if (targets.length > 0) {
-			const target = creep.pos.findClosestByRange(targets);
-			if (target) {
-				return target.id;
+	/**
+	 * Generates a derivative cost matrix that highly discourages room exits.
+	 *
+	 * @param {PathFinder.CostMatrix} matrix
+	 *   The matrix to use as a base.
+	 * @param {string} roomName
+	 *   Name of the room this matrix represents.
+	 *
+	 * @return {PathFinder.CostMatrix}
+	 *   The modified cost matrix.
+	 */
+	generateSingleRoomCostMatrix(matrix, roomName) {
+		const newMatrix = matrix.clone();
+		const terrain = new Room.Terrain(roomName);
+		for (let x = 0; x < 50; x++) {
+			for (let y = 0; y < 50; y++) {
+				if ((x === 0 || y === 0 || x === 49 || y === 49) && terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+					newMatrix.set(x, y, 50);
+				}
 			}
 		}
 
-		return null;
+		return newMatrix;
 	},
 
+	/**
+	 * Returns closest target to a room object.
+	 *
+	 * @param {RoomObject} roomObject
+	 *   The room object the search originates from.
+	 * @param {RoomObject[]} targets
+	 *   A list of room objects to check.
+	 *
+	 * @return {RoomObject}
+	 *   The closest target.
+	 */
+	getClosest(roomObject, targets) {
+		if (targets.length > 0) {
+			const target = roomObject.pos.findClosestByRange(targets);
+			return target && target.id;
+		}
+	},
+
+	/**
+	 * Gets most highly rated option from a list.
+	 *
+	 * @param {Array} options
+	 *   List of options, each option should at least contain the keys `priority`
+	 *   and `weight`.
+	 *
+	 * @return {object}
+	 *   The object with the highest priority and weight (within that priority).
+	 */
 	getBestOption(options) {
 		let best = null;
 
-		for (const i in options) {
-			if (!best || options[i].priority > best.priority || (options[i].priority == best.priority && options[i].weight > best.weight)) {
-				best = options[i];
+		for (const option of options) {
+			if (!best || option.priority > best.priority || (option.priority === best.priority && option.weight > best.weight)) {
+				best = option;
 			}
 		}
 
 		return best;
 	},
 
+	/**
+	 * Calculates how much a creep cost to spawn.
+	 * @todo Move into Creep.prototype.
+	 *
+	 * @param {Creep} creep
+	 *   The creep in question.
+	 *
+	 * @return {number}
+	 *   Energy cost for this creep.
+	 */
 	getBodyCost(creep) {
 		let cost = 0;
-		for (const i in creep.body) {
-			cost += BODYPART_COST[creep.body[i].type];
+		for (const part of creep.body) {
+			cost += BODYPART_COST[part.type];
 		}
 
 		return cost;
 	},
 
+	/**
+	 * Get part counts for this creep.
+	 * @todo Move into Creep.prototype.
+	 *
+	 * @param {Creep} creep
+	 *   The creep in question.
+	 *
+	 * @return {object}
+	 *   Amount of parts of each type in the creep's body.
+	 */
 	getBodyParts(creep) {
 		return creep.memory.body;
 	},
 
+	/**
+	 * Dynamically generates a creep body for spawning.
+	 *
+	 * @param {object} weights
+	 *   Weights specifying how to distribute the different body part types.
+	 * @param {number} maxCost
+	 *   Maximum cost for the creep.
+	 * @param {object} maxParts
+	 *   Maximum number of parts of certain types to use.
+	 *
+	 * @return {string[]}
+	 *   List of parts that make up the requested creep.
+	 */
 	generateCreepBody(weights, maxCost, maxParts) {
 		const newParts = {};
 		let size = 0;
@@ -202,7 +300,7 @@ const utilities = {
 		}
 
 		// Generate initial body containing at least one of each part.
-		for (const part in weights) {
+		for (const part of _.keys(weights)) {
 			newParts[part] = 1;
 			size++;
 			cost += BODYPART_COST[part];
@@ -213,27 +311,29 @@ const utilities = {
 		}
 
 		let done = false;
-		while (!done && size < 50) {
+		while (!done && size < MAX_CREEP_SIZE) {
 			done = true;
-			for (const part in BODYPART_COST) {
+			_.each(weights, (weight, part) => {
 				const currentWeight = newParts[part] / size;
-				if (currentWeight <= weights[part] && cost + BODYPART_COST[part] <= maxCost) {
-					if (!maxParts || !maxParts[part] || newParts[part] < maxParts[part]) {
-						done = false;
-						newParts[part]++;
-						size++;
-						cost += BODYPART_COST[part];
-						if (size >= 50) {
-							break;
-						}
-					}
-					else {
-						// Limit for this bodypart has been reached, so stop adding.
-						done = true;
-						break;
-					}
+				if (currentWeight > weight) return;
+				if (cost + BODYPART_COST[part] > maxCost) return;
+
+				if (maxParts && maxParts[part] && newParts[part] >= maxParts[part]) {
+					// Limit for this bodypart has been reached, so stop adding.
+					done = true;
+					return false;
 				}
-			}
+
+				done = false;
+				newParts[part]++;
+				size++;
+				cost += BODYPART_COST[part];
+
+				if (size >= MAX_CREEP_SIZE) {
+					// Maximum creep size reached, stop adding parts.
+					return false;
+				}
+			});
 		}
 
 		// Chain the generated configuration into an array of body parts.
@@ -262,8 +362,7 @@ const utilities = {
 
 		// Add military parts last to keep fighting effeciency.
 		const lastParts = [RANGED_ATTACK, ATTACK, HEAL];
-		for (const p in lastParts) {
-			const part = lastParts[p];
+		for (const part of lastParts) {
 			for (let i = 0; i < newParts[part] || 0; i++) {
 				body.push(part);
 			}
@@ -274,6 +373,13 @@ const utilities = {
 
 	/**
 	 * Serializes a position for storing it in memory.
+	 * @todo Move to RoomPosition.prototype.
+	 *
+	 * @param {RoomPosition} position
+	 *   The position to encode.
+	 *
+	 * @return {string}
+	 *   The encoded position.
 	 */
 	encodePosition(position) {
 		if (!position) return;
@@ -283,6 +389,13 @@ const utilities = {
 
 	/**
 	 * Creates a RoomPosition object from serialized data.
+	 * @todo Move to RoomPosition as static function.
+	 *
+	 * @param {string} position
+	 *   The encoded position.
+	 *
+	 * @return {RoomPosition}
+	 *   The original room position.
 	 */
 	decodePosition(position) {
 		if (!position) return;
@@ -296,40 +409,50 @@ const utilities = {
 
 	/**
 	 * Serializes an array of RoomPosition objects for storing in memory.
+	 *
+	 * @param {RoomPosition[]} path
+	 *   A list of positions to encode.
+	 *
+	 * @return {string[]}
+	 *   The encoded path.
 	 */
 	serializePositionPath(path) {
-		const result = [];
-		for (const i in path) {
-			result.push(utilities.encodePosition(path[i]));
-		}
-
-		return result;
+		return _.map(path, utilities.encodePosition);
 	},
 
 	/**
 	 * Deserializes a serialized path into an array of RoomPosition objects.
+	 *
+	 * @param {string[]} path
+	 *   A list of positions to decode.
+	 *
+	 * @return {RoomPosition[]}
+	 *   The decoded path.
 	 */
 	deserializePositionPath(path) {
-		const result = [];
-		for (const i in path) {
-			result.push(utilities.decodePosition(path[i]));
-		}
-
-		return result;
+		return _.map(path, utilities.decodePosition);
 	},
 
 	/**
-	 * Generates a Van der Corput sequence for the given number of digits and base.
+	 * Generates a Van der Corput sequence.
+	 *
+	 * @param {number} power
+	 *   Number of "digits" relative to base to generate a sequence for.
+	 * @param {number} base
+	 *   Base for the sequence. Detemines spacing of the sequence.
+	 *
+	 * @return {number[]}
+	 *   The generated sequence, containing all numbers from 1 to base^power.
 	 */
-	generateEvenSequence(numDigits, base) {
+	generateEvenSequence(power, base) {
 		const numbers = [];
 		const digits = [];
-		for (let i = 0; i < numDigits; i++) {
+		for (let i = 0; i < power; i++) {
 			digits[i] = 0;
 		}
 
 		function increase(digit) {
-			if (digit >= numDigits) return;
+			if (digit >= power) return;
 
 			digits[digit]++;
 			if (digits[digit] >= base) {
@@ -340,7 +463,7 @@ const utilities = {
 
 		function getNumber() {
 			let sum = 0;
-			for (let i = 0; i < numDigits; i++) {
+			for (let i = 0; i < power; i++) {
 				sum *= base;
 				sum += digits[i];
 			}
@@ -362,7 +485,17 @@ const utilities = {
 	},
 
 	/**
-	 * Choose whether a calculation should currently be executed based on priorities.
+	 * Choose whether an operation should currently run based on priorities.
+	 *
+	 * @param {number} offset
+	 *   Offset to add to time, so not all operations get throttled on the same tick.
+	 * @param {number} minBucket
+	 *   Minimum amount of bucket needed for this operation to run.
+	 * @param {number} maxBucket
+	 *   Amount of bucket at which this operation should always run.
+	 *
+	 * @return {boolean}
+	 *   True if the operation is allowed to run.
 	 */
 	throttle(offset, minBucket, maxBucket) {
 		utilities.initThrottleMemory();
@@ -383,6 +516,12 @@ const utilities = {
 		return true;
 	},
 
+	/**
+	 * Gets a new offset for a throttled operation.
+	 *
+	 * @return {number}
+	 *   Offset to store for a throttled operation.
+	 */
 	getThrottleOffset() {
 		utilities.initThrottleMemory();
 
@@ -394,6 +533,9 @@ const utilities = {
 		return Memory.throttleInfo.currentOffset;
 	},
 
+	/**
+	 * Initializes memory with general throttling information.
+	 */
 	initThrottleMemory() {
 		if (!Memory.throttleInfo) {
 			Memory.throttleInfo = {
@@ -412,9 +554,9 @@ const utilities = {
 			const max = sequence[0];
 			Memory.throttleInfo.max = max;
 
-			for (const i in sequence) {
-				Memory.throttleInfo.numbers[sequence[i]] = 1 - (i / max);
-			}
+			_.each(sequence, (number, index) => {
+				Memory.throttleInfo.numbers[number] = 1 - (index / max);
+			});
 
 			Memory.throttleInfo.numbers[0] = 1;
 		}

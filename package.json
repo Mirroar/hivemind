@@ -39,7 +39,8 @@
 			"Memory"
 		],
 		"ignores": [
-			"**/screeps-profiler.js"
+			"**/screeps-profiler.js",
+			"**/snippets.js"
 		]
 	}
 }
