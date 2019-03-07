@@ -51,24 +51,24 @@ Creep.prototype.getAvailableEnergySources = function () {
 	// Take energy from storage links.
 	if (creep.room.linkNetwork && creep.room.linkNetwork.energy > creep.room.linkNetwork.maxEnergy) {
 		for (const link of creep.room.linkNetwork.neutralLinks) {
-			if (link.energy > 0) {
-				const option = {
-					priority: 5,
-					weight: (link.energyCapacity - link.energy) / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: link,
-					resourceType: RESOURCE_ENERGY,
-				};
+			if (link.energy === 0) continue;
 
-				if (creep.pos.getRangeTo(link) > 10) {
-					// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
-					option.priority--;
-				}
+			const option = {
+				priority: 5,
+				weight: link.energy / 100, // @todo Also factor in distance.
+				type: 'structure',
+				object: link,
+				resourceType: RESOURCE_ENERGY,
+			};
 
-				option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
-
-				options.push(option);
+			if (creep.pos.getRangeTo(link) > 10) {
+				// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
+				option.priority--;
 			}
+
+			option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
+
+			options.push(option);
 		}
 	}
 
@@ -701,60 +701,25 @@ Creep.prototype.calculateSource = function () {
 
 /**
  * Makes this creep collect energy.
- *
- * @todo Refactor like in performGetResources().
  */
 Creep.prototype.performGetEnergy = function () {
 	const creep = this;
-	if (!creep.memory.sourceTarget) {
-		creep.calculateEnergySource();
-	}
-
-	const best = creep.memory.sourceTarget;
-	if (!best) {
-		if (creep.memory.role === 'transporter' && creep.carry[RESOURCE_ENERGY] > 0) {
-			// Deliver what energy we already have stored, if no more can be found for picking up.
-			creep.setTransporterState(true);
-		}
-
-		return;
-	}
-
-	const target = Game.getObjectById(best);
-	if (!target || (target.store && target.store[RESOURCE_ENERGY] <= 0) || (target.amount && target.amount <= 0) || (target.mineralAmount && target.mineralAmount <= 0)) {
-		creep.calculateEnergySource();
-	}
-	else if (target.store) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			const result = creep.withdraw(target, RESOURCE_ENERGY);
-			if (result === OK) {
-				creep.calculateEnergySource();
-			}
-		}
-	}
-	else if (target.amount) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			const result = creep.pickup(target);
-			if (result === OK) {
-				creep.calculateEnergySource();
-			}
-		}
-	}
+	this.performGetResources(() => creep.calculateEnergySource());
 };
 
 /**
  * Makes this creep collect resources.
+ *
+ * @param {Function } calculateSourceCallback
+ *   Optional callback to use when a new source target needs to be chosen.
  */
-Creep.prototype.performGetResources = function () {
+Creep.prototype.performGetResources = function (calculateSourceCallback) {
 	const creep = this;
+	if (!calculateSourceCallback) {
+		calculateSourceCallback = () => creep.calculateSource();
+	}
 
-	if (!this.ensureValidResourceSource()) {
+	if (!this.ensureValidResourceSource(calculateSourceCallback)) {
 		delete creep.memory.sourceTarget;
 		if (creep.memory.role === 'transporter' && _.sum(creep.carry) > 0) {
 			// Deliver what we already have stored, if no more can be found for picking up.
@@ -779,19 +744,22 @@ Creep.prototype.performGetResources = function () {
 		orderDone = creep.withdraw(target, resourceType) === OK;
 	}
 
-	if (orderDone) creep.calculateSource();
+	if (orderDone) calculateSourceCallback();
 };
 
 /**
  * Makes sure the creep has a valid target for resource pickup.
  *
+ * @param {Function } calculateSourceCallback
+ *   Callback to use when a new source target needs to be chosen.
+ *
  * @return {boolean}
  *   True if the target is valid and contains the needed resource.
  */
-Creep.prototype.ensureValidResourceSource = function () {
+Creep.prototype.ensureValidResourceSource = function (calculateSourceCallback) {
 	const creep = this;
 
-	if (!creep.memory.sourceTarget) creep.calculateSource();
+	if (!creep.memory.sourceTarget) calculateSourceCallback();
 
 	const target = Game.getObjectById(creep.memory.sourceTarget);
 	const resourceType = creep.memory.order && creep.memory.order.resourceType;
