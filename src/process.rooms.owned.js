@@ -38,7 +38,6 @@ OwnedRoomProcess.prototype.run = function () {
 		priority: PROCESS_PRIORITY_ALWAYS,
 	});
 
-	this.room.generateLinkNetwork();
 	hivemind.runProcess(this.room.name + '_links', ManageLinksProcess, {
 		interval: 10,
 		room: this.room,

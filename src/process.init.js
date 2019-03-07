@@ -26,6 +26,7 @@ InitProcess.prototype.run = function () {
 		if (!room.controller || !room.controller.my) return;
 
 		room.roomPlanner = new RoomPlanner(room.name);
+		room.generateLinkNetwork();
 	});
 };
 
