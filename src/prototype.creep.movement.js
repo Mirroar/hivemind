@@ -431,15 +431,17 @@ Creep.prototype.calculateGoToPath = function (target, options) {
  *
  * @param {string} roomName
  *   Name of the room to try and move to.
+ * @param {boolean} allowDanger
+ *   If true, creep may move through unsafe rooms.
  *
  * @return {boolean}
  *   True if movement is possible and ongoing.
  */
-Creep.prototype.moveToRoom = function (roomName) {
+Creep.prototype.moveToRoom = function (roomName, allowDanger) {
 	// Check which room to go to next.
 	const inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
 	if (!this.memory.nextRoom || (this.pos.roomName === this.memory.nextRoom && inRoom)) {
-		const path = this.calculateRoomPath(roomName);
+		const path = this.calculateRoomPath(roomName, allowDanger);
 		if (_.size(path) < 1) {
 			return false;
 		}
@@ -461,11 +463,13 @@ Creep.prototype.moveToRoom = function (roomName) {
  *
  * @param {string} roomName
  *   Name of the target room for finding a path.
+ * @param {boolean} allowDanger
+ *   If true, creep may move through unsafe rooms.
  *
  * @return {string[]|null}
  *   An array of room names, not including the current room, or null if no path
  *   could be found.
  */
-Creep.prototype.calculateRoomPath = function (roomName) {
-	return this.room.calculateRoomPath(roomName);
+Creep.prototype.calculateRoomPath = function (roomName, allowDanger) {
+	return this.room.calculateRoomPath(roomName, allowDanger);
 };

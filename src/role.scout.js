@@ -20,7 +20,7 @@ Creep.prototype.performScout = function () {
 		this.room.visual.text(this.memory.scoutTarget, this.pos);
 	}
 
-	if (!this.moveToRoom(this.memory.scoutTarget)) {
+	if (!this.moveToRoom(this.memory.scoutTarget, true)) {
 		this.chooseScoutTarget();
 	}
 };
@@ -41,7 +41,7 @@ Creep.prototype.chooseScoutTarget = function () {
 		if (info.origin === this.memory.origin && info.scoutPriority > 0) {
 			if (!best || best.scoutPriority < info.scoutPriority) {
 				// Check distance / path to room.
-				const path = this.calculateRoomPath(info.roomName);
+				const path = this.calculateRoomPath(info.roomName, true);
 
 				if (path) {
 					best = info;

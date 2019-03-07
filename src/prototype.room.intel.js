@@ -124,13 +124,6 @@ Room.prototype.needsScout = function () {
 		return false;
 	}
 
-	const memory = Memory.strategy;
-
-	for (const info of _.values(memory.roomList)) {
-		if (info.origin === this.name && info.scoutPriority >= 1) {
-			return true;
-		}
-	}
-
-	return false;
+	const room = this;
+	return _.any(Memory.strategy.roomList, info => info.origin === room.name && info.scoutPriority >= 1);
 };

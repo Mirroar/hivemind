@@ -60,11 +60,13 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
  *
  * @param {string} targetRoom
  *   Name of the room to navigate to.
+ * @param {boolean} allowDanger
+ *   If true, creep may move through unsafe rooms.
  *
  * @return {string[]}
  *   An array of room names a creep needs to move throught to reach targetRoom.
  */
-Room.prototype.calculateRoomPath = function (targetRoom) {
+Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 	const roomName = this.name;
 
 	const openList = {};
@@ -105,9 +107,11 @@ Room.prototype.calculateRoomPath = function (targetRoom) {
 			if (openList[exit] || closedList[exit]) continue;
 
 			const exitIntel = hivemind.roomIntel(exit);
-			if (exitIntel.isOwned()) continue;
-			// @todo Allow pathing through source keeper rooms if we can safely avoid them.
-			if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
+			if (!allowDanger) {
+				if (exitIntel.isOwned()) continue;
+				// @todo Allow pathing through source keeper rooms if we can safely avoid them.
+				if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
+			}
 
 			const path = [];
 			for (const step of info.path) {
