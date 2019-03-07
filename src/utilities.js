@@ -128,9 +128,6 @@ const utilities = {
 		return PathFinder.search(startPosition, endPosition, options);
 	},
 
-	costMatrixCache: {},
-	costMatrixCacheAge: Game.time,
-
 	/**
 	 * Gets the pathfinding cost matrix for a room.
 	 *
@@ -146,7 +143,7 @@ const utilities = {
 	 */
 	getCostMatrix(roomName, options) {
 		// Clear cost matrix cache from time to time.
-		if (utilities.costMatrixCacheAge < Game.time - 500) {
+		if (!utilities.costMatrixCacheAge || utilities.costMatrixCacheAge < Game.time - 500) {
 			utilities.costMatrixCache = {};
 			utilities.costMatrixCacheAge = Game.time;
 		}
@@ -505,7 +502,7 @@ const utilities = {
 		if (!maxBucket) maxBucket = Memory.throttleInfo.bucket.normal;
 
 		const bucket = Game.cpu.bucket;
-		if (bucket > maxBucket) return false;
+		if (bucket >= maxBucket) return false;
 		if (bucket < minBucket) return true;
 
 		const tick = (Game.time + offset) % Memory.throttleInfo.max;

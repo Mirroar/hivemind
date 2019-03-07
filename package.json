@@ -14,24 +14,44 @@
 		"url": "https://github.com/Mirroar/hivemind/issues"
 	},
 	"scripts": {
-		"test": "xo && ava"
+		"test": "xo && ava",
+		"coverage": "nyc ava"
 	},
 	"devDependencies": {
 		"ava": "^1.1.0",
+		"lodash": "^3.0.0",
+		"nyc": "^13.3.0",
 		"xo": "^0.24.0"
 	},
 	"xo": {
 		"rules": {
-			"brace-style": ["error", "stroustrup"],
-			"comma-dangle": ["error", "always-multiline"],
-			"curly": ["error", "multi-line"],
-			"import/no-unassigned-import": ["error", {
-				"allow": ["**/prototype.*"]
-			}],
-			"prefer-destructuring": ["error", {
-				"array": false,
-				"object": false
-			}]
+			"brace-style": [
+				"error",
+				"stroustrup"
+			],
+			"comma-dangle": [
+				"error",
+				"always-multiline"
+			],
+			"curly": [
+				"error",
+				"multi-line"
+			],
+			"import/no-unassigned-import": [
+				"error",
+				{
+					"allow": [
+						"**/prototype.*"
+					]
+				}
+			],
+			"prefer-destructuring": [
+				"error",
+				{
+					"array": false,
+					"object": false
+				}
+			]
 		},
 		"globals": [
 			"_",
