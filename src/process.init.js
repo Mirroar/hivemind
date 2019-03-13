@@ -1,5 +1,6 @@
 'use strict';
 
+const BoostManager = require('./manager.boost');
 const Process = require('./process');
 const RoomPlanner = require('./room-planner');
 
@@ -26,6 +27,7 @@ InitProcess.prototype.run = function () {
 		if (!room.controller || !room.controller.my) return;
 
 		room.roomPlanner = new RoomPlanner(room.name);
+		room.boostManager = new BoostManager(room.name);
 		room.generateLinkNetwork();
 	});
 };

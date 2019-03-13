@@ -5,7 +5,6 @@ STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
 
 const Bay = require('./manager.bay');
-const BoostManager = require('./manager.boost');
 const Exploit = require('./manager.exploit');
 
 /**
@@ -74,11 +73,6 @@ Room.prototype.enhanceData = function () {
 			}
 		}
 	}
-
-	// Initialize boost manager.
-	if (BoostManager) {
-		this.boostManager = new BoostManager(this.name);
-	}
 };
 
 /**
@@ -120,9 +114,7 @@ Room.prototype.scan = function () {
  *   True if a scout is needed.
  */
 Room.prototype.needsScout = function () {
-	if (!Memory.strategy) {
-		return false;
-	}
+	if (!Memory.strategy) return false;
 
 	const room = this;
 	return _.any(Memory.strategy.roomList, info => info.origin === room.name && info.scoutPriority >= 1);
