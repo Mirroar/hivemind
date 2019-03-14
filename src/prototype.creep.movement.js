@@ -35,14 +35,19 @@ Creep.prototype.moveToRange = function (target, range) {
  */
 Creep.prototype.setCachedPath = function (path, reverse, distance) {
 	path = _.clone(path);
-	if (reverse) {
-		path.reverse();
-	}
-
-	if (distance) {
-		for (let i = 0; i < distance; i++) {
-			path.pop();
+	if (reverse || distance) {
+		const originalPath = utilities.deserializePositionPath(path);
+		if (reverse) {
+			originalPath.reverse();
 		}
+
+		if (distance) {
+			for (let i = 0; i < distance; i++) {
+				originalPath.pop();
+			}
+		}
+
+		path = utilities.serializePositionPath(originalPath);
 	}
 
 	this.memory.cachedPath = {
@@ -51,6 +56,17 @@ Creep.prototype.setCachedPath = function (path, reverse, distance) {
 		arrived: false,
 		lastPositions: {},
 	};
+};
+
+/**
+ *
+ */
+Creep.prototype.getCachedPath = function () {
+	if (!this._decodedPath) {
+		this._decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
+	}
+
+	return this._decodedPath;
 };
 
 /**
@@ -92,10 +108,10 @@ Creep.prototype.followCachedPath = function () {
 		return;
 	}
 
-	const path = this.memory.cachedPath.path;
+	const path = this.getCachedPath();
 
 	if (this.memory.cachedPath.forceGoTo) {
-		const pos = utilities.decodePosition(path[this.memory.cachedPath.forceGoTo]);
+		const pos = path[this.memory.cachedPath.forceGoTo];
 
 		if (this.pos.getRangeTo(pos) > 0) {
 			this.say('S:' + pos.x + 'x' + pos.y);
@@ -127,7 +143,7 @@ Creep.prototype.followCachedPath = function () {
 	}
 
 	// Move towards next position.
-	const next = utilities.decodePosition(path[this.memory.cachedPath.position + 1]);
+	const next = path[this.memory.cachedPath.position + 1];
 	if (next.roomName !== this.pos.roomName) {
 		// Something went wrong, we must have gone off the path.
 		delete this.memory.cachedPath.position;
@@ -146,8 +162,7 @@ Creep.prototype.followCachedPath = function () {
  */
 Creep.prototype.getOntoCachedPath = function () {
 	const creep = this;
-	const decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
-	const target = this.pos.findClosestByRange(decodedPath, {
+	const target = this.pos.findClosestByRange(this._decodedPath, {
 		filter: pos => {
 			// Try to move to a position on the path that is in the current room.
 			if (pos.roomName !== this.room.name) return false;
@@ -162,14 +177,14 @@ Creep.prototype.getOntoCachedPath = function () {
 	if (!target) {
 		// We're not in the correct room to move on this path. Kind of sucks, but try to get there using the default pathfinder anyway.
 		// @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
-		if (this.pos.roomName === decodedPath[0].roomName) {
+		if (this.pos.roomName === this._decodedPath[0].roomName) {
 			this.say('Blocked');
 		}
 		else {
 			this.say('Searching');
 		}
 
-		this.moveTo(decodedPath[0]);
+		this.moveTo(this._decodedPath[0]);
 		this.memory.moveBlocked = true;
 		return true;
 	}
@@ -177,8 +192,8 @@ Creep.prototype.getOntoCachedPath = function () {
 	// Try to get to the closest part of the path.
 	if (this.pos.x === target.x && this.pos.y === target.y) {
 		// We've arrived on the path, time to get moving along it!
-		for (const i in decodedPath) {
-			if (this.pos.x === decodedPath[i].x && this.pos.y === decodedPath[i].y && this.pos.roomName === decodedPath[i].roomName) {
+		for (const i in this._decodedPath) {
+			if (this.pos.x === this._decodedPath[i].x && this.pos.y === this._decodedPath[i].y && this.pos.roomName === this._decodedPath[i].roomName) {
 				this.memory.cachedPath.position = i;
 				break;
 			}
@@ -199,10 +214,8 @@ Creep.prototype.getOntoCachedPath = function () {
  *   An array of encoded room positions.
  */
 Creep.prototype.incrementCachedPathPosition = function () {
-	const path = this.memory.cachedPath.path;
-
 	// Check if we've already moved onto the next position.
-	const next = utilities.decodePosition(path[this.memory.cachedPath.position + 1]);
+	const next = this._decodedPath[this.memory.cachedPath.position + 1];
 	if (!next) {
 		// Out of range, so we're probably at the end of the path.
 		this.memory.cachedPath.arrived = true;
@@ -216,7 +229,7 @@ Creep.prototype.incrementCachedPathPosition = function () {
 
 	if (next.roomName !== this.pos.roomName) {
 		// We just changed rooms.
-		const afterNext = utilities.decodePosition(path[this.memory.cachedPath.position + 2]);
+		const afterNext = this._decodedPath[this.memory.cachedPath.position + 2];
 		if (afterNext && afterNext.roomName === this.pos.roomName && afterNext.getRangeTo(this.pos) <= 1) {
 			this.memory.cachedPath.position += 2;
 		}
@@ -235,7 +248,6 @@ Creep.prototype.incrementCachedPathPosition = function () {
  */
 Creep.prototype.moveAroundObstacles = function () {
 	const REMEMBER_POSITION_COUNT = 5;
-	const path = this.memory.cachedPath.path;
 
 	// Record recent positions the creep has been on.
 	// @todo Using Game.time here is unwise in case the creep is being throttled.
@@ -267,8 +279,8 @@ Creep.prototype.moveAroundObstacles = function () {
 
 	// Try to find next free tile on the path.
 	let i = this.memory.cachedPath.position + 1;
-	while (i < path.length) {
-		const pos = utilities.decodePosition(path[i]);
+	while (i < this._decodedPath.length) {
+		const pos = this._decodedPath[i];
 		if (pos.roomName !== this.pos.roomName) {
 			// Skip past exit tile in next room.
 			i++;
@@ -280,7 +292,7 @@ Creep.prototype.moveAroundObstacles = function () {
 		i++;
 	}
 
-	if (i >= path.length) {
+	if (i >= this._decodedPath.length) {
 		// No free spots until end of path. Let normal pathfinder take over.
 		this.memory.cachedPath.arrived = true;
 		return true;

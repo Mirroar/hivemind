@@ -86,10 +86,12 @@ Creep.prototype.buildRoadOnCachedPath = function () {
 	const creep = this;
 	const workParts = creep.memory.body.work || 0;
 	const pos = creep.memory.cachedPath.position;
-	for (let i = pos - 2; i <= pos + 2; i++) {
-		if (i < 0 || i >= creep.memory.cachedPath.path.length) continue;
+	const path = this.getCachedPath();
 
-		const position = utilities.decodePosition(creep.memory.cachedPath.path[i]);
+	for (let i = pos - 2; i <= pos + 2; i++) {
+		if (i < 0 || i >= path.length) continue;
+
+		const position = path[i];
 		if (position.roomName !== creep.pos.roomName) continue;
 
 		// Check for roads around the current path position to repair.
@@ -171,8 +173,8 @@ Creep.prototype.ensureRemoteHarvestContainerIsBuilt = function (source) {
 			const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
 
 			if (harvestMemory.cachedPath) {
-				const path = harvestMemory.cachedPath.path;
-				const containerPosition = utilities.decodePosition(path[path.length - 2]);
+				const path = utilities.deserializePositionPath(harvestMemory.cachedPath.path);
+				const containerPosition = path[path.length - 2];
 				containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
 			}
 		}
@@ -196,10 +198,11 @@ Creep.prototype.removeObstacles = function () {
 
 	const pos = creep.memory.cachedPath.position;
 	const i = pos + 1;
+	const path = this.getCachedPath();
 
-	if (i >= creep.memory.cachedPath.path.length) return false;
+	if (i >= path.length) return false;
 
-	const position = utilities.decodePosition(creep.memory.cachedPath.path[i]);
+	const position = path[i];
 	if (!position || position.roomName !== creep.pos.roomName) return false;
 
 	// Check for obstacles on the next position to destroy.
