@@ -58,6 +58,8 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 
 	// A* from here to targetRoom.
 	// @todo Avoid unsafe rooms.
+	// @todo Some rooms' obstacles prevent moving from one exit to another,
+	// but we can deduce that from the cost matrixes we store.
 	let finalPath;
 	while (_.size(openList) > 0) {
 		let minDist;
