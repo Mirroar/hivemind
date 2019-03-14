@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Added this changelog.
+- Added xo for ensuring consistent code style.
+- Added ava for automated testing, along with a small set of tests.
 - Power mining can now be disabled by setting `Memory.disablePowerHarvesting = true`.
 - Throttling to 20 cpu can be activated by setting `Memory.isAccountThrottled = true`.
 - Added Hivemind class that functions as a kernel to start processes, handle throttling, etc.
@@ -17,9 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added creep role "gift" that takes excess resources and runs them around the map for other players to hunt.
 - Spawn reserver creeps for rooms that are deemed "safe" by the room planner, because they cannot be accessed from outside our empire.
 - Other nearby rooms will send remote builders to help out with expansion.
-- When the controller of an expansion is not direcly reahable (because structures are in the way), tunnels are built to reach it.
+- When the controller of an expansion is not direcly reachable (because structures are in the way), tunnels are built to reach it.
 - We start building roads and containers in new rooms even before they are claimed.
 - Automatic expansion is now aborted if the room does not grow fast enough.
+- Maximum scout distance is now managed dynamically based on memory usage.
+- Remote harvesters try to dismantle structures that block their path.
+- Creeps can now pick up resources from tombstones.
 
 ### Changed
 - Game object prototype enhancements have been moved into separate files like `room.prototype.intel.js`.
@@ -32,13 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - avoid being close to other players
   - avoid expanding too close to our own rooms if it restricts remote harvesting
   - prefer rooms that have many energy sources in adjacent rooms
+  - prefer rooms with mineral types we have few sources of
   - prefer rooms with few exit sides and tiles
   - prefer rooms that create safe exits for other nearby rooms
   - prefer rooms with open space and few swamp tiles
 - Expansions are now taken up to 7 rooms away (up from 5) and no longer have a minimum distance.
+- Expansions are taken even at high CPU usage if a high level of remote harvesting is going on.
 - Expansions are now only taken if a safe path to the target room exists.
 - Spawn room for expansion squad is now chosen dynamically.
 - When the path to an expansion is blocked, a new spawn room is chosen, or expansion is aborted.
+- Expansion Score is only calculated when looking for a new expansion.
 - Military creeps will now attack unowned structures if a flag has been placed directly on it.
 - Upgraders will move as close to their controller as possible for less of a chance of blocking other creeps.
 - Remote mining will try not to run paths through rooms owned or reserved by other players.
@@ -49,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RoomPlanner places extension bays with less than 7 extensions if in exchange they are much closer to the room's center.
 - RoomPlanner no longer places towers outside of the area covered by ramparts, and places them (and their access roads) more intelligently in general.
 - Roads to the controller are built much earlier in new rooms.
+- Power spawns and nukers are only supplied if the room has a surplus of energy.
+- Attack creeps that are not considered dangerous if they are in rooms we own / reserve.
+- Optimized memory usage of serialized paths and room cost matrixes.
 
 ### Removed
 - `pathfinding.js` has been removed in favor of `creep.prototype.movement.js`.
@@ -57,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `manager.strategy.js` has been removed in favor of `process.strategy.*.js` files.
 - `manager.structure.js` has been removed in favor of `process.empire.*.js` files.
 - `Game.isAlly()` has been removed in favor of `Relations.isAlly()`.
+- Several older pieces of code that allowed interaction using flags was removed.
 
 ## [1.0.4] - 2018-11-10
 ### @todo
