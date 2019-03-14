@@ -1,7 +1,8 @@
 'use strict';
 
 /* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL
-BODYPART_COST TOUGH ATTACK RANGED_ATTACK HEAL MAX_CREEP_SIZE */
+BODYPART_COST TOUGH ATTACK RANGED_ATTACK HEAL MAX_CREEP_SIZE
+TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT */
 
 const utilities = {
 
@@ -404,6 +405,46 @@ const utilities = {
 		}
 	},
 
+	xOffsets: {
+		[TOP]: 0,
+		[TOP_RIGHT]: 1,
+		[RIGHT]: 1,
+		[BOTTOM_RIGHT]: 1,
+		[BOTTOM]: 0,
+		[BOTTOM_LEFT]: -1,
+		[LEFT]: -1,
+		[TOP_LEFT]: -1,
+	},
+
+	yOffsets: {
+		[TOP]: -1,
+		[TOP_RIGHT]: -1,
+		[RIGHT]: 0,
+		[BOTTOM_RIGHT]: 1,
+		[BOTTOM]: 1,
+		[BOTTOM_LEFT]: 1,
+		[LEFT]: 0,
+		[TOP_LEFT]: -1,
+	},
+
+	directions: {
+		[-1]: {
+			[-1]: TOP_LEFT,
+			[0]: TOP,
+			[1]: TOP_RIGHT,
+		},
+		[0]: {
+			[-1]: LEFT,
+			[0]: null,
+			[1]: RIGHT,
+		},
+		[1]: {
+			[-1]: BOTTOM_LEFT,
+			[0]: BOTTOM,
+			[1]: BOTTOM_RIGHT,
+		},
+	},
+
 	/**
 	 * Serializes an array of RoomPosition objects for storing in memory.
 	 *
@@ -414,7 +455,18 @@ const utilities = {
 	 *   The encoded path.
 	 */
 	serializePositionPath(path) {
-		return _.map(path, utilities.encodePosition);
+		let previous;
+		return _.map(path, pos => {
+			let result;
+			if (previous && previous.roomName === pos.roomName) {
+				const dx = pos.x - previous.x;
+				const dy = pos.y - previous.y;
+				result = utilities.directions[dy] && utilities.directions[dy][dx];
+			}
+
+			previous = pos;
+			return result || utilities.encodePosition(pos);
+		});
 	},
 
 	/**
@@ -427,7 +479,17 @@ const utilities = {
 	 *   The decoded path.
 	 */
 	deserializePositionPath(path) {
-		return _.map(path, utilities.decodePosition);
+		let pos;
+		return _.map(path, location => {
+			if (typeof location === 'string') {
+				pos = utilities.decodePosition(location);
+			}
+			else {
+				pos = new RoomPosition(pos.x + utilities.xOffsets[location], pos.y + utilities.yOffsets[location], pos.roomName);
+			}
+
+			return pos;
+		});
 	},
 
 	/**
