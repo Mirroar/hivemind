@@ -14,7 +14,7 @@ const utilities = {
 	 *   The determined user name.
 	 */
 	getUsername() {
-		return _.first(Game.spawns).owner.username;
+		return _.sample(Game.spawns).owner.username;
 	},
 
 	/**
