@@ -137,15 +137,20 @@ module.exports = {
 		}
 
 		// Check if memory is getting too bloated.
-		if (Game.time % 836 === 0) {
-			if (RawMemory.get().length > 1800000) {
-				Memory.hivemind.maxScoutDistance = (Memory.hivemind.maxScoutDistance || 7) - 1;
+		if (Game.time % 7836 === 0) {
+			const currentScoutDistance = Memory.hivemind.maxScoutDistance || 7;
+			const usedMemory = RawMemory.get().length;
+			if (usedMemory > 1800000 && currentScoutDistance > 2) {
+				Memory.hivemind.maxScoutDistance = currentScoutDistance - 1;
 				for (const roomName in Memory.strategy.roomList) {
 					if (Memory.strategy.roomList[roomName].range > Memory.hivemind.maxScoutDistance) {
 						delete Memory.rooms[roomName];
 						delete Memory.strategy.roomList[roomName];
 					}
 				}
+			}
+			else if (usedMemory < 1500000 && currentScoutDistance < 10) {
+				Memory.hivemind.maxScoutDistance = currentScoutDistance + 1;
 			}
 		}
 
