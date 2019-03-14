@@ -3,7 +3,7 @@
 /* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
-STRUCTURE_POWER_BANK */
+STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES */
 
 const utilities = require('./utilities');
 
@@ -53,7 +53,8 @@ RoomIntel.prototype.gatherIntel = function () {
 	this.memory.exits = Game.map.describeExits(room.name);
 
 	// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
-	this.memory.costMatrix = room.generateCostMatrix().serialize();
+	const constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
+	this.generateCostMatrix(structures, constructionSites);
 
 	// @todo Check for portals.
 
@@ -210,7 +211,7 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
  * Commits structure status to memory.
  *
  * @param {object} structures
- *   An object containing Arrays of Structures, keyed by structure type.
+ *   An object containing Arrays of structures, keyed by structure type.
  * @param {string} structureType
  *   The type of structure to gather intel on.
  */
@@ -224,6 +225,31 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
 			hits: structure.hits,
 			hitsMax: structure.hitsMax,
 		};
+	}
+};
+
+/**
+ * Commits pathfinding matrix to memory.
+ *
+ * @param {object} structures
+ *   An object containing Arrays of structures, keyed by structure type.
+ * @param {object} constructionSites
+ *   An object containing Arrays of construction sites, keyed by structure type.
+ */
+RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
+	this.memory.costMatrix = utilities.generateCostMatrix(structures, constructionSites).serialize();
+	this.memory.pathfinderPositions = utilities.generateObstacleList(structures, constructionSites);
+
+	const matrixSize = JSON.stringify(this.memory.costMatrix).length;
+	const listSize = JSON.stringify(this.memory.pathfinderPositions).length;
+
+	hivemind.log('intel', this.roomName).debug('Obstacle list takes', Math.ceil(10000 * listSize / matrixSize) / 100, '% of matrix storage size -', listSize, '/', matrixSize);
+
+	if (matrixSize < listSize) {
+		delete this.memory.pathfinderPositions;
+	}
+	else {
+		delete this.memory.costMatrix;
 	}
 };
 
@@ -313,6 +339,25 @@ RoomIntel.prototype.getMineralType = function () {
  */
 RoomIntel.prototype.getCostMatrix = function () {
 	if (this.memory.costMatrix) return PathFinder.CostMatrix.deserialize(this.memory.costMatrix);
+
+	if (this.memory.pathfinderPositions) {
+		const matrix = new PathFinder.CostMatrix();
+
+		for (const location of this.memory.pathfinderPositions.obstacles) {
+			const pos = utilities.decodePosition(location);
+			matrix.set(pos.x, pos.y, 0xFF);
+		}
+
+		for (const location of this.memory.pathfinderPositions.roads) {
+			const pos = utilities.decodePosition(location);
+			if (matrix.get(pos.x, pos.y) === 0) {
+				matrix.set(pos.x, pos.y, 1);
+			}
+		}
+
+		return matrix;
+	}
+
 	if (Game.rooms[this.roomName]) return Game.rooms[this.roomName].generateCostMatrix();
 
 	return new PathFinder.CostMatrix();

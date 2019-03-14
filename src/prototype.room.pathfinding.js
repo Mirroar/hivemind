@@ -1,7 +1,7 @@
 'use strict';
 
-/* global hivemind Room PathFinder FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
-STRUCTURE_ROAD STRUCTURE_CONTAINER STRUCTURE_RAMPART STRUCTURE_KEEPER_LAIR */
+/* global hivemind Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
+STRUCTURE_KEEPER_LAIR */
 
 const utilities = require('./utilities');
 
@@ -21,38 +21,15 @@ Room.prototype.getCostMatrix = function () {
  *   A cost matrix representing this room.
  */
 Room.prototype.generateCostMatrix = function (structures, constructionSites) {
-	const costs = new PathFinder.CostMatrix();
-
 	if (!structures) {
-		structures = this.find(FIND_STRUCTURES);
+		structures = _.groupBy(this.find(FIND_STRUCTURES), 'structureType');
 	}
 
 	if (!constructionSites) {
-		constructionSites = this.find(FIND_MY_CONSTRUCTION_SITES);
+		constructionSites = _.groupBy(this.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 	}
 
-	_.each(structures, structure => {
-		if (structure.structureType === STRUCTURE_ROAD) {
-			// Only do this if no structure is on the road.
-			if (costs.get(structure.pos.x, structure.pos.y) <= 0) {
-				// Favor roads over plain tiles.
-				costs.set(structure.pos.x, structure.pos.y, 1);
-			}
-		}
-		else if (structure.structureType !== STRUCTURE_CONTAINER && (structure.structureType !== STRUCTURE_RAMPART || !structure.my)) {
-			// Can't walk through non-walkable buildings.
-			costs.set(structure.pos.x, structure.pos.y, 0xFF);
-		}
-	});
-
-	_.each(constructionSites, structure => {
-		if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER && structure.structureType !== STRUCTURE_RAMPART) {
-			// Can't walk through non-walkable construction sites.
-			costs.set(structure.pos.x, structure.pos.y, 0xFF);
-		}
-	});
-
-	return costs;
+	return utilities.generateCostMatrix(structures, constructionSites);
 };
 
 /**

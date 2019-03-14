@@ -2,6 +2,7 @@
 
 /* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL
 BODYPART_COST TOUGH ATTACK RANGED_ATTACK HEAL MAX_CREEP_SIZE
+OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART STRUCTURE_ROAD
 TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT */
 
 const utilities = {
@@ -127,6 +128,87 @@ const utilities = {
 		}
 
 		return PathFinder.search(startPosition, endPosition, options);
+	},
+
+	/**
+	 * Generates a new CostMatrix for pathfinding.
+	 *
+	 * @param {Array} structures
+	 *   An array of structures to navigate around.
+	 * @param {Array} constructionSites
+	 *   An array of construction sites to navigate around.
+	 *
+	 * @return {PathFinder.CostMatrix}
+	 *   A cost matrix representing the given obstacles.
+	 */
+	generateCostMatrix(structures, constructionSites) {
+		const costs = new PathFinder.CostMatrix();
+
+		this.markBuildings(
+			structures,
+			constructionSites,
+			structure => {
+				if (costs.get(structure.pos.x, structure.pos.y) === 0) {
+					costs.set(structure.pos.x, structure.pos.y, 1);
+				}
+			},
+			structure => costs.set(structure.pos.x, structure.pos.y, 0xFF),
+		);
+
+		return costs;
+	},
+
+	/**
+	 *
+	 */
+	generateObstacleList(structures, constructionSites) {
+		const result = {
+			obstacles: [],
+			roads: [],
+		};
+
+		this.markBuildings(
+			structures,
+			constructionSites,
+			structure => {
+				const location = utilities.encodePosition(structure.pos);
+				if (!_.contains(result.obstacles, location)) {
+					result.roads.push(location);
+				}
+			},
+			structure => result.obstacles.push(utilities.encodePosition(structure.pos)),
+		);
+
+		return result;
+	},
+
+	/**
+	 *
+	 */
+	markBuildings(structures, constructionSites, roadCallback, blockerCallback) {
+		_.each(OBSTACLE_OBJECT_TYPES, structureType => {
+			_.each(structures[structureType], structure => {
+				// Can't walk through non-walkable buildings.
+				blockerCallback(structure);
+			});
+
+			_.each(constructionSites[structureType], site => {
+				// Can't walk through non-walkable construction sites.
+				blockerCallback(site);
+			});
+		});
+
+		_.each(structures[STRUCTURE_RAMPART], structure => {
+			if (!structure.my) {
+				// Enemy ramparts are blocking.
+				blockerCallback(structure);
+			}
+		});
+
+		_.each(structures[STRUCTURE_ROAD], structure => {
+			// Favor roads over plain tiles.
+			roadCallback(structure);
+		});
 	},
 
 	/**
