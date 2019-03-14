@@ -735,7 +735,7 @@ Creep.prototype.performGetResources = function (calculateSourceCallback) {
 		return;
 	}
 
-	const resourceType = creep.memory.order.resourceType;
+	const resourceType = creep.memory.order && creep.memory.order.resourceType;
 	let orderDone = false;
 	if (target.amount) {
 		orderDone = creep.pickup(target) === OK;
