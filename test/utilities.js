@@ -19,15 +19,11 @@ test.afterEach(() => {
 	delete global.Memory;
 });
 
-test('encodePosition', t => {
-	const pos = new RoomPosition(1, 2, 'E1S1');
-	t.true(typeof utilities.encodePosition(pos) === 'string');
-});
-
-test('decodePosition', t => {
+test('RoomPosition serialization', t => {
 	const pos = new RoomPosition(1, 2, 'E1S1');
 	const encoded = utilities.encodePosition(pos);
 	const decoded = utilities.decodePosition(encoded);
+	t.true(typeof encoded === 'string');
 	t.deepEqual(pos, decoded);
 });
 
@@ -90,6 +86,7 @@ test('throttle', t => {
 	};
 	t.true(utilities.throttle(0, 5000, 8000));
 	t.false(utilities.throttle(0, 3000, 5000));
+	delete global.Game;
 });
 
 test('getThrottleOffset', t => {
