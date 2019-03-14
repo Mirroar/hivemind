@@ -157,6 +157,8 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		score: 0,
 		reasons: {},
 		addScore(amount, reason) {
+			if (amount === 0) return;
+
 			this.score += amount;
 			this.reasons[reason] = amount;
 		},
@@ -187,6 +189,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	// Check if expanding here creates a safe direction for another of our rooms.
 	for (const otherRoom of _.values(Game.rooms)) {
 		if (!otherRoom.controller || !otherRoom.controller.my) continue;
+		if (otherRoom.name === roomName) continue;
 
 		const roomDistance = Game.map.getRoomLinearDistance(roomName, otherRoom.name);
 		if (roomDistance > 3) continue;
