@@ -41,7 +41,8 @@
 				"error",
 				{
 					"allow": [
-						"**/prototype.*"
+						"**/prototype.*",
+						"**/constants"
 					]
 				}
 			],
@@ -60,7 +61,8 @@
 		],
 		"ignores": [
 			"**/screeps-profiler.js",
-			"**/snippets.js"
+			"**/snippets.js",
+			"test/mock/constants.js"
 		]
 	}
 }
