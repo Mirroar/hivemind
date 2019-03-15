@@ -92,6 +92,9 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 				if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
 			}
 
+			const distance = Game.map.getRoomLinearDistance(exit, targetRoom);
+			if (distance > 20) continue;
+
 			const path = [];
 			for (const step of info.path) {
 				path.push(step);
@@ -101,7 +104,7 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 
 			openList[exit] = {
 				range: info.range + 1,
-				dist: Game.map.getRoomLinearDistance(exit, targetRoom),
+				dist: distance,
 				origin: info.origin,
 				path,
 			};
