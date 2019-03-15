@@ -3,14 +3,12 @@ import _ from 'lodash';
 
 global._ = _;
 
-require('./mock/constants');
-const RoomPosition = require('./mock/room-position');
+require('../mock/constants');
+const RoomPosition = require('../mock/room-position');
 
 global.RoomPosition = RoomPosition;
 
-/* eslint-disable import/order */
 const utilities = require('../src/utilities');
-/* eslint-enable import/order */
 
 test.beforeEach(() => {
 	global.Memory = {};

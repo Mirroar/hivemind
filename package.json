@@ -60,9 +60,9 @@
 			"Memory"
 		],
 		"ignores": [
-			"**/screeps-profiler.js",
-			"**/snippets.js",
-			"test/mock/constants.js"
+			"src/screeps-profiler.js",
+			"src/snippets.js",
+			"mock/constants.js"
 		]
 	}
 }
