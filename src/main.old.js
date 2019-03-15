@@ -28,8 +28,6 @@ const roleRemoteBuilder = require('./role.builder.remote');
 const spawnManager = require('./manager.spawn');
 const utilities = require('./utilities');
 
-const Squad = require('./manager.squad');
-
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 
 // @todo Do not send any remote harvesters or claimers until enemies in a room should have expired. Maybe scout from time to time.
@@ -315,26 +313,6 @@ const main = {
 	 */
 	loop() {
 		const mainLoop = function () {
-			Game.squads = {};
-			Game.exploits = {};
-			Game.creepsByRole = {};
-			Game.exploitTemp = {};
-
-			// Add data to global Game object.
-			_.each(Memory.squads, (data, squadName) => {
-				Game.squads[squadName] = new Squad(squadName);
-			});
-
-			// Cache creeps per room and role.
-			_.each(Game.creeps, creep => {
-				creep.enhanceData();
-			});
-
-			// Add data to room objects.
-			_.each(Game.rooms, room => {
-				room.enhanceData();
-			});
-
 			spawnManager.manageSpawns();
 
 			main.manageCreeps();
