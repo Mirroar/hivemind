@@ -204,6 +204,9 @@ RoomPlanner.prototype.manageStructures = function () {
 
 	// Make sure links are built in the right place, remove otherwise.
 	this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
+	this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
+	this.buildPlannedStructures('link.sources', STRUCTURE_LINK);
+	this.buildPlannedStructures('link.controller', STRUCTURE_LINK);
 	this.buildPlannedStructures('link', STRUCTURE_LINK);
 
 	// Build extractor and related container if available.
@@ -799,7 +802,7 @@ RoomPlanner.prototype.placeFlags = function () {
 			this.placeContainer(controllerRoads, 'controller');
 
 			// Place a link near controller, but off the calculated path.
-			this.placeLink(controllerRoads);
+			this.placeLink(controllerRoads, 'controller');
 		}
 
 		if (this.room.mineral) {
@@ -825,7 +828,7 @@ RoomPlanner.prototype.placeFlags = function () {
 				this.placeContainer(sourceRoads, 'source');
 
 				// Place a link near sources, but off the calculated path.
-				this.placeLink(sourceRoads);
+				this.placeLink(sourceRoads, 'source');
 
 				// Make sure no other paths get led through harvester position.
 				this.buildingMatrix.set(sourceRoads[0].x, sourceRoads[0].y, 255);
@@ -961,20 +964,60 @@ RoomPlanner.prototype.findExitCenters = function () {
  *
  * @param {RoomPosition[]} sourceRoads
  *   Positions that make up the road.
+ * @param {string} linkType
+ *   Type identifier for this link, like `source` or `controller`.
  */
-RoomPlanner.prototype.placeLink = function (sourceRoads) {
-	for (const pos of sourceRoads) {
+RoomPlanner.prototype.placeLink = function (sourceRoads, linkType) {
+	const targetPos = this.findLinkPosition(sourceRoads);
+
+	if (!targetPos) return;
+
+	if (linkType) {
+		this.placeFlag(targetPos, 'link.' + linkType, null);
+	}
+
+	this.placeFlag(targetPos, 'link');
+};
+
+/**
+ * Finds a spot for a link near a given road.
+ *
+ * @param {RoomPosition[]} sourceRoads
+ *   Positions that make up the road.
+ *
+ * @return {RoomPosition}
+ *   A Position at which a container can be placed.
+ */
+RoomPlanner.prototype.findLinkPosition = function (sourceRoads) {
+	for (const pos of _.slice(sourceRoads, 0, 3)) {
 		for (let dx = -1; dx <= 1; dx++) {
 			for (let dy = -1; dy <= 1; dy++) {
-				if (dx === 0 && dy === 0) continue;
-
 				if (this.isBuildableTile(pos.x + dx, pos.y + dy)) {
-					this.placeFlag(new RoomPosition(pos.x + dx, pos.y + dy, pos.roomName), 'link');
-					return;
+					return new RoomPosition(pos.x + dx, pos.y + dy, pos.roomName);
 				}
 			}
 		}
 	}
+};
+
+/**
+ * Places a container near a given road.
+ *
+ * @param {RoomPosition[]} sourceRoads
+ *   Positions that make up the road.
+ * @param {string} containerType
+ *   Type identifier for this container, like `source` or `controller`.
+ */
+RoomPlanner.prototype.placeContainer = function (sourceRoads, containerType) {
+	const targetPos = this.findContainerPosition(sourceRoads);
+
+	if (!targetPos) return;
+
+	if (containerType) {
+		this.placeFlag(targetPos, 'container.' + containerType, null);
+	}
+
+	this.placeFlag(targetPos, 'container', 1);
 };
 
 /**
@@ -1007,26 +1050,6 @@ RoomPlanner.prototype.findContainerPosition = function (sourceRoads) {
 };
 
 /**
- * Places a container near a given road.
- *
- * @param {RoomPosition[]} sourceRoads
- *   Positions that make up the road.
- * @param {string} containerType
- *   Type identifier for this container, like `source` or `controller`.
- */
-RoomPlanner.prototype.placeContainer = function (sourceRoads, containerType) {
-	const targetPos = this.findContainerPosition(sourceRoads);
-
-	if (!targetPos) return;
-
-	if (containerType) {
-		this.placeFlag(targetPos, 'container.' + containerType, null);
-	}
-
-	this.placeFlag(targetPos, 'container', 1);
-};
-
-/**
  * Places structures that are fixed to the room's center.
  */
 RoomPlanner.prototype.placeRoomCore = function () {
@@ -1042,6 +1065,7 @@ RoomPlanner.prototype.placeRoomCore = function () {
 	this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'terminal');
 	this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab');
 	this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link');
+	this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link.storage');
 };
 
 /**
