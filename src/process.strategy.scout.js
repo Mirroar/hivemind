@@ -76,7 +76,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 		info.scoutPriority = 2;
 	}
 
-	if (info.scoutPriority > 0 && info.observer) {
+	if (info.scoutPriority > 0 && info.observer && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 		// Only observe if last Scan was longer ago than intel manager delay,
 		// so we don't get stuck scanning the same room for some reason.
 		if (timeSinceLastScan > 500) {
@@ -371,6 +371,8 @@ ScoutProcess.prototype.getNextRoomCandidate = function (openList) {
  */
 ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedList) {
 	const info = openList[roomName];
+	if (info.range >= (Memory.hivemind.maxScoutDistance || 7)) return;
+
 	const exits = hivemind.roomIntel(roomName).getExits();
 	for (const exit of _.values(exits)) {
 		if (openList[exit] || closedList[exit]) continue;
