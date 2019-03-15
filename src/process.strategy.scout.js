@@ -398,10 +398,10 @@ ScoutProcess.prototype.getClosestObserver = function (roomName) {
 	let bestObserver = null;
 	for (const observer of this.observers) {
 		const roomDist = Game.map.getRoomLinearDistance(observer.room.name, roomName);
-		if (roomDist <= OBSERVER_RANGE) {
-			if (!bestObserver || roomDist < Game.map.getRoomLinearDistance(bestObserver.room.name, roomName)) {
-				bestObserver = this.observers[observer.room.name];
-			}
+		if (roomDist > OBSERVER_RANGE) continue;
+
+		if (!bestObserver || roomDist < Game.map.getRoomLinearDistance(bestObserver.room.name, roomName)) {
+			bestObserver = observer;
 		}
 	}
 
