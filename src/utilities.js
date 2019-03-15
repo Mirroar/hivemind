@@ -133,10 +133,10 @@ const utilities = {
 	/**
 	 * Generates a new CostMatrix for pathfinding.
 	 *
-	 * @param {Array} structures
-	 *   An array of structures to navigate around.
-	 * @param {Array} constructionSites
-	 *   An array of construction sites to navigate around.
+	 * @param {object} structures
+	 *   Arrays of structures to navigate around, keyed by structure type.
+	 * @param {object} constructionSites
+	 *   Arrays of construction sites to navigate around, keyed by structure type.
 	 *
 	 * @return {PathFinder.CostMatrix}
 	 *   A cost matrix representing the given obstacles.
@@ -159,7 +159,17 @@ const utilities = {
 	},
 
 	/**
+	 * Generates an obstacle list as an alternative to cost matrixes.
 	 *
+	 * @param {object} structures
+	 *   Arrays of structures to navigate around, keyed by structure type.
+	 * @param {object} constructionSites
+	 *   Arrays of construction sites to navigate around, keyed by structure type.
+	 *
+	 * @return {object}
+	 *   An object containing encoded room positions in the following keys:
+	 *   - obstacles: Any positions a creep cannot move through.
+	 *   - roads: Any positions where a creep travels with road speed.
 	 */
 	generateObstacleList(structures, constructionSites) {
 		const result = {
@@ -183,7 +193,16 @@ const utilities = {
 	},
 
 	/**
+	 * Runs code for all given obstacles and roads.
 	 *
+	 * @param {object} structures
+	 *   Arrays of structures to navigate around, keyed by structure type.
+	 * @param {object} constructionSites
+	 *   Arrays of construction sites to navigate around, keyed by structure type.
+	 * @param {Function} roadCallback
+	 *   Gets called for every road found in structures.
+	 * @param {Function} blockerCallback
+	 *   Gets called for every obstacle found in structures or constructionSites.
 	 */
 	markBuildings(structures, constructionSites, roadCallback, blockerCallback) {
 		_.each(OBSTACLE_OBJECT_TYPES, structureType => {
@@ -512,18 +531,18 @@ const utilities = {
 	directions: {
 		[-1]: {
 			[-1]: TOP_LEFT,
-			[0]: TOP,
-			[1]: TOP_RIGHT,
+			0: TOP,
+			1: TOP_RIGHT,
 		},
-		[0]: {
+		0: {
 			[-1]: LEFT,
-			[0]: null,
-			[1]: RIGHT,
+			0: null,
+			1: RIGHT,
 		},
-		[1]: {
+		1: {
 			[-1]: BOTTOM_LEFT,
-			[0]: BOTTOM,
-			[1]: BOTTOM_RIGHT,
+			0: BOTTOM,
+			1: BOTTOM_RIGHT,
 		},
 	},
 

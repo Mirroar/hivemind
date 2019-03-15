@@ -59,9 +59,14 @@ Creep.prototype.setCachedPath = function (path, reverse, distance) {
 };
 
 /**
+ * Gets the current cached path for a creep.
  *
+ * @return {RoomPosition[]}
+ *   The creep's cached path as a list of room positions.
  */
 Creep.prototype.getCachedPath = function () {
+	if (!this.memory.cachedPath) return;
+
 	if (!this._decodedPath) {
 		this._decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
 	}
