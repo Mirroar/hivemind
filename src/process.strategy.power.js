@@ -92,6 +92,7 @@ PowerMiningProcess.prototype.run = function () {
 		_.each(Game.rooms, room => {
 			if (!room.controller || !room.controller.my) return;
 			if (room.isFullOnPower()) return;
+			if (room.getStoredEnergy() < 75000) return;
 			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) return;
 			if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) return;
 
