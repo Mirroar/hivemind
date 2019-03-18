@@ -98,6 +98,7 @@ module.exports = {
 
 		this.cleanup();
 		this.recordStats();
+		this.showDebug();
 	},
 
 	/**
@@ -178,6 +179,16 @@ module.exports = {
 			if (count > 0) {
 				hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
 			}
+		}
+	},
+
+	/**
+	 *
+	 */
+	showDebug() {
+		if ((Memory.hivemind.showProcessDebug || 0) > 0) {
+			Memory.hivemind.showProcessDebug--;
+			hivemind.drawProcessDebug();
 		}
 	},
 

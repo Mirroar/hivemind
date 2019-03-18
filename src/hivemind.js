@@ -1,7 +1,7 @@
 'use strict';
 
-/* global PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_HIGH
-PROCESS_PRIORITY_ALWAYS */
+/* global RoomVisual PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT
+PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 
 const Logger = require('./debug');
 const Relations = require('./relations');
@@ -96,12 +96,19 @@ Hivemind.prototype.runProcess = function (id, ProcessConstructor, options) {
 	const process = new ProcessConstructor(options, this.memory.process[id]);
 
 	if (this.isProcessAllowedToRun(stats, options) && process.shouldRun()) {
+		const prevRunTime = stats.lastRun;
 		stats.lastRun = Game.time;
 		const cpuBefore = Game.cpu.getUsed();
 		process.run();
 		const cpuUsage = Game.cpu.getUsed() - cpuBefore;
 
 		this.memory.process[id].cpu = ((this.memory.process[id].cpu || cpuUsage) * 0.99) + (cpuUsage * 0.01);
+		if (prevRunTime === Game.time) {
+			this.memory.process[id].lastCpu += cpuUsage;
+		}
+		else {
+			this.memory.process[id].lastCpu = cpuUsage;
+		}
 	}
 };
 
@@ -197,6 +204,31 @@ Hivemind.prototype.roomIntel = function (roomName) {
 	}
 
 	return this.intel[roomName];
+};
+
+/**
+ * Shows a list of processes run in a tick, sorted by CPU usage.
+ */
+Hivemind.prototype.drawProcessDebug = function () {
+	const processes = _.map(this.memory.process, (data, id) => {
+		return {
+			id,
+			lastRun: data.lastRun,
+			lastCpu: data.lastCpu,
+		};
+	});
+	const filtered = _.filter(processes, data => data.lastCpu > 0.5);
+	const processData = _.sortByOrder(filtered, ['lastRun', 'lastCpu'], ['desc', 'desc']);
+
+	const visual = new RoomVisual();
+	_.each(processData, (data, index) => {
+		visual.text(_.round(data.lastCpu, 2), 5, index, {align: 'right'});
+		visual.text(data.id, 6, index, {align: 'left'});
+
+		if (data.lastRun !== Game.time) {
+			visual.text((Game.time - data.lastRun) + ' ago', 2, index, {align: 'right', color: '#808080'});
+		}
+	});
 };
 
 module.exports = Hivemind;
