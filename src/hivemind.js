@@ -1,6 +1,7 @@
 'use strict';
 
-/* global PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_ALWAYS */
+/* global PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_HIGH
+PROCESS_PRIORITY_ALWAYS */
 
 const Logger = require('./debug');
 const Relations = require('./relations');
@@ -14,19 +15,19 @@ global.PROCESS_PRIORITY_ALWAYS = 10;
 
 /* Default options for the various process priorities. */
 const priorityEffects = {
-	1: {
+	[PROCESS_PRIORITY_LOW]: {
 		throttleAt: 9500,
 		stopAt: 5000,
 	},
-	2: {
+	[PROCESS_PRIORITY_DEFAULT]: {
 		throttleAt: 8000,
 		stopAt: 3000,
 	},
-	3: {
+	[PROCESS_PRIORITY_HIGH]: {
 		throttleAt: 5000,
 		stopAt: 500,
 	},
-	10: {
+	[PROCESS_PRIORITY_ALWAYS]: {
 		throttleAt: 0,
 		stopAt: 0,
 	},
