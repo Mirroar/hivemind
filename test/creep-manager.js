@@ -51,14 +51,14 @@ test('role management', t => {
 
 test('running logic by role', t => {
 	const manager = new CreepManager();
-	manager.registerCreepRole('test', {run: () => t.pass('Run function should only be called for creeps with supported roles.')});
+	manager.registerCreepRole('test', {run: creep => t.is(creep.name, 'foo', 'Run function should only be called for creeps with supported roles.')});
 
 	t.plan(1);
 
 	manager.manageCreeps({
-		first: getMockCreep('test'),
-		second: getMockCreep('notest'),
-		third: getMockCreep('test', {spawning: true}),
+		first: getMockCreep('test', {name: 'foo'}),
+		second: getMockCreep('notest', {name: 'bar'}),
+		third: getMockCreep('test', {name: 'baz', spawning: true}),
 	});
 });
 
