@@ -22,7 +22,7 @@ const Bay = function (flagName) {
 
 	if (!this.memory.extensions || Game.time % 100 === 38) {
 		const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-			filter: structure => structure.structureType === STRUCTURE_EXTENSION,
+			filter: structure => structure.structureType === STRUCTURE_EXTENSION && structure.isActive(),
 		});
 		this.memory.extensions = _.map(extensions, 'id');
 	}
@@ -46,11 +46,11 @@ const Bay = function (flagName) {
 	if (this.memory.extensions) {
 		for (const id of this.memory.extensions) {
 			const extension = Game.getObjectById(id);
-			if (extension && extension.isActive()) {
-				this.extensions.push(extension);
-				this.energy += extension.energy;
-				this.energyCapacity += extension.energyCapacity;
-			}
+			if (!extension) continue;
+
+			this.extensions.push(extension);
+			this.energy += extension.energy;
+			this.energyCapacity += extension.energyCapacity;
 		}
 	}
 
