@@ -37,7 +37,10 @@ const RoomPlanner = function (roomName) {
 
 	this.memory = Memory.rooms[roomName].roomPlanner;
 
-	this.drawDebug();
+	if ((this.memory.drawDebug || 0) > 0) {
+		this.memory.drawDebug--;
+		this.drawDebug();
+	}
 };
 
 /**
