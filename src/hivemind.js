@@ -61,6 +61,9 @@ Hivemind.prototype.onTickStart = function () {
 
 	// Clear possibly outdated intel objects from last tick.
 	this.intel = {};
+
+	// Refresh reference to memory object.
+	this.memory = Memory.hivemind;
 };
 
 /**
