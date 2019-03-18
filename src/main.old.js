@@ -19,7 +19,6 @@ require('./role.hauler');
 require('./role.hauler.exploit');
 require('./role.hauler.power');
 require('./role.helper');
-require('./role.scout');
 require('./role.transporter');
 require('./role.upgrader');
 /* eslint-enable import/no-unassigned-import */
@@ -103,7 +102,6 @@ const creepLogicFunctions = {
 	brawler: 'runBrawlerLogic',
 	'builder.exploit': 'runExploitBuilderLogic',
 	helper: 'runHelperLogic',
-	scout: 'runScoutLogic',
 };
 
 /**
@@ -228,7 +226,7 @@ Creep.prototype.runLogicByRole = function () {
 			roleRemoteBuilder.run(creep);
 		}
 		else {
-			hivemind.log('creeps').error('Creep', creep.name, 'has an unknown role:', creep.memory.role);
+			// hivemind.log('creeps').error('Creep', creep.name, 'has an unknown role:', creep.memory.role);
 		}
 	}
 	catch (error) {

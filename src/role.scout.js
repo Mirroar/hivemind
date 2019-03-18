@@ -1,47 +1,61 @@
 'use strict';
 
-/* global Creep RoomPosition */
+/* global RoomPosition */
+
+const Role = require('./role');
+
+const ScoutRole = function () {
+	Role.call(this);
+};
+
+ScoutRole.prototype = Object.create(Role.prototype);
 
 /**
  * Makes this creep move between rooms to gather intel.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performScout = function () {
-	if (!this.memory.scoutTarget) {
+ScoutRole.prototype.performScout = function (creep) {
+	if (!creep.memory.scoutTarget) {
 		// Just stand around somewhere.
-		const target = new RoomPosition(25, 25, this.pos.roomName);
-		if (this.pos.getRangeTo(target) > 3) {
-			this.moveToRange(target, 3);
+		const target = new RoomPosition(25, 25, creep.pos.roomName);
+		if (creep.pos.getRangeTo(target) > 3) {
+			creep.moveToRange(target, 3);
 		}
 
 		return;
 	}
 
-	if (typeof this.room.visual !== 'undefined') {
-		this.room.visual.text(this.memory.scoutTarget, this.pos);
+	if (typeof creep.room.visual !== 'undefined') {
+		creep.room.visual.text(creep.memory.scoutTarget, creep.pos);
 	}
 
-	if (!this.moveToRoom(this.memory.scoutTarget, true)) {
-		this.chooseScoutTarget();
+	if (!creep.moveToRoom(creep.memory.scoutTarget, true)) {
+		this.chooseScoutTarget(creep);
 	}
 };
 
 /**
  * Chooses which of the possible scout target rooms to travel to.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.chooseScoutTarget = function () {
-	this.memory.scoutTarget = null;
+ScoutRole.prototype.chooseScoutTarget = function (creep) {
+	creep.memory.scoutTarget = null;
 	if (!Memory.strategy) return;
 
 	const memory = Memory.strategy;
 
 	let best = null;
 	for (const info of _.values(memory.roomList)) {
-		if (info.roomName === this.pos.roomName) continue;
+		if (info.roomName === creep.pos.roomName) continue;
 
-		if (info.origin === this.memory.origin && info.scoutPriority > 0) {
+		if (info.origin === creep.memory.origin && info.scoutPriority > 0) {
 			if (!best || best.scoutPriority < info.scoutPriority) {
 				// Check distance / path to room.
-				const path = this.calculateRoomPath(info.roomName, true);
+				const path = creep.calculateRoomPath(info.roomName, true);
 
 				if (path) {
 					best = info;
@@ -51,21 +65,26 @@ Creep.prototype.chooseScoutTarget = function () {
 	}
 
 	if (best) {
-		this.memory.scoutTarget = best.roomName;
+		creep.memory.scoutTarget = best.roomName;
 	}
 
-	if (!this.memory.scoutTarget) {
-		this.memory.scoutTarget = this.memory.origin;
+	if (!creep.memory.scoutTarget) {
+		creep.memory.scoutTarget = creep.memory.origin;
 	}
 };
 
 /**
  * Makes a creep behave like a scout.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.runScoutLogic = function () {
-	if (!this.memory.scoutTarget) {
-		this.chooseScoutTarget();
+ScoutRole.prototype.run = function (creep) {
+	if (!creep.memory.scoutTarget) {
+		this.chooseScoutTarget(creep);
 	}
 
-	this.performScout();
+	this.performScout(creep);
 };
+
+module.exports = ScoutRole;

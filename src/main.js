@@ -18,6 +18,7 @@ global.hivemind = new Hivemind();
 
 // Load top-level processes.
 const InitProcess = require('./process.init');
+const CreepsProcess = require('./process.creeps');
 const RoomsProcess = require('./process.rooms');
 const ExpandProcess = require('./process.strategy.expand');
 const RemoteMiningProcess = require('./process.strategy.mining');
@@ -63,6 +64,10 @@ module.exports = {
 
 		// @todo Remove old "main" code eventually.
 		oldMain.loop();
+
+		hivemind.runProcess('creeps', CreepsProcess, {
+			priority: PROCESS_PRIORITY_ALWAYS,
+		});
 
 		hivemind.runProcess('rooms', RoomsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
