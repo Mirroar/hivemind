@@ -213,7 +213,6 @@ Room.prototype.manageSpawnsPriority = function () {
 		}
 		else if (roomSpawns[i].memory.wasSpawning) {
 			roomSpawns[i].memory.wasSpawning = false;
-			this.scan();
 		}
 	}
 
@@ -748,7 +747,6 @@ Room.prototype.manageSpawns = function () {
 	if (this.manageSpawnsPriority()) return;
 
 	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name && spawn.isActive());
-	const room = this;
 
 	let spawnerUsed = false;
 	for (const spawn of _.values(roomSpawns)) {
@@ -764,7 +762,6 @@ Room.prototype.manageSpawns = function () {
 
 		if (spawn.memory.wasSpawning) {
 			spawn.memory.wasSpawning = false;
-			room.scan();
 		}
 
 		spawnerUsed = true;
