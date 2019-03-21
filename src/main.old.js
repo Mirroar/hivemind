@@ -225,9 +225,6 @@ Creep.prototype.runLogicByRole = function () {
 		else if (creep.memory.role === 'builder.remote') {
 			roleRemoteBuilder.run(creep);
 		}
-		else {
-			// hivemind.log('creeps').error('Creep', creep.name, 'has an unknown role:', creep.memory.role);
-		}
 	}
 	catch (error) {
 		console.log('Error when managing creep', creep.name, ':', error);
