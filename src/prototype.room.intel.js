@@ -79,32 +79,83 @@ Room.prototype.enhanceData = function () {
 * Gathers information about a room and saves it to memory for faster access.
 */
 Room.prototype.scan = function () {
-	const room = this;
+	this.updateControllerContainer();
+	this.updateControllerLink();
+	this.updateStorageLink();
+};
 
+/**
+ * Updates location of the room's controller container.
+ */
+Room.prototype.updateControllerContainer = function () {
 	// Check if the controller has a container nearby.
-	let structures = room.find(FIND_STRUCTURES, {
-		filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.pos.getRangeTo(room.controller) <= 3,
-	});
-	room.memory.controllerContainer = structures.length > 0 && structures[0].id;
-
-	// Check if the controller has a link nearby.
-	structures = room.find(FIND_STRUCTURES, {
-		filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(room.controller) <= 3,
-	});
-	room.memory.controllerLink = structures.length > 0 && structures[0].id;
-
-	// Check if storage has a link nearby.
-	if (room.storage) {
-		structures = room.find(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(room.storage) <= 3,
-		});
-		if (structures && structures.length > 0) {
-			room.memory.storageLink = structures[0].id;
-		}
-		else {
-			delete room.memory.storageLink;
+	// Use room planner locations if available.
+	if (this.roomPlanner) {
+		const containerPositions = this.roomPlanner.getLocations('container.controller');
+		if (containerPositions.length > 0) {
+			const structures = this.find(FIND_STRUCTURES, {
+				filter: structure => structure.structureType === STRUCTURE_CONTAINER &&
+				_.filter(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
+			});
+			this.memory.controllerContainer = structures.length > 0 && structures[0].id;
+			return;
 		}
 	}
+
+	const structures = this.find(FIND_STRUCTURES, {
+		filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.pos.getRangeTo(this.controller) <= 3,
+	});
+	this.memory.controllerContainer = structures.length > 0 && structures[0].id;
+};
+
+/**
+ * Updates location of the room's controller link.
+ */
+Room.prototype.updateControllerLink = function () {
+	// Check if the controller has a link nearby.
+	// Use room planner locations if available.
+	if (this.roomPlanner) {
+		const linkPositions = this.roomPlanner.getLocations('link.controller');
+		if (linkPositions.length > 0) {
+			const structures = this.find(FIND_STRUCTURES, {
+				filter: structure => structure.structureType === STRUCTURE_LINK &&
+				_.filter(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
+			});
+			this.memory.controllerLink = structures.length > 0 && structures[0].id;
+			return;
+		}
+	}
+
+	const structures = this.find(FIND_STRUCTURES, {
+		filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(this.controller) <= 3,
+	});
+	this.memory.controllerLink = structures.length > 0 && structures[0].id;
+};
+
+/**
+ * Updates location of the room's storage link.
+ */
+Room.prototype.updateStorageLink = function () {
+	if (!this.storage) return;
+
+	// Check if storage has a link nearby.
+	// Use room planner locations if available.
+	if (this.roomPlanner) {
+		const linkPositions = this.roomPlanner.getLocations('link.storage');
+		if (linkPositions.length > 0) {
+			const structures = this.find(FIND_STRUCTURES, {
+				filter: structure => structure.structureType === STRUCTURE_LINK &&
+				_.filter(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
+			});
+			this.memory.storageLink = structures.length > 0 && structures[0].id;
+			return;
+		}
+	}
+
+	const structures = this.find(FIND_STRUCTURES, {
+		filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(this.storage) <= 3,
+	});
+	this.memory.storageLink = structures.length > 0 && structures[0].id;
 };
 
 /**

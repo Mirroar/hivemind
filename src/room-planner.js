@@ -1735,14 +1735,29 @@ RoomPlanner.prototype.getAdjacentSafeRooms = function () {
  *   The center position determined by planning.
  */
 RoomPlanner.prototype.getRoomCenter = function () {
-	if (this.memory.locations && this.memory.locations.center) {
-		for (const pos of _.keys(this.memory.locations.center)) {
-			return utilities.decodePosition(pos);
-		}
+	for (const pos of this.getLocations('center')) {
+		return pos;
 	}
 
 	// @todo Remove once we can guarantee there always is a center.
 	return new RoomPosition(25, 25, this.roomName);
+};
+
+/**
+ * Returns all positions planned for a certain type.
+ *
+ * @param {string} locationType
+ *   Type of location to get positions for.
+ *
+ * @return {RoomPosition[]}
+ *   An Array of positions where the given location type is planned.
+ */
+RoomPlanner.prototype.getLocations = function (locationType) {
+	if (this.memory.locations && this.memory.locations[locationType]) {
+		return _.map(_.keys(this.memory.locations[locationType]), utilities.decodePosition);
+	}
+
+	return [];
 };
 
 module.exports = RoomPlanner;
