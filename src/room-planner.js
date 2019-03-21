@@ -86,8 +86,6 @@ RoomPlanner.prototype.drawDebug = function () {
 RoomPlanner.prototype.runLogic = function () {
 	if (Game.cpu.bucket < 3500) return;
 
-	this.checkAdjacentRooms();
-
 	// Recalculate room layout if using a new version.
 	if (!this.memory.plannerVersion || this.memory.plannerVersion !== this.roomPlannerVersion) {
 		delete this.memory.locations;
@@ -119,6 +117,8 @@ RoomPlanner.prototype.runLogic = function () {
 	this.roomStructures = this.room.find(FIND_STRUCTURES);
 	this.structuresByType = _.groupBy(this.roomStructures, 'structureType');
 	this.newStructures = 0;
+
+	this.checkAdjacentRooms();
 
 	this.cleanRoom();
 	this.manageStructures();
