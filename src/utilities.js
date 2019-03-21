@@ -40,7 +40,7 @@ const utilities = {
 
 		const harvestMemory = room.memory.remoteHarvesting[sourceLocation];
 
-		if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 500) {
+		if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 500 * hivemind.getThrottleMultiplier()) {
 			// No need to recalculate path.
 			return;
 		}
@@ -245,7 +245,7 @@ const utilities = {
 	 */
 	getCostMatrix(roomName, options) {
 		// Clear cost matrix cache from time to time.
-		if (!utilities.costMatrixCacheAge || utilities.costMatrixCacheAge < Game.time - 500) {
+		if (!utilities.costMatrixCacheAge || Game.time - utilities.costMatrixCacheAge > 500 * hivemind.getThrottleMultiplier()) {
 			utilities.costMatrixCache = {};
 			utilities.costMatrixCacheAge = Game.time;
 		}

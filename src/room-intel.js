@@ -36,7 +36,7 @@ RoomIntel.prototype.gatherIntel = function () {
 		lastScanThreshold = 2500;
 	}
 
-	if (intel.lastScan && Game.time - intel.lastScan < lastScanThreshold) return;
+	if (intel.lastScan && Game.time - intel.lastScan < lastScanThreshold * hivemind.getThrottleMultiplier()) return;
 	hivemind.log('intel', room.name).debug('Gathering intel after', intel.lastScan ? Game.time - intel.lastScan : 'infinite', 'ticks.');
 	intel.lastScan = Game.time;
 

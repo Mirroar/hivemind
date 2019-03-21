@@ -92,7 +92,7 @@ Room.prototype.getBoostLabs = function () {
 	const boostLabs = [];
 	if (!this.boostManager) return boostLabs;
 
-	if (!this.memory.boostManager.labLastChecked || this.memory.boostManager.labLastChecked < Game.time - 953) {
+	if (!this.memory.boostManager.labLastChecked || Game.time - this.memory.boostManager.labLastChecked > 1000 * hivemind.getThrottleMultiplier()) {
 		this.memory.boostManager.labLastChecked = Game.time;
 
 		const labs = this.find(FIND_STRUCTURES, {

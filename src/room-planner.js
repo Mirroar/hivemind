@@ -105,12 +105,12 @@ RoomPlanner.prototype.runLogic = function () {
 		return;
 	}
 
-	if (!this.memory.throttleOffset) {
-		this.memory.throttleOffset = utilities.getThrottleOffset();
+	if (!this.memory.runNextTick && this.memory.lastRun) {
+		if (Game.time - this.memory.lastRun < 100 * hivemind.getThrottleMultiplier()) return;
 	}
 
-	if ((Game.time + this.memory.throttleOffset) % 100 !== 0 && !this.memory.runNextTick) return;
 	delete this.memory.runNextTick;
+	this.memory.lastRun = Game.time;
 
 	// Prune old planning cost matrixes. They will be regenerated if needed.
 	delete this.memory.wallDistanceMatrix;

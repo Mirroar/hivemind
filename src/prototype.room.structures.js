@@ -58,7 +58,7 @@ Room.prototype.addStructureReference = function (structureType) {
 
 	const cache = this.memory.structureCache;
 
-	if (!cache[structureType] || cache[structureType].lastCheck + 250 < Game.time) {
+	if (!cache[structureType] || Game.time - cache[structureType].lastCheck > 250 * hivemind.getThrottleMultiplier()) {
 		cache[structureType] = {
 			lastCheck: Game.time,
 		};

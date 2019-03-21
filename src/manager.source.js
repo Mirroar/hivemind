@@ -111,7 +111,7 @@ Mineral.prototype.getAdjacentFreeSquares = function () {
  *   Maximum number of harvesters on this source.
  */
 const getNumHarvestSpots = function () {
-	if (!this.memory.maxHarvestersCalculated || this.memory.maxHarvestersCalculated < Game.time - 1000) {
+	if (!this.memory.maxHarvestersCalculated || Game.time - this.memory.maxHarvestersCalculated > 1000 * hivemind.getThrottleMultiplier()) {
 		this.memory.maxHarvestersCalculated = Game.time;
 		this.memory.maxHarvesters = this.getAdjacentFreeSquares().length;
 	}
@@ -146,7 +146,7 @@ Mineral.prototype.getNumHarvestSpots = function () {
  *   A container close to this source.
  */
 const getNearbyContainer = function () {
-	if (!this.memory.nearbyContainerCalculated || this.memory.nearbyContainerCalculated < Game.time - 150) {
+	if (!this.memory.nearbyContainerCalculated || Game.time - this.memory.nearbyContainerCalculated > 150 * hivemind.getThrottleMultiplier()) {
 		this.memory.nearbyContainerCalculated = Game.time;
 		this.memory.targetContainer = null;
 
@@ -192,7 +192,7 @@ Mineral.prototype.getNearbyContainer = function () {
  *   A link close to this source.
  */
 Source.prototype.getNearbyLink = function () {
-	if (!this.memory.nearbyLinkCalculated || this.memory.nearbyLinkCalculated < Game.time - 1000) {
+	if (!this.memory.nearbyLinkCalculated || Game.time - this.memory.nearbyLinkCalculated > 1000 * hivemind.getThrottleMultiplier()) {
 		this.memory.nearbyLinkCalculated = Game.time;
 		this.memory.targetLink = null;
 
@@ -218,7 +218,7 @@ Source.prototype.getNearbyLink = function () {
  *   The lair protecting this source.
  */
 const getNearbyLair = function () {
-	if (!this.memory.nearbyLairCalculated || this.memory.nearbyLairCalculated < Game.time - 123456) {
+	if (!this.memory.nearbyLairCalculated || Game.time - this.memory.nearbyLairCalculated > 125000 * hivemind.getThrottleMultiplier()) {
 		// This information really shouldn't ever change.
 		this.memory.nearbyLairCalculated = Game.time;
 		this.memory.nearbyLair = null;
