@@ -105,7 +105,11 @@ RoomPlanner.prototype.runLogic = function () {
 		return;
 	}
 
-	if (Game.time % 100 !== 3 && !this.memory.runNextTick) return;
+	if (!this.memory.throttleOffset) {
+		this.memory.throttleOffset = utilities.getThrottleOffset();
+	}
+
+	if ((Game.time + this.memory.throttleOffset) % 100 !== 0 && !this.memory.runNextTick) return;
 	delete this.memory.runNextTick;
 
 	// Prune old planning cost matrixes. They will be regenerated if needed.
@@ -1531,8 +1535,12 @@ RoomPlanner.prototype.checkForAdjacentWallsToPrune = function (targetPos, walls,
 	for (let dx = -1; dx <= 1; dx++) {
 		for (let dy = -1; dy <= 1; dy++) {
 			if (dx === 0 && dy === 0) continue;
-			const pos = new RoomPosition(targetPos.x + dx, targetPos.y + dy, this.roomName);
-			if (pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) continue;
+
+			const newX = targetPos.x + dx;
+			const newY = targetPos.y + dy;
+
+			if (newX < 1 || newX > 48 || newY < 1 || newY > 48) continue;
+			const pos = new RoomPosition(newX, newY, this.roomName);
 
 			// Ignore walls.
 			if (this.wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
