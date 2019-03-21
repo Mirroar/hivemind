@@ -58,6 +58,8 @@ const Hivemind = function () {
 Hivemind.prototype.onTickStart = function () {
 	this.bucket = Game.cpu.bucket;
 	this.cpuUsage = stats.getStat('cpu_total', 10) / Game.cpu.limit;
+	this.parentProcessId = 'root';
+	this.currentProcess = null;
 
 	// Clear possibly outdated intel objects from last tick.
 	this.intel = {};
@@ -96,19 +98,53 @@ Hivemind.prototype.runProcess = function (id, ProcessConstructor, options) {
 	const process = new ProcessConstructor(options, this.memory.process[id]);
 
 	if (this.isProcessAllowedToRun(stats, options) && process.shouldRun()) {
-		const prevRunTime = stats.lastRun;
-		stats.lastRun = Game.time;
-		const cpuBefore = Game.cpu.getUsed();
-		process.run();
-		const cpuUsage = Game.cpu.getUsed() - cpuBefore;
+		const previousProcess = this.currentProcess;
+		this.currentProcess = process;
+		this.timeProcess(id, stats, () => process.run());
+		this.currentProcess = previousProcess;
+	}
+};
 
-		this.memory.process[id].cpu = ((this.memory.process[id].cpu || cpuUsage) * 0.99) + (cpuUsage * 0.01);
-		if (prevRunTime === Game.time) {
-			this.memory.process[id].lastCpu += cpuUsage;
-		}
-		else {
-			this.memory.process[id].lastCpu = cpuUsage;
-		}
+/**
+ * Runs and times a function as part of the currently running process.
+ *
+ * @param {string} id
+ *   The id of the process in memory.
+ * @param {Function} callback
+ *   Function to run as the sub process. Will be called with the current
+ *   process as this-argument.
+ */
+Hivemind.prototype.runSubProcess = function (id, callback) {
+	const stats = this.initializeProcessStats(id);
+	this.timeProcess(id, stats, () => callback.call(this.currentProcess));
+};
+
+/**
+ * Runs a callback and records cpu usage in memory.
+ *
+ * @param {string} id
+ *   The id of the process in memory.
+ * @param {object} stats
+ *   Memory object to record cpu stats in.
+ * @param {Function} callback
+ *   Function to run while timing.
+ */
+Hivemind.prototype.timeProcess = function (id, stats, callback) {
+	const prevRunTime = stats.lastRun;
+	stats.lastRun = Game.time;
+	const cpuBefore = Game.cpu.getUsed();
+	stats.parentId = this.parentProcessId;
+	this.parentProcessId = id;
+	callback();
+	this.parentProcessId = stats.parentId;
+	const cpuUsage = Game.cpu.getUsed() - cpuBefore;
+
+	this.memory.process[id].cpu = ((this.memory.process[id].cpu || cpuUsage) * 0.99) + (cpuUsage * 0.01);
+	if (prevRunTime === Game.time) {
+		this.memory.process[id].lastCpu += cpuUsage;
+	}
+	else {
+		this.memory.process[id].lastCpu = cpuUsage;
 	}
 };
 
@@ -215,20 +251,31 @@ Hivemind.prototype.drawProcessDebug = function () {
 			id,
 			lastRun: data.lastRun,
 			lastCpu: data.lastCpu,
+			parentId: data.parentId,
 		};
 	});
 	const filtered = _.filter(processes, data => data.lastCpu > 0.5);
-	const processData = _.sortByOrder(filtered, ['lastRun', 'lastCpu'], ['desc', 'desc']);
+	const processData = _.groupBy(_.sortByOrder(filtered, ['lastRun', 'lastCpu'], ['desc', 'desc']), 'parentId');
 
 	const visual = new RoomVisual();
-	_.each(processData, (data, index) => {
-		visual.text(_.round(data.lastCpu, 2), 5, index, {align: 'right'});
-		visual.text(data.id, 6, index, {align: 'left'});
+	let lineNum = 0;
 
-		if (data.lastRun !== Game.time) {
-			visual.text((Game.time - data.lastRun) + ' ago', 2, index, {align: 'right', color: '#808080'});
-		}
-	});
+	const drawProcesses = function (parentId, indent) {
+		_.each(processData[parentId], data => {
+			visual.text(_.round(data.lastCpu, 2), 5, lineNum, {align: 'right'});
+			visual.text(data.id, 6 + indent, lineNum, {align: 'left'});
+
+			if (data.lastRun !== Game.time) {
+				visual.text((Game.time - data.lastRun) + ' ago', 2, lineNum, {align: 'right', color: '#808080'});
+			}
+
+			lineNum++;
+
+			drawProcesses(data.id, indent + 1);
+		});
+	};
+
+	drawProcesses('root', 0);
 };
 
 module.exports = Hivemind;
