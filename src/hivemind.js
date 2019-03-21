@@ -192,18 +192,40 @@ Hivemind.prototype.isProcessAllowedToRun = function (stats, options) {
 	// No need to throttle if no interval is set.
 	if (interval === 0 || priority === PROCESS_PRIORITY_ALWAYS) return true;
 
-	// Throttle process based on current cpu usage.
+	interval *= this.getThrottleMultiplier(stopAt, throttleAt);
+
+	// Run process if interval has elapsed.
+	return Game.time - stats.lastRun > interval;
+};
+
+/**
+ * Returns a multiplier for intervals based on current cpu usage.
+ *
+ * @param {number} stopAt
+ *   Minimum amount of bucket needed for this operation to run.
+ * @param {number} throttleAt
+ *   Amount of bucket at which this operation should always run.
+ *
+ * @return {number}
+ *   Multiplier of at least 1.
+ */
+Hivemind.prototype.getThrottleMultiplier = function (stopAt, throttleAt) {
+	// Throttle process based on previous ticks' total cpu usage
 	let throttling = Math.max(this.cpuUsage, 1);
+
+	// Throttle process based on current cpu usage.
+	const minThrottle = Game.cpu.limit / 2;
+	const maxThrottle = Game.cpu.tickLimit;
+	if (Game.cpu.getUsed() > minThrottle) {
+		throttling /= 1 - ((Game.cpu.getUsed() - minThrottle) / (maxThrottle - minThrottle));
+	}
+
+	// Throttle process based on remaining bucket.
 	if (this.bucket < throttleAt) {
 		throttling *= (throttleAt - stopAt) / (this.bucket - stopAt);
 	}
 
-	if (throttling > 1) {
-		interval *= throttling;
-	}
-
-	// Run process if interval has elapsed.
-	return Game.time - stats.lastRun > interval;
+	return throttling;
 };
 
 /**
