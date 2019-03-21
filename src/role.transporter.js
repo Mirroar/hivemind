@@ -67,6 +67,7 @@ Creep.prototype.getAvailableEnergySources = function () {
 			}
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
+			option.priority -= creep.room.getCreepsWithOrder('getResource', link.id).length * 2;
 
 			options.push(option);
 		}
@@ -110,12 +111,7 @@ Creep.prototype.addDroppedEnergySourceOptions = function (options, storagePriori
 		};
 
 		if (storagePosition && target.pos.x === storagePosition.x && target.pos.y === storagePosition.y) {
-			if (creep.memory.role === 'transporter') {
-				option.priority = storagePriority;
-			}
-			else {
-				option.priority = 5;
-			}
+			option.priority = creep.memory.role === 'transporter' ? storagePriority : 5;
 		}
 		else {
 			if (target.amount < 100) {
@@ -127,6 +123,7 @@ Creep.prototype.addDroppedEnergySourceOptions = function (options, storagePriori
 			}
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
+			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 		}
 
 		if (creep.room.getFreeStorage() < target.amount) {
@@ -176,6 +173,7 @@ Creep.prototype.addTombstoneEnergySourceOptions = function (options) {
 		}
 
 		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
+		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 
 		if (creep.room.getFreeStorage() < target.amount) {
 			// If storage is super full, try leaving stuff on the ground.
@@ -228,6 +226,7 @@ Creep.prototype.addContainerEnergySourceOptions = function (options) {
 		}
 
 		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
+		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 
 		options.push(option);
 	}
