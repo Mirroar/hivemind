@@ -320,7 +320,7 @@ Creep.prototype.addDroppedResourceOptions = function (options) {
 	// Look for resources on the ground.
 	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => {
-			if (resource.amount > 10 && creep.pos.findPathTo(resource)) {
+			if (resource.amount > 10 && resource.resourceType !== RESOURCE_ENERGY && creep.pos.findPathTo(resource)) {
 				return true;
 			}
 
