@@ -35,11 +35,12 @@ InitProcess.prototype.run = function () {
 	});
 
 	_.each(Game.rooms, room => {
-		if (!room.controller || !room.controller.my) return;
+		if (room.controller && room.controller.my) {
+			room.roomPlanner = new RoomPlanner(room.name);
+			room.boostManager = new BoostManager(room.name);
+			room.generateLinkNetwork();
+		}
 
-		room.roomPlanner = new RoomPlanner(room.name);
-		room.boostManager = new BoostManager(room.name);
-		room.generateLinkNetwork();
 		room.enhanceData();
 	});
 
