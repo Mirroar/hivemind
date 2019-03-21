@@ -22,3 +22,6 @@ JSON.stringify(_.reduce(_.map(Memory.rooms, (roomData) => {const result = {}; _.
 
 // Calculate room value.
 const p = new (require('process.strategy.scout')); p.generateMineralStatus(); Memory.hivemind.canExpand = true; const r = []; _.each(Game.rooms, room => {if (!room.controller || !room.controller.my) return; const i = p.calculateExpansionScore(room.name);i.roomName = room.name; r.push(i)}); Memory.hivemind.canExpand = false; console.log(JSON.stringify(r));
+
+// Find energy source options for a transporter creep.
+JSON.stringify(_.map(Game.creeps.T_ju.getAvailableEnergySources(), option => {option.object = (option.object || {}).id; return option}))
