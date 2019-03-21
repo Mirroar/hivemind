@@ -164,18 +164,18 @@ Creep.prototype.addTombstoneEnergySourceOptions = function (options) {
 			resourceType: RESOURCE_ENERGY,
 		};
 
-		if (target.amount < 100) {
+		if (target.store.energy < 100) {
 			option.priority--;
 		}
 
-		if (target.amount < 200) {
+		if (target.store.energy < 200) {
 			option.priority--;
 		}
 
 		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 
-		if (creep.room.getFreeStorage() < target.amount) {
+		if (creep.room.getFreeStorage() < target.store.energy) {
 			// If storage is super full, try leaving stuff on the ground.
 			option.priority -= 2;
 		}
