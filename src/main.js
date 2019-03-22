@@ -58,6 +58,8 @@ module.exports = {
 
 		hivemind.onTickStart();
 
+		this.cleanup();
+
 		hivemind.runProcess('init', InitProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
@@ -96,7 +98,6 @@ module.exports = {
 			interval: 50,
 		});
 
-		this.cleanup();
 		this.recordStats();
 		this.showDebug();
 	},
@@ -143,9 +144,9 @@ module.exports = {
 		}
 
 		// Check if memory is getting too bloated.
-		if (Game.time % 7836 === 0) {
+		const usedMemory = RawMemory.get().length;
+		if (Game.time % 7836 === 0 || usedMemory > 2000000) {
 			const currentScoutDistance = Memory.hivemind.maxScoutDistance || 7;
-			const usedMemory = RawMemory.get().length;
 			if (usedMemory > 1800000 && currentScoutDistance > 2) {
 				Memory.hivemind.maxScoutDistance = currentScoutDistance - 1;
 				for (const roomName in Memory.strategy.roomList) {
