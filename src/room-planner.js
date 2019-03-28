@@ -23,7 +23,7 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 21;
+	this.roomPlannerVersion = 23;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -1094,6 +1094,7 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
 	}
 
 	this.placeFlag(nextPos, 'road', 255);
+	this.placeFlag(nextPos, 'helper_parking');
 
 	this.placeAccessRoad(nextPos);
 
@@ -1113,6 +1114,7 @@ RoomPlanner.prototype.placeBays = function () {
 
 		// Make sure there is a road in the center of the bay.
 		this.placeFlag(pos, 'road', 1);
+		this.placeFlag(pos, 'bay_center', 1);
 
 		// Fill other unused spots with extensions.
 		for (let dx = -1; dx <= 1; dx++) {
