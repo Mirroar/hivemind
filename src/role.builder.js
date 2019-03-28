@@ -51,42 +51,15 @@ Creep.prototype.addRepairOptions = function (options) {
 			object: target,
 		};
 
-		let maxHealth = target.hitsMax;
 		if (target.structureType === STRUCTURE_WALL || target.structureType === STRUCTURE_RAMPART) {
-			option.priority--;
-			if (target.structureType === STRUCTURE_WALL) {
-				option.priority--;
-			}
-
-			// Walls and ramparts get repaired up to a certain health level.
-			maxHealth = wallHealth[target.room.controller.level];
-			if (target.hits >= maxHealth * 0.9) {
-				if (target.hits < target.hitsMax && target.structureType === STRUCTURE_RAMPART) {
-					// This has really low priority.
-					option.priority = 0;
-					maxHealth = target.hitsMax;
-				}
-				else {
-					// Skip this.
-					continue;
-				}
-			}
-
-			option.weight = 1 - (target.hits / maxHealth);
-			option.maxHealth = maxHealth;
-
-			if (target.structureType === STRUCTURE_RAMPART && target.hits < 10000 && this.room.controller.level >= 4) {
-				// Low ramparts get special treatment so they don't decay.
-				option.priority++;
-				option.weight++;
-			}
+			this.modifyRepairDefensesOption(option, target);
 		}
 		else {
-			if (target.hits / maxHealth > 0.9) {
+			if (target.hits / target.hitsMax > 0.9) {
 				option.priority--;
 			}
 
-			if (target.hits / maxHealth < 0.2) {
+			if (target.hits / target.hitsMax < 0.2) {
 				option.priority++;
 			}
 
@@ -101,7 +74,7 @@ Creep.prototype.addRepairOptions = function (options) {
 
 		// For many decaying structures, we don't care if they're "almost" full.
 		if (target.structureType === STRUCTURE_ROAD || target.structureType === STRUCTURE_RAMPART || target.structureType === STRUCTURE_CONTAINER) {
-			if (target.hits / maxHealth > 0.9) {
+			if (target.hits / (option.maxHealth || target.hitsMax) > 0.9) {
 				continue;
 			}
 		}
@@ -109,6 +82,42 @@ Creep.prototype.addRepairOptions = function (options) {
 		option.priority -= this.room.getCreepsWithOrder('repair', target.id).length;
 
 		options.push(option);
+	}
+};
+
+/**
+ * Modifies basic repair order for defense structures.
+ *
+ * @param {object} option
+ *   The repair order to modify.
+ * @param {Structure} target
+ *   The defensive structure in question.
+ */
+Creep.prototype.modifyRepairDefensesOption = function (option, target) {
+	option.priority--;
+	if (target.structureType === STRUCTURE_WALL) {
+		option.priority--;
+	}
+
+	// Walls and ramparts get repaired up to a certain health level.
+	let maxHealth = wallHealth[target.room.controller.level];
+	if (this.room.roomPlanner && this.room.roomPlanner.isPlannedLocation(target.pos, 'wall.blocker')) {
+		maxHealth = 10000;
+	}
+
+	if (target.hits >= maxHealth * 0.9 && target.hits < target.hitsMax) {
+		// This has really low priority.
+		option.priority = 0;
+		maxHealth = target.hitsMax;
+	}
+
+	option.weight = 1 - (target.hits / maxHealth);
+	option.maxHealth = maxHealth;
+
+	if (target.structureType === STRUCTURE_RAMPART && target.hits < 10000 && this.room.controller.level >= 4) {
+		// Low ramparts get special treatment so they don't decay.
+		option.priority++;
+		option.weight++;
 	}
 };
 

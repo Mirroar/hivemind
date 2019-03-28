@@ -180,6 +180,8 @@ RoomPlanner.prototype.manageStructures = function () {
 		this.buildPlannedStructures('spawn', STRUCTURE_SPAWN);
 	}
 
+	this.buildPlannedStructures('wall.blocker', STRUCTURE_WALL);
+
 	// Build road to controller for easier upgrading.
 	this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
 
@@ -235,7 +237,7 @@ RoomPlanner.prototype.manageStructures = function () {
 	// Slate all unmanaged walls and ramparts for deconstruction.
 	const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
 		filter: structure => {
-			if (structure.structureType === STRUCTURE_WALL) return true;
+			if (structure.structureType === STRUCTURE_WALL && !this.isPlannedLocation(structure.pos, 'wall')) return true;
 			if (structure.structureType === STRUCTURE_RAMPART) {
 				// Keep rampart if it is one we have placed.
 				const pos = utilities.encodePosition(structure.pos);
@@ -858,6 +860,7 @@ RoomPlanner.prototype.placeFlags = function () {
 	this.placeAll('nuker', true);
 	this.placeAll('observer', false);
 	this.placeTowers();
+	this.placeSpawnWalls();
 
 	const end = Game.cpu.getUsed();
 	console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
@@ -1282,6 +1285,24 @@ RoomPlanner.prototype.placeTowers = function () {
 		const pos = utilities.decodePosition(posName);
 
 		this.placeAccessRoad(pos);
+	}
+};
+
+/**
+ * Places walls around spawns so creeps don't get spawned on inaccessible tiles.
+ */
+RoomPlanner.prototype.placeSpawnWalls = function () {
+	const positions = this.getLocations('spawn');
+
+	for (const pos of positions) {
+		for (let x = pos.x - 1; x <= pos.x + 1; x++) {
+			for (let y = pos.y - 1; y <= pos.y + 1; y++) {
+				if (this.isBuildableTile(x, y)) {
+					this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall');
+					this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
+				}
+			}
+		}
 	}
 };
 
@@ -1766,6 +1787,25 @@ RoomPlanner.prototype.getLocations = function (locationType) {
 	}
 
 	return [];
+};
+
+/**
+ * Checks whether a certain position is planned for building something.
+ *
+ * @param {RoomPosition} pos
+ *   Room position to check against.
+ * @param {string} locationType
+ *   Type of location to check for.
+ *
+ * @return {boolean}
+ *   True if the given location type is planned for the given position.
+ */
+RoomPlanner.prototype.isPlannedLocation = function (pos, locationType) {
+	if (!this.memory.locations) return false;
+	if (!this.memory.locations[locationType]) return false;
+	if (!this.memory.locations[locationType][utilities.encodePosition(pos)]) return false;
+
+	return true;
 };
 
 module.exports = RoomPlanner;
