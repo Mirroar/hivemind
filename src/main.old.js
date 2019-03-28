@@ -43,10 +43,6 @@ const creepThrottleLevels = {
 		max: 0,
 		min: -1,
 	},
-	claimer: {
-		max: 0,
-		min: -1,
-	},
 	'builder.remote': {
 		max: 0,
 		min: -1,
@@ -94,7 +90,6 @@ const creepLogicFunctions = {
 	'harvester.remote': 'runRemoteHarvesterLogic',
 	'harvester.exploit': 'runExploitHarvesterLogic',
 	'harvester.power': 'runPowerHarvesterLogic',
-	claimer: 'runClaimerLogic',
 	dismantler: 'runDismantlerLogic',
 	hauler: 'runHaulerLogic',
 	'hauler.exploit': 'runExploitHaulerLogic',

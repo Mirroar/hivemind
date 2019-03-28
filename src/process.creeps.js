@@ -4,6 +4,7 @@ const Process = require('./process');
 const CreepManager = require('./creep-manager');
 
 // Normal creep roles.
+const ClaimerRole = require('./role.claimer');
 const ScoutRole = require('./role.scout');
 
 // Power creep roles.
@@ -22,6 +23,7 @@ const CreepsProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	this.creepManager = new CreepManager();
+	this.creepManager.registerCreepRole('claimer', new ClaimerRole());
 	this.creepManager.registerCreepRole('scout', new ScoutRole());
 
 	this.creepManager.registerCreepRole('operator', new OperatorRole());

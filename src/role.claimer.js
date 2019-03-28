@@ -1,70 +1,136 @@
 'use strict';
 
-/* global Creep OK */
+/* global OK */
 
 const utilities = require('./utilities');
+const Role = require('./role');
+
+const ClaimerRole = function () {
+	Role.call(this);
+
+	// Claimers have high priority because of their short life spans.
+	this.stopAt = 0;
+	this.throttleAt = 0;
+};
+
+ClaimerRole.prototype = Object.create(Role.prototype);
+
+/**
+ * Makes a creep behave like a claimer.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+ClaimerRole.prototype.run = function (creep) {
+	if (this.moveToTargetRoom(creep)) return;
+
+	if (creep.memory.mission === 'reserve') {
+		this.performReserve(creep);
+	}
+	else if (creep.memory.mission === 'claim') {
+		this.performClaim(creep);
+	}
+};
+
+/**
+ * Moves the creep to the target room for its order.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ *
+ * @return {boolean}
+ *   True if the creep is still busy moving towards the target room.
+ */
+ClaimerRole.prototype.moveToTargetRoom = function (creep) {
+	const targetPosition = utilities.decodePosition(creep.memory.target);
+	if (!creep.hasCachedPath() && Memory.rooms[creep.room.name].remoteHarvesting && Memory.rooms[creep.room.name].remoteHarvesting[creep.memory.target]) {
+		const harvestMemory = Memory.rooms[creep.room.name].remoteHarvesting[creep.memory.target];
+
+		if (harvestMemory.cachedPath) {
+			creep.setCachedPath(harvestMemory.cachedPath.path, false, 1);
+		}
+	}
+
+	if (creep.hasCachedPath()) {
+		if (creep.hasArrived() || creep.pos.getRangeTo(targetPosition) < 3) {
+			creep.clearCachedPath();
+		}
+		else {
+			creep.followCachedPath();
+			return true;
+		}
+	}
+
+	return false;
+};
 
 /**
  * Makes the creep claim a room for the hive!
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performClaim = function () {
-	const targetPosition = utilities.decodePosition(this.memory.target);
+ClaimerRole.prototype.performClaim = function (creep) {
+	const targetPosition = utilities.decodePosition(creep.memory.target);
 
-	if (targetPosition.roomName !== this.pos.roomName) {
-		this.moveTo(targetPosition);
+	if (targetPosition.roomName !== creep.pos.roomName) {
+		creep.moveTo(targetPosition);
 		return;
 	}
 
-	const target = this.room.controller;
+	const target = creep.room.controller;
 
-	if (target.owner && !target.my && this.memory.body && this.memory.body.claim >= 5) {
-		if (this.pos.getRangeTo(target) > 1) {
-			this.moveTo(target);
+	if (target.owner && !target.my && creep.memory.body && creep.memory.body.claim >= 5) {
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveTo(target);
 		}
 		else {
-			this.claimController(target);
+			creep.claimController(target);
 		}
 	}
 	else if (!target.my) {
 		const numRooms = _.size(_.filter(Game.rooms, room => room.controller && room.controller.my));
 		const maxRooms = Game.gcl.level;
 
-		if (this.pos.getRangeTo(target) > 1) {
-			this.moveTo(target);
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveTo(target);
 		}
 		else if (numRooms < maxRooms) {
-			this.claimController(target);
+			creep.claimController(target);
 		}
 		else {
-			this.reserveController(target);
+			creep.reserveController(target);
 		}
 	}
 };
 
 /**
  * Makes the creep reserve a room.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performReserve = function () {
-	const targetPosition = utilities.decodePosition(this.memory.target);
-	if (targetPosition.roomName !== this.pos.roomName) {
-		this.moveTo(targetPosition);
+ClaimerRole.prototype.performReserve = function (creep) {
+	const targetPosition = utilities.decodePosition(creep.memory.target);
+	if (targetPosition.roomName !== creep.pos.roomName) {
+		creep.moveTo(targetPosition);
 		return;
 	}
 
-	const target = this.room.controller;
+	const target = creep.room.controller;
 
-	if (this.pos.getRangeTo(target) > 1) {
-		this.moveTo(target);
+	if (creep.pos.getRangeTo(target) > 1) {
+		creep.moveTo(target);
 	}
 	else {
-		const result = this.reserveController(target);
+		const result = creep.reserveController(target);
 		if (result === OK) {
 			let reservation = 0;
-			if (this.room.controller.reservation && this.room.controller.reservation.username === utilities.getUsername()) {
-				reservation = this.room.controller.reservation.ticksToEnd;
+			if (creep.room.controller.reservation && creep.room.controller.reservation.username === utilities.getUsername()) {
+				reservation = creep.room.controller.reservation.ticksToEnd;
 			}
 
-			this.room.memory.lastClaim = {
+			creep.room.memory.lastClaim = {
 				time: Game.time,
 				value: reservation,
 			};
@@ -72,33 +138,4 @@ Creep.prototype.performReserve = function () {
 	}
 };
 
-/**
- * Makes a creep behave like a claimer.
- */
-Creep.prototype.runClaimerLogic = function () {
-	const targetPosition = utilities.decodePosition(this.memory.target);
-	if (!this.hasCachedPath() && Memory.rooms[this.room.name].remoteHarvesting && Memory.rooms[this.room.name].remoteHarvesting[this.memory.target]) {
-		const harvestMemory = Memory.rooms[this.room.name].remoteHarvesting[this.memory.target];
-
-		if (harvestMemory.cachedPath) {
-			this.setCachedPath(harvestMemory.cachedPath.path, false, 1);
-		}
-	}
-
-	if (this.hasCachedPath()) {
-		if (this.hasArrived() || this.pos.getRangeTo(targetPosition) < 3) {
-			this.clearCachedPath();
-		}
-		else {
-			this.followCachedPath();
-			return;
-		}
-	}
-
-	if (this.memory.mission === 'reserve') {
-		this.performReserve();
-	}
-	else if (this.memory.mission === 'claim') {
-		this.performClaim();
-	}
-};
+module.exports = ClaimerRole;
