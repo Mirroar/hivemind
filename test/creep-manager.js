@@ -5,6 +5,7 @@ global._ = _;
 
 require('../mock/constants');
 const RoomPosition = require('../mock/room-position');
+const MockHivemind = require('../mock/hivemind');
 
 global.RoomPosition = RoomPosition;
 
@@ -35,6 +36,7 @@ test.beforeEach(() => {
 		},
 	};
 	global.Memory = {};
+	global.hivemind = new MockHivemind();
 });
 test.afterEach(() => {
 	delete global.Memory;
