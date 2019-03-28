@@ -1,7 +1,8 @@
 'use strict';
 
-/* global Source Mineral StructureKeeperLair ENERGY_REGEN_TIME LOOK_TERRAIN
-FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR */
+/* global hivemind Source Mineral StructureKeeperLair ENERGY_REGEN_TIME LOOK_TERRAIN
+FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR
+POWER_INFO PWR_REGEN_SOURCE */
 
 /**
  * Adds additional data to room objects.
@@ -58,7 +59,15 @@ Mineral.prototype.enhanceData = function () {
 Source.prototype.getMaxWorkParts = function () {
 	// @todo get Rid of maxWorkParts variable in favor of this.
 	// @todo Factor in whether we control this room.
-	return 1.2 * this.energyCapacity / ENERGY_REGEN_TIME / 2;
+	let numParts = this.energyCapacity / ENERGY_REGEN_TIME / 2;
+
+	_.each(this.effects, effect => {
+		if (effect.power === PWR_REGEN_SOURCE) {
+			numParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
+		}
+	});
+
+	return 1.2 * numParts;
 };
 
 /**
