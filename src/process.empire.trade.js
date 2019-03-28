@@ -58,9 +58,11 @@ TradeProcess.prototype.run = function () {
 
 	if (Game.market.credits > 5000) {
 		// Also try to cheaply buy some energy for rooms that are low on it.
-		const lowRooms = _.filter(resources.rooms, roomState => roomState.canTrade && !roomState.isEvacuating && (roomState.totalResources[RESOURCE_ENERGY] || 0) < 100000);
+		_.each(resources.rooms, (roomState, roomName) => {
+			if (!roomState.canTrade) return;
+			if (roomState.isEvacuating) return;
+			if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > 100000) return;
 
-		_.each(lowRooms, (roomState, roomName) => {
 			// @todo Force creating a buy order for every affected room.
 			const temp = {
 				[roomName]: roomState,
