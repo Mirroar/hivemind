@@ -29,51 +29,41 @@ Creep.prototype.getAvailableEnergySources = function () {
 		storagePriority = 2;
 	}
 
-	// Energy can be gotten at the room's storage or terminal.
-	const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
-	if (storageTarget && storageTarget.store.energy >= creep.carryCapacity - _.sum(creep.carry)) {
-		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
-		if (creep.memory.role === 'transporter' || storageTarget.store.energy > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
-			options.push({
-				priority: creep.memory.role === 'transporter' ? storagePriority : 5,
-				weight: 0,
-				type: 'structure',
-				object: storageTarget,
-				resourceType: RESOURCE_ENERGY,
-			});
-		}
-	}
-
+	this.addStorageEnergySourceOptions(options, storagePriority);
 	this.addDroppedEnergySourceOptions(options, storagePriority);
 	this.addTombstoneEnergySourceOptions(options);
 	this.addContainerEnergySourceOptions(options);
-
-	// Take energy from storage links.
-	if (creep.room.linkNetwork && creep.room.linkNetwork.energy > creep.room.linkNetwork.maxEnergy) {
-		for (const link of creep.room.linkNetwork.neutralLinks) {
-			if (link.energy === 0) continue;
-
-			const option = {
-				priority: 5,
-				weight: link.energy / 100, // @todo Also factor in distance.
-				type: 'structure',
-				object: link,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			if (creep.pos.getRangeTo(link) > 10) {
-				// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
-				option.priority--;
-			}
-
-			option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
-			option.priority -= creep.room.getCreepsWithOrder('getResource', link.id).length * 2;
-
-			options.push(option);
-		}
-	}
+	this.addLinkEnergySourceOptions(options);
 
 	return options;
+};
+
+/**
+ * Adds options for picking up energy from storage to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential energy sources.
+ * @param {number} storagePriority
+ *   Priority assigned for transporters picking up from storage.
+ */
+Creep.prototype.addStorageEnergySourceOptions = function (options, storagePriority) {
+	const creep = this;
+
+	// Energy can be gotten at the room's storage or terminal.
+	const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
+	if (!storageTarget) return;
+	if (storageTarget.store.energy < creep.carryCapacity - _.sum(creep.carry)) return;
+
+	// Only transporters can get the last bit of energy from storage, so spawning can always go on.
+	if (creep.memory.role === 'transporter' || storageTarget.store.energy > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
+		options.push({
+			priority: creep.memory.role === 'transporter' ? storagePriority : 5,
+			weight: 0,
+			type: 'structure',
+			object: storageTarget,
+			resourceType: RESOURCE_ENERGY,
+		});
+	}
 };
 
 /**
@@ -227,6 +217,41 @@ Creep.prototype.addContainerEnergySourceOptions = function (options) {
 
 		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
+
+		options.push(option);
+	}
+};
+
+/**
+ * Adds options for picking up energy from links to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential energy sources.
+ */
+Creep.prototype.addLinkEnergySourceOptions = function (options) {
+	const creep = this;
+
+	if (!creep.room.linkNetwork) return;
+	if (creep.room.linkNetwork.energy <= creep.room.linkNetwork.maxEnergy) return;
+
+	for (const link of creep.room.linkNetwork.neutralLinks) {
+		if (link.energy === 0) continue;
+
+		const option = {
+			priority: 5,
+			weight: link.energy / 100, // @todo Also factor in distance.
+			type: 'structure',
+			object: link,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		if (creep.pos.getRangeTo(link) > 10) {
+			// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
+			option.priority--;
+		}
+
+		option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
+		option.priority -= creep.room.getCreepsWithOrder('getResource', link.id).length * 2;
 
 		options.push(option);
 	}
