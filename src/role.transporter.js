@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind Creep Room RoomPosition FIND_DROPPED_RESOURCES
+/* global hivemind Creep PathFinder Room RoomPosition FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
@@ -84,7 +84,8 @@ Creep.prototype.addDroppedEnergySourceOptions = function (options, storagePriori
 	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => {
 			if (resource.resourceType === RESOURCE_ENERGY) {
-				if (creep.pos.findPathTo(resource)) return true;
+				const result = PathFinder.search(creep.pos, resource.pos);
+				if (!result.incomplete) return true;
 			}
 
 			return false;
@@ -138,7 +139,8 @@ Creep.prototype.addTombstoneEnergySourceOptions = function (options) {
 	const targets = creep.room.find(FIND_TOMBSTONES, {
 		filter: tomb => {
 			if (tomb.store.energy > 0) {
-				if (creep.pos.findPathTo(tomb)) return true;
+				const result = PathFinder.search(creep.pos, tomb.pos);
+				if (!result.incomplete) return true;
 			}
 
 			return false;
@@ -345,8 +347,9 @@ Creep.prototype.addDroppedResourceOptions = function (options) {
 	// Look for resources on the ground.
 	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => {
-			if (resource.amount > 10 && resource.resourceType !== RESOURCE_ENERGY && creep.pos.findPathTo(resource)) {
-				return true;
+			if (resource.amount > 10 && resource.resourceType !== RESOURCE_ENERGY) {
+				const result = PathFinder.search(creep.pos, resource.pos);
+				if (!result.incomplete) return true;
 			}
 
 			return false;
@@ -387,8 +390,9 @@ Creep.prototype.addTombstoneResourceOptions = function (options) {
 	// Look for resources on the ground.
 	const targets = creep.room.find(FIND_TOMBSTONES, {
 		filter: tomb => {
-			if (_.sum(tomb.store) > 10 && creep.pos.findPathTo(tomb)) {
-				return true;
+			if (_.sum(tomb.store) > 10) {
+				const result = PathFinder.search(creep.pos, tomb.pos);
+				if (!result.incomplete) return true;
 			}
 
 			return false;
@@ -1329,6 +1333,7 @@ Creep.prototype.ensureValidDeliveryTarget = function () {
 	const creep = this;
 
 	if (!creep.memory.deliverTarget) creep.calculateDeliveryTarget();
+	if (!creep.memory.deliverTarget) return false;
 
 	const resourceType = creep.memory.order && creep.memory.order.resourceType;
 	if ((creep.carry[resourceType] || 0) <= 0) return false;
