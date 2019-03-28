@@ -11,6 +11,20 @@ const ScoutRole = function () {
 ScoutRole.prototype = Object.create(Role.prototype);
 
 /**
+ * Makes a creep behave like a scout.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+ScoutRole.prototype.run = function (creep) {
+	if (!creep.memory.scoutTarget) {
+		this.chooseScoutTarget(creep);
+	}
+
+	this.performScout(creep);
+};
+
+/**
  * Makes this creep move between rooms to gather intel.
  *
  * @param {Creep} creep
@@ -71,20 +85,6 @@ ScoutRole.prototype.chooseScoutTarget = function (creep) {
 	if (!creep.memory.scoutTarget) {
 		creep.memory.scoutTarget = creep.memory.origin;
 	}
-};
-
-/**
- * Makes a creep behave like a scout.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- */
-ScoutRole.prototype.run = function (creep) {
-	if (!creep.memory.scoutTarget) {
-		this.chooseScoutTarget(creep);
-	}
-
-	this.performScout(creep);
 };
 
 module.exports = ScoutRole;
