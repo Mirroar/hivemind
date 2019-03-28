@@ -1,5 +1,7 @@
 'use strict';
 
+/* global hivemind */
+
 const utilities = require('./utilities');
 
 /**
@@ -145,6 +147,11 @@ CreepManager.prototype.manageCreeps = function (creeps) {
 	_.each(creeps, creep => {
 		this.runCreepLogic(creep);
 	});
+
+	if (this.performance.total.throttled) {
+		const total = this.performance.total.throttled + this.performance.total.run;
+		hivemind.log('creeps').debug(this.performance.total.throttled, 'of', total, 'creeps have been throttled due to bucket this tick.');
+	}
 };
 
 module.exports = CreepManager;
