@@ -60,6 +60,7 @@ Hivemind.prototype.onTickStart = function () {
 	this.cpuUsage = stats.getStat('cpu_total', 10) / Game.cpu.limit;
 	this.parentProcessId = 'root';
 	this.currentProcess = null;
+	this.emergencyBrakeProcessId = null;
 
 	// Clear possibly outdated intel objects from last tick.
 	this.intel = {};
@@ -91,6 +92,8 @@ Hivemind.prototype.onTickStart = function () {
  *     no longer run.
  */
 Hivemind.prototype.runProcess = function (id, ProcessConstructor, options) {
+	if (this.pullEmergengyBrake(id)) return;
+
 	// @todo Add CPU usage histogram data for some processes.
 	const stats = this.initializeProcessStats(id);
 
@@ -115,8 +118,32 @@ Hivemind.prototype.runProcess = function (id, ProcessConstructor, options) {
  *   process as this-argument.
  */
 Hivemind.prototype.runSubProcess = function (id, callback) {
+	if (this.pullEmergengyBrake(id)) return;
+
 	const stats = this.initializeProcessStats(id);
 	this.timeProcess(id, stats, () => callback.call(this.currentProcess));
+};
+
+/**
+ * Decides whether current CPU usage is too high to run any more processes.
+ *
+ * @param {string} id
+ *   The id of the process in memory.
+ *
+ * @return {boolean}
+ *   True if running processes is forbidden.
+ */
+Hivemind.prototype.pullEmergengyBrake = function (id) {
+	if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.9) {
+		if (!this.emergencyBrakeProcessId) {
+			this.emergencyBrakeProcessId = id;
+			this.log('cpu').error('Shutting down all other processes before running', id, '-', Game.cpu.getUsed(), '/', Game.cpu.tickLimit, 'cpu used!');
+		}
+
+		return true;
+	}
+
+	return false;
 };
 
 /**
