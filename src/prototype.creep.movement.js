@@ -1,7 +1,7 @@
 'use strict';
 
-/* global hivemind Creep RoomVisual RoomPosition LOOK_CREEPS LOOK_STRUCTURES
-LOOK_CONSTRUCTION_SITES ERR_NO_PATH */
+/* global hivemind Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS
+LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES */
 
 const utilities = require('./utilities');
 
@@ -490,3 +490,19 @@ Creep.prototype.moveToRoom = function (roomName, allowDanger) {
 Creep.prototype.calculateRoomPath = function (roomName, allowDanger) {
 	return this.room.calculateRoomPath(roomName, allowDanger);
 };
+
+PowerCreep.prototype.moveToRange = Creep.prototype.moveToRange;
+PowerCreep.prototype.setCachedPath = Creep.prototype.setCachedPath;
+PowerCreep.prototype.getCachedPath = Creep.prototype.getCachedPath;
+PowerCreep.prototype.hasCachedPath = Creep.prototype.hasCachedPath;
+PowerCreep.prototype.clearCachedPath = Creep.prototype.clearCachedPath;
+PowerCreep.prototype.hasArrived = Creep.prototype.hasArrived;
+PowerCreep.prototype.followCachedPath = Creep.prototype.followCachedPath;
+PowerCreep.prototype.getOntoCachedPath = Creep.prototype.getOntoCachedPath;
+PowerCreep.prototype.incrementCachedPathPosition = Creep.prototype.incrementCachedPathPosition;
+PowerCreep.prototype.moveAroundObstacles = Creep.prototype.moveAroundObstacles;
+PowerCreep.prototype.canMoveOnto = Creep.prototype.canMoveOnto;
+PowerCreep.prototype.goTo = Creep.prototype.goTo;
+PowerCreep.prototype.calculateGoToPath = Creep.prototype.calculateGoToPath;
+PowerCreep.prototype.moveToRoom = Creep.prototype.moveToRoom;
+PowerCreep.prototype.calculateRoomPath = Creep.prototype.calculateRoomPath;
