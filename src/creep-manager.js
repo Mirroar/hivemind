@@ -65,7 +65,8 @@ CreepManager.prototype.throttleCreep = function (creep) {
 	// transition back to their previous room.
 	if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) return false;
 
-	return utilities.throttle(creep.memory.throttleOffset, role.stopAt, role.throttleAt);
+	if (!creep.memory._tO) creep.memory._tO = utilities.getThrottleOffset();
+	return utilities.throttle(creep.memory._tO, role.stopAt, role.throttleAt);
 };
 
 /**
