@@ -686,6 +686,7 @@ Room.prototype.addPowerSpawnOptions = function () {
  * Adds gift creeps to spawn queue if needed.
  */
 Room.prototype.addGiftSpawnOptions = function () {
+	// @todo This is unlikely to happen exaclty when a spawn is idle.
 	if (Game.time % 123 !== 67) return;
 	if (!this.storage || this.getFreeStorage() > this.getStorageLimit() * 0.05) return;
 

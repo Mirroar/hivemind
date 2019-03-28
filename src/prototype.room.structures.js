@@ -1,6 +1,6 @@
 'use strict';
 
-/* global Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
+/* global hivemind Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
 FIND_STRUCTURES */
 
 const LinkNetwork = require('./link-network');
