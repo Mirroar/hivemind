@@ -261,7 +261,6 @@ RoomPlanner.prototype.manageStructures = function () {
 	// Further constructions should only happen in safe rooms.
 	if (this.room && this.room.isEvacuating()) return;
 	if (!this.checkWallIntegrity()) return;
-	hivemind.log('room plan', this.roomName).debug('walls are finished');
 
 	// Make sure labs are built in the right place, remove otherwise.
 	this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
@@ -1300,6 +1299,7 @@ RoomPlanner.prototype.placeSpawnWalls = function () {
 		for (let x = pos.x - 1; x <= pos.x + 1; x++) {
 			for (let y = pos.y - 1; y <= pos.y + 1; y++) {
 				if (this.isBuildableTile(x, y)) {
+					// @todo Check if any adjacent tile has a road, don't place a wall then.
 					this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall');
 					this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
 				}

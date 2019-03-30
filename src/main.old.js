@@ -285,7 +285,7 @@ const main = {
 		});
 
 		if (Game.numThrottledCreeps > 0) {
-			hivemind.log('creeps').info(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
+			hivemind.log('creeps').debug(Game.numThrottledCreeps, 'of', _.size(Game.creeps), 'creeps have been throttled due to bucket this tick.');
 		}
 
 		for (const role in Game.creepPerformance) {

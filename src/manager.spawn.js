@@ -107,7 +107,7 @@ StructureSpawn.prototype.createManagedCreep = function (options) {
 
 	// Spawning successful.
 	Memory.creepCounter[memory.role]++;
-	hivemind.log('creeps', this.pos.roomName).info('Spawning new creep:', newName);
+	hivemind.log('creeps', this.pos.roomName).debug('Spawning new creep:', newName);
 
 	// Also notify room's boost manager if necessary.
 	if (options.boosts && this.room.boostManager) {

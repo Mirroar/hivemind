@@ -1,6 +1,6 @@
 'use strict';
 
-/* global LINK_CAPACITY */
+/* global hivemind LINK_CAPACITY */
 
 const Process = require('./process');
 
@@ -104,7 +104,7 @@ ManageLinksProcess.prototype.run = function () {
 
 	const result = fromLink.link.transferEnergy(toLink.link, amount);
 	if (result !== 0) {
-		console.log(this.room.name, 'link transfer of', amount, 'energy failed:', result);
+		hivemind.log('default', this.room.name).debug('link transfer of', amount, 'energy failed:', result);
 	}
 };
 
