@@ -18,7 +18,6 @@ require('./role.hauler.exploit');
 require('./role.hauler.power');
 require('./role.helper');
 require('./role.transporter');
-require('./role.upgrader');
 /* eslint-enable import/no-unassigned-import */
 const roleRemoteBuilder = require('./role.builder.remote');
 
@@ -67,10 +66,6 @@ const creepThrottleLevels = {
 		max: 'normal',
 		min: 0,
 	},
-	upgrader: {
-		max: 'critical',
-		min: 0,
-	},
 	transporter: {
 		max: 'normal',
 		min: 0,
@@ -80,7 +75,6 @@ const creepThrottleLevels = {
 const creepLogicFunctions = {
 	harvester: 'runHarvesterLogic',
 	'harvester.minerals': 'runHarvesterLogic',
-	upgrader: 'runUpgraderLogic',
 	repairer: 'runBuilderLogic',
 	builder: 'runBuilderLogic',
 	transporter: 'runTransporterLogic',

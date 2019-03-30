@@ -1,39 +1,76 @@
 'use strict';
 
-/* global Creep RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER */
+/* global RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER */
+
+const Role = require('./role');
+
+const UpgraderRole = function () {
+	Role.call(this);
+
+	// Upgraders have high priority because we need to praise the GCL!
+	this.stopAt = 0;
+	this.throttleAt = 2000;
+};
+
+UpgraderRole.prototype = Object.create(Role.prototype);
+
+/**
+ * Makes a creep behave like an upgrader.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+UpgraderRole.prototype.run = function (creep) {
+	if (creep.memory.upgrading && creep.carry.energy === 0) {
+		this.setUpgraderState(creep, false);
+	}
+
+	if (!creep.memory.upgrading && (creep.carry.energy === creep.carryCapacity || (creep.carry.energy > 0 && creep.room.memory.controllerContainer))) {
+		this.setUpgraderState(creep, true);
+	}
+
+	if (creep.memory.upgrading) {
+		this.performUpgrade(creep);
+		return;
+	}
+
+	this.performGetUpgraderEnergy(creep);
+};
 
 /**
  * Makes the creep use energy reserves to upgrade the room's controller.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {boolean} allowRefilling
+ *   Whether the creep may take energy from controller link or container.
  */
-Creep.prototype.performUpgrade = function () {
+UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 	// Upgrade controller.
-	if (this.pos.getRangeTo(this.room.controller) > 3) {
-		this.moveToRange(this.room.controller, 1);
-	}
-	else {
-		this.upgradeController(this.room.controller);
-		if (this.pos.getRangeTo(this.room.controller) > 1) {
-			this.moveToRange(this.room.controller, 1);
+	const distance = creep.pos.getRangeTo(creep.room.controller);
+	if (distance > 1) {
+		creep.moveToRange(creep.room.controller, 1);
+		if (distance <= 3) {
+			creep.upgradeController(creep.room.controller);
 		}
 	}
 
 	// Keep syphoning energy from link or controller to ideally never stop upgrading.
-	// Only real upgraders do this, though, otherwise other primary roles will never stop upgrading.
-	if (this.memory.role === 'upgrader' && _.sum(this.carry) < this.carryCapacity * 0.5) {
+	if (allowRefilling && _.sum(creep.carry) < creep.carryCapacity * 0.5) {
 		let withdrawn = false;
-		if (this.room.memory.controllerLink) {
-			const controllerLink = Game.getObjectById(this.room.memory.controllerLink);
-			if (controllerLink && controllerLink.energy > 50 && this.pos.getRangeTo(controllerLink) <= 1) {
-				if (this.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
+		if (creep.room.memory.controllerLink) {
+			const controllerLink = Game.getObjectById(creep.room.memory.controllerLink);
+			if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1) {
+				if (creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
 					withdrawn = true;
 				}
 			}
 		}
 
-		if (!withdrawn && this.room.memory.controllerContainer) {
-			const controllerContainer = Game.getObjectById(this.room.memory.controllerContainer);
-			if (controllerContainer && controllerContainer.store.energy > 50 && this.pos.getRangeTo(controllerContainer) <= 1) {
-				if (this.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
+		if (!withdrawn && creep.room.memory.controllerContainer) {
+			const controllerContainer = Game.getObjectById(creep.room.memory.controllerContainer);
+			if (controllerContainer && controllerContainer.store.energy > 50 && creep.pos.getRangeTo(controllerContainer) <= 1) {
+				if (creep.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
 					withdrawn = true;
 				}
 			}
@@ -43,9 +80,11 @@ Creep.prototype.performUpgrade = function () {
 
 /**
  * Makes the creep gather energy as an upgrader.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performGetUpgraderEnergy = function () {
-	const creep = this;
+UpgraderRole.prototype.performGetUpgraderEnergy = function (creep) {
 	// Ideally, get energy from a link or container close to the controller.
 	if (creep.room.memory.controllerLink) {
 		const target = Game.getObjectById(creep.room.memory.controllerLink);
@@ -103,29 +142,13 @@ Creep.prototype.performGetUpgraderEnergy = function () {
 /**
  * Puts this creep into or out of upgrade mode.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  * @param {boolean} upgrading
  *   Whether the creep should be praising the controller.
  */
-Creep.prototype.setUpgraderState = function (upgrading) {
-	this.memory.upgrading = upgrading;
+UpgraderRole.prototype.setUpgraderState = function (creep, upgrading) {
+	creep.memory.upgrading = upgrading;
 };
 
-/**
- * Makes a creep behave like an upgrader.
- */
-Creep.prototype.runUpgraderLogic = function () {
-	if (this.memory.upgrading && this.carry.energy === 0) {
-		this.setUpgraderState(false);
-	}
-
-	if (!this.memory.upgrading && (this.carry.energy === this.carryCapacity || (this.carry.energy > 0 && this.room.memory.controllerContainer))) {
-		this.setUpgraderState(true);
-	}
-
-	if (this.memory.upgrading) {
-		this.performUpgrade();
-		return;
-	}
-
-	this.performGetUpgraderEnergy();
-};
+module.exports = UpgraderRole;
