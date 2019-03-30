@@ -28,7 +28,8 @@ const CreepsProcess = function (params, data) {
 	this.creepManager.registerCreepRole('dismantler', new DismantlerRole());
 	this.creepManager.registerCreepRole('scout', new ScoutRole());
 
-	this.creepManager.registerCreepRole('operator', new OperatorRole());
+	this.powerCreepManager = new CreepManager();
+	this.powerCreepManager.registerCreepRole('operator', new OperatorRole());
 };
 
 CreepsProcess.prototype = Object.create(Process.prototype);
@@ -41,7 +42,7 @@ CreepsProcess.prototype.run = function () {
 	this.creepManager.manageCreeps(Game.creeps);
 
 	const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
-	this.creepManager.manageCreeps(powerCreeps);
+	this.powerCreepManager.manageCreeps(powerCreeps);
 };
 
 module.exports = CreepsProcess;
