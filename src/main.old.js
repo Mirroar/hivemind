@@ -14,7 +14,6 @@ require('./role.harvester.exploit');
 require('./role.harvester.remote');
 require('./role.hauler');
 require('./role.hauler.exploit');
-require('./role.hauler.power');
 require('./role.helper');
 require('./role.transporter');
 /* eslint-enable import/no-unassigned-import */
@@ -78,7 +77,6 @@ const creepLogicFunctions = {
 	'harvester.exploit': 'runExploitHarvesterLogic',
 	hauler: 'runHaulerLogic',
 	'hauler.exploit': 'runExploitHaulerLogic',
-	'hauler.power': 'runPowerHaulerLogic',
 	brawler: 'runBrawlerLogic',
 	'builder.exploit': 'runExploitBuilderLogic',
 	helper: 'runHelperLogic',

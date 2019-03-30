@@ -7,6 +7,7 @@ const CreepManager = require('./creep-manager');
 const ClaimerRole = require('./role.claimer');
 const DismantlerRole = require('./role.dismantler');
 const PowerHarvesterRole = require('./role.harvester.power');
+const PowerHaulerRole = require('./role.hauler.power');
 const ScoutRole = require('./role.scout');
 const UpgraderRole = require('./role.upgrader');
 
@@ -29,6 +30,7 @@ const CreepsProcess = function (params, data) {
 	this.creepManager.registerCreepRole('claimer', new ClaimerRole());
 	this.creepManager.registerCreepRole('dismantler', new DismantlerRole());
 	this.creepManager.registerCreepRole('harvester.power', new PowerHarvesterRole());
+	this.creepManager.registerCreepRole('hauler.power', new PowerHaulerRole());
 	this.creepManager.registerCreepRole('scout', new ScoutRole());
 	this.creepManager.registerCreepRole('upgrader', new UpgraderRole());
 

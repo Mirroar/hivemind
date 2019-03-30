@@ -1,90 +1,122 @@
 'use strict';
 
-/* global Creep RESOURCE_POWER FIND_STRUCTURES STRUCTURE_POWER_BANK
+/* global RESOURCE_POWER FIND_STRUCTURES STRUCTURE_POWER_BANK
 FIND_DROPPED_RESOURCES */
+
+const Role = require('./role');
+
+const PowerHaulerRole = function () {
+	Role.call(this);
+};
+
+PowerHaulerRole.prototype = Object.create(Role.prototype);
 
 /**
  * Makes a creep act like a power hauler.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.runPowerHaulerLogic = function () {
-	if (this.memory.isReturning) {
-		if (this.pos.roomName !== this.memory.sourceRoom) {
-			this.moveToRoom(this.memory.sourceRoom);
-			return;
-		}
-
-		// @todo Put power in storage.
-		if ((this.carry[RESOURCE_POWER] || 0) > 0) {
-			const target = this.room.getBestStorageTarget(this.carry[RESOURCE_POWER], RESOURCE_POWER);
-
-			if (target) {
-				if (this.pos.getRangeTo(target) > 1) {
-					this.moveToRange(target, 1);
-					return;
-				}
-
-				this.transferAny(target);
-				return;
-			}
-
-			// Whelp, no delivery target. Let transporters handle it.
-			this.drop(RESOURCE_POWER);
-		}
-		else {
-			delete this.memory.isReturning;
-		}
-
+PowerHaulerRole.prototype.run = function (creep) {
+	if (creep.memory.isReturning) {
+		this.returnHome(creep);
 		return;
 	}
 
-	if (this.pos.roomName !== this.memory.targetRoom) {
-		this.moveToRoom(this.memory.targetRoom);
+	if (creep.pos.roomName !== creep.memory.targetRoom) {
+		creep.moveToRoom(creep.memory.targetRoom);
 		return;
 	}
 
-	const powerBanks = this.room.find(FIND_STRUCTURES, {
+	const powerBanks = creep.room.find(FIND_STRUCTURES, {
 		filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
 	});
 
 	if (powerBanks.length > 0) {
 		// Wait close by until power bank is destroyed.
 		const powerBank = powerBanks[0];
-		if (this.pos.getRangeTo(powerBank) > 5) {
-			this.moveToRange(powerBank, 5);
+		if (creep.pos.getRangeTo(powerBank) > 5) {
+			creep.moveToRange(powerBank, 5);
 		}
 
 		return;
 	}
 
-	const powerResources = this.room.find(FIND_DROPPED_RESOURCES, {
+	this.pickupPower(creep);
+};
+
+/**
+ * Makes the hauler return to its source room.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+PowerHaulerRole.prototype.returnHome = function (creep) {
+	if (creep.pos.roomName !== creep.memory.sourceRoom) {
+		creep.moveToRoom(creep.memory.sourceRoom);
+		return;
+	}
+
+	// Put power in storage.
+	if ((creep.carry[RESOURCE_POWER] || 0) > 0) {
+		const target = creep.room.getBestStorageTarget(creep.carry[RESOURCE_POWER], RESOURCE_POWER);
+
+		if (target) {
+			if (creep.pos.getRangeTo(target) > 1) {
+				creep.moveToRange(target, 1);
+				return;
+			}
+
+			creep.transferAny(target);
+			return;
+		}
+
+		// Whelp, no delivery target. Let transporters handle it.
+		creep.drop(RESOURCE_POWER);
+	}
+	else {
+		delete creep.memory.isReturning;
+	}
+};
+
+/**
+ * Makes the hauler pick up power from the ground.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+PowerHaulerRole.prototype.pickupPower = function (creep) {
+	const powerResources = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => resource.resourceType === RESOURCE_POWER,
 	});
 
-	if (_.sum(this.carry) >= this.carryCapacity || powerResources.length === 0) {
+	if (_.sum(creep.carry) >= creep.carryCapacity || powerResources.length === 0) {
 		// Return home.
-		this.memory.isReturning = true;
+		creep.memory.isReturning = true;
 		return;
 	}
 
 	if (powerResources.length <= 0) {
 		// Return home.
-		if (_.sum(this.carry) > 0) {
-			this.memory.isReturning = true;
+		if (_.sum(creep.carry) > 0) {
+			creep.memory.isReturning = true;
 		}
 
 		// Mark operation as finished.
-		if (Memory.strategy && Memory.strategy.power && Memory.strategy.power.rooms && Memory.strategy.power.rooms[this.memory.targetRoom]) {
-			Memory.strategy.power.rooms[this.memory.targetRoom].isActive = false;
-			Memory.strategy.power.rooms[this.memory.targetRoom].amount = 0;
+		if (Memory.strategy && Memory.strategy.power && Memory.strategy.power.rooms && Memory.strategy.power.rooms[creep.memory.targetRoom]) {
+			Memory.strategy.power.rooms[creep.memory.targetRoom].isActive = false;
+			Memory.strategy.power.rooms[creep.memory.targetRoom].amount = 0;
 		}
 
 		return;
 	}
 
-	if (this.pos.getRangeTo(powerResources[0]) > 1) {
-		this.moveToRange(powerResources[0], 1);
+	if (creep.pos.getRangeTo(powerResources[0]) > 1) {
+		creep.moveToRange(powerResources[0], 1);
 		return;
 	}
 
-	this.pickup(powerResources[0]);
+	creep.pickup(powerResources[0]);
 };
+
+module.exports = PowerHaulerRole;
