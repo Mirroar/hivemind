@@ -1,21 +1,74 @@
 'use strict';
 
-/* global Creep RoomPosition FIND_FLAGS LOOK_STRUCTURES */
+/* global RoomPosition FIND_FLAGS LOOK_STRUCTURES */
+
+const Role = require('./role');
+
+const DismantlerRole = function () {
+	Role.call(this);
+};
+
+DismantlerRole.prototype = Object.create(Role.prototype);
+
+/**
+ * Makes a creep behave like a dismantler.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+DismantlerRole.prototype.run = function (creep) {
+	if (!creep.memory.sourceRoom) {
+		creep.memory.sourceRoom = creep.pos.roomName;
+	}
+
+	if (!creep.memory.targetRoom) {
+		creep.memory.targetRoom = creep.pos.roomName;
+	}
+
+	if (creep.memory.dismantling && creep.carryCapacity > 0 && _.sum(creep.carry) >= creep.carryCapacity) {
+		this.setDismantlerState(creep, false);
+	}
+	else if (!creep.memory.dismantling && _.sum(creep.carry) === 0) {
+		this.setDismantlerState(creep, true);
+	}
+
+	if (creep.memory.dismantling) {
+		this.performDismantle(creep);
+		return;
+	}
+
+	this.performDismantlerDeliver(creep);
+};
+
+/**
+ * Puts this creep into or out of dismantling mode.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {boolean} dismantling
+ *   Whether this creep should be dismantling buildings.
+ */
+DismantlerRole.prototype.setDismantlerState = function (creep, dismantling) {
+	creep.memory.dismantling = dismantling;
+};
 
 /**
  * Makes the creep use energy to finish construction sites in the current room.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performDismantle = function () {
+DismantlerRole.prototype.performDismantle = function (creep) {
 	// First, get to target room.
-	if (this.pos.roomName !== this.memory.targetRoom) {
-		this.moveToRoom(this.memory.targetRoom);
+	if (creep.pos.roomName !== creep.memory.targetRoom) {
+		creep.moveToRoom(creep.memory.targetRoom);
 		return;
 	}
 
 	let target;
 
 	// Look for dismantle flags.
-	const flags = this.room.find(FIND_FLAGS, {
+	const flags = creep.room.find(FIND_FLAGS, {
 		filter: flag => flag.name.startsWith('Dismantle:'),
 	});
 	for (const flag of flags) {
@@ -31,85 +84,56 @@ Creep.prototype.performDismantle = function () {
 		break;
 	}
 
-	if (!target && this.room.roomPlanner && this.room.roomPlanner.needsDismantling()) {
-		target = this.room.roomPlanner.getDismantleTarget();
+	if (!target && creep.room.roomPlanner && creep.room.roomPlanner.needsDismantling()) {
+		target = creep.room.roomPlanner.getDismantleTarget();
 		if (target) {
 			target.notifyWhenAttacked(false);
 		}
 	}
 
 	if (target) {
-		if (this.pos.getRangeTo(target) > 1) {
-			this.moveTo(target);
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveTo(target);
 		}
 		else {
-			this.dismantle(target);
+			creep.dismantle(target);
 		}
 	}
 };
 
-Creep.prototype.performDismantlerDeliver = function () {
+/**
+ * Makes the creep deliver its stored energy.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+DismantlerRole.prototype.performDismantlerDeliver = function (creep) {
 	// First, get to delivery room.
-	if (this.pos.roomName !== this.memory.sourceRoom) {
-		this.moveTo(new RoomPosition(25, 25, this.memory.sourceRoom));
+	if (creep.pos.roomName !== creep.memory.sourceRoom) {
+		creep.moveTo(new RoomPosition(25, 25, creep.memory.sourceRoom));
 		return;
 	}
 
 	// Deliver to storage if possible.
-	if (this.room.storage) {
-		if (this.pos.getRangeTo(this.room.storage) > 1) {
-			this.moveTo(this.room.storage);
+	if (creep.room.storage) {
+		if (creep.pos.getRangeTo(creep.room.storage) > 1) {
+			creep.moveTo(creep.room.storage);
 		}
 		else {
-			this.transferAny(this.room.storage);
+			creep.transferAny(creep.room.storage);
 		}
 
 		return;
 	}
 
-	const location = this.room.getStorageLocation();
-	const pos = new RoomPosition(location.x, location.y, this.pos.roomName);
-	if (this.pos.getRangeTo(pos) > 0) {
-		this.moveTo(pos);
+	const location = creep.room.getStorageLocation();
+	const pos = new RoomPosition(location.x, location.y, creep.pos.roomName);
+	if (creep.pos.getRangeTo(pos) > 0) {
+		creep.moveTo(pos);
 	}
 	else {
-		this.dropAny();
+		creep.dropAny();
 	}
 };
 
-/**
- * Puts this creep into or out of dismantling mode.
- *
- * @param {boolean} dismantling
- *   Whether this creep should be dismantling buildings.
- */
-Creep.prototype.setDismantlerState = function (dismantling) {
-	this.memory.dismantling = dismantling;
-};
-
-/**
- * Makes a creep behave like a dismantler.
- */
-Creep.prototype.runDismantlerLogic = function () {
-	if (!this.memory.sourceRoom) {
-		this.memory.sourceRoom = this.pos.roomName;
-	}
-
-	if (!this.memory.targetRoom) {
-		this.memory.targetRoom = this.pos.roomName;
-	}
-
-	if (this.memory.dismantling && this.carryCapacity > 0 && _.sum(this.carry) >= this.carryCapacity) {
-		this.setDismantlerState(false);
-	}
-	else if (!this.memory.dismantling && _.sum(this.carry) === 0) {
-		this.setDismantlerState(true);
-	}
-
-	if (this.memory.dismantling) {
-		this.performDismantle();
-		return;
-	}
-
-	this.performDismantlerDeliver();
-};
+module.exports = DismantlerRole;
