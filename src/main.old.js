@@ -11,7 +11,6 @@ require('./role.builder.exploit');
 require('./role.gift');
 require('./role.harvester');
 require('./role.harvester.exploit');
-require('./role.harvester.power');
 require('./role.harvester.remote');
 require('./role.hauler');
 require('./role.hauler.exploit');
@@ -54,10 +53,6 @@ const creepThrottleLevels = {
 		max: 'warning',
 		min: 0,
 	},
-	'harvester.power': {
-		max: 'warning',
-		min: 0,
-	},
 	'harvester.remote': {
 		max: 'warning',
 		min: 'critical',
@@ -81,7 +76,6 @@ const creepLogicFunctions = {
 	gift: 'performGiftCollection',
 	'harvester.remote': 'runRemoteHarvesterLogic',
 	'harvester.exploit': 'runExploitHarvesterLogic',
-	'harvester.power': 'runPowerHarvesterLogic',
 	hauler: 'runHaulerLogic',
 	'hauler.exploit': 'runExploitHaulerLogic',
 	'hauler.power': 'runPowerHaulerLogic',
