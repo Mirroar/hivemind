@@ -44,6 +44,10 @@ const Hivemind = function () {
 		};
 	}
 
+	if (!Memory.rooms) {
+		Memory.rooms = {};
+	}
+
 	this.memory = Memory.hivemind;
 	this.relations = new Relations();
 	this.loggers = {};
