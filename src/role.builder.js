@@ -79,6 +79,8 @@ Creep.prototype.addRepairOptions = function (options) {
 			}
 		}
 
+		if (target.hits >= (option.maxHealth || target.hitsMax)) continue;
+
 		option.priority -= this.room.getCreepsWithOrder('repair', target.id).length;
 
 		options.push(option);
@@ -104,8 +106,7 @@ Creep.prototype.modifyRepairDefensesOption = function (option, target) {
 	if (this.room.roomPlanner && this.room.roomPlanner.isPlannedLocation(target.pos, 'wall.blocker')) {
 		maxHealth = 10000;
 	}
-
-	if (target.hits >= maxHealth * 0.9 && target.hits < target.hitsMax) {
+	else if (target.hits >= maxHealth * 0.9 && target.hits < target.hitsMax) {
 		// This has really low priority.
 		option.priority = 0;
 		maxHealth = target.hitsMax;
