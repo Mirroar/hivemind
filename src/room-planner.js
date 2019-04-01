@@ -609,17 +609,12 @@ RoomPlanner.prototype.prepareDistanceMatrixes = function (wallMatrix, exitMatrix
  *   y position of the tile in question.
  */
 RoomPlanner.prototype.markWallAdjacentTiles = function (matrix, terrain, x, y) {
-	for (let dx = -1; dx <= 1; dx++) {
-		for (let dy = -1; dy <= 1; dy++) {
-			const ax = (x + dx < 0 ? 0 : (x + dx > 49 ? 49 : x + dx));
-			const ay = (y + dy < 0 ? 0 : (y + dy > 49 ? 49 : y + dy));
-
-			if (terrain.get(ax, ay) === TERRAIN_MASK_WALL) {
-				matrix.set(x, y, 1);
-				return;
-			}
+	utilities.handleMapArea(x, y, (ax, ay) => {
+		if (terrain.get(ax, ay) === TERRAIN_MASK_WALL) {
+			matrix.set(x, y, 1);
+			return false;
 		}
-	}
+	});
 };
 
 /**
@@ -640,19 +635,16 @@ RoomPlanner.prototype.markWallAdjacentTiles = function (matrix, terrain, x, y) {
 RoomPlanner.prototype.markDistanceTiles = function (matrix, distance, x, y) {
 	if (matrix.get(x, y) !== 0) return false;
 
-	for (let dx = -1; dx <= 1; dx++) {
-		for (let dy = -1; dy <= 1; dy++) {
-			const ax = (x + dx < 0 ? 0 : (x + dx > 49 ? 49 : x + dx));
-			const ay = (y + dy < 0 ? 0 : (y + dy > 49 ? 49 : y + dy));
-
-			if (matrix.get(ax, ay) === distance) {
-				matrix.set(x, y, distance + 1);
-				return true;
-			}
+	let modified = false;
+	utilities.handleMapArea(x, y, (ax, ay) => {
+		if (matrix.get(ax, ay) === distance) {
+			matrix.set(x, y, distance + 1);
+			modified = true;
+			return false;
 		}
-	}
+	});
 
-	return false;
+	return modified;
 };
 
 /**
@@ -1116,13 +1108,11 @@ RoomPlanner.prototype.placeBays = function () {
 		this.placeFlag(pos, 'bay_center', 1);
 
 		// Fill other unused spots with extensions.
-		for (let dx = -1; dx <= 1; dx++) {
-			for (let dy = -1; dy <= 1; dy++) {
-				if (!this.isBuildableTile(pos.x + dx, pos.y + dy)) continue;
+		utilities.handleMapArea(pos.x, pos.y, (x, y) => {
+			if (!this.isBuildableTile(x, y)) return;
 
-				this.placeFlag(new RoomPosition(pos.x + dx, pos.y + dy, pos.roomName), 'extension');
-			}
-		}
+			this.placeFlag(new RoomPosition(x, y, pos.roomName), 'extension');
+		});
 
 		// Place a flag to mark this bay.
 		const flagKey = 'Bay:' + pos.roomName + ':' + bayCount;
@@ -1383,28 +1373,25 @@ RoomPlanner.prototype.getNextAvailableBuildSpot = function () {
 		this.closedList[utilities.encodePosition(nextPos)] = true;
 
 		// Add unhandled adjacent tiles to open list.
-		for (let dx = -1; dx <= 1; dx++) {
-			for (let dy = -1; dy <= 1; dy++) {
-				if (dx === 0 && dy === 0) continue;
-				const pos = new RoomPosition(nextPos.x + dx, nextPos.y + dy, this.roomName);
+		utilities.handleMapArea(nextPos.x, nextPos.y, (x, y) => {
+			if (x === nextPos.x && y === nextPos.y) return;
+			if (!this.isBuildableTile(x, y, true)) return;
 
-				if (!this.isBuildableTile(pos.x, pos.y, true)) continue;
+			const pos = new RoomPosition(x, y, this.roomName);
+			const posName = utilities.encodePosition(pos);
+			if (this.openList[posName] || this.closedList[posName]) return;
 
-				const posName = utilities.encodePosition(pos);
-				if (this.openList[posName] || this.closedList[posName]) continue;
-
-				const newPath = {};
-				for (const oldPos of _.keys(nextInfo.path)) {
-					newPath[oldPos] = true;
-				}
-
-				newPath[posName] = true;
-				this.openList[posName] = {
-					range: minDist + 1,
-					path: newPath,
-				};
+			const newPath = {};
+			for (const oldPos of _.keys(nextInfo.path)) {
+				newPath[oldPos] = true;
 			}
-		}
+
+			newPath[posName] = true;
+			this.openList[posName] = {
+				range: minDist + 1,
+				path: newPath,
+			};
+		});
 
 		// Don't build to close to room center.
 		if (nextPos.getRangeTo(this.roomCenter) < 3) continue;
@@ -1555,41 +1542,34 @@ RoomPlanner.prototype.pruneWallFromTiles = function (walls, startLocations, only
  */
 RoomPlanner.prototype.checkForAdjacentWallsToPrune = function (targetPos, walls, openList, closedList) {
 	// Add unhandled adjacent tiles to open list.
-	for (let dx = -1; dx <= 1; dx++) {
-		for (let dy = -1; dy <= 1; dy++) {
-			if (dx === 0 && dy === 0) continue;
+	utilities.handleMapArea(targetPos.x, targetPos.y, (x, y) => {
+		if (x === targetPos.x && y === targetPos.y) return;
+		if (x < 1 || x > 48 || y < 1 || y > 48) return;
 
-			const newX = targetPos.x + dx;
-			const newY = targetPos.y + dy;
+		// Ignore walls.
+		if (this.wallDistanceMatrix.get(x, y) > 100) return;
 
-			if (newX < 1 || newX > 48 || newY < 1 || newY > 48) continue;
-			const pos = new RoomPosition(newX, newY, this.roomName);
+		const posName = utilities.encodePosition(new RoomPosition(x, y, this.roomName));
+		if (openList[posName] || closedList[posName]) return;
 
-			// Ignore walls.
-			if (this.wallDistanceMatrix.get(pos.x, pos.y) > 100) continue;
+		// If there's a rampart to be built there, mark it and move on.
+		let wallFound = false;
+		for (const wall of walls) {
+			if (wall.x !== x || wall.y !== y) return;
 
-			const posName = utilities.encodePosition(pos);
-			if (openList[posName] || closedList[posName]) continue;
+			// Skip walls that might have been discarded in a previous pass.
+			if (wall.isIrrelevant) return;
 
-			// If there's a rampart to be built there, mark it and move on.
-			let wallFound = false;
-			for (const wall of walls) {
-				if (wall.x !== pos.x || wall.y !== pos.y) continue;
-
-				// Skip walls that might have been discarded in a previous pass.
-				if (wall.isIrrelevant) continue;
-
-				wall.isRelevant = true;
-				wallFound = true;
-				closedList[posName] = true;
-				break;
-			}
-
-			if (!wallFound) {
-				openList[posName] = true;
-			}
+			wall.isRelevant = true;
+			wallFound = true;
+			closedList[posName] = true;
+			break;
 		}
-	}
+
+		if (!wallFound) {
+			openList[posName] = true;
+		}
+	});
 };
 
 /**
@@ -1666,16 +1646,12 @@ RoomPlanner.prototype.pruneWalls = function (walls) {
  *   y position of the a tile that is unsafe.
  */
 RoomPlanner.prototype.markTilesInRangeOfUnsafeTile = function (x, y) {
-	for (let dx = -3; dx <= 3; dx++) {
-		for (let dy = -3; dy <= 3; dy++) {
-			if (dx === 0 && dy === 0) continue;
-			if (x + dx < 0 || x + dx > 49 || y + dy < 0 || y + dy > 49) continue;
-			if (this.safetyMatrix.get(x + dx, y + dy) === 1) {
-				// Safe tile in range of an unsafe tile, mark as neutral.
-				this.safetyMatrix.set(x + dx, y + dy, 0);
-			}
+	utilities.handleMapArea(x, y, (ax, ay) => {
+		if (this.safetyMatrix.get(ax, ay) === 1) {
+			// Safe tile in range of an unsafe tile, mark as neutral.
+			this.safetyMatrix.set(ax, ay, 0);
 		}
-	}
+	}, 3);
 };
 
 /**

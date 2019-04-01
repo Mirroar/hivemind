@@ -175,14 +175,11 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	// Find out how many access points there are around this power bank.
 	const terrain = new Room.Terrain(this.roomName);
 	let numFreeTiles = 0;
-	for (let dx = -1; dx <= 1; dx++) {
-		for (let dy = -1; dy <= 1; dy++) {
-			if (dx === 0 && dy === 0) continue;
-			if (terrain.get(powerBank.pos.x + dx, powerBank.pos.y + dy) !== TERRAIN_MASK_WALL) {
-				numFreeTiles++;
-			}
+	utilities.handleMapArea(powerBank.pos.x, powerBank.pos.y, (x, y) => {
+		if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+			numFreeTiles++;
 		}
-	}
+	});
 
 	this.memory.power = {
 		amount: powerBank.power,

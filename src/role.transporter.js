@@ -1411,28 +1411,30 @@ Creep.prototype.bayUnstuck = function () {
 
 		// We're standing in a bay that we're not delivering to.
 		const terrain = new Room.Terrain(this.pos.roomName);
-		for (let dx = -1; dx <= 1; dx++) {
-			for (let dy = -1; dy <= 1; dy++) {
-				if (dx === 0 && dy === 0) continue;
+		let unstuck = false;
+		utilities.handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+			if (x === this.pos.x && y === this.pos.y) return;
+			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
-				if (terrain.get(this.pos.x + dx, this.pos.y + dy) === TERRAIN_MASK_WALL) continue;
+			const pos = new RoomPosition(x, y, this.pos.roomName);
 
-				const pos = new RoomPosition(this.pos.x + dx, this.pos.y + dy, this.pos.roomName);
+			// Check if there's a structure here already.
+			const structures = pos.lookFor(LOOK_STRUCTURES);
+			if (_.filter(structures, structure => _.contains(OBSTACLE_OBJECT_TYPES, structure.structureType)).length > 0) return;
 
-				// Check if there's a structure here already.
-				const structures = pos.lookFor(LOOK_STRUCTURES);
-				if (_.filter(structures, structure => _.contains(OBSTACLE_OBJECT_TYPES, structure.structureType)).length > 0) continue;
+			// Check if there's a construction site here already.
+			const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+			if (_.filter(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType)).length > 0) return;
 
-				// Check if there's a construction site here already.
-				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-				if (_.filter(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType)).length > 0) continue;
+			// Move out of the way.
+			const dir = this.pos.getDirectionTo(pos);
+			this.move(dir);
+			unstuck = true;
 
-				const dir = this.pos.getDirectionTo(pos);
-				this.move(dir);
+			return false;
+		});
 
-				return true;
-			}
-		}
+		if (unstuck) return true;
 	}
 
 	return false;
