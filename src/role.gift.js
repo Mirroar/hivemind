@@ -1,65 +1,84 @@
 'use strict';
 
-/* global Creep */
+/* global */
+
+const Role = require('./role');
+
+const GiftRole = function () {
+	Role.call(this);
+};
+
+GiftRole.prototype = Object.create(Role.prototype);
 
 /**
  * Makes this creep take excess resources from storage.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performGiftCollection = function () {
-	const storage = this.room.storage;
+GiftRole.prototype.run = function (creep) {
+	const storage = creep.room.storage;
 	if (!storage) {
 		// Nothing to gift if we have no storage.
-		this.performGiftTransport();
+		this.performGiftTransport(creep);
 		return;
 	}
 
-	if (_.sum(this.carry) >= this.carryCapacity * 0.95) {
+	if (_.sum(creep.carry) >= creep.carryCapacity * 0.95) {
 		// If we're (nearly) full, embark.
-		this.performGiftTransport();
+		this.performGiftTransport(creep);
 		return;
 	}
 
-	if (!this.memory.targetResource) {
-		this.chooseGiftResource();
+	if (!creep.memory.targetResource) {
+		this.chooseGiftResource(creep);
 		return;
 	}
 
-	if (!storage.store[this.memory.targetResource] || storage.store[this.memory.targetResource] <= 0) {
-		this.chooseGiftResource();
+	if (!storage.store[creep.memory.targetResource] || storage.store[creep.memory.targetResource] <= 0) {
+		this.chooseGiftResource(creep);
 		return;
 	}
 
-	if (this.pos.getRangeTo(storage) > 1) {
-		this.moveToRange(storage, 1);
+	if (creep.pos.getRangeTo(storage) > 1) {
+		creep.moveToRange(storage, 1);
 		return;
 	}
 
-	this.withdraw(storage, this.memory.targetResource);
-	delete this.memory.targetResource;
+	creep.withdraw(storage, creep.memory.targetResource);
+	delete creep.memory.targetResource;
 };
 
 /**
  * Chooses a resource the room is overly full on.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.chooseGiftResource = function () {
+GiftRole.prototype.chooseGiftResource = function (creep) {
 	let tryCount = 0;
 	let resourceType = null;
-	const resourceTypes = Object.keys(this.room.storage.store);
+	const resourceTypes = Object.keys(creep.room.storage.store);
 	do {
 		resourceType = _.sample(resourceTypes);
 		tryCount++;
-	} while (tryCount < 10 && !this.room.isFullOn(resourceType));
+	} while (tryCount < 10 && !creep.room.isFullOn(resourceType));
 
-	this.memory.targetResource = resourceType;
+	creep.memory.targetResource = resourceType;
 };
 
 /**
  * Move the creep out of the room by letting it scout.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performGiftTransport = function () {
+GiftRole.prototype.performGiftTransport = function (creep) {
 	// Do not send notifications when attacked - we mean to suicide.
-	this.notifyWhenAttacked(false);
+	creep.notifyWhenAttacked(false);
 
 	// @todo Move to a known enemy room and suicide.
-	this.memory.role = 'scout';
+	creep.memory.role = 'scout';
 };
+
+module.exports = GiftRole;

@@ -8,7 +8,6 @@ require('./manager.source');
 require('./role.brawler');
 require('./role.builder');
 require('./role.builder.exploit');
-require('./role.gift');
 require('./role.harvester');
 require('./role.harvester.exploit');
 require('./role.harvester.remote');
@@ -72,7 +71,6 @@ const creepLogicFunctions = {
 	repairer: 'runBuilderLogic',
 	builder: 'runBuilderLogic',
 	transporter: 'runTransporterLogic',
-	gift: 'performGiftCollection',
 	'harvester.remote': 'runRemoteHarvesterLogic',
 	'harvester.exploit': 'runExploitHarvesterLogic',
 	hauler: 'runHaulerLogic',
