@@ -64,6 +64,17 @@ test('running logic by role', t => {
 	});
 });
 
+test('changing roles', t => {
+	const manager = new CreepManager();
+	manager.registerCreepRole('test', {run: creep => {
+		creep.memory.role = 'new_role';
+	}});
+
+	const creep = getMockCreep('test');
+	manager.manageCreeps([creep]);
+	t.is(creep.memory.role, 'new_role');
+});
+
 test('throttling', t => {
 	const manager = new CreepManager();
 	manager.registerCreepRole('low_priority', {throttleAt: 9500, stopAt: 8000, run: () => t.pass('Run function should always be called for creeps on exit tiles.')});
