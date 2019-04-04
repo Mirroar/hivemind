@@ -218,7 +218,7 @@ Hivemind.prototype.isProcessAllowedToRun = function (stats, options) {
 	const throttleAt = options.throttleAt || priorityEffects[priority].throttleAt || 0;
 
 	// Don't run process if bucket is too low.
-	if (this.bucket <= this.stopAt) return false;
+	if (this.bucket <= stopAt) return false;
 
 	// No need to throttle if no interval is set.
 	if (interval === 0 || priority === PROCESS_PRIORITY_ALWAYS) return true;
@@ -252,6 +252,9 @@ Hivemind.prototype.getThrottleMultiplier = function (stopAt, throttleAt) {
 	}
 
 	// Throttle process based on remaining bucket.
+	if (!stopAt) stopAt = 0;
+	if (!throttleAt) throttleAt = 5000;
+	if (this.bucket <= stopAt) return 99999;
 	if (this.bucket < throttleAt) {
 		throttling *= (throttleAt - stopAt) / (this.bucket - stopAt);
 	}
