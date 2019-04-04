@@ -128,19 +128,11 @@ BuilderRole.prototype.calculateBuilderTarget = function (creep) {
 	const best = utilities.getBestOption(this.getAvailableBuilderTargets(creep));
 	if (!best) return;
 
-	if (best.type === 'structure') {
-		creep.memory.order = {
-			type: 'repair',
-			target: best.object.id,
-			maxHealth: best.maxHealth,
-		};
-	}
-	else if (best.type === 'site') {
-		creep.memory.order = {
-			type: 'build',
-			target: best.object.id,
-		};
-	}
+	creep.memory.order = {
+		type: best.type,
+		target: best.object.id,
+		maxHealth: best.maxHealth,
+	};
 };
 
 /**
@@ -177,7 +169,7 @@ BuilderRole.prototype.addRepairOptions = function (creep, options) {
 		const option = {
 			priority: 3,
 			weight: 1 - (target.hits / target.hitsMax),
-			type: 'structure',
+			type: 'repair',
 			object: target,
 		};
 
@@ -268,7 +260,7 @@ BuilderRole.prototype.addBuildOptions = function (creep, options) {
 		const option = {
 			priority: 4,
 			weight: 1,
-			type: 'site',
+			type: 'build',
 			object: target,
 		};
 
