@@ -24,7 +24,6 @@ const roleNameMap = {
 	'harvester.minerals': 'HM',
 	'harvester.remote': 'HR',
 	'harvester.power': 'HP',
-	repairer: 'R',
 	scout: 'S',
 	transporter: 'T',
 	'hauler.exploit': 'TE',
@@ -514,9 +513,6 @@ Room.prototype.addBuilderSpawnOptions = function () {
 		maxWorkParts += 5;
 	}
 
-	_.each(this.creepsByRole.repairer, creep => {
-		numWorkParts += creep.memory.body.work || 0;
-	});
 	_.each(this.creepsByRole.builder, creep => {
 		numWorkParts += creep.memory.body.work || 0;
 	});
@@ -526,7 +522,7 @@ Room.prototype.addBuilderSpawnOptions = function () {
 		maxWorkParts += _.size(this.roomPlanner.memory.locations.rampart) / 10;
 	}
 
-	// Add more repairers if we have a lot of energy to spare.
+	// Add more builders if we have a lot of energy to spare.
 	if (this.storage && this.storage.store.energy > 400000) {
 		maxWorkParts *= 2;
 	}

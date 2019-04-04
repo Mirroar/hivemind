@@ -4,6 +4,7 @@ const Process = require('./process');
 const CreepManager = require('./creep-manager');
 
 // Normal creep roles.
+const BuilderRole = require('./role.builder');
 const ClaimerRole = require('./role.claimer');
 const DismantlerRole = require('./role.dismantler');
 const GiftRole = require('./role.gift');
@@ -29,6 +30,7 @@ const CreepsProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	this.creepManager = new CreepManager();
+	this.creepManager.registerCreepRole('builder', new BuilderRole());
 	this.creepManager.registerCreepRole('claimer', new ClaimerRole());
 	this.creepManager.registerCreepRole('dismantler', new DismantlerRole());
 	this.creepManager.registerCreepRole('gift', new GiftRole());

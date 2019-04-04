@@ -5,7 +5,7 @@ const Process = require('./process');
 /* eslint-disable array-element-newline */
 const songs = {
 	harder: {
-		roles: ['harvester', 'harvester.mineral', 'transporter', 'upgrader', 'repairer', 'builder', 'hauler'],
+		roles: ['harvester', 'harvester.mineral', 'transporter', 'upgrader', 'builder', 'hauler'],
 		lines: [
 			// 2 x 2 nothing
 			'work it', '', 'make it', '', 'do it', '', 'makes us', '', '♪', '♪', '♪', '♬', '♪', '♪', '♪', '♬',

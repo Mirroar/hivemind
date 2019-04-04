@@ -6,7 +6,6 @@
 require('./manager.military');
 require('./manager.source');
 require('./role.brawler');
-require('./role.builder');
 require('./role.builder.exploit');
 require('./role.harvester.exploit');
 require('./role.harvester.remote');
@@ -61,8 +60,6 @@ const creepThrottleLevels = {
 };
 
 const creepLogicFunctions = {
-	repairer: 'runBuilderLogic',
-	builder: 'runBuilderLogic',
 	transporter: 'runTransporterLogic',
 	'harvester.remote': 'runRemoteHarvesterLogic',
 	'harvester.exploit': 'runExploitHarvesterLogic',

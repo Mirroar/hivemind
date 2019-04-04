@@ -183,7 +183,13 @@ HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
 		});
 
 		if (sites.length > 0) {
-			creep.buildTarget(sites[0]);
+			if (creep.pos.getRangeTo(target) > 3) {
+				creep.moveToRange(target, 3);
+			}
+			else {
+				creep.build(target);
+			}
+
 			return;
 		}
 	}
