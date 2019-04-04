@@ -1555,10 +1555,10 @@ RoomPlanner.prototype.checkForAdjacentWallsToPrune = function (targetPos, walls,
 		// If there's a rampart to be built there, mark it and move on.
 		let wallFound = false;
 		for (const wall of walls) {
-			if (wall.x !== x || wall.y !== y) return;
+			if (wall.x !== x || wall.y !== y) continue;
 
 			// Skip walls that might have been discarded in a previous pass.
-			if (wall.isIrrelevant) return;
+			if (wall.isIrrelevant) continue;
 
 			wall.isRelevant = true;
 			wallFound = true;
