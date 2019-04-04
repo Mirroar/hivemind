@@ -147,7 +147,12 @@ CreepManager.prototype.manageCreeps = function (creeps) {
 	_.each(creeps, creep => {
 		this.runCreepLogic(creep);
 	});
+};
 
+/**
+ * Reports statistics like throttled creeps.
+ */
+CreepManager.prototype.report = function () {
 	if (this.performance.total.throttled) {
 		const total = this.performance.total.throttled + this.performance.total.run;
 		hivemind.log('creeps').debug(this.performance.total.throttled, 'of', total, 'creeps have been throttled due to bucket this tick.');

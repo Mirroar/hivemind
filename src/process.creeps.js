@@ -1,5 +1,7 @@
 'use strict';
 
+/* global hivemind */
+
 const Process = require('./process');
 const CreepManager = require('./creep-manager');
 
@@ -52,10 +54,17 @@ CreepsProcess.prototype = Object.create(Process.prototype);
  */
 CreepsProcess.prototype.run = function () {
 	this.creepManager.onTickStart();
-	this.creepManager.manageCreeps(Game.creeps);
+	_.each(Game.creepsByRole, (creeps, role) => {
+		hivemind.runSubProcess('creeps_' + role, () => {
+			this.creepManager.manageCreeps(creeps);
+		});
+	});
+	this.creepManager.report();
 
 	const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
+	this.powerCreepManager.onTickStart();
 	this.powerCreepManager.manageCreeps(powerCreeps);
+	this.powerCreepManager.report();
 };
 
 module.exports = CreepsProcess;
