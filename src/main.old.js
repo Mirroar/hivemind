@@ -8,7 +8,6 @@ require('./manager.source');
 require('./role.brawler');
 require('./role.builder');
 require('./role.builder.exploit');
-require('./role.harvester');
 require('./role.harvester.exploit');
 require('./role.harvester.remote');
 require('./role.hauler');
@@ -43,10 +42,6 @@ const creepThrottleLevels = {
 	},
 
 	// Some essential creeps only start throttling when things get critical.
-	harvester: {
-		max: 'critical',
-		min: 0,
-	},
 	'harvester.minerals': {
 		max: 'warning',
 		min: 0,
@@ -66,8 +61,6 @@ const creepThrottleLevels = {
 };
 
 const creepLogicFunctions = {
-	harvester: 'runHarvesterLogic',
-	'harvester.minerals': 'runHarvesterLogic',
 	repairer: 'runBuilderLogic',
 	builder: 'runBuilderLogic',
 	transporter: 'runTransporterLogic',

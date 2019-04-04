@@ -1,16 +1,68 @@
 'use strict';
 
-/* global Creep FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY
+/* global FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY
 STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES */
 
-// @todo Rewrite delivery part using priority queue.
+// @todo Rewrite delivery part using transporter logic.
 // @todo Just make the harvester build a container when none is available.
+// @todo Merge fixedMineralSource into fixedSource.
+
+const Role = require('./role');
+
+const HarvesterRole = function () {
+	Role.call(this);
+
+	// Harvesting energy is essential and doesn't need tons of CPU.
+	this.stopAt = 0;
+	this.throttleAt = 2000;
+};
+
+HarvesterRole.prototype = Object.create(Role.prototype);
+
+/**
+ * Makes a creep behave like a harvester.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+HarvesterRole.prototype.run = function (creep) {
+	const carryAmount = _.sum(creep.carry);
+	if (!creep.memory.harvesting && carryAmount <= 0) {
+		this.setHarvesterState(creep, true);
+	}
+	else if (creep.memory.harvesting && carryAmount >= creep.carryCapacity) {
+		this.setHarvesterState(creep, false);
+	}
+
+	if (creep.memory.harvesting) {
+		this.performHarvest(creep);
+		return;
+	}
+
+	this.performHarvesterDeliver(creep);
+};
+
+/**
+ * Puts this creep into or out of harvesting mode.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {boolean} harvesting
+ *   Whether this creep should be harvesting.
+ */
+HarvesterRole.prototype.setHarvesterState = function (creep, harvesting) {
+	creep.memory.harvesting = harvesting;
+	delete creep.memory.resourceTarget;
+	delete creep.memory.deliverTarget;
+};
 
 /**
  * Makes the creep gather resources in the current room.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performHarvest = function () {
-	const creep = this;
+HarvesterRole.prototype.performHarvest = function (creep) {
 	let source;
 	if (creep.memory.fixedSource) {
 		source = Game.getObjectById(creep.memory.fixedSource);
@@ -58,9 +110,11 @@ Creep.prototype.performHarvest = function () {
 
 /**
  * Dumps minerals a harvester creep has gathered.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performMineralHarvesterDeliver = function () {
-	const creep = this;
+HarvesterRole.prototype.performMineralHarvesterDeliver = function (creep) {
 	const source = Game.getObjectById(creep.memory.fixedMineralSource);
 	const container = source.getNearbyContainer();
 	let target;
@@ -69,7 +123,7 @@ Creep.prototype.performMineralHarvesterDeliver = function () {
 		target = container;
 	}
 	else {
-		target = this.room.getBestStorageTarget(this.carryCapacity, source.mineralType);
+		target = creep.room.getBestStorageTarget(creep.carryCapacity, source.mineralType);
 	}
 
 	if (target) {
@@ -87,16 +141,18 @@ Creep.prototype.performMineralHarvesterDeliver = function () {
 
 /**
  * Dumps resources a harvester creep has gathered.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performHarvesterDeliver = function () {
-	if (this.memory.fixedMineralSource) {
-		this.performMineralHarvesterDeliver();
+HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
+	if (creep.memory.fixedMineralSource) {
+		this.performMineralHarvesterDeliver(creep);
 		return;
 	}
 
-	if (!this.memory.fixedSource) return;
+	if (!creep.memory.fixedSource) return;
 
-	const creep = this;
 	const source = Game.getObjectById(creep.memory.fixedSource);
 	const targetLink = source.getNearbyLink();
 	const targetContainer = source.getNearbyContainer();
@@ -104,7 +160,7 @@ Creep.prototype.performHarvesterDeliver = function () {
 
 	if (_.size(creep.room.creepsByRole.transporter) === 0) {
 		// Use transporter drop off logic.
-		this.performDeliver();
+		creep.performDeliver();
 		return;
 	}
 
@@ -127,7 +183,7 @@ Creep.prototype.performHarvesterDeliver = function () {
 		});
 
 		if (sites.length > 0) {
-			this.buildTarget(sites[0]);
+			creep.buildTarget(sites[0]);
 			return;
 		}
 	}
@@ -145,33 +201,4 @@ Creep.prototype.performHarvesterDeliver = function () {
 	}
 };
 
-/**
- * Puts this creep into or out of harvesting mode.
- *
- * @param {boolean} harvesting
- *   Whether this creep should be harvesting.
- */
-Creep.prototype.setHarvesterState = function (harvesting) {
-	this.memory.harvesting = harvesting;
-	delete this.memory.resourceTarget;
-	delete this.memory.deliverTarget;
-};
-
-/**
- * Makes a creep behave like a harvester.
- */
-Creep.prototype.runHarvesterLogic = function () {
-	if (!this.memory.harvesting && _.sum(this.carry) <= 0) {
-		this.setHarvesterState(true);
-	}
-	else if (this.memory.harvesting && _.sum(this.carry) >= this.carryCapacity) {
-		this.setHarvesterState(false);
-	}
-
-	if (this.memory.harvesting) {
-		this.performHarvest();
-		return;
-	}
-
-	this.performHarvesterDeliver();
-};
+module.exports = HarvesterRole;
