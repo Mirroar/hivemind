@@ -20,26 +20,6 @@ Creep.prototype.performHarvest = function () {
 		source = Game.getObjectById(creep.memory.fixedMineralSource);
 		// @todo Just in case, handle source not existing anymore, or missing extractor.
 	}
-	else {
-		if (!creep.memory.resourceTarget) {
-			if (!creep.room.sources || creep.room.sources.length <= 0) {
-				return;
-			}
-
-			creep.memory.resourceTarget = creep.room.sources[Math.floor(Math.random() * creep.room.sources.length)].id;
-			delete creep.memory.deliverTarget;
-		}
-
-		const best = creep.memory.resourceTarget;
-		if (!best) {
-			return;
-		}
-
-		source = Game.getObjectById(best);
-		if (!source) {
-			delete creep.memory.resourceTarget;
-		}
-	}
 
 	if (creep.pos.getRangeTo(source) > 1) {
 		creep.moveToRange(source, 1);
