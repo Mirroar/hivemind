@@ -23,7 +23,7 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 23;
+	this.roomPlannerVersion = 24;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -56,12 +56,13 @@ RoomPlanner.prototype.drawDebug = function () {
 		nuker: '☢',
 		observer: '👁',
 		powerSpawn: '⚡',
-		rampart: '#',
+		rampart: '▤',
 		road: '·',
 		spawn: '⭕',
 		storage: '⬓',
 		terminal: '⛋',
 		tower: '⚔',
+		wall: '▦',
 	};
 
 	const visual = new RoomVisual(this.roomName);
@@ -1286,15 +1287,23 @@ RoomPlanner.prototype.placeSpawnWalls = function () {
 	const positions = this.getLocations('spawn');
 
 	for (const pos of positions) {
-		for (let x = pos.x - 1; x <= pos.x + 1; x++) {
-			for (let y = pos.y - 1; y <= pos.y + 1; y++) {
-				if (this.isBuildableTile(x, y)) {
-					// @todo Check if any adjacent tile has a road, don't place a wall then.
-					this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall');
-					this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
-				}
+		utilities.handleMapArea(pos.x, pos.y, (x, y) => {
+			if (this.isBuildableTile(x, y)) {
+				// Check if any adjacent tile has a road, which means creeps can leave from there.
+				let hasRoad = false;
+				utilities.handleMapArea(x, y, (ax, ay) => {
+					if (this.isPlannedLocation(new RoomPosition(ax, ay, this.roomName), 'road')) {
+						hasRoad = true;
+						return false;
+					}
+				});
+				if (hasRoad) return;
+
+				// Place a wall to prevent spawning in this direction.
+				this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall');
+				this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
 			}
-		}
+		});
 	}
 };
 
