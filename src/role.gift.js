@@ -1,7 +1,5 @@
 'use strict';
 
-/* global */
-
 const Role = require('./role');
 
 const GiftRole = function () {
