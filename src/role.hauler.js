@@ -1,7 +1,9 @@
 'use strict';
 
-/* global Creep FIND_DROPPED_RESOURCES RESOURCE_ENERGY FIND_CREEPS
-ERR_NO_PATH OK ERR_NOT_IN_RANGE */
+/* global Creep FIND_DROPPED_RESOURCES RESOURCE_ENERGY FIND_CREEPS FIND_SOURCES
+ERR_NO_PATH OK ERR_NOT_IN_RANGE FIND_STRUCTURES STRUCTURE_CONTAINER
+FIND_MY_CONSTRUCTION_SITES STRUCTURE_ROAD LOOK_STRUCTURES MAX_CONSTRUCTION_SITES
+LOOK_CONSTRUCTION_SITES */
 
 const utilities = require('./utilities');
 
@@ -206,6 +208,178 @@ Creep.prototype.performHaulerDeliver = function () {
 	}
 	else if (result === ERR_NOT_IN_RANGE) {
 		creep.moveTo(target);
+	}
+};
+
+/**
+ * Makes the creep build a road under itself on its way home.
+ *
+ * @return {boolean}
+ *   Whether or not an action for building this road has been taken.
+ */
+Creep.prototype.performBuildRoad = function () {
+	const creep = this;
+	const workParts = creep.memory.body.work || 0;
+
+	if (workParts === 0) return false;
+
+	this.actionTaken = false;
+
+	if (creep.memory.cachedPath) {
+		if (this.buildRoadOnCachedPath()) return true;
+	}
+	else {
+		// Repair structures in passing.
+		const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+			filter: structure => (structure.structureType === STRUCTURE_ROAD || structure.structureType === STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - (workParts * 100),
+		});
+		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
+			Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+			creep.repair(needsRepair);
+			this.actionTaken = true;
+			// If structure is especially damaged, stay here to keep repairing.
+			if (needsRepair.hits < needsRepair.hitsMax - (workParts * 2 * 100)) {
+				return true;
+			}
+		}
+	}
+
+	// Check source container and repair that, too.
+	const sourcePosition = utilities.decodePosition(creep.memory.source);
+	const sources = creep.room.find(FIND_SOURCES, {
+		filter: source => source.pos.x === sourcePosition.x && source.pos.y === sourcePosition.y,
+	});
+
+	if (sources.length > 0) {
+		if (this.ensureRemoteHarvestContainerIsBuilt(sources[0])) return true;
+	}
+
+	const needsBuilding = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
+		filter: site => site.structureType === STRUCTURE_ROAD || site.structureType === STRUCTURE_CONTAINER,
+	});
+	if (needsBuilding && creep.pos.getRangeTo(needsBuilding) <= 3) {
+		if (this.actionTaken) {
+			// Try again next time.
+			return true;
+		}
+
+		creep.build(needsBuilding);
+
+		const buildCost = Math.min(creep.carry.energy, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
+		Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += buildCost;
+		this.actionTaken = true;
+
+		// Stay here if more building is needed.
+		if (needsBuilding.progressTotal - needsBuilding.progress > workParts * 10) {
+			return true;
+		}
+	}
+
+	return false;
+};
+
+/**
+ * Builds and repairs roads along the creep's cached path.
+ *
+ * @return {boolean}
+ *   Whether the creep should stay on this spot for further repairs.
+ */
+Creep.prototype.buildRoadOnCachedPath = function () {
+	const creep = this;
+	const workParts = creep.memory.body.work || 0;
+	const pos = creep.memory.cachedPath.position;
+	const path = this.getCachedPath();
+
+	for (let i = pos - 2; i <= pos + 2; i++) {
+		if (i < 0 || i >= path.length) continue;
+
+		const position = path[i];
+		if (position.roomName !== creep.pos.roomName) continue;
+
+		// Check for roads around the current path position to repair.
+		let tileHasRoad = false;
+		const structures = position.lookFor(LOOK_STRUCTURES);
+		for (const structure of structures) {
+			if (structure.structureType !== STRUCTURE_ROAD) continue;
+
+			tileHasRoad = true;
+
+			if (structure.hits < structure.hitsMax - (workParts * 100)) {
+				// Many repairs to do, so stay here for next tick.
+				if (this.actionTaken) return true;
+
+				Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+				creep.repair(structure);
+				this.actionTaken = true;
+				// If structure is especially damaged, stay here to keep repairing.
+				if (structure.hits < structure.hitsMax - (workParts * 2 * 100)) {
+					return true;
+				}
+
+				break;
+			}
+		}
+
+		if (!tileHasRoad && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.7) {
+			const sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
+			const numSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
+			if (sites.length === 0 && numSites < 5) {
+				if (position.createConstructionSite(STRUCTURE_ROAD) === OK) {
+					return true;
+				}
+			}
+		}
+	}
+};
+
+/**
+ * Repairs or constructs a container near the source we're mining.
+ *
+ * @param {Source} source
+ *   The source we're checking.
+ *
+ * @return {boolean}
+ *   Whether the creep should stay on this spot for further repairs.
+ */
+Creep.prototype.ensureRemoteHarvestContainerIsBuilt = function (source) {
+	const creep = this;
+	const workParts = creep.memory.body.work || 0;
+
+	// Check if container is built at target location.
+	const container = source.getNearbyContainer();
+	if (container) {
+		if (this.pos.getRangeTo(container) <= 3 && container.hits < container.hitsMax - (workParts * 100)) {
+			// Many repairs to do, so stay here for next tick.
+			if (this.actionTaken) return true;
+
+			Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+			creep.repair(container);
+			this.actionTaken = true;
+			// If structure is especially damaged, stay here to keep repairing.
+			if (container.hits < container.hitsMax - (workParts * 2 * 100)) {
+				return true;
+			}
+		}
+	}
+	else {
+		// Check if there is a container or construction site nearby.
+		const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
+		});
+		const sites = source.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3, {
+			filter: site => site.structureType === STRUCTURE_CONTAINER,
+		});
+		if (structures.length === 0 && sites.length === 0) {
+			// Place a container construction site for this source.
+			const targetPosition = utilities.decodePosition(this.memory.storage);
+			const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[this.memory.source];
+
+			if (harvestMemory.cachedPath) {
+				const path = utilities.deserializePositionPath(harvestMemory.cachedPath.path);
+				const containerPosition = path[path.length - 2];
+				containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
+			}
+		}
 	}
 };
 
