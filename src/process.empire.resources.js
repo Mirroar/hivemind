@@ -121,7 +121,7 @@ ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
  *   Resource states, keyed by room name.
  */
 ResourcesProcess.prototype.getResourceStates = function () {
-	const rooms = [];
+	const rooms = {};
 
 	// Collect room resource states.
 	for (const room of _.values(Game.rooms)) {
