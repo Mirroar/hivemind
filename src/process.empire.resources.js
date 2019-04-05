@@ -24,25 +24,29 @@ ResourcesProcess.prototype = Object.create(Process.prototype);
  * Transports resources between owned rooms if needed.
  */
 ResourcesProcess.prototype.run = function () {
-	const routes = this.getAvailableTransportRoutes();
-	const best = utilities.getBestOption(routes);
+	let routes = this.getAvailableTransportRoutes();
+	let best = utilities.getBestOption(routes);
 
-	if (!best) return;
+	while (best) {
+		const room = Game.rooms[best.source];
+		const terminal = room.terminal;
+		if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+			const result = terminal.send(best.resourceType, 5000, best.target, 'Resource equalizing');
+			hivemind.log('trade').info('sending', best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+		}
+		else if (room.isEvacuating() && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
+			const amount = terminal.store[best.resourceType];
+			const result = terminal.send(best.resourceType, amount, best.target, 'Resource equalizing');
+			hivemind.log('trade').info('sending', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+		}
+		else {
+			hivemind.log('trade').info('Preparing 5000', best.resourceType, 'for transport from', best.source, 'to', best.target);
+			room.prepareForTrading(best.resourceType);
+		}
 
-	const room = Game.rooms[best.source];
-	const terminal = room.terminal;
-	if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
-		const result = terminal.send(best.resourceType, 5000, best.target, 'Resource equalizing');
-		hivemind.log('trade').info('sending', best.resourceType, 'from', best.source, 'to', best.target, ':', result);
-	}
-	else if (room.isEvacuating() && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
-		const amount = terminal.store[best.resourceType];
-		const result = terminal.send(best.resourceType, amount, best.target, 'Resource equalizing');
-		hivemind.log('trade').info('sending', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
-	}
-	else {
-		hivemind.log('trade').info('Preparing 5000', best.resourceType, 'for transport from', best.source, 'to', best.target);
-		room.prepareForTrading(best.resourceType);
+		// Use multiple routes as long as no room is involved multiple times.
+		routes = _.filter(routes, option => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
+		best = utilities.getBestOption(routes);
 	}
 };
 
