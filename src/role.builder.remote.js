@@ -59,7 +59,7 @@ const roleRemoteBuilder = {
 		const creep = this.creep;
 
 		// Try and prevent controller downgrades.
-		if ((creep.room.controller && creep.room.controller.level < 2) || (creep.room.controller.my && creep.room.controller.ticksToDowngrade < 500)) {
+		if (creep.room.controller && creep.room.controller.my && (creep.room.controller.level < 2 || creep.room.controller.ticksToDowngrade < 500)) {
 			creep.memory.upgrading = true;
 			return;
 		}
@@ -157,6 +157,7 @@ const roleRemoteBuilder = {
 	performControllerUpgrade() {
 		if (this.creep.room.controller.level === 0) {
 			this.creep.memory.upgrading = false;
+			return;
 		}
 
 		if (this.creep.pos.getRangeTo(this.creep.room.controller) > 3) {
