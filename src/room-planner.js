@@ -135,9 +135,10 @@ RoomPlanner.prototype.runLogic = function () {
 RoomPlanner.prototype.cleanRoom = function () {
 	// Remove all roads not part of current room plan.
 	const roomRoads = this.structuresByType[STRUCTURE_ROAD] || [];
+	const locations = this.memory.locations || {};
 	for (let i = 0; i < roomRoads.length; i++) {
 		const road = roomRoads[i];
-		if (!this.memory.locations.road || !this.memory.locations.road[utilities.encodePosition(road.pos)]) {
+		if (!locations.road || !locations.road[utilities.encodePosition(road.pos)]) {
 			road.destroy();
 		}
 	}
@@ -146,10 +147,10 @@ RoomPlanner.prototype.cleanRoom = function () {
 	const roomWalls = this.structuresByType[STRUCTURE_WALL] || [];
 	for (let i = 0; i < roomWalls.length; i++) {
 		const wall = roomWalls[i];
-		if (this.memory.locations.road[utilities.encodePosition(wall.pos)] ||
-			this.memory.locations.spawn[utilities.encodePosition(wall.pos)] ||
-			this.memory.locations.storage[utilities.encodePosition(wall.pos)] ||
-			this.memory.locations.extension[utilities.encodePosition(wall.pos)]) {
+		if (locations.road[utilities.encodePosition(wall.pos)] ||
+			locations.spawn[utilities.encodePosition(wall.pos)] ||
+			locations.storage[utilities.encodePosition(wall.pos)] ||
+			locations.extension[utilities.encodePosition(wall.pos)]) {
 			wall.destroy();
 		}
 	}
