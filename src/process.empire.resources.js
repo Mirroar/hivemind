@@ -90,7 +90,10 @@ ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
 				if (!roomState.isEvacuating && !shouldReceiveResources) return;
 
 				// Make sure target has space left.
-				if (_.sum(room2.terminal.store) > room2.terminal.storeCapacity - 5000) return;
+				if (room2.terminal.storeCapacity - _.sum(room2.terminal.store) < 5000) return;
+
+				// Make sure source room has enough energy to send resources.
+				if (room.terminal.store.energy < Game.market.calcTransactionCost(5000, roomName, roomName2)) return;
 
 				const option = {
 					priority: 3,
