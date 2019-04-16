@@ -11,7 +11,6 @@ require('./role.hauler.exploit');
 require('./role.helper');
 require('./role.transporter');
 /* eslint-enable import/no-unassigned-import */
-const roleRemoteBuilder = require('./role.builder.remote');
 
 const spawnManager = require('./manager.spawn');
 const utilities = require('./utilities');
@@ -27,12 +26,6 @@ const utilities = require('./utilities');
 
 // Information about how throttling works for each creep role.
 const creepThrottleLevels = {
-	// Military creeps are always fully active!
-	'builder.remote': {
-		max: 0,
-		min: -1,
-	},
-
 	// Some essential creeps only start throttling when things get critical.
 	'harvester.exploit': {
 		max: 'normal',
@@ -169,9 +162,6 @@ Creep.prototype.runLogicByRole = function () {
 
 		if (creepLogicFunctions[creep.memory.role]) {
 			creep[creepLogicFunctions[creep.memory.role]]();
-		}
-		else if (creep.memory.role === 'builder.remote') {
-			roleRemoteBuilder.run(creep);
 		}
 	}
 	catch (error) {

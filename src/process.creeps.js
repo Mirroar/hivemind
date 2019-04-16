@@ -15,6 +15,7 @@ const GiftRole = require('./role.gift');
 const HarvesterRole = require('./role.harvester');
 const PowerHarvesterRole = require('./role.harvester.power');
 const PowerHaulerRole = require('./role.hauler.power');
+const RemoteBuilderRole = require('./role.builder.remote');
 const RemoteHarvesterRole = require('./role.harvester.remote');
 const ScoutRole = require('./role.scout');
 const UpgraderRole = require('./role.upgrader');
@@ -46,6 +47,7 @@ const CreepsProcess = function (params, data) {
 	this.creepManager.registerCreepRole('harvester.minerals', new HarvesterRole());
 	this.creepManager.registerCreepRole('harvester.power', new PowerHarvesterRole());
 	this.creepManager.registerCreepRole('hauler.power', new PowerHaulerRole());
+	this.creepManager.registerCreepRole('builder.remote', new RemoteBuilderRole());
 	this.creepManager.registerCreepRole('harvester.remote', new RemoteHarvesterRole());
 	this.creepManager.registerCreepRole('scout', new ScoutRole());
 	this.creepManager.registerCreepRole('upgrader', new UpgraderRole());
