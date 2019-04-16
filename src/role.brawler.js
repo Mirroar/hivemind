@@ -1,20 +1,105 @@
 'use strict';
 
-/* global hivemind Creep StructureController FIND_HOSTILE_CREEPS
+/* global hivemind StructureController FIND_HOSTILE_CREEPS
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL */
 
 const utilities = require('./utilities');
+const Role = require('./role');
+
+const BrawlerRole = function () {
+	Role.call(this);
+
+	// Military creeps are always fully active!
+	this.stopAt = 0;
+	this.throttleAt = 0;
+};
+
+BrawlerRole.prototype = Object.create(Role.prototype);
+
+/**
+ * Makes a creep behave like a brawler.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+BrawlerRole.prototype.run = function (creep) {
+	if (!creep.memory.initialized) {
+		this.initBrawlerState(creep);
+	}
+
+	// Target is recalculated every turn for best results.
+	this.calculateMilitaryTarget(creep);
+
+	this.performMilitaryMove(creep);
+
+	if (!this.performMilitaryAttack(creep)) {
+		this.performMilitaryHeal(creep);
+	}
+};
+
+/**
+ * Initializes memory of military creeps.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+BrawlerRole.prototype.initBrawlerState = function (creep) {
+	creep.memory.initialized = true;
+
+	if (creep.memory.squadUnitType === 'builder') {
+		creep.memory.fillWithEnergy = true;
+	}
+
+	if (creep.memory.pathTarget) {
+		// Reuse remote harvesting path.
+		const harvestMemory = creep.room.memory.remoteHarvesting;
+		const pathTarget = creep.memory.pathTarget;
+		if (harvestMemory && harvestMemory[pathTarget] && harvestMemory[pathTarget].cachedPath) {
+			creep.setCachedPath(harvestMemory[pathTarget].cachedPath.path);
+		}
+	}
+};
+
+/**
+ * Sets a good military target for this creep.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+BrawlerRole.prototype.calculateMilitaryTarget = function (creep) {
+	const best = utilities.getBestOption(this.getAvailableMilitaryTargets(creep));
+
+	if (!best) {
+		delete creep.memory.order;
+		return;
+	}
+
+	let action = 'heal';
+	if (best.type === 'hostilecreep' || best.type === 'hostilestructure') {
+		action = 'attack';
+	}
+	else if (best.type === 'controller') {
+		action = 'claim';
+	}
+
+	creep.memory.order = {
+		type: action,
+		target: best.object.id,
+	};
+};
 
 /**
  * Get a priority list of military targets for this creep.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ *
  * @return {Array}
  *   An array of target options for this creep.
  */
-Creep.prototype.getAvailableMilitaryTargets = function () {
-	const creep = this;
+BrawlerRole.prototype.getAvailableMilitaryTargets = function (creep) {
 	const options = [];
 
 	if (!creep.memory.target) return options;
@@ -25,16 +110,17 @@ Creep.prototype.getAvailableMilitaryTargets = function () {
 		return options;
 	}
 
+	// @todo Defend ourselves even when not in target room.
 	if (creep.pos.roomName !== targetPosition.roomName) return options;
 
 	// Find enemies to attack.
 	if (creep.memory.body.attack) {
-		this.addMilitaryAttackOptions(options);
+		this.addMilitaryAttackOptions(creep, options);
 	}
 
 	// Find friendlies to heal.
 	if (creep.memory.body.heal) {
-		this.addMilitaryHealOptions(options);
+		this.addMilitaryHealOptions(creep, options);
 	}
 
 	// Attack / Reserve controllers.
@@ -66,21 +152,23 @@ Creep.prototype.getAvailableMilitaryTargets = function () {
 /**
  * Adds attack options to military targets for this creep.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  * @param {Array} options
  *   An array of target options for this creep.
  */
-Creep.prototype.addMilitaryAttackOptions = function (options) {
-	const enemies = this.room.find(FIND_HOSTILE_CREEPS);
-	const targetPosition = utilities.decodePosition(this.memory.target);
+BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
+	const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+	const targetPosition = utilities.decodePosition(creep.memory.target);
 
 	if (enemies && enemies.length > 0) {
 		for (const enemy of enemies) {
 			// Check if enemy is harmless, and ignore it.
-			if (!enemy.isDangerous() && (!this.room.controller || !this.room.controller.my)) continue;
+			if (!enemy.isDangerous() && (!creep.room.controller || !creep.room.controller.my)) continue;
 
 			const option = {
 				priority: 5,
-				weight: 1 - (this.pos.getRangeTo(enemy) / 50),
+				weight: 1 - (creep.pos.getRangeTo(enemy) / 50),
 				type: 'hostilecreep',
 				object: enemy,
 			};
@@ -92,10 +180,10 @@ Creep.prototype.addMilitaryAttackOptions = function (options) {
 	}
 
 	// Find structures to attack.
-	let structures = this.room.find(FIND_HOSTILE_STRUCTURES, {
+	let structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
 		filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.hits,
 	});
-	if (!this.room.controller || !this.room.controller.owner || hivemind.relations.isAlly(this.room.controller.owner.username)) structures = [];
+	if (!creep.room.controller || !creep.room.controller.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) structures = [];
 
 	// Attack structures under target flag (even if non-hostile, like walls).
 	const directStructures = targetPosition.lookFor(LOOK_STRUCTURES);
@@ -124,8 +212,8 @@ Creep.prototype.addMilitaryAttackOptions = function (options) {
 	}
 
 	// Find walls in front of controller.
-	if (this.room.controller && this.room.controller.owner && !this.room.controller.my) {
-		const structures = this.room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
+	if (creep.room.controller && creep.room.controller.owner && !creep.room.controller.my) {
+		const structures = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 1, {
 			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER,
 		});
 
@@ -145,16 +233,18 @@ Creep.prototype.addMilitaryAttackOptions = function (options) {
 /**
  * Adds heal options to military targets for this creep.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  * @param {Array} options
  *   An array of target options for this creep.
  */
-Creep.prototype.addMilitaryHealOptions = function (options) {
-	let damaged = this.room.find(FIND_MY_CREEPS, {
-		filter: friendly => ((friendly.id !== this.id) && (friendly.hits < friendly.hitsMax)),
+BrawlerRole.prototype.addMilitaryHealOptions = function (creep, options) {
+	let damaged = creep.room.find(FIND_MY_CREEPS, {
+		filter: friendly => ((friendly.id !== creep.id) && (friendly.hits < friendly.hitsMax)),
 	});
 	if (_.size(damaged) === 0) {
-		damaged = this.room.find(FIND_HOSTILE_CREEPS, {
-			filter: friendly => ((friendly.id !== this.id) && (friendly.hits < friendly.hitsMax) && hivemind.relations.isAlly(friendly.owner.username)),
+		damaged = creep.room.find(FIND_HOSTILE_CREEPS, {
+			filter: friendly => ((friendly.id !== creep.id) && (friendly.hits < friendly.hitsMax) && hivemind.relations.isAlly(friendly.owner.username)),
 		});
 	}
 
@@ -173,98 +263,58 @@ Creep.prototype.addMilitaryHealOptions = function (options) {
 };
 
 /**
- * Sets a good military target for this creep.
- */
-Creep.prototype.calculateMilitaryTarget = function () {
-	const creep = this;
-	const best = utilities.getBestOption(creep.getAvailableMilitaryTargets());
-
-	if (best) {
-		let action = 'heal';
-		if (best.type === 'hostilecreep' || best.type === 'hostilestructure') {
-			action = 'attack';
-		}
-		else if (best.type === 'controller') {
-			action = 'claim';
-		}
-
-		creep.memory.order = {
-			type: action,
-			target: best.object.id,
-		};
-	}
-	else {
-		delete creep.memory.order;
-	}
-};
-
-/**
- * Potentially modifies a creep when target room has been reached.
- */
-Creep.prototype.militaryRoomReached = function () {
-	if (this.memory.squadUnitType === 'builder') {
-		// Rebrand as remote builder to work in this room from now on.
-		this.memory.role = 'builder.remote';
-		this.memory.target = utilities.encodePosition(this.pos);
-		this.memory.singleRoom = this.pos.roomName;
-	}
-};
-
-/**
  * Makes a creep move towards its designated target.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performMilitaryMove = function () {
-	if (this.memory.fillWithEnergy) {
-		if (_.sum(this.carry) < this.carryCapacity) {
-			this.performGetEnergy();
+BrawlerRole.prototype.performMilitaryMove = function (creep) {
+	if (creep.memory.fillWithEnergy) {
+		if (_.sum(creep.carry) < creep.carryCapacity) {
+			creep.performGetEnergy();
 			return;
 		}
 
-		delete this.memory.fillWithEnergy;
+		delete creep.memory.fillWithEnergy;
 	}
 
-	if (this.memory.pathName) {
-		this.followFlagPath(this.memory.pathName);
+	if (creep.memory.exploitName) {
+		this.performExploitMove(creep);
 		return;
 	}
 
-	if (this.memory.exploitName) {
-		this.performExploitMove();
-		return;
+	if (creep.memory.squadName) {
+		this.performSquadMove(creep);
 	}
 
-	if (this.memory.squadName) {
-		this.performSquadMove();
-	}
-
-	if (this.memory.target) {
-		const targetPosition = utilities.decodePosition(this.memory.target);
-		if (this.pos.roomName !== targetPosition.roomName) {
-			if (!this.moveToRoom(targetPosition.roomName)) {
-				hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPosition.roomName);
+	if (creep.memory.target) {
+		const targetPosition = utilities.decodePosition(creep.memory.target);
+		if (creep.pos.roomName !== targetPosition.roomName) {
+			if (!creep.moveToRoom(targetPosition.roomName)) {
+				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
 				// @todo This is cross-room movement and should therefore only calculate a path once.
-				this.moveToRange(targetPosition, 3);
+				creep.moveToRange(targetPosition, 3);
 			}
 
 			return;
 		}
 
-		this.moveTo(targetPosition);
+		creep.moveTo(targetPosition);
 	}
 
-	if (this.memory.order) {
-		const target = Game.getObjectById(this.memory.order.target);
+	if (creep.memory.order) {
+		const target = Game.getObjectById(creep.memory.order.target);
 
 		if (target) {
-			if (this.memory.body.attack) {
-				const ignore = (!this.room.controller || !this.room.controller.owner || (!this.room.controller.my && !hivemind.relations.isAlly(this.room.controller.owner.username)));
-				this.moveTo(target, {
+			if (creep.memory.body.attack) {
+				const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
+				creep.moveTo(target, {
 					reusePath: 5,
 					ignoreDestructibleStructures: ignore,
 				});
 			}
 			else {
-				this.goTo(target, {
+				creep.goTo(target, {
 					range: 1,
 					maxRooms: 1,
 				});
@@ -274,129 +324,111 @@ Creep.prototype.performMilitaryMove = function () {
 		return;
 	}
 
-	if (this.memory.squadName) {
-		const attackFlags = _.filter(Game.flags, flag => flag.name === 'AttackSquad:' + this.memory.squadName);
+	if (creep.memory.squadName) {
+		const attackFlags = _.filter(Game.flags, flag => flag.name === 'AttackSquad:' + creep.memory.squadName);
 		if (attackFlags.length > 0) {
-			this.moveTo(attackFlags[0]);
+			creep.moveTo(attackFlags[0]);
 
-			if (this.pos.roomName === attackFlags[0].pos.roomName) {
-				this.militaryRoomReached();
+			if (creep.pos.roomName === attackFlags[0].pos.roomName) {
+				this.militaryRoomReached(creep);
 			}
 			else {
-				this.memory.target = utilities.encodePosition(attackFlags[0].pos);
+				creep.memory.target = utilities.encodePosition(attackFlags[0].pos);
 			}
 
 			return;
 		}
 	}
 
-	this.moveTo(25, 25, {
+	creep.moveTo(25, 25, {
 		reusePath: 50,
 	});
 };
 
 /**
- * Follows a set of flags to a creep's target.
- */
-Creep.prototype.followFlagPath = function () {
-	// @todo Decide if squad should be fully spawned / have an order or attack flag before moving along path.
-	const flagName = 'Path:' + this.memory.pathName + ':' + this.memory.pathStep;
-	const flag = Game.flags[flagName];
-
-	if (flag) {
-		this.moveTo(flag);
-		if (this.pos.getRangeTo(flag) < 5) {
-			console.log(this.name, 'reached waypoint', this.memory.pathStep, 'of path', this.memory.pathName, 'and has', this.ticksToLive, 'ticks left to live.');
-
-			this.memory.pathStep++;
-		}
-
-		return;
-	}
-
-	console.log(this.name, 'reached end of path', this.memory.pathName, 'at step', this.memory.pathStep, 'and has', this.ticksToLive, 'ticks left to live.');
-
-	delete this.memory.pathName;
-	delete this.memory.pathStep;
-
-	this.militaryRoomReached();
-};
-
-/**
  * Performs creep movement as part of an exploit operation.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ *
+ * @todo This should probably be done by having the exploit choose targets
+ * and then using normal military creep movement to get there.
  */
-Creep.prototype.performExploitMove = function () {
-	const exploit = Game.exploits[this.memory.exploitName];
+BrawlerRole.prototype.performExploitMove = function (creep) {
+	const exploit = Game.exploits[creep.memory.exploitName];
 	if (!exploit) return;
 
 	// If an enemy is close by, move to attack it.
-	const enemies = this.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
+	const enemies = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
 		filter: enemy => enemy.isDangerous(),
 	});
 	if (enemies.length > 0) {
-		this.memory.exploitTarget = enemies[0].id;
+		creep.memory.exploitTarget = enemies[0].id;
 	}
 
-	if (this.memory.exploitTarget) {
-		const target = Game.getObjectById(this.memory.exploitTarget);
+	if (creep.memory.exploitTarget) {
+		const target = Game.getObjectById(creep.memory.exploitTarget);
 
 		if (target) {
-			this.moveTo(target);
+			creep.moveTo(target);
 			return;
 		}
 
-		delete this.memory.exploitTarget;
+		delete creep.memory.exploitTarget;
 	}
 
 	// Clear cached path if we've gotton close to goal.
-	if (this.memory.patrolPoint && this.hasCachedPath()) {
-		const lair = Game.getObjectById(this.memory.patrolPoint);
-		if (this.pos.getRangeTo(lair) <= 7) {
-			this.clearCachedPath();
+	if (creep.memory.patrolPoint && creep.hasCachedPath()) {
+		const lair = Game.getObjectById(creep.memory.patrolPoint);
+		if (creep.pos.getRangeTo(lair) <= 7) {
+			creep.clearCachedPath();
 		}
 	}
 
 	// Follow cached path when requested.
-	if (this.hasCachedPath()) {
-		this.followCachedPath();
-		if (this.hasArrived()) {
-			this.clearCachedPath();
+	if (creep.hasCachedPath()) {
+		creep.followCachedPath();
+		if (creep.hasArrived()) {
+			creep.clearCachedPath();
 		}
 		else {
 			return;
 		}
 	}
 
-	if (this.pos.roomName !== exploit.roomName && !this.hasCachedPath() && exploit.memory.pathToRoom) {
+	if (creep.pos.roomName !== exploit.roomName && !creep.hasCachedPath() && exploit.memory.pathToRoom) {
 		// Follow cached path to target room.
-		this.setCachedPath(exploit.memory.pathToRoom);
+		creep.setCachedPath(exploit.memory.pathToRoom);
 		return;
 	}
 
 	// In-room movement.
-	this.performExploitPatrol();
+	this.performExploitPatrol(creep);
 };
 
 /**
  * Makes exploit creeps patrol along source keeper lairs.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performExploitPatrol = function () {
-	const exploit = Game.exploits[this.memory.exploitName];
+BrawlerRole.prototype.performExploitPatrol = function (creep) {
+	const exploit = Game.exploits[creep.memory.exploitName];
 
 	// Start at closest patrol point to entrance
-	if (!this.memory.patrolPoint) {
+	if (!creep.memory.patrolPoint) {
 		if (exploit.memory.closestLairToEntrance) {
-			this.memory.patrolPoint = exploit.memory.closestLairToEntrance;
+			creep.memory.patrolPoint = exploit.memory.closestLairToEntrance;
 		}
 		else if (exploit.memory.lairs) {
-			this.memory.patrolPoint = _.sample(_.keys(exploit.memory.lairs));
+			creep.memory.patrolPoint = _.sample(_.keys(exploit.memory.lairs));
 		}
 	}
 
-	if (this.memory.patrolPoint) return;
+	if (creep.memory.patrolPoint) return;
 
-	this.memory.target = this.memory.patrolPoint;
-	const lair = Game.getObjectById(this.memory.patrolPoint);
+	creep.memory.target = creep.memory.patrolPoint;
+	const lair = Game.getObjectById(creep.memory.patrolPoint);
 	if (!lair) return;
 
 	// Seems we have arrived at a patrol Point, and no enemies are immediately nearby.
@@ -404,7 +436,7 @@ Creep.prototype.performExploitPatrol = function () {
 	let best = null;
 	let bestTime = null;
 
-	const id = this.memory.patrolPoint;
+	const id = creep.memory.patrolPoint;
 	for (const id2 of _.keys(exploit.memory.lairs)) {
 		const otherLair = Game.getObjectById(id2);
 		if (!otherLair) continue;
@@ -428,61 +460,64 @@ Creep.prototype.performExploitPatrol = function () {
 
 	if (!best) return;
 
-	if (best === this.memory.patrolPoint) {
+	if (best === creep.memory.patrolPoint) {
 		// We're at the correct control point. Move to intercept potentially spawning source keepers.
 		if (exploit.memory.lairs[best].sourcePath) {
-			this.moveTo(utilities.decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
+			creep.moveTo(utilities.decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
 		}
 		else {
-			this.moveToRange(lair, 1);
+			creep.moveToRange(lair, 1);
 		}
 	}
 	else {
-		this.memory.patrolPoint = best;
+		creep.memory.patrolPoint = best;
 		if (exploit.memory.lairs[id].paths[best].path) {
-			this.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
+			creep.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
 		}
 		else {
-			this.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
+			creep.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
 		}
 	}
 };
 
 /**
  * Makes a creep move as part of a squad.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
-Creep.prototype.performSquadMove = function () {
+BrawlerRole.prototype.performSquadMove = function (creep) {
 	// Check if there are orders and set a target accordingly.
-	const squad = Game.squads[this.memory.squadName];
+	const squad = Game.squads[creep.memory.squadName];
 	if (!squad) return; // @todo Go recycle.
 
 	// Movement is dictated by squad orders.
 	const orders = squad.getOrders();
 	if (orders.length > 0) {
-		this.memory.target = orders[0].target;
+		creep.memory.target = orders[0].target;
 	}
 	else {
-		delete this.memory.target;
+		delete creep.memory.target;
 	}
 
-	if (this.memory.target) return;
+	if (creep.memory.target) return;
 
 	// If no order has been given, wait by spawn and renew.
-	const spawnFlags = _.filter(Game.flags, flag => flag.name === 'SpawnSquad:' + this.memory.squadName);
+	const spawnFlags = _.filter(Game.flags, flag => flag.name === 'SpawnSquad:' + creep.memory.squadName);
 	if (spawnFlags.length === 0) return;
 
 	const flag = spawnFlags[0];
-	if (this.pos.roomName !== flag.pos.roomName) return;
+	if (creep.pos.roomName !== flag.pos.roomName) return;
 
 	// Refresh creep if it's getting low, so that it has high lifetime when a mission finally starts.
-	if (this.ticksToLive < CREEP_LIFE_TIME * 0.66) {
-		const spawn = this.pos.findClosestByRange(FIND_STRUCTURES, {
+	if (creep.ticksToLive < CREEP_LIFE_TIME * 0.66) {
+		const spawn = creep.pos.findClosestByRange(FIND_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_SPAWN,
 		});
 
 		if (spawn) {
-			if (spawn.renewCreep(this) !== OK) {
-				this.moveTo(spawn);
+			if (spawn.renewCreep(creep) !== OK) {
+				creep.moveTo(spawn);
 			}
 
 			return;
@@ -490,22 +525,38 @@ Creep.prototype.performSquadMove = function () {
 	}
 
 	// If there's nothing to do, move back to spawn flag.
-	this.moveTo(flag);
+	creep.moveTo(flag);
+};
+
+/**
+ * Potentially modifies a creep when target room has been reached.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+BrawlerRole.prototype.militaryRoomReached = function (creep) {
+	if (creep.memory.squadUnitType === 'builder') {
+		// Rebrand as remote builder to work in this room from now on.
+		creep.memory.role = 'builder.remote';
+		creep.memory.target = utilities.encodePosition(creep.pos);
+		creep.memory.singleRoom = creep.pos.roomName;
+	}
 };
 
 /**
  * Makes a creep try to attack its designated target or nearby enemies.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  * @return {boolean}
  *   True if an attack was made.
  */
-Creep.prototype.performMilitaryAttack = function () {
-	const creep = this;
+BrawlerRole.prototype.performMilitaryAttack = function (creep) {
 	if (!creep.memory.order) return;
 
 	const target = Game.getObjectById(creep.memory.order.target);
 
-	if (target && !target.my && this.attackMilitaryTarget(target)) return true;
+	if (target && !target.my && this.attackMilitaryTarget(creep, target)) return true;
 
 	// See if enemies are nearby, attack one of those.
 	const hostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
@@ -544,32 +595,34 @@ Creep.prototype.performMilitaryAttack = function () {
 /**
  * Makes a creep try to attack its designated target.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  * @param {RoomObject} target
  *   Target to try and attack.
  *
  * @return {boolean}
  *   True if an attack was made.
  */
-Creep.prototype.attackMilitaryTarget = function (target) {
+BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 	if (target instanceof StructureController) {
 		if (target.owner) {
-			if (this.attackController(target) === OK) {
+			if (creep.attackController(target) === OK) {
 				return true;
 			}
 		}
 
 		// If attack flag is directly on controller, claim it, otherwise just reserve.
-		if (this.memory.squadName && Game.flags['AttackSquad:' + this.memory.squadName] && Game.flags['AttackSquad:' + this.memory.squadName].pos.getRangeTo(target) === 0) {
-			if (this.claimController(target) === OK) {
+		if (creep.memory.squadName && Game.flags['AttackSquad:' + creep.memory.squadName] && Game.flags['AttackSquad:' + creep.memory.squadName].pos.getRangeTo(target) === 0) {
+			if (creep.claimController(target) === OK) {
 				return true;
 			}
 		}
-		else if (this.reserveController(target) === OK) {
+		else if (creep.reserveController(target) === OK) {
 			return true;
 		}
 	}
 	else if (!target.owner || !hivemind.relations.isAlly(target.owner.username)) {
-		if (this.attack(target) === OK) {
+		if (creep.attack(target) === OK) {
 			return true;
 		}
 	}
@@ -578,11 +631,12 @@ Creep.prototype.attackMilitaryTarget = function (target) {
 /**
  * Makes a creep heal itself or nearby injured creeps.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  * @return {boolean}
  *   True if an action was ordered.
  */
-Creep.prototype.performMilitaryHeal = function () {
-	const creep = this;
+BrawlerRole.prototype.performMilitaryHeal = function (creep) {
 	if (creep.memory.order) {
 		const target = Game.getObjectById(creep.memory.order.target);
 
@@ -623,45 +677,4 @@ Creep.prototype.performMilitaryHeal = function () {
 	return false;
 };
 
-/**
- * Initializes memory of military creeps.
- */
-Creep.prototype.initBrawlerState = function () {
-	this.memory.initialized = true;
-
-	if (this.memory.squadName) {
-		const squad = Game.squads[this.memory.squadName];
-		if (squad && squad.memory.pathName) {
-			this.memory.pathName = squad.memory.pathName;
-			this.memory.pathStep = 1;
-		}
-	}
-
-	if (this.memory.squadUnitType === 'builder') {
-		this.memory.fillWithEnergy = true;
-	}
-
-	if (this.memory.pathTarget) {
-		if (this.room.memory.remoteHarvesting && this.room.memory.remoteHarvesting[this.memory.pathTarget] && this.room.memory.remoteHarvesting[this.memory.pathTarget].cachedPath) {
-			this.setCachedPath(this.room.memory.remoteHarvesting[this.memory.pathTarget].cachedPath.path);
-		}
-	}
-};
-
-/**
- * Makes a creep behave like a brawler.
- */
-Creep.prototype.runBrawlerLogic = function () {
-	if (!this.memory.initialized) {
-		this.initBrawlerState();
-	}
-
-	// Target is recalculated every turn for best results.
-	this.calculateMilitaryTarget();
-
-	this.performMilitaryMove();
-
-	if (!this.performMilitaryAttack()) {
-		this.performMilitaryHeal();
-	}
-};
+module.exports = BrawlerRole;

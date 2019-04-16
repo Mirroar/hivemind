@@ -5,7 +5,6 @@
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
 require('./manager.source');
-require('./role.brawler');
 require('./role.builder.exploit');
 require('./role.harvester.exploit');
 require('./role.hauler');
@@ -30,10 +29,6 @@ const utilities = require('./utilities');
 // Information about how throttling works for each creep role.
 const creepThrottleLevels = {
 	// Military creeps are always fully active!
-	brawler: {
-		max: 0,
-		min: -1,
-	},
 	'builder.remote': {
 		max: 0,
 		min: -1,
@@ -55,7 +50,6 @@ const creepLogicFunctions = {
 	'harvester.exploit': 'runExploitHarvesterLogic',
 	hauler: 'runHaulerLogic',
 	'hauler.exploit': 'runExploitHaulerLogic',
-	brawler: 'runBrawlerLogic',
 	'builder.exploit': 'runExploitBuilderLogic',
 	helper: 'runHelperLogic',
 };
