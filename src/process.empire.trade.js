@@ -260,7 +260,10 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 	// Make sure we have enough credits to actually buy this.
 	if (Game.market.credits < 10000 * offerPrice) return;
 
-	Game.market.createOrder(ORDER_BUY, resourceType, offerPrice, 10000, roomName);
+	const result = Game.market.createOrder(ORDER_BUY, resourceType, offerPrice, 10000, roomName);
+	if (result !== OK) {
+		hivemind.log('trade', roomName).error('Could not create buy order:', result);
+	}
 };
 
 /**
