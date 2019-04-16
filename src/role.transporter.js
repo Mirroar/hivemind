@@ -1372,6 +1372,7 @@ Creep.prototype.ensureValidDeliveryTargetObject = function (target, resourceType
 
 	if (target.store && _.sum(target.store) < target.storeCapacity) return true;
 	if (resourceType === RESOURCE_ENERGY && target.energyCapacity && target.energy < target.energyCapacity) return true;
+	if (resourceType === RESOURCE_GHODIUM && target.ghodiumCapacity && target.ghodium < target.ghodiumCapacity) return true;
 	if (resourceType === RESOURCE_POWER && target.powerCapacity && target.power < target.powerCapacity) return true;
 	if (target.mineralCapacity && ((target.mineralType || resourceType) === resourceType) && target.mineralAmount < target.mineralCapacity) return true;
 };
