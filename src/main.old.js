@@ -5,7 +5,6 @@
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
 require('./manager.source');
-require('./role.builder.exploit');
 require('./role.harvester.exploit');
 require('./role.hauler');
 require('./role.hauler.exploit');
@@ -50,7 +49,6 @@ const creepLogicFunctions = {
 	'harvester.exploit': 'runExploitHarvesterLogic',
 	hauler: 'runHaulerLogic',
 	'hauler.exploit': 'runExploitHaulerLogic',
-	'builder.exploit': 'runExploitBuilderLogic',
 	helper: 'runHelperLogic',
 };
 

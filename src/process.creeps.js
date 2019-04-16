@@ -10,6 +10,7 @@ const BrawlerRole = require('./role.brawler');
 const BuilderRole = require('./role.builder');
 const ClaimerRole = require('./role.claimer');
 const DismantlerRole = require('./role.dismantler');
+const ExploitBuilderRole = require('./role.builder.exploit');
 const GiftRole = require('./role.gift');
 const HarvesterRole = require('./role.harvester');
 const PowerHarvesterRole = require('./role.harvester.power');
@@ -34,10 +35,12 @@ const CreepsProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	this.creepManager = new CreepManager();
+	// @todo Require and initialize roles dynamically from a list.
 	this.creepManager.registerCreepRole('brawler', new BrawlerRole());
 	this.creepManager.registerCreepRole('builder', new BuilderRole());
 	this.creepManager.registerCreepRole('claimer', new ClaimerRole());
 	this.creepManager.registerCreepRole('dismantler', new DismantlerRole());
+	this.creepManager.registerCreepRole('builder.exploit', new ExploitBuilderRole());
 	this.creepManager.registerCreepRole('gift', new GiftRole());
 	this.creepManager.registerCreepRole('harvester', new HarvesterRole());
 	this.creepManager.registerCreepRole('harvester.minerals', new HarvesterRole());
