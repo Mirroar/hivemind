@@ -270,7 +270,20 @@ Room.prototype.getResourceState = function () {
 
 	_.each(roomData.totalResources, (amount, resourceType) => {
 		if (resourceType === RESOURCE_ENERGY) {
-			amount /= 2.5;
+			if (amount >= 350000) {
+				roomData.state[resourceType] = 'excessive';
+			}
+			else if (amount >= 200000) {
+				roomData.state[resourceType] = 'high';
+			}
+			else if (amount >= 100000) {
+				roomData.state[resourceType] = 'medium';
+			}
+			else {
+				roomData.state[resourceType] = 'low';
+			}
+
+			return;
 		}
 
 		if (amount >= 220000) {
