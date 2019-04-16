@@ -5,7 +5,6 @@
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
 require('./manager.source');
-require('./role.harvester.exploit');
 require('./role.hauler');
 require('./role.hauler.exploit');
 require('./role.helper');
@@ -27,10 +26,6 @@ const utilities = require('./utilities');
 // Information about how throttling works for each creep role.
 const creepThrottleLevels = {
 	// Some essential creeps only start throttling when things get critical.
-	'harvester.exploit': {
-		max: 'normal',
-		min: 0,
-	},
 	transporter: {
 		max: 'normal',
 		min: 0,
@@ -39,7 +34,6 @@ const creepThrottleLevels = {
 
 const creepLogicFunctions = {
 	transporter: 'runTransporterLogic',
-	'harvester.exploit': 'runExploitHarvesterLogic',
 	hauler: 'runHaulerLogic',
 	'hauler.exploit': 'runExploitHaulerLogic',
 	helper: 'runHelperLogic',
