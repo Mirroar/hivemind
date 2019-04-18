@@ -5,9 +5,12 @@ FIND_SOURCES FIND_STRUCTURES STRUCTURE_CONTAINER */
 
 const utilities = require('./utilities');
 const Role = require('./role');
+const HaulerRole = require('./role.hauler');
 
 const RemoteHarvesterRole = function () {
 	Role.call(this);
+
+	this.haulerRole = new HaulerRole();
 
 	// Remote harvesters have slighly higher priority, since they don't use much
 	// cpu once they are harvesting.
@@ -234,7 +237,7 @@ RemoteHarvesterRole.prototype.performRemoteHarvesterDeliver = function (creep) {
 
 	if (targetPosition.roomName !== creep.pos.roomName) {
 		if (creep.hasCachedPath()) {
-			if (creep.performBuildRoad()) {
+			if (this.haulerRole.performBuildRoad(creep)) {
 				return;
 			}
 		}

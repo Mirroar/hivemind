@@ -5,7 +5,6 @@
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
 require('./manager.source');
-require('./role.hauler');
 require('./role.helper');
 require('./role.transporter');
 /* eslint-enable import/no-unassigned-import */
@@ -33,7 +32,6 @@ const creepThrottleLevels = {
 
 const creepLogicFunctions = {
 	transporter: 'runTransporterLogic',
-	hauler: 'runHaulerLogic',
 	helper: 'runHelperLogic',
 };
 
