@@ -245,8 +245,8 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
 /**
  * Gets a list of labs and their designated resource types.
  *
- * @return {Array}
- *   An array of boosting information, keyed by lab id.
+ * @return {object}
+ *   Boosting information, keyed by lab id.
  */
 BoostManager.prototype.getLabOrders = function () {
 	const labs = this.room.getBoostLabs();

@@ -21,6 +21,7 @@ const creepRoles = [
 	'hauler',
 	'hauler.exploit',
 	'hauler.power',
+	'helper',
 	'scout',
 	'upgrader',
 ];

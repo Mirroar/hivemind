@@ -1,26 +1,143 @@
 'use strict';
 
-/* global Creep RESOURCE_ENERGY */
+/* global RESOURCE_ENERGY */
+
+const Role = require('./role');
+
+const HelperRole = function () {
+	Role.call(this);
+};
+
+HelperRole.prototype = Object.create(Role.prototype);
+
+/**
+ * Makes a creep behave like a helper.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+HelperRole.prototype.run = function (creep) {
+	if (!creep.room.boostManager) {
+		this.parkHelper();
+		return;
+	}
+
+	const orders = creep.room.boostManager.getLabOrders();
+
+	if (creep.memory.delivering && _.sum(creep.carry) === 0) {
+		this.setHelperState(creep, false);
+	}
+	else if (!creep.memory.delivering && _.sum(creep.carry) === creep.carryCapacity) {
+		this.setHelperState(creep, true);
+	}
+
+	if (this.performHelperCleanup(creep, orders)) {
+		return;
+	}
+
+	if (creep.memory.delivering) {
+		this.performHelperDeliver(creep, orders);
+		return;
+	}
+
+	this.performHelperGather(creep, orders);
+};
+
+/**
+ * Moves a helper creep to its designated parking spot.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+HelperRole.prototype.parkHelper = function (creep) {
+	const targetPos = _.sample(creep.room.roomPlanner.getLocations('helper_parking'));
+	if (!targetPos) return;
+
+	if (creep.pos.getRangeTo(targetPos) > 0) {
+		creep.goTo(targetPos);
+	}
+};
+
+/**
+ * Puts this creep into or out of deliver mode.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {boolean} delivering
+ *   Whether this creep should be delivering resources.
+ */
+HelperRole.prototype.setHelperState = function (creep, delivering) {
+	creep.memory.delivering = delivering;
+};
+
+/**
+ * Checks if any of the labs have the wrong mineral type assigned, and clears those out.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {object} orders
+ *   Boosting information, keyed by lab id.
+ */
+HelperRole.prototype.performHelperCleanup = function (creep, orders) {
+	const storage = creep.room.storage;
+	const terminal = creep.room.terminal;
+
+	for (const id of _.keys(orders)) {
+		const lab = Game.getObjectById(id);
+		if (!lab) continue;
+
+		if (lab.mineralType && lab.mineralType !== orders[id].resourceType) {
+			if (creep.memory.delivering) {
+				// Put everything away.
+				let target = terminal;
+				if (storage && _.sum(storage.store) + _.sum(creep.carry) < storage.storeCapacity) {
+					target = storage;
+				}
+
+				if (creep.pos.getRangeTo(target) > 1) {
+					creep.moveToRange(target, 1);
+				}
+				else {
+					creep.transferAny(target);
+				}
+			}
+			// Clean out lab.
+			else if (creep.pos.getRangeTo(lab) > 1) {
+				creep.moveToRange(lab, 1);
+			}
+			else {
+				creep.withdraw(lab, lab.mineralType);
+			}
+
+			break;
+		}
+	}
+};
 
 /**
  * Makes a helper creep deliver its resources.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {object} orders
+ *   Boosting information, keyed by lab id.
  */
-Creep.prototype.performHelperDeliver = function () {
-	const storage = this.room.storage;
-	const terminal = this.room.terminal;
+HelperRole.prototype.performHelperDeliver = function (creep, orders) {
+	const storage = creep.room.storage;
+	const terminal = creep.room.terminal;
 
-	if (this.performHelperLabDeliver()) return;
+	if (this.performHelperLabDeliver(creep, orders)) return;
 
 	// Nothing to do, store excess energy in labs.
-	if (this.carry.energy > 0) {
-		const labs = this.room.getBoostLabs();
+	if (creep.carry.energy > 0) {
+		const labs = creep.room.getBoostLabs();
 		for (const lab of labs) {
-			if (lab.energy + this.carry.energy <= lab.energyCapacity) {
-				if (this.pos.getRangeTo(lab) > 1) {
-					this.moveToRange(lab, 1);
+			if (lab.energy + creep.carry.energy <= lab.energyCapacity) {
+				if (creep.pos.getRangeTo(lab) > 1) {
+					creep.moveToRange(lab, 1);
 				}
 				else {
-					this.transfer(lab, RESOURCE_ENERGY);
+					creep.transfer(lab, RESOURCE_ENERGY);
 				}
 
 				return;
@@ -29,14 +146,14 @@ Creep.prototype.performHelperDeliver = function () {
 	}
 
 	// Nothing to do, store excess energy in terminal.
-	if (this.carry.energy > 0 && storage && terminal && !this.room.isClearingTerminal()) {
+	if (creep.carry.energy > 0 && storage && terminal && !creep.room.isClearingTerminal()) {
 		if (terminal.store.energy < storage.store.energy * 0.05) {
-			if (_.sum(terminal.store) + this.carry.energy <= terminal.storeCapacity) {
-				if (this.pos.getRangeTo(terminal) > 1) {
-					this.moveToRange(terminal, 1);
+			if (_.sum(terminal.store) + creep.carry.energy <= terminal.storeCapacity) {
+				if (creep.pos.getRangeTo(terminal) > 1) {
+					creep.moveToRange(terminal, 1);
 				}
 				else {
-					this.transfer(terminal, RESOURCE_ENERGY);
+					creep.transfer(terminal, RESOURCE_ENERGY);
 				}
 
 				return;
@@ -46,57 +163,62 @@ Creep.prototype.performHelperDeliver = function () {
 
 	// Store anything else in storage or terminal.
 	let target = terminal;
-	if (storage && (!this.room.isClearingTerminal() || _.sum(storage.store) + _.sum(this.carry) < storage.storeCapacity)) {
+	if (storage && (!creep.room.isClearingTerminal() || _.sum(storage.store) + _.sum(creep.carry) < storage.storeCapacity)) {
 		target = storage;
 	}
 
-	if (this.pos.getRangeTo(target) > 1) {
-		this.moveToRange(target, 1);
+	if (creep.pos.getRangeTo(target) > 1) {
+		creep.moveToRange(target, 1);
 	}
 	else {
-		this.transferAny(target);
+		creep.transferAny(target);
 	}
 };
 
 /**
  * Makes a helper creep deliver its resources to labs according to orders.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {object} orders
+ *   Boosting information, keyed by lab id.
+ *
  * @return {boolean}
  *   Whether a delivery is taking place.
  */
-Creep.prototype.performHelperLabDeliver = function () {
-	for (const id of _.keys(this.orders)) {
+HelperRole.prototype.performHelperLabDeliver = function (creep, orders) {
+	for (const id of _.keys(orders)) {
 		const lab = Game.getObjectById(id);
 		if (!lab) continue;
 
-		const resourceType = this.orders[id].resourceType;
+		const resourceType = orders[id].resourceType;
 
-		if (this.carry[resourceType] && this.carry[resourceType] > 0) {
-			const diff = this.orders[id].resourceAmount - (lab.mineralAmount || 0);
+		if (creep.carry[resourceType] && creep.carry[resourceType] > 0) {
+			const diff = orders[id].resourceAmount - (lab.mineralAmount || 0);
 			if (diff > 0) {
-				if (this.pos.getRangeTo(lab) > 1) {
-					this.moveToRange(lab, 1);
+				if (creep.pos.getRangeTo(lab) > 1) {
+					creep.moveToRange(lab, 1);
 				}
 				else {
-					const amount = Math.min(diff, this.carry[resourceType]);
+					const amount = Math.min(diff, creep.carry[resourceType]);
 
-					this.transfer(lab, resourceType, amount);
+					creep.transfer(lab, resourceType, amount);
 				}
 
 				return true;
 			}
 		}
 
-		if (this.carry[RESOURCE_ENERGY] && this.carry[RESOURCE_ENERGY] > 0) {
-			const diff = this.orders[id].energyAmount - (lab.energy || 0);
+		if (creep.carry[RESOURCE_ENERGY] && creep.carry[RESOURCE_ENERGY] > 0) {
+			const diff = orders[id].energyAmount - (lab.energy || 0);
 			if (diff > 0) {
-				if (this.pos.getRangeTo(lab) > 1) {
-					this.moveToRange(lab, 1);
+				if (creep.pos.getRangeTo(lab) > 1) {
+					creep.moveToRange(lab, 1);
 				}
 				else {
-					const amount = Math.min(diff, this.carry[RESOURCE_ENERGY]);
+					const amount = Math.min(diff, creep.carry[RESOURCE_ENERGY]);
 
-					this.transfer(lab, RESOURCE_ENERGY, amount);
+					creep.transfer(lab, RESOURCE_ENERGY, amount);
 				}
 
 				return true;
@@ -107,198 +229,118 @@ Creep.prototype.performHelperLabDeliver = function () {
 
 /**
  * Makes a helper creep gather resources.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {object} orders
+ *   Boosting information, keyed by lab id.
  */
-Creep.prototype.performHelperGather = function () {
-	const storage = this.room.storage;
-	const terminal = this.room.terminal;
+HelperRole.prototype.performHelperGather = function (creep, orders) {
+	const storage = creep.room.storage;
+	const terminal = creep.room.terminal;
 
-	if (this.performHelperLabGather()) return;
+	if (this.performHelperLabGather(creep, orders)) return;
 
 	// Get energy to fill labs when needed.
-	const labs = this.room.getBoostLabs();
+	const labs = creep.room.getBoostLabs();
 	for (const lab of labs) {
-		if (lab.energy + this.carryCapacity > lab.energyCapacity) continue;
+		if (lab.energy + creep.carryCapacity > lab.energyCapacity) continue;
 
-		const target = this.room.getBestStorageSource(RESOURCE_ENERGY);
+		const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 
-		if (this.pos.getRangeTo(target) > 1) {
-			this.moveToRange(target, 1);
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveToRange(target, 1);
 		}
 		else {
-			this.withdraw(target, RESOURCE_ENERGY);
+			creep.withdraw(target, RESOURCE_ENERGY);
 		}
 
 		return;
 	}
 
 	// Get energy to fill terminal when needed.
-	if (storage && terminal && terminal.store.energy < storage.store.energy * 0.05 && !this.room.isClearingTerminal()) {
+	if (storage && terminal && terminal.store.energy < storage.store.energy * 0.05 && !creep.room.isClearingTerminal()) {
 		const target = storage;
 
-		if (this.pos.getRangeTo(target) > 1) {
-			this.moveToRange(target, 1);
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveToRange(target, 1);
 		}
 		else {
-			this.withdraw(target, RESOURCE_ENERGY);
+			creep.withdraw(target, RESOURCE_ENERGY);
 		}
 
 		return;
 	}
 
 	// If we got here, there's nothing left to gather. Deliver what we have stored.
-	if (_.sum(this.carry) > 0) {
-		this.setHelperState(true);
+	if (_.sum(creep.carry) > 0) {
+		this.setHelperState(creep, true);
 	}
 
 	// After that, just go into parking position.
-	this.parkHelper();
+	this.parkHelper(creep);
 };
 
 /**
  * Makes a helper creep gather resources needed for lab orders.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {object} orders
+ *   Boosting information, keyed by lab id.
+ *
  * @return {boolean}
  *   Whether the creep is currently fulfilling an order.
  */
-Creep.prototype.performHelperLabGather = function () {
-	for (const id of _.keys(this.orders)) {
-		const order = this.orders[id];
+HelperRole.prototype.performHelperLabGather = function (creep, orders) {
+	for (const id of _.keys(orders)) {
+		const order = orders[id];
 		const lab = Game.getObjectById(id);
 		if (!lab) continue;
 
 		const resourceType = order.resourceType;
 
-		let diff = order.resourceAmount - (this.carry[resourceType] || 0) - (lab.mineralAmount || 0);
+		let diff = order.resourceAmount - (creep.carry[resourceType] || 0) - (lab.mineralAmount || 0);
 		if (diff > 0) {
-			const target = this.room.getBestStorageSource(resourceType);
-			if (this.pos.getRangeTo(target) > 1) {
-				this.moveToRange(target, 1);
+			const target = creep.room.getBestStorageSource(resourceType);
+			if (creep.pos.getRangeTo(target) > 1) {
+				creep.moveToRange(target, 1);
 			}
 			else {
 				if (!target || !target.store[resourceType]) {
 					// Something went wrong, we don't actually have enough of this stuff.
 					// Delete any boost orders using this resource.
-					this.room.boostManager.memory.creepsToBoost = _.filter(
-						this.room.boostManager.memory.creepsToBoost,
+					creep.room.boostManager.memory.creepsToBoost = _.filter(
+						creep.room.boostManager.memory.creepsToBoost,
 						resources => !_.contains(_.keys(resources), resourceType)
 					);
 
 					return true;
 				}
 
-				let amount = Math.min(diff, this.carryCapacity - _.sum(this.carry));
+				let amount = Math.min(diff, creep.carryCapacity - _.sum(creep.carry));
 				amount = Math.min(amount, target.store[resourceType]);
-				this.withdraw(target, resourceType, amount);
+				creep.withdraw(target, resourceType, amount);
 			}
 
 			return true;
 		}
 
-		diff = order.energyAmount - (this.carry[RESOURCE_ENERGY] || 0) - (lab.energy || 0);
+		diff = order.energyAmount - (creep.carry[RESOURCE_ENERGY] || 0) - (lab.energy || 0);
 		if (diff <= 0) continue;
 
-		const target = this.room.getBestStorageSource(RESOURCE_ENERGY);
-		if (this.pos.getRangeTo(target) > 1) {
-			this.moveToRange(target, 1);
+		const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveToRange(target, 1);
 		}
 		else {
-			const amount = Math.min(diff, this.carryCapacity - _.sum(this.carry));
+			const amount = Math.min(diff, creep.carryCapacity - _.sum(creep.carry));
 
-			this.withdraw(target, RESOURCE_ENERGY, amount);
+			creep.withdraw(target, RESOURCE_ENERGY, amount);
 		}
 
 		return true;
 	}
 };
 
-/**
- * Checks if any of the labs have the wrong mineral type assigned, and clears those out.
- */
-Creep.prototype.performHelperCleanup = function () {
-	const storage = this.room.storage;
-	const terminal = this.room.terminal;
-
-	for (const id of _.keys(this.orders)) {
-		const lab = Game.getObjectById(id);
-		if (!lab) continue;
-
-		if (lab.mineralType && lab.mineralType !== this.orders[id].resourceType) {
-			if (this.memory.delivering) {
-				// Put everything away.
-				let target = terminal;
-				if (storage && _.sum(storage.store) + _.sum(this.carry) < storage.storeCapacity) {
-					target = storage;
-				}
-
-				if (this.pos.getRangeTo(target) > 1) {
-					this.moveToRange(target, 1);
-				}
-				else {
-					this.transferAny(target);
-				}
-			}
-			// Clean out lab.
-			else if (this.pos.getRangeTo(lab) > 1) {
-				this.moveToRange(lab, 1);
-			}
-			else {
-				this.withdraw(lab, lab.mineralType);
-			}
-
-			break;
-		}
-	}
-};
-
-/**
- * Moves a helper creep to its designated parking spot.
- */
-Creep.prototype.parkHelper = function () {
-	const flagName = 'Helper:' + this.pos.roomName;
-	if (Game.flags[flagName]) {
-		const flag = Game.flags[flagName];
-		if (this.pos.getRangeTo(flag) > 0) {
-			this.moveToRange(flag, 0);
-		}
-	}
-};
-
-/**
- * Puts this creep into or out of deliver mode.
- *
- * @param {boolean} delivering
- *   Whether this creep should be delivering resources.
- */
-Creep.prototype.setHelperState = function (delivering) {
-	this.memory.delivering = delivering;
-};
-
-/**
- * Makes a creep behave like a helper.
- */
-Creep.prototype.runHelperLogic = function () {
-	if (!this.room.boostManager) {
-		this.parkHelper();
-		return;
-	}
-
-	this.orders = this.room.boostManager.getLabOrders();
-
-	if (this.memory.delivering && _.sum(this.carry) === 0) {
-		this.setHelperState(false);
-	}
-	else if (!this.memory.delivering && _.sum(this.carry) === this.carryCapacity) {
-		this.setHelperState(true);
-	}
-
-	if (this.performHelperCleanup()) {
-		return;
-	}
-
-	if (this.memory.delivering) {
-		this.performHelperDeliver();
-		return;
-	}
-
-	this.performHelperGather();
-};
+module.exports = HelperRole;

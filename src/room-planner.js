@@ -1078,14 +1078,6 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
 	const nextPos = this.getNextAvailableBuildSpot();
 	if (!nextPos) return;
 
-	const flagKey = 'Helper:' + nextPos.roomName;
-	if (Game.flags[flagKey]) {
-		Game.flags[flagKey].setPosition(nextPos);
-	}
-	else {
-		nextPos.createFlag(flagKey);
-	}
-
 	this.placeFlag(nextPos, 'road', 255);
 	this.placeFlag(nextPos, 'helper_parking');
 
