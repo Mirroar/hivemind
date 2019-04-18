@@ -1,8 +1,7 @@
 'use strict';
 
-/* global Creep LOOK_STRUCTURES STRUCTURE_ROAD MAX_CONSTRUCTION_SITES OK
-LOOK_CONSTRUCTION_SITES FIND_SOURCES FIND_STRUCTURES STRUCTURE_CONTAINER
-FIND_MY_CONSTRUCTION_SITES RESOURCE_ENERGY */
+/* global LOOK_STRUCTURES STRUCTURE_ROAD OK RESOURCE_ENERGY
+FIND_SOURCES FIND_STRUCTURES STRUCTURE_CONTAINER */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -204,6 +203,9 @@ RemoteHarvesterRole.prototype.removeObstacles = function (creep) {
 /**
  * Makes the creep deliver remotely harvested resources.
  * @todo Reduce this function since remote harvesters are not meant to return.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
 RemoteHarvesterRole.prototype.performRemoteHarvesterDeliver = function (creep) {
 	const targetPosition = utilities.decodePosition(creep.memory.storage);
@@ -280,7 +282,10 @@ RemoteHarvesterRole.prototype.performRemoteHarvesterDeliver = function (creep) {
 };
 
 /**
+ * Starts timing a creep on its journey.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
 RemoteHarvesterRole.prototype.startTravelTimer = function (creep) {
 	if (!creep.memory.travelTimer) {
@@ -291,7 +296,10 @@ RemoteHarvesterRole.prototype.startTravelTimer = function (creep) {
 };
 
 /**
+ * Stops timing a creep when it arrives at its destination.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
 RemoteHarvesterRole.prototype.stopTravelTimer = function (creep) {
 	const harvestMemory = Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source];
