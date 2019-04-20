@@ -5,7 +5,6 @@
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
 require('./manager.source');
-require('./role.transporter');
 /* eslint-enable import/no-unassigned-import */
 
 const spawnManager = require('./manager.spawn');
@@ -21,17 +20,8 @@ const utilities = require('./utilities');
 // @todo Spawn creeps using "sequences" where more control is needed.
 
 // Information about how throttling works for each creep role.
-const creepThrottleLevels = {
-	// Some essential creeps only start throttling when things get critical.
-	transporter: {
-		max: 'normal',
-		min: 0,
-	},
-};
-
-const creepLogicFunctions = {
-	transporter: 'runTransporterLogic',
-};
+const creepThrottleLevels = {};
+const creepLogicFunctions = {};
 
 /**
  * Runs a creeps logic depending on role and other factors.

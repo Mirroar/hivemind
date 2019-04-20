@@ -3,6 +3,7 @@
 /* global RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER */
 
 const Role = require('./role');
+const TransporterRole = require('./role.transporter');
 
 const UpgraderRole = function () {
 	Role.call(this);
@@ -10,6 +11,8 @@ const UpgraderRole = function () {
 	// Upgraders have high priority because we need to praise the GCL!
 	this.stopAt = 0;
 	this.throttleAt = 2000;
+
+	this.transporterRole = new TransporterRole();
 };
 
 UpgraderRole.prototype = Object.create(Role.prototype);
@@ -130,9 +133,7 @@ UpgraderRole.prototype.performGetUpgraderEnergy = function (creep) {
 	}
 
 	// Otherwise, get energy from anywhere.
-	if (creep.performGetEnergy()) {
-		return;
-	}
+	this.transporterRole.performGetEnergy(creep);
 
 	if (creep.carry.energy > 0) {
 		creep.setUpgraderState(true);

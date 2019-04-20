@@ -7,6 +7,7 @@ FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL */
 
 const utilities = require('./utilities');
 const Role = require('./role');
+const TransporterRole = require('./role.transporter');
 
 const BrawlerRole = function () {
 	Role.call(this);
@@ -14,6 +15,8 @@ const BrawlerRole = function () {
 	// Military creeps are always fully active!
 	this.stopAt = 0;
 	this.throttleAt = 0;
+
+	this.transporterRole = new TransporterRole();
 };
 
 BrawlerRole.prototype = Object.create(Role.prototype);
@@ -271,7 +274,7 @@ BrawlerRole.prototype.addMilitaryHealOptions = function (creep, options) {
 BrawlerRole.prototype.performMilitaryMove = function (creep) {
 	if (creep.memory.fillWithEnergy) {
 		if (_.sum(creep.carry) < creep.carryCapacity) {
-			creep.performGetEnergy();
+			this.transporterRole.performGetEnergy(creep);
 			return;
 		}
 

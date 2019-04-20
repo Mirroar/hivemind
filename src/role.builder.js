@@ -5,9 +5,12 @@ STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER */
 
 const utilities = require('./utilities');
 const Role = require('./role');
+const TransporterRole = require('./role.transporter');
 
 const BuilderRole = function () {
 	Role.call(this);
+
+	this.transporterRole = new TransporterRole();
 };
 
 BuilderRole.prototype = Object.create(Role.prototype);
@@ -44,7 +47,7 @@ BuilderRole.prototype.run = function (creep) {
 		return;
 	}
 
-	creep.performGetEnergy();
+	this.transporterRole.performGetEnergy(creep);
 };
 
 /**

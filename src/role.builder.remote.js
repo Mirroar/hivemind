@@ -7,6 +7,7 @@ STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
 
 const utilities = require('./utilities');
 const Role = require('./role');
+const TransporterRole = require('./role.transporter');
 
 const RemoteBuilderRole = function () {
 	Role.call(this);
@@ -14,6 +15,8 @@ const RemoteBuilderRole = function () {
 	// Military creeps are always fully active!
 	this.stopAt = 0;
 	this.throttleAt = 0;
+
+	this.transporterRole = new TransporterRole();
 };
 
 RemoteBuilderRole.prototype = Object.create(Role.prototype);
@@ -253,7 +256,7 @@ RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
 			// 	creep.memory.sourceRoom = creep.pos.roomName;
 			// }
 
-			creep.performGetEnergy();
+			this.transporterRole.performGetEnergy(creep);
 			return;
 		}
 	}

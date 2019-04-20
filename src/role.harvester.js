@@ -8,6 +8,7 @@ STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES */
 // @todo Merge fixedMineralSource into fixedSource.
 
 const Role = require('./role');
+const TransporterRole = require('./role.transporter');
 
 const HarvesterRole = function () {
 	Role.call(this);
@@ -15,6 +16,8 @@ const HarvesterRole = function () {
 	// Harvesting energy is essential and doesn't need tons of CPU.
 	this.stopAt = 0;
 	this.throttleAt = 2000;
+
+	this.transporterRole = new TransporterRole();
 };
 
 HarvesterRole.prototype = Object.create(Role.prototype);
@@ -26,6 +29,7 @@ HarvesterRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 HarvesterRole.prototype.run = function (creep) {
+	this.transporterRole.creep = creep;
 	const carryAmount = _.sum(creep.carry);
 	if (!creep.memory.harvesting && carryAmount <= 0) {
 		this.setHarvesterState(creep, true);
@@ -160,7 +164,7 @@ HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
 
 	if (_.size(creep.room.creepsByRole.transporter) === 0) {
 		// Use transporter drop off logic.
-		creep.performDeliver();
+		this.transporterRole.performDeliver();
 		return;
 	}
 
