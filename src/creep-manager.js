@@ -93,7 +93,15 @@ CreepManager.prototype.runCreepLogic = function (creep) {
 
 	this.performance.total.run++;
 	this.performance[roleId].run++;
-	this.roles[roleId].run(creep);
+
+	let shouldRun = true;
+	if (this.roles[roleId].preRun) {
+		shouldRun = this.roles[roleId].preRun(creep);
+	}
+
+	if (shouldRun !== false) {
+		this.roles[roleId].run(creep);
+	}
 
 	this.recordCreepCpuStats(roleId, Game.cpu.getUsed() - startTime);
 };

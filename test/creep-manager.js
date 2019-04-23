@@ -64,6 +64,19 @@ test('running logic by role', t => {
 	});
 });
 
+test('preRun hooks', t => {
+	const manager = new CreepManager();
+	manager.registerCreepRole('test', {run: () => t.pass(), preRun: () => t.pass('preRun hook should be called.')});
+	manager.registerCreepRole('shouldNotRun', {run: () => t.fail('Don\'t call run function when preRun returns false.'), preRun: () => false});
+
+	t.plan(2);
+
+	manager.manageCreeps({
+		normal: getMockCreep('test'),
+		skipped: getMockCreep('shouldNotRun'),
+	});
+});
+
 test('changing roles', t => {
 	const manager = new CreepManager();
 	manager.registerCreepRole('test', {run: creep => {
