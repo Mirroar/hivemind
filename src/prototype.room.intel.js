@@ -15,11 +15,11 @@ Room.prototype.enhanceData = function () {
 	this.addStructureReference(STRUCTURE_OBSERVER);
 	this.addStructureReference(STRUCTURE_POWER_SPAWN);
 
-	if (this.terminal && !this.terminal.isActive()) {
+	if (this.terminal && !this.terminal.isOperational()) {
 		delete this.terminal;
 	}
 
-	if (this.storage && !this.storage.isActive()) {
+	if (this.storage && !this.storage.isOperational()) {
 		delete this.storage;
 	}
 

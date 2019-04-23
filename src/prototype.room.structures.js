@@ -10,7 +10,7 @@ const LinkNetwork = require('./link-network');
  */
 Room.prototype.generateLinkNetwork = function () {
 	const links = this.find(FIND_MY_STRUCTURES, {
-		filter: s => s.structureType === STRUCTURE_LINK && s.isActive(),
+		filter: s => s.structureType === STRUCTURE_LINK && s.isOperational(),
 	});
 
 	if (links.length <= 0) {

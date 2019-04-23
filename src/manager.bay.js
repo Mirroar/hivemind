@@ -22,7 +22,7 @@ const Bay = function (flagName) {
 
 	if (!this.memory.extensions || Game.time % 100 === 38) {
 		const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-			filter: structure => structure.structureType === STRUCTURE_EXTENSION && structure.isActive(),
+			filter: structure => structure.structureType === STRUCTURE_EXTENSION && structure.isOperational(),
 		});
 		this.memory.extensions = _.map(extensions, 'id');
 	}

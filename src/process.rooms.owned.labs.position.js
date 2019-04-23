@@ -28,7 +28,7 @@ ReactionsProcess.prototype.run = function () {
 	this.room.memory.canPerformReactions = false;
 
 	const labs = this.room.find(FIND_STRUCTURES, {
-		filter: structure => structure.structureType === STRUCTURE_LAB && structure.isActive(),
+		filter: structure => structure.structureType === STRUCTURE_LAB && structure.isOperational(),
 	});
 	if (labs.length < 3) return;
 

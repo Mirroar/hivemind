@@ -189,7 +189,7 @@ Room.prototype.manageSpawnsPriority = function () {
 	let allSpawning = true;
 	let activeSpawn;
 	for (const i in roomSpawns) {
-		if (!roomSpawns[i].isActive()) continue;
+		if (!roomSpawns[i].isOperational()) continue;
 		if (!roomSpawns[i].spawning) {
 			allSpawning = false;
 			activeSpawn = roomSpawns[i];
@@ -743,7 +743,7 @@ Room.prototype.manageSpawns = function () {
 	// If the new spawn code is trying to spawn something, give it priority.
 	if (this.manageSpawnsPriority()) return;
 
-	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name && spawn.isActive());
+	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name && spawn.isOperational());
 
 	let spawnerUsed = false;
 	for (const spawn of _.values(roomSpawns)) {
@@ -1382,7 +1382,7 @@ StructureSpawn.prototype.spawnMineralHarvester = function () {
 	const minerals = this.room.find(FIND_MINERALS, {
 		filter: mineral => {
 			const extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
-				filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.isActive(),
+				filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.isOperational(),
 			});
 
 			if (extractors.length > 0) {

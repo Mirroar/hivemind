@@ -21,6 +21,19 @@ if (!Structure.prototype.__enhancementsLoaded) {
 	};
 
 	/**
+	 * Replacement for Structure.prototype.isActive that is less CPU intensive.
+	 * @see InactiveStructuresProcess
+	 *
+	 * @return {boolean}
+	 *   True if the structure is operational.
+	 */
+	Structure.prototype.isOperational = function () {
+		if (!this.room.memory.inactiveStructures) return true;
+		if (!this.room.memory.inactiveStructures[this.id]) return true;
+		return false;
+	};
+
+	/**
 	 * Checks whether this extension belongs to any bay.
 	 *
 	 * @return {boolean}

@@ -5,6 +5,7 @@ POWER_SPAWN_ENERGY_RATIO */
 
 const Process = require('./process');
 
+const InactiveStructuresProcess = require('./process.rooms.owned.inactive-structures');
 const ManageLabsProcess = require('./process.rooms.owned.labs');
 const ManageLinksProcess = require('./process.rooms.owned.links');
 const RoomDefenseProcess = require('./process.rooms.owned.defense');
@@ -27,11 +28,19 @@ const OwnedRoomProcess = function (params, data) {
 OwnedRoomProcess.prototype = Object.create(Process.prototype);
 
 /**
- * Manages on of our rooms.
+ * Manages one of our rooms.
  */
 OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_roomplanner', () => {
 		this.room.roomPlanner.runLogic();
+	});
+
+	hivemind.runSubProcess('rooms_inactive_structs', () => {
+		hivemind.runProcess(this.room.name + '_inactive_structs', InactiveStructuresProcess, {
+			interval: 500,
+			room: this.room,
+			priority: PROCESS_PRIORITY_LOW,
+		});
 	});
 
 	// @todo Only run processes based on current room level or existing structures.

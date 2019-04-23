@@ -43,7 +43,7 @@ RemoteMiningProcess.prototype.run = function () {
 	_.each(Game.rooms, room => {
 		if (!room.controller || !room.controller.my) return;
 
-		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isActive()).length;
+		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 		if (numSpawns === 0) return;
 
 		max += 2 * numSpawns;
