@@ -48,6 +48,9 @@ const CreepsProcess = function (params, data) {
 		this.creepManager.registerCreepRole(roleName, new RoleClass());
 	}
 
+	const HarvesterRole = require('./role.harvester');
+	this.creepManager.registerCreepRole('harvester.minerals', new HarvesterRole());
+
 	this.powerCreepManager = new CreepManager();
 	this.powerCreepManager.registerCreepRole('operator', new OperatorRole());
 };
