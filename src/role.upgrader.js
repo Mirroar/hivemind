@@ -54,6 +54,7 @@ UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 	if (distance > 1) {
 		creep.moveToRange(creep.room.controller, 1);
 	}
+
 	if (distance <= 3) {
 		creep.upgradeController(creep.room.controller);
 	}
