@@ -16,6 +16,9 @@ const Process = require('./process');
  */
 const TradeProcess = function (params, data) {
 	Process.call(this, params, data);
+
+	// Would be cool if this was a game constant, but oh well...
+	this.minTradeValue = 0.001;
 };
 
 TradeProcess.prototype = Object.create(Process.prototype);
@@ -254,6 +257,8 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 		hivemind.log('trade', roomName).info('Nobody else is currently buying', resourceType);
 		offerPrice = npcPrice;
 	}
+
+	if (offerPrice < this.minTradeValue) offerPrice = this.minTradeValue;
 
 	hivemind.log('trade', roomName).debug('Offering to buy for', offerPrice);
 
