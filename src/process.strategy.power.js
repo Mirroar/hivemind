@@ -153,7 +153,7 @@ PowerMiningProcess.prototype.run = function () {
 		// @todo Calculate number of transporters needed in the end.
 
 		// @todo Start spawning.
-		Game.notify('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
+		Game.notify('⚡ Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
 		hivemind.log('strategy').info('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
 	});
 };

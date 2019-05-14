@@ -148,7 +148,7 @@ ExpandProcess.prototype.startExpansion = function (roomInfo) {
 	squad.setPath(null);
 	Memory.strategy.expand.started = Game.time;
 
-	Game.notify('Started expanding to ' + roomInfo.roomName);
+	Game.notify('🏴 Started expanding to ' + roomInfo.roomName);
 };
 
 /**
