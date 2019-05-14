@@ -182,8 +182,6 @@ Room.prototype.manageSpawnsPriority = function () {
 		return false;
 	}
 
-	this.spawnOptions = {};
-
 	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name);
 	// If all spawns are busy, no need to calculate what could be spawned.
 	let allSpawning = true;
