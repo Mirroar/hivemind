@@ -1,7 +1,7 @@
 'use strict';
 
 /* global hivemind Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS
-LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES */
+LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
 const utilities = require('./utilities');
 
@@ -319,6 +319,9 @@ Creep.prototype.moveAroundObstacles = function () {
 Creep.prototype.canMoveOnto = function (pos) {
 	const creeps = pos.lookFor(LOOK_CREEPS);
 	if (creeps.length > 0 && creeps[0].id !== this.id) return false;
+
+	const powerCreeps = pos.lookFor(LOOK_POWER_CREEPS);
+	if (powerCreeps.length > 0 && powerCreeps[0].id !== this.id) return false;
 
 	const structures = pos.lookFor(LOOK_STRUCTURES);
 	for (const structure of structures) {
