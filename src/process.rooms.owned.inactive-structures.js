@@ -34,7 +34,7 @@ InactiveStructuresProcess.prototype.run = function () {
 	const groupedStructures = _.groupBy(this.room.find(FIND_MY_STRUCTURES), 'structureType');
 	_.each(groupedStructures, (structures, structureType) => {
 		// Check if more structures than allowed exist.
-		if (structures.length <= CONTROLLER_STRUCTURES[structureType][rcl]) return;
+		if (!CONTROLLER_STRUCTURES[structureType] || structures.length <= CONTROLLER_STRUCTURES[structureType][rcl]) return;
 
 		for (const structure of structures) {
 			if (!structure.isActive()) {
