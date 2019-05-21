@@ -294,7 +294,7 @@ RoomPlanner.prototype.manageStructures = function () {
  */
 RoomPlanner.prototype.buildPlannedStructures = function (locationType, structureType) {
 	let canBuildMore = true;
-	for (const posName of _.keys(this.memory.locations[locationType])) {
+	for (const posName of _.keys(this.memory.locations[locationType] || [])) {
 		const pos = utilities.decodePosition(posName);
 
 		canBuildMore &= this.tryBuild(pos, structureType);
