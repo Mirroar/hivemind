@@ -175,7 +175,12 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 	const info = Memory.strategy.expand.currentTarget;
 	if (!info) return;
 
+	const activeSquads = {};
+
 	_.each(Game.rooms, room => {
+		// 5 Support squads max.
+		if (_.size(activeSquads) >= 5) return false;
+
 		if (!room.controller || !room.controller.my || room.controller.level < 4) return;
 		if (room.name === info.spawnRoom || room.name === info.roomName) return;
 		if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return;
@@ -183,19 +188,22 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		const path = room.calculateRoomPath(info.roomName);
 		if (!path || path.length > 15) return;
 
-		const supportSquad = new Squad('expandSupport.' + info.roomName + '.' + room.name);
+		const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
+		const supportSquad = new Squad(squadName);
 		supportSquad.setSpawn(room.name);
 		supportSquad.setTarget(new RoomPosition(25, 25, info.roomName));
 		supportSquad.clearUnits();
 		supportSquad.setUnitCount('builder', 1);
 		supportSquad.setPath(null);
+
+		activeSquads[squadName] = true;
 	});
 
 	// Remove support squads from older rooms.
 	// @todo This should no longer be necessary when the code in stopExpansion
 	// works reliably.
 	_.each(Game.squads, (squad, squadName) => {
-		if (squadName.startsWith('expandSupport.') && !squadName.startsWith('expandSupport.' + info.roomName)) {
+		if (squadName.startsWith('expandSupport.') && !activeSquads[squadName]) {
 			squad.disband();
 		}
 	});
