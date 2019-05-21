@@ -8,6 +8,7 @@ const Process = require('./process');
 const InactiveStructuresProcess = require('./process.rooms.owned.inactive-structures');
 const ManageLabsProcess = require('./process.rooms.owned.labs');
 const ManageLinksProcess = require('./process.rooms.owned.links');
+const ManageSpawnsProcess = require('./process.rooms.owned.spawns');
 const RoomDefenseProcess = require('./process.rooms.owned.defense');
 const RoomSongsProcess = require('./process.rooms.owned.songs');
 
@@ -60,6 +61,12 @@ OwnedRoomProcess.prototype.run = function () {
 
 	hivemind.runSubProcess('rooms_labs', () => {
 		hivemind.runProcess(this.room.name + '_labs', ManageLabsProcess, {
+			room: this.room,
+		});
+	});
+
+	hivemind.runSubProcess('rooms_spawns', () => {
+		hivemind.runProcess(this.room.name + '_spawns', ManageSpawnsProcess, {
 			room: this.room,
 		});
 	});

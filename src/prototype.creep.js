@@ -60,5 +60,53 @@ if (!Creep.prototype.__enhancementsLoaded) {
 		return ERR_NOT_ENOUGH_RESOURCES;
 	};
 
+	/**
+	 * Add additional data for each creep.
+	 */
+	Creep.prototype.enhanceData = function () {
+		const role = this.memory.role;
+
+		// Store creeps by role in global and room data.
+		if (!Game.creepsByRole[role]) {
+			Game.creepsByRole[role] = {};
+		}
+
+		Game.creepsByRole[role][this.name] = this;
+
+		const room = this.room;
+		if (!room.creeps) {
+			room.creeps = {};
+			room.creepsByRole = {};
+		}
+
+		room.creeps[this.name] = this;
+		if (!room.creepsByRole[role]) {
+			room.creepsByRole[role] = {};
+		}
+
+		room.creepsByRole[role][this.name] = this;
+
+		// Store creeps that are part of a squad in their respectice squads.
+		if (this.memory.squadName) {
+			const squad = Game.squads[this.memory.squadName];
+			if (squad) {
+				if (!squad.units[this.memory.squadUnitType]) {
+					squad.units[this.memory.squadUnitType] = [];
+				}
+
+				squad.units[this.memory.squadUnitType].push(this);
+			}
+		}
+
+		// Store creeps that are part of an exploit operation in the correct object.
+		if (this.memory.exploitName) {
+			if (!Game.exploitTemp[this.memory.exploitName]) {
+				Game.exploitTemp[this.memory.exploitName] = [];
+			}
+
+			Game.exploitTemp[this.memory.exploitName].push(this.id);
+		}
+	};
+
 	Creep.prototype.__enhancementsLoaded = true;
 }

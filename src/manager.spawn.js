@@ -177,45 +177,10 @@ StructureSpawn.prototype.finalizeCreepBody = function (options, minCost, energyA
  * @return {boolean}
  *   True if a creep was spawned.
  */
-Room.prototype.manageSpawnsPriority = function () {
-	if (!this.controller || !this.controller.my) {
-		return false;
-	}
-
-	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name);
+Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 	// If all spawns are busy, no need to calculate what could be spawned.
-	let allSpawning = true;
-	let activeSpawn;
-	for (const i in roomSpawns) {
-		if (!roomSpawns[i].isOperational()) continue;
-		if (!roomSpawns[i].spawning) {
-			allSpawning = false;
-			activeSpawn = roomSpawns[i];
-		}
-
-		// If spawning was just finished, scan the room again to assign creeps.
-		if (roomSpawns[i].spawning) {
-			roomSpawns[i].memory.wasSpawning = true;
-			if (this.visual) {
-				this.visual.text(roomSpawns[i].memory.spawnRole, roomSpawns[i].pos.x + 0.05, roomSpawns[i].pos.y + 0.05, {
-					size: 0.5,
-					color: 'black',
-				});
-				this.visual.text(roomSpawns[i].memory.spawnRole, roomSpawns[i].pos.x, roomSpawns[i].pos.y, {
-					size: 0.5,
-				});
-			}
-
-			continue;
-		}
-		else if (roomSpawns[i].memory.wasSpawning) {
-			roomSpawns[i].memory.wasSpawning = false;
-		}
-	}
-
-	if (allSpawning) {
-		return true;
-	}
+	if (roomSpawns.length === 0) return true;
+	const activeSpawn = roomSpawns[0];
 
 	// Prepare spawn queue.
 	if (!this.memory.spawnQueue) {
@@ -224,7 +189,21 @@ Room.prototype.manageSpawnsPriority = function () {
 
 	const memory = this.memory.spawnQueue;
 	memory.options = [];
+	this.addAllSpawnOptions();
 
+	if (memory.options.length > 0) {
+		// Try to spawn the most needed creep.
+		this.spawnCreepByPriority(activeSpawn);
+		return true;
+	}
+
+	return false;
+};
+
+/**
+ * Temporary helper.
+ */
+Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
 	this.addHarvesterSpawnOptions();
 	this.addTransporterSpawnOptions();
@@ -238,20 +217,12 @@ Room.prototype.manageSpawnsPriority = function () {
 
 	// In low level rooms, add defenses!
 	if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
-		memory.options.push({
+		this.memory.spawnQueue.options.push({
 			priority: 5,
 			weight: 1,
 			role: 'brawler',
 		});
 	}
-
-	if (memory.options.length > 0) {
-		// Try to spawn the most needed creep.
-		this.spawnCreepByPriority(activeSpawn);
-		return true;
-	}
-
-	return false;
 };
 
 /**
@@ -734,14 +705,9 @@ Room.prototype.addDismantlerSpawnOptions = function () {
 /**
  * Spawns creeps in a room whenever needed.
  */
-Room.prototype.manageSpawns = function () {
-	if (!this.memory.throttleOffset) this.memory.throttleOffset = utilities.getThrottleOffset();
-	if (utilities.throttle(this.memory.throttleOffset, 0, Memory.throttleInfo.bucket.warning)) return;
-
+Room.prototype.manageSpawns = function (spawnManager, roomSpawns) {
 	// If the new spawn code is trying to spawn something, give it priority.
-	if (this.manageSpawnsPriority()) return;
-
-	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.name && spawn.isOperational());
+	if (this.manageSpawnsPriority(spawnManager, roomSpawns)) return;
 
 	let spawnerUsed = false;
 	for (const spawn of _.values(roomSpawns)) {
@@ -751,12 +717,7 @@ Room.prototype.manageSpawns = function () {
 
 		// If spawning was just finished, scan the room again to assign creeps.
 		if (spawn.spawning) {
-			spawn.memory.wasSpawning = true;
 			continue;
-		}
-
-		if (spawn.memory.wasSpawning) {
-			spawn.memory.wasSpawning = false;
 		}
 
 		spawnerUsed = true;
@@ -1578,24 +1539,3 @@ StructureSpawn.prototype.spawnScout = function () {
 		},
 	});
 };
-
-/**
- * Handles logic for spawning creeps in rooms, and spawning creeps to go
- * outside of these rooms.
- */
-const spawnManager = {
-
-	/**
-	 * Manages spawning logic for all spawns.
-	 */
-	manageSpawns() {
-		for (const room of _.values(Game.rooms)) {
-			if (room.controller && room.controller.my) {
-				room.manageSpawns();
-			}
-		}
-	},
-
-};
-
-module.exports = spawnManager;

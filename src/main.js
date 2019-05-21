@@ -27,12 +27,21 @@ const ScoutProcess = require('./process.strategy.scout');
 const TradeProcess = require('./process.empire.trade');
 const ResourcesProcess = require('./process.empire.resources');
 
-// @todo Refactor old main code away.
-const oldMain = require('./main.old');
+/* eslint-disable import/no-unassigned-import */
+require('./manager.military');
+require('./manager.source');
+/* eslint-enable import/no-unassigned-import */
 
 // Allow profiling of code.
 const profiler = require('./profiler');
 const stats = require('./stats');
+
+// @todo Add a healer to defender squads, or spawn one when creeps are injured.
+
+// @todo Do not send any remote harvesters or claimers until enemies in a room should have expired. Maybe scout from time to time.
+// @todo make unarmed creeps run from hostiles.
+
+// @todo Spawn creeps using "sequences" where more control is needed.
 
 module.exports = {
 
@@ -63,9 +72,6 @@ module.exports = {
 		hivemind.runProcess('init', InitProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
-
-		// @todo Remove old "main" code eventually.
-		oldMain.loop();
 
 		hivemind.runProcess('creeps', CreepsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
