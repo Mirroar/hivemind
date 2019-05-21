@@ -6,6 +6,7 @@ STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES */
 // @todo Rewrite delivery part using transporter logic.
 // @todo Just make the harvester build a container when none is available.
 // @todo Merge fixedMineralSource into fixedSource.
+// @todo Stop harvesting when container and link are full.
 
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');

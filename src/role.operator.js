@@ -198,7 +198,10 @@ OperatorRole.prototype.addOperateStorageOptions = function (options) {
 };
 
 /**
+ * Adds options for transferring extra ops to storage.
  *
+ * @param {Array} options
+ *   A list of potential power creep orders.
  */
 OperatorRole.prototype.addTransferOpsOptions = function (options) {
 	if (!this.creep.carry[RESOURCE_OPS]) return;
