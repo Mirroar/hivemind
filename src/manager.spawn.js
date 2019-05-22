@@ -188,7 +188,7 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 	}
 
 	const memory = this.memory.spawnQueue;
-	memory.options = [];
+	memory.options = spawnManager.getAllSpawnOptions(this);
 	this.addAllSpawnOptions();
 
 	if (memory.options.length > 0) {
@@ -205,7 +205,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
  */
 Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
-	this.addHarvesterSpawnOptions();
 	this.addTransporterSpawnOptions();
 	this.addUpgraderSpawnOptions();
 	this.addBuilderSpawnOptions();
@@ -270,59 +269,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
-	}
-};
-
-/**
- * Checks which sources in this room still need harvesters and adds those to queue.
- */
-Room.prototype.addHarvesterSpawnOptions = function () {
-	const memory = this.memory.spawnQueue;
-
-	// If we have no other way to recover, spawn with reduced amounts of parts.
-	let force = false;
-	if (_.size(this.creepsByRole.harvester) === 0 && (!this.storage || (_.size(this.creepsByRole.transporter) === 0 && this.getStoredEnergy() < 5000))) {
-		force = true;
-	}
-
-	if (!force && this.isFullOnEnergy()) return;
-
-	for (const source of this.sources) {
-		const maxParts = source.getMaxWorkParts();
-		// Make sure at least one harvester is spawned for each source.
-		if (source.harvesters.length === 0) {
-			memory.options.push({
-				priority: (force ? 5 : 4),
-				weight: 1,
-				role: 'harvester',
-				source: source.id,
-				maxWorkParts: maxParts,
-				force,
-			});
-		}
-		else if (this.controller.level <= 3 && source.harvesters.length < source.getNumHarvestSpots()) {
-			// If there's still space at this source, spawn additional harvesters until the maximum number of work parts has been reached.
-			// Starting from RCL 4, 1 harvester per source should always be enough.
-			let totalWorkParts = 0;
-			for (const creep of source.harvesters) {
-				totalWorkParts += creep.memory.body.work || 0;
-			}
-
-			for (const creep of _.values(this.creepsByRole['builder.remote']) || {}) {
-				totalWorkParts += (creep.memory.body.work || 0) / 2;
-			}
-
-			if (totalWorkParts < maxParts) {
-				memory.options.push({
-					priority: 4,
-					weight: 1 - (totalWorkParts / maxParts),
-					role: 'harvester',
-					source: source.id,
-					maxWorkParts: maxParts - totalWorkParts,
-					force: false,
-				});
-			}
-		}
 	}
 };
 
