@@ -2,7 +2,9 @@
 
 /* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO */
 
-module.exports = class HarvesterSpawnRole {
+const SpawnRole = require('./spawn-role');
+
+module.exports = class HarvesterSpawnRole extends SpawnRole {
 	/**
 	 * Adds harvester spawn options for the given room.
 	 *
