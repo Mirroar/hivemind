@@ -1285,7 +1285,7 @@ RoomPlanner.prototype.placeSpawnWalls = function () {
 				// Check if any adjacent tile has a road, which means creeps can leave from there.
 				let hasRoad = false;
 				utilities.handleMapArea(x, y, (ax, ay) => {
-					if (this.isPlannedLocation(new RoomPosition(ax, ay, this.roomName), 'road')) {
+					if (this.buildingMatrix.get(ax, ay) === 1) {
 						hasRoad = true;
 						return false;
 					}
