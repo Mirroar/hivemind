@@ -1,8 +1,10 @@
 'use strict';
 
+/* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO */
+
 module.exports = class HarvesterSpawnRole {
 	/**
-	 * Adds spawn options for the given room.
+	 * Adds harvester spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
@@ -16,7 +18,7 @@ module.exports = class HarvesterSpawnRole {
 		if (room.isFullOnEnergy() && !force) return;
 
 		for (const source of room.sources) {
-			const maxParts = source.getMaxWorkParts();
+			const maxParts = this.getMaxWorkParts(source);
 			// Make sure at least one harvester is spawned for each source.
 			if (source.harvesters.length === 0) {
 				options.push({
@@ -81,5 +83,27 @@ module.exports = class HarvesterSpawnRole {
 		if (room.getStoredEnergy() < 5000) return true;
 
 		return false;
+	}
+
+	/**
+	 * Calculates the maximum number of work parts for harvesting a source.
+	 *
+	 * @param {Source} source
+	 *   The source to calculate the number of work parts for.
+	 *
+	 * @return {number}
+	 *   Number of needed work parts.
+	 */
+	getMaxWorkParts(source) {
+		// @todo Factor in whether we control this room.
+		let numParts = source.energyCapacity / ENERGY_REGEN_TIME / 2;
+
+		_.each(source.effects, effect => {
+			if (effect.power === PWR_REGEN_SOURCE) {
+				numParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
+			}
+		});
+
+		return 1.2 * numParts;
 	}
 };

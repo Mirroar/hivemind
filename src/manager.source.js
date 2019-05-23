@@ -1,8 +1,7 @@
 'use strict';
 
-/* global hivemind Source Mineral StructureKeeperLair ENERGY_REGEN_TIME LOOK_TERRAIN
-FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR
-POWER_INFO PWR_REGEN_SOURCE */
+/* global hivemind Source Mineral StructureKeeperLair LOOK_TERRAIN
+FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR */
 
 /**
  * Adds additional data to room objects.
@@ -48,26 +47,6 @@ Source.prototype.enhanceData = function () {
  */
 Mineral.prototype.enhanceData = function () {
 	enhanceData.call(this, 'minerals', 'fixedMineral');
-};
-
-/**
- * Calculates the maximum number of work parts for harvesting a source.
- *
- * @return {number}
- *   Number of needed work parts.
- */
-Source.prototype.getMaxWorkParts = function () {
-	// @todo get Rid of maxWorkParts variable in favor of this.
-	// @todo Factor in whether we control this room.
-	let numParts = this.energyCapacity / ENERGY_REGEN_TIME / 2;
-
-	_.each(this.effects, effect => {
-		if (effect.power === PWR_REGEN_SOURCE) {
-			numParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
-		}
-	});
-
-	return 1.2 * numParts;
 };
 
 /**
