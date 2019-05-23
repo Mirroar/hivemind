@@ -12,51 +12,75 @@ module.exports = class HarvesterSpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		const force = this.isSmallHarvesterNeeded(room);
-
 		// Stop harvesting if we can't really store any more energy.
-		if (room.isFullOnEnergy() && !force) return;
+		if (room.isFullOnEnergy() && !this.isSmallHarvesterNeeded(room)) return;
 
 		for (const source of room.sources) {
-			const maxParts = this.getMaxWorkParts(source);
-			// Make sure at least one harvester is spawned for each source.
-			if (source.harvesters.length === 0) {
-				options.push({
-					priority: (force ? 5 : 4),
-					weight: 1,
-					role: 'harvester',
-					source: source.id,
-					maxWorkParts: maxParts,
-					force,
-				});
+			this.addInitialHarvester(source, options);
+			this.addAdditionalHarvesters(source, options);
+		}
+	}
 
-				continue;
-			}
+	/**
+	 * Spawns a harvester at every source.
+	 *
+	 * @param {Source} source
+	 *   The source to spawn harvesters for.
+	 * @param {Object[]} options
+	 *   A list of spawn options to add to.
+	 */
+	addInitialHarvester(source, options) {
+		// @todo Spawn bigger harvesters in high level rooms with plenty of energy to save on CPU.
+		// @todo Spawn new harvester before previous harvester dies.
 
-			if (room.controller.level > 3) continue;
-			if (source.harvesters.length >= source.getNumHarvestSpots()) continue;
+		if (source.harvesters.length > 0) return;
 
-			// If there's still space at this source, spawn additional harvesters until the maximum number of work parts has been reached.
-			// Starting from RCL 4, 1 harvester per source should always be enough.
-			let totalWorkParts = 0;
-			for (const creep of source.harvesters) {
-				totalWorkParts += creep.memory.body.work || 0;
-			}
+		const force = this.isSmallHarvesterNeeded(source.room);
+		options.push({
+			priority: (force ? 5 : 4),
+			weight: 1,
+			role: 'harvester',
+			source: source.id,
+			maxWorkParts: this.getMaxWorkParts(source),
+			force,
+		});
+	}
 
-			for (const creep of _.values(room.creepsByRole['builder.remote']) || {}) {
-				totalWorkParts += (creep.memory.body.work || 0) / 2;
-			}
+	/**
+	 * Spawns additional harvesters when it improves productivity.
+	 *
+	 * @param {Source} source
+	 *   The source to spawn harvesters for.
+	 * @param {Object[]} options
+	 *   A list of spawn options to add to.
+	 */
+	addAdditionalHarvesters(source, options) {
+		// Starting from RCL 4, 1 harvester per source should always be enough.
+		if (source.room.controller.level > 3) return;
 
-			if (totalWorkParts < maxParts) {
-				options.push({
-					priority: 4,
-					weight: 1 - (totalWorkParts / maxParts),
-					role: 'harvester',
-					source: source.id,
-					maxWorkParts: maxParts - totalWorkParts,
-					force: false,
-				});
-			}
+		// Don't spawn more harvesters than we have space for.
+		if (source.harvesters.length >= source.getNumHarvestSpots()) return;
+
+		let totalWorkParts = 0;
+		for (const creep of source.harvesters) {
+			totalWorkParts += creep.memory.body.work || 0;
+		}
+
+		// Remote builders want access to sources as well, so spawn less harvesters.
+		for (const creep of _.values(source.room.creepsByRole['builder.remote']) || {}) {
+			totalWorkParts += (creep.memory.body.work || 0) / 2;
+		}
+
+		const maxParts = this.getMaxWorkParts(source);
+		if (totalWorkParts < maxParts) {
+			options.push({
+				priority: 4,
+				weight: 1 - (totalWorkParts / maxParts),
+				role: 'harvester',
+				source: source.id,
+				maxWorkParts: maxParts - totalWorkParts,
+				force: false,
+			});
 		}
 	}
 
