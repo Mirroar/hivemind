@@ -209,7 +209,6 @@ Room.prototype.addAllSpawnOptions = function () {
 	this.addUpgraderSpawnOptions();
 	this.addBuilderSpawnOptions();
 	this.addExploitSpawnOptions();
-	this.addDismantlerSpawnOptions();
 	this.addBoostManagerSpawnOptions();
 	this.addPowerSpawnOptions();
 	this.addGiftSpawnOptions();
@@ -607,45 +606,6 @@ Room.prototype.addGiftSpawnOptions = function () {
 		weight: 0,
 		role: 'gift',
 	});
-};
-
-/**
- * Adds dismantler creeps to spawn queue if needed.
- */
-Room.prototype.addDismantlerSpawnOptions = function () {
-	if (this.isEvacuating()) return;
-
-	const memory = this.memory.spawnQueue;
-
-	const flags = _.filter(Game.flags, flag => flag.name.startsWith('Dismantle:' + this.name));
-	if (flags.length > 0) {
-		// @todo Check if there is enough dismantlers per room with flags in it.
-		const flag = flags[0];
-		const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === flag.pos.roomName && creep.memory.sourceRoom === this.name).length;
-
-		if (numDismantlers < flags.length) {
-			memory.options.push({
-				priority: 4,
-				weight: 0,
-				role: 'dismantler',
-				targetRoom: flag.pos.roomName,
-			});
-		}
-	}
-
-	if (this.roomPlanner && this.roomPlanner.needsDismantling()) {
-		// @todo this.roomPlanner will not be available until spawn management is moved to run after room logic.
-		const numDismantlers = _.filter(this.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === this.name && creep.memory.sourceRoom === this.name).length;
-
-		if (numDismantlers < 1) {
-			memory.options.push({
-				priority: 3,
-				weight: 0,
-				role: 'dismantler',
-				targetRoom: this.name,
-			});
-		}
-	}
 };
 
 /**
