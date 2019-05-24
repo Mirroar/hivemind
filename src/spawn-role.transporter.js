@@ -12,69 +12,17 @@ module.exports = class TransporterSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		const numSources = _.size(room.sources);
+		const transporterSize = this.getTransporterSize(room);
+		const maxTransporters = this.getTransporterAmount(room, transporterSize);
+
 		const numTransporters = _.size(room.creepsByRole.transporter);
-		let maxTransporters = 2 + (2 * numSources); // @todo Find a good way to gauge needed number of transporters by measuring distances.
-
-		for (const i in room.sources) {
-			// If we have a link to beam energy around, we'll need less transporters.
-			if (room.sources[i].getNearbyLink() && room.memory.controllerLink) {
-				maxTransporters--;
-			}
-		}
-
-		// Need less transporters if energy gets beamed around the place a lot.
-		if (room.memory.controllerLink && room.memory.storageLink) {
-			maxTransporters--;
-		}
-
-		if (room.controller.level === 6) {
-			// RCL 6 is that annoying level at which refilling extensions is very tedious and there are many things that need spawning.
-			maxTransporters++;
-		}
-
-		// Need less transporters in rooms where remote builders are working.
-		maxTransporters -= _.size(room.creepsByRole['builder.remote']);
-
-		// On low level rooms, do not use (too many) transporters.
-		if (room.controller.level < 3) {
-			maxTransporters = 1;
-		}
-
-		if (room.controller.level < 4 || !room.storage) {
-			// Storage mostly takes place in containers, units will get their energy from there.
-			maxTransporters = 2;
-		}
-
-		// On higher level rooms, spawn less, but bigger, transporters.
-		let sizeFactor = 1;
-		if (room.controller.level >= 7) {
-			sizeFactor = 2;
-		}
-		else if (room.controller.level >= 6) {
-			sizeFactor = 1.5;
-		}
-		else if (room.controller.level >= 5) {
-			sizeFactor = 1.25;
-		}
-
-		sizeFactor *= 1.5;
-		maxTransporters /= 1.2;
-
-		maxTransporters /= sizeFactor;
-		maxTransporters = Math.max(maxTransporters, 2);
-
-		if (room.isClearingTerminal() && room.terminal && _.sum(room.terminal.store) > room.terminal.storeCapacity * 0.01) {
-			maxTransporters *= 1.5;
-		}
-
 		if (numTransporters < maxTransporters) {
 			const option = {
 				priority: 5,
 				weight: 0.5,
 				role: 'transporter',
 				force: false,
-				size: 8 * sizeFactor,
+				size: transporterSize,
 			};
 
 			if (numTransporters >= maxTransporters / 2) {
@@ -89,5 +37,85 @@ module.exports = class TransporterSpawnRole extends SpawnRole {
 
 			options.push(option);
 		}
+	}
+
+	/**
+	 * Determines number of transporters needed in a room.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {number} transporterSize
+	 *   Maximum size of transporters in this room.
+	 *
+	 * @return {number}
+	 *   Number of transporters needed in this room.
+	 */
+	getTransporterAmount(room, transporterSize) {
+		let maxTransporters = this.getTransporterBaseAmount(room) * 2 / 3;
+
+		// On higher level rooms, spawn less, but bigger, transporters.
+		maxTransporters /= transporterSize;
+		maxTransporters = Math.max(maxTransporters, 2);
+
+		if (room.isClearingTerminal() && room.terminal && _.sum(room.terminal.store) > room.terminal.storeCapacity * 0.01) {
+			maxTransporters *= 1.5;
+		}
+
+		return maxTransporters;
+	}
+
+	/**
+	 * Determines a base amount of transporters needed in a room.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 *
+	 * @return {number}
+	 *   Number of transporters needed in this room.
+	 */
+	getTransporterBaseAmount(room) {
+		// On low level rooms, do not use (too many) transporters.
+		if (room.controller.level < 3) return 1;
+		if (room.controller.level < 4) return 2;
+
+		// Storage mostly takes place in containers, units will get their energy from there.
+		if (!room.storage) return 2;
+
+		const numSources = _.size(room.sources);
+		let maxTransporters = 2 + (2 * numSources); // @todo Find a good way to gauge needed number of transporters by measuring distances.
+
+		// If we have links to beam energy around, we'll need less transporters.
+		if (room.memory.controllerLink) {
+			maxTransporters -= _.sum(room.sources, source => source.getNearbyLink() ? 1 : 0);
+
+			// Need less transporters if energy gets beamed around the place a lot.
+			if (room.memory.controllerLink) {
+				maxTransporters--;
+			}
+		}
+
+		// RCL 6 is that annoying level at which refilling extensions is very tedious and there are many things that need spawning.
+		if (room.controller.level === 6) maxTransporters++;
+
+		// Need less transporters in rooms where remote builders are working.
+		maxTransporters -= _.size(room.creepsByRole['builder.remote']);
+
+		return maxTransporters;
+	}
+
+	/**
+	 * Determines maximum size of transporters in a room.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 *
+	 * @return {number}
+	 *   Size of transporters for this room.
+	 */
+	getTransporterSize(room) {
+		if (room.controller.level >= 7) return 24;
+		if (room.controller.level >= 6) return 18;
+		if (room.controller.level >= 5) return 15;
+		return 12;
 	}
 };
