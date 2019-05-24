@@ -1,7 +1,7 @@
 'use strict';
 
 /* global hivemind StructureSpawn Room RoomPosition BODYPART_COST OK
-FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE CREEP_LIFE_TIME CREEP_SPAWN_TIME
+FIND_MY_CONSTRUCTION_SITES CREEP_LIFE_TIME CREEP_SPAWN_TIME
 MAX_CREEP_SIZE FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR FIND_FLAGS
 SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY
 CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY ATTACK HEAL
@@ -205,7 +205,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
  */
 Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
-	this.addUpgraderSpawnOptions();
 	this.addBuilderSpawnOptions();
 	this.addExploitSpawnOptions();
 	this.addBoostManagerSpawnOptions();
@@ -267,64 +266,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
-	}
-};
-
-/**
- * Spawns a number of upgraders appropriate for this room.
- */
-Room.prototype.addUpgraderSpawnOptions = function () {
-	const memory = this.memory.spawnQueue;
-
-	const numUpgraders = _.size(_.filter(this.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
-	let maxUpgraders = 0;
-
-	if (this.controller.level <= 3) {
-		const numSources = _.size(this.sources);
-		maxUpgraders = 1 + numSources + Math.floor(this.getStoredEnergy() / 2000);
-		maxUpgraders = Math.min(maxUpgraders, 5);
-	}
-	else if (this.controller.level === 8) {
-		maxUpgraders = 1;
-		if (this.getStoredEnergy() < 50000) {
-			maxUpgraders = 0;
-		}
-	}
-	else if (this.getStoredEnergy() < 100000) {
-		maxUpgraders = 0;
-	}
-	else if (this.getStoredEnergy() < 300000) {
-		maxUpgraders = 1;
-	}
-	else if (this.getStoredEnergy() < 500000) {
-		maxUpgraders = 2;
-	}
-	else {
-		// @todo Have maximum depend on number of work parts.
-		// @todo Make sure enough energy is brought by.
-		maxUpgraders = 3;
-	}
-
-	if (this.isEvacuating()) maxUpgraders = 0;
-
-	if (!this.storage && !this.terminal && this.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
-		// Do not spawn upgraders when builders and spawns will need most of
-		// our energy.
-		maxUpgraders = 0;
-	}
-
-	if (maxUpgraders === 0 && this.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[this.controller.level] * 0.5) {
-		hivemind.log('creeps', this.name).info('trying to spawn upgrader because controller is close to downgrading', this.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[this.controller.level]);
-		// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
-		maxUpgraders = 1;
-	}
-
-	if (numUpgraders < maxUpgraders) {
-		memory.options.push({
-			priority: 3,
-			weight: 1,
-			role: 'upgrader',
-		});
 	}
 };
 
