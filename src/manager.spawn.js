@@ -1,11 +1,10 @@
 'use strict';
 
 /* global hivemind StructureSpawn Room RoomPosition BODYPART_COST OK
-FIND_MY_CONSTRUCTION_SITES CREEP_LIFE_TIME CREEP_SPAWN_TIME
 MAX_CREEP_SIZE FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR FIND_FLAGS
 SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY
 CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY ATTACK HEAL
-CONTROLLER_MAX_UPGRADE_PER_TICK */
+CONTROLLER_MAX_UPGRADE_PER_TICK CREEP_LIFE_TIME CREEP_SPAWN_TIME */
 
 const stats = require('./stats');
 const utilities = require('./utilities');
@@ -208,7 +207,6 @@ Room.prototype.addAllSpawnOptions = function () {
 	this.addExploitSpawnOptions();
 	this.addBoostManagerSpawnOptions();
 	this.addPowerSpawnOptions();
-	this.addGiftSpawnOptions();
 
 	// In low level rooms, add defenses!
 	if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
@@ -379,22 +377,6 @@ Room.prototype.addPowerSpawnOptions = function () {
 				}
 			}
 		}
-	});
-};
-
-/**
- * Adds gift creeps to spawn queue if needed.
- */
-Room.prototype.addGiftSpawnOptions = function () {
-	// @todo This is unlikely to happen exaclty when a spawn is idle.
-	if (Game.time % 123 !== 67) return;
-	if (!this.storage || this.getFreeStorage() > this.getStorageLimit() * 0.05) return;
-
-	const memory = this.memory.spawnQueue;
-	memory.options.push({
-		priority: 4,
-		weight: 0,
-		role: 'gift',
 	});
 };
 
