@@ -205,7 +205,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
  */
 Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
-	this.addBuilderSpawnOptions();
 	this.addExploitSpawnOptions();
 	this.addBoostManagerSpawnOptions();
 	this.addPowerSpawnOptions();
@@ -266,70 +265,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
-	}
-};
-
-/**
- * Spawns a number of repairers to keep buildings in good health.
- */
-Room.prototype.addBuilderSpawnOptions = function () {
-	const memory = this.memory.spawnQueue;
-
-	let numWorkParts = 0;
-	let maxWorkParts = 5;
-	let builderSize = null;
-	if (this.controller.level > 2) {
-		maxWorkParts += 5;
-	}
-
-	_.each(this.creepsByRole.builder, creep => {
-		numWorkParts += creep.memory.body.work || 0;
-	});
-
-	// There are a lot of ramparts in planned rooms, spawn builders appropriately.
-	if (this.roomPlanner && this.roomPlanner.memory.locations && this.controller && this.controller.my && this.controller.level >= 4) {
-		maxWorkParts += _.size(this.roomPlanner.memory.locations.rampart) / 10;
-	}
-
-	// Add more builders if we have a lot of energy to spare.
-	if (this.storage && this.storage.store.energy > 400000) {
-		maxWorkParts *= 2;
-	}
-	else if (this.storage && this.storage.store.energy > 200000) {
-		maxWorkParts *= 1.5;
-	}
-
-	// Add more builders if we're moving a spawn.
-	if (this.memory.roomPlanner && this.memory.roomPlanner.hasMisplacedSpawn) {
-		maxWorkParts *= 1.5;
-	}
-
-	if (this.controller.level <= 3) {
-		if (this.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-			// There isn't really much to repair before RCL 4, so don't spawn
-			// new builders when there's nothing to build.
-			maxWorkParts = 0;
-		}
-	}
-	else {
-		// Spawn more builders depending on total size of current construction sites.
-		// @todo Use hitpoints of construction sites vs number of work parts as a guide.
-		maxWorkParts += this.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
-	}
-
-	if (this.isEvacuating()) {
-		// Just spawn a small builder for keeping roads intact.
-		maxWorkParts = 1;
-		builderSize = 3;
-	}
-
-	if (numWorkParts < maxWorkParts) {
-		memory.options.push({
-			priority: 3,
-			weight: 0.5,
-			role: 'builder',
-			size: builderSize,
-		});
 	}
 };
 
