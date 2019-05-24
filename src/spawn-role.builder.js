@@ -4,9 +4,9 @@
 
 const SpawnRole = require('./spawn-role');
 
-module.exports = class UpgraderSpawnRole extends SpawnRole {
+module.exports = class BuilderSpawnRole extends SpawnRole {
 	/**
-	 * Adds upgrader spawn options for the given room.
+	 * Adds builder spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
@@ -14,19 +14,14 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		let numWorkParts = 0;
 		let maxWorkParts = 5;
-		let builderSize = null;
 		if (room.controller.level > 2) {
 			maxWorkParts += 5;
 		}
 
-		_.each(room.creepsByRole.builder, creep => {
-			numWorkParts += creep.memory.body.work || 0;
-		});
-
 		// There are a lot of ramparts in planned rooms, spawn builders appropriately.
-		if (room.roomPlanner && room.roomPlanner.memory.locations && room.controller && room.controller.my && room.controller.level >= 4) {
+		// @todo Only if they are not fully built, of course.
+		if (room.roomPlanner && room.roomPlanner.memory.locations && room.controller.level >= 4) {
 			maxWorkParts += _.size(room.roomPlanner.memory.locations.rampart) / 10;
 		}
 
@@ -56,11 +51,17 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 			maxWorkParts += room.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
 		}
 
+		let builderSize = null;
 		if (room.isEvacuating()) {
 			// Just spawn a small builder for keeping roads intact.
 			maxWorkParts = 1;
 			builderSize = 3;
 		}
+
+		let numWorkParts = 0;
+		_.each(room.creepsByRole.builder, creep => {
+			numWorkParts += creep.memory.body.work || 0;
+		});
 
 		if (numWorkParts < maxWorkParts) {
 			options.push({

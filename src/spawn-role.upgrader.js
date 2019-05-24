@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE hivemind */
+/* global hivemind FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE */
 
 const SpawnRole = require('./spawn-role');
 
