@@ -12,6 +12,7 @@ require('./manager.spawn');
 const spawnRoles = [
 	'dismantler',
 	'harvester',
+	'transporter',
 ];
 
 /**

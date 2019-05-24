@@ -205,7 +205,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
  */
 Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
-	this.addTransporterSpawnOptions();
 	this.addUpgraderSpawnOptions();
 	this.addBuilderSpawnOptions();
 	this.addExploitSpawnOptions();
@@ -268,91 +267,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
-	}
-};
-
-/**
- * Checks for and spawns more transporters.
- */
-Room.prototype.addTransporterSpawnOptions = function () {
-	const memory = this.memory.spawnQueue;
-
-	const numSources = _.size(this.sources);
-	const numTransporters = _.size(this.creepsByRole.transporter);
-	let maxTransporters = 2 + (2 * numSources); // @todo Find a good way to gauge needed number of transporters by measuring distances.
-
-	for (const i in this.sources) {
-		// If we have a link to beam energy around, we'll need less transporters.
-		if (this.sources[i].getNearbyLink() && this.memory.controllerLink) {
-			maxTransporters--;
-		}
-	}
-
-	// Need less transporters if energy gets beamed around the place a lot.
-	if (this.memory.controllerLink && this.memory.storageLink) {
-		maxTransporters--;
-	}
-
-	if (this.controller.level === 6) {
-		// RCL 6 is that annoying level at which refilling extensions is very tedious and there are many things that need spawning.
-		maxTransporters++;
-	}
-
-	// Need less transporters in rooms where remote builders are working.
-	maxTransporters -= _.size(this.creepsByRole['builder.remote']);
-
-	// On low level rooms, do not use (too many) transporters.
-	if (this.controller.level < 3) {
-		maxTransporters = 1;
-	}
-
-	if (this.controller.level < 4 || !this.storage) {
-		// Storage mostly takes place in containers, units will get their energy from there.
-		maxTransporters = 2;
-	}
-
-	// On higher level rooms, spawn less, but bigger, transporters.
-	let sizeFactor = 1;
-	if (this.controller.level >= 7) {
-		sizeFactor = 2;
-	}
-	else if (this.controller.level >= 6) {
-		sizeFactor = 1.5;
-	}
-	else if (this.controller.level >= 5) {
-		sizeFactor = 1.25;
-	}
-
-	sizeFactor *= 1.5;
-	maxTransporters /= 1.2;
-
-	maxTransporters /= sizeFactor;
-	maxTransporters = Math.max(maxTransporters, 2);
-
-	if (this.isClearingTerminal() && this.terminal && _.sum(this.terminal.store) > this.terminal.storeCapacity * 0.01) {
-		maxTransporters *= 1.5;
-	}
-
-	if (numTransporters < maxTransporters) {
-		const option = {
-			priority: 5,
-			weight: 0.5,
-			role: 'transporter',
-			force: false,
-			size: 8 * sizeFactor,
-		};
-
-		if (numTransporters >= maxTransporters / 2) {
-			option.priority = 4;
-		}
-		else if (numTransporters > 1) {
-			option.weight = 0;
-		}
-		else {
-			option.force = true;
-		}
-
-		memory.options.push(option);
 	}
 };
 
