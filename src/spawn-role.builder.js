@@ -14,6 +14,44 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
+		const maxWorkParts = this.getNeededWorkParts(room);
+
+		let numWorkParts = 0;
+		_.each(room.creepsByRole.builder, creep => {
+			numWorkParts += creep.memory.body.work || 0;
+		});
+
+		if (numWorkParts < maxWorkParts) {
+			options.push({
+				priority: 3,
+				weight: 0.5,
+				role: 'builder',
+				size: room.isEvacuating() ? 3 : null,
+			});
+		}
+	}
+
+	/**
+	 * Determine how many work parts we need on builders in this room.
+	 *
+	 * @param {Room} room
+	 *   The room to check.
+	 *
+	 * @return {number}
+	 *   The number of work parts needed.
+	 */
+	getNeededWorkParts(room) {
+		if (room.isEvacuating()) {
+			// Just spawn a small builder for keeping roads intact.
+			return 1;
+		}
+
+		if (room.controller.level <= 3 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+			// There isn't really much to repair before RCL 4, so don't spawn
+			// new builders when there's nothing to build.
+			return 1;
+		}
+
 		let maxWorkParts = 5;
 		if (room.controller.level > 2) {
 			maxWorkParts += 5;
@@ -38,38 +76,12 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 			maxWorkParts *= 1.5;
 		}
 
-		if (room.controller.level <= 3) {
-			if (room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-				// There isn't really much to repair before RCL 4, so don't spawn
-				// new builders when there's nothing to build.
-				maxWorkParts = 0;
-			}
-		}
-		else {
+		if (room.controller.level > 3) {
 			// Spawn more builders depending on total size of current construction sites.
 			// @todo Use hitpoints of construction sites vs number of work parts as a guide.
 			maxWorkParts += room.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
 		}
 
-		let builderSize = null;
-		if (room.isEvacuating()) {
-			// Just spawn a small builder for keeping roads intact.
-			maxWorkParts = 1;
-			builderSize = 3;
-		}
-
-		let numWorkParts = 0;
-		_.each(room.creepsByRole.builder, creep => {
-			numWorkParts += creep.memory.body.work || 0;
-		});
-
-		if (numWorkParts < maxWorkParts) {
-			options.push({
-				priority: 3,
-				weight: 0.5,
-				role: 'builder',
-				size: builderSize,
-			});
-		}
+		return maxWorkParts;
 	}
 };
