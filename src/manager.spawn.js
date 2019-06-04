@@ -205,7 +205,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
 	this.addExploitSpawnOptions();
-	this.addBoostManagerSpawnOptions();
 
 	// In low level rooms, add defenses!
 	if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
@@ -257,8 +256,8 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	else if (best.role === 'exploit') {
 		Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
 	}
-	else if (best.role === 'boosts') {
-		Game.rooms[best.roomName].boostManager.spawn(activeSpawn);
+	else if (best.role === 'helper') {
+		activeSpawn.spawnHelper();
 	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
@@ -273,23 +272,6 @@ Room.prototype.addExploitSpawnOptions = function () {
 
 	const memory = this.memory.spawnQueue;
 	_.each(this.exploits, exploit => exploit.addSpawnOptions(memory.options));
-};
-
-/**
- * Adds helper creeps the boost manager might need to spawn queue.
- */
-Room.prototype.addBoostManagerSpawnOptions = function () {
-	if (!this.boostManager) return;
-
-	const memory = this.memory.spawnQueue;
-	if (this.boostManager.needsSpawning()) {
-		memory.options.push({
-			priority: 4,
-			weight: 1,
-			role: 'boosts',
-			roomName: this.name,
-		});
-	}
 };
 
 /**
@@ -896,6 +878,22 @@ StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
 		memory: {
 			sourceRoom: this.pos.roomName,
 			targetRoom,
+		},
+	});
+};
+
+/**
+ * Spawns a helper when necessary.
+ *
+ * @return {boolean}
+ *   True if we started spawning a creep.
+ */
+StructureSpawn.prototype.spawnHelper = function () {
+	return this.createManagedCreep({
+		role: 'helper',
+		body: [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY],
+		memory: {
+			singleRoom: this.pos.roomName,
 		},
 	});
 };

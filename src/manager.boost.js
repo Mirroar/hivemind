@@ -330,20 +330,4 @@ BoostManager.prototype.needsSpawning = function () {
 	return false;
 };
 
-/**
- * Spawns a helper when necessary.
- *
- * @param {StructureSpawn} spawn
- *   The spawn that should create the helper creep.
- */
-BoostManager.prototype.spawn = function (spawn) {
-	spawn.createManagedCreep({
-		role: 'helper',
-		body: [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY],
-		memory: {
-			singleRoom: this.roomName,
-		},
-	});
-};
-
 module.exports = BoostManager;
