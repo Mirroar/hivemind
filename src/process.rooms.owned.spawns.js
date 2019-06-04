@@ -14,6 +14,8 @@ const spawnRoles = [
 	'dismantler',
 	'gift',
 	'harvester',
+	'harvester.power',
+	'hauler.power',
 	'transporter',
 	'upgrader',
 ];

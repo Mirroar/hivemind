@@ -4,7 +4,7 @@
 MAX_CREEP_SIZE FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR FIND_FLAGS
 SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY
 CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY ATTACK HEAL
-CONTROLLER_MAX_UPGRADE_PER_TICK CREEP_LIFE_TIME CREEP_SPAWN_TIME */
+CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 const stats = require('./stats');
 const utilities = require('./utilities');
@@ -206,7 +206,6 @@ Room.prototype.addAllSpawnOptions = function () {
 	// Fill spawn queue.
 	this.addExploitSpawnOptions();
 	this.addBoostManagerSpawnOptions();
-	this.addPowerSpawnOptions();
 
 	// In low level rooms, add defenses!
 	if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
@@ -291,93 +290,6 @@ Room.prototype.addBoostManagerSpawnOptions = function () {
 			roomName: this.name,
 		});
 	}
-};
-
-/**
- * Adds creeps needed for power gathering to spawn queue.
- */
-Room.prototype.addPowerSpawnOptions = function () {
-	if (Memory.disablePowerHarvesting) {
-		return;
-	}
-
-	if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) {
-		return;
-	}
-
-	const memory = this.memory.spawnQueue;
-	const myRoomName = this.name;
-
-	_.each(Memory.strategy.power.rooms, (info, roomName) => {
-		if (!info.isActive) return;
-
-		// @todo Determine supposed time until we crack open the power bank.
-		// Then we can stop spawning attackers and spawn haulers instead.
-
-		if (info.spawnRooms[myRoomName]) {
-			const travelTime = 50 * info.spawnRooms[myRoomName].distance;
-
-			const timeToKill = info.hits / info.dps;
-
-			// We're assigned to spawn creeps for this power gathering operation!
-			const powerHarvesters = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
-				if (creep.memory.sourceRoom === myRoomName && creep.memory.targetRoom === roomName && !creep.memory.isHealer) {
-					if ((creep.ticksToLive || CREEP_LIFE_TIME) >= (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + travelTime) {
-						return true;
-					}
-				}
-
-				return false;
-			});
-			const powerHealers = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
-				if (creep.memory.sourceRoom === myRoomName && creep.memory.targetRoom === roomName && creep.memory.isHealer) {
-					if ((creep.ticksToLive || CREEP_LIFE_TIME) >= (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + travelTime) {
-						return true;
-					}
-				}
-
-				return false;
-			});
-
-			if (powerHarvesters.length < 2 && powerHarvesters.length <= powerHealers.length && timeToKill > 0) {
-				memory.options.push({
-					priority: 3,
-					weight: 1,
-					role: 'harvester.power',
-					targetRoom: roomName,
-				});
-			}
-
-			// Also spawn healers.
-			if (powerHealers.length < 2 && powerHarvesters.length >= powerHealers.length && timeToKill > 0) {
-				memory.options.push({
-					priority: 3,
-					weight: 1,
-					role: 'harvester.power',
-					targetRoom: roomName,
-					isHealer: true,
-				});
-			}
-
-			if (timeToKill < (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + (CREEP_LIFE_TIME / 3)) {
-				// Time to spawn haulers!
-				const powerHaulers = _.filter(Game.creepsByRole['hauler.power'] || {}, creep => creep.memory.targetRoom === roomName);
-				let totalCapacity = 0;
-				_.each(powerHaulers, creep => {
-					totalCapacity += creep.carryCapacity;
-				});
-
-				if (totalCapacity < info.amount * 1.2) {
-					memory.options.push({
-						priority: 3,
-						weight: 0.5,
-						role: 'hauler.power',
-						targetRoom: roomName,
-					});
-				}
-			}
-		}
-	});
 };
 
 /**
