@@ -20,7 +20,6 @@ module.exports = class TransporterSpawnRole extends SpawnRole {
 			const option = {
 				priority: 5,
 				weight: 0.5,
-				role: 'transporter',
 				force: false,
 				size: transporterSize,
 			};

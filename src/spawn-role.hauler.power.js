@@ -37,7 +37,6 @@ module.exports = class PowerHaulerSpawnRole extends SpawnRole {
 				options.push({
 					priority: 3,
 					weight: 0.5,
-					role: 'hauler.power',
 					targetRoom: roomName,
 				});
 			}

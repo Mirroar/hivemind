@@ -20,7 +20,6 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 			options.push({
 				priority: 3,
 				weight: 1,
-				role: 'upgrader',
 			});
 		}
 	}

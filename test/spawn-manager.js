@@ -59,3 +59,14 @@ test('optimization', t => {
 	t.plan(1);
 	t.pass();
 });
+
+test('fallback values', t => {
+	const manager = new SpawnManager();
+	const roleId = 'test';
+	manager.registerSpawnRole(roleId, {
+		getSpawnOptions: (room, options) => options.push({}),
+	});
+
+	const options = manager.getAllSpawnOptions({});
+	t.is(options[0].role, roleId);
+});

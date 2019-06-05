@@ -20,7 +20,6 @@ module.exports = class HelperSpawnRole extends SpawnRole {
 			options.push({
 				priority: 4,
 				weight: 1,
-				role: 'helper',
 				roomName: room.name,
 			});
 		}

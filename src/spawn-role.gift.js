@@ -19,7 +19,6 @@ module.exports = class GiftSpawnRole extends SpawnRole {
 		options.push({
 			priority: 4,
 			weight: 0,
-			role: 'gift',
 		});
 	}
 };

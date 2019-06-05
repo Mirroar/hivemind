@@ -50,7 +50,6 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 				options.push({
 					priority: 3,
 					weight: 1,
-					role: 'harvester.power',
 					targetRoom: roomName,
 				});
 			}
@@ -60,7 +59,6 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 				options.push({
 					priority: 3,
 					weight: 1,
-					role: 'harvester.power',
 					targetRoom: roomName,
 					isHealer: true,
 				});

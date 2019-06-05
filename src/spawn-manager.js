@@ -28,9 +28,17 @@ SpawnManager.prototype.registerSpawnRole = function (roleId, role) {
 SpawnManager.prototype.getAllSpawnOptions = function (room) {
 	const options = [];
 
-	_.each(this.roles, role => {
+	_.each(this.roles, (role, roleId) => {
 		if (role.getSpawnOptions) {
-			role.getSpawnOptions(room, options);
+			const roleOptions = [];
+			role.getSpawnOptions(room, roleOptions);
+
+			_.each(roleOptions, option => {
+				// Set default values for options.
+				if (typeof option.role === 'undefined') option.role = roleId;
+
+				options.push(option);
+			});
 		}
 	});
 

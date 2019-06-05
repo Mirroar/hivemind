@@ -25,7 +25,6 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 			options.push({
 				priority: 3,
 				weight: 0.5,
-				role: 'builder',
 				size: room.isEvacuating() ? 3 : null,
 			});
 		}

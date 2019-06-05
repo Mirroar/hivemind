@@ -41,7 +41,6 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 		options.push({
 			priority: (force ? 5 : 4),
 			weight: 1,
-			role: 'harvester',
 			source: source.id,
 			maxWorkParts: this.getMaxWorkParts(source),
 			force,
@@ -78,7 +77,6 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 			options.push({
 				priority: 4,
 				weight: 1 - (totalWorkParts / maxParts),
-				role: 'harvester',
 				source: source.id,
 				maxWorkParts: maxParts - totalWorkParts,
 				force: false,
