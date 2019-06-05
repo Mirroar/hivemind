@@ -188,7 +188,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 
 	const memory = this.memory.spawnQueue;
 	memory.options = spawnManager.getAllSpawnOptions(this);
-	this.addAllSpawnOptions();
 
 	if (memory.options.length > 0) {
 		// Try to spawn the most needed creep.
@@ -197,23 +196,6 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 	}
 
 	return false;
-};
-
-/**
- * Temporary helper.
- */
-Room.prototype.addAllSpawnOptions = function () {
-	// Fill spawn queue.
-	this.addExploitSpawnOptions();
-
-	// In low level rooms, add defenses!
-	if (this.memory.enemies && !this.memory.enemies.safe && this.controller.level < 4 && _.size(this.creepsByRole.brawler) < 2) {
-		this.memory.spawnQueue.options.push({
-			priority: 5,
-			weight: 1,
-			role: 'brawler',
-		});
-	}
 };
 
 /**
@@ -262,16 +244,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
 	}
-};
-
-/**
- * Adds creeps that need to be spawned for exploits to spawn queue.
- */
-Room.prototype.addExploitSpawnOptions = function () {
-	if (_.size(this.exploits) === 0) return;
-
-	const memory = this.memory.spawnQueue;
-	_.each(this.exploits, exploit => exploit.addSpawnOptions(memory.options));
 };
 
 /**

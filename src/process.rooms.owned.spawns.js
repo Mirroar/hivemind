@@ -10,8 +10,10 @@ require('./manager.spawn');
 /* eslint-enable import/no-unassigned-import */
 
 const spawnRoles = [
+	'brawler',
 	'builder',
 	'dismantler',
+	'exploit',
 	'gift',
 	'harvester',
 	'harvester.power',
