@@ -37,13 +37,15 @@ test('initialization', t => {
 
 test('choosing a spawn', t => {
 	const manager = new SpawnManager();
+	const unavailableSpawn = 'Spawn1';
+	const availableSpawn = 'Spawn2';
 	const spawns = [
-		{name: 'Spawn1', spawning: true},
-		{name: 'Spawn2', spawning: false},
+		{name: unavailableSpawn, spawning: true},
+		{name: availableSpawn, spawning: false},
 	];
 	const filteredSpawns = manager.filterAvailableSpawns(spawns);
 	t.is(filteredSpawns.length, 1);
-	t.is(filteredSpawns[0].name, 'Spawn2');
+	t.is(filteredSpawns[0].name, availableSpawn);
 });
 
 test('optimization', t => {
