@@ -182,10 +182,7 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 	const activeSpawn = roomSpawns[0];
 
 	// Prepare spawn queue.
-	if (!this.memory.spawnQueue) {
-		this.memory.spawnQueue = {};
-	}
-
+	if (!this.memory.spawnQueue) this.memory.spawnQueue = {};
 	const memory = this.memory.spawnQueue;
 	memory.options = spawnManager.getAllSpawnOptions(this);
 

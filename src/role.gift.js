@@ -75,6 +75,7 @@ GiftRole.prototype.performGiftTransport = function (creep) {
 	// Do not send notifications when attacked - we mean to suicide.
 	creep.notifyWhenAttacked(false);
 
+	// @todo Move to a nearby owned room with enough space left.
 	// @todo Move to a known enemy room and suicide.
 	creep.memory.role = 'scout';
 };
