@@ -29,6 +29,11 @@ InitProcess.prototype.run = function () {
 	Game.creepsByRole = {};
 	Game.exploitTemp = {};
 
+	// Add data to global Game object.
+	_.each(Memory.squads, (data, squadName) => {
+		Game.squads[squadName] = new Squad(squadName);
+	});
+
 	// Cache creeps per room and role.
 	_.each(Game.creeps, creep => {
 		creep.enhanceData();
@@ -42,11 +47,6 @@ InitProcess.prototype.run = function () {
 		}
 
 		room.enhanceData();
-	});
-
-	// Add data to global Game object.
-	_.each(Memory.squads, (data, squadName) => {
-		Game.squads[squadName] = new Squad(squadName);
 	});
 };
 
