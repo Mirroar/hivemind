@@ -87,11 +87,13 @@ RemoteMiningProcess.prototype.run = function () {
 			if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.9 * Game.cpu.limit) {
 				if (memory.remoteHarvesting.currentCount < max) {
 					memory.remoteHarvesting.currentCount++;
+					Game.notify('⚒ increased remote mining count to ' + memory.remoteHarvesting.currentCount);
 				}
 			}
 			else if (stats.getStat('bucket', 1000) <= 8000) {
 				if (memory.remoteHarvesting.currentCount > 0) {
 					memory.remoteHarvesting.currentCount--;
+					Game.notify('⚒ reduced remote mining count to ' + memory.remoteHarvesting.currentCount);
 				}
 			}
 		}
