@@ -177,6 +177,7 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 
 	const activeSquads = {};
 
+	// @todo Start with closest rooms first.
 	_.each(Game.rooms, room => {
 		// 5 Support squads max.
 		if (_.size(activeSquads) >= 5) return false;
@@ -184,6 +185,7 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		if (!room.controller || !room.controller.my || room.controller.level < 4) return;
 		if (room.name === info.spawnRoom || room.name === info.roomName) return;
 		if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return;
+		if (room.getStoredEnergy() < 50000) return;
 
 		const path = room.calculateRoomPath(info.roomName);
 		if (!path || path.length > 15) return;
@@ -194,6 +196,11 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		supportSquad.setTarget(new RoomPosition(25, 25, info.roomName));
 		supportSquad.clearUnits();
 		supportSquad.setUnitCount('builder', 1);
+		// Sometimes add a claim creep if main squad has problems claiming the room.
+		if (Math.random() < 0.05 && !Memory.strategy.expand.claimed) {
+			supportSquad.setUnitCount('singleClaim', 1);
+		}
+
 		supportSquad.setPath(null);
 
 		activeSquads[squadName] = true;
