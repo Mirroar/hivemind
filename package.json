@@ -18,7 +18,7 @@
 		"coverage": "nyc ava"
 	},
 	"devDependencies": {
-		"ava": "^1.1.0",
+		"ava": "^1.4.1",
 		"lodash": "^3.0.0",
 		"nyc": "^13.3.0",
 		"xo": "^0.24.0"
