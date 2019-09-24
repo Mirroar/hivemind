@@ -18,7 +18,7 @@ test('initialization', t => {
 				role: 'test',
 			});
 		},
-		getBody: room => {
+		getCreepBody: room => {
 			t.is(room.name, 'E1N1');
 			return ['move', 'work'];
 		},
@@ -71,4 +71,16 @@ test('fallback values', t => {
 
 	const options = manager.getAllSpawnOptions({});
 	t.is(options[0].role, roleId);
+});
+
+test('generating creep bodies from roles', t => {
+	const manager = new SpawnManager();
+	manager.registerSpawnRole('test', {
+		getCreepBody: () => {
+			return ['work', 'move'];
+		},
+	});
+
+	const body = manager.getCreepBody({}, {role: 'test'});
+	t.deepEqual(body, ['work', 'move']);
 });
