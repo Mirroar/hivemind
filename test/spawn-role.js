@@ -1,5 +1,7 @@
 'use strict';
 
+/* global MOVE CARRY ATTACK RANGED_ATTACK HEAL TOUGH */
+
 import test from 'ava';
 import _ from 'lodash';
 
@@ -13,17 +15,35 @@ test('body generation from weights', t => {
 
 	// Simple generation.
 	t.deepEqual(
-		spawnRole.generateCreepBodyFromWeights({move: 1}, 100),
-		['move', 'move']
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 1}, 100),
+		[MOVE, MOVE]
 	);
 	// Test weight distribution.
 	t.deepEqual(
-		spawnRole.generateCreepBodyFromWeights({move: 3, carry: 1}, 200),
-		['move', 'carry', 'move', 'move']
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 3, [CARRY]: 1}, 200),
+		[MOVE, CARRY, MOVE, MOVE]
 	);
 	// Test limiting number of body parts.
 	t.deepEqual(
-		spawnRole.generateCreepBodyFromWeights({move: 2, carry: 1}, 1000, {carry: 2}),
-		['move', 'carry', 'move', 'carry', 'move', 'move']
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 2, [CARRY]: 1}, 1000, {[CARRY]: 2}),
+		[MOVE, CARRY, MOVE, CARRY, MOVE, MOVE]
+	);
+	// Tough parts should be at the front of the creep.
+	t.deepEqual(
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 1, [TOUGH]: 1}, 1000, {[MOVE]: 2}),
+		[TOUGH, TOUGH, MOVE, MOVE]
+	);
+	// Combat parts should be at the rear end of the creep.
+	t.deepEqual(
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 1, [ATTACK]: 1}, 1000, {[MOVE]: 2}),
+		[MOVE, MOVE, ATTACK, ATTACK]
+	);
+	t.deepEqual(
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 1, [RANGED_ATTACK]: 1}, 1000, {[MOVE]: 2}),
+		[MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK]
+	);
+	t.deepEqual(
+		spawnRole.generateCreepBodyFromWeights({[MOVE]: 1, [HEAL]: 1}, 1000, {[MOVE]: 2}),
+		[MOVE, MOVE, HEAL, HEAL]
 	);
 });
