@@ -18,8 +18,8 @@ module.exports = class SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
 	 *
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
