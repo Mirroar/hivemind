@@ -1,6 +1,6 @@
 'use strict';
 
-/* global MOVE CARRY ATTACK RANGED_ATTACK HEAL TOUGH */
+/* global MOVE CARRY ATTACK RANGED_ATTACK HEAL TOUGH MAX_CREEP_SIZE */
 
 import test from 'ava';
 import _ from 'lodash';
@@ -46,4 +46,6 @@ test('body generation from weights', t => {
 		spawnRole.generateCreepBodyFromWeights({[MOVE]: 1, [HEAL]: 1}, 1000, {[MOVE]: 2}),
 		[MOVE, MOVE, HEAL, HEAL]
 	);
+	// Respect MAX_CREEP_SIZE.
+	t.is(spawnRole.generateCreepBodyFromWeights({[MOVE]: 1}, 10000).length, MAX_CREEP_SIZE);
 });
