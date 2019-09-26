@@ -1,7 +1,7 @@
 'use strict';
 
 /* global hivemind Room BOOSTS FIND_STRUCTURES STRUCTURE_LAB LAB_BOOST_MINERAL
-LAB_BOOST_ENERGY OK MOVE CARRY */
+LAB_BOOST_ENERGY OK */
 
 /**
  * Collects available boosts in a room, optionally filtered by effect.

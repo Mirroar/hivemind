@@ -250,20 +250,11 @@ Room.prototype.manageSpawns = function (spawnManager, roomSpawns) {
 	// If the new spawn code is trying to spawn something, give it priority.
 	if (this.manageSpawnsPriority(spawnManager, roomSpawns)) return;
 
-	let spawnerUsed = false;
 	for (const spawn of _.values(roomSpawns)) {
-		if (spawnerUsed) break;
-
-		// @todo Stop spawning for a bit if creeps are queued for renewing.
-
-		// If spawning was just finished, scan the room again to assign creeps.
-		if (spawn.spawning) {
-			continue;
-		}
-
-		spawnerUsed = true;
+		if (spawn.spawning) continue;
 
 		spawn.spawnCreeps();
+		// @todo Stop spawning for a bit if creeps are queued for renewing.
 
 		// Let only one spawner start spawning each tick to prevent confusion.
 		break;
