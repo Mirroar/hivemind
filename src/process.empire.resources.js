@@ -84,7 +84,7 @@ ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
 				if (roomState2.isEvacuating) return;
 
 				const isLow = resourceLevel2 === 'low';
-				const isLowEnough = _.includes(['medium', 'high'], resourceLevel2);
+				const isLowEnough = resourceLevel2 === 'medium';
 				const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
 
 				if (!roomState.isEvacuating && !shouldReceiveResources) return;
