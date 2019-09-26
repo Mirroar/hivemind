@@ -1,33 +1,42 @@
 'use strict';
 
+/* global OK MOVE CARRY */
+
 import test from 'ava';
 import _ from 'lodash';
 
 global._ = _;
 
+require('../mock/constants');
 const SpawnManager = require('../src/spawn-manager');
+const SpawnRole = require('../src/spawn-role');
 
 test('initialization', t => {
+	global.Memory = {};
+	const testRole = new SpawnRole();
+	testRole.getSpawnOptions = (room, options) => {
+		t.is(room.name, 'E1N1');
+		options.push({
+			priority: 1,
+		});
+	};
+
+	testRole.getCreepBody = room => {
+		t.is(room.name, 'E1N1');
+		return ['move', 'work'];
+	};
+
 	const manager = new SpawnManager();
-	manager.registerSpawnRole('test', {
-		getSpawnOptions: (room, options) => {
-			t.is(room.name, 'E1N1');
-			options.push({
-				priority: 1,
-				weight: 0,
-				role: 'test',
-			});
-		},
-		getCreepBody: room => {
-			t.is(room.name, 'E1N1');
-			return ['move', 'work'];
-		},
-	});
+	manager.registerSpawnRole('test', testRole);
 
 	const room = {name: 'E1N1'};
 	const spawns = [{
-		spawnCreep: body => {
-			t.deepEqual(body, ['move', 'work']);
+		spawnCreep: (body, name, options) => {
+			if (!options || !options.dryRun) {
+				t.deepEqual(body, ['move', 'work']);
+			}
+
+			return OK;
 		},
 	}];
 
@@ -46,6 +55,49 @@ test('choosing a spawn', t => {
 	const filteredSpawns = manager.filterAvailableSpawns(spawns);
 	t.is(filteredSpawns.length, 1);
 	t.is(filteredSpawns[0].name, availableSpawn);
+});
+
+test('spawn conditions', t => {
+	global.Memory = {};
+	const testRole = new SpawnRole();
+	testRole.getCreepBody = function () {
+		return [MOVE, CARRY];
+	};
+
+	testRole.getSpawnOptions = function (room, options) {
+		options.push({priority: 1});
+	};
+
+	const manager = new SpawnManager();
+	manager.registerSpawnRole('test', testRole);
+
+	const spawns = [
+		{
+			name: 'spawn',
+			spawnCreep: (body, name, options) => {
+				if (!options || !options.dryRun) {
+					t.deepEqual(body, [MOVE, CARRY]);
+				}
+
+				return OK;
+			},
+		},
+	];
+
+	const room = {
+		name: 'E1N1',
+		energyAvailable: 0,
+		energyCapacityAvailable: 500,
+	};
+
+	t.plan(1);
+
+	// Nothing should spawn because no energy is available.
+	manager.manageSpawns(room, spawns);
+
+	// With full energy, our creep gets spawned.
+	room.energyAvailable = room.energyCapacityAvailable;
+	manager.manageSpawns(room, spawns);
 });
 
 test('optimization', t => {
@@ -71,16 +123,4 @@ test('fallback values', t => {
 
 	const options = manager.getAllSpawnOptions({});
 	t.is(options[0].role, roleId);
-});
-
-test('generating creep bodies from roles', t => {
-	const manager = new SpawnManager();
-	manager.registerSpawnRole('test', {
-		getCreepBody: () => {
-			return ['work', 'move'];
-		},
-	});
-
-	const body = manager.getCreepBody({}, {role: 'test'});
-	t.deepEqual(body, ['work', 'move']);
 });

@@ -1,5 +1,31 @@
 'use strict';
 
+/* global BODYPART_COST OK */
+
+const utilities = require('../src/utilities');
+
+const roleNameMap = {
+	builder: 'B',
+	'builder.exploit': 'BE',
+	'builder.remote': 'BR',
+	claimer: 'C',
+	dismantler: 'D',
+	brawler: 'F',
+	guardian: 'FE',
+	gift: ':) GIFT (: ',
+	harvester: 'H',
+	'harvester.exploit': 'HE',
+	'harvester.minerals': 'HM',
+	'harvester.remote': 'HR',
+	'harvester.power': 'HP',
+	scout: 'S',
+	transporter: 'T',
+	'hauler.exploit': 'TE',
+	'hauler.power': 'TP',
+	hauler: 'TR',
+	upgrader: 'U',
+};
+
 module.exports = class SpawnManager {
 	/**
 	 * Creates a new SpawnManager instance.
@@ -60,14 +86,88 @@ module.exports = class SpawnManager {
 	manageSpawns(room, spawns) {
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
+		const spawn = _.sample(availableSpawns);
 
 		const options = this.getAllSpawnOptions(room);
-		const option = _.sample(options);
+		const option = utilities.getBestOption(options);
+
+		if (option) {
+			this.trySpawnCreep(room, spawn, option);
+		}
+	}
+
+	/**
+	 * Tries spawning the selected creep.
+	 *
+	 * @param {Room} room
+	 *   The room to manage spawning in.
+	 * @param {StructureSpawn} spawn
+	 *   The spawn where the creep should be spawned.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the creep.
+	 */
+	trySpawnCreep(room, spawn, option) {
 		const role = this.roles[option.role];
 		const body = role.getCreepBody(room, option);
 
-		const spawn = _.sample(availableSpawns);
-		spawn.spawnCreep(body, '', {});
+		let cost = 0;
+		for (const part of body) {
+			cost += BODYPART_COST[part];
+		}
+
+		if (cost > room.energyAvailable) return;
+
+		//  Make sure a creep like this could be spawned.
+		if (spawn.spawnCreep(body, 'dryRun', {dryRun: true}) !== OK) return;
+
+		// Prepare creep memory.
+		const memory = role.getCreepMemory(room, option);
+		if (!memory.role) {
+			memory.role = option.role;
+		}
+
+		// Store creep's body definition in memory for easier access.
+		memory.body = _.countBy(body);
+
+		// Actually try to spawn this creep.
+		const creepName = this.generateCreepName(memory.role);
+		const result = spawn.spawnCreep(body, creepName, {
+			memory,
+		});
+
+		if (result !== OK) return;
+
+		// Spawning successful.
+		Memory.creepCounter[memory.role]++;
+
+		// Also notify room's boost manager if necessary.
+		const boosts = role.getCreepBoosts(room, option, body);
+		if (boosts && room.boostManager) {
+			room.boostManager.markForBoosting(creepName, boosts);
+		}
+	}
+
+	/**
+	 * Generates a name for a new creep.
+	 *
+	 * @param {String} roleId
+	 *   Identifier of the role, as stored in a creep's memory.
+	 *
+	 * @return {String}
+	 *   The generated name.
+	 */
+	generateCreepName(roleId) {
+		// Generate creep name.
+		if (!Memory.creepCounter) {
+			Memory.creepCounter = {};
+		}
+
+		if (!Memory.creepCounter[roleId] || Memory.creepCounter[roleId] >= 36 * 36) {
+			Memory.creepCounter[roleId] = 0;
+		}
+
+		const roleName = roleNameMap[roleId] || roleId;
+		return roleName + '_' + Memory.creepCounter[roleId].toString(36);
 	}
 
 	/**
@@ -85,13 +185,5 @@ module.exports = class SpawnManager {
 
 			return true;
 		});
-	}
-
-	/**
-	 *
-	 */
-	getCreepBody(room, option) {
-		const role = this.roles[option.role];
-		if (typeof role !== 'undefined') return role.getCreepBody(room, option);
 	}
 };
