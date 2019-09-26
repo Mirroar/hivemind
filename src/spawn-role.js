@@ -29,6 +29,38 @@ module.exports = class SpawnRole {
 	}
 
 	/**
+	 * Gets which boosts to use on a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 * @param {string[]} body
+	 *   The body generated for this creep.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepBoosts() {
+		return null;
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory() {
+		return {};
+	}
+
+	/**
 	 * Dynamically generates a creep body using body part weights and limits.
 	 *
 	 * @param {object} weights
