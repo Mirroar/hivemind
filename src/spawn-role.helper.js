@@ -1,6 +1,6 @@
 'use strict';
 
-/* global */
+/* global MOVE CARRY */
 
 const SpawnRole = require('./spawn-role');
 
@@ -23,5 +23,35 @@ module.exports = class HelperSpawnRole extends SpawnRole {
 				roomName: room.name,
 			});
 		}
+	}
+
+	/**
+	 * Gets the body of a creep to be spawned.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {string[]}
+	 *   A list of body parts the new creep should consist of.
+	 */
+	getCreepBody() {
+		return [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY];
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory(room) {
+		return {singleRoom: room.name};
 	}
 };
