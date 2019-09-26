@@ -68,11 +68,11 @@ ManageSpawnsProcess.prototype.visualizeSpawning = function (spawns) {
 	for (const spawn of spawns) {
 		if (!spawn.spawning) continue;
 
-		this.room.visual.text(spawn.memory.spawnRole, spawn.pos.x + 0.05, spawn.pos.y + 0.05, {
+		this.room.visual.text(spawn.spawning.name, spawn.pos.x + 0.05, spawn.pos.y + 0.05, {
 			size: 0.5,
 			color: 'black',
 		});
-		this.room.visual.text(spawn.memory.spawnRole, spawn.pos.x, spawn.pos.y, {
+		this.room.visual.text(spawn.spawning.name, spawn.pos.x, spawn.pos.y, {
 			size: 0.5,
 		});
 	}
