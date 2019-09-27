@@ -211,9 +211,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	if (best.role === 'harvester') {
 		activeSpawn.spawnHarvester(best.force, best.maxWorkParts, best.source);
 	}
-	else if (best.role === 'transporter') {
-		activeSpawn.spawnTransporter(best.force, best.size);
-	}
 	else if (best.role === 'dismantler') {
 		activeSpawn.spawnDismantler(best.targetRoom);
 	}
@@ -916,35 +913,6 @@ StructureSpawn.prototype.spawnSquadUnits = function () {
 	}
 
 	return false;
-};
-
-/**
- * Spawns a new transporter.
- *
- * @param {boolean} force
- *   Wether to force spawning a transporter with whatever energy is available.
- * @param {number} maxCarryParts
- *   Maximum number of carry parts this transporter should use.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnTransporter = function (force, maxCarryParts) {
-	const minCost = force && 250;
-	const maxParts = {carry: 8};
-	if (maxCarryParts) {
-		maxParts.carry = maxCarryParts;
-	}
-
-	return this.createManagedCreep({
-		role: 'transporter',
-		bodyWeights: {move: 0.35, carry: 0.65},
-		maxParts,
-		minCost,
-		memory: {
-			singleRoom: this.pos.roomName,
-		},
-	});
 };
 
 /**

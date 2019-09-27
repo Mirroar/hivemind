@@ -1,5 +1,7 @@
 'use strict';
 
+/* global MOVE CARRY */
+
 const SpawnRole = require('./spawn-role');
 
 module.exports = class TransporterSpawnRole extends SpawnRole {
@@ -116,5 +118,39 @@ module.exports = class TransporterSpawnRole extends SpawnRole {
 		if (room.controller.level >= 6) return 18;
 		if (room.controller.level >= 5) return 15;
 		return 12;
+	}
+
+	/**
+	 * Gets the body of a creep to be spawned.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {string[]}
+	 *   A list of body parts the new creep should consist of.
+	 */
+	getCreepBody(room, option) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.35, [CARRY]: 0.65},
+			Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
+			{[CARRY]: option.size || 8}
+		);
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory(room) {
+		return {singleRoom: room.name};
 	}
 };
