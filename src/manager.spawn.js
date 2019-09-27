@@ -211,9 +211,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	if (best.role === 'brawler') {
 		activeSpawn.spawnBrawler(this.controller.pos);
 	}
-	else if (best.role === 'exploit') {
-		Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
-	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
 	}
