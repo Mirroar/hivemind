@@ -80,12 +80,9 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room, option) {
-		const maxParts = option.size && {[WORK]: option.size};
-
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.65},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxParts
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
