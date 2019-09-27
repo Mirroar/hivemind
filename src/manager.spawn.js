@@ -214,9 +214,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	else if (best.role === 'transporter') {
 		activeSpawn.spawnTransporter(best.force, best.size);
 	}
-	else if (best.role === 'upgrader') {
-		activeSpawn.spawnUpgrader();
-	}
 	else if (best.role === 'dismantler') {
 		activeSpawn.spawnDismantler(best.targetRoom);
 	}
@@ -944,48 +941,6 @@ StructureSpawn.prototype.spawnTransporter = function (force, maxCarryParts) {
 		bodyWeights: {move: 0.35, carry: 0.65},
 		maxParts,
 		minCost,
-		memory: {
-			singleRoom: this.pos.roomName,
-		},
-	});
-};
-
-/**
- * Spawns a new upgrader.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnUpgrader = function () {
-	let bodyWeights = {move: 0.35, work: 0.3, carry: 0.35};
-	if (this.room.memory.controllerContainer || this.room.memory.controllerLink) {
-		bodyWeights = {move: 0.2, work: 0.75, carry: 0.05};
-	}
-
-	let boosts = null;
-	if (this.room.canSpawnBoostedCreeps()) {
-		const availableBoosts = this.room.getAvailableBoosts('upgradeController');
-		let bestBoost;
-		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available >= CONTROLLER_MAX_UPGRADE_PER_TICK) {
-				if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-					bestBoost = resourceType;
-				}
-			}
-		}
-
-		if (bestBoost) {
-			boosts = {
-				work: bestBoost,
-			};
-		}
-	}
-
-	return this.createManagedCreep({
-		role: 'upgrader',
-		bodyWeights,
-		boosts,
-		maxParts: {work: CONTROLLER_MAX_UPGRADE_PER_TICK},
 		memory: {
 			singleRoom: this.pos.roomName,
 		},

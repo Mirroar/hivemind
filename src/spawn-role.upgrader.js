@@ -1,6 +1,7 @@
 'use strict';
 
-/* global hivemind FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE */
+/* global hivemind FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE
+MOVE WORK CARRY CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 const SpawnRole = require('./spawn-role');
 
@@ -85,5 +86,79 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 		// @todo Have maximum depend on number of work parts.
 		// @todo Make sure enough energy is brought by.
 		return 3;
+	}
+
+	/**
+	 * Gets the body of a creep to be spawned.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {string[]}
+	 *   A list of body parts the new creep should consist of.
+	 */
+	getCreepBody(room) {
+		let bodyWeights = {[MOVE]: 0.35, [WORK]: 0.3, [CARRY]: 0.35};
+		if (room.memory.controllerContainer || room.memory.controllerLink) {
+			// If there is easy access to energy, we can save on move an carry parts.
+			bodyWeights = {[MOVE]: 0.2, [WORK]: 0.75, [CARRY]: 0.05};
+		}
+
+		return this.generateCreepBodyFromWeights(
+			bodyWeights,
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
+			{[WORK]: CONTROLLER_MAX_UPGRADE_PER_TICK}
+		);
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory(room) {
+		return {singleRoom: room.name};
+	}
+
+	/**
+	 * Gets which boosts to use on a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 * @param {string[]} body
+	 *   The body generated for this creep.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepBoosts(room, option, body) {
+		if (!room.canSpawnBoostedCreeps()) return;
+
+		const availableBoosts = this.room.getAvailableBoosts('upgradeController');
+		let bestBoost;
+		const numWorkParts = _.countBy(body)[WORK];
+		for (const resourceType in availableBoosts || []) {
+			if (availableBoosts[resourceType].available < numWorkParts) continue;
+
+			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+				bestBoost = resourceType;
+			}
+		}
+
+		if (!bestBoost) return;
+
+		return {
+			work: bestBoost,
+		};
 	}
 };
