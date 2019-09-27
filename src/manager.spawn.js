@@ -211,9 +211,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	if (best.role === 'harvester') {
 		activeSpawn.spawnHarvester(best.force, best.maxWorkParts, best.source);
 	}
-	else if (best.role === 'dismantler') {
-		activeSpawn.spawnDismantler(best.targetRoom);
-	}
 	else if (best.role === 'brawler') {
 		activeSpawn.spawnBrawler(this.controller.pos);
 	}
@@ -698,46 +695,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 		memory: {
 			storage: utilities.encodePosition(position),
 			source: utilities.encodePosition(targetPosition),
-		},
-	});
-};
-
-/**
- * Spawns a new dismantler.
- *
- * @param {string} targetRoom
- *   The room ro which the dismantler should move.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnDismantler = function (targetRoom) {
-	let boosts;
-	if (this.room.canSpawnBoostedCreeps()) {
-		const availableBoosts = this.room.getAvailableBoosts('dismantle');
-		let bestBoost;
-		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available >= 50) {
-				if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-					bestBoost = resourceType;
-				}
-			}
-		}
-
-		if (bestBoost) {
-			boosts = {
-				work: bestBoost,
-			};
-		}
-	}
-
-	return this.createManagedCreep({
-		role: 'dismantler',
-		bodyWeights: {move: 0.35, work: 0.65},
-		memory: {
-			sourceRoom: this.pos.roomName,
-			targetRoom,
-			boosts,
 		},
 	});
 };
