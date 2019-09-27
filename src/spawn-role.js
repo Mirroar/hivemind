@@ -154,4 +154,40 @@ module.exports = class SpawnRole {
 
 		return body;
 	}
+
+	/**
+	 * Calculates the best available boost for a body part to use.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {String[]} body
+	 *   The body generated for this creep.
+	 * @param {String} partType
+	 *   The body part type to apply boosts to.
+	 * @param {String} boostType
+	 *   The type of boost to use.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	generateCreepBoosts(room, body, partType, boostType) {
+		if (!room.canSpawnBoostedCreeps()) return;
+
+		const availableBoosts = room.getAvailableBoosts(boostType);
+		const numAffectedParts = _.countBy(body)[partType] || 0;
+		let bestBoost;
+		for (const resourceType in availableBoosts || []) {
+			if (availableBoosts[resourceType].available < numAffectedParts) continue;
+
+			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+				bestBoost = resourceType;
+			}
+		}
+
+		if (!bestBoost) return;
+
+		return {
+			[partType]: bestBoost,
+		};
+	}
 };

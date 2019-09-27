@@ -134,23 +134,6 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room, option, body) {
-		if (!room.canSpawnBoostedCreeps()) return;
-
-		const availableBoosts = room.getAvailableBoosts('repair');
-		const numWorkParts = _.countBy(body)[WORK];
-		let bestBoost;
-		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available < numWorkParts) continue;
-
-			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-				bestBoost = resourceType;
-			}
-		}
-
-		if (!bestBoost) return;
-
-		return {
-			work: bestBoost,
-		};
+		return this.generateCreepBoosts(room, body, WORK, 'repair');
 	}
 };

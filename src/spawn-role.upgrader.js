@@ -142,23 +142,6 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room, option, body) {
-		if (!room.canSpawnBoostedCreeps()) return;
-
-		const availableBoosts = this.room.getAvailableBoosts('upgradeController');
-		let bestBoost;
-		const numWorkParts = _.countBy(body)[WORK];
-		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available < numWorkParts) continue;
-
-			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-				bestBoost = resourceType;
-			}
-		}
-
-		if (!bestBoost) return;
-
-		return {
-			work: bestBoost,
-		};
+		return this.generateCreepBoosts(room, body, WORK, 'upgradeController');
 	}
 };
