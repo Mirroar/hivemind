@@ -61,7 +61,6 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 			options.push({
 				priority: 3,
 				weight: 0,
-				role: 'dismantler',
 				targetRoom: room.name,
 			});
 		}

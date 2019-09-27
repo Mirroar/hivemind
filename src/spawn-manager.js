@@ -2,7 +2,7 @@
 
 /* global BODYPART_COST OK */
 
-const utilities = require('../src/utilities');
+const utilities = require('./utilities');
 
 const roleNameMap = {
 	builder: 'B',
@@ -91,8 +91,11 @@ module.exports = class SpawnManager {
 		const options = this.getAllSpawnOptions(room);
 		const option = utilities.getBestOption(options);
 
+		this.options = options;
+		this.option = option;
+
 		if (option) {
-			this.trySpawnCreep(room, spawn, option);
+			return this.trySpawnCreep(room, spawn, option);
 		}
 	}
 
@@ -109,6 +112,8 @@ module.exports = class SpawnManager {
 	trySpawnCreep(room, spawn, option) {
 		const role = this.roles[option.role];
 		const body = role.getCreepBody(room, option);
+
+		if (!body || body.length === 0) return;
 
 		let cost = 0;
 		for (const part of body) {
@@ -130,6 +135,7 @@ module.exports = class SpawnManager {
 		memory.body = _.countBy(body);
 
 		// Actually try to spawn this creep.
+		// @todo Use extensions grouped by bay to make refilling easier.
 		const creepName = this.generateCreepName(memory.role);
 		const result = spawn.spawnCreep(body, creepName, {
 			memory,
@@ -145,6 +151,8 @@ module.exports = class SpawnManager {
 		if (boosts && room.boostManager) {
 			room.boostManager.markForBoosting(creepName, boosts);
 		}
+
+		return true;
 	}
 
 	/**

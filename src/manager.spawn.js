@@ -181,10 +181,13 @@ Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 	if (roomSpawns.length === 0) return true;
 	const activeSpawn = roomSpawns[0];
 
+	// Have new spawn manager handle things if possible.
+	if (spawnManager.manageSpawns(this, roomSpawns)) return true;
+
 	// Prepare spawn queue.
 	if (!this.memory.spawnQueue) this.memory.spawnQueue = {};
 	const memory = this.memory.spawnQueue;
-	memory.options = spawnManager.getAllSpawnOptions(this);
+	memory.options = spawnManager.options;
 
 	if (memory.options.length > 0) {
 		// Try to spawn the most needed creep.
@@ -214,12 +217,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	else if (best.role === 'upgrader') {
 		activeSpawn.spawnUpgrader();
 	}
-	else if (best.role === 'gift') {
-		activeSpawn.spawnGift();
-	}
-	else if (best.role === 'builder') {
-		activeSpawn.spawnBuilder(best.size);
-	}
 	else if (best.role === 'dismantler') {
 		activeSpawn.spawnDismantler(best.targetRoom);
 	}
@@ -234,9 +231,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	}
 	else if (best.role === 'exploit') {
 		Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
-	}
-	else if (best.role === 'helper') {
-		activeSpawn.spawnHelper();
 	}
 	else {
 		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
@@ -843,38 +837,6 @@ StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
 };
 
 /**
- * Spawns a helper when necessary.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnHelper = function () {
-	return this.createManagedCreep({
-		role: 'helper',
-		body: [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY],
-		memory: {
-			singleRoom: this.pos.roomName,
-		},
-	});
-};
-
-/**
- * Spawns a new gifter.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnGift = function () {
-	return this.createManagedCreep({
-		role: 'gift',
-		bodyWeights: {move: 0.2, carry: 0.8},
-		memory: {
-			origin: this.pos.roomName,
-		},
-	});
-};
-
-/**
  * Spawns a new mineral harvester.
  *
  * @return {boolean}
@@ -957,48 +919,6 @@ StructureSpawn.prototype.spawnSquadUnits = function () {
 	}
 
 	return false;
-};
-
-/**
- * Spawns a new builder.
- *
- * @param {number} maxWorkParts
- *   Maximum number of work parts to use for this builder.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnBuilder = function (maxWorkParts) {
-	const maxParts = maxWorkParts && {work: maxWorkParts};
-
-	let boosts = null;
-	if (this.room.canSpawnBoostedCreeps()) {
-		const availableBoosts = this.room.getAvailableBoosts('repair');
-		let bestBoost;
-		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available >= (maxWorkParts || 50)) {
-				if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-					bestBoost = resourceType;
-				}
-			}
-		}
-
-		if (bestBoost) {
-			boosts = {
-				work: bestBoost,
-			};
-		}
-	}
-
-	return this.createManagedCreep({
-		role: 'builder',
-		bodyWeights: {move: 0.35, work: 0.35, carry: 0.3},
-		maxParts,
-		boosts,
-		memory: {
-			singleRoom: this.pos.roomName,
-		},
-	});
 };
 
 /**
