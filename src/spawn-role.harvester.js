@@ -1,6 +1,6 @@
 'use strict';
 
-/* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO */
+/* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO MOVE WORK CARRY */
 
 const SpawnRole = require('./spawn-role');
 
@@ -42,7 +42,7 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 			priority: (force ? 5 : 4),
 			weight: 1,
 			source: source.id,
-			maxWorkParts: this.getMaxWorkParts(source),
+			size: this.getMaxWorkParts(source),
 			force,
 		});
 	}
@@ -78,7 +78,7 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 				priority: 4,
 				weight: 1 - (totalWorkParts / maxParts),
 				source: source.id,
-				maxWorkParts: maxParts - totalWorkParts,
+				size: maxParts - totalWorkParts,
 				force: false,
 			});
 		}
@@ -129,5 +129,42 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 		});
 
 		return 1.2 * numParts;
+	}
+
+	/**
+	 * Gets the body of a creep to be spawned.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {string[]}
+	 *   A list of body parts the new creep should consist of.
+	 */
+	getCreepBody(room, option) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.1, [WORK]: 0.7, [CARRY]: 0.2},
+			Math.max(option.force ? 200 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
+			option.size && {[WORK]: option.size}
+		);
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory(room, option) {
+		return {
+			singleRoom: room.name,
+			fixedSource: option.source,
+		};
 	}
 };

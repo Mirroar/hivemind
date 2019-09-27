@@ -208,10 +208,7 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	const memory = this.memory.spawnQueue;
 	const best = utilities.getBestOption(memory.options);
 
-	if (best.role === 'harvester') {
-		activeSpawn.spawnHarvester(best.force, best.maxWorkParts, best.source);
-	}
-	else if (best.role === 'brawler') {
+	if (best.role === 'brawler') {
 		activeSpawn.spawnBrawler(this.controller.pos);
 	}
 	else if (best.role === 'exploit') {
@@ -689,34 +686,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 		memory: {
 			storage: utilities.encodePosition(position),
 			source: utilities.encodePosition(targetPosition),
-		},
-	});
-};
-
-/**
- * Spawns a new harvester.
- *
- * @param {boolean} force
- *   Wether to force spawning a harvester with whatever energy is available.
- * @param {number} maxWorkParts
- *   Maximum number of work parts this harvester should use.
- * @param {string} sourceId
- *   ID of the source this harvester is being sent to.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnHarvester = function (force, maxWorkParts, sourceId) {
-	const minCost = force && 200;
-
-	return this.createManagedCreep({
-		role: 'harvester',
-		bodyWeights: {move: 0.1, work: 0.7, carry: 0.2},
-		minCost,
-		maxParts: maxWorkParts && {work: maxWorkParts},
-		memory: {
-			singleRoom: this.pos.roomName,
-			fixedSource: sourceId,
 		},
 	});
 };
