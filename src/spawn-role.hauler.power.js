@@ -1,6 +1,6 @@
 'use strict';
 
-/* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE */
+/* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE CARRY */
 
 const SpawnRole = require('./spawn-role');
 
@@ -41,5 +41,41 @@ module.exports = class PowerHaulerSpawnRole extends SpawnRole {
 				});
 			}
 		});
+	}
+
+	/**
+	 * Gets the body of a creep to be spawned.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {string[]}
+	 *   A list of body parts the new creep should consist of.
+	 */
+	getCreepBody(room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.35, [CARRY]: 0.65},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+		);
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory(room, option) {
+		return {
+			sourceRoom: room.name,
+			targetRoom: option.targetRoom,
+		};
 	}
 };

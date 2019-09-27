@@ -1,6 +1,6 @@
 'use strict';
 
-/* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE */
+/* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE HEAL ATTACK */
 
 const SpawnRole = require('./spawn-role');
 
@@ -64,5 +64,53 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 				});
 			}
 		});
+	}
+
+	/**
+	 * Gets the body of a creep to be spawned.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {string[]}
+	 *   A list of body parts the new creep should consist of.
+	 */
+	getCreepBody(room, option) {
+		const body = [];
+		const functionalPart = option.isHealer ? HEAL : ATTACK;
+
+		for (let i = 0; i < MAX_CREEP_SIZE; i++) {
+			// First half is all move parts.
+			if (i < MAX_CREEP_SIZE / 2) {
+				body.push(MOVE);
+				continue;
+			}
+
+			// The rest is functional parts.
+			body.push(functionalPart);
+		}
+
+		return body;
+	}
+
+	/**
+	 * Gets memory for a new creep.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object} option
+	 *   The spawn option for which to generate the body.
+	 *
+	 * @return {Object}
+	 *   The boost compound to use keyed by body part type.
+	 */
+	getCreepMemory(room, option) {
+		return {
+			sourceRoom: room.name,
+			targetRoom: option.targetRoom,
+			isHealer: option.isHealer,
+		};
 	}
 };

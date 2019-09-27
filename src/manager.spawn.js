@@ -214,12 +214,6 @@ Room.prototype.spawnCreepByPriority = function (activeSpawn) {
 	else if (best.role === 'brawler') {
 		activeSpawn.spawnBrawler(this.controller.pos);
 	}
-	else if (best.role === 'harvester.power') {
-		activeSpawn.spawnPowerHarvester(best.targetRoom, best.isHealer);
-	}
-	else if (best.role === 'hauler.power') {
-		activeSpawn.spawnPowerHauler(best.targetRoom);
-	}
 	else if (best.role === 'exploit') {
 		Game.exploits[best.exploit].spawnUnit(activeSpawn, best);
 	}
@@ -723,66 +717,6 @@ StructureSpawn.prototype.spawnHarvester = function (force, maxWorkParts, sourceI
 		memory: {
 			singleRoom: this.pos.roomName,
 			fixedSource: sourceId,
-		},
-	});
-};
-
-/**
- * Spawns a new power harvester.
- *
- * @param {string} targetRoom
- *   Name of the room this power harvester needs to go to.
- * @param {boolean} isHealer
- *   If true, spawn with heal instead of attack parts.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnPowerHarvester = function (targetRoom, isHealer) {
-	const bodyParts = [];
-	let functionalPart = ATTACK;
-	if (isHealer) {
-		functionalPart = HEAL;
-	}
-
-	for (let i = 0; i < MAX_CREEP_SIZE; i++) {
-		// First half is all move parts.
-		if (i < MAX_CREEP_SIZE / 2) {
-			bodyParts.push(MOVE);
-			continue;
-		}
-
-		// The rest is functional parts.
-		bodyParts.push(functionalPart);
-	}
-
-	return this.createManagedCreep({
-		role: 'harvester.power',
-		body: bodyParts,
-		memory: {
-			sourceRoom: this.pos.roomName,
-			targetRoom,
-			isHealer,
-		},
-	});
-};
-
-/**
- * Spawns a new power hauler.
- *
- * @param {string} targetRoom
- *   Name of the room this power hauler needs to go to.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnPowerHauler = function (targetRoom) {
-	return this.createManagedCreep({
-		role: 'hauler.power',
-		bodyWeights: {move: 0.35, carry: 0.65},
-		memory: {
-			sourceRoom: this.pos.roomName,
-			targetRoom,
 		},
 	});
 };
