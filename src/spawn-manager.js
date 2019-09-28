@@ -120,10 +120,10 @@ module.exports = class SpawnManager {
 			cost += BODYPART_COST[part];
 		}
 
-		if (cost > room.energyAvailable) return;
+		if (cost > room.energyAvailable) return true;
 
 		//  Make sure a creep like this could be spawned.
-		if (spawn.spawnCreep(body, 'dryRun', {dryRun: true}) !== OK) return;
+		if (spawn.spawnCreep(body, 'dryRun', {dryRun: true}) !== OK) return true;
 
 		// Prepare creep memory.
 		const memory = role.getCreepMemory(room, option);
@@ -141,7 +141,7 @@ module.exports = class SpawnManager {
 			memory,
 		});
 
-		if (result !== OK) return;
+		if (result !== OK) return true;
 
 		// Spawning successful.
 		Memory.creepCounter[memory.role]++;

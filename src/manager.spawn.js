@@ -1,10 +1,9 @@
 'use strict';
 
 /* global hivemind StructureSpawn Room RoomPosition BODYPART_COST OK
-MAX_CREEP_SIZE FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR FIND_FLAGS
+ FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR FIND_FLAGS
 SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY
-CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY ATTACK HEAL
-CONTROLLER_MAX_UPGRADE_PER_TICK */
+CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY */
 
 const stats = require('./stats');
 const utilities = require('./utilities');
@@ -179,41 +178,9 @@ StructureSpawn.prototype.finalizeCreepBody = function (options, minCost, energyA
 Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
 	// If all spawns are busy, no need to calculate what could be spawned.
 	if (roomSpawns.length === 0) return true;
-	const activeSpawn = roomSpawns[0];
 
 	// Have new spawn manager handle things if possible.
-	if (spawnManager.manageSpawns(this, roomSpawns)) return true;
-
-	// Prepare spawn queue.
-	if (!this.memory.spawnQueue) this.memory.spawnQueue = {};
-	const memory = this.memory.spawnQueue;
-	memory.options = spawnManager.options;
-
-	if (memory.options.length > 0) {
-		// Try to spawn the most needed creep.
-		this.spawnCreepByPriority(activeSpawn);
-		return true;
-	}
-
-	return false;
-};
-
-/**
- * Spawns the most needed creep from the priority queue.
- *
- * @param {StructureSpawn} activeSpawn
- *   A spawn that is not currently spawning a creep.
- */
-Room.prototype.spawnCreepByPriority = function (activeSpawn) {
-	const memory = this.memory.spawnQueue;
-	const best = utilities.getBestOption(memory.options);
-
-	if (best.role === 'brawler') {
-		activeSpawn.spawnBrawler(this.controller.pos);
-	}
-	else {
-		hivemind.log('creeps', this.name).error('trying to spawn unknown creep role:', best.role);
-	}
+	return spawnManager.manageSpawns(this, roomSpawns);
 };
 
 /**
