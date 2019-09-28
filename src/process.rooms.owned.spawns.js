@@ -16,6 +16,7 @@ const spawnRoles = [
 	'exploit',
 	'gift',
 	'harvester',
+	'harvester.minerals',
 	'harvester.power',
 	'hauler.power',
 	'helper',

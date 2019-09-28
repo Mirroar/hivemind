@@ -205,9 +205,6 @@ Room.prototype.manageSpawns = function (spawnManager, roomSpawns) {
  * Spawns basic needed creeps at a spawn.
  */
 StructureSpawn.prototype.spawnCreeps = function () {
-	// Harvest minerals.
-	if (this.spawnMineralHarvester()) return;
-
 	// Spawn squads.
 	if (this.spawnSquadUnits()) return;
 
@@ -650,65 +647,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 		memory: {
 			storage: utilities.encodePosition(position),
 			source: utilities.encodePosition(targetPosition),
-		},
-	});
-};
-
-/**
- * Spawns a new mineral harvester.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnMineralHarvester = function () {
-	if (this.room.isFullOnMinerals()) return false;
-
-	// Gather some information.
-	// @todo This could be done on script startup and partially kept in room memory.
-	const mineralHarvesters = this.room.creepsByRole['harvester.minerals'] || {};
-	const minerals = this.room.find(FIND_MINERALS, {
-		filter: mineral => {
-			const extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
-				filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.isOperational(),
-			});
-
-			if (extractors.length > 0) {
-				return true;
-			}
-
-			return false;
-		},
-	});
-
-	// We assume there is always at most one mineral deposit in a room.
-	if (_.size(mineralHarvesters) > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return false;
-
-	let boosts = null;
-	if (this.room.canSpawnBoostedCreeps()) {
-		const availableBoosts = this.room.getAvailableBoosts('harvest');
-		let bestBoost;
-		for (const resourceType in availableBoosts || []) {
-			if (availableBoosts[resourceType].available >= 50) {
-				if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-					bestBoost = resourceType;
-				}
-			}
-		}
-
-		if (bestBoost) {
-			boosts = {
-				work: bestBoost,
-			};
-		}
-	}
-
-	return this.createManagedCreep({
-		role: 'harvester.minerals',
-		bodyWeights: {move: 0.35, work: 0.3, carry: 0.35},
-		boosts,
-		memory: {
-			singleRoom: this.pos.roomName,
-			fixedMineralSource: minerals[0].id,
 		},
 	});
 };
