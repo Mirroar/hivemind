@@ -16,7 +16,7 @@ module.exports = class GiftSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		// @todo This is unlikely to happen exaclty when a spawn is idle.
 		if (Game.time % 123 !== 67) return;
-		if (!this.storage || this.getFreeStorage() > this.getStorageLimit() * 0.05) return;
+		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return;
 
 		options.push({
 			priority: 4,
@@ -54,6 +54,6 @@ module.exports = class GiftSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room) {
-		return {origin: this.pos.roomName};
+		return {origin: room.name};
 	}
 };
