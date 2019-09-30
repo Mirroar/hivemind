@@ -205,9 +205,6 @@ Room.prototype.manageSpawns = function (spawnManager, roomSpawns) {
  * Spawns basic needed creeps at a spawn.
  */
 StructureSpawn.prototype.spawnCreeps = function () {
-	// Spawn squads.
-	if (this.spawnSquadUnits()) return;
-
 	// We've got nothing to do, how about some remote harvesting?
 	const harvestPositions = [];
 	const reservePositions = [];
@@ -649,32 +646,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 			source: utilities.encodePosition(targetPosition),
 		},
 	});
-};
-
-/**
- * Spawns squad units at this spawn if needed.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnSquadUnits = function () {
-	const spawnFlags = this.room.find(FIND_FLAGS, {
-		filter: flag => flag.name.startsWith('SpawnSquad:'),
-	});
-	for (const flag of spawnFlags) {
-		const commandParts = flag.name.split(':');
-		const squadName = commandParts[1];
-
-		if (!Memory.squads || !Memory.squads[squadName]) continue;
-
-		// @todo Initialize Game.squads in main loop and use that.
-		const squad = Game.squads[squadName];
-		if (squad.spawnUnit(this)) {
-			return true;
-		}
-	}
-
-	return false;
 };
 
 /**

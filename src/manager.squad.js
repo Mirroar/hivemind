@@ -107,165 +107,6 @@ Squad.prototype.disband = function () {
 };
 
 /**
- * Decides whether this squad needs additional units spawned.
- *
- * @return {string|null}
- *   Type of the unit that needs spawning.
- */
-Squad.prototype.needsSpawning = function () {
-	for (const unitType in this.memory.composition) {
-		if (this.memory.composition[unitType] > _.size(this.units[unitType])) {
-			return unitType;
-		}
-	}
-
-	this.memory.fullySpawned = true;
-	return null;
-};
-
-/**
- * Spawns another unit for this squad.
- *
- * @param {StructureSpawn} spawn
- *   Spawn to use for creating creeps.
- *
- * @return {boolean}
- *   Whether a new unit is being spawned.
- */
-Squad.prototype.spawnUnit = function (spawn) {
-	const toSpawn = this.needsSpawning();
-
-	if (!toSpawn) return false;
-
-	if (toSpawn === 'ranger') {
-		spawn.createManagedCreep({
-			role: 'brawler',
-			bodyWeights: {
-				[MOVE]: 0.5,
-				[RANGED_ATTACK]: 0.3,
-				[HEAL]: 0.2,
-			},
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else if (toSpawn === 'healer') {
-		let boosts = null;
-		if (spawn.room.canSpawnBoostedCreeps()) {
-			const availableBoosts = spawn.room.getAvailableBoosts('heal');
-			let bestBoost;
-			_.each(availableBoosts, (info, resourceType) => {
-				if (info.available >= 50) {
-					if (!bestBoost || info.effect > availableBoosts[bestBoost].effect) {
-						bestBoost = resourceType;
-					}
-				}
-			});
-
-			if (bestBoost) {
-				boosts = {
-					heal: bestBoost,
-				};
-			}
-		}
-
-		spawn.createManagedCreep({
-			role: 'brawler',
-			bodyWeights: {move: 0.52, heal: 0.48},
-			boosts,
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else if (toSpawn === 'claimer') {
-		spawn.createManagedCreep({
-			role: 'brawler',
-			bodyWeights: {move: 0.52, tough: 0.18, claim: 0.3},
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else if (toSpawn === 'singleClaim') {
-		spawn.createManagedCreep({
-			role: 'brawler',
-			body: [MOVE, MOVE, MOVE, MOVE, MOVE, CLAIM],
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else if (toSpawn === 'builder') {
-		spawn.createManagedCreep({
-			role: 'brawler',
-			bodyWeights: {move: 0.52, carry: 0.38, work: 0.1},
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else if (toSpawn === 'attacker') {
-		let boosts;
-		if (spawn.room.canSpawnBoostedCreeps()) {
-			const availableBoosts = spawn.room.getAvailableBoosts('attack');
-			let bestBoost;
-			_.each(availableBoosts, (info, resourceType) => {
-				if (info.available >= 50) {
-					if (!bestBoost || info.effect > availableBoosts[bestBoost].effect) {
-						bestBoost = resourceType;
-					}
-				}
-			});
-
-			if (bestBoost) {
-				boosts = {
-					attack: bestBoost,
-				};
-			}
-		}
-
-		spawn.createManagedCreep({
-			role: 'brawler',
-			bodyWeights: {move: 0.5, attack: 0.5},
-			boosts,
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else if (toSpawn === 'test') {
-		spawn.createManagedCreep({
-			role: 'brawler',
-			body: [MOVE],
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-	else {
-		spawn.createManagedCreep({
-			role: 'brawler',
-			bodyWeights: {move: 0.5, attack: 0.3, heal: 0.2},
-			memory: {
-				squadName: this.name,
-				squadUnitType: toSpawn,
-			},
-		});
-	}
-
-	return true;
-};
-
-/**
  * Gets current squad orders with priorities.
  *
  * @return {Array}
@@ -308,6 +149,7 @@ Squad.prototype.setPath = function (pathName) {
  *   Name of the room to spawn in.
  */
 Squad.prototype.setSpawn = function (roomName) {
+	// @todo Use memory instead of flags and add visualization.
 	const key = 'SpawnSquad:' + this.name;
 	const flag = Game.flags[key];
 	if (!roomName) {
@@ -329,12 +171,27 @@ Squad.prototype.setSpawn = function (roomName) {
 };
 
 /**
+ * Determines which room the squad is set to spawn in.
+ *
+ * @return {string}
+ *   Name of the room the squad spawns in.
+ */
+Squad.prototype.getSpawn = function () {
+	const key = 'SpawnSquad:' + this.name;
+	const flag = Game.flags[key];
+	if (flag) {
+		return flag.pos.roomName;
+	}
+};
+
+/**
  * Orders squad to move toward the given position.
  *
  * @param {RoomPosition} targetPos
  *   Position the squad is supposed to move to.
  */
 Squad.prototype.setTarget = function (targetPos) {
+	// @todo Use memory instead of flags and add visualization.
 	const key = 'AttackSquad:' + this.name;
 	const flag = Game.flags[key];
 	if (!targetPos) {
@@ -351,6 +208,17 @@ Squad.prototype.setTarget = function (targetPos) {
 	}
 	else {
 		targetPos.createFlag(key);
+	}
+};
+
+/**
+ * Determines which room position the squad is currently targeting.
+ */
+Squad.prototype.getTarget = function () {
+	const key = 'AttackSquad:' + this.name;
+	const flag = Game.flags[key];
+	if (flag) {
+		return flag.pos;
 	}
 };
 
