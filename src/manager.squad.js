@@ -1,7 +1,5 @@
 'use strict';
 
-/* global RoomPosition COLOR_GREEN COLOR_RED MOVE CLAIM HEAL RANGED_ATTACK */
-
 const utilities = require('./utilities');
 
 /**
@@ -9,7 +7,7 @@ const utilities = require('./utilities');
  * @constructor
  *
  * @param {string}squadName
- *   Identifier of this squad for memory and flag names.
+ *   Identifier of this squad for memory.
  */
 const Squad = function (squadName) {
 	this.name = squadName;
@@ -24,16 +22,6 @@ const Squad = function (squadName) {
 			composition: {},
 			fullySpawned: false,
 		};
-	}
-
-	const spawnFlag = Game.flags['SpawnSquad:' + squadName];
-	if (spawnFlag && spawnFlag.color !== COLOR_GREEN) {
-		spawnFlag.setColor(COLOR_GREEN);
-	}
-
-	const attackFlag = Game.flags['AttackSquad:' + squadName];
-	if (attackFlag && attackFlag.color !== COLOR_RED) {
-		attackFlag.setColor(COLOR_RED);
 	}
 
 	this.memory = Memory.squads[squadName];
@@ -113,21 +101,17 @@ Squad.prototype.disband = function () {
  *   An array of objects containing squad orders.
  */
 Squad.prototype.getOrders = function () {
-	const options = [];
+	if (!this.memory.fullySpawned) return [];
 
-	if (this.memory.fullySpawned) {
-		// Check if there is an attack flag for this squad.
-		const attackFlags = _.filter(Game.flags, flag => flag.name === 'AttackSquad:' + this.name);
-		if (attackFlags.length > 0) {
-			options.push({
-				priority: 5,
-				weight: 0,
-				target: utilities.encodePosition(attackFlags[0].pos),
-			});
-		}
-	}
+	// Check if there is a target for this squad.
+	const targetPos = this.getTarget();
+	if (!targetPos) return [];
 
-	return options;
+	return [{
+		priority: 5,
+		weight: 0,
+		target: utilities.encodePosition(targetPos),
+	}];
 };
 
 /**
@@ -149,25 +133,7 @@ Squad.prototype.setPath = function (pathName) {
  *   Name of the room to spawn in.
  */
 Squad.prototype.setSpawn = function (roomName) {
-	// @todo Use memory instead of flags and add visualization.
-	const key = 'SpawnSquad:' + this.name;
-	const flag = Game.flags[key];
-	if (!roomName) {
-		if (flag) {
-			// Remove spawn flag.
-			flag.remove();
-		}
-
-		return;
-	}
-
-	const spawnPos = new RoomPosition(25, 25, roomName);
-	if (flag) {
-		flag.setPosition(spawnPos);
-	}
-	else {
-		spawnPos.createFlag(key);
-	}
+	this.memory.spawnRoom = roomName;
 };
 
 /**
@@ -177,11 +143,7 @@ Squad.prototype.setSpawn = function (roomName) {
  *   Name of the room the squad spawns in.
  */
 Squad.prototype.getSpawn = function () {
-	const key = 'SpawnSquad:' + this.name;
-	const flag = Game.flags[key];
-	if (flag) {
-		return flag.pos.roomName;
-	}
+	return this.memory.spawnRoom;
 };
 
 /**
@@ -191,34 +153,23 @@ Squad.prototype.getSpawn = function () {
  *   Position the squad is supposed to move to.
  */
 Squad.prototype.setTarget = function (targetPos) {
-	// @todo Use memory instead of flags and add visualization.
-	const key = 'AttackSquad:' + this.name;
-	const flag = Game.flags[key];
-	if (!targetPos) {
-		if (flag) {
-			// Remove spawn flag.
-			flag.remove();
-		}
-
-		return;
-	}
-
-	if (flag) {
-		flag.setPosition(targetPos);
+	if (targetPos) {
+		this.memory.targetPos = utilities.encodePosition(targetPos);
 	}
 	else {
-		targetPos.createFlag(key);
+		delete this.memory.targetPos;
 	}
 };
 
 /**
  * Determines which room position the squad is currently targeting.
+ *
+ * @return {RoomPosition}
+ *   Position the squad is supposed to move to.
  */
 Squad.prototype.getTarget = function () {
-	const key = 'AttackSquad:' + this.name;
-	const flag = Game.flags[key];
-	if (flag) {
-		return flag.pos;
+	if (this.memory.targetPos) {
+		return utilities.decodePosition(this.memory.targetPos);
 	}
 };
 

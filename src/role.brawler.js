@@ -328,15 +328,16 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 	}
 
 	if (creep.memory.squadName) {
-		const attackFlags = _.filter(Game.flags, flag => flag.name === 'AttackSquad:' + creep.memory.squadName);
-		if (attackFlags.length > 0) {
-			creep.moveTo(attackFlags[0]);
+		const squad = Game.squads[creep.memory.squadName];
+		const targetPos = squad && squad.getTarget();
+		if (targetPos) {
+			creep.moveTo(targetPos);
 
-			if (creep.pos.roomName === attackFlags[0].pos.roomName) {
+			if (creep.pos.roomName === targetPos.roomName) {
 				this.militaryRoomReached(creep);
 			}
 			else {
-				creep.memory.target = utilities.encodePosition(attackFlags[0].pos);
+				creep.memory.target = utilities.encodePosition(targetPos);
 			}
 
 			return;
@@ -506,11 +507,8 @@ BrawlerRole.prototype.performSquadMove = function (creep) {
 	if (creep.memory.target) return;
 
 	// If no order has been given, wait by spawn and renew.
-	const spawnFlags = _.filter(Game.flags, flag => flag.name === 'SpawnSquad:' + creep.memory.squadName);
-	if (spawnFlags.length === 0) return;
-
-	const flag = spawnFlags[0];
-	if (creep.pos.roomName !== flag.pos.roomName) return;
+	const spawnRoom = squad.getSpawn();
+	if (!spawnRoom || creep.pos.roomName !== spawnRoom) return;
 
 	// Refresh creep if it's getting low, so that it has high lifetime when a mission finally starts.
 	if (creep.ticksToLive < CREEP_LIFE_TIME * 0.66) {
@@ -527,8 +525,8 @@ BrawlerRole.prototype.performSquadMove = function (creep) {
 		}
 	}
 
-	// If there's nothing to do, move back to spawn flag.
-	creep.moveTo(flag);
+	// If there's nothing to do, move back to spawn room center.
+	creep.moveTo(25, 25);
 };
 
 /**
@@ -615,9 +613,13 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 		}
 
 		// If attack flag is directly on controller, claim it, otherwise just reserve.
-		if (creep.memory.squadName && Game.flags['AttackSquad:' + creep.memory.squadName] && Game.flags['AttackSquad:' + creep.memory.squadName].pos.getRangeTo(target) === 0) {
-			if (creep.claimController(target) === OK) {
-				return true;
+		if (creep.memory.squadName) {
+			const squad = Game.squads(creep.memory.squadName);
+			const targetPos = squad && squad.getTarget();
+			if (targetPos && targetPos.getRangeTo(target) === 0) {
+				if (creep.claimController(target) === OK) {
+					return true;
+				}
 			}
 		}
 		else if (creep.reserveController(target) === OK) {
