@@ -169,25 +169,11 @@ StructureSpawn.prototype.finalizeCreepBody = function (options, minCost, energyA
 };
 
 /**
- * WIP Replacement of manageSpawns using a priority queue and more caches.
- *
- * @return {boolean}
- *   True if a creep was spawned.
- */
-Room.prototype.manageSpawnsPriority = function (spawnManager, roomSpawns) {
-	// If all spawns are busy, no need to calculate what could be spawned.
-	if (roomSpawns.length === 0) return true;
-
-	// Have new spawn manager handle things if possible.
-	return spawnManager.manageSpawns(this, roomSpawns);
-};
-
-/**
  * Spawns creeps in a room whenever needed.
  */
 Room.prototype.manageSpawns = function (spawnManager, roomSpawns) {
 	// If the new spawn code is trying to spawn something, give it priority.
-	if (this.manageSpawnsPriority(spawnManager, roomSpawns)) return;
+	if (spawnManager.manageSpawns(this, roomSpawns)) return;
 
 	for (const spawn of _.values(roomSpawns)) {
 		if (spawn.spawning) continue;
