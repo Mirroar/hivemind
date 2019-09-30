@@ -227,19 +227,6 @@ StructureSpawn.prototype.spawnCreeps = function () {
 	for (const pos of reservePositions) {
 		if (this.spawnRequestedClaimers(pos)) return;
 	}
-
-	// Last but not least: Scouts.
-	let found = false;
-	for (const i in Game.creepsByRole.scout || []) {
-		if (Game.creepsByRole.scout[i].memory.origin === this.pos.roomName) {
-			found = true;
-			break;
-		}
-	}
-
-	if (!found && this.room.needsScout()) {
-		this.spawnScout();
-	}
 };
 
 /**
@@ -629,22 +616,6 @@ StructureSpawn.prototype.spawnHauler = function (targetPosition, maxCarryParts) 
 		memory: {
 			storage: utilities.encodePosition(position),
 			source: utilities.encodePosition(targetPosition),
-		},
-	});
-};
-
-/**
- * Spawns a new scout.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnScout = function () {
-	return this.createManagedCreep({
-		role: 'scout',
-		body: [MOVE],
-		memory: {
-			origin: this.pos.roomName,
 		},
 	});
 };
