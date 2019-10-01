@@ -1,8 +1,7 @@
 'use strict';
 
-/* global hivemind StructureSpawn Room RoomPosition BODYPART_COST OK
-SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY
-CONTROLLER_RESERVE_MAX CLAIM MOVE CARRY */
+/* global hivemind StructureSpawn Room BODYPART_COST OK
+SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME CARRY_CAPACITY CARRY */
 
 const stats = require('./stats');
 const utilities = require('./utilities');
@@ -191,41 +190,11 @@ Room.prototype.manageSpawns = function (spawnManager, roomSpawns) {
  */
 StructureSpawn.prototype.spawnCreeps = function () {
 	// We've got nothing to do, how about some remote harvesting?
-	const harvestPositions = [];
-	const reservePositions = [];
-	const remoteHarvestTargets = this.room.getRemoteHarvestTargets();
-	for (const info of remoteHarvestTargets) {
-		const roomIntel = hivemind.roomIntel(info.roomName);
-		const sources = roomIntel.getSourcePositions();
-		for (const pos of sources) {
-			harvestPositions.push(new RoomPosition(pos.x, pos.y, info.roomName));
-		}
-
-		const position = roomIntel.getControllerPosition();
-		if (position) {
-			reservePositions.push(position);
-		}
-	}
+	const harvestPositions = this.room.getRemoteHarvestSourcePositions();
 
 	for (const harvestPosition of harvestPositions) {
-		// First of all, if it's not safe, send a bruiser.
-		if (this.spawnRemoteHarvestDefense(harvestPosition)) return;
-
 		// If it's safe or brawler is sent, start harvesting.
 		if (this.spawnRemoteHarvesters(harvestPosition)) return;
-	}
-
-	// No harvester spawned? How about some claimers?
-	const safeRooms = this.roomPlanner ? this.roomPlanner.getAdjacentSafeRooms() : [];
-	for (const roomName of safeRooms) {
-		const position = hivemind.roomIntel(roomName).getControllerPosition();
-		if (position) {
-			reservePositions.push(position);
-		}
-	}
-
-	for (const pos of reservePositions) {
-		if (this.spawnRequestedClaimers(pos)) return;
 	}
 };
 
@@ -405,172 +374,6 @@ StructureSpawn.prototype.spawnRemoteHarvester = function (targetPosition) {
 		memory: {
 			storage: utilities.encodePosition(position),
 			source: utilities.encodePosition(targetPosition),
-		},
-	});
-};
-
-/**
- * Spawns brawlers to defend remote harvest rooms agains invaders.
- *
- * @param {RoomPosition} harvestPosition
- *   Position of the source that needs defending.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnRemoteHarvestDefense = function (harvestPosition) {
-	const roomMemory = Memory.rooms[harvestPosition.roomName];
-	if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) {
-		let position = this.pos;
-		if (this.room.storage) {
-			position = this.room.storage.pos;
-		}
-
-		// Since we just want a brawler in the room - not one per remoteharvest source - generalize target position.
-		const brawlPosition = new RoomPosition(25, 25, harvestPosition.roomName);
-
-		const maxBrawlers = 1;
-		const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => {
-			if (creep.memory.storage === utilities.encodePosition(position) && creep.memory.target === utilities.encodePosition(brawlPosition)) {
-				return true;
-			}
-
-			return false;
-		});
-
-		if (!brawlers || brawlers.length < maxBrawlers) {
-			const result = this.spawnBrawler(brawlPosition, 4, utilities.encodePosition(harvestPosition));
-			if (result) {
-				const position = utilities.encodePosition(harvestPosition);
-				console.log('Spawning new brawler to defend', position, ':', result);
-
-				const cost = this.calculateCreepBodyCost(Memory.creeps[result].body);
-				stats.addRemoteHarvestDefenseCost(this.room.name, position, cost);
-			}
-
-			// Do not continue trying to spawn other creeps when defense is needed.
-			return true;
-		}
-	}
-};
-
-/**
- * Spawns claimers to reserve requested rooms.
- *
- * @param {RoomPosition} claimPosition
- *   Position of the controller that should be reserved.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnRequestedClaimers = function (claimPosition) {
-	// Cache path when possible.
-	try {
-		utilities.precalculatePaths(this.room, claimPosition);
-	}
-	catch (error) {
-		console.log('Error in pathfinding:', error);
-		console.log(error.stack);
-	}
-
-	let doSpawn = false;
-
-	const claimers = _.filter(Game.creepsByRole.claimer || {}, creep => creep.memory.mission === 'reserve');
-	const maxClaimers = 1;
-	const claimerIds = [];
-	for (const creep of _.values(claimers)) {
-		if (creep.memory.target === utilities.encodePosition(claimPosition)) {
-			claimerIds.push(creep.id);
-		}
-	}
-
-	if (claimerIds.length < maxClaimers) {
-		doSpawn = true;
-	}
-
-	if (Memory.rooms[claimPosition.roomName] &&
-		Memory.rooms[claimPosition.roomName].lastClaim &&
-		Memory.rooms[claimPosition.roomName].lastClaim.value + (Memory.rooms[claimPosition.roomName].lastClaim.time - Game.time) > CONTROLLER_RESERVE_MAX * 0.5
-	) {
-		doSpawn = false;
-	}
-
-	if (doSpawn) {
-		const result = this.spawnClaimer(claimPosition, 'reserve');
-
-		if (result) {
-			// @todo Add cost to a random harvest flag in the room.
-
-			return true;
-		}
-	}
-};
-
-/**
- * Spawns a brawler to attacka a certain position.
- *
- * @param {RoomPosition} targetPosition
- *   Position the brawler needs to be sent to.
- * @param {number} maxAttackParts
- *   Maximum number of attack parts to use.
- * @param {string} pathTarget
- *   Encoded room position of harvest source for reusing pathfinder data.
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnBrawler = function (targetPosition, maxAttackParts, pathTarget) {
-	let maxParts = null;
-	if (maxAttackParts) {
-		maxParts = {attack: maxAttackParts};
-	}
-
-	let position = this.pos;
-	if (this.room.storage) {
-		position = this.room.storage.pos;
-	}
-
-	return this.createManagedCreep({
-		role: 'brawler',
-		bodyWeights: {move: 0.5, attack: 0.3, heal: 0.2},
-		maxParts,
-		memory: {
-			storage: utilities.encodePosition(position),
-			target: utilities.encodePosition(targetPosition),
-			pathTarget,
-		},
-	});
-};
-
-/**
- * Spawns a claimer to reserve or claim a room.
- *
- * @param {RoomPosition} targetPosition
- *   Position of the controller that should be reserved or claimed.
- * @param {string} mission
- *   What the claimer should do: "claim" or "reserve".
- *
- * @return {boolean}
- *   True if we started spawning a creep.
- */
-StructureSpawn.prototype.spawnClaimer = function (targetPosition, mission) {
-	const setCost = BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
-
-	let numSets = Math.floor(this.room.energyCapacityAvailable / setCost);
-	if (numSets < 2) return false;
-
-	if (numSets > 5) {
-		numSets = 5;
-	}
-
-	const body = _.fill(new Array(numSets), CLAIM).concat(_.fill(new Array(numSets), MOVE));
-
-	return this.createManagedCreep({
-		role: 'claimer',
-		body,
-		memory: {
-			target: utilities.encodePosition(targetPosition),
-			mission,
 		},
 	});
 };

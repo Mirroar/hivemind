@@ -12,6 +12,7 @@ require('./manager.spawn');
 const spawnRoles = [
 	'brawler',
 	'builder',
+	'claimer',
 	'dismantler',
 	'exploit',
 	'gift',
