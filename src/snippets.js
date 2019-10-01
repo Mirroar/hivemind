@@ -6,10 +6,6 @@
 // Remove all constructions sites in a roon you have vision in:
 _.forEach(Game.rooms.E49S48.find(FIND_CONSTRUCTION_SITES), s => s.remove());
 
-// Find out which rooms are of interest for expansion.
-JSON.stringify(_.max(Memory.strategy.roomList, 'expansionScore'));
-JSON.stringify(_.sortBy(Memory.strategy.roomList, 'expansionScore'));
-
 // Re-run room planner for a room.
 Memory.rooms.E49S51.roomPlanner.plannerVersion = 0;
 
@@ -25,3 +21,6 @@ const p = new (require('process.strategy.scout')); p.generateMineralStatus(); Me
 
 // Find energy source options for a transporter creep.
 JSON.stringify(_.map(Game.creeps.T_ju.getAvailableEnergySources(), option => {option.object = (option.object || {}).id; return option}))
+
+// Find out how many creeps of each role are currently spawned.
+_.each(Game.creepsByRole, (g, n) => console.log(_.size(g), n));
