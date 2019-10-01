@@ -244,11 +244,7 @@ const utilities = {
 	 *   The requested cost matrix.
 	 */
 	getCostMatrix(roomName, options) {
-		// Clear cost matrix cache from time to time.
-		if (!utilities.costMatrixCacheAge || Game.time - utilities.costMatrixCacheAge > 500 * hivemind.getThrottleMultiplier()) {
-			utilities.costMatrixCache = {};
-			utilities.costMatrixCacheAge = Game.time;
-		}
+		const matrixCache = utilities.getCache('costMatix', 500);
 
 		if (!options) {
 			options = {};
@@ -256,26 +252,49 @@ const utilities = {
 
 		let cacheKey = roomName;
 		let matrix;
-		if (!utilities.costMatrixCache[cacheKey]) {
+		if (!matrixCache[cacheKey]) {
 			const roomIntel = hivemind.roomIntel(roomName);
 			matrix = roomIntel.getCostMatrix();
-			utilities.costMatrixCache[cacheKey] = matrix;
+			matrixCache[cacheKey] = matrix;
 		}
 
-		matrix = utilities.costMatrixCache[cacheKey];
+		matrix = matrixCache[cacheKey];
 
 		if (matrix && options.singleRoom) {
 			// Highly discourage room exits if creep is supposed to stay in a room.
 			cacheKey += ':singleRoom';
 
-			if (!utilities.costMatrixCache[cacheKey]) {
-				utilities.costMatrixCache[cacheKey] = this.generateSingleRoomCostMatrix(matrix, roomName);
+			if (!matrixCache[cacheKey]) {
+				matrixCache[cacheKey] = this.generateSingleRoomCostMatrix(matrix, roomName);
 			}
 		}
 
-		matrix = utilities.costMatrixCache[cacheKey];
+		return matrixCache[cacheKey];
+	},
 
-		return matrix;
+	/**
+	 * Provides an object that is stored in heap memory.
+	 *
+	 * @param {string} bin
+	 *   Name of the requested cache bin.
+	 * @param {number} maxAge
+	 *   Maximum age of cached data in ticks.
+	 *
+	 * @return {Object}
+	 *   The requested cache object.
+	 */
+	getCache(bin, maxAge) {
+		if (!utilities.cacheStorage) utilities.cacheStorage = {};
+
+		// Clear cost matrix cache from time to time.
+		if (!utilities.cacheStorage[bin] || Game.time - !utilities.cacheStorage[bin].created > maxAge * hivemind.getThrottleMultiplier()) {
+			utilities.cacheStorage[bin] = {
+				data: {},
+				created: Game.time,
+			};
+		}
+
+		return utilities.cacheStorage[bin].data;
 	},
 
 	/**
