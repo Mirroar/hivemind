@@ -38,10 +38,12 @@ module.exports = class SquadSpawnRole extends SpawnRole {
 	 *   Type of the unit that needs spawning.
 	 */
 	needsSpawning(squad) {
-		const neededUnits = _.keys(_.filter(
-			squad.memory.composition,
-			(amount, unitType) => amount > _.size(squad.units[unitType])
-		));
+		const neededUnits = [];
+		for (const unitType in squad.memory.composition) {
+			if (squad.memory.composition[unitType] > _.size(squad.units[unitType])) {
+				neededUnits.push(unitType);
+			}
+		}
 
 		if (_.size(neededUnits) === 0) squad.memory.fullySpawned = true;
 
@@ -64,10 +66,10 @@ module.exports = class SquadSpawnRole extends SpawnRole {
 	getCreepBody(room, option) {
 		// Automatically call spawning function for selected unit type.
 		const methodName = 'get' + _.capitalize(option.unitType) + 'CreepBody';
-		if (this[methodName]) this[methodName](room, option);
+		if (this[methodName]) return this[methodName](room, option);
 
 		// If the unit type is not supported, spawn a general brawler.
-		return this.spawnBrawlerCreepBody(room, option);
+		return this.getBrawlerCreepBody(room, option);
 	}
 
 	getRangerCreepBody(room) {
