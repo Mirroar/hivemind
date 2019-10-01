@@ -614,7 +614,7 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 
 		// If attack flag is directly on controller, claim it, otherwise just reserve.
 		if (creep.memory.squadName) {
-			const squad = Game.squads(creep.memory.squadName);
+			const squad = Game.squads[creep.memory.squadName];
 			const targetPos = squad && squad.getTarget();
 			if (targetPos && targetPos.getRangeTo(target) === 0) {
 				if (creep.claimController(target) === OK) {
