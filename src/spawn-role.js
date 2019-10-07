@@ -61,6 +61,20 @@ module.exports = class SpawnRole {
 	}
 
 	/**
+	 * Act when a creep belonging to this spawn role is successfully spawning.
+	 *
+	 * @param {Room} room
+	 *   The room the creep is spawned in.
+	 * @param {Object} option
+	 *   The spawn option which caused the spawning.
+	 * @param {string[]} body
+	 *   The body generated for this creep.
+	 * @param {string} name
+	 *   The name of the new creep.
+	 */
+	onSpawn() {}
+
+	/**
 	 * Dynamically generates a creep body using body part weights and limits.
 	 *
 	 * @param {object} weights
@@ -189,5 +203,18 @@ module.exports = class SpawnRole {
 		return {
 			[partType]: bestBoost,
 		};
+	}
+
+	/**
+	 * Calculates the cost of a creep body array.
+	 *
+	 * @param {String[]} body
+	 *   A creep body.
+	 *
+	 * @return {number}
+	 *   The energy cost of the provided body.
+	 */
+	calculateBodyCost(body) {
+		return _.reduce(body, (sum, part) => sum + BODYPART_COST[part], 0);
 	}
 };

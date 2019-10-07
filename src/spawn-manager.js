@@ -152,6 +152,9 @@ module.exports = class SpawnManager {
 			room.boostManager.markForBoosting(creepName, boosts);
 		}
 
+		// Notify the role that spawning was successful.
+		role.onSpawn(room, option, body, creepName);
+
 		return true;
 	}
 

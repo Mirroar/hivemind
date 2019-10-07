@@ -108,13 +108,22 @@ module.exports = class ExploitSpawnRole extends SpawnRole {
 	}
 
 	/**
+	 * Act when a creep belonging to this spawn role is successfully spawning.
 	 *
+	 * @param {Room} room
+	 *   The room the creep is spawned in.
+	 * @param {Object} option
+	 *   The spawn option which caused the spawning.
+	 * @param {string[]} body
+	 *   The body generated for this creep.
+	 * @param {string} name
+	 *   The name of the new creep.
 	 */
-	onSpawn(room, option, body) {
-		const position = utilities.encodePosition(harvestPosition);
-		console.log('Spawning new brawler to defend', position, ':', result);
+	onSpawn(room, option, body, name) {
+		const position = option.targetPos;
+		if (!position) return;
 
-		const cost = this.calculateCreepBodyCost(Memory.creeps[result].body);
-		stats.addRemoteHarvestDefenseCost(this.room.name, position, cost);
+		hivemind.log('creeps', room.name).info('Spawning new brawler', name, 'to defend', position);
+		stats.addRemoteHarvestDefenseCost(room.name, position, this.calculateBodyCost(body));
 	}
 };
