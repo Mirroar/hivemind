@@ -5,7 +5,7 @@
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
 
-module.exports = class ExploitSpawnRole extends SpawnRole {
+module.exports = class BrawlerSpawnRole extends SpawnRole {
 	/**
 	 * Adds brawler spawn options for the given room.
 	 *
