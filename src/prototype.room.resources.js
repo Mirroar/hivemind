@@ -284,7 +284,7 @@ Room.prototype.generateRemoteHarvestInfo = function () {
  *   - canTrade: Whether the room can perform trades.
  */
 Room.prototype.getResourceState = function () {
-	if (!this.controller || !this.controller.my) return;
+	if (!this.isMine()) return;
 
 	const storage = this.storage;
 	const terminal = this.terminal;

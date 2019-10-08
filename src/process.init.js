@@ -40,7 +40,7 @@ InitProcess.prototype.run = function () {
 	});
 
 	_.each(Game.rooms, room => {
-		if (room.controller && room.controller.my) {
+		if (room.isMine()) {
 			room.roomPlanner = new RoomPlanner(room.name);
 			room.boostManager = new BoostManager(room.name);
 			room.generateLinkNetwork();

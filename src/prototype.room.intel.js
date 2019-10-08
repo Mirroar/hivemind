@@ -1,6 +1,6 @@
 'use strict';
 
-/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER
+/* global utilities Room FIND_STRUCTURES STRUCTURE_CONTAINER
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
 
@@ -43,7 +43,7 @@ Room.prototype.enhanceData = function () {
 
 	// Register bays.
 	this.bays = [];
-	if (this.controller && this.controller.my) {
+	if (this.isMine()) {
 		const flags = this.find(FIND_FLAGS, {
 			filter: flag => flag.name.startsWith('Bay:'),
 		});
@@ -169,4 +169,24 @@ Room.prototype.needsScout = function () {
 
 	const room = this;
 	return _.any(Memory.strategy.roomList, info => info.origin === room.name && info.scoutPriority >= 1);
+};
+
+/**
+ * Decides if the room belongs to the player.
+ *
+ * @param {boolean} allowReserved
+ *   If specified, rooms reserved by the player are acceptable as well.
+ *
+ * @return {boolean}
+ *   True if the room is owned / reserved by the player.
+ */
+Room.prototype.isMine = function (allowReserved) {
+	if (!this.controller) return false;
+	if (this.controller.my) return true;
+
+	if (!allowReserved) return false;
+	if (!this.controller.reservation) return false;
+	if (this.controller.reservation.username === utilities.getUsername()) return true;
+
+	return false;
 };

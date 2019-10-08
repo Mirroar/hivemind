@@ -37,7 +37,7 @@ ExpandProcess.prototype = Object.create(Process.prototype);
 ExpandProcess.prototype.run = function () {
 	const memory = Memory.strategy;
 
-	const ownedRooms = _.size(_.filter(Game.rooms, room => room.controller && room.controller.my));
+	const ownedRooms = _.size(_.filter(Game.rooms, room => room.isMine()));
 	const harvestRooms = memory.remoteHarvesting ? memory.remoteHarvesting.currentCount : 0;
 
 	// If we have many rooms with remote harvesting, be a bit more lenient
@@ -182,7 +182,7 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		// 5 Support squads max.
 		if (_.size(activeSquads) >= 5) return false;
 
-		if (!room.controller || !room.controller.my || room.controller.level < 4) return;
+		if (!room.isMine() || room.controller.level < 4) return;
 		if (room.name === info.spawnRoom || room.name === info.roomName) return;
 		if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return;
 		if (room.getStoredEnergy() < 50000) return;
@@ -362,7 +362,7 @@ ExpandProcess.prototype.findClosestSpawn = function (targetRoom) {
 	let bestRoom = null;
 	let bestLength = 0;
 	_.each(Game.rooms, room => {
-		if (!room.controller || !room.controller.my || room.controller.level < 5) return;
+		if (!room.isMine() || room.controller.level < 5) return;
 		if (room.name === targetRoom) return;
 		if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 10) return;
 

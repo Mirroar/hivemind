@@ -41,7 +41,7 @@ RemoteMiningProcess.prototype.run = function () {
 
 	// Determine how much remote mining each room can handle.
 	_.each(Game.rooms, room => {
-		if (!room.controller || !room.controller.my) return;
+		if (!room.isMine()) return;
 
 		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 		if (numSpawns === 0) return;

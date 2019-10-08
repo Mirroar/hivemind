@@ -90,7 +90,7 @@ PowerMiningProcess.prototype.run = function () {
 		// Determine which rooms need to spawn creeps.
 		let potentialSpawns = [];
 		_.each(Game.rooms, room => {
-			if (!room.controller || !room.controller.my) return;
+			if (!room.isMine()) return;
 			if (room.isFullOnPower()) return;
 			if (room.getStoredEnergy() < 75000) return;
 			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) return;

@@ -128,7 +128,7 @@ BrawlerRole.prototype.getAvailableMilitaryTargets = function (creep) {
 
 	// Attack / Reserve controllers.
 	if (creep.memory.body.claim && creep.memory.body.claim >= 5) {
-		if (creep.room.controller.owner && !creep.room.controller.my) {
+		if (creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
 			options.push({
 				priority: 5,
 				weight: 0,
@@ -166,8 +166,8 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
 
 	if (enemies && enemies.length > 0) {
 		for (const enemy of enemies) {
-			// Check if enemy is harmless, and ignore it.
-			if (!enemy.isDangerous() && (!creep.room.controller || !creep.room.controller.my)) continue;
+			// Check if enemy is harmless, and ignore it outside own rooms.
+			if (!enemy.isDangerous() && !creep.room.isMine()) continue;
 
 			const option = {
 				priority: 5,

@@ -71,7 +71,7 @@ RemoteBuilderRole.prototype.performRemoteBuild = function () {
 	const creep = this.creep;
 
 	// Try and prevent controller downgrades.
-	if (creep.room.controller && creep.room.controller.my && (creep.room.controller.level < 2 || creep.room.controller.ticksToDowngrade < 500)) {
+	if (creep.room.isMine() && (creep.room.controller.level < 2 || creep.room.controller.ticksToDowngrade < 500)) {
 		creep.memory.upgrading = true;
 		return;
 	}

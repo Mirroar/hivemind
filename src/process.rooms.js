@@ -35,7 +35,7 @@ RoomsProcess.prototype.run = function () {
 		// Manage owned rooms.
 		// @todo Keep a list of managed rooms in memory so we can notice when
 		// a room gets lost or a new one claimed.
-		if (room.controller && room.controller.my) {
+		if (room.isMine()) {
 			hivemind.runProcess('owned_rooms', OwnedRoomProcess, {
 				room,
 				priority: PROCESS_PRIORITY_ALWAYS,

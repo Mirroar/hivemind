@@ -89,7 +89,7 @@ ClaimerRole.prototype.performClaim = function (creep) {
 		}
 	}
 	else if (!target.my) {
-		const numRooms = _.size(_.filter(Game.rooms, room => room.controller && room.controller.my));
+		const numRooms = _.size(_.filter(Game.rooms, room => room.isMine()));
 		const maxRooms = Game.gcl.level;
 
 		if (creep.pos.getRangeTo(target) > 1) {

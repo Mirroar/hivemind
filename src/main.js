@@ -177,7 +177,7 @@ module.exports = {
 					return;
 				}
 
-				if (memory.roomPlanner && (!Game.rooms[roomName] || !Game.rooms[roomName].controller || !Game.rooms[roomName].controller.my)) {
+				if (memory.roomPlanner && (!Game.rooms[roomName] || !Game.rooms[roomName].isMine())) {
 					delete memory.roomPlanner;
 					count++;
 				}

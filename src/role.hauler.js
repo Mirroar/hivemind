@@ -222,7 +222,7 @@ HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
 	}
 
 	// Repair / build roads, even when just waiting for more energy.
-	if (!actionTaken && targetPosition.roomName !== creep.pos.roomName && (!creep.room.controller || !creep.room.controller.my) && Game.cpu.bucket > 3000) {
+	if (!actionTaken && targetPosition.roomName !== creep.pos.roomName && !creep.room.isMine() && Game.cpu.bucket > 3000) {
 		this.performBuildRoad(creep);
 	}
 };

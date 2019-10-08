@@ -132,7 +132,7 @@ ResourcesProcess.prototype.getResourceStates = function () {
 
 	// Collect room resource states.
 	for (const room of _.values(Game.rooms)) {
-		if (!room.controller || !room.controller.my) continue;
+		if (!room.isMine()) continue;
 
 		const roomData = room.getResourceState();
 		if (roomData) {

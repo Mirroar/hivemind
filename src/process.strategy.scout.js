@@ -188,7 +188,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
 	// Check if expanding here creates a safe direction for another of our rooms.
 	for (const otherRoom of _.values(Game.rooms)) {
-		if (!otherRoom.controller || !otherRoom.controller.my) continue;
+		if (!otherRoom.isMine()) continue;
 		if (otherRoom.name === roomName) continue;
 
 		const roomDistance = Game.map.getRoomLinearDistance(roomName, otherRoom.name);
@@ -250,7 +250,7 @@ ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
 	if (roomIntel.isOwned()) return -0.5;
 
 	// Can't remote harvest from my own room.
-	if (Game.rooms[roomName] && Game.rooms[roomName].controller && Game.rooms[roomName].controller.my) return 0;
+	if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) return 0;
 
 	let sourceFactor = 0.25;
 	// If another player has reserved the adjacent room, we can't profit all that well.
@@ -313,7 +313,7 @@ ScoutProcess.prototype.getScoutOrigins = function () {
 
 	// Starting point for scouting operations are owned rooms.
 	_.each(Game.rooms, room => {
-		if (!room.controller || !room.controller.my) return;
+		if (!room.isMine()) return;
 
 		openList[room.name] = {
 			range: 0,
@@ -331,7 +331,7 @@ ScoutProcess.prototype.getScoutOrigins = function () {
 ScoutProcess.prototype.findObservers = function () {
 	this.observers = [];
 	_.each(Game.rooms, room => {
-		if (!room.controller || !room.controller.my || !room.observer) return;
+		if (!room.isMine() || !room.observer) return;
 
 		this.observers.push(room.observer);
 	});
@@ -417,7 +417,7 @@ ScoutProcess.prototype.generateMineralStatus = function () {
 	this.mineralCount = {};
 	const mineralCount = this.mineralCount;
 	_.each(Game.rooms, room => {
-		if (!room.controller || !room.controller.my) return;
+		if (!room.isMine()) return;
 		const roomIntel = hivemind.roomIntel(room.name);
 		const mineralType = roomIntel.getMineralType();
 
