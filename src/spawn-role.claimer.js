@@ -70,10 +70,10 @@ module.exports = class ClaimerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room) {
+	getCreepMemory(room, option) {
 		return {
 			target: utilities.encodePosition(option.targetPos),
-			'reserve',
+			mission: 'reserve',
 		};
 	}
 };

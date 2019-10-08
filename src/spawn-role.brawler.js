@@ -1,9 +1,10 @@
 'use strict';
 
-/* global MOVE ATTACK HEAL */
+/* global hivemind RoomPosition MOVE ATTACK HEAL */
 
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
+const stats = require('./stats');
 
 module.exports = class BrawlerSpawnRole extends SpawnRole {
 	/**
@@ -84,7 +85,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			option.maxAttack ? {[ATTACK]: option.maxAttack}
+			option.maxAttack && {[ATTACK]: option.maxAttack}
 		);
 	}
 
