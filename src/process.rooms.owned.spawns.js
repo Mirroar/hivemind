@@ -1,13 +1,7 @@
 'use strict';
 
-/* global */
-
 const Process = require('./process');
 const SpawnManager = require('./spawn-manager');
-
-/* eslint-disable import/no-unassigned-import */
-require('./manager.spawn');
-/* eslint-enable import/no-unassigned-import */
 
 const spawnRoles = [
 	'brawler',
@@ -55,9 +49,7 @@ ManageSpawnsProcess.prototype = Object.create(Process.prototype);
 ManageSpawnsProcess.prototype.run = function () {
 	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.room.name && spawn.isOperational());
 	this.visualizeSpawning(roomSpawns);
-
-	const availableSpawns = this.spawnManager.filterAvailableSpawns(roomSpawns);
-	this.room.manageSpawns(this.spawnManager, availableSpawns);
+	this.spawnManager.manageSpawns(roomSpawns);
 };
 
 /**
