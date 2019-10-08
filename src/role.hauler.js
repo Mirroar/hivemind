@@ -353,6 +353,11 @@ HaulerRole.prototype.performBuildRoad = function (creep) {
  *   Whether the creep should stay on this spot for further repairs.
  */
 HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
+	// Don't try to build roads in owned rooms.
+	// If it's another player's, we can't build anyway. If if it's our own,
+	// the room planner should handle everything.
+	if (creep.room.controller && creep.room.controller.owner) return false;
+
 	const workParts = creep.memory.body.work || 0;
 	const pos = creep.memory.cachedPath.position;
 	const path = creep.getCachedPath();
