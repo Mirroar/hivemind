@@ -13,6 +13,8 @@ const spawnRoles = [
 	'harvester',
 	'harvester.minerals',
 	'harvester.power',
+	'harvester.remote',
+	'hauler',
 	'hauler.power',
 	'helper',
 	'scout',
