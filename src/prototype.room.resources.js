@@ -231,7 +231,7 @@ Room.prototype.getRemoteHarvestInfo = function () {
 	const cache = utilities.getCache('remoteHarvestSources_' + this.name, 100);
 
 	if (!cache.rooms) {
-		this.generateRemoteHarvestInfo();
+		this.generateRemoteHarvestInfo(cache);
 	}
 
 	return cache;
@@ -239,9 +239,11 @@ Room.prototype.getRemoteHarvestInfo = function () {
 
 /**
  * Generates cached data about remoute harvest targets for the current room.
+ *
+ * @param {Object} cache
+ *   The cache object to write information into.
  */
-Room.prototype.generateRemoteHarvestInfo = function () {
-	const cache = utilities.getCache('remoteHarvestSources_' + this.name, 100);
+Room.prototype.generateRemoteHarvestInfo = function (cache) {
 	cache.rooms = [];
 	cache.harvestPositions = [];
 	cache.reservePositions = [];
