@@ -3,6 +3,7 @@
 /* global hivemind */
 
 const Process = require('./process');
+const SpawnPowerCreepsProcess = require('./process.creeps.power.spawn');
 const CreepManager = require('./creep-manager');
 
 // Normal creep roles.
@@ -31,7 +32,7 @@ const creepRoles = [
 const OperatorRole = require('./role.operator');
 
 /**
- * Runs logic for all rooms we have visibility in.
+ * Runs logic for all creeps and power creeps.
  * @constructor
  *
  * @param {object} params
@@ -61,6 +62,7 @@ CreepsProcess.prototype = Object.create(Process.prototype);
  * Runs logic for all creeps.
  */
 CreepsProcess.prototype.run = function () {
+	// Run normal creeps.
 	this.creepManager.onTickStart();
 	_.each(Game.creepsByRole, (creeps, role) => {
 		hivemind.runSubProcess('creeps_' + role, () => {
@@ -69,10 +71,16 @@ CreepsProcess.prototype.run = function () {
 	});
 	this.creepManager.report();
 
+	// Run power creeps.
 	const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
 	this.powerCreepManager.onTickStart();
 	this.powerCreepManager.manageCreeps(powerCreeps);
 	this.powerCreepManager.report();
+
+	// Spawn power creeps.
+	hivemind.runProcess('creeps_power_spawn', SpawnPowerCreepsProcess, {
+		interval: 10,
+	});
 };
 
 module.exports = CreepsProcess;
