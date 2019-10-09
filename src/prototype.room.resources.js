@@ -1,7 +1,9 @@
 'use strict';
 
-/* global hivemind utilities Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
+/* global hivemind Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
+
+const utilities = require('./utilities');
 
 /**
  * Determines maximum storage capacity within a room.

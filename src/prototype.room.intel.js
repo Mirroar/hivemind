@@ -1,9 +1,10 @@
 'use strict';
 
-/* global utilities Room FIND_STRUCTURES STRUCTURE_CONTAINER
+/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
 
+const utilities = require('./utilities');
 const Bay = require('./manager.bay');
 const Exploit = require('./manager.exploit');
 

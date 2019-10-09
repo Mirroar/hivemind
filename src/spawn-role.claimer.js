@@ -1,7 +1,8 @@
 'use strict';
 
-/* global utilities MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX */
+/* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX */
 
+const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
 
 module.exports = class ClaimerSpawnRole extends SpawnRole {

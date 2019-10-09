@@ -51,7 +51,7 @@ ManageSpawnsProcess.prototype = Object.create(Process.prototype);
 ManageSpawnsProcess.prototype.run = function () {
 	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.room.name && spawn.isOperational());
 	this.visualizeSpawning(roomSpawns);
-	this.spawnManager.manageSpawns(roomSpawns);
+	this.spawnManager.manageSpawns(this.room, roomSpawns);
 };
 
 /**
