@@ -10,6 +10,7 @@ const ManageLabsProcess = require('./process.rooms.owned.labs');
 const ManageLinksProcess = require('./process.rooms.owned.links');
 const ManageSpawnsProcess = require('./process.rooms.owned.spawns');
 const RoomDefenseProcess = require('./process.rooms.owned.defense');
+const RoomManagerProcess = require('./process.rooms.owned.manager');
 const RoomSongsProcess = require('./process.rooms.owned.songs');
 
 /**
@@ -33,7 +34,15 @@ OwnedRoomProcess.prototype = Object.create(Process.prototype);
  */
 OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_roomplanner', () => {
+		// RoomPlanner has its own 100 tick throttling, so we runLogic every tick.
 		this.room.roomPlanner.runLogic();
+	});
+
+	hivemind.runSubProcess('rooms_manager', () => {
+		hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
+			interval: 100,
+			room: this.room,
+		});
 	});
 
 	hivemind.runSubProcess('rooms_inactive_structs', () => {

@@ -6,7 +6,7 @@ STRUCTURE_CONTAINER STRUCTURE_TOWER STRUCTURE_STORAGE STRUCTURE_EXTENSION
 STRUCTURE_TERMINAL STRUCTURE_LINK STRUCTURE_EXTRACTOR LOOK_STRUCTURES
 STRUCTURE_RAMPART LOOK_CONSTRUCTION_SITES MAX_CONSTRUCTION_SITES OK
 STRUCTURE_WALL CREEP_LIFE_TIME STRUCTURE_LAB STRUCTURE_NUKER FIND_STRUCTURES
-STRUCTURE_POWER_SPAWN STRUCTURE_OBSERVER FIND_HOSTILE_STRUCTURES
+STRUCTURE_POWER_SPAWN STRUCTURE_OBSERVER
 FIND_MY_CONSTRUCTION_SITES TERRAIN_MASK_WALL FIND_SOURCES FIND_MINERALS */
 
 const utilities = require('./utilities');
@@ -125,41 +125,7 @@ RoomPlanner.prototype.runLogic = function () {
 
 	this.checkAdjacentRooms();
 
-	this.cleanRoom();
 	this.manageStructures();
-};
-
-/**
- * Removes structures that might prevent the room's construction.
- */
-RoomPlanner.prototype.cleanRoom = function () {
-	// Remove all roads not part of current room plan.
-	const roomRoads = this.structuresByType[STRUCTURE_ROAD] || [];
-	const locations = this.memory.locations || {};
-	for (let i = 0; i < roomRoads.length; i++) {
-		const road = roomRoads[i];
-		if (!locations.road || !locations.road[utilities.encodePosition(road.pos)]) {
-			road.destroy();
-		}
-	}
-
-	// Remove unwanted walls.
-	const roomWalls = this.structuresByType[STRUCTURE_WALL] || [];
-	for (let i = 0; i < roomWalls.length; i++) {
-		const wall = roomWalls[i];
-		if (locations.road[utilities.encodePosition(wall.pos)] ||
-			locations.spawn[utilities.encodePosition(wall.pos)] ||
-			locations.storage[utilities.encodePosition(wall.pos)] ||
-			locations.extension[utilities.encodePosition(wall.pos)]) {
-			wall.destroy();
-		}
-	}
-
-	// Remove hostile structures.
-	const hostileStructures = this.room.find(FIND_HOSTILE_STRUCTURES);
-	for (let i = 0; i < hostileStructures.length; i++) {
-		hostileStructures[i].destroy();
-	}
 };
 
 /**

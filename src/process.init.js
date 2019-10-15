@@ -3,6 +3,7 @@
 const BoostManager = require('./manager.boost');
 const Process = require('./process');
 const RoomPlanner = require('./room-planner');
+const RoomManager = require('./room-manager');
 const Squad = require('./manager.squad');
 
 /**
@@ -42,6 +43,7 @@ InitProcess.prototype.run = function () {
 	_.each(Game.rooms, room => {
 		if (room.isMine()) {
 			room.roomPlanner = new RoomPlanner(room.name);
+			room.roomManager = new RoomManager(room);
 			room.boostManager = new BoostManager(room.name);
 			room.generateLinkNetwork();
 		}
