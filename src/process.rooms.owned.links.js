@@ -5,7 +5,7 @@
 const Process = require('./process');
 
 /**
- * Manages links in our room.s
+ * Manages links in our rooms.
  * @constructor
  *
  * @param {object} params
