@@ -78,7 +78,7 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 				priority: 4,
 				weight: 1 - (totalWorkParts / maxParts),
 				source: source.id,
-				size: maxParts - totalWorkParts,
+				size: maxParts,
 				force: false,
 			});
 		}

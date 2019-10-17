@@ -43,6 +43,10 @@ RemoteMiningProcess.prototype.run = function () {
 	_.each(Game.rooms, room => {
 		if (!room.isMine()) return;
 
+		// In our first room, don't start remote harvesting immediately. The energy
+		// required to start being profitable is better used for upgrading.
+		if (_.size(Game.spawns) === 1 && room.controller.level < 4) return;
+
 		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 		if (numSpawns === 0) return;
 

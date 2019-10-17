@@ -37,10 +37,19 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 	getUpgraderAmount(room) {
 		const maxUpgraders = this.getBaseUpgraderAmount(room);
 
-		if (maxUpgraders === 0 && room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5) {
-			hivemind.log('creeps', room.name).info('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
-			// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
-			return 1;
+		if (maxUpgraders === 0) {
+			if (room.controller.level === 1) {
+				// Level 1 rooms should be upgraded ASAP, should usually only happen
+				// in the first claimed room, since otherwise remote builders will
+				// have upgraded the room already.
+				return 1;
+			}
+
+			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5) {
+				hivemind.log('creeps', room.name).info('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
+				// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
+				return 1;
+			}
 		}
 
 		return maxUpgraders;
