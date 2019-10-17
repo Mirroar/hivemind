@@ -137,7 +137,7 @@ UpgraderRole.prototype.performGetUpgraderEnergy = function (creep) {
 	this.transporterRole.performGetEnergy(creep);
 
 	if (creep.carry.energy > 0) {
-		creep.setUpgraderState(true);
+		this.setUpgraderState(creep, true);
 	}
 };
 
