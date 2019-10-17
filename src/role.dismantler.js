@@ -84,8 +84,8 @@ DismantlerRole.prototype.performDismantle = function (creep) {
 		break;
 	}
 
-	if (!target && creep.room.roomPlanner && creep.room.roomPlanner.needsDismantling()) {
-		target = creep.room.roomPlanner.getDismantleTarget();
+	if (!target && creep.room.roomManager && creep.room.roomManager.needsDismantling()) {
+		target = creep.room.roomManager.getDismantleTarget();
 		if (target) {
 			target.notifyWhenAttacked(false);
 		}

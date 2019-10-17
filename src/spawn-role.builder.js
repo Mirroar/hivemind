@@ -71,7 +71,7 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we're moving a spawn.
-		if (room.memory.roomPlanner && room.memory.roomPlanner.hasMisplacedSpawn) {
+		if (room.roomManager && room.roomManager.hasMisplacedSpawn()) {
 			maxWorkParts *= 1.5;
 		}
 

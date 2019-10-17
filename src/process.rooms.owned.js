@@ -1,7 +1,7 @@
 'use strict';
 
-/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_ALWAYS
-POWER_SPAWN_ENERGY_RATIO */
+/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_NORMAL
+PROCESS_PRIORITY_ALWAYS POWER_SPAWN_ENERGY_RATIO */
 
 const Process = require('./process');
 
@@ -38,10 +38,12 @@ OwnedRoomProcess.prototype.run = function () {
 		this.room.roomPlanner.runLogic();
 	});
 
+	const prioritizeRoomManager = this.room.roomManager.shouldRunImmediately();
 	hivemind.runSubProcess('rooms_manager', () => {
 		hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
-			interval: 100,
+			interval: prioritizeRoomManager ? 100 : 0,
 			room: this.room,
+			priority: prioritizeRoomManager ? PROCESS_PRIORITY_NORMAL : PROCESS_PRIORITY_ALWAYS,
 		});
 	});
 
