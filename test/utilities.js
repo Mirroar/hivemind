@@ -66,13 +66,6 @@ test('getBestOption', t => {
 	t.is(utilities.getBestOption(options).id, 'highest', 'Within the same priority, higher weight wins.');
 });
 
-test('generateCreepBody', t => {
-	t.deepEqual(utilities.generateCreepBody({move: 0.5, carry: 0.5}, 100), ['move', 'carry']);
-	t.deepEqual(utilities.generateCreepBody({move: 0.5, carry: 0.5}, 200), ['move', 'carry', 'move', 'carry']);
-	const limitedBody = utilities.generateCreepBody({move: 0.5, carry: 0.5}, 500, {move: 2});
-	t.is(_.filter(limitedBody, part => part === 'move').length, 2);
-});
-
 test('generateEvenSequence', t => {
 	const numbers = utilities.generateEvenSequence(3, 2);
 	t.deepEqual(numbers, [8, 4, 2, 6, 1, 5, 3, 7]);
