@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind Creep MOVE CARRY TOUGH ERR_NOT_ENOUGH_RESOURCES
+/* global hivemind Creep MOVE TOUGH ERR_NOT_ENOUGH_RESOURCES
 RESOURCE_ENERGY STRUCTURE_LINK */
 
 if (!Creep.prototype.__enhancementsLoaded) {
@@ -16,7 +16,7 @@ if (!Creep.prototype.__enhancementsLoaded) {
 		if (hivemind.relations.isAlly(this.owner.username)) return false;
 
 		for (const part of this.body) {
-			if (part.type !== MOVE && part.type !== CARRY && part.type !== TOUGH) {
+			if (part.type !== MOVE && part.type !== TOUGH) {
 				return true;
 			}
 		}
