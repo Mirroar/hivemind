@@ -269,7 +269,13 @@ BuilderRole.prototype.addBuildOptions = function (creep, options) {
 		// Slightly adjust weight so that closer sites get prioritized.
 		option.weight -= creep.pos.getRangeTo(target) / 100;
 
-		option.priority -= creep.room.getCreepsWithOrder('build', target.id).length;
+		if (target.progressTotal < 1000) {
+			// For things that are build quickly, don't send multiple builders to the
+			// same target.
+			// @todo Use target.progressTotal - target.progress in relation to
+			// assigned builders' stored energy for this decision.
+			option.priority -= creep.room.getCreepsWithOrder('build', target.id).length;
+		}
 
 		if (target.structureType === STRUCTURE_SPAWN) {
 			// Spawns have highest construction priority - we want to make

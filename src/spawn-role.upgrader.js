@@ -84,7 +84,7 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 		// Small rooms that don't have a storage yet shouls spawn upgraders depending on available energy.
 		if (room.controller.level <= 3) {
 			const numSources = _.size(room.sources);
-			const maxUpgraders = 1 + numSources + Math.floor(availableEnergy / 2000);
+			const maxUpgraders = 1 + numSources + Math.floor(availableEnergy / 1000);
 			return Math.min(maxUpgraders, 5);
 		}
 
