@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_NORMAL
+/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT
 PROCESS_PRIORITY_ALWAYS POWER_SPAWN_ENERGY_RATIO */
 
 const Process = require('./process');
@@ -43,7 +43,7 @@ OwnedRoomProcess.prototype.run = function () {
 		hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
 			interval: prioritizeRoomManager ? 100 : 0,
 			room: this.room,
-			priority: prioritizeRoomManager ? PROCESS_PRIORITY_NORMAL : PROCESS_PRIORITY_ALWAYS,
+			priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
 		});
 	});
 
