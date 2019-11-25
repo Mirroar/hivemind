@@ -2,7 +2,7 @@
 
 /* global hivemind PathFinder Room RoomPosition FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
-STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
+STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES
 FIND_TOMBSTONES */
@@ -292,7 +292,6 @@ TransporterRole.prototype.getAvailableDeliveryTargets = function () {
 	if (creep.carry.energy > creep.carryCapacity * 0.1) {
 		this.addSpawnBuildingDeliveryOptions(options);
 		this.addContainerEnergyDeliveryOptions(options);
-		this.addTowerDeliveryOptions(options);
 		this.addHighLevelEnergyDeliveryOptions(options);
 		this.addStorageEnergyDeliveryOptions(options);
 		this.addLinkDeliveryOptions(options);
@@ -461,43 +460,6 @@ TransporterRole.prototype.addContainerEnergyDeliveryOptions = function (options)
 		}
 
 		option.priority -= room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
-
-		options.push(option);
-	}
-};
-
-/**
- * Adds options for filling towers with energy.
- *
- * @param {Array} options
- *   A list of potential delivery targets.
- */
-TransporterRole.prototype.addTowerDeliveryOptions = function (options) {
-	const room = this.creep.room;
-	const targets = room.find(FIND_STRUCTURES, {
-		filter: structure => {
-			return (structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity * 0.8;
-		},
-	});
-
-	for (const target of targets) {
-		const option = {
-			priority: 3,
-			weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
-			type: 'structure',
-			object: target,
-			resourceType: RESOURCE_ENERGY,
-		};
-
-		if (room.memory.enemies && !room.memory.enemies.safe) {
-			option.priority++;
-		}
-
-		if (target.energy < target.energyCapacity * 0.2) {
-			option.priority++;
-		}
-
-		option.priority -= room.getCreepsWithOrder('deliver', target.id).length * 2;
 
 		options.push(option);
 	}
