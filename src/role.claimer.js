@@ -135,6 +135,10 @@ ClaimerRole.prototype.performReserve = function (creep) {
 				value: reservation,
 			};
 		}
+
+		if (target.sign && target.sign.username) {
+			creep.signController(target, '');
+		}
 	}
 };
 

@@ -57,6 +57,10 @@ UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 
 	if (distance <= 3) {
 		creep.upgradeController(creep.room.controller);
+
+		if (distance === 1 && creep.room.controller.sign && creep.room.controller.sign.username) {
+			creep.signController(creep.room.controller, '');
+		}
 	}
 
 	// Keep syphoning energy from link or controller to ideally never stop upgrading.
