@@ -90,8 +90,8 @@ RoomPlanner.prototype.runLogic = function () {
 
 	// Sometimes room planning can't be finished successfully. Try a maximum of 10
 	// times in that case.
-	if (!this.memory.planningTries) this.memory.planningTries = 1;
-	if (!this.memory.locations || (!this.memory.locations.observer && this.memory.planningTries <= 10)) {
+	if (!this.memory.planningTries) this.memory.planningTries = 0;
+	if (!this.isPlanningFinished()) {
 		if (Game.cpu.getUsed() < Game.cpu.tickLimit / 2) {
 			this.placeFlags();
 			this.memory.planningTries++;
@@ -1386,6 +1386,18 @@ RoomPlanner.prototype.isPlannedLocation = function (pos, locationType) {
 	if (!this.memory.locations) return false;
 	if (!this.memory.locations[locationType]) return false;
 	if (!this.memory.locations[locationType][utilities.encodePosition(pos)]) return false;
+
+	return true;
+};
+
+/**
+ * Checks whether planning for this room is finished.
+ *
+ * @return {boolean}
+ */
+RoomPlanner.prototype.isPlanningFinished = function () {
+	if (!this.memory.locations) return false;
+	if (!this.memory.locations.observer && this.memory.planningTries <= 10) return false;
 
 	return true;
 };
