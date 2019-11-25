@@ -172,7 +172,7 @@ module.exports = class RoomManager {
 		// Slate all unmanaged walls and ramparts for deconstruction.
 		const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
 			filter: structure => {
-				if (structure.structureType === STRUCTURE_WALL && !this.isPlannedLocation(structure.pos, 'wall')) return true;
+				if (structure.structureType === STRUCTURE_WALL && !this.roomPlanner.isPlannedLocation(structure.pos, 'wall')) return true;
 				if (structure.structureType === STRUCTURE_RAMPART && !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart')) return true;
 
 				return false;
