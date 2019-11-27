@@ -4,7 +4,7 @@
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
-STRUCTURE_TERMINAL, FIND_RUINS */
+STRUCTURE_TERMINAL, FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 const utilities = require('./utilities');
 
@@ -31,7 +31,7 @@ RoomIntel.prototype.gatherIntel = function () {
 
 	const intel = this.memory;
 
-	// @todo Have process logic handle throttling of this task .
+	// @todo Have process logic handle throttling of this task.
 	let lastScanThreshold = 500;
 	if (Game.cpu.bucket < 5000) {
 		lastScanThreshold = 2500;
@@ -49,6 +49,8 @@ RoomIntel.prototype.gatherIntel = function () {
 	this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK]);
 	this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 	this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
+	this.gatherInvaderIntel(structures);
+
 	const ruins = room.find(FIND_RUINS);
 	this.gatherAbandonedResourcesIntel(structures, ruins);
 
@@ -257,6 +259,30 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 
 	// @todo Also consider saving containers with resources if it's not one
 	// of our harvest rooms, so we can "borrow" from other players.
+};
+
+/**
+ * @todo Documentation
+ */
+RoomIntel.prototype.gatherInvaderIntel = function (structures) {
+	delete this.memory.invaderInfo;
+
+	const core = _.first(structures[STRUCTURE_INVADER_CORE]);
+	if (!core) return;
+
+	// Commit basic invader core info.
+	this.memory.invaderInfo = {
+		level: core.level,
+		active: !core.ticksToDeploy,
+		activates: core.ticksToDeploy ? Game.time + core.ticksToDeploy : undefined,
+	};
+
+	// Check when the core collapses.
+	for (const effect of core.effects) {
+		if (effect.effect === EFFECT_COLLAPSE_TIMER) {
+			this.memory.invaderInfo.collapses = Game.time + effect.ticksRemaining;
+		}
+	}
 };
 
 /**
