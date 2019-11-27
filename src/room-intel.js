@@ -3,7 +3,8 @@
 /* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
-STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES */
+STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
+STRUCTURE_TERMINAL, FIND_RUINS */
 
 const utilities = require('./utilities');
 
@@ -48,6 +49,8 @@ RoomIntel.prototype.gatherIntel = function () {
 	this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK]);
 	this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 	this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
+	const ruins = room.find(FIND_RUINS);
+	this.gatherAbandonedResourcesIntel(structures, ruins);
 
 	// Remember room exits.
 	this.memory.exits = Game.map.describeExits(room.name);
@@ -223,6 +226,37 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
 			hitsMax: structure.hitsMax,
 		};
 	}
+};
+
+/**
+ * @todo Documentation
+ */
+RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins) {
+	delete this.memory.abandonedResources;
+
+	if (this.memory.owner) return;
+	if (!structures[STRUCTURE_STORAGE] && !structures[STRUCTURE_TERMINAL] && ruins.length === 0) return;
+
+	const resources = {};
+	const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
+	for (const objects of collections) {
+		for (const object of objects) {
+			if (object.storage) {
+				_.each(object.storage, (amount, resourceType) => {
+					resources[resourceType] = (resources[resourceType] || 0) + amount;
+				});
+			}
+		}
+	}
+
+	if (_.keys(resources).length === 0) return;
+
+	this.memory.abandonedResources = resources;
+
+	// @todo Consider resources from buildings that might need dismantling first.
+
+	// @todo Also consider saving containers with resources if it's not one
+	// of our harvest rooms, so we can "borrow" from other players.
 };
 
 /**
