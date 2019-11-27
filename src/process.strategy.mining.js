@@ -37,7 +37,6 @@ RemoteMiningProcess.prototype = Object.create(Process.prototype);
 RemoteMiningProcess.prototype.run = function () {
 	const memory = Memory.strategy;
 	const sourceRooms = {};
-	let max = 0;
 
 	// Determine how much remote mining each room can handle.
 	_.each(Game.rooms, room => {
@@ -50,8 +49,6 @@ RemoteMiningProcess.prototype.run = function () {
 		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 		if (numSpawns === 0) return;
 
-		max += 2 * numSpawns;
-
 		sourceRooms[room.name] = {
 			current: 0,
 			max: 2 * numSpawns,
@@ -59,42 +56,59 @@ RemoteMiningProcess.prototype.run = function () {
 	});
 
 	// Create ordered list of best harvest rooms.
+	// @todo At this point we should carry duplicate for rooms tgat could have
+	// multiple origins.
 	const harvestRooms = [];
 	_.each(memory.roomList, info => {
+		info.harvestActive = false;
+
+		// Ignore rooms that are not profitable to harvest from.
 		if (!info.harvestPriority || info.harvestPriority <= 0.1) return;
 
-		info.harvestActive = false;
+		// Ignore rooms we can not reach safely.
+		if (!info.safePath) return;
+
 		harvestRooms.push(info);
 	});
 
 	const sortedRooms = _.sortBy(harvestRooms, info => -info.harvestPriority);
 
-	// Decide which are active.
-	let total = 0;
-	for (let i = 0; i < sortedRooms.length; i++) {
-		const info = sortedRooms[i];
+	// Decide which harvest rooms are active.
+	let availableHarvestRoomCount = 0;
+	for (const info of sortedRooms) {
 		if (!sourceRooms[info.origin]) continue;
+
 		if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
-
 		sourceRooms[info.origin].current++;
-		info.harvestActive = true;
 
-		total++;
-		if (total >= memory.remoteHarvesting.currentCount) break;
+		availableHarvestRoomCount++;
+		if (availableHarvestRoomCount >= memory.remoteHarvesting.currentCount) continue;
+
+		// Harvest from this room.
+		info.harvestActive = true;
 	}
 
-	// Adjust remote harvesting number according to cpu.
+	// Adjust remote harvesting number periodically.
 	if (Game.time - memory.remoteHarvesting.lastCheck >= 1000) {
 		memory.remoteHarvesting.lastCheck = Game.time;
 
+		// Reduce count if we are over the available maximum.
+		if (memory.remoteHarvesting.currentCount > availableHarvestRoomCount) {
+			memory.remoteHarvesting.currentCount = availableHarvestRoomCount;
+			Game.notify('⚒ reduced remote mining count from ' + memory.remoteHarvesting.currentCount + ' to ' + availableHarvestRoomCount + ' because that is the maximum number of available rooms.');
+		}
+
+		// Check past CPU and bucket usage.
 		if (stats.getStat('bucket', 10000)) {
 			if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.9 * Game.cpu.limit) {
-				if (memory.remoteHarvesting.currentCount < max) {
+				// We've been having bucket reserves and CPU cycles to spare.
+				if (memory.remoteHarvesting.currentCount < availableHarvestRoomCount) {
 					memory.remoteHarvesting.currentCount++;
 					Game.notify('⚒ increased remote mining count to ' + memory.remoteHarvesting.currentCount);
 				}
 			}
 			else if (stats.getStat('bucket', 1000) <= 8000) {
+				// Bucket has seen some usage recently.
 				if (memory.remoteHarvesting.currentCount > 0) {
 					memory.remoteHarvesting.currentCount--;
 					Game.notify('⚒ reduced remote mining count to ' + memory.remoteHarvesting.currentCount);
