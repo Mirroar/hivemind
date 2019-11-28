@@ -231,7 +231,12 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
 };
 
 /**
- * @todo Documentation
+ * Commits abandoned resources to memory.
+ *
+ * @param {object} structures
+ *   An object containing Arrays of structures, keyed by structure type.
+ * @param {object[]} ruins
+ *   An array of Ruin objects.
  */
 RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins) {
 	delete this.memory.abandonedResources;
@@ -241,15 +246,15 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 
 	const resources = {};
 	const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
-	for (const objects of collections) {
-		for (const object of objects) {
-			if (object.storage) {
-				_.each(object.storage, (amount, resourceType) => {
-					resources[resourceType] = (resources[resourceType] || 0) + amount;
-				});
-			}
-		}
-	}
+	_.each(collections, objects => {
+		_.each(objects, object => {
+			if (!object.storage) return;
+
+			_.each(object.storage, (amount, resourceType) => {
+				resources[resourceType] = (resources[resourceType] || 0) + amount;
+			});
+		});
+	});
 
 	if (_.keys(resources).length === 0) return;
 
@@ -262,7 +267,10 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 };
 
 /**
- * @todo Documentation
+ * Commits info about invader outposts to memory.
+ *
+ * @param {object} structures
+ *   An object containing Arrays of structures, keyed by structure type.
  */
 RoomIntel.prototype.gatherInvaderIntel = function (structures) {
 	delete this.memory.invaderInfo;
