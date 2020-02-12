@@ -241,6 +241,16 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
 RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins) {
 	delete this.memory.abandonedResources;
 
+	// Find origin room.
+	if (!Memory.strategy) return;
+	if (!Memory.strategy.roomList) return;
+	const strategyInfo = Memory.strategy.roomList[this.roomName];
+	if (!strategyInfo || !strategyInfo.origin) return;
+
+	const roomMemory = Memory.rooms[strategyInfo.origin];
+	if (!roomMemory.abandonedResources) roomMemory.abandonedResources = {};
+	delete roomMemory.abandonedResources[this.roomName];
+
 	if (this.memory.owner) return;
 	if (!structures[STRUCTURE_STORAGE] && !structures[STRUCTURE_TERMINAL] && ruins.length === 0) return;
 
@@ -248,9 +258,9 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 	const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
 	_.each(collections, objects => {
 		_.each(objects, object => {
-			if (!object.storage) return;
+			if (!object.store) return;
 
-			_.each(object.storage, (amount, resourceType) => {
+			_.each(object.store, (amount, resourceType) => {
 				resources[resourceType] = (resources[resourceType] || 0) + amount;
 			});
 		});
@@ -258,7 +268,7 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 
 	if (_.keys(resources).length === 0) return;
 
-	this.memory.abandonedResources = resources;
+	roomMemory.abandonedResources[this.roomName] = resources;
 
 	// @todo Consider resources from buildings that might need dismantling first.
 
