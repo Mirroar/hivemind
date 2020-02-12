@@ -94,8 +94,8 @@ RemoteMiningProcess.prototype.run = function () {
 
 		// Reduce count if we are over the available maximum.
 		if (memory.remoteHarvesting.currentCount > availableHarvestRoomCount) {
-			memory.remoteHarvesting.currentCount = availableHarvestRoomCount;
 			Game.notify('⚒ reduced remote mining count from ' + memory.remoteHarvesting.currentCount + ' to ' + availableHarvestRoomCount + ' because that is the maximum number of available rooms.');
+			memory.remoteHarvesting.currentCount = availableHarvestRoomCount;
 		}
 
 		// Check past CPU and bucket usage.
