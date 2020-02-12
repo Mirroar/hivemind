@@ -7,6 +7,19 @@ const utilities = require('./utilities');
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
 
+/**
+ * Builders stay in their spawn room and build or repair structures.
+ *
+ * When empty, they will gather energy from various sources. Once enough
+ * energy is carried, they will pick a target to build or repair, move to it,
+ * and use their energy for it.
+ * Targets are chosen by priority based on the structure type, missing
+ * hit points, etc.
+ * Energy may be spent on repairing nearby structures (mostly roads) on the
+ * move so less effort is needed to individually maintain these.
+ *
+ * @todo Document memory structure.
+ */
 const BuilderRole = function () {
 	Role.call(this);
 
