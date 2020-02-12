@@ -1394,6 +1394,7 @@ RoomPlanner.prototype.isPlannedLocation = function (pos, locationType) {
  * Checks whether planning for this room is finished.
  *
  * @return {boolean}
+ *   Whether all structures have been planned for this room.
  */
 RoomPlanner.prototype.isPlanningFinished = function () {
 	if (!this.memory.locations) return false;
