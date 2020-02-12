@@ -185,24 +185,10 @@ module.exports = class RoomManager {
 		}
 
 		// Further constructions should only happen in safe rooms.
-		if (this.room && this.room.isEvacuating()) return;
+		if (this.room.isEvacuating()) return;
 		if (!this.checkWallIntegrity()) return;
 
-		// Make sure labs are built in the right place, remove otherwise.
-		this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
-		this.buildPlannedStructures('lab', STRUCTURE_LAB);
-
-		// Make sure all current nukers have been built.
-		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
-		this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
-
-		// Make sure all current power spawns have been built.
-		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
-		this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
-
-		// Make sure all current observers have been built.
-		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
-		this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
+		this.buildEndgameStructures();
 	}
 
 	/**
@@ -370,6 +356,27 @@ module.exports = class RoomManager {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Builds structures that are relevant in fully built rooms only.
+	 */
+	buildEndgameStructures() {
+		// Make sure labs are built in the right place, remove otherwise.
+		this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
+		this.buildPlannedStructures('lab', STRUCTURE_LAB);
+
+		// Make sure all current nukers have been built.
+		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
+		this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
+
+		// Make sure all current power spawns have been built.
+		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
+		this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
+
+		// Make sure all current observers have been built.
+		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
+		this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
 	}
 
 	/**
