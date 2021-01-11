@@ -17,15 +17,16 @@ const Hivemind = require('./hivemind');
 global.hivemind = new Hivemind();
 
 // Load top-level processes.
-const InitProcess = require('./process.init');
 const CreepsProcess = require('./process.creeps');
-const RoomsProcess = require('./process.rooms');
 const ExpandProcess = require('./process.strategy.expand');
-const RemoteMiningProcess = require('./process.strategy.mining');
+const InitProcess = require('./process.init');
 const PowerMiningProcess = require('./process.strategy.power');
+const RemoteMiningProcess = require('./process.strategy.mining');
+const ReportProcess = require('./process.empire.report');
+const ResourcesProcess = require('./process.empire.resources');
+const RoomsProcess = require('./process.rooms');
 const ScoutProcess = require('./process.strategy.scout');
 const TradeProcess = require('./process.empire.trade');
-const ResourcesProcess = require('./process.empire.resources');
 
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
@@ -102,6 +103,9 @@ module.exports = {
 		});
 		hivemind.runProcess('empire.resources', ResourcesProcess, {
 			interval: 50,
+		});
+		hivemind.runProcess('empire.report', ReportProcess, {
+			interval: 100,
 		});
 
 		this.recordStats();

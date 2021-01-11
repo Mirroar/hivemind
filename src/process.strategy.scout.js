@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind RoomPosition OBSERVER_RANGE */
+/* global Memory hivemind RoomPosition OBSERVER_RANGE */
 
 const Process = require('./process');
 const utilities = require('./utilities');
