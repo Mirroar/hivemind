@@ -40,6 +40,9 @@ ReportProcess.prototype.initMemory = function (baseTimestamp) {
 
 	// @todo Add stats about total stored resources.
 	// @todo Add stats about room levels to report level ups?
+
+	// Update reference to memory.
+	this.memory = Memory.strategy.reports;
 };
 
 /**
