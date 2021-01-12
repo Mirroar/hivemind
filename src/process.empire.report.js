@@ -16,15 +16,21 @@ const Process = require('./process');
 const ReportProcess = function (params, data) {
 	Process.call(this, params, data);
 
-	if (!Memory.strategy.report) this.initMemory();
+	if (!Memory.strategy.report) this.initMemory((new Date()).getTime());
 	this.memory = Memory.strategy.reports;
 };
 
 ReportProcess.prototype = Object.create(Process.prototype);
 
-ReportProcess.prototype.initMemory = function () {
+/**
+ * (Re-)initializes report memory.
+ *
+ * @param {Number} baseTimestamp
+ *   Timestamp in milliseconds that marks the start of this reporting period.
+ */
+ReportProcess.prototype.initMemory = function (baseTimestamp) {
 	Memory.strategy.reports = {
-		nextReportTime: this.normalizeDate(new Date()).getTime(),
+		nextReportTime: this.normalizeDate(new Date(baseTimestamp + (24 * 60 * 60 * 1000))).getTime(),
 		data: {
 			time: Game.time,
 			gcl: Game.gcl,
@@ -44,11 +50,7 @@ ReportProcess.prototype.run = function () {
 	if ((new Date()).getTime() < this.memory.nextReportTime) return;
 
 	this.generateReport();
-	const lastReportTime = this.memory.nextReportTime;
-	this.initMemory();
-
-	// Set time of next report.
-	this.memory.nextReportTime = this.normalizeDate(new Date(lastReportTime + (24 * 60 * 60 * 1000))).getTime();
+	this.initMemory(this.memory.nextReportTime);
 };
 
 /**
@@ -77,7 +79,7 @@ ReportProcess.prototype.generateReport = function () {
 };
 
 /**
- * Generates report email for gcl / gpc changes.
+ * Generates report email for gcl / gpl changes.
  *
  * @param {String} variable
  *   Variable to report. Must be either 'gcl' or 'gpl'.
