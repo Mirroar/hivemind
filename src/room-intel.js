@@ -173,7 +173,7 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	delete this.memory.power;
 
 	const powerBank = _.first(powerBanks);
-	if (!powerBank) return;
+	if (!powerBank || powerBank.hits === 0 || powerBank.power === 0) return;
 
 	// For now, send a notification!
 	hivemind.log('intel', this.roomName).info('Power bank containing', powerBank.amount, 'power found!');
