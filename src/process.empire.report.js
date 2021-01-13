@@ -79,6 +79,7 @@ ReportProcess.prototype.normalizeDate = function (date) {
 ReportProcess.prototype.generateReport = function () {
 	this.generateLevelReport('gcl', 'Control Points');
 	this.generateLevelReport('gpl', 'Power');
+	this.generatePowerReport();
 };
 
 /**
@@ -103,6 +104,30 @@ ReportProcess.prototype.generateLevelReport = function (variable, label) {
 	}
 
 	reportText += '\nPoints: ' + currentValues.progress + ' (+' + pointsDiff + ' @ ' + (pointsDiff / tickDiff).toPrecision(4) + '/tick)';
+
+	Game.notify(reportText);
+};
+
+/**
+ * Generates report email for power harvesting.
+ */
+ReportProcess.prototype.generatePowerReport = function () {
+	let reportText = this.generateHeading('Power gathering');
+
+	let totalAmount = 0;
+	let totalRooms = 0;
+	for (const intent of this.memory.data.power || []) {
+		totalRooms++;
+		totalAmount += intent.info.amount || 0;
+	}
+
+	if (totalRooms === 0) return;
+
+	reportText += 'Started gathering ' + totalAmount + ' power in ' + totalRooms + 'Rooms:<br>';
+
+	for (const intent of this.memory.data.power || []) {
+		reportText += intent.roomName + ': ' + intent.info.amount || 'N/A';
+	}
 
 	Game.notify(reportText);
 };

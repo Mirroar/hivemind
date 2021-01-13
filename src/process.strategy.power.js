@@ -153,8 +153,27 @@ PowerMiningProcess.prototype.run = function () {
 		// @todo Calculate number of transporters needed in the end.
 
 		// @todo Start spawning.
-		Game.notify('⚡ Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
-		hivemind.log('strategy').info('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
+		this.logHarvestIntent(roomName, info);
+	});
+};
+
+/**
+ * Informs the user of a starting power mining process.
+ * @param {String} roomName
+ *   Name of the room where power is being harvested.
+ * @param {object} info
+ *   Scout information and calculated values for this harvesting effort.
+ */
+PowerMiningProcess.prototype.logHarvestIntent = function (roomName, info) {
+	hivemind.log('strategy').info('Gathering ' + (info.amount || 'N/A') + ' power from room ' + roomName + '.');
+
+	if (!Memory.strategy || !Memory.strategy.reports) return;
+	if (!Memory.strategy.reports.data.power) Memory.strategy.reports.data.power = [];
+	const memory = Memory.strategy.reports.data.power;
+
+	memory.push({
+		roomName,
+		info,
 	});
 };
 
