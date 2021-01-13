@@ -16,7 +16,7 @@ const Process = require('./process');
 const ReportProcess = function (params, data) {
 	Process.call(this, params, data);
 
-	if (!Memory.strategy.report) this.initMemory((new Date()).getTime());
+	if (!Memory.strategy.reports) this.initMemory((new Date()).getTime());
 	this.memory = Memory.strategy.reports;
 };
 
