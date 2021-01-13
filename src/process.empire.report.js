@@ -35,6 +35,8 @@ ReportProcess.prototype.initMemory = function (baseTimestamp) {
 			time: Game.time,
 			gcl: Game.gcl,
 			gpl: Game.gpl,
+			power: [],
+			remoteHarvestCount: Memory.strategy.remoteHarvesting.currentCount,
 		},
 	};
 
@@ -79,6 +81,7 @@ ReportProcess.prototype.normalizeDate = function (date) {
 ReportProcess.prototype.generateReport = function () {
 	this.generateLevelReport('gcl', 'Control Points');
 	this.generateLevelReport('gpl', 'Power');
+	this.generateRemoteMiningReport();
 	this.generatePowerReport();
 };
 
@@ -112,7 +115,7 @@ ReportProcess.prototype.generateLevelReport = function (variable, label) {
  * Generates report email for power harvesting.
  */
 ReportProcess.prototype.generatePowerReport = function () {
-	let reportText = this.generateHeading('Power gathering');
+	let reportText = this.generateHeading('⚡ Power gathering');
 
 	let totalAmount = 0;
 	let totalRooms = 0;
@@ -127,6 +130,23 @@ ReportProcess.prototype.generatePowerReport = function () {
 
 	for (const intent of this.memory.data.power || []) {
 		reportText += intent.roomName + ': ' + intent.info.amount || 'N/A';
+	}
+
+	Game.notify(reportText);
+};
+
+/**
+ * Generates report email for remote mining.
+ */
+ReportProcess.prototype.generateRemoteMiningReport = function () {
+	let reportText = this.generateHeading('⚒ Remote mining');
+
+	reportText += 'Remote mining in ' + Memory.strategy.remoteHarvesting.currentCount + ' rooms';
+	if (Memory.strategy.remoteHarvesting.currentCount > this.memory.data.remoteHarvestCount) {
+		reportText += ' (+' + (Memory.strategy.remoteHarvesting.currentCount - this.memory.data.remoteHarvestCount) + ')';
+	}
+	else if (Memory.strategy.remoteHarvesting.currentCount < this.memory.data.remoteHarvestCount) {
+		reportText += ' (-' + (this.memory.data.remoteHarvestCount - Memory.strategy.remoteHarvesting.currentCount) + ')';
 	}
 
 	Game.notify(reportText);

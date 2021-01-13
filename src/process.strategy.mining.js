@@ -104,14 +104,12 @@ RemoteMiningProcess.prototype.run = function () {
 				// We've been having bucket reserves and CPU cycles to spare.
 				if (memory.remoteHarvesting.currentCount < availableHarvestRoomCount) {
 					memory.remoteHarvesting.currentCount++;
-					Game.notify('⚒ increased remote mining count to ' + memory.remoteHarvesting.currentCount);
 				}
 			}
 			else if (stats.getStat('bucket', 1000) <= 8000) {
 				// Bucket has seen some usage recently.
 				if (memory.remoteHarvesting.currentCount > 0) {
 					memory.remoteHarvesting.currentCount--;
-					Game.notify('⚒ reduced remote mining count to ' + memory.remoteHarvesting.currentCount);
 				}
 			}
 		}
