@@ -83,6 +83,8 @@ ReportProcess.prototype.generateReport = function () {
 	this.generateLevelReport('gpl', 'Power');
 	this.generateRemoteMiningReport();
 	this.generatePowerReport();
+
+	// @todo Report market transactions.
 };
 
 /**

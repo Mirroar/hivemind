@@ -4,9 +4,11 @@
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
-STRUCTURE_TERMINAL, FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
+STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER
+STRUCTURE_PORTAL */
 
 const utilities = require('./utilities');
+const interShard = require('./intershard');
 
 const RoomIntel = function (roomName) {
 	this.roomName = roomName;
@@ -47,6 +49,7 @@ RoomIntel.prototype.gatherIntel = function () {
 
 	const structures = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
 	this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK]);
+	this.gatherPortalIntel(structures[STRUCTURE_PORTAL]);
 	this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 	this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
 	this.gatherInvaderIntel(structures);
@@ -60,8 +63,6 @@ RoomIntel.prototype.gatherIntel = function () {
 	// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
 	const constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 	this.generateCostMatrix(structures, constructionSites);
-
-	// @todo Check for portals.
 
 	// @todo Check enemy structures.
 
@@ -206,6 +207,24 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 		if (!Memory.strategy.power.rooms[this.roomName] || !Memory.strategy.power.rooms[this.roomName].isActive) {
 			Memory.strategy.power.rooms[this.roomName] = this.memory.power;
 		}
+	}
+};
+
+/**
+ * Commits portal status to memory.
+ *
+ * @param {Structure[]} portals
+ *   An array containing all power banks for the room.
+ */
+RoomIntel.prototype.gatherPortalIntel = function (portals) {
+	for (const portal of portals || []) {
+		// Ignore unstable portals for now.
+		if (portal.ticksToDecay) continue;
+
+		// Ignore same-shard portals for now.
+		if (!portal.destination.shard) continue;
+
+		interShard.registerPortal(portal);
 	}
 };
 
