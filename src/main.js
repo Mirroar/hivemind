@@ -20,6 +20,7 @@ global.hivemind = new Hivemind();
 const CreepsProcess = require('./process.creeps');
 const ExpandProcess = require('./process.strategy.expand');
 const InitProcess = require('./process.init');
+const InterShardProcess = require('./process.strategy.intershard');
 const PowerMiningProcess = require('./process.strategy.power');
 const RemoteMiningProcess = require('./process.strategy.mining');
 const ReportProcess = require('./process.empire.report');
@@ -95,6 +96,10 @@ module.exports = {
 		});
 		hivemind.runProcess('strategy.power_mining', PowerMiningProcess, {
 			interval: 100,
+		});
+		hivemind.runProcess('strategy.inter_shard', InterShardProcess, {
+			interval: 100,
+			priority: PROCESS_PRIORITY_LOW,
 		});
 
 		hivemind.runProcess('empire.trade', TradeProcess, {

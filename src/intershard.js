@@ -32,6 +32,19 @@ const interShard = {
 	},
 
 	/**
+	 * Gets the memory object for another shard.
+	 *
+	 * @param {String} shardName
+	 *   The name of the shard for which memory is requested.
+	 *
+	 * @return {object}
+	 *   The shard's inter-shard memory.
+	 */
+	getRemoteMemory(shardName) {
+		return JSON.parse(InterShardMemory.getRemote(shardName)) || {};
+	},
+
+	/**
 	 * Registers a portal in intershard memory.
 	 *
 	 * @param {StructurePortal} portal
