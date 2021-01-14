@@ -73,6 +73,9 @@ PowerMiningProcess.prototype.run = function () {
 			return;
 		}
 
+		// Skip if this doesn't need harvesting anymore.
+		if (info.amount <= 0 || info.hits <= 0) return;
+
 		const dps = info.hits / timeRemaining;
 
 		// @todo Maybe adjust strategy to use dedicated attackers and healers if space is limited.
