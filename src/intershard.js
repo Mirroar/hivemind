@@ -2,6 +2,8 @@
 
 /* global InterShardMemory */
 
+const utilities = require('./utilities');
+
 const interShard = {
 
 	/**
@@ -56,7 +58,7 @@ const interShard = {
 
 		if (!memory.portals) memory.portals = {};
 		if (!memory.portals[targetShard]) memory.portals[targetShard] = {};
-		memory.portals[targetShard][portal.room.name] = portal.destination.room;
+		memory.portals[targetShard][utilities.encodePosition(portal.pos)] = portal.destination.room;
 
 		this.writeLocalMemory();
 	},
