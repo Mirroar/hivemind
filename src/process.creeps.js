@@ -25,6 +25,7 @@ const creepRoles = [
 	'helper',
 	'scout',
 	'transporter',
+	'unassigned',
 	'upgrader',
 ];
 

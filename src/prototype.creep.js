@@ -64,6 +64,10 @@ if (!Creep.prototype.__enhancementsLoaded) {
 	 * Add additional data for each creep.
 	 */
 	Creep.prototype.enhanceData = function () {
+		if (!this.memory.role) {
+			this.memory.role = 'unassigned';
+		}
+
 		const role = this.memory.role;
 
 		// Store creeps by role in global and room data.

@@ -63,12 +63,13 @@ InterShardProcess.prototype.distributeCPU = function () {
 	};
 	this.addShardData(Game.shard.name, this._memory);
 
+	// Based on collected information, assign CPU to each shard.
 	const totalCpu = _.sum(Game.cpu.shardLimits);
 	const newLimits = {};
-	_.each(this._shardData, function (data, shardName) {
+	_.each(this._shardData, (data, shardName) => {
 		if (shardName === 'total') return;
 
-		newLimits[shardName] = totalCpu * data.neededCpu / this._shardData.total.neededCpu;
+		newLimits[shardName] = Math.round(totalCpu * data.neededCpu / this._shardData.total.neededCpu);
 	});
 	Game.cpu.setShardLimits(newLimits);
 };

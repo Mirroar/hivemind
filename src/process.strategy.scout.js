@@ -322,6 +322,17 @@ ScoutProcess.prototype.getScoutOrigins = function () {
 		};
 	});
 
+	if (_.size(openList) === 0) {
+		// Add any room with visibility as a scout origin if we have no room in this shard.
+		_.each(Game.rooms, room => {
+			openList[room.name] = {
+				range: 0,
+				origin: room.name,
+				safePath: true,
+			};
+		});
+	}
+
 	return openList;
 };
 

@@ -216,6 +216,11 @@ const utilities = {
 			});
 		});
 
+		_.each(structures[STRUCTURE_PORTAL], structure => {
+			// Treat portals as blocking. They will be targetted intentionally.
+			blockerCallback(structure);
+		});
+
 		_.each(structures[STRUCTURE_RAMPART], structure => {
 			if (!structure.my) {
 				// Enemy ramparts are blocking.
