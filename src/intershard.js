@@ -58,7 +58,11 @@ const interShard = {
 
 		if (!memory.portals) memory.portals = {};
 		if (!memory.portals[targetShard]) memory.portals[targetShard] = {};
-		memory.portals[targetShard][utilities.encodePosition(portal.pos)] = portal.destination.room;
+		if (!memory.portals[targetShard][utilities.encodePosition(portal.pos)]) {
+			memory.portals[targetShard][utilities.encodePosition(portal.pos)] = {};
+		}
+
+		memory.portals[targetShard][utilities.encodePosition(portal.pos)].dest = portal.destination.room;
 
 		this.writeLocalMemory();
 	},

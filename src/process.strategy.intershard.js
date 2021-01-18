@@ -28,6 +28,7 @@ InterShardProcess.prototype.run = function () {
 
 	this.updateShardInfo();
 	this.distributeCPU();
+	this.manageScouting();
 
 	interShard.writeLocalMemory();
 };
@@ -108,6 +109,21 @@ InterShardProcess.prototype.addShardData = function (shardName, shardMemory) {
 	this._shardData.total.neededCpu += this._shardData[shardName].neededCpu;
 
 	_.each(shardMemory.portals, (portals, otherShardName) => this.addShardData(otherShardName));
+};
+
+/**
+ * Manages scouting adjacent shards.
+ */
+InterShardProcess.prototype.manageScouting = function () {
+	this.memory.scouting = {};
+	if (this.memory.info.maxRoomLevel < 8) return;
+
+	// Scout nearby shards that have no rooms claimed.
+	for (const shardName in this.memory.portals) {
+		if (this._shardData[shardName].rooms === 0) {
+			this.memory.scouting[shardName] = true;
+		}
+	}
 };
 
 module.exports = InterShardProcess;

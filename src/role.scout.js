@@ -2,6 +2,7 @@
 
 /* global RoomPosition */
 
+const utilities = require('./utilities');
 const Role = require('./role');
 
 const ScoutRole = function () {
@@ -17,7 +18,7 @@ ScoutRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 ScoutRole.prototype.run = function (creep) {
-	if (!creep.memory.scoutTarget) {
+	if (!creep.memory.scoutTarget && !creep.memory.portalTarget) {
 		this.chooseScoutTarget(creep);
 	}
 
@@ -31,6 +32,18 @@ ScoutRole.prototype.run = function (creep) {
  *   The creep to run logic for.
  */
 ScoutRole.prototype.performScout = function (creep) {
+	if (creep.memory.portalTarget) {
+		const portalPosition = utilities.decodePosition(creep.memory.portalTarget);
+		if (creep.pos.roomName === portalPosition.roomName) {
+			creep.goTo(portalPosition);
+		}
+		else {
+			creep.moveToRoom(portalPosition.roomName);
+		}
+
+		return;
+	}
+
 	if (!creep.memory.scoutTarget) {
 		// Just stand around somewhere.
 		const target = new RoomPosition(25, 25, creep.pos.roomName);
