@@ -35,7 +35,12 @@ ScoutRole.prototype.performScout = function (creep) {
 	if (creep.memory.portalTarget) {
 		const portalPosition = utilities.decodePosition(creep.memory.portalTarget);
 		if (creep.pos.roomName === portalPosition.roomName) {
-			creep.goTo(portalPosition);
+			if (creep.pos.getRangeTo(portalPosition) > 1) {
+				creep.moveToRange(portalPosition, 1);
+			}
+			else {
+				creep.moveTo(portalPosition);
+			}
 		}
 		else {
 			creep.moveToRoom(portalPosition.roomName);

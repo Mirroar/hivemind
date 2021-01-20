@@ -50,6 +50,36 @@ InterShardProcess.prototype.updateShardInfo = function () {
 			this.memory.info.maxRoomLevel = room.controller.level;
 		}
 	}
+
+	// Determine significant rooms.
+	this.memory.info.rooms = {};
+	const roomStats = this.memory.info.rooms;
+	_.each(Memory.strategy.roomList, (info, roomName) => {
+		if (info.range > 0) {
+			// The following scores only apply to unowned rooms.
+			if (!roomStats.bestExpansion || roomStats.bestExpansion.score < info.expansionScore) {
+				roomStats.bestExpansion = {
+					name: roomName,
+					score: info.expansionScore,
+				};
+			}
+		} else {
+			// The following scores only apply to owned rooms.
+			if (!roomStats.bestRoom || roomStats.bestRoom.score < info.expansionScore) {
+				roomStats.bestRoom = {
+					name: roomName,
+					score: info.expansionScore,
+				};
+			}
+
+			if (!roomStats.worstRoom || roomStats.worstRoom.score > info.expansionScore) {
+				roomStats.worstRoom = {
+					name: roomName,
+					score: info.expansionScore,
+				};
+			}
+		}
+	});
 };
 
 /**

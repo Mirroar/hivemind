@@ -164,7 +164,9 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		},
 	};
 
-	if (!Memory.hivemind.canExpand) return result;
+	if ((!Memory.hivemind.canExpand) && this.getExpansionScoreFromCache(roomName, result)) {
+		return result;
+	}
 	const roomIntel = hivemind.roomIntel(roomName);
 
 	// More sources is better.
@@ -177,11 +179,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
 	// Having fewer exit sides is good.
 	// Having dead ends / safe rooms nearby is similarly good.
-	const exits = roomIntel.getExits();
 	const safety = roomIntel.calculateAdjacentRoomSafety();
 	result.addScore(_.sum(safety.directions) * 0.25, 'safeExits');
 
 	// Add score for harvest room sources.
+	const exits = roomIntel.getExits();
 	for (const adjacentRoom of _.values(exits)) {
 		result.addScore(this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
 	}
@@ -226,8 +228,30 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	// Having few swamp tiles is good (less cost for road maintenance, easier setup).
 	result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
+	this.setExpansionScoreCache(roomName, result);
+
 	// @todo Prefer rooms with minerals we have little sources of.
 	return result;
+};
+
+/**
+ *
+ */
+ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
+	if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
+
+	Memory.strategy._expansionScoreCache[roomName] = result.score;
+};
+
+/**
+ *
+ */
+ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) {
+	if (!Memory.strategy._expansionScoreCache) return false;
+	if (!Memory.strategy._expansionScoreCache[roomName]) return false;
+
+	result.addScore(Memory.strategy._expansionScoreCache[roomName], 'fromCache');
+	return true;
 };
 
 /**
