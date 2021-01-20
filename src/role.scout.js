@@ -76,6 +76,7 @@ ScoutRole.prototype.performScout = function (creep) {
  */
 ScoutRole.prototype.chooseScoutTarget = function (creep) {
 	creep.memory.scoutTarget = null;
+	if (!creep.memory.origin) creep.memory.origin = creep.room.name;
 	if (!Memory.strategy) return;
 
 	const memory = Memory.strategy;

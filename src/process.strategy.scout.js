@@ -56,6 +56,13 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 
 	const timeSinceLastScan = roomIntel.getAge();
 
+	if (info.range === 0) {
+		// Add expansion score for later reference.
+		const expansionInfo = this.calculateExpansionScore(roomName);
+		info.expansionScore = expansionInfo.score;
+		info.expansionReasons = expansionInfo.reasons;
+	}
+
 	if (info.range > 0 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 		if (timeSinceLastScan > 5000) {
 			info.scoutPriority = 1;
@@ -122,7 +129,7 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
 	for (const pos of sourcePositions) {
 		income += 3000;
 		pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
-		if (typeof pos === 'object') {
+		if (typeof pos === 'object' && Game.rooms[info.origin] && Game.rooms[info.origin].isMine()) {
 			const sourcePos = new RoomPosition(pos.x, pos.y, roomName);
 			utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
 
@@ -217,6 +224,8 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 			}
 		}
 	}
+
+	// @todo If this is an owned room, revert above logic and calculate possible safe exit loss as score.
 
 	// Having fewer exit tiles is good. Safe exits reduce the number of tiles
 	// we need to cover.

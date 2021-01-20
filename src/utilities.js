@@ -14,6 +14,8 @@ const utilities = {
 	 *   The determined user name.
 	 */
 	getUsername() {
+	    if (_.size(Game.spawns) === 0) return '@undefined';
+
 		return _.sample(Game.spawns).owner.username;
 	},
 
