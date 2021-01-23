@@ -196,6 +196,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	}
 
 	// Check if expanding here creates a safe direction for another of our rooms.
+	const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 	for (const otherRoom of _.values(Game.rooms)) {
 		if (!otherRoom.isMine()) continue;
 		if (otherRoom.name === roomName) continue;
@@ -204,11 +205,10 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		if (roomDistance > 3) continue;
 
 		const otherRoomIntel = hivemind.roomIntel(otherRoom.name);
-		const currentSafety = otherRoomIntel.calculateAdjacentRoomSafety();
-		const adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety({safe: [roomName]});
+		const adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety(isMyRoom ? {unsafe: [roomName]} : {safe: [roomName]});
 
 		// If after expanding there are more safe directions, improve score.
-		const newSafeExits = (_.sum(adjustedSafety.directions) - _.sum(currentSafety.directions));
+		const newSafeExits = Math.abs(_.sum(adjustedSafety.directions) - _.sum(safety.directions));
 		result.addScore(newSafeExits * 0.25, 'newSafeExits' + otherRoom.name);
 		// Also, there will be less exit tiles to cover.
 		const otherRoomExits = otherRoomIntel.getExits();
@@ -224,8 +224,6 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 			}
 		}
 	}
-
-	// @todo If this is an owned room, revert above logic and calculate possible safe exit loss as score.
 
 	// Having fewer exit tiles is good. Safe exits reduce the number of tiles
 	// we need to cover.

@@ -519,6 +519,7 @@ RoomIntel.prototype.countTiles = function (type) {
  * @param {object} options
  *   Further options for calculation, possible keys are:
  *   - safe: An array of room names which are considered safe no matter what.
+ *   - unsafe: An array of room names which are considered unsafe no matter what.
  *
  * @return {object}
  *   An object describing adjacent room status, containing the following keys:
@@ -556,7 +557,8 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
 	const openList = {};
 	const closedList = {};
 	this.joinedDirs = {};
-	this.otherSafeRooms = options ? options.safe : [];
+	this.otherSafeRooms = options ? (options.safe || []) : [];
+	this.otherUnsafeRooms = options ? (options.unsafe || []) : [];
 	// Add initial directions to open list.
 	for (const moveDir of _.keys(this.memory.exits)) {
 		const dir = dirMap[moveDir];
@@ -614,13 +616,15 @@ RoomIntel.prototype.calculateAdjacentRoomSafety = function (options) {
  *   Information about the room this operation is base on.
  */
 RoomIntel.prototype.addAdjacentRoomToCheck = function (roomName, openList, base) {
-	if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) {
-		// This is one of our own rooms, and as such is possibly safe.
-		if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return;
-		if (roomName === this.roomName) return;
-	}
+	if (this.otherUnsafeRooms.indexOf(roomName) === -1) {
+		if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) {
+			// This is one of our own rooms, and as such is possibly safe.
+			if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return;
+			if (roomName === this.roomName) return;
+		}
 
-	if (this.otherSafeRooms.indexOf(roomName) > -1) return;
+		if (this.otherSafeRooms.indexOf(roomName) > -1) return;
+	}
 
 	openList[roomName] = {
 		range: base.range + 1,
