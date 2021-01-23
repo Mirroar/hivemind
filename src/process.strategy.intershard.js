@@ -63,7 +63,8 @@ InterShardProcess.prototype.updateShardInfo = function () {
 					score: info.expansionScore,
 				};
 			}
-		} else {
+		}
+		else {
 			// The following scores only apply to owned rooms.
 			if (!roomStats.bestRoom || roomStats.bestRoom.score < info.expansionScore) {
 				roomStats.bestRoom = {

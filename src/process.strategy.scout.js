@@ -174,6 +174,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	if ((!Memory.hivemind.canExpand) && this.getExpansionScoreFromCache(roomName, result)) {
 		return result;
 	}
+
 	const roomIntel = hivemind.roomIntel(roomName);
 
 	// More sources is better.
@@ -242,7 +243,12 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 };
 
 /**
+ * Caches calculated expansion score for a room.
  *
+ * @param {String} roomName
+ *   Name of the room to cache data for.
+ * @param {object} result
+ *   The result of the expansion score calculation.
  */
 ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
@@ -251,7 +257,16 @@ ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 };
 
 /**
+ * Gets calculated expansion score for a room from cache.
  *
+ * @param {String} roomName
+ *   Name of the room to get data for.
+ * @param {object} result
+ *   The result of the expansion score calculation to add score for.
+ *
+ * @return {boolean}
+ *   True if a cached score was found, false if no score is in cache or it it
+ *   stale.
  */
 ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) return false;
