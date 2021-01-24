@@ -1,9 +1,10 @@
 'use strict';
 
-/* global */
+/* global RoomPosition */
 
-const Process = require('./process');
 const interShard = require('./intershard');
+const Process = require('./process');
+const Squad = require('./manager.squad');
 
 /**
  * Chooses rooms for expansion and sends creeps there.
@@ -188,9 +189,16 @@ InterShardProcess.prototype.manageExpanding = function () {
 	const expansionInfo = {
 		room: targetRoom,
 	};
-	expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom.origin];
+	expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom].origin;
 
 	this.memory.info.interShardExpansion = expansionInfo;
+
+	// Preliminarily create `interShardExpansion` squad.
+	const squad = new Squad('interShardExpansion');
+	squad.clearUnits();
+	squad.addUnit('singleClaim');
+	squad.addUnit('builder');
+	squad.setTarget(new RoomPosition(25, 25, targetRoom));
 };
 
 module.exports = InterShardProcess;

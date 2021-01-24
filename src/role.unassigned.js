@@ -1,5 +1,7 @@
 'use strict';
 
+/* global CLAIM WORK */
+
 const Role = require('./role');
 
 const UnassignedRole = function () {
@@ -15,12 +17,26 @@ UnassignedRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 UnassignedRole.prototype.run = function (creep) {
-	// Just make this creep a scout by default.
-	// @todo Enhance this once we send workers through inter-shard portals.
+	// Make this creep a scout by default.
 	creep.memory = {
 		role: 'scout',
 		origin: creep.room.name,
+		body: _.countBy(creep.body),
 	};
+
+	// Creeps with claim parts are sent as part of intershard expansion.
+	if (creep.memory.body[CLAIM] > 0) {
+		creep.memory.role = 'brawler';
+		creep.memory.squadUnitType = 'singleClaim';
+		creep.memory.squadName = 'interShardExpansion';
+	}
+
+	// Creeps with work parts are sent as part of intershard expansion.
+	if (creep.memory.body[WORK] > 0) {
+		creep.memory.role = 'brawler';
+		creep.memory.squadUnitType = 'builder';
+		creep.memory.squadName = 'interShardExpansion';
+	}
 };
 
 module.exports = UnassignedRole;
