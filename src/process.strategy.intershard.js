@@ -174,6 +174,9 @@ InterShardProcess.prototype.manageExpanding = function () {
 		// Remove expansion request when our room has hopefully stabilized.
 		if (this.memory.info.maxRoomLevel >= 4) {
 			delete this.memory.info.interShardExpansion;
+			const squad = new Squad('interShardExpansion');
+			squad.clearUnits();
+			squad.disband();
 		}
 
 		return;

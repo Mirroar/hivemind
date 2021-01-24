@@ -138,7 +138,7 @@ BrawlerRole.prototype.getAvailableMilitaryTargets = function (creep) {
 		}
 	}
 
-	if (creep.memory.body.claim && !creep.room.controller.owner) {
+	if (creep.memory.body.claim && creep.room.controller && !creep.room.controller.owner) {
 		options.push({
 			priority: 4,
 			weight: 0,
@@ -536,7 +536,7 @@ BrawlerRole.prototype.performSquadMove = function (creep) {
  *   The creep to run logic for.
  */
 BrawlerRole.prototype.militaryRoomReached = function (creep) {
-	if (creep.memory.squadUnitType === 'builder') {
+	if (creep.memory.squadUnitType === 'builder' && creep.room.controller) {
 		// Rebrand as remote builder to work in this room from now on.
 		creep.memory.role = 'builder.remote';
 		creep.memory.target = utilities.encodePosition(creep.pos);

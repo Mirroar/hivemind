@@ -375,6 +375,8 @@ ScoutProcess.prototype.getScoutOrigins = function () {
 		_.each(memory.portals, portals => {
 			_.each(portals, (portalInfo, portalPosition) => {
 				const pos = utilities.decodePosition(portalPosition);
+				if (!pos) return;
+
 				openList[pos.roomName] = {
 					range: 0,
 					origin: pos.roomName,

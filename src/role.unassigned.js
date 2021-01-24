@@ -21,8 +21,13 @@ UnassignedRole.prototype.run = function (creep) {
 	creep.memory = {
 		role: 'scout',
 		origin: creep.room.name,
-		body: _.countBy(creep.body),
+		body: {},
 	};
+
+	// Recaulculate body part counts.
+	for (const part of creep.body) {
+		creep.memory.body[part.type] = (creep.memory.body[part.type] || 0) + 1;
+	}
 
 	// Creeps with claim parts are sent as part of intershard expansion.
 	if (creep.memory.body[CLAIM] > 0) {
