@@ -29,6 +29,7 @@ InterShardProcess.prototype.run = function () {
 	this.updateShardInfo();
 	this.distributeCPU();
 	this.manageScouting();
+	this.manageExpanding();
 
 	interShard.writeLocalMemory();
 };
@@ -130,6 +131,11 @@ InterShardProcess.prototype.addShardData = function (shardName, shardMemory) {
 		this._shardData[shardName].rooms = shardMemory.info.ownedRooms;
 		this._shardData[shardName].creeps = shardMemory.info.ownedCreeps;
 		this._shardData[shardName].neededCpu = 1 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
+
+		if (shardMemory.info.interShardExpansion) {
+			// Allow for more CPU while creating out first intershard room.
+			this._shardData[shardName].neededCpu += 1;
+		}
 	}
 	else if (this.memory.info.maxRoomLevel === 8) {
 		// If we have at least one level 8 room, assign a little CPU to unexplored
@@ -155,6 +161,36 @@ InterShardProcess.prototype.manageScouting = function () {
 			this.memory.scouting[shardName] = true;
 		}
 	}
+};
+
+/**
+ * Manages requesting an expansion squad from a nearby shard.
+ */
+InterShardProcess.prototype.manageExpanding = function () {
+	if (this.memory.info.ownedRooms > 0) {
+		// Remove expansion request when our room has hopefully stabilized.
+		if (this.memory.info.maxRoomLevel >= 4) {
+			delete this.memory.info.interShardExpansion;
+		}
+
+		return;
+	}
+
+	// Don't recalculate if we've already set a target.
+	// @todo Unless expanding has failed, e.g. due to attacks.
+	if (this.memory.info.interShardExpansion) return;
+
+	// Immediately try to expand to the best known room.
+	// @todo Decide when we've scouted enough to claim a room.
+	if (!this.memory.info.rooms.bestExpansion) return;
+
+	const targetRoom = this.memory.info.rooms.bestExpansion.name;
+	const expansionInfo = {
+		room: targetRoom,
+	};
+	expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom.origin];
+
+	this.memory.info.interShardExpansion = expansionInfo;
 };
 
 module.exports = InterShardProcess;
