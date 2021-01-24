@@ -5,6 +5,7 @@
 const interShard = require('./intershard');
 const Process = require('./process');
 const Squad = require('./manager.squad');
+const utilities = require('./utilities');
 
 /**
  * Chooses rooms for expansion and sends creeps there.
@@ -31,6 +32,7 @@ InterShardProcess.prototype.run = function () {
 	this.distributeCPU();
 	this.manageScouting();
 	this.manageExpanding();
+	this.manageExpansionSupport();
 
 	interShard.writeLocalMemory();
 };
@@ -199,6 +201,67 @@ InterShardProcess.prototype.manageExpanding = function () {
 	squad.addUnit('singleClaim');
 	squad.addUnit('builder');
 	squad.setTarget(new RoomPosition(25, 25, targetRoom));
+};
+
+/**
+ * Manages a squad that sends claimers and builders for intershard expansion.
+ */
+InterShardProcess.prototype.manageExpansionSupport = function () {
+	// Clear squad unit assignments for when no support is needed.
+	const squad = new Squad('interShardSupport');
+	squad.clearUnits();
+
+	// Check if a shard we're scouting is trying to expand.
+	_.each(this.memory.scouting, (isScouting, shardName) => {
+		if (!isScouting) return;
+
+		const remoteMemory = interShard.getRemoteMemory(shardName);
+		if (!remoteMemory.info || !remoteMemory.info.interShardExpansion) return;
+
+		const targetRoom = remoteMemory.info.interShardExpansion.portalRoom;
+		const bestPortal = this.findClosestPortalToSpawnTo(targetRoom, shardName);
+		if (!bestPortal) return;
+
+		// Send units to facilitate expansion.
+		if (remoteMemory.info.maxRoomLevel === 0) squad.addUnit('singleClaim');
+		squad.setUnitCount('builder', 2);
+		squad.setTarget(bestPortal.pos);
+		squad.setSpawn(bestPortal.origin);
+	});
+};
+
+/**
+ * Finds the portal that leads to the target room and is close to an owned room.
+ *
+ * @param {String} roomName
+ *   The name of the room we're trying to reach via portal.
+ * @param {String} targetShard
+ *   The shard we're trying to reach.
+ *
+ * @return {RoomPosition}
+ *   Position of the portal we should take to get to the target room.
+ */
+InterShardProcess.prototype.findClosestPortalToSpawnTo = function (roomName, targetShard) {
+	let bestPortal;
+	_.each(this.memory.portals, (portals, shardName) => {
+		if (shardName !== targetShard) return;
+
+		_.each(portals, (portalInfo, portalPosition) => {
+			if (portalInfo.dest !== roomName) return;
+
+			const pos = utilities.decodePosition(portalPosition);
+			const roomInfo = Memory.strategy.roomList[pos.roomName];
+			if (bestPortal && bestPortal.range <= roomInfo.range) return;
+
+			bestPortal = {
+				pos,
+				range: roomInfo.range,
+				origin: roomInfo.origin,
+			};
+		});
+	});
+
+	return bestPortal;
 };
 
 module.exports = InterShardProcess;

@@ -372,7 +372,7 @@ ScoutProcess.prototype.getScoutOrigins = function () {
 	if (_.size(openList) === 0) {
 		// Add any room with a portal as a scout origin if we have no room in this shard.
 		const memory = interShard.getLocalMemory();
-		_.each(memory.portals, (portals) => {
+		_.each(memory.portals, portals => {
 			_.each(portals, (portalInfo, portalPosition) => {
 				const pos = utilities.decodePosition(portalPosition);
 				openList[pos.roomName] = {
