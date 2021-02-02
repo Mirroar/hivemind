@@ -182,8 +182,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	result.addScore(roomIntel.getSourcePositions().length, 'numSources');
 
 	// Having a mineral source is good.
+	const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 	if (roomIntel.getMineralType()) {
-		result.addScore(1 / ((this.mineralCount[roomIntel.getMineralType()] || 0) + 1), 'numMinerals');
+		// In our own rooms, calculate the score this has gotten us.
+		const mineralGain = isMyRoom ? 0 : 1;
+		result.addScore(1 / ((this.mineralCount[roomIntel.getMineralType()] || 0) + mineralGain), 'numMinerals');
 	}
 
 	// Having fewer exit sides is good.
@@ -198,7 +201,6 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	}
 
 	// Check if expanding here creates a safe direction for another of our rooms.
-	const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 	for (const otherRoom of _.values(Game.rooms)) {
 		if (!otherRoom.isMine()) continue;
 		if (otherRoom.name === roomName) continue;
