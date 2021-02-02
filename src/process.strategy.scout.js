@@ -284,7 +284,7 @@ ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) 
 		];
 	}
 
-	if (Memory.strategy._expansionScoreCache[roomName][1] < Game.time - 5000 * hivemind.getThrottleMultiplier()) return false;
+	if (Memory.strategy._expansionScoreCache[roomName][1] < Game.time - (5000 * hivemind.getThrottleMultiplier())) return false;
 
 	result.addScore(Memory.strategy._expansionScoreCache[roomName][0], 'fromCache');
 	return true;
