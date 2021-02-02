@@ -256,7 +256,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
 
-	Memory.strategy._expansionScoreCache[roomName] = result.score;
+	Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time];
 };
 
 /**
@@ -275,7 +275,18 @@ ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) 
 	if (!Memory.strategy._expansionScoreCache) return false;
 	if (!Memory.strategy._expansionScoreCache[roomName]) return false;
 
-	result.addScore(Memory.strategy._expansionScoreCache[roomName], 'fromCache');
+	if (!Array.isArray(Memory.strategy._expansionScoreCache[roomName])) {
+		// Migrate from old cache format to new format.
+		// @todo Remove when old code is likely gone.
+		Memory.strategy._expansionScoreCache[roomName] = [
+			Memory.strategy._expansionScoreCache[roomName],
+			Game.time,
+		];
+	}
+
+	if (Memory.strategy._expansionScoreCache[roomName][1] < Game.time - 5000 * hivemind.getThrottleMultiplier()) return false;
+
+	result.addScore(Memory.strategy._expansionScoreCache[roomName][0], 'fromCache');
 	return true;
 };
 
