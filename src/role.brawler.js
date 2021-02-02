@@ -293,7 +293,7 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 	if (creep.memory.target) {
 		const targetPosition = utilities.decodePosition(creep.memory.target);
 		if (creep.pos.roomName !== targetPosition.roomName) {
-			if (!creep.moveToRoom(targetPosition.roomName)) {
+			if (!creep.moveToRoom(targetPosition.roomName, true)) {
 				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
 				// @todo This is cross-room movement and should therefore only calculate a path once.
 				creep.moveToRange(targetPosition, 3);

@@ -57,7 +57,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 
 	const timeSinceLastScan = roomIntel.getAge();
 
-	if (info.range === 0) {
+	if (info.range === 0 && roomIntel.isClaimable()) {
 		// Add expansion score for later reference.
 		const expansionInfo = this.calculateExpansionScore(roomName);
 		info.expansionScore = expansionInfo.score;

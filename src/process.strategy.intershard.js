@@ -215,9 +215,7 @@ InterShardProcess.prototype.manageExpansionSupport = function () {
 	squad.clearUnits();
 
 	// Check if a shard we're scouting is trying to expand.
-	_.each(this.memory.scouting, (isScouting, shardName) => {
-		if (!isScouting) return;
-
+	_.each(this.memory.portals, (portals, shardName) => {
 		const remoteMemory = interShard.getRemoteMemory(shardName);
 		if (!remoteMemory.info || !remoteMemory.info.interShardExpansion) return;
 
