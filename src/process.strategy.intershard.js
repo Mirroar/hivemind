@@ -191,6 +191,9 @@ InterShardProcess.prototype.manageExpanding = function () {
 	if (!this.memory.info.rooms.bestExpansion) return;
 
 	const targetRoom = this.memory.info.rooms.bestExpansion.name;
+	const roomIntel = hivemind.roomIntel(targetRoom);
+	if (!roomIntel) return;
+
 	const expansionInfo = {
 		room: targetRoom,
 	};
@@ -198,12 +201,13 @@ InterShardProcess.prototype.manageExpanding = function () {
 
 	this.memory.info.interShardExpansion = expansionInfo;
 
-	// Preliminarily create `interShardExpansion` squad.
+	// Preliminarily create `interShardExpansion` squad. It will be filled
+	// by creeps travelling here through a portal.
 	const squad = new Squad('interShardExpansion');
 	squad.clearUnits();
 	squad.addUnit('singleClaim');
 	squad.addUnit('builder');
-	squad.setTarget(new RoomPosition(25, 25, targetRoom));
+	squad.setTarget(roomIntel.getControllerPosition());
 };
 
 /**
