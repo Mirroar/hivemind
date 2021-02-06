@@ -56,7 +56,7 @@ RemoteMiningProcess.prototype.run = function () {
 	});
 
 	// Create ordered list of best harvest rooms.
-	// @todo At this point we should carry duplicate for rooms tgat could have
+	// @todo At this point we should carry duplicate for rooms that could have
 	// multiple origins.
 	const harvestRooms = [];
 	_.each(memory.roomList, info => {
@@ -81,11 +81,11 @@ RemoteMiningProcess.prototype.run = function () {
 		if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
 		sourceRooms[info.origin].current++;
 
-		availableHarvestRoomCount++;
-		if (availableHarvestRoomCount >= memory.remoteHarvesting.currentCount) continue;
-
 		// Harvest from this room.
 		info.harvestActive = true;
+
+		availableHarvestRoomCount++;
+		if (availableHarvestRoomCount >= memory.remoteHarvesting.currentCount) continue;
 	}
 
 	// Adjust remote harvesting number periodically.
