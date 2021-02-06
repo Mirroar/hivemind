@@ -25,7 +25,14 @@ RoomDefenseProcess.prototype = Object.create(Process.prototype);
  * Manages defenses.
  */
 RoomDefenseProcess.prototype.run = function () {
-	// Handle towers.
+	this.manageTowers();
+	this.manageSafeMode();
+};
+
+/**
+ * Manages this room's towers.
+ */
+RoomDefenseProcess.prototype.manageTowers = function () {
 	const towers = this.room.find(FIND_MY_STRUCTURES, {
 		filter: structure => (structure.structureType === STRUCTURE_TOWER) && structure.energy > 0,
 	});
@@ -78,6 +85,20 @@ RoomDefenseProcess.prototype.run = function () {
 			tower.heal(damaged);
 		}
 	}
+};
+
+/**
+ * Activates a room's safe mode when under attack.
+ */
+RoomDefenseProcess.prototype.manageSafeMode = function () {
+	if (this.room.controller.safeMode) return;
+	if (this.room.controller.safeModeCooldown) return;
+	if (this.room.controller.safeModeAvailable < 1) return;
+	if (this.room.defense.getEnemyStrength() < 2) return;
+	if (this.room.defense.isWallIntact()) return;
+
+	Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
+	this.room.controller.activateSafeMode();
 };
 
 module.exports = RoomDefenseProcess;

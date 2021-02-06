@@ -1,12 +1,53 @@
 'use strict';
 
-/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER
+/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER FIND_HOSTILE_CREEPS
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS FIND_FLAGS */
 
 const utilities = require('./utilities');
 const Bay = require('./manager.bay');
 const Exploit = require('./manager.exploit');
+const RoomDefense = require('./room-defense');
+
+// Define quick access property room.enemyCreeps.
+Object.defineProperty(Room.prototype, 'enemyCreeps', {
+
+	/**
+	 * Gets all enemy creeps in a room, keyed by owner username.
+	 *
+	 * @return {Object}
+	 *   All enemy creeps in this room.
+	 */
+	get() {
+		if (!this._enemyCreeps) {
+			this._enemyCreeps = _.groupBy(this.find(FIND_HOSTILE_CREEPS), 'owner.username');
+		}
+
+		return this._enemyCreeps;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.defense
+Object.defineProperty(Room.prototype, 'defense', {
+
+	/**
+	 * Gets a room's defense manager.
+	 *
+	 * @return {RoomDefense}
+	 *   The room's defense manager.
+	 */
+	get() {
+		if (!this._defenseManager) {
+			this._defenseManager = new RoomDefense(this.name);
+		}
+
+		return this._defenseManager;
+	},
+	enumerable: false,
+	configurable: true,
+});
 
 /**
  * Adds some additional data to room objects.
