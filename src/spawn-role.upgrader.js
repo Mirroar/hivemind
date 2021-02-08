@@ -89,9 +89,9 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 		}
 
 		// Spawn upgraders depending on stored energy.
-		if (availableEnergy < 100000) return 0;
-		if (availableEnergy < 300000) return 1;
-		if (availableEnergy < 500000) return 2;
+		if (availableEnergy < 10000) return 0;
+		if (availableEnergy < 100000) return 1;
+		if (availableEnergy < 300000) return 2;
 		// @todo Have maximum depend on number of work parts.
 		// @todo Make sure enough energy is brought by.
 		return 3;
