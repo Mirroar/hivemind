@@ -11,8 +11,6 @@ const MAX_ROOM_LEVEL = 8;
  * Creates a room layout and makes sure the room is built accordingly.
  * @constructor
  *
- * @todo Split off RoomManager class.
- *
  * @param {string} roomName
  *   Name of the room this room planner is assigned to.
  */
@@ -394,7 +392,8 @@ RoomPlanner.prototype.placeFlags = function () {
 	}
 
 	if (this.room) {
-		// @todo Have intelManager save locations (not just IDs) of sources, minerals and controller, so we don't need room access here.
+		// @todo Have intelManager save locations (not just IDs) of minerals, so we don't need room access here.
+		// @todo Use source and controller positions from room intel.
 		// We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
 		if (this.room.controller) {
 			const controllerRoads = this.scanAndAddRoad(this.room.controller.pos, this.roomCenterEntrances);

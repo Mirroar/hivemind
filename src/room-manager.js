@@ -54,6 +54,7 @@ module.exports = class RoomManager {
 		this.structuresByType = _.groupBy(this.roomStructures, 'structureType');
 		this.newStructures = 0;
 
+		this.cleanRoom();
 		this.manageStructures();
 	}
 
@@ -90,7 +91,7 @@ module.exports = class RoomManager {
 	 * Makes sure structures are built and removed as intended.
 	 */
 	manageStructures() {
-		if (_.size(Game.spawns) === 1 && this.room.controller.level < 4) {
+		if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name == this.room.name && this.room.controller.level < 4) {
 			// In our first room, getting more extensions is pretty important for
 			// spawning bigger creeps asap.
 			this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
