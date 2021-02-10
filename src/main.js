@@ -196,6 +196,22 @@ module.exports = {
 				hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
 			}
 		}
+
+		// Periodically clean old squad memory.
+		if (Game.time % 548 === 3) {
+			_.each(Memory.squads, (memory, squadName) => {
+				// Only delete if squad can't be spawned.
+				if (memory.spawnRoom && Game.rooms[memory.spawnRoom]) return;
+
+				// Don't delete inter-shard squad that can't have a spawn room.
+				if (squadName === 'interShardExpansion') return;
+
+				// Only delete if there are no creeps belonging to this squad.
+				if (_.size(_.filter(Game.creeps, creep => creep.memory.squadName === squadName)) > 0) return;
+
+				delete Memory.squads[squadName];
+			});
+		}
 	},
 
 	/**
