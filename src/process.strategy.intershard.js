@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind */
+/* global RoomPosition */
 
 const interShard = require('./intershard');
 const Process = require('./process');
@@ -61,7 +61,7 @@ InterShardProcess.prototype.updateShardInfo = function () {
 	_.each(Memory.strategy.roomList, (info, roomName) => {
 		if (info.range > 0) {
 			// The following scores only apply to unowned rooms.
-			if (!roomStats.bestExpansion || roomStats.bestExpansion.score < info.expansionScore) {
+			if (info.expansionScore > 0 && (!roomStats.bestExpansion || roomStats.bestExpansion.score < info.expansionScore)) {
 				roomStats.bestExpansion = {
 					name: roomName,
 					score: info.expansionScore,
