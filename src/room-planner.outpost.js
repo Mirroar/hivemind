@@ -110,7 +110,16 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 				if (top < 3) continue;
 				if (top + CORE_SIZE > 48) continue;
 
-				// @todo Check if 3x3 core center is free.
+				// Check if 3x3 core center is free.
+				if (terrain.get(-1 + left + (CORE_SIZE - 1) / 2, -1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get(     left + (CORE_SIZE - 1) / 2, -1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get( 1 + left + (CORE_SIZE - 1) / 2, -1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get(-1 + left + (CORE_SIZE - 1) / 2,      top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get(     left + (CORE_SIZE - 1) / 2,      top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get( 1 + left + (CORE_SIZE - 1) / 2,      top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get(-1 + left + (CORE_SIZE - 1) / 2,  1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get(     left + (CORE_SIZE - 1) / 2,  1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (terrain.get( 1 + left + (CORE_SIZE - 1) / 2,  1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
 
 				// Count free tiles.
 				// @todo This can be optimized.
