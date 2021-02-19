@@ -13,8 +13,9 @@ const interShard = {
 	 *   This shard's inter-shard memory.
 	 */
 	getLocalMemory() {
-		if (!this._memory) {
+		if (!this._memory || Game.time !== this._memoryAge) {
 			this._memory = JSON.parse(InterShardMemory.getLocal()) || {};
+			this._memoryAge = Game.time;
 		}
 
 		return this._memory;

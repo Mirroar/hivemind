@@ -44,7 +44,7 @@ RemoteMiningProcess.prototype.run = function () {
 
 		// In our first room, don't start remote harvesting immediately. The energy
 		// required to start being profitable is better used for upgrading.
-		if (_.size(Game.spawns) === 1 && room.controller.level < 4) return;
+		if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name == room.name && room.controller.level < 4) return;
 
 		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 		if (numSpawns === 0) return;
@@ -81,11 +81,11 @@ RemoteMiningProcess.prototype.run = function () {
 		if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
 		sourceRooms[info.origin].current++;
 
-		// Harvest from this room.
-		info.harvestActive = true;
-
+		if (availableHarvestRoomCount < memory.remoteHarvesting.currentCount) {
+			// Harvest from this room.
+			info.harvestActive = true;
+		}
 		availableHarvestRoomCount++;
-		if (availableHarvestRoomCount >= memory.remoteHarvesting.currentCount) continue;
 	}
 
 	// Adjust remote harvesting number periodically.
