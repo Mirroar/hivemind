@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind FIND_HOSTILE_CREEPS */
+/* global hivemind FIND_HOSTILE_CREEPS FIND_HOSTILE_STRUCTURES */
 
 const Process = require('./process');
 
@@ -55,6 +55,13 @@ RoomIntelProcess.prototype.findHostiles = function () {
 			for (const part of creep.body) {
 				parts[part.type] = (parts[part.type] || 0) + 1;
 			}
+		}
+	}
+
+	for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
+		if (structure.type === STRUCTURE_INVADER_CORE) {
+			safe = false;
+			lastSeen = Game.time;
 		}
 	}
 
