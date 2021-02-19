@@ -5,6 +5,7 @@
 const utilities = require('./utilities');
 const RoomPlanner = require('./room-planner');
 const CORE_SIZE = 7;
+const CORE_RADIUS = (CORE_SIZE - 1) / 2;
 
 module.exports = class OutpostRoomPlanner extends RoomPlanner {
 	constructor(roomName) {
@@ -154,15 +155,15 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 				if (top + CORE_SIZE > 49) continue;
 
 				// Check if 3x3 core center is free.
-				if (this.terrain.get(-1 + left + (CORE_SIZE - 1) / 2, -1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(     left + (CORE_SIZE - 1) / 2, -1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get( 1 + left + (CORE_SIZE - 1) / 2, -1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(-1 + left + (CORE_SIZE - 1) / 2,      top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(     left + (CORE_SIZE - 1) / 2,      top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get( 1 + left + (CORE_SIZE - 1) / 2,      top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(-1 + left + (CORE_SIZE - 1) / 2,  1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(     left + (CORE_SIZE - 1) / 2,  1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get( 1 + left + (CORE_SIZE - 1) / 2,  1 + top + (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get(-1 + left + CORE_RADIUS, -1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get(     left + CORE_RADIUS, -1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get( 1 + left + CORE_RADIUS, -1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get(-1 + left + CORE_RADIUS,      top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get(     left + CORE_RADIUS,      top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get( 1 + left + CORE_RADIUS,      top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get(-1 + left + CORE_RADIUS,  1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get(     left + CORE_RADIUS,  1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+				if (this.terrain.get( 1 + left + CORE_RADIUS,  1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
 
 				// Count free tiles.
 				// @todo This can be optimized.
@@ -174,7 +175,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 						// Check overlap with other cores.
 						let overlap = false;
 						for (const core of this.memory.cores) {
-							if (Math.max(Math.abs(x - core.center.x), Math.abs(y - core.center.y)) > (CORE_SIZE - 1) / 2) continue;
+							if (Math.max(Math.abs(x - core.center.x), Math.abs(y - core.center.y)) > CORE_RADIUS) continue;
 
 							overlap = true;
 							break;
@@ -216,8 +217,8 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 				for (const core of this.memory.cores) {
 					if (
 						Math.max(
-							Math.abs(left + ((CORE_SIZE - 1) / 2) - core.center.x),
-							Math.abs(top + ((CORE_SIZE - 1) / 2) - core.center.y)
+							Math.abs(left + (CORE_RADIUS) - core.center.x),
+							Math.abs(top + (CORE_RADIUS) - core.center.y)
 						) > CORE_SIZE
 					) continue;
 
@@ -226,17 +227,17 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					for (let x = 0; x < CORE_SIZE; x++) {
 						coreRamparts[x] = [];
 						for (let y = 0; y < CORE_SIZE; y++) {
-							coreRamparts[x][y] = this.terrain.get(x + core.center.x - (CORE_SIZE - 1) / 2, y + core.center.y - (CORE_SIZE - 1) / 2) === TERRAIN_MASK_WALL ? -1 : 0;
+							coreRamparts[x][y] = this.terrain.get(x + core.center.x - CORE_RADIUS, y + core.center.y - CORE_RADIUS) === TERRAIN_MASK_WALL ? -1 : 0;
 						}
 					}
 
-					for (let x = core.center.x - (CORE_SIZE + 1) / 2; x <= core.center.x + (CORE_SIZE + 1) / 2; x++) {
-						this.markRamparts(coreRamparts, x, core.center.y - (CORE_SIZE + 1) / 2, core);
-						this.markRamparts(coreRamparts, x, core.center.y + (CORE_SIZE + 1) / 2, core);
+					for (let x = core.center.x - CORE_RADIUS - 1; x <= core.center.x + CORE_RADIUS + 1; x++) {
+						this.markRamparts(coreRamparts, x, core.center.y - CORE_RADIUS - 1, core);
+						this.markRamparts(coreRamparts, x, core.center.y + CORE_RADIUS + 1, core);
 					}
-					for (let y = core.center.y - (CORE_SIZE + 1) / 2; y < core.center.y + (CORE_SIZE + 1) / 2; y++) {
-						this.markRamparts(coreRamparts, core.center.x - (CORE_SIZE + 1) / 2, y, core);
-						this.markRamparts(coreRamparts, core.center.x + (CORE_SIZE + 1) / 2, y, core);
+					for (let y = core.center.y - CORE_RADIUS - 1; y < core.center.y + CORE_RADIUS + 1; y++) {
+						this.markRamparts(coreRamparts, core.center.x - CORE_RADIUS - 1, y, core);
+						this.markRamparts(coreRamparts, core.center.x + CORE_RADIUS + 1, y, core);
 					}
 
 					if (this._otherNumRamparts >= core.numRamparts) continue;
@@ -251,8 +252,8 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 
 				positions.push({
 					center: {
-						x: left + (CORE_SIZE - 1) / 2,
-						y: top + (CORE_SIZE - 1) / 2,
+						x: left + CORE_RADIUS,
+						y: top + CORE_RADIUS,
 					},
 					ramparts,
 					numRamparts: this._numRamparts,
@@ -289,7 +290,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		// Enemies shouldn't be within another of our cores.
 		for (const core of this.memory.cores) {
 			if (otherCore && core.center.x === otherCore.center.x && core.center.y === otherCore.center.y) continue;
-			if (Math.max(Math.abs(x - core.center.x), Math.abs(y - core.center.y)) <= (CORE_SIZE - 1) / 2) return;
+			if (Math.max(Math.abs(x - core.center.x), Math.abs(y - core.center.y)) <= CORE_RADIUS) return;
 		}
 
 		// Or within the core we're currently generating.
@@ -307,10 +308,10 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		let top = Math.max(y - 3, this._coreTop) - this._coreTop;
 		let bottom = Math.min(y + 3, this._coreTop + CORE_SIZE - 1) - this._coreTop;
 		if (otherCore) {
-			left = Math.max(x - 3, otherCore.center.x - (CORE_SIZE - 1) / 2) - otherCore.center.x + (CORE_SIZE - 1) / 2;
-			right = Math.min(x + 3, otherCore.center.x + (CORE_SIZE - 1) / 2) - otherCore.center.x + (CORE_SIZE - 1) / 2;
-			top = Math.max(y - 3, otherCore.center.y - (CORE_SIZE - 1) / 2) - otherCore.center.y + (CORE_SIZE - 1) / 2;
-			bottom = Math.min(y + 3, otherCore.center.y + (CORE_SIZE - 1) / 2) - otherCore.center.y + (CORE_SIZE - 1) / 2;
+			left = Math.max(x - 3, otherCore.center.x - CORE_RADIUS) - otherCore.center.x + CORE_RADIUS;
+			right = Math.min(x + 3, otherCore.center.x + CORE_RADIUS) - otherCore.center.x + CORE_RADIUS;
+			top = Math.max(y - 3, otherCore.center.y - CORE_RADIUS) - otherCore.center.y + CORE_RADIUS;
+			bottom = Math.min(y + 3, otherCore.center.y + CORE_RADIUS) - otherCore.center.y + CORE_RADIUS;
 		}
 		for (let rX = left; rX <= right; rX++) {
 			for (let rY = top; rY <= bottom; rY++) {
@@ -467,7 +468,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			for (let y = 0; y < CORE_SIZE; y++) {
 				if (core.ramparts[x][y] !== 1) continue;
 
-				this.placeFlag(new RoomPosition(x + core.center.x - (CORE_SIZE - 1) / 2, y + core.center.y - (CORE_SIZE - 1) / 2, this.roomName), 'rampart');
+				this.placeFlag(new RoomPosition(x + core.center.x - CORE_RADIUS, y + core.center.y - CORE_RADIUS, this.roomName), 'rampart');
 			}
 		}
 	}
