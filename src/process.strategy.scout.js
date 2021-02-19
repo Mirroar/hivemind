@@ -189,11 +189,6 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		result.addScore(1 / ((this.mineralCount[roomIntel.getMineralType()] || 0) + mineralGain), 'numMinerals');
 	}
 
-	// Having fewer exit sides is good.
-	// Having dead ends / safe rooms nearby is similarly good.
-	const safety = roomIntel.calculateAdjacentRoomSafety();
-	result.addScore(_.sum(safety.directions) * 0.25, 'safeExits');
-
 	// Add score for harvest room sources.
 	const exits = roomIntel.getExits();
 	for (const adjacentRoom of _.values(exits)) {
@@ -209,10 +204,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		if (roomDistance > 3) continue;
 
 		const otherRoomIntel = hivemind.roomIntel(otherRoom.name);
+		const normalSafety = otherRoomIntel.calculateAdjacentRoomSafety();
 		const adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety(isMyRoom ? {unsafe: [roomName]} : {safe: [roomName]});
 
 		// If after expanding there are more safe directions, improve score.
-		const newSafeExits = Math.abs(_.sum(adjustedSafety.directions) - _.sum(safety.directions));
+		const newSafeExits = Math.abs(_.sum(adjustedSafety.directions) - _.sum(normalSafety.directions));
 		result.addScore(newSafeExits * 0.25, 'newSafeExits' + otherRoom.name);
 		// Also, there will be less exit tiles to cover.
 		const otherRoomExits = otherRoomIntel.getExits();
@@ -228,6 +224,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 			}
 		}
 	}
+
+	// Having fewer exit sides is good.
+	// Having dead ends / safe rooms nearby is similarly good.
+	const safety = roomIntel.calculateAdjacentRoomSafety();
+	result.addScore(_.sum(safety.directions) * 0.25, 'safeExits');
 
 	// Having fewer exit tiles is good. Safe exits reduce the number of tiles
 	// we need to cover.
@@ -256,7 +257,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
 
-	Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time];
+	Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
 };
 
 /**
@@ -274,19 +275,12 @@ ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) return false;
 	if (!Memory.strategy._expansionScoreCache[roomName]) return false;
-
-	if (!Array.isArray(Memory.strategy._expansionScoreCache[roomName])) {
-		// Migrate from old cache format to new format.
-		// @todo Remove when old code is likely gone.
-		Memory.strategy._expansionScoreCache[roomName] = [
-			Memory.strategy._expansionScoreCache[roomName],
-			Game.time,
-		];
-	}
-
 	if (Memory.strategy._expansionScoreCache[roomName][1] < Game.time - (5000 * hivemind.getThrottleMultiplier())) return false;
 
 	result.addScore(Memory.strategy._expansionScoreCache[roomName][0], 'fromCache');
+	if (Memory.strategy._expansionScoreCache[roomName][2]) {
+		result.reasons = Memory.strategy._expansionScoreCache[roomName][2];
+	}
 	return true;
 };
 
