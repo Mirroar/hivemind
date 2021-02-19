@@ -1,4 +1,5 @@
 src/relations.local.js
 
 node_modules
+gruntfile.js
 .nyc_output
