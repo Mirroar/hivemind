@@ -8,11 +8,18 @@ const CORE_SIZE = 7;
 const CORE_RADIUS = (CORE_SIZE - 1) / 2;
 
 module.exports = class OutpostRoomPlanner extends RoomPlanner {
+	/**
+	 * Creates a new OutpostRoomPlanner object.
+	 *
+	 * @param {string} roomName
+	 *   Name of the room this room planner is assigned to.
+	 */
 	constructor(roomName) {
 		super(roomName);
 
-		this.roomPlannerVersion = 13;
+		this.roomPlannerVersion = 4;
 
+		// @todo Remove this temporary reassignment of memory location.
 		if (!Memory.rooms[roomName].outpostRoomPlanner) {
 			Memory.rooms[roomName].outpostRoomPlanner = {};
 		}
@@ -22,7 +29,11 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		this.drawDebug();
 	}
 
-	// @todo Remove. Only included to get around CPU limits.
+	/**
+	 * {@inheritdoc}
+	 *
+	 * @todo Remove. Only included to get around CPU limits.
+	 */
 	runLogic() {
 		// Recalculate room layout if using a new version.
 		if (!this.memory.plannerVersion || this.memory.plannerVersion !== this.roomPlannerVersion) {
@@ -52,15 +63,24 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		this.checkAdjacentRooms();
 	}
 
+	/**
+	 * {@inheritdoc}
+	 */
 	drawDebug() {
 		super.drawDebug();
 
+		// Also indicate core positions.
 		const visual = new RoomVisual(this.roomName);
 		_.each(this.memory.cores, core => {
+			let color = '#ff0';
+			if (core.type === 'controller') color = '#f00';
 			visual.rect(core.center.x - (CORE_SIZE / 2), core.center.y - (CORE_SIZE / 2), CORE_SIZE, CORE_SIZE, {fill: 'transparent', stroke: '#f00'});
 		});
 	}
 
+	/**
+	 * {@inheritdoc}
+	 */
 	placeFlags() {
 		const start = Game.cpu.getUsed();
 
@@ -107,88 +127,108 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 	 */
 	findCorePositions() {
 		this.memory.cores = [];
-		const intel = hivemind.roomIntel(this.roomName);
+		const positions = this.collectCorePositions();
 
-		const controllerPosition = intel.getControllerPosition();
-		const adjacent = this.findAdjacentFreeTiles(controllerPosition);
-		adjacent.push(controllerPosition);
-
-		const xValues = _.pluck(adjacent, 'x');
-		const yValues = _.pluck(adjacent, 'y');
-		const controllerCore = _.first(_.sortByOrder(this.collectCorePositions(_.min(xValues), _.min(yValues), _.max(xValues), _.max(yValues)), 'score', 'desc'));
+		const controllerCore = _.first(_.sortByOrder(
+			_.filter(positions, position => position.adjacent['controller/0']),
+			'score',
+			'desc'
+		));
 		controllerCore.type = 'controller';
 		this.memory.cores.push(controllerCore);
 
-		_.each(intel.getSourcePositions(), source => {
-			const adjacent = this.findAdjacentFreeTiles(new RoomPosition(source.x, source.y, this.roomName));
+		while (this.memory.cores.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][8]) {
+			const positions = this.collectCorePositions();
 
-			const xValues = _.pluck(adjacent, 'x');
-			const yValues = _.pluck(adjacent, 'y');
-			const sourceCore = _.first(_.sortByOrder(this.collectCorePositions(_.max(xValues), _.max(yValues), _.min(xValues), _.min(yValues)), 'score', 'desc'));
-			sourceCore.type = 'source';
-			sourceCore.sourceId = source.id;
+			const otherCore = _.first(_.sortByOrder(
+				positions,
+				'score',
+				'desc'
+			));
+			otherCore.type = 'default';
+			this.memory.cores.push(otherCore);
 
-			for (const core of sourceCore.adjustedCores) {
+			for (const core of otherCore.adjustedCores) {
 				core.core.ramparts = core.ramparts;
 				core.core.numRamparts = core.numRamparts;
 				// @todo Adjust score.
 			}
-
-			this.memory.cores.push(sourceCore);
-		});
+		}
 
 		// @todo On one-source rooms, the third core may be placed near minerals.
+		// @todo Mark responsibilities of each other core, e.g. sources to harvest.
+		// @todo Also remember sources that are not touched by a core, and the
+		// core responsible for harvesting it.
 	}
 
 	/**
 	 * Tries to find optimal core position overlapping/touching an area.
 	 */
-	collectCorePositions(maxLeft, maxTop, minRight, minBottom) {
+	collectCorePositions() {
 		const positions = [];
 
-		for (let left = minRight - CORE_SIZE + 1; left <= maxLeft; left++) {
-			if (left < 2) continue;
-			if (left + CORE_SIZE > 49) continue;
+		const positionLimits = this.getPositionLimits();
 
-			for (let top = minBottom - CORE_SIZE + 1; top <= maxTop; top++) {
-				if (top < 2) continue;
-				if (top + CORE_SIZE > 49) continue;
+		// Calculate initial free tiles.
+		let freeTiles = 0;
+		for (let x = 2; x < 2 + CORE_SIZE; x++) {
+			for (let y = 2; y < 2 + CORE_SIZE; y++) {
+				if (this.terrain.get(x, y) !== TERRAIN_MASK_WALL) freeTiles++;
+			}
+		}
 
-				// Check if 3x3 core center is free.
-				if (this.terrain.get(-1 + left + CORE_RADIUS, -1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(     left + CORE_RADIUS, -1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get( 1 + left + CORE_RADIUS, -1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(-1 + left + CORE_RADIUS,      top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(     left + CORE_RADIUS,      top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get( 1 + left + CORE_RADIUS,      top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(-1 + left + CORE_RADIUS,  1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get(     left + CORE_RADIUS,  1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
-				if (this.terrain.get( 1 + left + CORE_RADIUS,  1 + top + CORE_RADIUS) === TERRAIN_MASK_WALL) continue;
+		for (let left = 2; left < 49 - CORE_SIZE; left++) {
+			const right = left + CORE_SIZE - 1;
 
-				// Count free tiles.
-				// @todo This can be optimized.
-				let freeTiles = 0;
-				for (let x = left; x < left + CORE_SIZE; x++) {
-					for (let y = top; y < top + CORE_SIZE; y++) {
-						if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+			// Adjust freeTiles for next column.
+			if (left > 2) {
+				for (let y = 2; y < 2 + CORE_SIZE; y++) {
+					if (this.terrain.get(left - 1, y) !== TERRAIN_MASK_WALL) freeTiles--;
+					if (this.terrain.get(right, y) !== TERRAIN_MASK_WALL) freeTiles++;
+				}
+			}
 
-						// Check overlap with other cores.
-						let overlap = false;
-						for (const core of this.memory.cores) {
-							if (Math.max(Math.abs(x - core.center.x), Math.abs(y - core.center.y)) > CORE_RADIUS) continue;
-
-							overlap = true;
-							break;
-						}
-
-						if (overlap) continue;
-
-						freeTiles++;
+			const topFreeTiles = freeTiles;
+			for (let top = 2; top < 49 - CORE_SIZE; top++) {
+				const bottom = top + CORE_SIZE - 1;
+				// Adjust freeTiles for next row.
+				if (top > 2) {
+					for (let x = left; x < left + CORE_SIZE; x++) {
+						if (this.terrain.get(x, top - 1) !== TERRAIN_MASK_WALL) freeTiles--;
+						if (this.terrain.get(x, bottom) !== TERRAIN_MASK_WALL) freeTiles++;
 					}
 				}
 
+				// Check if 3x3 core center is free.
+				const centerX = left + CORE_RADIUS;
+				const centerY = top + CORE_RADIUS;
+				const wallDistance = this.wallDistanceMatrix.get(centerX, centerY);
+				if (wallDistance < 2 || wallDistance >= 255) continue;
+
+				// Check if we're touching another core.
+				let overlappingFreeTiles = 0;
+				let coresTouching = false;
+				for (const core of this.memory.cores) {
+					if (Math.max(Math.abs(centerX - core.center.x), Math.abs(centerY - core.center.y)) > CORE_SIZE) continue;
+
+					coresTouching = true;
+
+					// Adjust free tiles by those overlapping with the other core.
+					// This could be done up in normal free tile calculation, not
+					// sure what's faster.
+					// This also penalizes tiles multiple times if overlapping with more
+					// than one core, but that's okay, we'd like to avoid that anyway.
+					for (let x = Math.max(centerX, core.center.x) - CORE_RADIUS; x <= Math.min(centerX, core.center.x) + CORE_RADIUS; x++) {
+						for (let y = Math.max(centerY, core.center.y) - CORE_RADIUS; y <= Math.min(centerY, core.center.y) + CORE_RADIUS; y++) {
+							if (this.terrain.get(x, y) !== TERRAIN_MASK_WALL) overlappingFreeTiles++;
+						}
+					}
+				}
+
+				// Skip if free tiles already rule out a high score.
+				if (freeTiles - overlappingFreeTiles < (CORE_SIZE * CORE_SIZE) * 2 / 3) continue;
+
 				// Count necessary ramparts.
-				// @todo Skip if free tiles already rule out a max score.
 				const ramparts = [];
 				for (let x = 0; x < CORE_SIZE; x++) {
 					ramparts[x] = [];
@@ -208,10 +248,6 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					this.markRamparts(ramparts, left - 1, y);
 					this.markRamparts(ramparts, left + CORE_SIZE, y);
 				}
-				// @todo recalculate ramparts for other cores we touch and let it
-				// influence score.
-				// @todo unless we create new dead ends, in which case other cores
-				// might be affected as well.
 				const adjustedCores = [];
 				let savedRamparts = 0;
 				for (const core of this.memory.cores) {
@@ -222,6 +258,10 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 						) > CORE_SIZE
 					) continue;
 
+					// Recalculate ramparts for other cores we touch and let it
+					// influence score.
+					// @todo unless we create new dead ends, in which case other cores
+					// might be affected as well.
 					const coreRamparts = [];
 					this._otherNumRamparts = 0;
 					for (let x = 0; x < CORE_SIZE; x++) {
@@ -250,6 +290,34 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					savedRamparts += core.numRamparts - this._otherNumRamparts;
 				}
 
+				let score = freeTiles - overlappingFreeTiles + (savedRamparts - this._numRamparts) / 5;
+
+				// Are we within a special position limit?
+				let adjacent = {};
+				for (const limit of positionLimits) {
+					if (left > limit.maxLeft) continue;
+					if (top > limit.maxTop) continue;
+					if (right < limit.minRight) continue;
+					if (bottom < limit.minBottom) continue;
+
+					const limitKey = limit.type + '/' + limit.id;
+					adjacent[limitKey] = true;
+					score += limit.value;
+
+					// Check if another core already has this limit covered.
+					for (const core of this.memory.cores) {
+						if (core.adjacent[limitKey]) {
+							// Remove bonus.
+							// @todo Make sure room manager does not double-harvest a
+							// source from multiple cores.
+							score -= limit.value;
+							break;
+						}
+					}
+				}
+
+				// @todo Add a little score if we're close to other cores.
+
 				positions.push({
 					center: {
 						x: left + CORE_RADIUS,
@@ -258,12 +326,58 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					ramparts,
 					numRamparts: this._numRamparts,
 					adjustedCores,
-					score: freeTiles + (savedRamparts - this._numRamparts) / 10,
+					score,
+					adjacent,
 				});
 			}
+			freeTiles = topFreeTiles;
 		}
 
 		return positions;
+	}
+
+	getPositionLimits() {
+		const limits = [];
+		const intel = hivemind.roomIntel(this.roomName);
+
+		// Controller position needs to be completely encased in core.
+		const controllerPosition = intel.getControllerPosition();
+		const adjacent = this.findAdjacentFreeTiles(controllerPosition);
+		adjacent.push(controllerPosition);
+
+		const xValues = _.pluck(adjacent, 'x');
+		const yValues = _.pluck(adjacent, 'y');
+
+		limits.push({
+			type: 'controller',
+			id: '0',
+			value: 5,
+			maxLeft: _.min(xValues),
+			maxTop: _.min(yValues),
+			minRight: _.max(xValues),
+			minBottom: _.max(yValues),
+		});
+
+		// Source positions need to be touched by core.
+		_.each(intel.getSourcePositions(), source => {
+			const adjacent = this.findAdjacentFreeTiles(new RoomPosition(source.x, source.y, this.roomName));
+
+			const xValues = _.pluck(adjacent, 'x');
+			const yValues = _.pluck(adjacent, 'y');
+			limits.push({
+				type: 'source',
+				id: source.id,
+				value: 2.5,
+				maxLeft: _.max(xValues),
+				maxTop: _.max(yValues),
+				minRight: _.min(xValues),
+				minBottom: _.min(yValues),
+			});
+		});
+
+		// @todo Add mineral positions.
+
+		return limits;
 	}
 
 	findAdjacentFreeTiles(center) {
@@ -292,6 +406,11 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			if (otherCore && core.center.x === otherCore.center.x && core.center.y === otherCore.center.y) continue;
 			if (Math.max(Math.abs(x - core.center.x), Math.abs(y - core.center.y)) <= CORE_RADIUS) return;
 		}
+
+		// @todo Find save positions by detecting whether exit tiles can be reached.
+		// Either using Tarjan's algorithm to find partitions, or by pathfinding
+		// towards room exits.
+		// @see https://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
 
 		// Or within the core we're currently generating.
 		if (otherCore) {
