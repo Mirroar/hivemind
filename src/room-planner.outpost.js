@@ -1,11 +1,14 @@
 'use strict';
 
-/* global hivemind Room RoomPosition RoomVisual PathFinder TERRAIN_MASK_WALL */
+/* global hivemind Room RoomPosition RoomVisual PathFinder TERRAIN_MASK_WALL
+CONTROLLER_STRUCTURES STRUCTURE_SPAWN */
 
 const utilities = require('./utilities');
 const RoomPlanner = require('./room-planner');
+
 const CORE_SIZE = 7;
 const CORE_RADIUS = (CORE_SIZE - 1) / 2;
+const TILE_BLOCKED_BY_CORE = 250;
 
 module.exports = class OutpostRoomPlanner extends RoomPlanner {
 	/**
@@ -74,7 +77,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		_.each(this.memory.cores, core => {
 			let color = '#ff0';
 			if (core.type === 'controller') color = '#f00';
-			visual.rect(core.center.x - (CORE_SIZE / 2), core.center.y - (CORE_SIZE / 2), CORE_SIZE, CORE_SIZE, {fill: 'transparent', stroke: '#f00'});
+			visual.rect(core.center.x - (CORE_SIZE / 2), core.center.y - (CORE_SIZE / 2), CORE_SIZE, CORE_SIZE, {fill: 'transparent', stroke: color});
 		});
 	}
 
@@ -107,6 +110,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		this.prepareBuildingMatrix(potentialWallPositions, potentialCenterPositions);
 		this.terrain = new Room.Terrain(this.roomName);
 
+		this.findExitCenters();
 		this.findCorePositions();
 
 		for (const core of this.memory.cores) {
@@ -114,6 +118,9 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			this.initBuildLocations(core);
 			this.placeRamparts(core);
 		}
+
+		const end = Game.cpu.getUsed();
+		console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
 	}
 
 	/**
@@ -168,12 +175,15 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		const positions = [];
 
 		const positionLimits = this.getPositionLimits();
+		let blockedByCoreMatrix = this.getBlockedByCoreMatrix();
+		const pathFindingGoals = this.getPathFindingGoals();
 
 		// Calculate initial free tiles.
 		let freeTiles = 0;
 		for (let x = 2; x < 2 + CORE_SIZE; x++) {
 			for (let y = 2; y < 2 + CORE_SIZE; y++) {
 				if (this.terrain.get(x, y) !== TERRAIN_MASK_WALL) freeTiles++;
+				if (blockedByCoreMatrix.get(x, y) !== TILE_BLOCKED_BY_CORE) blockedByCoreMatrix.set(x, y, 255);
 			}
 		}
 
@@ -185,10 +195,13 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 				for (let y = 2; y < 2 + CORE_SIZE; y++) {
 					if (this.terrain.get(left - 1, y) !== TERRAIN_MASK_WALL) freeTiles--;
 					if (this.terrain.get(right, y) !== TERRAIN_MASK_WALL) freeTiles++;
+					if (blockedByCoreMatrix.get(left - 1, y) !== TILE_BLOCKED_BY_CORE) blockedByCoreMatrix.set(left - 1, y, 0);
+					if (blockedByCoreMatrix.get(right, y) !== TILE_BLOCKED_BY_CORE) blockedByCoreMatrix.set(right, y, 255);
 				}
 			}
 
 			const topFreeTiles = freeTiles;
+			const topBlockedMatrix = blockedByCoreMatrix.clone();
 			for (let top = 2; top < 49 - CORE_SIZE; top++) {
 				const bottom = top + CORE_SIZE - 1;
 				// Adjust freeTiles for next row.
@@ -196,6 +209,8 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					for (let x = left; x < left + CORE_SIZE; x++) {
 						if (this.terrain.get(x, top - 1) !== TERRAIN_MASK_WALL) freeTiles--;
 						if (this.terrain.get(x, bottom) !== TERRAIN_MASK_WALL) freeTiles++;
+						if (blockedByCoreMatrix.get(x, top - 1) !== TILE_BLOCKED_BY_CORE) blockedByCoreMatrix.set(x, top - 1, 0);
+						if (blockedByCoreMatrix.get(x, bottom) !== TILE_BLOCKED_BY_CORE) blockedByCoreMatrix.set(x, bottom, 255);
 					}
 				}
 
@@ -207,11 +222,8 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 
 				// Check if we're touching another core.
 				let overlappingFreeTiles = 0;
-				let coresTouching = false;
 				for (const core of this.memory.cores) {
 					if (Math.max(Math.abs(centerX - core.center.x), Math.abs(centerY - core.center.y)) > CORE_SIZE) continue;
-
-					coresTouching = true;
 
 					// Adjust free tiles by those overlapping with the other core.
 					// This could be done up in normal free tile calculation, not
@@ -244,10 +256,12 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					this.markRamparts(ramparts, x, top - 1);
 					this.markRamparts(ramparts, x, top + CORE_SIZE);
 				}
+
 				for (let y = top; y < top + CORE_SIZE; y++) {
 					this.markRamparts(ramparts, left - 1, y);
 					this.markRamparts(ramparts, left + CORE_SIZE, y);
 				}
+
 				const adjustedCores = [];
 				let savedRamparts = 0;
 				for (const core of this.memory.cores) {
@@ -275,6 +289,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 						this.markRamparts(coreRamparts, x, core.center.y - CORE_RADIUS - 1, core);
 						this.markRamparts(coreRamparts, x, core.center.y + CORE_RADIUS + 1, core);
 					}
+
 					for (let y = core.center.y - CORE_RADIUS - 1; y < core.center.y + CORE_RADIUS + 1; y++) {
 						this.markRamparts(coreRamparts, core.center.x - CORE_RADIUS - 1, y, core);
 						this.markRamparts(coreRamparts, core.center.x + CORE_RADIUS + 1, y, core);
@@ -290,7 +305,8 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					savedRamparts += core.numRamparts - this._otherNumRamparts;
 				}
 
-				let score = freeTiles - overlappingFreeTiles + (savedRamparts - this._numRamparts) / 5;
+				let score = freeTiles - overlappingFreeTiles;
+				score += (savedRamparts - this._numRamparts) / 5;
 
 				// Are we within a special position limit?
 				let adjacent = {};
@@ -330,7 +346,10 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 					adjacent,
 				});
 			}
+
+			// Restore values from top.
 			freeTiles = topFreeTiles;
+			blockedByCoreMatrix = topBlockedMatrix;
 		}
 
 		return positions;
@@ -393,6 +412,33 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 		return tiles;
 	}
 
+	/**
+	 * Generates a CostMatrix where every calculated core is considered blocked.
+	 */
+	getBlockedByCoreMatrix() {
+		const matrix = new PathFinder.CostMatrix();
+		for (const core of this.memory.cores) {
+			for (let x = core.center.x - CORE_RADIUS; x <= core.center.x + CORE_RADIUS; x++) {
+				for (let y = core.center.y - CORE_RADIUS; y <= core.center.y + CORE_RADIUS; y++) {
+					matrix.set(x, y, TILE_BLOCKED_BY_CORE);
+				}
+			}
+		}
+
+		return matrix;
+	}
+
+	getPathFindingGoals() {
+		const goals = this.getLocations('exit');
+		for (const core of this.memory.cores) {
+			goals.push(new RoomPosition(core.center.x, core.center.y, this.roomName));
+		}
+	}
+
+	findDeadEnds(blockedByCoreMatrix, pathFindingGoals) {
+
+	}
+
 	markRamparts(ramparts, x, y, otherCore) {
 		// Check if an enemy could stand on the given tile.
 		// @todo Count tiles as safe if they're in a dead end when the core
@@ -432,6 +478,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			top = Math.max(y - 3, otherCore.center.y - CORE_RADIUS) - otherCore.center.y + CORE_RADIUS;
 			bottom = Math.min(y + 3, otherCore.center.y + CORE_RADIUS) - otherCore.center.y + CORE_RADIUS;
 		}
+
 		for (let rX = left; rX <= right; rX++) {
 			for (let rY = top; rY <= bottom; rY++) {
 				if (ramparts[rX][rY]) continue;
@@ -487,6 +534,7 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				this.addBuildSpot(core, pos);
 			}
+
 			this.substractDirection(pos, straight);
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				this.addBuildSpot(core, pos);
@@ -501,19 +549,23 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			this.addDirection(pos, straight);
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			this.addDirection(pos, straight);
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			this.addDirection(pos, straight);
 			this.substractDirection(pos, diagonal);
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			if (buildSpots.length < 2) {
 				this.addBuildSpot(core, roadPos);
 				continue;
@@ -532,16 +584,19 @@ module.exports = class OutpostRoomPlanner extends RoomPlanner {
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots2.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			this.addDirection(pos, straight);
 			this.substractDirection(pos, diagonal);
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots2.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			this.addDirection(pos, straight);
 			this.substractDirection(pos, diagonal);
 			if (this.terrain.get(pos.x, pos.y) !== TERRAIN_MASK_WALL) {
 				buildSpots2.push(new RoomPosition(pos.x, pos.y, pos.roomName));
 			}
+
 			if (buildSpots2.length < 2) {
 				this.addBuildSpot(core, roadPos2);
 				continue;
