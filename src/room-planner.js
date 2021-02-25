@@ -48,7 +48,6 @@ RoomPlanner.prototype.drawDebug = function () {
 		nuker: '☢',
 		observer: '👁',
 		powerSpawn: '⚡',
-		rampart: '▤',
 		road: '·',
 		spawn: '⭕',
 		storage: '⬓',
@@ -69,6 +68,12 @@ RoomPlanner.prototype.drawDebug = function () {
 
 				visual.text(debugSymbols[locationType], pos.x, pos.y + 0.2);
 			}
+		}
+
+		for (const posName of _.keys(this.memory.locations.rampart || [])) {
+			const pos = utilities.decodePosition(posName);
+
+			visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, {fill: '#0f0', opacity: 0.2});
 		}
 	}
 };
