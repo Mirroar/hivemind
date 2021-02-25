@@ -27,7 +27,6 @@ const ReportProcess = require('./process.empire.report');
 const ResourcesProcess = require('./process.empire.resources');
 const RoomsProcess = require('./process.rooms');
 const ScoutProcess = require('./process.strategy.scout');
-const TradeProcess = require('./process.empire.trade');
 
 /* eslint-disable import/no-unassigned-import */
 require('./manager.military');
@@ -102,10 +101,6 @@ module.exports = {
 			priority: PROCESS_PRIORITY_LOW,
 		});
 
-		hivemind.runProcess('empire.trade', TradeProcess, {
-			interval: 50,
-			priority: PROCESS_PRIORITY_LOW,
-		});
 		hivemind.runProcess('empire.resources', ResourcesProcess, {
 			interval: 50,
 		});
