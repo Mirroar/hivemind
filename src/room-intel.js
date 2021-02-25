@@ -34,7 +34,7 @@ RoomIntel.prototype.gatherIntel = function () {
 	const intel = this.memory;
 
 	// @todo Have process logic handle throttling of this task.
-	let lastScanThreshold = 500;
+	let lastScanThreshold = 200;
 	if (Game.cpu.bucket < 5000) {
 		lastScanThreshold = 2500;
 	}

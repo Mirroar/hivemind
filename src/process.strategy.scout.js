@@ -65,7 +65,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 	}
 
 	if (info.range > 0 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
-		if (timeSinceLastScan > 5000) {
+		if (timeSinceLastScan > 2000) {
 			info.scoutPriority = 1;
 		}
 		else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
@@ -79,7 +79,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 	}
 	// @todo For higher ranges (7-10), only scout if we have memory to spare.
 
-	if (info.observer && info.range <= 6 && (/^[EW]\d*0[NS]\d+$/.test(roomName) || /^[EW]\d+[NS]\d*0$/.test(roomName)) && timeSinceLastScan > 1000) {
+	if (info.observer && info.range <= 6 && (/^[EW]\d*0[NS]\d+$/.test(roomName) || /^[EW]\d+[NS]\d*0$/.test(roomName)) && timeSinceLastScan > 500) {
 		// Corridor rooms get scouted more often to look for power banks.
 		info.scoutPriority = 2;
 	}
@@ -87,7 +87,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 	if (info.scoutPriority > 0 && info.observer && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 		// Only observe if last Scan was longer ago than intel manager delay,
 		// so we don't get stuck scanning the same room for some reason.
-		if (timeSinceLastScan > 500) {
+		if (timeSinceLastScan > 200) {
 			// No need to manually scout rooms in range of an observer.
 			info.scoutPriority = 0.5;
 
