@@ -189,6 +189,19 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		result.addScore(1 / ((this.mineralCount[roomIntel.getMineralType()] || 0) + mineralGain), 'numMinerals');
 	}
 
+	// Having a decoder is good.
+	if (roomIntel.getDecoderType()) {
+		if (isMyRoom && this.decoderCount[roomIntel.getDecoderType()] === 1) {
+			// Losing a decoder is only relevant if it's the last of its type.
+			// @todo Or if it's the highest level of its kind.
+			result.addScore(1, 'numDecoders');
+		}
+		else if (!isMyRoom && this.decoderCount[roomIntel.getDecoderType()] === 0) {
+			// Gaining a decoder is only relevant if it's a new type.
+			result.addScore(1, 'numDecoders');
+		}
+	}
+
 	// Add score for harvest room sources.
 	const exits = roomIntel.getExits();
 	for (const adjacentRoom of _.values(exits)) {

@@ -5,7 +5,7 @@ STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER
-STRUCTURE_PORTAL */
+STRUCTURE_PORTAL FIND_SYMBOL_CONTAINERS FIND_SYMBOL_DECODERS */
 
 const utilities = require('./utilities');
 const interShard = require('./intershard');
@@ -45,6 +45,7 @@ RoomIntel.prototype.gatherIntel = function () {
 
 	this.gatherControllerIntel(room);
 	this.gatherResourceIntel(room);
+	this.gatherSeasonIntel(room);
 	this.gatherTerrainIntel();
 
 	const structures = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
@@ -120,6 +121,39 @@ RoomIntel.prototype.gatherResourceIntel = function (room) {
 	const mineral = _.first(room.find(FIND_MINERALS));
 	this.memory.mineral = mineral && mineral.id;
 	this.memory.mineralType = mineral && mineral.mineralType;
+};
+
+/**
+ * Commits season-specific intel to memory.
+ *
+ * @param {Room} room
+ *   The room to gather season intel on.
+ */
+RoomIntel.prototype.gatherSeasonIntel = function (room) {
+	const containers = room.find(FIND_SYMBOL_CONTAINERS);
+	const decoder = _.first(room.find(FIND_SYMBOL_DECODERS));
+
+	this.memory.symbolDecoder = decoder && {
+		symbol: decoder.resourceType,
+		x: decoder.pos.x,
+		y: decoder.pos.y,
+		id: decoder.id,
+	};
+
+	delete this.memory.symbolContainers;
+	if (containers.length === 0) return;
+
+	this.memory.symbolContainers = [];
+	for (const container of containers) {
+		this.memory.symbolContainers.push({
+			symbol: container.resourceType,
+			x: container.pos.x,
+			y: container.pos.y,
+			id: container.id,
+			amount: container.store[container.resourceType] || 0,
+			decays: container.ticksToDecay + Game.time,
+		});
+	}
 };
 
 /**
@@ -423,6 +457,17 @@ RoomIntel.prototype.getSourcePositions = function () {
  */
 RoomIntel.prototype.getMineralType = function () {
 	return this.memory.mineralType;
+};
+
+/**
+ * Returns type of decoder in the room, if available.
+ *
+ * @return {string}
+ *   Type of this room's decoder.
+ */
+RoomIntel.prototype.getDecoderType = function () {
+	if (!this.memory.symbolDecoder) return null;
+	return this.memory.symbolDecoder.symbol;
 };
 
 /**
