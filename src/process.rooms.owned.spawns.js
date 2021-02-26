@@ -9,6 +9,7 @@ const spawnRoles = [
 	'claimer',
 	'dismantler',
 	'exploit',
+	'gatherer',
 	'gift',
 	'harvester',
 	'harvester.minerals',

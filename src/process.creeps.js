@@ -14,6 +14,7 @@ const creepRoles = [
 	'builder.remote',
 	'claimer',
 	'dismantler',
+	'gatherer',
 	'gift',
 	'harvester',
 	'harvester.exploit',
