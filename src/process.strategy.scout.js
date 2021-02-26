@@ -294,6 +294,7 @@ ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) 
 	if (Memory.strategy._expansionScoreCache[roomName][2]) {
 		result.reasons = Memory.strategy._expansionScoreCache[roomName][2];
 	}
+
 	return true;
 };
 

@@ -11,6 +11,7 @@ const roleNameMap = {
 	claimer: 'C',
 	dismantler: 'D',
 	brawler: 'F',
+	gatherer: 'G',
 	guardian: 'FE',
 	gift: ':) GIFT (: ',
 	harvester: 'H',

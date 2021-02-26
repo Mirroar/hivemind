@@ -1,6 +1,7 @@
 'use strict';
 
-/* global hivemind FIND_HOSTILE_CREEPS FIND_HOSTILE_STRUCTURES */
+/* global hivemind FIND_HOSTILE_CREEPS FIND_HOSTILE_STRUCTURES
+STRUCTURE_INVADER_CORE */
 
 const Process = require('./process');
 
