@@ -1,6 +1,7 @@
 'use strict';
 
-/* global FIND_STRUCTURES FIND_RUINS FIND_DROPPED_RESOURCES */
+/* global FIND_STRUCTURES FIND_RUINS FIND_SYMBOL_CONTAINERS
+FIND_DROPPED_RESOURCES */
 
 const Role = require('./role');
 
@@ -65,11 +66,20 @@ module.exports = class GathererRole extends Role {
 			if (target) return target;
 		}
 
+		const containers = creep.room.find(FIND_SYMBOL_CONTAINERS);
 		const resources = creep.room.find(FIND_DROPPED_RESOURCES);
 		const structures = creep.room.find(FIND_STRUCTURES);
 		const ruins = creep.room.find(FIND_RUINS);
 
 		// @todo Decide what the most valuable target is.
+		for (const container of containers) {
+			// @todo
+			if (container.store && container.store.getUsedCapacity(container.resourceType) > 0) {
+				this.memory.target = container.id;
+				return container;
+			}
+		}
+
 		for (const resource of resources) {
 			// @todo
 			if (resource.amount) {
