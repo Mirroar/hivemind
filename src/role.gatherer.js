@@ -1,8 +1,9 @@
 'use strict';
 
-/* global FIND_STRUCTURES FIND_RUINS FIND_SYMBOL_CONTAINERS
-FIND_DROPPED_RESOURCES */
+/* global FIND_STRUCTURES FIND_RUINS FIND_DROPPED_RESOURCES
+FIND_SYMBOL_CONTAINERS STRUCTURE_STORAGE STRUCTURE_TERMINAL */
 
+const utilities = require('./utilities');
 const Role = require('./role');
 
 /**
@@ -40,6 +41,12 @@ module.exports = class GathererRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	gatherResources(creep) {
+		// Switch to delivery mode if storage is full.
+		if (creep.store.getFreeCapacity() === 0) {
+			creep.memory.delivering = true;
+			return;
+		}
+
 		if (creep.pos.roomName !== creep.memory.targetRoom) {
 			// Move back to spawn room.
 			creep.moveToRoom(creep.memory.targetRoom);
@@ -48,6 +55,8 @@ module.exports = class GathererRole extends Role {
 
 		// Choose a target in the room.
 		const target = this.getGatherTarget(creep);
+		if (!target) return;
+
 		this.gatherFromTarget(creep, target);
 	}
 
@@ -61,51 +70,83 @@ module.exports = class GathererRole extends Role {
 	 *   An object that has gatherable resources stored.
 	 */
 	getGatherTarget(creep) {
-		if (this.memory.target) {
-			const target = Game.getObjectById(this.memory.target);
+		if (creep.memory.target) {
+			const target = Game.getObjectById(creep.memory.target);
 			if (target) return target;
 		}
 
+		// Decide what the most valuable target is.
+		const options = [];
+		this.addSymbolContainerOptions(creep, options);
+		this.addResourceOptions(creep, options);
+		this.addStructureOptions(creep, options);
+		this.addRuinOptions(creep, options);
+
+		const option = utilities.getBestOption(options);
+		if (!option) {
+			// @todo If there's no valid target, deliver and/or assign to new room.
+			creep.memory.delivering = true;
+			return;
+		}
+
+		creep.memory.target = option.target;
+	}
+
+	addSymbolContainerOptions(creep, options) {
 		const containers = creep.room.find(FIND_SYMBOL_CONTAINERS);
-		const resources = creep.room.find(FIND_DROPPED_RESOURCES);
-		const structures = creep.room.find(FIND_STRUCTURES);
-		const ruins = creep.room.find(FIND_RUINS);
-
-		// @todo Decide what the most valuable target is.
 		for (const container of containers) {
-			// @todo
-			if (container.store && container.store.getUsedCapacity(container.resourceType) > 0) {
-				this.memory.target = container.id;
-				return container;
-			}
-		}
+			if (!container.store) continue;
+			if (container.store.getUsedCapacity(container.resourceType) === 0) continue;
 
+			options.push({
+				priority: 4,
+				weight: container.store[container.resourceType] / 1000,
+				target: container.id,
+			});
+		}
+	}
+
+	addResourceOptions(creep, options) {
+		const resources = creep.room.find(FIND_DROPPED_RESOURCES);
 		for (const resource of resources) {
-			// @todo
-			if (resource.amount) {
-				this.memory.target = resource.id;
-				return resource;
-			}
-		}
+			if (!resource.amount) continue;
 
+			options.push({
+				priority: resource.amount > 100 ? 3 : 2,
+				weight: resource.amount / 1000,
+				target: resource.id,
+			});
+		}
+	}
+
+	addStructureOptions(creep, options) {
+		const structures = creep.room.find(FIND_STRUCTURES);
 		for (const structure of structures) {
-			// @todo
-			if (structure.store && structure.store.getUsedCapacity() > 0) {
-				this.memory.target = structure.id;
-				return structure;
-			}
-		}
+			if (!structure.store) continue;
+			if (structure.store.getUsedCapacity() === 0) continue;
 
+			// @todo Ignore our own remote harvest containers.
+
+			options.push({
+				priority: structure.structureType === STRUCTURE_STORAGE || structure.structureType === STRUCTURE_TERMINAL ? 2 : 1,
+				weight: structure.store.getUsedCapacity() / 10000,
+				target: structure.id,
+			});
+		}
+	}
+
+	addRuinOptions(creep, options) {
+		const ruins = creep.room.find(FIND_RUINS);
 		for (const ruin of ruins) {
-			// @todo
-			if (ruin.store && ruin.store.getUsedCapacity() > 0) {
-				this.memory.target = ruin.id;
-				return ruin;
-			}
-		}
+			if (!ruin.store) continue;
+			if (ruin.store.getUsedCapacity() === 0) continue;
 
-		// @todo If there's no valid target, deliver and/or assign to new room.
-		this.memory.delivering = true;
+			options.push({
+				priority: 1,
+				weight: ruin.store.getUsedCapacity() / 10000,
+				target: ruin.id,
+			});
+		}
 	}
 
 	/**
@@ -133,10 +174,8 @@ module.exports = class GathererRole extends Role {
 			creep.withdraw(target, resourceType);
 		});
 
-		// Switch to delivery mode if storage is full.
-		if (creep.store.getFreeCapacity() === 0) {
-			this.memory.delivering = true;
-		}
+		// Decide on a new target next tick after withdrawing.
+		delete creep.memory.target;
 	}
 
 	/**
@@ -157,7 +196,7 @@ module.exports = class GathererRole extends Role {
 			if (!amount || amount === 0) return;
 
 			const target = creep.room.getBestStorageTarget(amount, resourceType);
-			if (!target) return;
+			if (!target) return false;
 
 			if (creep.pos.getRangeTo(target) > 1) {
 				creep.moveToRange(target, 1);
@@ -165,10 +204,11 @@ module.exports = class GathererRole extends Role {
 			}
 
 			creep.transfer(target, resourceType);
+			return false;
 		});
 
 		if (creep.store.getUsedCapacity() === 0) {
-			this.memory.delivering = false;
+			creep.memory.delivering = false;
 		}
 	}
 };
