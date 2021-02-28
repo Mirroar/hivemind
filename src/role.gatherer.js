@@ -92,6 +92,14 @@ module.exports = class GathererRole extends Role {
 		creep.memory.target = option.target;
 	}
 
+	/**
+	 * Adds gathering options for symbol containers at high priority.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {object} options
+	 *   List of prioritized options to add targets to.
+	 */
 	addSymbolContainerOptions(creep, options) {
 		const containers = creep.room.find(FIND_SYMBOL_CONTAINERS);
 		for (const container of containers) {

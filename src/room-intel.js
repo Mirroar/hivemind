@@ -305,7 +305,8 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 	delete roomMemory.abandonedResources[this.roomName];
 
 	if (this.memory.owner) return;
-	if (!structures[STRUCTURE_STORAGE] && !structures[STRUCTURE_TERMINAL] && ruins.length === 0) return;
+
+	if (!structures[STRUCTURE_STORAGE] && !structures[STRUCTURE_TERMINAL] && ruins.length === 0 && !this.memory.symbolContainers) return;
 
 	const resources = {};
 	const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
@@ -317,6 +318,10 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 				resources[resourceType] = (resources[resourceType] || 0) + amount;
 			});
 		});
+	});
+
+	_.each(this.memory.symbolContainers, containerIntel => {
+		resources[containerIntel.symbol] = (resources[containerIntel.symbol] || 0) + containerIntel.amount;
 	});
 
 	if (_.keys(resources).length === 0) return;
