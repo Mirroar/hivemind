@@ -16,6 +16,7 @@ module.exports = class MineralHarvesterSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		// Stop harvesting if we can't really store any more minerals.
 		if (room.isFullOnMinerals()) return;
+		if (room.isEvacuating()) return;
 
 		// Find mineral sources with an extractor.
 		// @todo This could be done on script startup and partially kept in room memory.
