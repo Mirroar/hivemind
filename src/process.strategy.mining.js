@@ -101,7 +101,7 @@ RemoteMiningProcess.prototype.run = function () {
 
 		// Check past CPU and bucket usage.
 		if (stats.getStat('bucket', 10000)) {
-			if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.9 * Game.cpu.limit) {
+			if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.95 * Game.cpu.limit) {
 				// We've been having bucket reserves and CPU cycles to spare.
 				if (memory.remoteHarvesting.currentCount < availableHarvestRoomCount) {
 					memory.remoteHarvesting.currentCount++;

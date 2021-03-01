@@ -108,7 +108,7 @@ ReportProcess.prototype.generateLevelReport = function (variable, label) {
 		pointsDiff += previousValues.progressTotal;
 	}
 
-	reportText += '\nPoints: ' + currentValues.progress + ' (+' + pointsDiff + ' @ ' + (pointsDiff / tickDiff).toPrecision(4) + '/tick)';
+	reportText += '\nProgress: ' + (100 * currentValues.progress / currentValues.progressTotal).toPrecision(3) + '% (+' + (100 * pointsDiff / currentValues.progressTotal).toPrecision(3) + '% @ ' + (pointsDiff / tickDiff).toPrecision(3) + '/tick)';
 
 	Game.notify(reportText);
 };
@@ -128,10 +128,12 @@ ReportProcess.prototype.generatePowerReport = function () {
 
 	if (totalRooms === 0) return;
 
-	reportText += 'Started gathering ' + totalAmount + ' power in ' + totalRooms + 'Rooms:<br>';
+	reportText += 'Started gathering ' + totalAmount + ' power in ' + totalRooms + ' rooms:';
 
 	for (const intent of this.memory.data.power || []) {
-		reportText += intent.roomName + ': ' + intent.info.amount || 'N/A';
+		if (!intent.info.amount || intent.info.amount === 0) continue;
+
+		reportText += '<br>' + intent.roomName + ': ' + intent.info.amount || 'N/A';
 	}
 
 	Game.notify(reportText);

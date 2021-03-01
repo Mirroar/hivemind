@@ -1,7 +1,7 @@
 'use strict';
 
-/* global FIND_STRUCTURES FIND_RUINS FIND_DROPPED_RESOURCES
-FIND_SYMBOL_CONTAINERS STRUCTURE_STORAGE STRUCTURE_TERMINAL */
+/* global FIND_STRUCTURES FIND_RUINS FIND_DROPPED_RESOURCES FIND_TOMBSTONES
+STRUCTURE_STORAGE STRUCTURE_TERMINAL FIND_SYMBOL_CONTAINERS */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -79,6 +79,7 @@ module.exports = class GathererRole extends Role {
 		const options = [];
 		this.addSymbolContainerOptions(creep, options);
 		this.addResourceOptions(creep, options);
+		this.addTombstoneOptions(creep, options);
 		this.addStructureOptions(creep, options);
 		this.addRuinOptions(creep, options);
 
@@ -114,6 +115,14 @@ module.exports = class GathererRole extends Role {
 		}
 	}
 
+	/**
+	 * Adds gathering options for dropped resources.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {object} options
+	 *   List of prioritized options to add targets to.
+	 */
 	addResourceOptions(creep, options) {
 		const resources = creep.room.find(FIND_DROPPED_RESOURCES);
 		for (const resource of resources) {
@@ -127,6 +136,35 @@ module.exports = class GathererRole extends Role {
 		}
 	}
 
+	/**
+	 * Adds gathering options for dropped resources.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {object} options
+	 *   List of prioritized options to add targets to.
+	 */
+	addTombstoneOptions(creep, options) {
+		const tombs = creep.room.find(FIND_TOMBSTONES);
+		for (const tomb of tombs) {
+			if (tomb.store.getUsedCapacity() === 0) continue;
+
+			options.push({
+				priority: tomb.store.getUsedCapacity() > 100 ? 3 : 2,
+				weight: tomb.store.getUsedCapacity() / 1000,
+				target: tomb.id,
+			});
+		}
+	}
+
+	/**
+	 * Adds gathering options for structures containing resources.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {object} options
+	 *   List of prioritized options to add targets to.
+	 */
 	addStructureOptions(creep, options) {
 		const structures = creep.room.find(FIND_STRUCTURES);
 		for (const structure of structures) {
@@ -134,6 +172,7 @@ module.exports = class GathererRole extends Role {
 			if (structure.store.getUsedCapacity() === 0) continue;
 
 			// @todo Ignore our own remote harvest containers.
+			// @todo Handle structures with a store that can't be withdrawn from.
 
 			options.push({
 				priority: structure.structureType === STRUCTURE_STORAGE || structure.structureType === STRUCTURE_TERMINAL ? 2 : 1,
@@ -143,6 +182,14 @@ module.exports = class GathererRole extends Role {
 		}
 	}
 
+	/**
+	 * Adds gathering options for ruins.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {object} options
+	 *   List of prioritized options to add targets to.
+	 */
 	addRuinOptions(creep, options) {
 		const ruins = creep.room.find(FIND_RUINS);
 		for (const ruin of ruins) {
@@ -168,6 +215,9 @@ module.exports = class GathererRole extends Role {
 	gatherFromTarget(creep, target) {
 		if (creep.pos.getRangeTo(target) > 1) {
 			creep.moveToRange(target, 1);
+			// @todo If path to target is blocked, remember as invalid target.
+			// If everything is blocked, consider sending dismantlers, or not doing
+			// anything in the room.
 			return;
 		}
 

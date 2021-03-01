@@ -36,8 +36,8 @@ ResourcesProcess.prototype.run = function () {
 		}
 		else if (room.isEvacuating() && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
 			const amount = terminal.store[best.resourceType];
-			const result = terminal.send(best.resourceType, amount, best.target, 'Resource equalizing');
-			hivemind.log('trade').info('sending', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+			const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
+			hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 		}
 		else {
 			hivemind.log('trade').info('Preparing 5000', best.resourceType, 'for transport from', best.source, 'to', best.target);
