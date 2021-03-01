@@ -1,6 +1,6 @@
 'use strict';
 
-/* global RoomPosition */
+/* global hivemind */
 
 const interShard = require('./intershard');
 const Process = require('./process');
