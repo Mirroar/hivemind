@@ -5,7 +5,7 @@ STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES
-FIND_TOMBSTONES */
+FIND_TOMBSTONES FIND_RUINS */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -864,6 +864,7 @@ TransporterRole.prototype.getAvailableSources = function () {
 
 	this.addDroppedResourceOptions(options);
 	this.addTombstoneResourceOptions(options);
+	this.addRuinResourceOptions(options);
 	this.addContainerResourceOptions(options);
 	this.addHighLevelResourceOptions(options);
 	this.addEvacuatingRoomResourceOptions(options);
@@ -895,6 +896,7 @@ TransporterRole.prototype.getAvailableEnergySources = function () {
 	this.addStorageEnergySourceOptions(options, storagePriority);
 	this.addDroppedEnergySourceOptions(options, storagePriority);
 	this.addTombstoneEnergySourceOptions(options);
+	this.addRuinEnergySourceOptions(options);
 	this.addContainerEnergySourceOptions(options);
 	this.addLinkEnergySourceOptions(options);
 
@@ -1003,6 +1005,56 @@ TransporterRole.prototype.addTombstoneEnergySourceOptions = function (options) {
 		filter: tomb => {
 			if (tomb.store.energy > 0) {
 				const result = PathFinder.search(creep.pos, tomb.pos);
+				if (!result.incomplete) return true;
+			}
+
+			return false;
+		},
+	});
+
+	for (const target of targets) {
+		const option = {
+			priority: 4,
+			weight: target.store.energy / 100, // @todo Also factor in distance.
+			type: 'tombstone',
+			object: target,
+			resourceType: RESOURCE_ENERGY,
+		};
+
+		if (target.store.energy < 100) {
+			option.priority--;
+		}
+
+		if (target.store.energy < 200) {
+			option.priority--;
+		}
+
+		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
+		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
+
+		if (creep.room.getFreeStorage() < target.store.energy) {
+			// If storage is super full, try leaving stuff on the ground.
+			option.priority -= 2;
+		}
+
+		options.push(option);
+	}
+};
+
+/**
+ * Adds options for picking up energy from tombstones to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential energy sources.
+ */
+TransporterRole.prototype.addRuinEnergySourceOptions = function (options) {
+	const creep = this.creep;
+
+	// Look for energy on the ground.
+	const targets = creep.room.find(FIND_RUINS, {
+		filter: ruin => {
+			if (ruin.store.energy > 0) {
+				const result = PathFinder.search(creep.pos, ruin.pos);
 				if (!result.incomplete) return true;
 			}
 
@@ -1194,7 +1246,55 @@ TransporterRole.prototype.addTombstoneResourceOptions = function (options) {
 			const option = {
 				priority: 4,
 				weight: target.store[resourceType] / 30, // @todo Also factor in distance.
-				type: 'resource',
+				type: 'tombstone',
+				object: target,
+				resourceType,
+			};
+
+			if (resourceType === RESOURCE_POWER) {
+				option.priority++;
+			}
+
+			if (creep.room.getFreeStorage() < target.store[resourceType]) {
+				// If storage is super full, try leaving stuff on the ground.
+				option.priority -= 2;
+			}
+
+			options.push(option);
+		}
+	}
+};
+
+/**
+ * Adds options for picking up resources from tombstones to priority list.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+TransporterRole.prototype.addRuinResourceOptions = function (options) {
+	const creep = this.creep;
+
+	// Look for resources on the ground.
+	const targets = creep.room.find(FIND_RUINS, {
+		filter: ruin => {
+			if (_.sum(ruin.store) > 10) {
+				const result = PathFinder.search(creep.pos, ruin.pos);
+				if (!result.incomplete) return true;
+			}
+
+			return false;
+		},
+	});
+
+	for (const target of targets) {
+		for (const resourceType of _.keys(target.store)) {
+			if (resourceType === RESOURCE_ENERGY) continue;
+			if (target.store[resourceType] === 0) continue;
+
+			const option = {
+				priority: 4,
+				weight: target.store[resourceType] / 30, // @todo Also factor in distance.
+				type: 'tombstone',
 				object: target,
 				resourceType,
 			};

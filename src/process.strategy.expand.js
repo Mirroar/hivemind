@@ -4,6 +4,7 @@
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
+const interShard = require('./intershard');
 const Process = require('./process');
 const Squad = require('./manager.squad');
 const stats = require('./stats');
@@ -27,6 +28,8 @@ const ExpandProcess = function (params, data) {
 	if (!Memory.strategy.expand) {
 		Memory.strategy.expand = {};
 	}
+
+	this.memory = Memory.strategy.expand;
 };
 
 ExpandProcess.prototype = Object.create(Process.prototype);
@@ -35,68 +38,39 @@ ExpandProcess.prototype = Object.create(Process.prototype);
  * Sends a squad for expanding to a new room if GCL and CPU allow.
  */
 ExpandProcess.prototype.run = function () {
-	const memory = Memory.strategy;
+	// We probably can't expect to expand earlier than 100 ticks into the game.
+	if (!stats.getStat('cpu_total', 1000)) return;
 
 	const ownedRooms = _.size(_.filter(Game.rooms, room => room.isMine()));
-	const harvestRooms = memory.remoteHarvesting ? memory.remoteHarvesting.currentCount : 0;
+	const harvestRooms = Memory.strategy.remoteHarvesting ? Memory.strategy.remoteHarvesting.currentCount : 0;
 
 	// If we have many rooms with remote harvesting, be a bit more lenient
 	// on CPU cap for claiming a new room. Remote harvesting can always be
 	// dialed back to the most efficient rooms to save CPU.
 	const cpuLimit = harvestRooms / (ownedRooms + 1) < 2 ? 0.8 : 1;
 
-	const canExpand = ownedRooms < Game.gcl.level &&
-		stats.getStat('cpu_total', 10000) &&
-		stats.getStat('cpu_total', 10000) < Game.cpu.limit * cpuLimit &&
-		stats.getStat('cpu_total', 1000) < Game.cpu.limit * cpuLimit;
+	const hasFreeControlLevels = ownedRooms < Game.gcl.level;
+	const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
+	const longTermCpuUsage = stats.getStat('cpu_total', 10000) ? stats.getStat('cpu_total', 10000) / Game.cpu.limit : shortTermCpuUsage;
+
+	const canExpand = hasFreeControlLevels &&
+		shortTermCpuUsage < cpuLimit &&
+		longTermCpuUsage < cpuLimit;
 
 	Memory.hivemind.canExpand = false;
-	if (!memory.expand.currentTarget && canExpand) {
+	if (!this.memory.currentTarget && canExpand) {
 		Memory.hivemind.canExpand = true;
 		this.chooseNewExpansionTarget();
 	}
 
-	if (memory.expand.currentTarget) {
-		this.manageExpansionSupport();
+	this.manageCurrentExpansion();
 
-		const info = memory.expand.currentTarget;
-		const squad = new Squad('expand');
-
-		this.checkAccessPath();
-
-		if (Game.rooms[info.roomName]) {
-			// @todo If path to controller is blocked, send dismantlers to dismantle
-			// blocking buildings, or construct a tunnel to the controller.
-
-			const room = Game.rooms[info.roomName];
-			squad.setTarget(room.controller.pos);
-
-			if (room.controller.my) {
-				if (!memory.expand.claimed) {
-					// Remove claimer from composition once room has been claimed.
-					memory.expand.claimed = Game.time;
-					squad.setUnitCount('singleClaim', 0);
-				}
-
-				if (room.controller.level > 3 && room.storage) {
-					this.stopExpansion();
-					return;
-				}
-			}
-			else {
-				this.checkClaimPath();
-			}
-		}
-
-		// @todo Abort if claiming takes too long and we don't have anything
-		// to dismantle in the way of the controller.
-
-		// If a lot of time has passed, let the room fend for itself anyways,
-		// either it will be lost or fix itself.
-		if (Game.time - memory.expand.claimed > 50 * CREEP_LIFE_TIME) {
-			this.stopExpansion();
-		}
+	// Check if we could benefit from giving up a room to expand to a better one.
+	if (shortTermCpuUsage > cpuLimit && longTermCpuUsage > cpuLimit) {
+		this.abandonWeakRoom();
 	}
+
+	this.manageEvacuation();
 };
 
 /**
@@ -131,7 +105,7 @@ ExpandProcess.prototype.chooseNewExpansionTarget = function () {
  *   Scout information of the room to expand to.
  */
 ExpandProcess.prototype.startExpansion = function (roomInfo) {
-	Memory.strategy.expand.currentTarget = roomInfo;
+	this.memory.currentTarget = roomInfo;
 
 	// Spawn expansion squad at origin.
 	const squad = new Squad('expand');
@@ -146,16 +120,63 @@ ExpandProcess.prototype.startExpansion = function (roomInfo) {
 	squad.setUnitCount('singleClaim', 1);
 	squad.setUnitCount('builder', 2);
 	squad.setPath(null);
-	Memory.strategy.expand.started = Game.time;
+	this.memory.started = Game.time;
 
 	Game.notify('🏴 Started expanding to ' + roomInfo.roomName);
+};
+
+/**
+ * Manages getting an expansion up and running.
+ */
+ExpandProcess.prototype.manageCurrentExpansion = function () {
+	if (!this.memory.currentTarget) return;
+
+	this.manageExpansionSupport();
+
+	const info = this.memory.currentTarget;
+	const squad = new Squad('expand');
+
+	this.checkAccessPath();
+
+	if (Game.rooms[info.roomName]) {
+		// @todo If path to controller is blocked, send dismantlers to dismantle
+		// blocking buildings, or construct a tunnel to the controller.
+
+		const room = Game.rooms[info.roomName];
+		squad.setTarget(room.controller.pos);
+
+		if (room.controller.my) {
+			if (!this.memory.claimed) {
+				// Remove claimer from composition once room has been claimed.
+				this.memory.claimed = Game.time;
+				squad.setUnitCount('singleClaim', 0);
+			}
+
+			if (room.controller.level > 3 && room.storage) {
+				this.stopExpansion();
+				return;
+			}
+		}
+		else {
+			this.checkClaimPath();
+		}
+	}
+
+	// @todo Abort if claiming takes too long and we don't have anything
+	// to dismantle in the way of the controller.
+
+	// If a lot of time has passed, let the room fend for itself anyways,
+	// either it will be lost or fix itself.
+	if (Game.time - this.memory.claimed > 50 * CREEP_LIFE_TIME) {
+		this.stopExpansion();
+	}
 };
 
 /**
  * Stops current expansion plans by disbanding all related squads.
  */
 ExpandProcess.prototype.stopExpansion = function () {
-	const roomName = Memory.strategy.expand.currentTarget.roomName;
+	const roomName = this.memory.currentTarget.roomName;
 	const squad = new Squad('expand');
 	squad.disband();
 
@@ -166,13 +187,14 @@ ExpandProcess.prototype.stopExpansion = function () {
 	});
 
 	Memory.strategy.expand = {};
+	this.memory = Memory.strategy.expand;
 };
 
 /**
  * Sends extra builders from rooms in range so the room is self-sufficient sooner.
  */
 ExpandProcess.prototype.manageExpansionSupport = function () {
-	const info = Memory.strategy.expand.currentTarget;
+	const info = this.memory.currentTarget;
 	if (!info) return;
 
 	const activeSquads = {};
@@ -197,7 +219,7 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		supportSquad.clearUnits();
 		supportSquad.setUnitCount('builder', 1);
 		// Sometimes add a claim creep if main squad has problems claiming the room.
-		if (Math.random() < 0.05 && !Memory.strategy.expand.claimed) {
+		if (Math.random() < 0.05 && !this.memory.claimed) {
 			supportSquad.setUnitCount('singleClaim', 1);
 		}
 
@@ -220,7 +242,7 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
  * Checks if creeps can reach the room's controller, builds tunnels otherwise.
  */
 ExpandProcess.prototype.checkClaimPath = function () {
-	const info = Memory.strategy.expand.currentTarget;
+	const info = this.memory.currentTarget;
 	if (!info) return;
 
 	const room = Game.rooms[info.roomName];
@@ -317,7 +339,7 @@ ExpandProcess.prototype.checkClaimPath = function () {
  * Checks if there is a safe path to the current expansion for spawned creeps.
  */
 ExpandProcess.prototype.checkAccessPath = function () {
-	const info = Memory.strategy.expand.currentTarget;
+	const info = this.memory.currentTarget;
 	if (!info) return;
 
 	const originRoom = Game.rooms[info.spawnRoom];
@@ -325,17 +347,17 @@ ExpandProcess.prototype.checkAccessPath = function () {
 		const path = originRoom.calculateRoomPath(info.roomName);
 		if (!path || path.length > 10) {
 			// Path is too long, claimers might not even reach.
-			if (!Memory.strategy.expand.pathBlocked) {
-				Memory.strategy.expand.pathBlocked = Game.time;
+			if (!this.memory.pathBlocked) {
+				this.memory.pathBlocked = Game.time;
 			}
 		}
 		else {
 			// Everything is fine (again).
-			delete Memory.strategy.expand.pathBlocked;
+			delete this.memory.pathBlocked;
 		}
 	}
 
-	if (!originRoom || (Memory.strategy.expand.pathBlocked && Game.time - Memory.strategy.expand.pathBlocked > 5 * CREEP_LIFE_TIME)) {
+	if (!originRoom || (this.memory.pathBlocked && Game.time - this.memory.pathBlocked > 5 * CREEP_LIFE_TIME)) {
 		const newOrigin = this.findClosestSpawn(info.roomName);
 		const squad = new Squad('expand');
 		if (newOrigin) {
@@ -376,6 +398,76 @@ ExpandProcess.prototype.findClosestSpawn = function (targetRoom) {
 	});
 
 	return bestRoom && bestRoom.name;
+};
+
+/**
+ * Decides if it's worth giving up a weak room in favor of a new expansion.
+ */
+ExpandProcess.prototype.abandonWeakRoom = function () {
+	// Only choose a new target if we aren't already relocating.
+	if (this.memory.evacuatingRoom) return;
+
+	// @todo Take into account better expansions on other shards.
+	// We expect a minimal gain from giving up a room.
+	const shardMemory = interShard.getLocalMemory();
+	if (!shardMemory.info) return;
+	if (shardMemory.info.ownedRooms && shardMemory.info.ownedRooms < 2) return;
+	if (!shardMemory.info.rooms) return;
+	if (!shardMemory.info.rooms.bestExpansion) return;
+	if (!shardMemory.info.rooms.worstRoom) return;
+	if (shardMemory.info.rooms.bestExpansion.score - shardMemory.info.rooms.worstRoom.score < 0.5) return;
+
+	const roomName = shardMemory.info.rooms.worstRoom.name;
+	if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) return;
+
+	Game.rooms[roomName].setEvacuating(true);
+	this.memory.evacuatingRoom = {
+		name: roomName,
+	};
+	Game.notify('💀 Evacuating ' + roomName + ' to free up CPU cycles for expanding. Possible Target: ' + shardMemory.info.rooms.bestExpansion.name);
+};
+
+/**
+ * Manages the room we are currently abandoning.
+ */
+ExpandProcess.prototype.manageEvacuation = function () {
+	if (!this.memory.evacuatingRoom) return;
+
+	const roomName = this.memory.evacuatingRoom.name;
+	const room = Game.rooms[roomName];
+	if (!room || !room.isMine()) {
+		// We don't own this room anymore for some reason. Guess we're done.
+		if (!this.memory.evacuatingRoom.cooldown) {
+			// Start a cooldown timer of about 5000 ticks before considering
+			// abandoning more (enough for creeps to despawn and CPU to normalize).
+			this.memory.evacuatingRoom.cooldown = Game.time + 5000;
+			return;
+		}
+
+		if (Game.time < this.memory.evacuatingRoom.cooldown) return;
+
+		delete this.memory.evacuatingRoom;
+		return;
+	}
+
+	// Storage needs to be emptied.
+	if (room.storage && room.storage.store.getUsedCapacity() > 0) return;
+
+	// Destroy nuker for some extra resources.
+	// Make sure terminal is somewhat empty beforehand.
+	if (room.terminal && room.terminal.store.getUsedCapacity() > 100000) return;
+	if (room.nuker) room.nuker.destroy();
+
+	// Terminal needs to be mostly empty and contain only energy.
+	if (room.terminal && room.terminal.store.getUsedCapacity() > 10000) return;
+	if (room.terminal && room.terminal.store.energy < room.terminal.store.getUsedCapacity()) return;
+
+	// Alright, this is it, flipping the switch!
+	room.controller.unclaim();
+	_.each(
+		_.filter(room.find(FIND_MY_CREEPS), creep => creep.memory.singleRoom === room.name),
+		creep => creep.suicide()
+	);
 };
 
 module.exports = ExpandProcess;
