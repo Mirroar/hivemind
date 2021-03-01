@@ -411,7 +411,7 @@ ExpandProcess.prototype.abandonWeakRoom = function () {
 	// We expect a minimal gain from giving up a room.
 	const shardMemory = interShard.getLocalMemory();
 	if (!shardMemory.info) return;
-	if ((shardMemory.info.ownedRooms || 1) < 2) return;
+	if (shardMemory.info.ownedRooms && shardMemory.info.ownedRooms < 2) return;
 	if (!shardMemory.info.rooms) return;
 	if (!shardMemory.info.rooms.bestExpansion) return;
 	if (!shardMemory.info.rooms.worstRoom) return;
