@@ -31,6 +31,7 @@ ScoutProcess.prototype = Object.create(Process.prototype);
 ScoutProcess.prototype.run = function () {
 	Memory.strategy.roomList = this.generateScoutTargets();
 	this.generateMineralStatus();
+	this.generateDecoderStatus();
 
 	// Add data to scout list for creating priorities.
 	for (const roomName of _.keys(Memory.strategy.roomList)) {
@@ -507,6 +508,21 @@ ScoutProcess.prototype.generateMineralStatus = function () {
 		const mineralType = roomIntel.getMineralType();
 
 		mineralCount[mineralType] = (mineralCount[mineralType] || 0) + 1;
+	});
+};
+
+/**
+ * Counts mineral sources in our empire.
+ */
+ScoutProcess.prototype.generateDecoderStatus = function () {
+	this.decoderCount = {};
+	const decoderCount = this.decoderCount;
+	_.each(Game.rooms, room => {
+		if (!room.isMine()) return;
+		const roomIntel = hivemind.roomIntel(room.name);
+		const symbol = roomIntel.getDecoderType();
+
+		decoderCount[symbol] = (decoderCount[symbol] || 0) + 1;
 	});
 };
 
