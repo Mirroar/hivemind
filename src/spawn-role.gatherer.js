@@ -20,6 +20,10 @@ module.exports = class GathererSpawnRole extends SpawnRole {
 			const numGatherers = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.targetRoom === roomName && creep.memory.origin === room.name).length;
 			// @todo Allow more gatherers at low priority if a lot of resources need
 			// gathering.
+			// @todo Make sure gatherers can reach their targets.
+			// @todo Currently disabled on shard0 until we automaticall remove
+			// pesky walls / ramparts.
+			if (Game.shard.name === 'shard0') return;
 			if (numGatherers > 0) return;
 
 			options.push({
