@@ -30,7 +30,16 @@ ResourcesProcess.prototype.run = function () {
 	while (best) {
 		const room = Game.rooms[best.source];
 		const terminal = room.terminal;
-		if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+		if (room.isEvacuating() && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+			let amount = Math.min(terminal.store[best.resourceType], 50000);
+			if (best.resourceType === RESOURCE_ENERGY) {
+				amount -= Game.market.calcTransactionCost(amount, best.source, best.target);
+			}
+
+			const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
+			hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+		}
+		else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 			const result = terminal.send(best.resourceType, 5000, best.target, 'Resource equalizing');
 			hivemind.log('trade').info('sending', best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 		}
