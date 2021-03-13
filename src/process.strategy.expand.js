@@ -83,6 +83,7 @@ ExpandProcess.prototype.chooseNewExpansionTarget = function () {
 	for (const info of _.values(Memory.strategy.roomList)) {
 		if (!info.expansionScore || info.expansionScore <= 0) continue;
 		if (bestTarget && bestTarget.expansionScore >= info.expansionScore) continue;
+		if (Game.rooms[info.roomName] && Game.rooms[info.roomName].isMine()) continue;
 
 		// Don't try to expand to a room that can't be reached safely.
 		const bestSpawn = this.findClosestSpawn(info.roomName);
