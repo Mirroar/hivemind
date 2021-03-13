@@ -21,6 +21,7 @@ const CreepsProcess = require('./process.creeps');
 const ExpandProcess = require('./process.strategy.expand');
 const InitProcess = require('./process.init');
 const InterShardProcess = require('./process.strategy.intershard');
+const MapVisualsProcess = require('./process.map-visuals');
 const PowerMiningProcess = require('./process.strategy.power');
 const RemoteMiningProcess = require('./process.strategy.mining');
 const ReportProcess = require('./process.empire.report');
@@ -106,6 +107,9 @@ module.exports = {
 		});
 		hivemind.runProcess('empire.report', ReportProcess, {
 			interval: 100,
+		});
+		hivemind.runProcess('map-visuals', MapVisualsProcess, {
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
 		this.recordStats();
