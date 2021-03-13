@@ -1,10 +1,12 @@
 'use strict';
 
-/* global hivemind PROCESS_PRIORITY_ALWAYS */
+/* global hivemind PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_ALWAYS */
 
-const Process = require('./process');
 const OwnedRoomProcess = require('./process.rooms.owned');
+const Process = require('./process');
 const RoomIntelProcess = require('./process.rooms.intel');
+const RoomManager = require('./room-manager');
+const RoomManagerProcess = require('./process.rooms.owned.manager');
 const RoomPlanner = require('./room-planner');
 
 /**
@@ -46,7 +48,21 @@ RoomsProcess.prototype.run = function () {
 		// @todo Maybe move to extra process, this is misplaced in this loop.
 		if (Memory.strategy && Memory.strategy.expand && Memory.strategy.expand.currentTarget && Memory.strategy.expand.currentTarget.roomName === roomName) {
 			room.roomPlanner = new RoomPlanner(roomName);
-			room.roomPlanner.runLogic();
+			room.roomManager = new RoomManager(room);
+
+			hivemind.runSubProcess('rooms_roomplanner', () => {
+				// RoomPlanner has its own 100 tick throttling, so we runLogic every tick.
+				room.roomPlanner.runLogic();
+			});
+
+			const prioritizeRoomManager = room.roomManager.shouldRunImmediately();
+			hivemind.runSubProcess('rooms_manager', () => {
+				hivemind.runProcess(room.name + '_manager', RoomManagerProcess, {
+					interval: prioritizeRoomManager ? 0 : 100,
+					room,
+					priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
+				});
+			});
 		}
 	});
 };
