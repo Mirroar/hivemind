@@ -1266,7 +1266,7 @@ TransporterRole.prototype.addTombstoneResourceOptions = function (options) {
 };
 
 /**
- * Adds options for picking up resources from tombstones to priority list.
+ * Adds options for picking up resources from ruins to priority list.
  *
  * @param {Array} options
  *   A list of potential resource sources.

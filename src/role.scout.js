@@ -1,6 +1,6 @@
 'use strict';
 
-/* global RoomPosition */
+/* global hivemind RoomPosition */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -63,9 +63,9 @@ ScoutRole.prototype.performScout = function (creep) {
 		creep.room.visual.text(creep.memory.scoutTarget, creep.pos);
 	}
 
-	if (!creep.moveToRoom(creep.memory.scoutTarget, true)) {
-		this.chooseScoutTarget(creep);
-	}
+	if (!creep.moveToRoom(creep.memory.scoutTarget, true)) this.chooseScoutTarget(creep);
+
+	if (this.isOscillating(creep)) this.chooseScoutTarget(creep);
 };
 
 /**
@@ -85,25 +85,71 @@ ScoutRole.prototype.chooseScoutTarget = function (creep) {
 	for (const info of _.values(memory.roomList)) {
 		if (info.roomName === creep.pos.roomName) continue;
 
-		if (info.origin === creep.memory.origin && info.scoutPriority > 0) {
-			if (!best || best.scoutPriority < info.scoutPriority) {
-				// Check distance / path to room.
-				const path = creep.calculateRoomPath(info.roomName, true);
+		if (info.origin !== creep.memory.origin) continue;
+		if (info.scoutPriority <= 0) continue;
+		if (best && best.info.scoutPriority > info.scoutPriority) continue;
 
-				if (path) {
-					best = info;
-				}
-			}
+		const roomIntel = hivemind.roomIntel(info.roomName);
+		const lastScout = roomIntel.getLastScoutAttempt();
+		if (best && lastScout > best.lastScout) continue;
+
+		// Check distance / path to room.
+		const path = creep.calculateRoomPath(info.roomName, true);
+
+		if (path) {
+			best = {info, lastScout};
 		}
 	}
 
 	if (best) {
-		creep.memory.scoutTarget = best.roomName;
+		creep.memory.scoutTarget = best.info.roomName;
+		const roomIntel = hivemind.roomIntel(best.info.roomName);
+		roomIntel.registerScoutAttempt();
 	}
 
 	if (!creep.memory.scoutTarget) {
 		creep.memory.scoutTarget = creep.memory.origin;
 	}
+};
+
+ScoutRole.prototype.isOscillating = function (creep) {
+	if (!creep.memory._roomHistory) creep.memory._roomHistory = [];
+	const history = creep.memory._roomHistory;
+
+	if (history.length === 0 || history[history.length - 1] !== creep.pos.roomName) history.push(creep.pos.roomName);
+	if (history.length > 20) creep.memory._roomHistory = history.slice(-10);
+
+	if (
+		history.length >= 10 &&
+		history[history.length - 1] === history[history.length - 3] &&
+		history[history.length - 2] === history[history.length - 4] &&
+		history[history.length - 3] === history[history.length - 5] &&
+		history[history.length - 4] === history[history.length - 6] &&
+		history[history.length - 5] === history[history.length - 7] &&
+		history[history.length - 6] === history[history.length - 8] &&
+		history[history.length - 7] === history[history.length - 9] &&
+		history[history.length - 8] === history[history.length - 10]
+	) {
+		delete creep.memory._roomHistory;
+		return true;
+	}
+
+	return this.isTileOscillating(creep);
+};
+
+ScoutRole.prototype.isTileOscillating = function (creep) {
+	if (!creep.memory._posHistory) creep.memory._posHistory = [];
+	const history = creep.memory._posHistory;
+	const pos = utilities.encodePosition(creep.pos);
+
+	if (history.length === 0 || history[history.length - 1] !== pos) history.push(pos);
+	if (history.length > 30) creep.memory._posHistory = history.slice(-20);
+	if (_.filter(history, v => v === pos).length >= 5) {
+		delete creep.memory._posHistory;
+		return true;
+	}
+
+	return false;
 };
 
 module.exports = ScoutRole;
