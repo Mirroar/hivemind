@@ -3,7 +3,7 @@
 /* global hivemind StructureController FIND_HOSTILE_CREEPS
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
-FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL */
+FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -186,7 +186,10 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
 	let structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
 		filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.hits,
 	});
-	if (!creep.room.controller || !creep.room.controller.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) structures = [];
+	if (!creep.room.controller || !creep.room.controller.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) {
+		// Outside of owned rooms, only attack invader cores.
+		structures = _.filter(structures, structure => structure.structureType === STRUCTURE_INVADER_CORE);
+	}
 
 	// Attack structures under target flag (even if non-hostile, like walls).
 	const directStructures = targetPosition.lookFor(LOOK_STRUCTURES);
@@ -302,6 +305,8 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 			return;
 		}
 
+		// @todo For some reason, using goTo instead of moveTo here results in
+		// a lot of "trying to follow non-existing path" errors moving across rooms.
 		creep.moveTo(targetPosition);
 	}
 
