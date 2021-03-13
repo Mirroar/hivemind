@@ -60,7 +60,7 @@ RoomIntelProcess.prototype.findHostiles = function () {
 	}
 
 	for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
-		if (structure.type === STRUCTURE_INVADER_CORE) {
+		if (structure.structureType === STRUCTURE_INVADER_CORE) {
 			safe = false;
 			lastSeen = Game.time;
 		}

@@ -83,6 +83,7 @@ ExpandProcess.prototype.chooseNewExpansionTarget = function () {
 	for (const info of _.values(Memory.strategy.roomList)) {
 		if (!info.expansionScore || info.expansionScore <= 0) continue;
 		if (bestTarget && bestTarget.expansionScore >= info.expansionScore) continue;
+		if (Game.rooms[info.roomName] && Game.rooms[info.roomName].isMine()) continue;
 
 		// Don't try to expand to a room that can't be reached safely.
 		const bestSpawn = this.findClosestSpawn(info.roomName);
@@ -458,9 +459,9 @@ ExpandProcess.prototype.manageEvacuation = function () {
 	if (room.terminal && room.terminal.store.getUsedCapacity() > 100000) return;
 	if (room.nuker) room.nuker.destroy();
 
-	// Terminal needs to be mostly empty and contain only energy.
+	// Terminal needs to be mostly empty and contain mostly energy.
 	if (room.terminal && room.terminal.store.getUsedCapacity() > 10000) return;
-	if (room.terminal && room.terminal.store.energy < room.terminal.store.getUsedCapacity()) return;
+	if (room.terminal && room.terminal.store.getUsedCapacity() > 0 && room.terminal.store.energy / room.terminal.store.getUsedCapacity() < 0.8) return;
 
 	// Alright, this is it, flipping the switch!
 	room.controller.unclaim();

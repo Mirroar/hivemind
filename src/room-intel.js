@@ -32,6 +32,7 @@ RoomIntel.prototype.gatherIntel = function () {
 	if (!room) return;
 
 	const intel = this.memory;
+	this.registerScoutAttempt();
 
 	// @todo Have process logic handle throttling of this task.
 	let lastScanThreshold = 200;
@@ -728,6 +729,23 @@ RoomIntel.prototype.handleAdjacentRoom = function (roomData, openList, closedLis
 
 		this.addAdjacentRoomToCheck(roomName, openList, {roomData});
 	}
+};
+
+/**
+ * Registers a scout attempting to reach this room.
+ */
+RoomIntel.prototype.registerScoutAttempt = function () {
+	this.memory.lastScout = Game.time;
+};
+
+/**
+ * Determiness the last time a scout was assigned to this room.
+ *
+ * @return {number}
+ *   Game tick when a scout attempt was last registered, or 0.
+ */
+RoomIntel.prototype.getLastScoutAttempt = function () {
+	return this.memory.lastScout || 0;
 };
 
 module.exports = RoomIntel;

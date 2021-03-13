@@ -69,7 +69,8 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 		if (timeSinceLastScan > 2000) {
 			info.scoutPriority = 1;
 		}
-		else if (roomIntel.isClaimable() && !roomIntel.isClaimed()) {
+
+		if (roomIntel.memory.lastScan > 0 && roomIntel.isClaimable() && !(roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader')) {
 			info.harvestPriority = this.calculateHarvestScore(roomName);
 
 			// Check if we could reasonably expand to this room.
@@ -237,6 +238,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 				if (exits[j] === adjacentRoom) result.addScore(-this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
 			}
 		}
+
+		if (roomDistance > 1) continue;
+		// If we're direct neighbors, that also means we can't remote harvest
+		// after expanding.
+		result.addScore(-this.getHarvestRoomScore(roomName), 'blockHarvest' + otherRoom.name);
 	}
 
 	// Having fewer exit sides is good.
@@ -316,14 +322,14 @@ ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
 	if (!roomIntel.isClaimable()) return 0;
 
 	// Try not to expand too close to other players.
-	if (roomIntel.isOwned()) return -0.5;
+	if (roomIntel.isOwned() && roomIntel.memory.owner !== 'Invader') return -0.5;
 
 	// Can't remote harvest from my own room.
 	if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) return 0;
 
 	let sourceFactor = 0.25;
 	// If another player has reserved the adjacent room, we can't profit all that well.
-	if (roomIntel.isClaimed()) sourceFactor = 0.1;
+	if (roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader') sourceFactor = 0.1;
 
 	// @todo factor in path length to sources.
 	return roomIntel.getSourcePositions().length * sourceFactor;
@@ -336,7 +342,7 @@ ScoutProcess.prototype.getHarvestRoomScore = function (roomName) {
  *   Room info objects keyed by room name.
  */
 ScoutProcess.prototype.generateScoutTargets = function () {
-	const roomList = {};
+	const roomList = Memory.strategy.roomList || {};
 
 	const openList = this.getScoutOrigins();
 	const closedList = {};
@@ -352,6 +358,7 @@ ScoutProcess.prototype.generateScoutTargets = function () {
 		this.addAdjacentRooms(nextRoom, openList, closedList);
 		const info = openList[nextRoom];
 		delete openList[nextRoom];
+		const updated = closedList[nextRoom];
 		closedList[nextRoom] = true;
 
 		// Add current room as a candidate for scouting.
@@ -365,6 +372,11 @@ ScoutProcess.prototype.generateScoutTargets = function () {
 				observerRoom: observer && observer.pos.roomName,
 				safePath: info.safePath,
 			};
+		}
+		else if (!updated) {
+			const observer = this.getClosestObserver(nextRoom);
+			roomList[nextRoom].observer = observer && observer.id;
+			roomList[nextRoom].observerRoom = observer && observer.pos.roomName;
 		}
 	}
 
@@ -463,7 +475,8 @@ ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedLi
 	for (const exit of _.values(exits)) {
 		if (openList[exit] || closedList[exit]) continue;
 
-		const roomIsSafe = !hivemind.roomIntel(exit).isClaimed();
+		const roomIntel = hivemind.roomIntel(exit);
+		const roomIsSafe = !(roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader');
 
 		openList[exit] = {
 			range: info.range + 1,

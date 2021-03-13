@@ -458,11 +458,18 @@ Creep.prototype.calculateGoToPath = function (target, options) {
  *   True if movement is possible and ongoing.
  */
 Creep.prototype.moveToRoom = function (roomName, allowDanger) {
+	// Make sure we recalculate path if target changes.
+	if (this.memory._mtrTarget !== roomName) {
+		delete this.memory.nextRoom;
+		this.memory._mtrTarget = roomName;
+	}
+
 	// Check which room to go to next.
 	const inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
 	if (!this.memory.nextRoom || (this.pos.roomName === this.memory.nextRoom && inRoom)) {
 		const path = this.calculateRoomPath(roomName, allowDanger);
 		if (_.size(path) < 1) {
+			// There is no valid path.
 			return false;
 		}
 
@@ -472,7 +479,7 @@ Creep.prototype.moveToRoom = function (roomName, allowDanger) {
 	// Move to next room.
 	const target = new RoomPosition(25, 25, this.memory.nextRoom);
 	if (this.pos.getRangeTo(target) > 15) {
-		this.moveToRange(target, 15);
+		return this.moveToRange(target, 15);
 	}
 
 	return true;

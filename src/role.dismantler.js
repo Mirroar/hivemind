@@ -93,7 +93,7 @@ DismantlerRole.prototype.performDismantle = function (creep) {
 
 	if (target) {
 		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveTo(target);
+			creep.moveToRange(target, 1);
 		}
 		else {
 			creep.dismantle(target);
