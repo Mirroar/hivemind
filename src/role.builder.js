@@ -254,8 +254,9 @@ BuilderRole.prototype.modifyRepairDefensesOption = function (creep, option, targ
 	option.weight = 1 - (target.hits / maxHealth);
 	option.maxHealth = maxHealth;
 
-	if (target.structureType === STRUCTURE_RAMPART && target.hits < 10000 && creep.room.controller.level >= 4) {
+	if (target.structureType === STRUCTURE_RAMPART && target.hits < 10000 && creep.room.controller.level >= 3) {
 		// Low ramparts get special treatment so they don't decay.
+		option.priority++;
 		option.priority++;
 		option.weight++;
 	}
