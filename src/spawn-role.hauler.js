@@ -96,7 +96,7 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room, option) {
 		return this.generateCreepBodyFromWeights(
-			this.getBodyWeights(),
+			room.controller.level > 3 ? this.getBodyWeights() : this.getNoRoadsBodyWeight(),
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 			{[CARRY]: option.size}
 		);
@@ -110,6 +110,16 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 */
 	getBodyWeights() {
 		return {[MOVE]: 0.35, [WORK]: 0.05, [CARRY]: 0.6};
+	}
+
+	/**
+	 * Determine body weights for haulers when no roads are being built.
+	 *
+	 * @return {object}
+	 *   An object containing body part weights, keyed by type.
+	 */
+	getNoRoadsBodyWeight() {
+		return {[MOVE]: 0.5, [CARRY]: 0.5};
 	}
 
 	/**

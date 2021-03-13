@@ -254,6 +254,7 @@ HaulerRole.prototype.pickupNearbyEnergy = function (creep) {
 	}
 
 	if (!resource) {
+		// @todo Check if there's a valid (short) path to the resource.
 		const resources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
 			filter: resource => resource.resourceType === RESOURCE_ENERGY,
 		});
@@ -285,12 +286,15 @@ HaulerRole.prototype.pickupNearbyEnergy = function (creep) {
  */
 HaulerRole.prototype.performBuildRoad = function (creep) {
 	const workParts = creep.memory.body.work || 0;
+	const sourceRoom = utilities.decodePosition(creep.memory.storage).roomName;
+	const sourceRoomLevel = Game.rooms[sourceRoom] ? Game.rooms[sourceRoom].controller.level : 0;
+	const buildRoads = sourceRoomLevel > 3;
 
 	if (workParts === 0) return false;
 
 	this.actionTaken = false;
 
-	if (creep.memory.cachedPath) {
+	if (creep.memory.cachedPath && buildRoads) {
 		if (this.buildRoadOnCachedPath(creep)) return true;
 	}
 	else {
@@ -299,7 +303,7 @@ HaulerRole.prototype.performBuildRoad = function (creep) {
 			filter: structure => (structure.structureType === STRUCTURE_ROAD || structure.structureType === STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - (workParts * 100),
 		});
 		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-			Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
+			Memory.rooms[sourceRoom].remoteHarvesting[creep.memory.source].buildCost += workParts;
 			creep.repair(needsRepair);
 			this.actionTaken = true;
 			// If structure is especially damaged, stay here to keep repairing.
