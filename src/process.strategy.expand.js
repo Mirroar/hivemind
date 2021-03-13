@@ -459,9 +459,9 @@ ExpandProcess.prototype.manageEvacuation = function () {
 	if (room.terminal && room.terminal.store.getUsedCapacity() > 100000) return;
 	if (room.nuker) room.nuker.destroy();
 
-	// Terminal needs to be mostly empty and contain only energy.
+	// Terminal needs to be mostly empty and contain mostly energy.
 	if (room.terminal && room.terminal.store.getUsedCapacity() > 10000) return;
-	if (room.terminal && room.terminal.store.energy < room.terminal.store.getUsedCapacity()) return;
+	if (room.terminal && room.terminal.store.getUsedCapacity() > 0 && room.terminal.store.energy / room.terminal.store.getUsedCapacity() < 0.8) return;
 
 	// Alright, this is it, flipping the switch!
 	room.controller.unclaim();
