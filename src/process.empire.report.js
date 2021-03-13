@@ -1,6 +1,6 @@
 'use strict';
 
-/* global Game Memory */
+/* global */
 
 const Process = require('./process');
 
