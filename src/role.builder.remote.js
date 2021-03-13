@@ -90,9 +90,10 @@ RemoteBuilderRole.prototype.performRemoteBuild = function () {
 
 	if (this.saveExpiringRamparts()) return;
 
-	// Build structures.
-	const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
 	if (!creep.memory.buildTarget) {
+		// Build structures.
+		const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+
 		// Build spawns before building anything else.
 		const spawnSites = _.filter(targets, structure => structure.structureType === STRUCTURE_SPAWN);
 		if (spawnSites.length > 0) {
@@ -111,6 +112,11 @@ RemoteBuilderRole.prototype.performRemoteBuild = function () {
 				}
 			}
 		}
+
+		if (!creep.memory.buildTarget) {
+			// Could not set a target for building. Start upgrading instead.
+			creep.memory.upgrading = true;
+		}
 	}
 
 	const target = Game.getObjectById(creep.memory.buildTarget);
@@ -125,9 +131,8 @@ RemoteBuilderRole.prototype.performRemoteBuild = function () {
 		return;
 	}
 
-	// Otherwise, upgrade controller.
+	// If build target is gone, find a new one next tick.
 	delete creep.memory.buildTarget;
-	creep.memory.upgrading = true;
 };
 
 /**
