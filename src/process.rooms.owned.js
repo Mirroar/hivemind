@@ -41,7 +41,7 @@ OwnedRoomProcess.prototype.run = function () {
 	const prioritizeRoomManager = this.room.roomManager.shouldRunImmediately();
 	hivemind.runSubProcess('rooms_manager', () => {
 		hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
-			interval: prioritizeRoomManager ? 100 : 0,
+			interval: prioritizeRoomManager ? 0 : 100,
 			room: this.room,
 			priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
 		});
