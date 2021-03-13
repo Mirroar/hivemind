@@ -56,7 +56,12 @@ module.exports = class TransporterSpawnRole extends SpawnRole {
 
 		// On higher level rooms, spawn less, but bigger, transporters.
 		maxTransporters /= transporterSize;
-		maxTransporters = Math.max(maxTransporters, 2);
+		if (room.controller.level > 6) {
+			maxTransporters = Math.max(maxTransporters, 2);
+		}
+		else {
+			maxTransporters = Math.max(maxTransporters, 3);
+		}
 
 		if (room.isClearingTerminal() && room.terminal && _.sum(room.terminal.store) > room.terminal.storeCapacity * 0.01) {
 			maxTransporters *= 1.5;
@@ -95,7 +100,9 @@ module.exports = class TransporterSpawnRole extends SpawnRole {
 			}
 		}
 
-		// RCL 6 is that annoying level at which refilling extensions is very tedious and there are many things that need spawning.
+		// RCL 5 and 6 are that annoying level at which refilling extensions is
+		// very tedious and there are many things that need spawning.
+		if (room.controller.level === 5) maxTransporters++;
 		if (room.controller.level === 6) maxTransporters++;
 
 		// Need less transporters in rooms where remote builders are working.
