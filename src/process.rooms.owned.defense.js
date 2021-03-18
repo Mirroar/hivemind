@@ -25,6 +25,7 @@ RoomDefenseProcess.prototype = Object.create(Process.prototype);
  * Manages defenses.
  */
 RoomDefenseProcess.prototype.run = function () {
+	this.room.defense.openRampartsToFriendlies();
 	this.manageTowers();
 	this.manageSafeMode();
 };
@@ -62,7 +63,7 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 				},
 			});
 			const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-				filter: creep => creep.isDangerous(),
+				filter: creep => creep.isDangerous() || this.room.defense.isThief(creep),
 			});
 
 			if (closestHostileHealer) {
