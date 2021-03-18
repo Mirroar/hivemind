@@ -1,6 +1,6 @@
 'use strict';
 
-/* global MOVE WORK */
+/* global hivemind MOVE WORK */
 
 const SpawnRole = require('./spawn-role');
 
@@ -16,6 +16,7 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		this.addManualDismantlers(room, options);
 		this.addRoomPlannerDismantlers(room, options);
+		this.addWallBreakerDismantlers(room, options);
 	}
 
 	/**
@@ -64,6 +65,27 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 				weight: 0,
 				targetRoom: room.name,
 			});
+		}
+	}
+
+	addWallBreakerDismantlers(room, options) {
+		const wallsToBreak = ['E10N24', 'E20N21'];
+		for (const roomName of wallsToBreak) {
+			if (Memory.strategy.roomList[roomName].origin !== room.name) continue;
+
+			const intel = hivemind.roomIntel(roomName);
+			if (!intel.memory.wallBreaker) continue;
+			if (intel.memory.wallBreaker.total === 0) continue;
+
+			const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === roomName && creep.memory.sourceRoom === room.name).length;
+
+			if (numDismantlers < 1) {
+				options.push({
+					priority: 2,
+					weight: 1,
+					targetRoom: roomName,
+				});
+			}
 		}
 	}
 
