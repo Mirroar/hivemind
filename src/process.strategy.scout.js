@@ -196,11 +196,11 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		if (isMyRoom && this.decoderCount[roomIntel.getDecoderType()] === 1) {
 			// Losing a decoder is only relevant if it's the last of its type.
 			// @todo Or if it's the highest level of its kind.
-			result.addScore(1, 'numDecoders');
+			result.addScore(2, 'numDecoders');
 		}
 		else if (!isMyRoom && this.decoderCount[roomIntel.getDecoderType()] === 0) {
 			// Gaining a decoder is only relevant if it's a new type.
-			result.addScore(1, 'numDecoders');
+			result.addScore(2, 'numDecoders');
 		}
 	}
 
