@@ -1,11 +1,11 @@
 'use strict';
 
-/* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES
+/* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES LOOK_STRUCTURES
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER
-STRUCTURE_PORTAL FIND_SYMBOL_CONTAINERS FIND_SYMBOL_DECODERS */
+STRUCTURE_PORTAL FIND_SYMBOL_CONTAINERS FIND_SYMBOL_DECODERS STRUCTURE_WALL */
 
 const utilities = require('./utilities');
 const interShard = require('./intershard');
@@ -69,6 +69,7 @@ RoomIntel.prototype.gatherIntel = function () {
 	// @todo Check enemy structures.
 
 	// @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
+	this.generateWallBreakerCostMatrix(room);
 };
 
 /**
@@ -747,6 +748,44 @@ RoomIntel.prototype.registerScoutAttempt = function () {
  */
 RoomIntel.prototype.getLastScoutAttempt = function () {
 	return this.memory.lastScout || 0;
+};
+
+/**
+ * @code
+ * _.each(Memory.rooms, (mem, roomName) => {if (mem.intel.wallBreaker) console.log(roomName, mem.intel.wallBreaker.total)})
+ * @endcode
+ */
+RoomIntel.prototype.generateWallBreakerCostMatrix = function (room) {
+	if (!room.name.startsWith('E10N2') && !room.name.startsWith('E20N2')) return;
+	if (this.memory.wallBreaker && Game.time - this.memory.wallBreaker.generated < 5000) return;
+
+	// Generate cost matrix for digging through wall.
+	const matrix = new PathFinder.CostMatrix();
+	_.each(room.find(FIND_STRUCTURES), structure => {
+		if (structure.structureType !== STRUCTURE_WALL) {
+			matrix.set(structure.pos.x, structure.pos.y, 255);
+			return;
+		}
+
+		matrix.set(structure.pos.x, structure.pos.y, Math.ceil(100 * structure.hits / structure.hitsMax));
+	});
+
+	const result = PathFinder.search(
+		new RoomPosition(29, 21, room.name),
+		new RoomPosition(21, 29, room.name),
+		{
+			roomCallback: () => matrix,
+			plainCost: 0,
+			swampCost: 0,
+			maxRooms: 1,
+		}
+	);
+
+	this.memory.wallBreaker = {
+		tiles: _.map(_.filter(result.path, pos => pos.lookFor(LOOK_STRUCTURES).length > 0), utilities.encodePosition),
+		total: result.cost,
+		generated: Game.time,
+	};
 };
 
 module.exports = RoomIntel;
