@@ -37,6 +37,9 @@ ReportProcess.prototype.initMemory = function (baseTimestamp) {
 			gpl: Game.gpl,
 			power: [],
 			remoteHarvestCount: Memory.strategy.remoteHarvesting.currentCount,
+			score: Game.score,
+			symbols: _.sum(Game.symbols),
+			storedSymbols: this.getStoredSymbols(),
 		},
 	};
 
@@ -83,6 +86,7 @@ ReportProcess.prototype.generateReport = function () {
 	this.generateLevelReport('gpl', 'Power');
 	this.generateRemoteMiningReport();
 	this.generatePowerReport();
+	this.generateScoreReport();
 
 	// @todo Report market transactions.
 };
@@ -154,6 +158,26 @@ ReportProcess.prototype.generateRemoteMiningReport = function () {
 	}
 
 	Game.notify(reportText);
+};
+
+ReportProcess.prototype.generateScoreReport = function () {
+	let reportText = this.generateHeading('Score');
+
+	reportText += 'Points: ' + Game.score + ' (+' + (Game.score - (this.memory.data.score || 0)) + ')<br>';
+	reportText += 'Symbols: ' + _.sum(Game.symbols) + ' (+' + (_.sum(Game.symbols) - (this.memory.data.symbols || 0)) + ')<br>';
+	reportText += 'Stored: ' + this.getStoredSymbols() + ' (+' + (this.getStoredSymbols() - (this.memory.data.storedSymbols || 0)) + ')';
+};
+
+ReportProcess.prototype.getStoredSymbols = function () {
+	let amount = 0;
+	const rooms = _.filter(Game.rooms, r => r.isMine() && r.storage);
+	_.each(rooms, room => {
+		const storageSymbols = _.filter(room.storage ? room.storage.store : {}, (a, r) => _.includes(SYMBOLS, r));
+		const terminalSymbols = _.filter(room.terminal ? room.terminal.store : {}, (a, r) => _.includes(SYMBOLS, r));
+		amount += _.sum(storageSymbols) + _.sum(terminalSymbols);
+	});
+
+	return amount;
 };
 
 /**
