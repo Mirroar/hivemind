@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
+/* global hivemind Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES SYMBOLS
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
 const utilities = require('./utilities');
@@ -103,6 +103,24 @@ Room.prototype.getCurrentMineralAmount = function () {
 
 	for (const resourceType of RESOURCES_ALL) {
 		if (resourceType === RESOURCE_ENERGY || resourceType === RESOURCE_POWER) continue;
+		if (resourceType.startsWith('symbol_')) continue;
+		total += this.getCurrentResourceAmount(resourceType);
+	}
+
+	return total;
+};
+
+/**
+ * Gets amount of symbols stored in a room.
+ *
+ * @return {number}
+ *   Amount of symbols stored in this room.
+ */
+Room.prototype.getCurrentSymbolAmount = function () {
+	// @todo This could use caching.
+	let total = 0;
+
+	for (const resourceType of SYMBOLS) {
 		total += this.getCurrentResourceAmount(resourceType);
 	}
 
@@ -116,7 +134,7 @@ Room.prototype.getCurrentMineralAmount = function () {
  *   True if storage limit for energy has been reached.
  */
 Room.prototype.isFullOnEnergy = function () {
-	return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 2;
+	return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 3;
 };
 
 /**
@@ -136,7 +154,17 @@ Room.prototype.isFullOnPower = function () {
  *   True if storage limit for minerals has been reached.
  */
 Room.prototype.isFullOnMinerals = function () {
-	return this.getCurrentMineralAmount() > this.getStorageLimit() / 3;
+	return this.getCurrentMineralAmount() > this.getStorageLimit() / 10;
+};
+
+/**
+ * Decides whether a room's storage has too many symbols.
+ *
+ * @return {boolean}
+ *   True if storage limit for symbols has been reached.
+ */
+Room.prototype.isFullOnSymbols = function () {
+	return this.getCurrentSymbolAmount() > 2 * this.getStorageLimit() / 3;
 };
 
 /**
@@ -151,6 +179,7 @@ Room.prototype.isFullOnMinerals = function () {
 Room.prototype.isFullOn = function (resourceType) {
 	if (resourceType === RESOURCE_ENERGY) return this.isFullOnEnergy();
 	if (resourceType === RESOURCE_POWER) return this.isFullOnPower();
+	if (resourceType.startsWith('symbol_')) return this.isFullOnSymbols();
 	return this.isFullOnMinerals();
 };
 
