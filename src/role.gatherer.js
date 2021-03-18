@@ -5,6 +5,7 @@ STRUCTURE_STORAGE STRUCTURE_TERMINAL FIND_SYMBOL_CONTAINERS */
 
 const utilities = require('./utilities');
 const Role = require('./role');
+const ScoutRole = require('./role.scout');
 
 /**
  * Gatherers collect resources from safe sources outside their spawn room.
@@ -20,6 +21,15 @@ const Role = require('./role');
  */
 module.exports = class GathererRole extends Role {
 	/**
+	 * Creates a new GathererRole object.
+	 */
+	constructor() {
+		super();
+
+		this.scoutRole = new ScoutRole();
+	}
+
+	/**
 	 * Makes this creep behave like a gatherer.
 	 *
 	 * @param {Creep} creep
@@ -31,7 +41,15 @@ module.exports = class GathererRole extends Role {
 			return;
 		}
 
-		this.gatherResources(creep);
+		if (creep.memory.targetRoom) {
+			this.gatherResources(creep);
+			return;
+		}
+
+		this.scoutRole.run(creep);
+
+		// @todo Once we find a symbol container, gather from it and notify other
+		// nearby gatherers without target room.
 	}
 
 	/**
@@ -55,7 +73,16 @@ module.exports = class GathererRole extends Role {
 
 		// Choose a target in the room.
 		const target = this.getGatherTarget(creep);
-		if (!target) return;
+		if (!target) {
+			if (creep.store.getUsedCapacity() * 2 > creep.store.getFreeCapacity()) {
+				// Deliver what resources we gathered.
+				creep.memory.delivering = true;
+			}
+
+			// Go scouting afterwards.
+			delete creep.memory.targetRoom;
+			return;
+		}
 
 		this.gatherFromTarget(creep, target);
 	}
