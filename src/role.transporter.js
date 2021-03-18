@@ -5,7 +5,7 @@ STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES
-FIND_TOMBSTONES FIND_RUINS */
+FIND_TOMBSTONES FIND_RUINS FIND_SYMBOL_CONTAINERS */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -334,6 +334,16 @@ TransporterRole.prototype.getAvailableDeliveryTargets = function () {
 
 		this.addHighLevelResourceDeliveryOptions(options, resourceType);
 		this.addLabResourceDeliveryOptions(options, resourceType);
+
+		if (resourceType === creep.room.decoder.resourceType && this.shouldScoreSymbols()) {
+			options.push({
+				priority: 4,
+				weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+				type: 'decoder',
+				object: room.decoder,
+				resourceType,
+			});
+		}
 
 		// As a last resort, simply drop the resource since it can't be put anywhere.
 		options.push({
@@ -865,6 +875,8 @@ TransporterRole.prototype.getAvailableSources = function () {
 	this.addDroppedResourceOptions(options);
 	this.addTombstoneResourceOptions(options);
 	this.addRuinResourceOptions(options);
+	this.addSymbolContainerResourceOptions(options);
+	this.addSymbolResourceOptions(options);
 	this.addContainerResourceOptions(options);
 	this.addHighLevelResourceOptions(options);
 	this.addEvacuatingRoomResourceOptions(options);
@@ -1314,6 +1326,50 @@ TransporterRole.prototype.addRuinResourceOptions = function (options) {
 };
 
 /**
+ * Adds options for picking up resources from symbol containers to list.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+TransporterRole.prototype.addSymbolContainerResourceOptions = function (options) {
+	const creep = this.creep;
+	if (!creep.room.storage) return;
+
+	// Look for resources on the ground.
+	const targets = creep.room.find(FIND_SYMBOL_CONTAINERS, {
+		filter: container => {
+			if (_.sum(container.store) > 10) {
+				const result = PathFinder.search(creep.pos, container.pos);
+				if (!result.incomplete) return true;
+			}
+
+			return false;
+		},
+	});
+
+	for (const target of targets) {
+		for (const resourceType of _.keys(target.store)) {
+			if (target.store[resourceType] === 0) continue;
+
+			const option = {
+				priority: 5,
+				weight: target.store[resourceType] / 30, // @todo Also factor in distance.
+				type: 'tombstone',
+				object: target,
+				resourceType,
+			};
+
+			if (creep.room.getFreeStorage() < target.store[resourceType]) {
+				// If storage is super full, try leaving stuff on the ground.
+				option.priority -= 2;
+			}
+
+			options.push(option);
+		}
+	}
+};
+
+/**
  * Adds options for picking up resources from containers to priority list.
  *
  * @param {Array} options
@@ -1394,6 +1450,40 @@ TransporterRole.prototype.addHighLevelResourceOptions = function (options) {
 		}
 	}
 };
+
+TransporterRole.prototype.addSymbolResourceOptions = function (options) {
+	if (!this.shouldScoreSymbols()) return;
+
+	const target = room.getBestStorageSource(this.decoder.resourceType);
+	if (target && target.store.power > 0) {
+		// @todo Limit amount since power spawn can only hold 100 power at a time.
+		// @todo Make sure only 1 creep does this at a time.
+		const option = {
+			priority: 3,
+			weight: 1, // @todo Also factor in distance.
+			type: 'structure',
+			object: target,
+			resourceType: this.decoder.resourceType,
+		};
+
+		options.push(option);
+	}
+};
+
+TransporterRole.prototype.shouldScoreSymbols = function () {
+	const room = this.creep.room;
+
+	// Score symbols if storage is filling up.
+	if (room.isFullOnSymbols()) return true;
+
+	// Score if controller has reached max level.
+	if (room.controller.level === 8) return true;
+
+	// Score if a strong attack is incoming.
+	if (room.defense.getEnemyStrength() >= 2) return true;
+
+	return false;
+}
 
 /**
  * Adds options for picking up resources for moving to terminal.
