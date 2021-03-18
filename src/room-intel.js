@@ -297,6 +297,9 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
 RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins) {
 	delete this.memory.abandonedResources;
 
+	// Resources in owned rooms are not considered abandoned.
+	if (this.isOwned()) return;
+
 	// Find origin room.
 	if (!Memory.strategy) return;
 	if (!Memory.strategy.roomList) return;
@@ -330,6 +333,26 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 	if (_.keys(resources).length === 0) return;
 
 	roomMemory.abandonedResources[this.roomName] = resources;
+
+	const numSymbols = _.sum(_.filter(resources, (a, r) => _.includes(SYMBOLS, r)));
+	const assignedGatherers = _.filter(Game.creepsByRole.gatherer || {}, creep => creep.memory.targetRoom === this.roomName);
+	let assignedSpace = _.sum(_.map(assignedGatherers, creep => creep.store.getCapacity()));
+	const availableGatherers = _.filter(
+		Game.creepsByRole.gatherer,
+		creep => !creep.memory.targetRoom &&
+			Game.map.getRoomLinearDistance(creep.room.name, this.roomName) <= 5 &&
+			creep.ticksToLive > (strategyInfo.range + Game.map.getRoomLinearDistance(creep.room.name, this.roomName)) * 50,
+	);
+	_.sortBy(availableGatherers, creep => Game.map.getRoomLinearDistance(creep.room.name, this.roomName));
+	_.each(availableGatherers, creep => {
+		// If we have enough gathering space assigned, we're done.
+		if (assignedSpace >= numSymbols) return false;
+
+		// Reassign gatherer to this room.
+		creep.memory.targetRoom = this.roomName;
+		creep.memory.origin = strategyInfo.origin;
+		assignedSpace += creep.store.getCapacity();
+	});
 
 	// @todo Consider resources from buildings that might need dismantling first.
 
