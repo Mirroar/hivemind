@@ -78,11 +78,15 @@ ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
 
 		for (const resourceType of _.keys(roomState.state)) {
 			const resourceLevel = roomState.state[resourceType] || 'low';
-			if (!_.includes(['high', 'excessive'], resourceLevel) && !roomState.isEvacuating) continue;
+			if (!_.includes(['high', 'excessive'], resourceLevel) && !roomState.isEvacuating && !_.includes(SYMBOLS, resourceType)) continue;
 
 			// Make sure we have enough to send (while evacuating).
 			if (roomState.totalResources[resourceType] < 100) continue;
 			if (resourceType === RESOURCE_ENERGY && roomState.totalResources[resourceType] < 10000) continue;
+
+			// Don't send away symbols needed in this room.
+			// @todo Unless there's a better room with the same symbol?
+			if (resourceType === room.decoder.resourceType) continue;
 
 			// Look for other rooms that are low on this resource.
 			_.each(rooms, (roomState2, roomName2) => {
@@ -91,6 +95,17 @@ ResourcesProcess.prototype.getAvailableTransportRoutes = function () {
 
 				if (!roomState2.canTrade) return;
 				if (roomState2.isEvacuating) return;
+				if (resourceType === room2.decoder.resourceType) {
+					options.push({
+						priority: 3,
+						weight: ((roomState.totalResources[resourceType] - roomState2.totalResources[resourceType]) / 100000) - Game.map.getRoomLinearDistance(roomName, roomName2),
+						resourceType,
+						source: roomName,
+						target: roomName2,
+					});
+				}
+				else if (_.includes(SYMBOLS, resourceType) && !roomState.isEvacuating) return;
+
 
 				const isLow = resourceLevel2 === 'low';
 				const isLowEnough = resourceLevel2 === 'medium';
