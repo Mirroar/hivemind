@@ -5,6 +5,26 @@ FIND_STRUCTURES */
 
 const LinkNetwork = require('./link-network');
 
+// Define quick access property room.decoder
+Object.defineProperty(Room.prototype, 'decoder', {
+
+	/**
+	 * Gets a room's symbol decoder.
+	 *
+	 * @return {SymbolDecoder}
+	 *   The room's symbol decoder.
+	 */
+	get() {
+		if (!this._decoder) {
+			this._decoder = _.sample(this.find(FIND_SYMBOL_DECODERS));
+		}
+
+		return this._decoder;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
 /**
  * Moves creep within a certain range of a target.
  */
