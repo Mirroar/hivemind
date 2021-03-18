@@ -206,6 +206,7 @@ RoomIntel.prototype.gatherTerrainIntel = function () {
  */
 RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	delete this.memory.power;
+	return;
 
 	const powerBank = _.first(powerBanks);
 	if (!powerBank || powerBank.hits === 0 || powerBank.power === 0) return;
