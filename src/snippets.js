@@ -3,6 +3,10 @@
  */
 /* global FIND_CONSTRUCTION_SITES */
 
+// Season 2 stuff:
+// List all owned rooms and their symbols.
+JSON.stringify(_.map(_.filter(Game.rooms, r => r.isMine()), room => {return {name: room.name, symbol: room.decoder.resourceType, rcl: room.controller.level}}));
+
 // Remove all constructions sites in a roon you have vision in:
 _.forEach(Game.rooms.E49S48.find(FIND_CONSTRUCTION_SITES), s => s.remove());
 
