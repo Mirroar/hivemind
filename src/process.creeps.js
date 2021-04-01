@@ -24,6 +24,7 @@ const creepRoles = [
 	'hauler.exploit',
 	'hauler.power',
 	'helper',
+	'mule',
 	'scout',
 	'transporter',
 	'unassigned',

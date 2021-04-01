@@ -3,6 +3,8 @@
 /* global hivemind */
 
 const Process = require('./process');
+const TradeRoute = require('./trade-route');
+const utilities = require('./utilities');
 
 /**
  * Displays map visuals.
@@ -38,7 +40,14 @@ module.exports = class MapVisualsProcess extends Process {
     _.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy.roomList[roomName]), (mem, roomName) => {
       if (typeof roomName !== 'string') return;
       this.drawIntelStatus(roomName);
-    })
+    });
+
+    let routeCounter = 0;
+    _.each(Memory.tradeRoutes, (mem, routeName) => {
+      this.drawTradeRoute(new TradeRoute(routeName), routeCounter++);
+    });
+
+    this.drawNavMesh();
   }
 
   /**
@@ -72,5 +81,24 @@ module.exports = class MapVisualsProcess extends Process {
    */
   drawInfluenceBorders(roomName) {
     // @todo
+  }
+
+  /**
+   * Visualizes a trade route path.
+   */
+  drawTradeRoute(route, routeIndex) {
+    const numRoutes = _.size(Memory.tradeRoutes);
+    const offset = Math.floor(((routeIndex * 50) + 25) / numRoutes);
+
+    const color = route.isActive() ? '#ffffff' : '#888888';
+    const points = [new RoomPosition(offset, offset, route.getOrigin())];
+    for (const roomName of route.getPath()) {
+      points.push(new RoomPosition(offset, offset, roomName));
+    }
+
+    Game.map.visual.poly(points, {
+      stroke: color,
+      lineStyle: 'dashed',
+    });
   }
 };
