@@ -67,7 +67,7 @@ ExpandProcess.prototype.run = function () {
 
 	// Check if we could benefit from giving up a room to expand to a better one.
 	if (shortTermCpuUsage > cpuLimit && longTermCpuUsage > cpuLimit) {
-		this.abandonWeakRoom();
+		// this.abandonWeakRoom();
 	}
 
 	this.manageEvacuation();
