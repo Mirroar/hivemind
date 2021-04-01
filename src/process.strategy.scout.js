@@ -198,7 +198,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 			// @todo Or if it's the highest level of its kind.
 			result.addScore(2, 'numDecoders');
 		}
-		else if (!isMyRoom && this.decoderCount[roomIntel.getDecoderType()] === 0) {
+		else if (!isMyRoom && (this.decoderCount[roomIntel.getDecoderType()] || 0) === 0) {
 			// Gaining a decoder is only relevant if it's a new type.
 			result.addScore(2, 'numDecoders');
 		}
