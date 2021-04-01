@@ -3,6 +3,7 @@
 /* global RoomPosition FIND_FLAGS LOOK_STRUCTURES */
 
 const Role = require('./role');
+const utilities = require('./utilities');
 
 const DismantlerRole = function () {
 	Role.call(this);
@@ -65,7 +66,14 @@ DismantlerRole.prototype.performDismantle = function (creep) {
 		return;
 	}
 
+	if (creep.memory.target) {
+		this.dismantleTarget(creep);
+		return;
+	}
+
 	let target;
+
+	// @todo Refactor so we always use the pathfinding code.
 
 	// Look for dismantle flags.
 	const flags = creep.room.find(FIND_FLAGS, {
@@ -91,13 +99,59 @@ DismantlerRole.prototype.performDismantle = function (creep) {
 		}
 	}
 
+	if (!target && creep.room.memory.intel.wallBreaker) {
+		const walls = [];
+		for (const wallPosition of creep.room.memory.intel.wallBreaker.tiles) {
+			const structures = utilities.decodePosition(wallPosition).lookFor(LOOK_STRUCTURES);
+			if (structures.length === 0) continue;
+
+			walls.push({pos: structures[0].pos, range: 1});
+		}
+
+		if (walls.length === 0) return;
+
+		const result = PathFinder.search(
+			creep.pos,
+			walls,
+			{
+				roomCallback: roomName => hivemind.roomIntel(roomName).getCostMatrix(),
+				maxRooms: 1,
+			}
+		);
+
+		if (result.incomplete) return;
+
+		const adjacentPos = result.path[result.path.length - 1];
+		for (const wallPosition of creep.room.memory.intel.wallBreaker.tiles) {
+			const structures = utilities.decodePosition(wallPosition).lookFor(LOOK_STRUCTURES);
+			if (structures.length === 0) continue;
+			if (structures[0].pos.getRangeTo(adjacentPos) > 1) continue;
+
+			target = structures[0];
+			break;
+		}
+	}
+
 	if (target) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			creep.dismantle(target);
-		}
+		creep.memory.target = target.id;
+		this.dismantleTarget(creep);
+	}
+};
+
+DismantlerRole.prototype.dismantleTarget = function (creep) {
+	if (!creep.memory.target) return;
+
+	const target = Game.getObjectById(creep.memory.target);
+	if (!target) {
+		delete creep.memory.target;
+		return;
+	}
+
+	if (creep.pos.getRangeTo(target) > 1) {
+		creep.moveToRange(target, 1);
+	}
+	else {
+		creep.dismantle(target);
 	}
 };
 
