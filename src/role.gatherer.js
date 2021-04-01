@@ -46,10 +46,13 @@ module.exports = class GathererRole extends Role {
 			return;
 		}
 
-		this.scoutRole.run(creep);
+		if (creep.store.getUsedCapacity() * 2 > creep.store.getFreeCapacity()) {
+			// Deliver what resources we gathered.
+			creep.memory.delivering = true;
+			return;
+		}
 
-		// @todo Once we find a symbol container, gather from it and notify other
-		// nearby gatherers without target room.
+		this.scoutRole.run(creep);
 	}
 
 	/**
@@ -65,26 +68,40 @@ module.exports = class GathererRole extends Role {
 			return;
 		}
 
-		if (creep.pos.roomName !== creep.memory.targetRoom) {
-			// Move back to spawn room.
-			creep.moveToRoom(creep.memory.targetRoom);
+		const isInTargetRoom = creep.pos.roomName === creep.memory.targetRoom;
+		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+			// Move to target room.
+			if (creep.moveUsingNavMesh(new RoomPosition(25, 25, creep.memory.targetRoom)) !== OK) {
+				// Can't reach target room, for example because of enemies.
+				// Go scout, then.
+				delete creep.memory.targetRoom;
+			}
+
 			return;
 		}
 
+		creep.stopNavMeshMove();
+
 		// Choose a target in the room.
 		const target = this.getGatherTarget(creep);
-		if (!target) {
+		if (!target && !creep.memory.delivering) {
 			if (creep.store.getUsedCapacity() * 2 > creep.store.getFreeCapacity()) {
 				// Deliver what resources we gathered.
 				creep.memory.delivering = true;
 			}
 
-			// Go scouting afterwards.
-			delete creep.memory.targetRoom;
+			// Go scouting afterwards. Same for all other gatherers assigned to this
+			// room.
+			const roomName = creep.memory.targetRoom;
+			_.each(Game.creepsByRole.gatherer, creep2 => {
+				if (creep2.memory.targetRoom === roomName) delete creep.memory.targetRoom;
+			});
 			return;
 		}
 
-		this.gatherFromTarget(creep, target);
+		if (target) {
+			this.gatherFromTarget(creep, target);
+		}
 	}
 
 	/**
@@ -118,6 +135,8 @@ module.exports = class GathererRole extends Role {
 		}
 
 		creep.memory.target = option.target;
+		const target = Game.getObjectById(creep.memory.target);
+		if (target) return target;
 	}
 
 	/**
@@ -270,11 +289,17 @@ module.exports = class GathererRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	deliverResources(creep) {
-		if (creep.pos.roomName !== creep.memory.origin) {
+		const isInTargetRoom = creep.pos.roomName === creep.memory.origin;
+		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
 			// Move back to spawn room.
-			creep.moveToRoom(creep.memory.origin);
+			if (creep.moveUsingNavMesh(new RoomPosition(25, 25, creep.memory.origin)) !== OK) {
+				// @todo What if we can't deliver? Find a new "origin" room to deliver to?
+			}
+
 			return;
 		}
+
+		creep.stopNavMeshMove();
 
 		// Choose a resource and deliver it.
 		_.each(creep.store, (amount, resourceType) => {
