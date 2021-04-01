@@ -1,6 +1,6 @@
 'use strict';
 
-/* global */
+/* global SYMBOLS */
 
 const Process = require('./process');
 
@@ -166,6 +166,8 @@ ReportProcess.prototype.generateScoreReport = function () {
 	reportText += 'Points: ' + Game.score + ' (+' + (Game.score - (this.memory.data.score || 0)) + ')<br>';
 	reportText += 'Symbols: ' + _.sum(Game.symbols) + ' (+' + (_.sum(Game.symbols) - (this.memory.data.symbols || 0)) + ')<br>';
 	reportText += 'Stored: ' + this.getStoredSymbols() + ' (+' + (this.getStoredSymbols() - (this.memory.data.storedSymbols || 0)) + ')';
+
+	Game.notify(reportText);
 };
 
 ReportProcess.prototype.getStoredSymbols = function () {
