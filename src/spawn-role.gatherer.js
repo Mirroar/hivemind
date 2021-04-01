@@ -26,11 +26,29 @@ module.exports = class GathererSpawnRole extends SpawnRole {
 			if (Game.shard.name === 'shard0') return;
 			if (numGatherers > 0) return;
 
+			const numGatherersByRoom = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.origin === room.name).length;
+			if (numGatherersByRoom > 2) return;
+
 			options.push({
 				priority: 2,
 				weight: 0.8,
 				targetRoom: roomName,
 			});
+		});
+
+		// In high rcl rooms, spawn gatherers as scouts to collect symbols all the time.
+		if (room.controller.level <= 6) return;
+		const numGatherers = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.origin === room.name).length;
+		if (numGatherers > 1) return;
+		options.push({
+			priority: 2,
+			weight: 0,
+		});
+
+		if (numGatherers > 0) return;
+		options.push({
+			priority: 2,
+			weight: 0.5,
 		});
 	}
 
