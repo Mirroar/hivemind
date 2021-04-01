@@ -19,7 +19,7 @@ module.exports = class ScoutSpawnRole extends SpawnRole {
 		this.addIntershardSpawnOptions(room, options);
 
 		const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
-		if (_.size(roomScouts) > 2 || !room.needsScout()) return;
+		if (_.size(roomScouts) > 0 || !room.needsScout()) return;
 
 		options.push({
 			priority: 1,
