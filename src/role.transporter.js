@@ -340,7 +340,7 @@ TransporterRole.prototype.getAvailableDeliveryTargets = function () {
 				priority: 4,
 				weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
 				type: 'decoder',
-				object: room.decoder,
+				object: creep.room.decoder,
 				resourceType,
 			});
 		}
@@ -715,6 +715,9 @@ TransporterRole.prototype.ensureValidDeliveryTargetObject = function (target, re
 	if (resourceType === RESOURCE_GHODIUM && target.ghodiumCapacity && target.ghodium < target.ghodiumCapacity) return true;
 	if (resourceType === RESOURCE_POWER && target.powerCapacity && target.power < target.powerCapacity) return true;
 	if (target.mineralCapacity && ((target.mineralType || resourceType) === resourceType) && target.mineralAmount < target.mineralCapacity) return true;
+	if (target.resourceType && resourceType === target.resourceType) return true;
+
+	return false;
 };
 
 /**
@@ -1454,8 +1457,10 @@ TransporterRole.prototype.addHighLevelResourceOptions = function (options) {
 TransporterRole.prototype.addSymbolResourceOptions = function (options) {
 	if (!this.shouldScoreSymbols()) return;
 
-	const target = room.getBestStorageSource(this.decoder.resourceType);
-	if (target && target.store.power > 0) {
+	const room = this.creep.room;
+
+	const target = room.getBestStorageSource(room.decoder.resourceType);
+	if (target && target.store[room.decoder.resourceType] > 0) {
 		// @todo Limit amount since power spawn can only hold 100 power at a time.
 		// @todo Make sure only 1 creep does this at a time.
 		const option = {
@@ -1463,7 +1468,7 @@ TransporterRole.prototype.addSymbolResourceOptions = function (options) {
 			weight: 1, // @todo Also factor in distance.
 			type: 'structure',
 			object: target,
-			resourceType: this.decoder.resourceType,
+			resourceType: room.decoder.resourceType,
 		};
 
 		options.push(option);
@@ -1483,7 +1488,7 @@ TransporterRole.prototype.shouldScoreSymbols = function () {
 	if (room.defense.getEnemyStrength() >= 2) return true;
 
 	return false;
-}
+};
 
 /**
  * Adds options for picking up resources for moving to terminal.
