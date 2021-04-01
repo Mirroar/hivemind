@@ -69,13 +69,16 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 	}
 
 	addWallBreakerDismantlers(room, options) {
-		const wallsToBreak = ['E10N24', 'E20N21'];
+		if (!Memory.strategy || !Memory.strategy.roomList) return;
+
+		const wallsToBreak = [];
 		for (const roomName of wallsToBreak) {
 			if (Memory.strategy.roomList[roomName].origin !== room.name) continue;
 
 			const intel = hivemind.roomIntel(roomName);
 			if (!intel.memory.wallBreaker) continue;
 			if (intel.memory.wallBreaker.total === 0) continue;
+			if (intel.memory.wallBreaker.tiles.length === 0) continue;
 
 			const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === roomName && creep.memory.sourceRoom === room.name).length;
 
