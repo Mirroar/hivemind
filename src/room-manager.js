@@ -369,11 +369,11 @@ module.exports = class RoomManager {
 
 		// Make sure all current nukers have been built.
 		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
-		this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
+		//this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
 
 		// Make sure all current power spawns have been built.
 		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
-		this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
+		//this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
 
 		// Make sure all current observers have been built.
 		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
