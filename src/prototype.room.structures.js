@@ -1,7 +1,7 @@
 'use strict';
 
 /* global hivemind Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
-FIND_STRUCTURES */
+FIND_STRUCTURES FIND_SYMBOL_DECODERS */
 
 const LinkNetwork = require('./link-network');
 
