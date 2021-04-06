@@ -242,12 +242,12 @@ const tradeRouteTargets = {
 	// Meridion
 	// Starting from W12N25.
 	W9N21: {sourceRoom: 'W12N25', resourceType: 'symbol_yodh', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21']},
-	W8N27: {sourceRoom: 'W12N25', resourceType: 'symbol_mem', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21', 'W9N22', 'W10N22', 'W10N23', 'W10N24', 'W10N25', 'W10N26', 'W9N27', 'W8N27']},
-	W5N28: {sourceRoom: 'W12N25', resourceType: 'symbol_waw', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21', 'W9N22', 'W10N22', 'W10N23', 'W10N24', 'W10N25', 'W10N26', 'W9N27', 'W8N27', 'W7N28', 'W6N29', 'W5N28']},
-	W1N28: {sourceRoom: 'W12N25', resourceType: 'symbol_tsade', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21', 'W9N22', 'W10N22', 'W10N23', 'W10N24', 'W10N25', 'W10N26', 'W9N27', 'W8N27', 'W7N28', 'W6N29', 'W5N28', 'W4N27', 'W3N28', 'W2N28', 'W1N28']},
-	W5N23: {sourceRoom: 'W12N25', resourceType: 'symbol_kaph', rcl: 7, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21', 'W8N21', 'W7N22', 'W6N23', 'W5N23']},
-	W1N22: {sourceRoom: 'W12N25', resourceType: 'symbol_he', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21', 'W8N21', 'W7N21', 'W6N20', 'W5N20', 'W4N20', 'W3N20', 'W2N21', 'W1N22']},
-	W2N25: {sourceRoom: 'W12N25', resourceType: 'symbol_mem', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N21', 'W8N21', 'W7N21', 'W6N20', 'W5N20', 'W4N20', 'W3N20', 'W2N21', 'W1N22', 'W1N23', 'W2N24', 'W2N25']},
+	W8N27: {sourceRoom: 'W12N25', resourceType: 'symbol_mem', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N22', 'W10N22', 'W10N23', 'W10N24', 'W10N25', 'W10N26', 'W9N27', 'W8N27']},
+	W5N28: {sourceRoom: 'W12N25', resourceType: 'symbol_waw', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N22', 'W10N22', 'W10N23', 'W10N24', 'W10N25', 'W10N26', 'W9N27', 'W7N28', 'W6N29', 'W5N28']},
+	W1N28: {sourceRoom: 'W12N25', resourceType: 'symbol_tsade', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W9N22', 'W10N22', 'W10N23', 'W10N24', 'W10N25', 'W10N26', 'W9N27', 'W7N28', 'W6N29', 'W5N29', 'W4N29', 'W3N29', 'W2N29', 'W1N28']},
+	W5N23: {sourceRoom: 'W12N25', resourceType: 'symbol_kaph', rcl: 7, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W8N21', 'W7N22', 'W6N23', 'W5N23']},
+	W1N22: {sourceRoom: 'W12N25', resourceType: 'symbol_he', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W8N21', 'W7N21', 'W6N20', 'W5N20', 'W4N20', 'W3N20', 'W2N21', 'W1N22']},
+	W2N25: {sourceRoom: 'W12N25', resourceType: 'symbol_mem', rcl: 8, path: ['W11N25', 'W10N24', 'W10N23', 'W10N22', 'W10N21', 'W8N21', 'W7N21', 'W6N20', 'W5N20', 'W4N20', 'W3N20', 'W2N21', 'W1N22', 'W1N23', 'W2N24', 'W2N25']},
 };
 
 ResourcesProcess.prototype.getSymbolDestinations = function () {
