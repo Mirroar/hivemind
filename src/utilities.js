@@ -20,6 +20,29 @@ const utilities = {
 	},
 
 	/**
+	 * Runs a callback within a try/catch block.
+	 *
+	 * @param {function} callback
+	 *   The callback to run.
+	 *
+	 * @return {mixed}
+	 *   Whatever the original fuction returns.
+	 */
+	bubbleWrap(callback) {
+		try {
+			return callback();
+		}
+		catch (e) {
+			let errorLocation = 'N/A';
+			if (hivemind.currentProcess) {
+				errorLocation = hivemind.currentProcess.constructor.name;
+			}
+			Game.notify(e.name + ' in ' + errorLocation + ':<br>' + e.stack);
+			console.log(e.name + ' in ' + errorLocation + ':<br>' + e.stack);
+		}
+	},
+
+	/**
 	 * Calculates and stores paths for remote harvesting.
 	 *
 	 * @param {Room} room
