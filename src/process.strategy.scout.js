@@ -177,6 +177,12 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		return result;
 	}
 
+	// Can't expand to closed rooms.
+	if (Game.map.getRoomStatus(roomName).status === 'closed') {
+		this.setExpansionScoreCache(roomName, result);
+		return result;
+	}
+
 	const roomIntel = hivemind.roomIntel(roomName);
 
 	// More sources is better.
