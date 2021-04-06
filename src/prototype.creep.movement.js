@@ -4,6 +4,7 @@
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
 const utilities = require('./utilities');
+const NavMesh = require('./nav-mesh');
 
 // @todo For multi-room movement we could save which rooms we're travelling through, and recalculate (part of) the path when a CostMatrix changes.
 // That info should probably live in global memory, we don't want that serialized...
@@ -465,8 +466,7 @@ Creep.prototype.moveToRoom = function (roomName, allowDanger) {
 	}
 
 	// Check which room to go to next.
-	const inRoom = (this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47);
-	if (!this.memory.nextRoom || (this.pos.roomName === this.memory.nextRoom && inRoom)) {
+	if (!this.memory.nextRoom || (this.pos.roomName === this.memory.nextRoom && this.isInRoom())) {
 		const path = this.calculateRoomPath(roomName, allowDanger);
 		if (_.size(path) < 1) {
 			// There is no valid path.
@@ -499,6 +499,59 @@ Creep.prototype.moveToRoom = function (roomName, allowDanger) {
  */
 Creep.prototype.calculateRoomPath = function (roomName, allowDanger) {
 	return this.room.calculateRoomPath(roomName, allowDanger);
+};
+
+Creep.prototype.isInRoom = function () {
+	return this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47;
+};
+
+Creep.prototype.moveUsingNavMesh = function (targetPos, options) {
+	if (!options) options = {};
+
+	const pos = utilities.encodePosition(targetPos);
+	if (!this.memory._nmpt || !this.memory._nmp || this.memory._nmpt !== pos) {
+		this.memory._nmpt = pos;
+		const mesh = new NavMesh();
+		this.memory._nmp = mesh.findPath(this.pos, targetPos, options);
+		if (this.memory._nmp.path) {
+			this.memory._nmp.path = _.map(this.memory._nmp.path, utilities.encodePosition);
+		}
+
+		this.memory._nmpi = 0;
+	}
+
+	if (!this.memory._nmp.path) {
+		if (this.moveToRoom(targetPos.roomName)) return OK;
+
+		return ERR_NO_PATH;
+	}
+
+	const nextPos = utilities.decodePosition(this.memory._nmp.path[this.memory._nmpi]);
+	if (this.pos.roomName !== nextPos.roomName || this.pos.getRangeTo(nextPos) > 1) {
+		const moveResult = this.moveToRange(nextPos, 1);
+		if (!moveResult) {
+			// Couldn't get to next path target.
+			// @todo Recalculate route?
+			return ERR_NO_PATH;
+		}
+	}
+
+	// If we reach a waypoint, increment path index.
+	if (this.pos.getRangeTo(nextPos) <= 1 && this.memory._nmpi < this.memory._nmp.path.length - 1) {
+		this.memory._nmpi++;
+	}
+
+	return OK;
+};
+
+Creep.prototype.getNavMeshMoveTarget = function () {
+	return this.memory._nmpt;
+};
+
+Creep.prototype.stopNavMeshMove = function () {
+	delete this.memory._nmpt;
+	delete this.memory._nmp;
+	delete this.memory._nmpi;
 };
 
 PowerCreep.prototype.moveToRange = Creep.prototype.moveToRange;

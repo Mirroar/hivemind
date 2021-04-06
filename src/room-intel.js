@@ -7,8 +7,9 @@ STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER
 STRUCTURE_PORTAL */
 
-const utilities = require('./utilities');
 const interShard = require('./intershard');
+const NavMesh = require('./nav-mesh');
+const utilities = require('./utilities');
 
 const RoomIntel = function (roomName) {
 	this.roomName = roomName;
@@ -64,6 +65,10 @@ RoomIntel.prototype.gatherIntel = function () {
 	// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
 	const constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 	this.generateCostMatrix(structures, constructionSites);
+
+	// Update nav mesh for this room.
+	const mesh = new NavMesh();
+	mesh.generateForRoom(this.roomName);
 
 	// @todo Check enemy structures.
 
