@@ -69,7 +69,7 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 			info.scoutPriority = 1;
 		}
 
-		if (roomIntel.memory.lastScan > 0 && roomIntel.isClaimable() && !(roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader')) {
+		if (roomIntel.memory.lastScan > 0 && roomIntel.isClaimable() && (!roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader'))) {
 			info.harvestPriority = this.calculateHarvestScore(roomName);
 
 			// Check if we could reasonably expand to this room.
@@ -123,7 +123,7 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
 	const info = Memory.strategy.roomList[roomName];
 
 	if (!info.safePath) return 0;
-	if (info.range === 0 || info.range > 2) return 0;
+	if (info.range === 0 || info.range > 3) return 0;
 
 	let income = -2000; // Flat cost for room reservation
 	let pathLength = 0;
@@ -462,7 +462,7 @@ ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedLi
 		if (openList[exit] || closedList[exit]) continue;
 
 		const roomIntel = hivemind.roomIntel(exit);
-		const roomIsSafe = !(roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader');
+		const roomIsSafe = !roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader');
 
 		openList[exit] = {
 			range: info.range + 1,

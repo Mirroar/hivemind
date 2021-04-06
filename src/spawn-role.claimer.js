@@ -33,6 +33,10 @@ module.exports = class ClaimerSpawnRole extends SpawnRole {
 				roomMemory.lastClaim.time + roomMemory.lastClaim.value - Game.time > CONTROLLER_RESERVE_MAX * 0.5
 			) continue;
 
+			// Don't spawn if enemies are in the room.
+			// @todo Or in any room on the route, actually.
+			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) continue;
+
 			options.push({
 				priority: 3,
 				weight: 0,

@@ -80,8 +80,7 @@ RemoteHarvesterRole.prototype.setRemoteHarvestState = function (creep, harvestin
 	if (!harvestMemory.cachedPath) {
 		// Try precalculating the path back home if it doesn't exist yet.
 		const room = Game.rooms[targetPosition.roomName];
-		const sourceFlag = {pos: utilities.decodePosition(creep.memory.source)};
-		utilities.precalculatePaths(room, sourceFlag.pos);
+		utilities.precalculatePaths(room, utilities.decodePosition(creep.memory.source));
 	}
 
 	if (harvestMemory.cachedPath) {

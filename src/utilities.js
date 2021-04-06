@@ -70,6 +70,13 @@ const utilities = {
 			return;
 		}
 
+		if (harvestMemory._noCachedPath && Game.time - harvestMemory._noCachedPath < 500 * hivemind.getThrottleMultiplier()) {
+			// No need to recalculate path.
+			return;
+		}
+
+		delete harvestMemory.cachedPath;
+		delete harvestMemory._noCachedPath;
 		const startLocation = room.getStorageLocation();
 		let startPosition = new RoomPosition(startLocation.x, startLocation.y, room.name);
 		if (room.storage) {
@@ -80,7 +87,7 @@ const utilities = {
 
 		const result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
 
-		if (result) {
+		if (result && !result.incomplete || result.path.length < 150) {
 			hivemind.log('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
 
 			harvestMemory.cachedPath = {
@@ -90,6 +97,7 @@ const utilities = {
 		}
 		else {
 			console.log('No path found!');
+			harvestMemory._noCachedPath = Game.time;
 		}
 	},
 

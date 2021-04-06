@@ -26,8 +26,15 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 			const targetPos = utilities.encodePosition(pos);
 			if (!room.memory.remoteHarvesting[targetPos]) continue;
 
+			// Don't spawn if enemies are in the room.
+			// @todo Or in any room on the route, actually.
+			const roomMemory = Memory.rooms[pos.roomName];
+			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) continue;
+
 			const harvestMemory = room.memory.remoteHarvesting[targetPos];
 			const cachedPathLength = harvestMemory.cachedPath && harvestMemory.cachedPath.path && harvestMemory.cachedPath.path.length;
+			if (!cachedPathLength) continue;
+
 			const travelTime = cachedPathLength || harvestMemory.travelTime;
 			const travelTimeSpawn = harvestMemory.travelTime || cachedPathLength;
 
