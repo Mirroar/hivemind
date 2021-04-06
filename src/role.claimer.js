@@ -123,6 +123,11 @@ ClaimerRole.prototype.performReserve = function (creep) {
 		creep.moveTo(target);
 	}
 	else {
+		if (creep.room.controller.reservation && creep.room.controller.reservation.username !== utilities.getUsername()) {
+			creep.attackController(target);
+			return;
+		}
+
 		const result = creep.reserveController(target);
 		if (result === OK) {
 			let reservation = 0;
