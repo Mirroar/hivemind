@@ -131,13 +131,13 @@ const utilities = {
 				const costs = utilities.getCostMatrix(roomName, options);
 
 				// Also try not to drive through bays.
-				_.filter(Game.flags, flag => {
-					return flag.pos.roomName === roomName && flag.name.startsWith('Bay:');
-				}).forEach(flag => {
-					if (costs.get(flag.pos.x, flag.pos.y) <= 20) {
-						costs.set(flag.pos.x, flag.pos.y, 20);
-					}
-				});
+				if (Game.rooms[roomName] && Game.rooms[roomName].roomPlanner) {
+					_.each(Game.rooms[roomName].roomPlanner.getLocations('bay_center'), pos => {
+						if (costs.get(pos.x, pos.y) <= 20) {
+							costs.set(pos.x, pos.y, 20);
+						}
+					});
+				}
 
 				// @todo Try not to drive too close to sources / minerals / controllers.
 				// @todo Avoid source keepers.

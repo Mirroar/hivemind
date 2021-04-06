@@ -3,22 +3,24 @@
 /* global RoomVisual COLOR_GREY FIND_STRUCTURES STRUCTURE_EXTENSION
 OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
 
+const utilities = require('./utilities');
+
 /**
  * Bays collect extensions into a single entity for more efficient refilling.
  * @constructor
  *
- * @param {string} flagName
- *   Name of the flag around which this bay is positioned.
+ * @param {RoomPosition} pos
+ *   Room position around which this bay is placed.
  */
-const Bay = function (flagName) {
-	this.flag = Game.flags[flagName];
-	this.memory = this.flag.memory;
-	this.pos = this.flag.pos;
-	this.name = this.flag.name;
+const Bay = function (pos) {
+	this.pos = pos;
+	this.name = utilities.encodePosition(pos);
 
-	if (this.flag.color !== COLOR_GREY) {
-		this.flag.setColor(COLOR_GREY);
-	}
+	if (!Memory.rooms[pos.roomName].bays) Memory.rooms[pos.roomName].bays = {};
+	if (!Memory.rooms[pos.roomName].bays[this.name]) Memory.rooms[pos.roomName].bays[this.name] = {};
+	this.memory = Memory.rooms[pos.roomName].bays[this.name];
+
+	// @todo Memory of bays that no longer exist needs to be cleaned up.
 
 	if (!this.memory.extensions || Game.time % 100 === 38) {
 		const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
@@ -55,6 +57,8 @@ const Bay = function (flagName) {
 	}
 
 	// Draw bay.
+	// @todo Move out of constructor into separate function, called in owned rooms
+	// process.
 	if (typeof RoomVisual !== 'undefined') {
 		const visual = new RoomVisual(this.pos.roomName);
 		visual.rect(this.pos.x - 1.4, this.pos.y - 1.4, 2.8, 2.8, {

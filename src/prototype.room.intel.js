@@ -86,17 +86,8 @@ Room.prototype.enhanceData = function () {
 	// Register bays.
 	this.bays = [];
 	if (this.isMine()) {
-		const flags = this.find(FIND_FLAGS, {
-			filter: flag => flag.name.startsWith('Bay:'),
-		});
-		for (const flag of flags) {
-			try {
-				this.bays.push(new Bay(flag.name));
-			}
-			catch (error) {
-				console.log('Error when initializing Bays:', error);
-				console.log(error.stack);
-			}
+		for (const pos of this.roomPlanner.getLocations('bay_center')) {
+			this.bays.push(new Bay(pos));
 		}
 	}
 

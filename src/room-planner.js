@@ -714,27 +714,8 @@ RoomPlanner.prototype.placeBays = function () {
 			this.placeFlag(new RoomPosition(x, y, pos.roomName), 'extension');
 		});
 
-		// Place a flag to mark this bay.
-		const flagKey = 'Bay:' + pos.roomName + ':' + bayCount;
-		if (Game.flags[flagKey]) {
-			Game.flags[flagKey].setPosition(pos);
-		}
-		else {
-			pos.createFlag(flagKey);
-		}
-
-		bayCount++;
-
 		// Reinitialize pathfinding.
 		this.startBuildingPlacement();
-	}
-
-	// Remove other bay flags in room that might be left over.
-	for (let i = bayCount; i < 30; i++) {
-		const flagKey = 'Bay:' + this.roomName + ':' + i;
-		if (Game.flags[flagKey]) {
-			Game.flags[flagKey].remove();
-		}
 	}
 };
 
