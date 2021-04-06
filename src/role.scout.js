@@ -65,7 +65,7 @@ ScoutRole.prototype.performScout = function (creep) {
 
 	if (!creep.moveToRoom(creep.memory.scoutTarget, true)) this.chooseScoutTarget(creep);
 
-	if (this.isOscillating(creep)) this.chooseScoutTarget(creep);
+	if (this.isOscillating(creep) || this.isStuck(creep)) this.chooseScoutTarget(creep);
 };
 
 /**
@@ -150,6 +150,20 @@ ScoutRole.prototype.isTileOscillating = function (creep) {
 	}
 
 	return false;
+};
+
+ScoutRole.prototype.isStuck = function (creep) {
+	const pos = utilities.encodePosition(creep.pos);
+
+	if (!creep.memory._lastPos || creep.memory._lastPos !== pos) {
+		creep.memory._lastPos = pos;
+		creep.memory._stuckCount = 1;
+		return false;
+	}
+
+	if (creep.memory._stuckCount++ < 10) return false;
+
+	return true;
 };
 
 module.exports = ScoutRole;
