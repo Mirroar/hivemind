@@ -171,7 +171,7 @@ module.exports = class MuleRole extends Role {
 		if (!target) return;
 
 		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
+			creep.goTo(target, {range: 1, maxRooms: 1});
 			return;
 		}
 
