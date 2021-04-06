@@ -23,6 +23,13 @@ const spawnRoles = [
 	'transporter',
 	'upgrader',
 ];
+const spawnClasses = {};
+const historyChunkLength = 100;
+const maxHistoryChunks = 5;
+
+for (const roleName of spawnRoles) {
+	spawnClasses[roleName] = require('./spawn-role.' + roleName);
+}
 
 /**
  * Runs reactions in a room's labs.
@@ -39,8 +46,7 @@ const ManageSpawnsProcess = function (params, data) {
 
 	this.spawnManager = new SpawnManager();
 	for (const roleName of spawnRoles) {
-		const SpawnClass = require('./spawn-role.' + roleName);
-		this.spawnManager.registerSpawnRole(roleName, new SpawnClass());
+		this.spawnManager.registerSpawnRole(roleName, new spawnClasses[roleName]());
 	}
 };
 
@@ -53,6 +59,43 @@ ManageSpawnsProcess.prototype.run = function () {
 	const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.room.name && spawn.isOperational());
 	this.visualizeSpawning(roomSpawns);
 	this.spawnManager.manageSpawns(this.room, roomSpawns);
+	this.collectSpawnStats(roomSpawns);
+};
+
+ManageSpawnsProcess.prototype.collectSpawnStats = function (spawns) {
+	if (!this.room.memory.spawns) this.room.memory.spawns = {};
+	const memory = this.room.memory.spawns;
+
+	for (const spawn of spawns) {
+		if (!memory[spawn.id]) {
+			memory[spawn.id] = {
+				ticks: 0,
+				spawning: 0,
+				waiting: 0,
+				history: [],
+			};
+		}
+
+		const spawnMemory = memory[spawn.id];
+		spawnMemory.ticks++;
+		if (spawn.spawning) spawnMemory.spawning++;
+		if (spawn.waiting) spawnMemory.waiting++;
+
+		if (spawnMemory.ticks >= historyChunkLength) {
+			// Save current history as new chunk.
+			spawnMemory.history.push({
+				ticks: spawnMemory.ticks,
+				spawning: spawnMemory.spawning,
+				waiting: spawnMemory.waiting,
+			});
+			spawnMemory.history = spawnMemory.history.slice(-maxHistoryChunks);
+
+			// Reset current history values.
+			spawnMemory.ticks = 0;
+			spawnMemory.spawning = 0;
+			spawnMemory.waiting = 0;
+		}
+	}
 };
 
 /**
@@ -63,15 +106,26 @@ ManageSpawnsProcess.prototype.run = function () {
  */
 ManageSpawnsProcess.prototype.visualizeSpawning = function (spawns) {
 	if (!this.room.visual) return;
+	if (!this.room.memory.spawns) return;
 
 	for (const spawn of spawns) {
+		// Show spawn usage stats.
+		const memory = this.room.memory.spawns[spawn.id] || {ticks: 1, spawning: 0, waiting: 0, history: []};
+		const totalTicks = memory.ticks + (memory.history.length * historyChunkLength);
+		const spawningTicks = _.reduce(memory.history, (total, h) => total + h.spawning, memory.spawning);
+		const waitingTicks = _.reduce(memory.history, (total, h) => total + h.waiting, memory.waiting);
+		this.room.visual.rect(spawn.pos.x - 0.5, spawn.pos.y, 1, 0.3, {fill: '#888888', opacity: 0.5});
+		this.room.visual.rect(spawn.pos.x - 0.5, spawn.pos.y, spawningTicks / totalTicks, 0.3, {fill: '#88ff88'});
+		this.room.visual.rect(spawn.pos.x - 0.5 + (spawningTicks / totalTicks), spawn.pos.y, waitingTicks / totalTicks, 0.3, {fill: '#ff8888'});
+
 		if (!spawn.spawning) continue;
 
-		this.room.visual.text(spawn.spawning.name, spawn.pos.x + 0.05, spawn.pos.y + 0.05, {
+		// Show name of currently spawning creep.
+		this.room.visual.text(spawn.spawning.name, spawn.pos.x + 0.05, spawn.pos.y + 0.65, {
 			size: 0.5,
 			color: 'black',
 		});
-		this.room.visual.text(spawn.spawning.name, spawn.pos.x, spawn.pos.y, {
+		this.room.visual.text(spawn.spawning.name, spawn.pos.x, spawn.pos.y + 0.6, {
 			size: 0.5,
 		});
 	}

@@ -93,7 +93,11 @@ module.exports = class SpawnManager {
 		const option = utilities.getBestOption(options);
 
 		if (option) {
-			this.trySpawnCreep(room, spawn, option);
+			if (!this.trySpawnCreep(room, spawn, option)) {
+				_.each(availableSpawns, s => {
+					s.waiting = true;
+				});
+			}
 		}
 	}
 
@@ -106,22 +110,25 @@ module.exports = class SpawnManager {
 	 *   The spawn where the creep should be spawned.
 	 * @param {Object} option
 	 *   The spawn option for which to generate the creep.
+	 *
+	 * @return {boolean}
+	 *   True if spawning was successful.
 	 */
 	trySpawnCreep(room, spawn, option) {
 		const role = this.roles[option.role];
 		const body = role.getCreepBody(room, option);
 
-		if (!body || body.length === 0) return;
+		if (!body || body.length === 0) return false;
 
 		let cost = 0;
 		for (const part of body) {
 			cost += BODYPART_COST[part];
 		}
 
-		if (cost > room.energyAvailable) return;
+		if (cost > room.energyAvailable) return false;
 
 		//  Make sure a creep like this could be spawned.
-		if (spawn.spawnCreep(body, 'dryRun', {dryRun: true}) !== OK) return;
+		if (spawn.spawnCreep(body, 'dryRun', {dryRun: true}) !== OK) return false;
 
 		// Prepare creep memory.
 		const memory = role.getCreepMemory(room, option);
@@ -139,7 +146,7 @@ module.exports = class SpawnManager {
 			memory,
 		});
 
-		if (result !== OK) return;
+		if (result !== OK) return false;
 
 		// Spawning successful.
 		Memory.creepCounter[memory.role]++;
@@ -152,6 +159,7 @@ module.exports = class SpawnManager {
 
 		// Notify the role that spawning was successful.
 		role.onSpawn(room, option, body, creepName);
+		return true;
 	}
 
 	/**

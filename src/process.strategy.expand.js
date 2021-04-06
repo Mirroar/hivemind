@@ -114,8 +114,6 @@ ExpandProcess.prototype.startExpansion = function (roomInfo) {
 
 	// Sent to target room.
 	squad.setTarget(new RoomPosition(25, 25, roomInfo.roomName));
-
-	// @todo Place flags to guide squad through safe rooms and make pathfinding easier.
 	squad.clearUnits();
 	squad.setUnitCount('brawler', 1);
 	squad.setUnitCount('singleClaim', 1);
@@ -405,6 +403,9 @@ ExpandProcess.prototype.findClosestSpawn = function (targetRoom) {
  * Decides if it's worth giving up a weak room in favor of a new expansion.
  */
 ExpandProcess.prototype.abandonWeakRoom = function () {
+	// Only abandon rooms if we aren't in the process of expanding.
+	if (this.memory.currentTarget) return;
+
 	// Only choose a new target if we aren't already relocating.
 	if (this.memory.evacuatingRoom) return;
 
@@ -442,6 +443,7 @@ ExpandProcess.prototype.manageEvacuation = function () {
 			// Start a cooldown timer of about 5000 ticks before considering
 			// abandoning more (enough for creeps to despawn and CPU to normalize).
 			this.memory.evacuatingRoom.cooldown = Game.time + 5000;
+			delete this.memory.evacuatingRoom.name;
 			return;
 		}
 
