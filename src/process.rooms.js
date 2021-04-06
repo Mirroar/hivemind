@@ -2,6 +2,7 @@
 
 /* global hivemind PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_ALWAYS */
 
+const OutpostRoomPlanner = require('./room-planner.outpost');
 const OwnedRoomProcess = require('./process.rooms.owned');
 const Process = require('./process');
 const RoomIntelProcess = require('./process.rooms.intel');
@@ -63,6 +64,13 @@ RoomsProcess.prototype.run = function () {
 					priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
 				});
 			});
+		}
+
+		// Add roomPlanner to expansion target room.
+		// @todo Maybe move to extra process, this is misplaced in this loop.
+		if (roomName === 'E47S53') {
+			room.roomPlanner = new OutpostRoomPlanner(roomName);
+			room.roomPlanner.runLogic();
 		}
 	});
 };
