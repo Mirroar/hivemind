@@ -162,7 +162,7 @@ RoomDefense.prototype.calculateRampartState = function (rampart, allowed, forbid
 };
 
 RoomDefense.prototype.isUnarmedCreep = function (creep) {
-	for (const part of this.body) {
+	for (const part of creep.body) {
 		if (part.type !== MOVE && part.type !== TOUGH && part.type !== CARRY) {
 			return false;
 		}
