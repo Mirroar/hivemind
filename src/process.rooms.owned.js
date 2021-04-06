@@ -79,6 +79,7 @@ OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_spawns', () => {
 		hivemind.runProcess(this.room.name + '_spawns', ManageSpawnsProcess, {
 			room: this.room,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 	});
 
