@@ -337,8 +337,8 @@ RoomIntel.prototype.gatherInvaderIntel = function (structures) {
  *   An object containing Arrays of construction sites, keyed by structure type.
  */
 RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
-	this.memory.costMatrix = utilities.generateCostMatrix(structures, constructionSites).serialize();
-	this.memory.pathfinderPositions = utilities.generateObstacleList(structures, constructionSites);
+	this.memory.costMatrix = utilities.generateCostMatrix(this.roomName, structures, constructionSites).serialize();
+	this.memory.pathfinderPositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
 
 	const matrixSize = JSON.stringify(this.memory.costMatrix).length;
 	const listSize = JSON.stringify(this.memory.pathfinderPositions).length;
