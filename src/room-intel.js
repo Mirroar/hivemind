@@ -351,6 +351,7 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 		// Reassign gatherer to this room.
 		creep.memory.targetRoom = this.roomName;
 		creep.memory.origin = strategyInfo.origin;
+		delete creep.memory.scoutTarget;
 		assignedSpace += creep.store.getCapacity();
 	});
 
