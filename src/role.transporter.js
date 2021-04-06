@@ -845,7 +845,7 @@ TransporterRole.prototype.getAvailableSources = function () {
 	if (creep.room.memory.fillTerminal && !creep.room.isClearingTerminal()) {
 		const resourceType = creep.room.memory.fillTerminal;
 		if (storage && terminal && storage.store[resourceType]) {
-			if ((storage.store[resourceType] > creep.carryCapacity || creep.room.isEvacuating()) && _.sum(terminal.store) < terminal.storeCapacity - 10000) {
+			if (_.sum(terminal.store) < terminal.storeCapacity - 10000) {
 				options.push({
 					priority: 4,
 					weight: 0,
@@ -958,7 +958,7 @@ TransporterRole.prototype.addDroppedEnergySourceOptions = function (options, sto
 
 	for (const target of targets) {
 		const option = {
-			priority: 4,
+			priority: 2,
 			weight: target.amount / 100, // @todo Also factor in distance.
 			type: 'resource',
 			object: target,
@@ -976,6 +976,8 @@ TransporterRole.prototype.addDroppedEnergySourceOptions = function (options, sto
 			if (target.amount < 200) {
 				option.priority--;
 			}
+
+			if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
@@ -1122,10 +1124,11 @@ TransporterRole.prototype.addContainerEnergySourceOptions = function (options) {
 		for (const sourceData of _.values(target.room.memory.sources)) {
 			if (sourceData.targetContainer !== target.id) continue;
 
-			option.priority = 2;
+			option.priority++;
 			if (_.sum(target.store) >= creep.carryCapacity - _.sum(creep.carry)) {
-				// This container is filling up, prioritize emptying it.
-				option.priority += 2;
+				// This container is filling up, prioritize emptying it when we aren't
+				// busy filling extensions.
+				if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
 			}
 
 			break;
@@ -1195,6 +1198,8 @@ TransporterRole.prototype.addDroppedResourceOptions = function (options) {
 	});
 
 	for (const target of targets) {
+		if (!creep.room.storage && target.resourceType !== RESOURCE_ENERGY) continue;
+
 		const option = {
 			priority: 4,
 			weight: target.amount / 30, // @todo Also factor in distance.
