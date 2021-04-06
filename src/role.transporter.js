@@ -91,18 +91,17 @@ TransporterRole.prototype.bayUnstuck = function () {
 	for (const bay of creep.room.bays) {
 		// @todo Number of extensions is not really the correct measure, number of
 		// walkable tiles around center is.
-		if (bay.extensions.length < 7) continue;
-
 		if (creep.pos.x !== bay.pos.x || creep.pos.y !== bay.pos.y) continue;
 
 		const best = creep.memory.deliverTarget;
 
 		// It's fine if we're explicitly delivering to this bay right now.
-		if (best && typeof best !== 'string' && best.type === 'bay' && creep.memory.order.target === bay.flag.name) continue;
+		if (best && typeof best !== 'string' && best.type === 'bay' && creep.memory.order.target === bay.name) continue;
 
 		// We're standing in a bay that we're not delivering to.
 		const terrain = new Room.Terrain(creep.pos.roomName);
-		let unstuck = false;
+		// @todo Bay's available tiles should by handled and cached by the bay itself.
+		const availableTiles = [];
 		utilities.handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
 			if (x === creep.pos.x && y === creep.pos.y) return;
 			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
@@ -118,14 +117,14 @@ TransporterRole.prototype.bayUnstuck = function () {
 			if (_.filter(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType)).length > 0) return;
 
 			// Move out of the way.
-			const dir = creep.pos.getDirectionTo(pos);
-			creep.move(dir);
-			unstuck = true;
-
-			return false;
+			availableTiles.push(pos);
 		});
 
-		if (unstuck) return true;
+		if (availableTiles.length === 1) {
+			const dir = creep.pos.getDirectionTo(availableTiles[0]);
+			creep.move(dir);
+			return true;
+		}
 	}
 
 	return false;
@@ -158,7 +157,7 @@ TransporterRole.prototype.performDeliver = function () {
 	}
 
 	if (best.type === 'bay') {
-		const target = _.find(creep.room.bays, bay => bay.flag.name === creep.memory.order.target);
+		const target = _.find(creep.room.bays, bay => bay.name === creep.memory.order.target);
 
 		if (creep.pos.getRangeTo(target) > 0) {
 			creep.moveToRange(target);
@@ -221,7 +220,7 @@ TransporterRole.prototype.ensureValidDeliveryTarget = function () {
 	}
 
 	if (creep.memory.deliverTarget.type === 'bay') {
-		const target = _.find(creep.room.bays, bay => bay.flag.name === creep.memory.order.target);
+		const target = _.find(creep.room.bays, bay => bay.name === creep.memory.order.target);
 		if (!target) return false;
 
 		if (target.energy < target.energyCapacity) return true;
@@ -301,7 +300,7 @@ TransporterRole.prototype.getAvailableDeliveryTargets = function () {
 	for (const resourceType of _.keys(creep.carry)) {
 		// If it's needed for transferring, store in terminal.
 		if (resourceType === creep.room.memory.fillTerminal && creep.carry[resourceType] > 0 && !creep.room.isClearingTerminal()) {
-			if (terminal && (!terminal.store[resourceType] || terminal.store[resourceType] < (creep.room.memory.fillTerminalAmount || 10000)) && _.sum(terminal.store) < terminal.storeCapacity) {
+			if (terminal && ((terminal.store[resourceType] || 0) < (creep.room.memory.fillTerminalAmount || 10000)) && _.sum(terminal.store) < terminal.storeCapacity) {
 				const option = {
 					priority: 4,
 					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
@@ -859,7 +858,7 @@ TransporterRole.prototype.getAvailableSources = function () {
 	if (creep.room.memory.fillTerminal && !creep.room.isClearingTerminal()) {
 		const resourceType = creep.room.memory.fillTerminal;
 		if (storage && terminal && storage.store[resourceType]) {
-			if ((storage.store[resourceType] > creep.carryCapacity || creep.room.isEvacuating()) && _.sum(terminal.store) < terminal.storeCapacity - 10000) {
+			if (_.sum(terminal.store) < terminal.storeCapacity - 10000) {
 				options.push({
 					priority: 4,
 					weight: 0,
@@ -974,7 +973,7 @@ TransporterRole.prototype.addDroppedEnergySourceOptions = function (options, sto
 
 	for (const target of targets) {
 		const option = {
-			priority: 4,
+			priority: 2,
 			weight: target.amount / 100, // @todo Also factor in distance.
 			type: 'resource',
 			object: target,
@@ -992,6 +991,8 @@ TransporterRole.prototype.addDroppedEnergySourceOptions = function (options, sto
 			if (target.amount < 200) {
 				option.priority--;
 			}
+
+			if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
@@ -1138,10 +1139,11 @@ TransporterRole.prototype.addContainerEnergySourceOptions = function (options) {
 		for (const sourceData of _.values(target.room.memory.sources)) {
 			if (sourceData.targetContainer !== target.id) continue;
 
-			option.priority = 2;
+			option.priority++;
 			if (_.sum(target.store) >= creep.carryCapacity - _.sum(creep.carry)) {
-				// This container is filling up, prioritize emptying it.
-				option.priority += 2;
+				// This container is filling up, prioritize emptying it when we aren't
+				// busy filling extensions.
+				if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
 			}
 
 			break;
@@ -1211,6 +1213,8 @@ TransporterRole.prototype.addDroppedResourceOptions = function (options) {
 	});
 
 	for (const target of targets) {
+		if (!creep.room.storage && target.resourceType !== RESOURCE_ENERGY) continue;
+
 		const option = {
 			priority: 4,
 			weight: target.amount / 30, // @todo Also factor in distance.

@@ -57,6 +57,11 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			const storagePos = utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos);
 			const targetPos = utilities.encodePosition(new RoomPosition(25, 25, pos.roomName));
 
+			// Don't spawn simple source defenders in quick succession.
+			// If they fail, there's a stronger enemy that we need to deal with
+			// in a different way.
+			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || 0) < 1000) continue;
+
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.storage === storagePos && creep.memory.target === targetPos);
 			if (_.size(brawlers) > 0) continue;
 
@@ -123,6 +128,9 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	onSpawn(room, option, body, name) {
 		const position = option.targetPos;
 		if (!position) return;
+
+		if (!room.memory.recentBrawler) room.memory.recentBrawler = {};
+		room.memory.recentBrawler[position] = Game.time;
 
 		hivemind.log('creeps', room.name).info('Spawning new brawler', name, 'to defend', position);
 		stats.addRemoteHarvestDefenseCost(room.name, position, this.calculateBodyCost(body));

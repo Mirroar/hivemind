@@ -36,6 +36,7 @@ ReportProcess.prototype.initMemory = function (baseTimestamp) {
 			gcl: Game.gcl,
 			gpl: Game.gpl,
 			power: [],
+			storedPower: this.getStoredPower(),
 			remoteHarvestCount: Memory.strategy.remoteHarvesting.currentCount,
 			score: Game.score,
 			symbols: _.sum(Game.symbols),
@@ -89,6 +90,7 @@ ReportProcess.prototype.generateReport = function () {
 	this.generateScoreReport();
 
 	// @todo Report market transactions.
+	// @todo Generate report for CPU usage and bucket.
 };
 
 /**
@@ -132,15 +134,27 @@ ReportProcess.prototype.generatePowerReport = function () {
 
 	if (totalRooms === 0) return;
 
-	reportText += 'Started gathering ' + totalAmount + ' power in ' + totalRooms + ' rooms:';
-
-	for (const intent of this.memory.data.power || []) {
-		if (!intent.info.amount || intent.info.amount === 0) continue;
-
-		reportText += '<br>' + intent.roomName + ': ' + intent.info.amount || 'N/A';
-	}
+	reportText += 'Started gathering ' + totalAmount + ' power in ' + totalRooms + ' rooms.<br>';
+	reportText += 'Stored: ' + this.getStoredPower() + ' (+' + (this.getStoredPower() - (this.memory.data.storedPower || 0)) + ')';
 
 	Game.notify(reportText);
+};
+
+/**
+ * Gets the amount of power in storage across owned rooms.
+ *
+ * @return {number}
+ *   Global amount of stored power.
+ */
+ReportProcess.prototype.getStoredPower = function () {
+	let amount = 0;
+	const rooms = _.filter(Game.rooms, r => r.isMine());
+	_.each(rooms, room => {
+		amount += room.storage ? (room.storage.store[RESOURCE_POWER] || 0) : 0;
+		amount += room.terminal ? (room.terminal.store[RESOURCE_POWER] || 0) : 0;
+	});
+
+	return amount;
 };
 
 /**

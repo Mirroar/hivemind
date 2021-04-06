@@ -29,7 +29,7 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
 		constructionSites = _.groupBy(this.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 	}
 
-	return utilities.generateCostMatrix(structures, constructionSites);
+	return utilities.generateCostMatrix(this.name, structures, constructionSites);
 };
 
 /**
@@ -64,6 +64,7 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 	while (_.size(openList) > 0) {
 		let minDist;
 		let nextRoom;
+		let cost = 1;
 		_.each(openList, (info, rName) => {
 			if (!minDist || info.range + info.dist < minDist) {
 				minDist = info.range + info.dist;
@@ -86,10 +87,20 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 			if (openList[exit] || closedList[exit]) continue;
 
 			const exitIntel = hivemind.roomIntel(exit);
-			if (!allowDanger) {
-				if (exitIntel.isOwned()) continue;
+			if (exitIntel.isOwned()) {
+				if (!allowDanger) continue;
+
+				cost *= 5;
+			}
+			else if (exitIntel.isClaimed()) {
+				cost *= 1.5;
+			}
+
+			if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
 				// @todo Allow pathing through source keeper rooms if we can safely avoid them.
-				if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
+				if (!allowDanger) continue;
+
+				cost *= 2;
 			}
 
 			const distance = Game.map.getRoomLinearDistance(exit, targetRoom);
@@ -103,7 +114,7 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 			path.push(exit);
 
 			openList[exit] = {
-				range: info.range + 1,
+				range: info.range + cost,
 				dist: distance,
 				origin: info.origin,
 				path,

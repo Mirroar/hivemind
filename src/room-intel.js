@@ -7,8 +7,9 @@ STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER
 STRUCTURE_PORTAL FIND_SYMBOL_CONTAINERS FIND_SYMBOL_DECODERS STRUCTURE_WALL */
 
-const utilities = require('./utilities');
 const interShard = require('./intershard');
+const NavMesh = require('./nav-mesh');
+const utilities = require('./utilities');
 
 const RoomIntel = function (roomName) {
 	this.roomName = roomName;
@@ -66,6 +67,10 @@ RoomIntel.prototype.gatherIntel = function () {
 	const constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 	this.generateCostMatrix(structures, constructionSites);
 
+	// Update nav mesh for this room.
+	const mesh = new NavMesh();
+	mesh.generateForRoom(this.roomName);
+
 	// @todo Check enemy structures.
 
 	// @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
@@ -120,9 +125,12 @@ RoomIntel.prototype.gatherResourceIntel = function (room) {
 	);
 
 	// Check minerals.
-	const mineral = _.first(room.find(FIND_MINERALS));
-	this.memory.mineral = mineral && mineral.id;
-	this.memory.mineralType = mineral && mineral.mineralType;
+	this.memory.mineralInfo = room.mineral && {
+		x: room.mineral.pos.x,
+		y: room.mineral.pos.y,
+		id: room.mineral.id,
+		type: room.mineral.mineralType,
+	};
 };
 
 /**
@@ -397,8 +405,8 @@ RoomIntel.prototype.gatherInvaderIntel = function (structures) {
  *   An object containing Arrays of construction sites, keyed by structure type.
  */
 RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
-	this.memory.costMatrix = utilities.generateCostMatrix(structures, constructionSites).serialize();
-	this.memory.pathfinderPositions = utilities.generateObstacleList(structures, constructionSites);
+	this.memory.costMatrix = utilities.generateCostMatrix(this.roomName, structures, constructionSites).serialize();
+	this.memory.pathfinderPositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
 
 	const matrixSize = JSON.stringify(this.memory.costMatrix).length;
 	const listSize = JSON.stringify(this.memory.pathfinderPositions).length;
@@ -488,7 +496,17 @@ RoomIntel.prototype.getSourcePositions = function () {
  *   Type of this room's mineral source.
  */
 RoomIntel.prototype.getMineralType = function () {
-	return this.memory.mineralType;
+	return this.memory.mineralInfo ? this.memory.mineralInfo.type : this.memory.mineralType;
+};
+
+/**
+ * Returns position of mineral deposit in the room.
+ *
+ * @return {object}
+ *   An Object containing id, type, x and y position of the mineral deposit.
+ */
+RoomIntel.prototype.getMineralPosition = function () {
+	return this.memory.mineralInfo;
 };
 
 /**
@@ -532,6 +550,16 @@ RoomIntel.prototype.getCostMatrix = function () {
 	if (Game.rooms[this.roomName]) return Game.rooms[this.roomName].generateCostMatrix();
 
 	return new PathFinder.CostMatrix();
+};
+
+/**
+ * Checks whether there is a previously generated cost matrix for this room.
+ */
+RoomIntel.prototype.hasCostMatrixData = function () {
+	if (this.memory.costMatrix) return true;
+	if (this.memory.pathfinderPositions) return true;
+
+	return false;
 };
 
 /**

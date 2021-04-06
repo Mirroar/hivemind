@@ -1,6 +1,6 @@
 'use strict';
 
-/* global MOVE CARRY */
+/* global hivemind MOVE CARRY */
 
 const SpawnRole = require('./spawn-role');
 
@@ -23,8 +23,9 @@ module.exports = class GathererSpawnRole extends SpawnRole {
 			// @todo Make sure gatherers can reach their targets.
 			// @todo Currently disabled on shard0 until we automaticall remove
 			// pesky walls / ramparts.
-			if (Game.shard.name === 'shard0') return;
+			if (Game.shard.name === 'shard0' || Game.shard.name === 'shard1') return;
 			if (numGatherers > 0) return;
+			if (hivemind.roomIntel(roomName).isOwned()) return;
 
 			const numGatherersByRoom = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.origin === room.name).length;
 			if (numGatherersByRoom > 2) return;

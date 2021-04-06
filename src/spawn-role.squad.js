@@ -100,7 +100,7 @@ module.exports = class SquadSpawnRole extends SpawnRole {
 
 	getBuilderCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.52, [CARRY]: 0.38, [WORK]: 0.1},
+			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}

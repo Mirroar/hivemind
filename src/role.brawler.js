@@ -5,9 +5,10 @@ STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE */
 
-const utilities = require('./utilities');
+const NavMesh = require('./nav-mesh');
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
+const utilities = require('./utilities');
 
 const BrawlerRole = function () {
 	Role.call(this);
@@ -295,8 +296,9 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 
 	if (creep.memory.target) {
 		const targetPosition = utilities.decodePosition(creep.memory.target);
-		if (creep.pos.roomName !== targetPosition.roomName) {
-			if (!creep.moveToRoom(targetPosition.roomName, true)) {
+		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
+		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+			if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
 				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
 				// @todo This is cross-room movement and should therefore only calculate a path once.
 				creep.moveToRange(targetPosition, 3);
@@ -305,9 +307,12 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 			return;
 		}
 
+		creep.stopNavMeshMove();
+
 		// @todo For some reason, using goTo instead of moveTo here results in
 		// a lot of "trying to follow non-existing path" errors moving across rooms.
-		creep.moveTo(targetPosition);
+		// Maybe because it clashes with other movement further down this method.
+		creep.moveTo(targetPosition, {maxRooms: 1});
 	}
 
 	if (creep.memory.order) {
@@ -319,6 +324,7 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 				creep.moveTo(target, {
 					reusePath: 5,
 					ignoreDestructibleStructures: ignore,
+					maxRooms: 1,
 				});
 			}
 			else {

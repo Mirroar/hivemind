@@ -28,3 +28,6 @@ JSON.stringify(_.map(Game.creeps.T_ju.getAvailableEnergySources(), option => {op
 
 // Find out how many creeps of each role are currently spawned.
 _.each(Game.creepsByRole, (g, n) => console.log(_.size(g), n));
+
+// Force expansion to a certain room.
+const ep = require('process.strategy.expand'); p = new ep({}, {}); r = Memory.strategy.roomList.E19N24; r.spawnRoom = 'E16N22'; p.startExpansion(r)

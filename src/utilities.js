@@ -20,6 +20,29 @@ const utilities = {
 	},
 
 	/**
+	 * Runs a callback within a try/catch block.
+	 *
+	 * @param {function} callback
+	 *   The callback to run.
+	 *
+	 * @return {mixed}
+	 *   Whatever the original fuction returns.
+	 */
+	bubbleWrap(callback) {
+		try {
+			return callback();
+		}
+		catch (e) {
+			let errorLocation = 'N/A';
+			if (hivemind.currentProcess) {
+				errorLocation = hivemind.currentProcess.constructor.name;
+			}
+			Game.notify(e.name + ' in ' + errorLocation + ':<br>' + e.stack);
+			console.log(e.name + ' in ' + errorLocation + ':<br>' + e.stack);
+		}
+	},
+
+	/**
 	 * Calculates and stores paths for remote harvesting.
 	 *
 	 * @param {Room} room
@@ -47,6 +70,13 @@ const utilities = {
 			return;
 		}
 
+		if (harvestMemory._noCachedPath && Game.time - harvestMemory._noCachedPath < 500 * hivemind.getThrottleMultiplier()) {
+			// No need to recalculate path.
+			return;
+		}
+
+		delete harvestMemory.cachedPath;
+		delete harvestMemory._noCachedPath;
 		const startLocation = room.getStorageLocation();
 		let startPosition = new RoomPosition(startLocation.x, startLocation.y, room.name);
 		if (room.storage) {
@@ -57,7 +87,7 @@ const utilities = {
 
 		const result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
 
-		if (result) {
+		if (result && !result.incomplete || result.path.length < 150) {
 			hivemind.log('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
 
 			harvestMemory.cachedPath = {
@@ -67,6 +97,7 @@ const utilities = {
 		}
 		else {
 			console.log('No path found!');
+			harvestMemory._noCachedPath = Game.time;
 		}
 	},
 
@@ -108,13 +139,13 @@ const utilities = {
 				const costs = utilities.getCostMatrix(roomName, options);
 
 				// Also try not to drive through bays.
-				_.filter(Game.flags, flag => {
-					return flag.pos.roomName === roomName && flag.name.startsWith('Bay:');
-				}).forEach(flag => {
-					if (costs.get(flag.pos.x, flag.pos.y) <= 20) {
-						costs.set(flag.pos.x, flag.pos.y, 20);
-					}
-				});
+				if (Game.rooms[roomName] && Game.rooms[roomName].roomPlanner) {
+					_.each(Game.rooms[roomName].roomPlanner.getLocations('bay_center'), pos => {
+						if (costs.get(pos.x, pos.y) <= 20) {
+							costs.set(pos.x, pos.y, 20);
+						}
+					});
+				}
 
 				// @todo Try not to drive too close to sources / minerals / controllers.
 				// @todo Avoid source keepers.
@@ -143,10 +174,11 @@ const utilities = {
 	 * @return {PathFinder.CostMatrix}
 	 *   A cost matrix representing the given obstacles.
 	 */
-	generateCostMatrix(structures, constructionSites) {
+	generateCostMatrix(roomName, structures, constructionSites) {
 		const costs = new PathFinder.CostMatrix();
 
 		this.markBuildings(
+			roomName,
 			structures,
 			constructionSites,
 			structure => {
@@ -155,6 +187,7 @@ const utilities = {
 				}
 			},
 			structure => costs.set(structure.pos.x, structure.pos.y, 0xFF),
+			(x, y) => costs.set(x, y, 0xFF),
 		);
 
 		return costs;
@@ -173,13 +206,14 @@ const utilities = {
 	 *   - obstacles: Any positions a creep cannot move through.
 	 *   - roads: Any positions where a creep travels with road speed.
 	 */
-	generateObstacleList(structures, constructionSites) {
+	generateObstacleList(roomName, structures, constructionSites) {
 		const result = {
 			obstacles: [],
 			roads: [],
 		};
 
 		this.markBuildings(
+			roomName,
 			structures,
 			constructionSites,
 			structure => {
@@ -189,6 +223,12 @@ const utilities = {
 				}
 			},
 			structure => result.obstacles.push(utilities.encodePosition(structure.pos)),
+			(x, y) => {
+				const location = utilities.encodePosition(new RoomPosition(x, y, roomName));
+				if (!_.contains(result.obstacles, location)) {
+					result.obstacles.push(location);
+				}
+			}
 		);
 
 		return result;
@@ -197,6 +237,8 @@ const utilities = {
 	/**
 	 * Runs code for all given obstacles and roads.
 	 *
+	 * @param {String} roomName
+	 *   Name of the room that's being handled.
 	 * @param {object} structures
 	 *   Arrays of structures to navigate around, keyed by structure type.
 	 * @param {object} constructionSites
@@ -205,8 +247,10 @@ const utilities = {
 	 *   Gets called for every road found in structures.
 	 * @param {Function} blockerCallback
 	 *   Gets called for every obstacle found in structures or constructionSites.
+	 * @param {Function} sourceKeeperCallback
+	 *   Gets called for every position in range of a source keeper.
 	 */
-	markBuildings(structures, constructionSites, roadCallback, blockerCallback) {
+	markBuildings(roomName, structures, constructionSites, roadCallback, blockerCallback, sourceKeeperCallback) {
 		_.each(OBSTACLE_OBJECT_TYPES, structureType => {
 			_.each(structures[structureType], structure => {
 				// Can't walk through non-walkable buildings.
@@ -230,6 +274,60 @@ const utilities = {
 				blockerCallback(structure);
 			}
 		});
+
+		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
+			// @todo If we're running a (successful) exploit in this room, tiles
+			// should not be marked inaccessible.
+			// Add area around keeper lairs as obstacles.
+			_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
+				utilities.handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
+					sourceKeeperCallback(x, y);
+				}, 3);
+			});
+
+			// Add area around sources as obstacles.
+			const roomIntel = hivemind.roomIntel(roomName);
+			_.each(roomIntel.getSourcePositions(), sourceInfo => {
+				utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+					sourceKeeperCallback(x, y);
+				}, 3);
+			});
+
+			// Add area around mineral as obstacles.
+			const mineralInfo = roomIntel.getMineralPosition();
+			if (mineralInfo) {
+				utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+					sourceKeeperCallback(x, y);
+				}, 3);
+			}
+
+			// For exit consistency, we need to check corresponding exit
+			// tiles of adjacend rooms, and if blocked by source keepers, block tiles
+			// in our own room as well.
+			const exits = roomIntel.getExits();
+			for (const dir of [TOP, BOTTOM, LEFT, RIGHT]) {
+				if (!exits[dir]) continue;
+
+				const otherRoomName = exits[dir];
+				const otherRoomIntel = hivemind.roomIntel(otherRoomName);
+				if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
+
+				const matrix = utilities.getCostMatrix(otherRoomName);
+				if (dir === TOP || dir === BOTTOM) {
+					const y = (dir === TOP ? 0 : 49);
+					for (let x = 1; x < 49; x++) {
+						if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
+					}
+
+					continue;
+				}
+
+				const x = (dir === LEFT ? 0 : 49);
+				for (let y = 1; y < 49; y++) {
+					if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
+				}
+			}
+		}
 
 		_.each(structures[STRUCTURE_ROAD], structure => {
 			// Favor roads over plain tiles.
