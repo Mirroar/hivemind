@@ -2,6 +2,9 @@
 
 /* global LOOK_STRUCTURES STRUCTURE_RAMPART ATTACK HEAL CLAIM */
 
+// @todo Evacuate room when walls are breached, or when spawns are gone, ...
+// @todo Destroy terminal and storage if not hope of recovery, then unclaim
+
 const RoomDefense = function (roomName) {
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName];
