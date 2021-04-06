@@ -114,7 +114,7 @@ DismantlerRole.prototype.performDismantle = function (creep) {
 			creep.pos,
 			walls,
 			{
-				roomCallback: roomName => hivemind.roomIntel(roomName).getCostMatrix(),
+				roomCallback: roomName => utilities.getCostMatrix(roomName),
 				maxRooms: 1,
 			}
 		);
