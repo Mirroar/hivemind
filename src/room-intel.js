@@ -123,9 +123,12 @@ RoomIntel.prototype.gatherResourceIntel = function (room) {
 	);
 
 	// Check minerals.
-	const mineral = _.first(room.find(FIND_MINERALS));
-	this.memory.mineral = mineral && mineral.id;
-	this.memory.mineralType = mineral && mineral.mineralType;
+	this.memory.mineralInfo = room.mineral && {
+		x: room.mineral.pos.x,
+		y: room.mineral.pos.y,
+		id: room.mineral.id,
+		type: room.mineral.mineralType,
+	};
 };
 
 /**
@@ -428,7 +431,17 @@ RoomIntel.prototype.getSourcePositions = function () {
  *   Type of this room's mineral source.
  */
 RoomIntel.prototype.getMineralType = function () {
-	return this.memory.mineralType;
+	return this.memory.mineralInfo ? this.memory.mineralInfo.type : this.memory.mineralType;
+};
+
+/**
+ * Returns position of mineral deposit in the room.
+ *
+ * @return {object}
+ *   An Object containing id, type, x and y position of the mineral deposit.
+ */
+RoomIntel.prototype.getMineralPosition = function () {
+	return this.memory.mineralInfo;
 };
 
 /**
@@ -461,6 +474,16 @@ RoomIntel.prototype.getCostMatrix = function () {
 	if (Game.rooms[this.roomName]) return Game.rooms[this.roomName].generateCostMatrix();
 
 	return new PathFinder.CostMatrix();
+};
+
+/**
+ * Checks whether there is a previously generated cost matrix for this room.
+ */
+RoomIntel.prototype.hasCostMatrixData = function () {
+	if (this.memory.costMatrix) return true;
+	if (this.memory.pathfinderPositions) return true;
+
+	return false;
 };
 
 /**
