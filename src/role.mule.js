@@ -32,6 +32,8 @@ module.exports = class MuleRole extends Role {
 		// @todo Make TradeRoute object available and reusable.
 		this.tradeRoute = new TradeRoute(creep.memory.route);
 
+		this.reportEarlyDemise(creep);
+
 		if (!this.tradeRoute.isActive()) {
 			this.setDelivering(creep, false);
 		}
@@ -42,6 +44,21 @@ module.exports = class MuleRole extends Role {
 		}
 
 		this.pickupResources(creep);
+	}
+
+	reportEarlyDemise(creep) {
+		if (creep.ticksToLive > 10) return;
+		if (creep.memory.demiseReported) return;
+		creep.memory.demiseReported = true;
+
+		const storageContents = [];
+		_.each(creep.store, (amount, resourceType) => {
+			if (amount === 0) return;
+			storageContents.push(amount + ' ' + resourceType);
+		});
+		if (storageContents.length === 0) return;
+
+		Game.notify(creep.name + ' containing ' + storageContents.join(', ') + ' is about to expire in ' + creep.pos.roomName + ' on tick ' + (Game.time + creep.ticksToLive));
 	}
 
 	setDelivering(creep, deliver) {
@@ -57,14 +74,13 @@ module.exports = class MuleRole extends Role {
 	}
 
 	followRoomPath(creep) {
-		const inRoom = (creep.pos.x > 2 && creep.pos.x < 47 && creep.pos.y > 2 && creep.pos.y < 47);
 		// @todo Find room in path that we're closest to.
 		if (!creep.memory.pathIndex) creep.memory.pathIndex = 0;
 
 		const nextRoom = creep.memory.roomPath[creep.memory.pathIndex];
 		if (!nextRoom) return false;
 
-		if (creep.pos.roomName === nextRoom && inRoom) creep.memory.pathIndex++;
+		if (creep.pos.roomName === nextRoom && creep.isInRoom()) creep.memory.pathIndex++;
 
 		// Move to next room.
 		const target = new RoomPosition(25, 25, nextRoom);
@@ -163,6 +179,15 @@ module.exports = class MuleRole extends Role {
 			return;
 		}
 
+		if (creep.store.getUsedCapacity() === 0) {
+			this.setDelivering(creep, false);
+
+			// Suicide if another round is unlikely to succeed in time.
+			const travelLength = this.tradeRoute.getTravelLength();
+			if (travelLength && creep.ticksToLive < 2.1 * travelLength) creep.suicide();
+			return;
+		}
+
 		// Choose a resource and deliver it.
 		const resourceType = this.tradeRoute.getResourceType();
 		const amount = creep.store[resourceType] || 0;
@@ -181,14 +206,6 @@ module.exports = class MuleRole extends Role {
 		if (creep.memory.recordTravelLength) {
 			this.tradeRoute.setTravelLength(Game.time - creep.memory.recordTravelLength);
 			delete creep.memory.recordTravelLength;
-		}
-
-		if (creep.store.getUsedCapacity() === 0) {
-			this.setDelivering(creep, false);
-
-			// Suicide if another round is unlikely to succeed in time.
-			const travelLength = this.tradeRoute.getTravelLength();
-			if (travelLength && creep.ticksToLive < 2.1 * travelLength) creep.suicide();
 		}
 	}
 };
