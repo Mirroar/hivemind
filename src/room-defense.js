@@ -180,12 +180,10 @@ RoomDefense.prototype.isInRoom = function (creep) {
 
 RoomDefense.prototype.isWhitelisted = function (username) {
 	return _.includes([
-		'Eiskalt',
-		'Fiskmans',
 		'Meridion',
-		'rysade',
-		'SirFrump',
-		'slowmotionghost',
+		'Montblanc',
+		'Tigga',
+		'Cub',
 	], username);
 }
 
