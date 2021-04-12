@@ -88,14 +88,17 @@ ManageLinksProcess.prototype.run = function () {
 
 		if (!toLink || toLink.delta < MIN_ENERGY_TRANSFER) {
 			const sorted = _.sortBy(this.room.linkNetwork.neutralLinks, link => link.energy);
-			toLink = {
-				link: sorted[0],
-				delta: sorted[0].energyCapacity - sorted[0].energy,
-			};
+			if (sorted.length > 0) {
+				toLink = {
+					link: sorted[0],
+					delta: sorted[0].energyCapacity - sorted[0].energy,
+				};
+			}
 		}
 	}
 
 	if (!fromLink || !toLink || fromLink.cooldown > 0) return;
+	if (fromLink.link.id === toLink.link.id) return;
 
 	// Calculate maximum possible transfer amount, taking into account 3% cost on arrival.
 	// @todo For some reason, using 1 + LINK_LOSS_RATIO as target amount results in ERR_FULL.
