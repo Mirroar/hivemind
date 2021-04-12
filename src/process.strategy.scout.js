@@ -232,9 +232,12 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		}
 
 		if (roomDistance > 1) continue;
-		// If we're direct neighbors, that also means we can't remote harvest
-		// after expanding.
-		result.addScore(-this.getHarvestRoomScore(roomName), 'blockHarvest' + otherRoom.name);
+
+		if (_.values(exits).indexOf(otherRoom.name) !== -1) {
+			// If we're direct neighbors, that also means we can't remote harvest
+			// after expanding if there is a connecting exit.
+			result.addScore(-this.getHarvestRoomScore(roomName), 'blockHarvest' + otherRoom.name);
+		}
 	}
 
 	// Having fewer exit sides is good.
