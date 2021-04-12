@@ -269,10 +269,12 @@ const utilities = {
 		});
 
 		_.each(structures[STRUCTURE_RAMPART], structure => {
-			if (!structure.my) {
-				// Enemy ramparts are blocking.
-				blockerCallback(structure);
-			}
+			if (structure.my) return;
+			if (structure.owner.username === 'Meridion') return;
+			if (structure.owner.username === 'Montblanc') return;
+
+			// Enemy ramparts are blocking.
+			blockerCallback(structure);
 		});
 
 		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
