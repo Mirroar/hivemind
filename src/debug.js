@@ -43,7 +43,6 @@ const Logger = function (channel, roomName) {
 	this.color = channels.default.color;
 	this.roomName = roomName;
 	this.active = true;
-	this.prefix = this.getOutputPrefix();
 
 	if (channels[this.channel]) {
 		this.channelName = ('          ' + channels[this.channel].name).slice(-10);
@@ -51,6 +50,7 @@ const Logger = function (channel, roomName) {
 			this.color = channels[this.channel].color;
 		}
 	}
+	this.prefix = this.getOutputPrefix();
 
 	if (!Memory.logger) {
 		Memory.logger = {};
