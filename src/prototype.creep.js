@@ -5,24 +5,7 @@ RESOURCE_ENERGY STRUCTURE_LINK */
 
 if (!Creep.prototype.__enhancementsLoaded) {
 	require('./prototype.creep.movement');
-
-	/**
-	 * Determines if a creep is dangerous and should be attacked.
-	 *
-	 * @return {boolean}
-	 *   True if the creep can be considered dangerous in some way.
-	 */
-	Creep.prototype.isDangerous = function () {
-		if (hivemind.relations.isAlly(this.owner.username)) return false;
-
-		for (const part of this.body) {
-			if (part.type !== MOVE && part.type !== TOUGH) {
-				return true;
-			}
-		}
-
-		return false;
-	};
+	require('./prototype.creep.military');
 
 	/**
 	 * Transfer resources to a target, if the creep carries any.
