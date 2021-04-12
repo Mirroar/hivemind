@@ -14,7 +14,7 @@ if (!Structure.prototype.__enhancementsLoaded) {
 	Structure.prototype.isWalkable = function () {
 		if (_.includes(OBSTACLE_OBJECT_TYPES, this.structureType)) return false;
 		if (this.structureType === STRUCTURE_RAMPART) {
-			return this.my || this.isPublic();
+			return this.my || this.isPublic;
 		}
 
 		return true;
