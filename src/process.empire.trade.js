@@ -5,6 +5,12 @@ ORDER_BUY ORDER_SELL */
 
 const Process = require('./process');
 
+// @todo Move to configuration eventually.
+const shouldBuyEnergy = false;
+const shouldBuyPixels = true;
+const shouldSellPower = false;
+const shouldSellOps = true;
+
 /**
  * Automatically trades resources on the open market.
  * @constructor
@@ -59,7 +65,7 @@ TradeProcess.prototype.run = function () {
 		}
 	}
 
-	if (Game.market.credits > 5000) {
+	if (Game.market.credits > 5000 && shouldBuyEnergy) {
 		// Also try to cheaply buy some energy for rooms that are low on it.
 		_.each(resources.rooms, (roomState, roomName) => {
 			if (!roomState.canTrade) return;
@@ -72,6 +78,10 @@ TradeProcess.prototype.run = function () {
 			};
 			this.tryBuyResources(RESOURCE_ENERGY, temp, true);
 		});
+	}
+
+	if (Game.market.credits > 10000 && shouldBuyPixels) {
+		// @todo Try to buy pixels when price is low.
 	}
 };
 
