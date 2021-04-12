@@ -148,7 +148,7 @@ module.exports = class RoomManager {
 		this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
 		this.buildPlannedStructures('link.controller', STRUCTURE_LINK);
 		// @todo Build link to farthest locations first.
-		this.buildPlannedStructures('link.sources', STRUCTURE_LINK);
+		this.buildPlannedStructures('link.source', STRUCTURE_LINK);
 		this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
 		this.buildPlannedStructures('link', STRUCTURE_LINK);
 

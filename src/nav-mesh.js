@@ -119,6 +119,7 @@ module.exports = class NavMesh {
       maxY: 0,
     };
     let startPos = this.getUntouchedExit(region, exits);
+    let firstRegionTile = startPos;
     while (startPos) {
       const openList = [startPos];
 
@@ -155,7 +156,7 @@ module.exports = class NavMesh {
       }
 
       let range = 1;
-      while(!region.center) {
+      while(!region.center && range < 25) {
         for (const coords of [
           [centerX + range, centerY],
           [centerX - range, centerY],
@@ -177,6 +178,7 @@ module.exports = class NavMesh {
         }
         range++;
       }
+      if (!region.center) region.center = firstRegionTile;
 
       regions.push(region);
       region = {
@@ -187,6 +189,7 @@ module.exports = class NavMesh {
         maxY: 0,
       };
       startPos = this.getUntouchedExit(region, exits);
+      firstRegionTile = startPos;
     }
 
     return regions;
@@ -367,6 +370,8 @@ module.exports = class NavMesh {
       if (roomMemory.regions) {
         // Find region containing corresponding exit.
         const region = _.filter(roomMemory.regions, region => region.exits.indexOf(correspondingExit) > -1)[0];
+        if (!region) continue;
+
         availableExits = _.filter(roomMemory.exits, exit => exit.id !== correspondingExit && region.exits.indexOf(exit.id) > -1);
       }
       else {
@@ -377,6 +382,11 @@ module.exports = class NavMesh {
         // Check if in closed list.
         if (closedList[exit.center]) continue;
         if (openListLookup[exit.center]) continue;
+
+        // If there's a weird path mismatch, skip.
+        const noPath1 = !roomMemory.paths[exit.id] || !roomMemory.paths[exit.id][correspondingExit];
+        const noPath2 = !roomMemory.paths[correspondingExit] || !roomMemory.paths[correspondingExit][exit.id];
+        if (noPath1 && noPath2) continue;
 
         const item = {
           exitId: exit.id,
@@ -428,6 +438,7 @@ module.exports = class NavMesh {
   }
 
   getAdjacentRoom(roomName, exitId) {
+    // @todo Use RoomIntel.getExits() or Game.map.describeExits() instead.
     const parts = roomName.match(/(\w)(\d+)(\w)(\d+)/);
 
     const dir = Math.floor(exitId / 20);

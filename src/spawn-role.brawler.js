@@ -65,14 +65,61 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.storage === storagePos && creep.memory.target === targetPos);
 			if (_.size(brawlers) > 0) continue;
 
+			const creepSize = this.getDefenseCreepSize(room, roomMemory.enemies);
+
+			hivemind.log('creeps', room.name).debug('Enemies:', roomMemory.enemies.damage, roomMemory.enemies.heal);
+			hivemind.log('creeps', room.name).debug('Response:', creepSize);
+			if (creepSize === 0) continue;
+
 			options.push({
 				priority: 3,
 				weight: 1,
 				targetPos,
-				maxAttack: 4,
+				maxAttack: creepSize === 1 ? 4 : null,
 				pathTarget: utilities.encodePosition(pos),
+				creepSize,
 			});
 		}
+	}
+
+	getDefenseCreepSize(room, enemyData) {
+		// Default defense creep has 4 attack and 3 heal parts.
+		const defaultAttack = 4;
+		const defaultHeal = 3;
+
+		const enemyPower = enemyData.damage + enemyData.heal * 5;
+
+		// For small attackers that should be defeated easily, use simple brawler.
+		if (enemyPower < defaultAttack * ATTACK_POWER + defaultHeal * HEAL_POWER * 5) {
+			return 1;
+		}
+
+		// If damage and heal suffices, use single range / heal creep.
+		const blinkyBody = this.getBlinkyCreepBody(room);
+		const numBlinkyRanged = _.filter(blinkyBody, p => p === RANGED_ATTACK).length;
+		const numBlinkyHeal = _.filter(blinkyBody, p => p === HEAL).length;
+		// hivemind.log('creeps', room.name).debug('Blinky:', numBlinkyRanged * RANGED_ATTACK_POWER, numBlinkyHeal * HEAL_POWER, blinkyBody.length);
+		if (enemyPower < numBlinkyRanged * RANGED_ATTACK_POWER + numBlinkyHeal * HEAL_POWER * 5) {
+			return 2;
+		}
+
+		// If needed, use 2-creep train.
+		const rangedBody = this.getRangedBody(room);
+		const healBody = this.getHealBody(room);
+		const numTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
+		const numTrainHeal = _.filter(healBody, p => p === HEAL).length;
+		// hivemind.log('creeps', room.name).debug('Train:', numTrainRanged * RANGED_ATTACK_POWER, numTrainHeal * HEAL_POWER, rangedBody.length, healBody.length);
+		if (enemyPower < numTrainRanged * RANGED_ATTACK_POWER + numTrainHeal * HEAL_POWER * 5) {
+			return 3;
+		}
+
+		// For more damage, can use ranged + blinky train.
+		if (enemyPower < (numTrainRanged + numBlinkyRanged) * RANGED_ATTACK_POWER + numBlinkyHeal * HEAL_POWER * 5) {
+			return 4;
+		}
+
+		// If attacker too strong, don't spawn defense at all.
+		return 0;
 	}
 
 	/**
@@ -91,6 +138,27 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 			option.maxAttack && {[ATTACK]: option.maxAttack}
+		);
+	}
+
+	getBlinkyCreepBody(room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+		);
+	}
+
+	getRangedBody(room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+		);
+	}
+
+	getHealBody(room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.5, [HEAL]: 0.5},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
