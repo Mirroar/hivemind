@@ -279,6 +279,7 @@ const utilities = {
 			}
 		});
 
+		const roomIntel = hivemind.roomIntel(roomName);
 		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
 			// @todo If we're running a (successful) exploit in this room, tiles
 			// should not be marked inaccessible.
@@ -290,11 +291,10 @@ const utilities = {
 			});
 
 			// Add area around sources as obstacles.
-			const roomIntel = hivemind.roomIntel(roomName);
 			_.each(roomIntel.getSourcePositions(), sourceInfo => {
 				utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
 					sourceKeeperCallback(x, y);
-				}, 3);
+				}, 4);
 			});
 
 			// Add area around mineral as obstacles.
@@ -302,34 +302,34 @@ const utilities = {
 			if (mineralInfo) {
 				utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
 					sourceKeeperCallback(x, y);
-				}, 3);
+				}, 4);
+			}
+		}
+
+		// For exit consistency, we need to check corresponding exit
+		// tiles of adjacend rooms, and if blocked by source keepers, block tiles
+		// in our own room as well.
+		const exits = roomIntel.getExits();
+		for (const dir of [TOP, BOTTOM, LEFT, RIGHT]) {
+			if (!exits[dir]) continue;
+
+			const otherRoomName = exits[dir];
+			const otherRoomIntel = hivemind.roomIntel(otherRoomName);
+			if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
+
+			const matrix = utilities.getCostMatrix(otherRoomName);
+			if (dir === TOP || dir === BOTTOM) {
+				const y = (dir === TOP ? 0 : 49);
+				for (let x = 1; x < 49; x++) {
+					if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
+				}
+
+				continue;
 			}
 
-			// For exit consistency, we need to check corresponding exit
-			// tiles of adjacend rooms, and if blocked by source keepers, block tiles
-			// in our own room as well.
-			const exits = roomIntel.getExits();
-			for (const dir of [TOP, BOTTOM, LEFT, RIGHT]) {
-				if (!exits[dir]) continue;
-
-				const otherRoomName = exits[dir];
-				const otherRoomIntel = hivemind.roomIntel(otherRoomName);
-				if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
-
-				const matrix = utilities.getCostMatrix(otherRoomName);
-				if (dir === TOP || dir === BOTTOM) {
-					const y = (dir === TOP ? 0 : 49);
-					for (let x = 1; x < 49; x++) {
-						if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
-					}
-
-					continue;
-				}
-
-				const x = (dir === LEFT ? 0 : 49);
-				for (let y = 1; y < 49; y++) {
-					if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
-				}
+			const x = (dir === LEFT ? 0 : 49);
+			for (let y = 1; y < 49; y++) {
+				if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
 			}
 		}
 
