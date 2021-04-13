@@ -4,6 +4,7 @@
 
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
+const utilities = require('./utilities');
 
 const UpgraderRole = function () {
 	Role.call(this);
@@ -59,8 +60,8 @@ UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 	if (distance <= 3) {
 		creep.upgradeController(controller);
 
-		if (distance === 1 && controller.sign && controller.sign.username) {
-			creep.signController(controller, '');
+		if (distance === 1 && (!controller.sign || controller.sign.username !== utilities.getUsername())) {
+			creep.signController(controller, creep.room.decoder.resourceType.replace('symbol_', '') + ' | DM / Slack for decoder access');
 		}
 	}
 
