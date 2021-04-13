@@ -10,93 +10,93 @@ RESOURCE_ENERGY STRUCTURE_LINK */
  *   True if the creep can be considered dangerous in some way.
  */
 Creep.prototype.isDangerous = function () {
-  if (hivemind.relations.isAlly(this.owner.username)) return false;
+	if (hivemind.relations.isAlly(this.owner.username)) return false;
 
-  for (const part of this.body) {
-    if (part.type !== MOVE && part.type !== TOUGH) {
-      return true;
-    }
-  }
+	for (const part of this.body) {
+		if (part.type !== MOVE && part.type !== TOUGH) {
+			return true;
+		}
+	}
 
-  return false;
+	return false;
 };
 
 Creep.prototype.getEffectiveHealth = function () {
-  // @todo Cache for one tick?
-  let total = 0;
+	// @todo Cache for one tick?
+	let total = 0;
 
-  for (const part of this.body) {
-    if (part.hits === 0) continue;
-    if (part.boost) {
-      const effects = BOOSTS[part.type][part.boost];
-      if (effects.damage) {
-        total += part.hits / effects.damage;
-        continue;
-      }
-    }
+	for (const part of this.body) {
+		if (part.hits === 0) continue;
+		if (part.boost) {
+			const effects = BOOSTS[part.type][part.boost];
+			if (effects.damage) {
+				total += part.hits / effects.damage;
+				continue;
+			}
+		}
 
-    total += part.hits;
-  }
+		total += part.hits;
+	}
 
-  return total;
+	return total;
 };
 
 Creep.prototype.getDamageCapacity = function (range) {
-  // @todo Cache for one tick?
-  let total = 0;
-  if (range > 3) return total;
+	// @todo Cache for one tick?
+	let total = 0;
+	if (range > 3) return total;
 
-  for (const part of this.body) {
-    if (part.hits === 0) continue;
+	for (const part of this.body) {
+		if (part.hits === 0) continue;
 
-    if (part.type === ATTACK) {
-      if (range > 1) continue;
-      if (part.boost) {
-        const effects = BOOSTS[part.type][part.boost];
-        if (effects.attack) {
-          total += ATTACK_POWER * effects.attack;
-          continue;
-        }
-      }
+		if (part.type === ATTACK) {
+			if (range > 1) continue;
+			if (part.boost) {
+				const effects = BOOSTS[part.type][part.boost];
+				if (effects.attack) {
+					total += ATTACK_POWER * effects.attack;
+					continue;
+				}
+			}
 
-      total += ATTACK_POWER;
-      continue
-    }
+			total += ATTACK_POWER;
+			continue
+		}
 
-    if (part.type !== RANGED_ATTACK) continue;
-    if (part.boost) {
-      const effects = BOOSTS[part.type][part.boost];
-      if (effects.rangedAttack) {
-        total += RANGED_ATTACK_POWER * effects.rangedAttack;
-        continue;
-      }
-    }
+		if (part.type !== RANGED_ATTACK) continue;
+		if (part.boost) {
+			const effects = BOOSTS[part.type][part.boost];
+			if (effects.rangedAttack) {
+				total += RANGED_ATTACK_POWER * effects.rangedAttack;
+				continue;
+			}
+		}
 
-    total += RANGED_ATTACK_POWER;
-  }
+		total += RANGED_ATTACK_POWER;
+	}
 
-  return total;
+	return total;
 };
 
 Creep.prototype.getHealCapacity = function (range) {
-  // @todo Cache for one tick?
-  let total = 0;
-  if (range > 3) return total;
-  const power = range === 1 ? HEAL_POWER : RANGED_HEAL_POWER;
+	// @todo Cache for one tick?
+	let total = 0;
+	if (range > 3) return total;
+	const power = range === 1 ? HEAL_POWER : RANGED_HEAL_POWER;
 
-  for (const part of this.body) {
-    if (part.hits === 0) continue;
-    if (part.type !== HEAL) continue;
-    if (part.boost) {
-      const effects = BOOSTS[part.type][part.boost];
-      if (effects.heal) {
-        total += power * effects.heal;
-        continue;
-      }
-    }
+	for (const part of this.body) {
+		if (part.hits === 0) continue;
+		if (part.type !== HEAL) continue;
+		if (part.boost) {
+			const effects = BOOSTS[part.type][part.boost];
+			if (effects.heal) {
+				total += power * effects.heal;
+				continue;
+			}
+		}
 
-    total += power;
-  }
+		total += power;
+	}
 
-  return total;
+	return total;
 };
