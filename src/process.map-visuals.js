@@ -3,6 +3,7 @@
 /* global hivemind RoomPosition */
 
 const Process = require('./process');
+const TradeRoute = require('./trade-route');
 const utilities = require('./utilities');
 
 /**
@@ -24,6 +25,11 @@ module.exports = class MapVisualsProcess extends Process {
 		_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy.roomList[roomName]), (mem, roomName) => {
 			if (typeof roomName !== 'string') return;
 			this.drawIntelStatus(roomName);
+		});
+
+		let routeCounter = 0;
+		_.each(Memory.tradeRoutes, (mem, routeName) => {
+			this.drawTradeRoute(new TradeRoute(routeName), routeCounter++);
 		});
 
 		this.drawNavMesh();
@@ -59,6 +65,30 @@ module.exports = class MapVisualsProcess extends Process {
 		if (!info.expansionScore) return;
 
 		Game.map.visual.text(info.expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
+	}
+
+	/**
+	 * Visualizes a trade route path.
+	 *
+	 * @param {TradeRoute} route
+	 *   The route in question.
+	 * @param {number} routeIndex
+	 *   Index number of the route for offsetting the paths that are drawn.
+	 */
+	drawTradeRoute(route, routeIndex) {
+		const numRoutes = _.size(Memory.tradeRoutes);
+		const offset = Math.floor(((routeIndex * 50) + 25) / numRoutes);
+
+		const color = route.isActive() ? '#ffffff' : '#888888';
+		const points = [new RoomPosition(offset, offset, route.getOrigin())];
+		for (const roomName of route.getPath()) {
+			points.push(new RoomPosition(offset, offset, roomName));
+		}
+
+		Game.map.visual.poly(points, {
+			stroke: color,
+			lineStyle: 'dashed',
+		});
 	}
 
 	drawNavMesh() {
