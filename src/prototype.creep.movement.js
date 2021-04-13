@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS
+/* global hivemind Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
 const utilities = require('./utilities');

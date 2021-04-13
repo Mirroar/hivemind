@@ -696,7 +696,6 @@ RoomPlanner.prototype.placeHelperParkingLot = function () {
  * Places extension bays.
  */
 RoomPlanner.prototype.placeBays = function () {
-	let bayCount = 0;
 	while (this.canPlaceMore('extension')) {
 		const pos = this.findBayPosition();
 		if (!pos) break;

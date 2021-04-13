@@ -2,10 +2,9 @@
 
 /* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
-FIND_MINERALS TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY
+TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY STRUCTURE_PORTAL
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
-STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER
-STRUCTURE_PORTAL */
+STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 const interShard = require('./intershard');
 const NavMesh = require('./nav-mesh');
@@ -478,6 +477,9 @@ RoomIntel.prototype.getCostMatrix = function () {
 
 /**
  * Checks whether there is a previously generated cost matrix for this room.
+ *
+ * @return {bool}
+ *   Whether a cost matrix has previously been generated for this room.
  */
 RoomIntel.prototype.hasCostMatrixData = function () {
 	if (this.memory.costMatrix) return true;

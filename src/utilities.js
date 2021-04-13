@@ -3,7 +3,7 @@
 /* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART STRUCTURE_ROAD BODYPART_COST
 TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT
-STRUCTURE_PORTAL */
+STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
 
 const utilities = {
 
@@ -36,13 +36,14 @@ const utilities = {
 		try {
 			return callback();
 		}
-		catch (e) {
+		catch (error) {
 			let errorLocation = 'N/A';
 			if (hivemind.currentProcess) {
 				errorLocation = hivemind.currentProcess.constructor.name;
 			}
-			Game.notify(e.name + ' in ' + errorLocation + ':<br>' + e.stack);
-			console.log(e.name + ' in ' + errorLocation + ':<br>' + e.stack);
+
+			Game.notify(error.name + ' in ' + errorLocation + ':<br>' + error.stack);
+			console.log(error.name + ' in ' + errorLocation + ':<br>' + error.stack);
 		}
 	},
 
@@ -91,7 +92,7 @@ const utilities = {
 
 		const result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
 
-		if (result && !result.incomplete || result.path.length < 150) {
+		if (result && !result.incomplete && result.path.length < 150) {
 			hivemind.log('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
 
 			harvestMemory.cachedPath = {
@@ -170,6 +171,8 @@ const utilities = {
 	/**
 	 * Generates a new CostMatrix for pathfinding.
 	 *
+	 * @param {string} roomName
+	 *   Name of the room to generate a cost matrix for.
 	 * @param {object} structures
 	 *   Arrays of structures to navigate around, keyed by structure type.
 	 * @param {object} constructionSites
@@ -200,6 +203,8 @@ const utilities = {
 	/**
 	 * Generates an obstacle list as an alternative to cost matrixes.
 	 *
+	 * @param {string} roomName
+	 *   Name of the room to generate an obstacle list for.
 	 * @param {object} structures
 	 *   Arrays of structures to navigate around, keyed by structure type.
 	 * @param {object} constructionSites

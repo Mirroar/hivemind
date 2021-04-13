@@ -1,15 +1,17 @@
 'use strict';
 
-/* global Room LEFT RIGHT TOP BOTTOM */
+/* global hivemind PathFinder Room RoomPosition LEFT RIGHT TOP BOTTOM
+TERRAIN_MASK_WALL STRUCTURE_KEEPER_LAIR */
 
 const utilities = require('./utilities');
 
 module.exports = class NavMesh {
-
 	constructor() {
-		if (!Memory.nav) Memory.nav = {
-			rooms: {},
-		};
+		if (!Memory.nav) {
+			Memory.nav = {
+				rooms: {},
+			};
+		}
 
 		this.memory = Memory.nav;
 	}
@@ -52,7 +54,7 @@ module.exports = class NavMesh {
 			gen: Game.time,
 			exits: exitMem,
 			paths,
-		}
+		};
 
 		if (regions.length > 1) {
 			this.memory.rooms[roomName].regions = regionMem;
@@ -93,6 +95,7 @@ module.exports = class NavMesh {
 					currentStart = null;
 					nextId = (groupId++) + (10 * (dir - 1));
 				}
+
 				continue;
 			}
 
@@ -135,6 +138,7 @@ module.exports = class NavMesh {
 							this.exitLookup[matrixValue - 100].touched = true;
 							region.exits.push(matrixValue - 100);
 						}
+
 						return;
 					}
 
@@ -156,7 +160,7 @@ module.exports = class NavMesh {
 			}
 
 			let range = 1;
-			while(!region.center && range < 25) {
+			while (!region.center && range < 25) {
 				for (const coords of [
 					[centerX + range, centerY],
 					[centerX - range, centerY],
@@ -176,8 +180,10 @@ module.exports = class NavMesh {
 					region.center = x + (50 * y);
 					break;
 				}
+
 				range++;
 			}
+
 			if (!region.center) region.center = firstRegionTile;
 
 			regions.push(region);
@@ -226,7 +232,7 @@ module.exports = class NavMesh {
 					new RoomPosition(centerX, centerY, roomName),
 					new RoomPosition(centerXR, centerYR, roomName),
 					{
-						roomCallback: room => costMatrix,
+						roomCallback: () => costMatrix,
 						maxRooms: 1,
 					}
 				);
@@ -248,7 +254,7 @@ module.exports = class NavMesh {
 						new RoomPosition(centerX, centerY, roomName),
 						new RoomPosition(centerX2, centerY2, roomName),
 						{
-							roomCallback: room => costMatrix,
+							roomCallback: () => costMatrix,
 							maxRooms: 1,
 						}
 					);
@@ -277,7 +283,7 @@ module.exports = class NavMesh {
 			// Trying to find a path outside of nav mesh. We can't really decide.
 			return {
 				incomplete: true,
-			}
+			};
 		}
 
 		const roomMemory = this.memory.rooms[startRoom];
@@ -289,7 +295,7 @@ module.exports = class NavMesh {
 					startPos,
 					utilities.decodePosition(region.center),
 					{
-						roomCallback: room => costMatrix,
+						roomCallback: () => costMatrix,
 						maxRooms: 1,
 					}
 				);
@@ -393,7 +399,7 @@ module.exports = class NavMesh {
 					pos: exit.center,
 					roomName: nextRoom,
 					parent: current,
-					pathLength: current.pathLength + (costMultiplier * (roomMemory.paths[exit.id] && roomMemory.paths[exit.id][correspondingExit] || roomMemory.paths[correspondingExit][exit.id])),
+					pathLength: current.pathLength + (costMultiplier * ((roomMemory.paths[exit.id] && roomMemory.paths[exit.id][correspondingExit]) || roomMemory.paths[correspondingExit][exit.id])),
 					heuristic: (Game.map.getRoomLinearDistance(current.roomName, endRoom) - 1) * 50,
 				};
 
@@ -446,50 +452,50 @@ module.exports = class NavMesh {
 			case 0:
 				// Exit is due north.
 				if (parts[3] === 'N') {
-					return parts[1] + parts[2] + parts[3] + (parseInt(parts[4]) + 1);
+					return parts[1] + parts[2] + parts[3] + (parseInt(parts[4], 10) + 1);
 				}
 
 				if (parts[4] === '1') {
 					return parts[1] + parts[2] + 'N1';
 				}
 
-				return parts[1] + parts[2] + parts[3] + (parseInt(parts[4]) - 1);
+				return parts[1] + parts[2] + parts[3] + (parseInt(parts[4], 10) - 1);
 
 			case 1:
 				// Exit is due east.
 				if (parts[1] === 'E') {
-					return parts[1] + (parseInt(parts[2]) + 1) + parts[3] + parts[4];
+					return parts[1] + (parseInt(parts[2], 10) + 1) + parts[3] + parts[4];
 				}
 
 				if (parts[2] === '1') {
 					return 'E1' + parts[3] + parts[4];
 				}
 
-				return parts[1] + (parseInt(parts[2]) - 1) + parts[3] + parts[4];
+				return parts[1] + (parseInt(parts[2], 10) - 1) + parts[3] + parts[4];
 
 			case 2:
 				// Exit is due south.
 				if (parts[3] === 'S') {
-					return parts[1] + parts[2] + parts[3] + (parseInt(parts[4]) + 1);
+					return parts[1] + parts[2] + parts[3] + (parseInt(parts[4], 10) + 1);
 				}
 
 				if (parts[4] === '1') {
 					return parts[1] + parts[2] + 'S1';
 				}
 
-				return parts[1] + parts[2] + parts[3] + (parseInt(parts[4]) - 1);
+				return parts[1] + parts[2] + parts[3] + (parseInt(parts[4], 10) - 1);
 
-			case 3:
+			default:
 				// Exit is due west.
 				if (parts[1] === 'W') {
-					return parts[1] + (parseInt(parts[2]) + 1) + parts[3] + parts[4];
+					return parts[1] + (parseInt(parts[2], 10) + 1) + parts[3] + parts[4];
 				}
 
 				if (parts[2] === '1') {
 					return 'W1' + parts[3] + parts[4];
 				}
 
-				return parts[1] + (parseInt(parts[2]) - 1) + parts[3] + parts[4];
+				return parts[1] + (parseInt(parts[2], 10) - 1) + parts[3] + parts[4];
 		}
 	}
 
@@ -499,12 +505,11 @@ module.exports = class NavMesh {
 
 	pluckRoomPath(current) {
 		const path = [utilities.decodePosition(current.pos)];
-		while(current.parent) {
+		while (current.parent) {
 			current = current.parent;
 			path.push(utilities.decodePosition(current.pos));
 		}
 
 		return path.reverse();
 	}
-
 };

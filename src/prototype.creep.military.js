@@ -1,7 +1,7 @@
 'use strict';
 
-/* global hivemind Creep MOVE TOUGH ERR_NOT_ENOUGH_RESOURCES
-RESOURCE_ENERGY STRUCTURE_LINK */
+/* global hivemind Creep ATTACK RANGED_ATTACK HEAL MOVE TOUGH BOOSTS
+ATTACK_POWER HEAL_POWER RANGED_ATTACK_POWER RANGED_HEAL_POWER */
 
 /**
  * Determines if a creep is dangerous and should be attacked.
@@ -60,7 +60,7 @@ Creep.prototype.getDamageCapacity = function (range) {
 			}
 
 			total += ATTACK_POWER;
-			continue
+			continue;
 		}
 
 		if (part.type !== RANGED_ATTACK) continue;

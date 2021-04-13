@@ -1,6 +1,6 @@
 'use strict';
 
-/* global */
+/* global RESOURCE_POWER */
 
 const Process = require('./process');
 

@@ -50,7 +50,7 @@ RemoteMiningProcess.prototype.run = function () {
 
 		sourceRooms[room.name] = {
 			current: 0,
-			max: 4 * numSpawns - 2,
+			max: (4 * numSpawns) - 2,
 		};
 	});
 

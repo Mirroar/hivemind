@@ -5,7 +5,6 @@ STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE */
 
-const NavMesh = require('./nav-mesh');
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
 const utilities = require('./utilities');
