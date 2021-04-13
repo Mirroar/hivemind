@@ -1,7 +1,6 @@
 'use strict';
 
-/* global hivemind FIND_HOSTILE_CREEPS FIND_HOSTILE_STRUCTURES
-STRUCTURE_INVADER_CORE */
+/* global hivemind FIND_HOSTILE_STRUCTURES STRUCTURE_INVADER_CORE */
 
 const Process = require('./process');
 
@@ -35,7 +34,6 @@ RoomIntelProcess.prototype.run = function () {
  * Detects hostile creeps.
  */
 RoomIntelProcess.prototype.findHostiles = function () {
-	const hostiles = this.room.find(FIND_HOSTILE_CREEPS);
 	const parts = {};
 	let lastSeen = this.room.memory.enemies ? this.room.memory.enemies.lastSeen : 0;
 	let safe = true;

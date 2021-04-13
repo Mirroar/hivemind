@@ -1,6 +1,7 @@
 'use strict';
 
-/* global hivemind RoomPosition MOVE ATTACK HEAL */
+/* global hivemind RoomPosition MOVE ATTACK HEAL RANGED_ATTACK ATTACK_POWER
+RANGED_ATTACK_POWER HEAL_POWER */
 
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
@@ -67,8 +68,6 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 
 			const creepSize = this.getDefenseCreepSize(room, roomMemory.enemies);
 
-			hivemind.log('creeps', room.name).debug('Enemies:', roomMemory.enemies.damage, roomMemory.enemies.heal);
-			hivemind.log('creeps', room.name).debug('Response:', creepSize);
 			if (creepSize === 0) continue;
 
 			options.push({
@@ -87,10 +86,10 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const defaultAttack = 4;
 		const defaultHeal = 3;
 
-		const enemyPower = enemyData.damage + enemyData.heal * 5;
+		const enemyPower = enemyData.damage + (enemyData.heal * 5);
 
 		// For small attackers that should be defeated easily, use simple brawler.
-		if (enemyPower < defaultAttack * ATTACK_POWER + defaultHeal * HEAL_POWER * 5) {
+		if (enemyPower < (defaultAttack * ATTACK_POWER) + (defaultHeal * HEAL_POWER * 5)) {
 			return 1;
 		}
 
@@ -98,8 +97,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const blinkyBody = this.getBlinkyCreepBody(room);
 		const numBlinkyRanged = _.filter(blinkyBody, p => p === RANGED_ATTACK).length;
 		const numBlinkyHeal = _.filter(blinkyBody, p => p === HEAL).length;
-		// hivemind.log('creeps', room.name).debug('Blinky:', numBlinkyRanged * RANGED_ATTACK_POWER, numBlinkyHeal * HEAL_POWER, blinkyBody.length);
-		if (enemyPower < numBlinkyRanged * RANGED_ATTACK_POWER + numBlinkyHeal * HEAL_POWER * 5) {
+		if (enemyPower < (numBlinkyRanged * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
 			return 2;
 		}
 
@@ -108,13 +106,12 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const healBody = this.getHealBody(room);
 		const numTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
 		const numTrainHeal = _.filter(healBody, p => p === HEAL).length;
-		// hivemind.log('creeps', room.name).debug('Train:', numTrainRanged * RANGED_ATTACK_POWER, numTrainHeal * HEAL_POWER, rangedBody.length, healBody.length);
-		if (enemyPower < numTrainRanged * RANGED_ATTACK_POWER + numTrainHeal * HEAL_POWER * 5) {
+		if (enemyPower < (numTrainRanged * RANGED_ATTACK_POWER) + (numTrainHeal * HEAL_POWER * 5)) {
 			return 3;
 		}
 
 		// For more damage, can use ranged + blinky train.
-		if (enemyPower < (numTrainRanged + numBlinkyRanged) * RANGED_ATTACK_POWER + numBlinkyHeal * HEAL_POWER * 5) {
+		if (enemyPower < ((numTrainRanged + numBlinkyRanged) * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
 			return 4;
 		}
 

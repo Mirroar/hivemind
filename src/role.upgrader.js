@@ -50,16 +50,17 @@ UpgraderRole.prototype.run = function (creep) {
  */
 UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 	// Upgrade controller.
-	const distance = creep.pos.getRangeTo(creep.room.controller);
+	const controller = creep.room.controller;
+	const distance = creep.pos.getRangeTo(controller);
 	if (distance > 1) {
-		creep.moveToRange(creep.room.controller, 1);
+		creep.moveToRange(controller, 1);
 	}
 
 	if (distance <= 3) {
-		creep.upgradeController(creep.room.controller);
+		creep.upgradeController(controller);
 
-		if (distance === 1 && creep.room.controller.sign && creep.room.controller.sign.username) {
-			creep.signController(creep.room.controller, '');
+		if (distance === 1 && controller.sign && controller.sign.username) {
+			creep.signController(controller, '');
 		}
 	}
 

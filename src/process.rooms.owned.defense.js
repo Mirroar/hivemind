@@ -55,7 +55,7 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 				filter: creep => {
 					for (const i in creep.body) {
 						if (creep.body[i].type === HEAL && creep.body[i].hits > 0) {
-							return true;
+							return creep.isDangerous();
 						}
 					}
 

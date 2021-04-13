@@ -5,7 +5,6 @@ STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE */
 
-const NavMesh = require('./nav-mesh');
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
 const utilities = require('./utilities');
@@ -167,8 +166,8 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
 
 	if (enemies && enemies.length > 0) {
 		for (const enemy of enemies) {
-			// Check if enemy is harmless, and ignore it outside own rooms.
-			if (!enemy.isDangerous() && !creep.room.isMine()) continue;
+			// Check if enemy is harmless, and ignore it.
+			if (!enemy.isDangerous()) continue;
 
 			const option = {
 				priority: 5,

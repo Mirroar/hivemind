@@ -97,9 +97,7 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 			}
 
 			if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-				// @todo Allow pathing through source keeper rooms if we can safely avoid them.
-				if (!allowDanger) continue;
-
+				// Allow pathing through source keeper rooms since we can safely avoid them most of the time.
 				cost *= 2;
 			}
 

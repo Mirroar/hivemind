@@ -1,6 +1,6 @@
 'use strict';
 
-/* global RoomVisual COLOR_GREY FIND_STRUCTURES STRUCTURE_EXTENSION
+/* global RoomVisual FIND_STRUCTURES STRUCTURE_EXTENSION
 OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
 
 const utilities = require('./utilities');

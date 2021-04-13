@@ -83,6 +83,14 @@ TradeProcess.prototype.run = function () {
 	if (Game.market.credits > 10000 && shouldBuyPixels) {
 		// @todo Try to buy pixels when price is low.
 	}
+
+	if (Game.market.credits > 10000 && shouldSellPower) {
+		// @todo Try to buy pixels when price is low.
+	}
+
+	if (Game.market.credits > 10000 && shouldSellOps) {
+		// @todo Try to buy pixels when price is low.
+	}
 };
 
 /**

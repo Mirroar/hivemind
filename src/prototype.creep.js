@@ -1,7 +1,6 @@
 'use strict';
 
-/* global hivemind Creep MOVE TOUGH ERR_NOT_ENOUGH_RESOURCES
-RESOURCE_ENERGY STRUCTURE_LINK */
+/* global Creep ERR_NOT_ENOUGH_RESOURCES RESOURCE_ENERGY STRUCTURE_LINK */
 
 if (!Creep.prototype.__enhancementsLoaded) {
 	require('./prototype.creep.movement');
