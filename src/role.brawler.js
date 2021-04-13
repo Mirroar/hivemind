@@ -167,8 +167,8 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
 
 	if (enemies && enemies.length > 0) {
 		for (const enemy of enemies) {
-			// Check if enemy is harmless, and ignore it outside own rooms.
-			if (!enemy.isDangerous() && !creep.room.isMine()) continue;
+			// Check if enemy is harmless, and ignore it.
+			if (!enemy.isDangerous()) continue;
 
 			const option = {
 				priority: 5,
