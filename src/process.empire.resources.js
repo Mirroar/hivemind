@@ -223,7 +223,7 @@ const tradeRouteTargets = {
 	// E27N25: {sourceRoom: 'E19N22', resourceType: 'symbol_heth', rcl: 7, path: ['E19N21', 'E20N21', 'E21N20', 'E22N20', 'E23N20', 'E24N20', 'E25N20', 'E25N21', 'E26N22', 'E27N22', 'E27N23', 'E27N24']},
 
 	// Montblanc
-	W13N27: {sourceRoom: 'W13N29', resourceType: 'symbol_yodh', rcl: 6, path: ['W14N28', 'W13N27']},
+	W13N27: {sourceRoom: 'W11N27', resourceType: 'symbol_yodh', rcl: 7, path: ['W13N27']},
 
 	// Starting from W12N25.
 	// W11N23: {sourceRoom: 'W12N25', resourceType: 'symbol_ayin', rcl: 7, path: ['W11N25', 'W11N24', 'W11N23']},
