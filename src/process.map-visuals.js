@@ -67,7 +67,7 @@ module.exports = class MapVisualsProcess extends Process {
 			if (!navInfo.regions) {
 				// Single region, all exits are connected.
 				for (const exit of navInfo.exits) {
-					Game.map.visual.line(new RoomPosition(25, 25, roomName), utilities.decodePosition(exit.center));
+					Game.map.visual.line(new RoomPosition(25, 25, roomName), utilities.deserializePosition(exit.center, roomName));
 				}
 
 				return;
@@ -78,7 +78,7 @@ module.exports = class MapVisualsProcess extends Process {
 				for (const exit of navInfo.exits) {
 					if (region.exits.indexOf(exit.id) === -1) continue;
 
-					Game.map.visual.line(utilities.decodePosition(region.center), utilities.decodePosition(exit.center));
+					Game.map.visual.line(utilities.deserializePosition(region.center, roomName), utilities.deserializePosition(exit.center, roomName));
 				}
 			}
 		});
