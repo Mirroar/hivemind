@@ -55,6 +55,8 @@ if (!Structure.prototype.__enhancementsLoaded) {
 		return this.bay !== null;
 	};
 
+	StructureSpawn.prototype.isBaySpawn = StructureExtension.prototype.isBayExtension;
+
 	/**
 	 * Calculates relative tower power at a certain range.
 	 *
