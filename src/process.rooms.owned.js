@@ -129,16 +129,16 @@ OwnedRoomProcess.prototype.gatherStats = function () {
 
 	const memory = Memory.roomStats[roomName];
 	const key = 'rcl' + this.room.controller.level;
-	if (!memory[key]) memory[key] = Game.time;
+	if (!memory[key]) memory[key] = Game.time - memory.claimed;
 
 	if (!memory.tower) {
 		if (this.room.find(FIND_STRUCTURES, {filter: (s) => s.structureType === STRUCTURE_TOWER}).length > 0) {
-			memory.tower = Game.time;
+			memory.tower = Game.time - memory.claimed;
 		}
 	}
 
 	if (!memory.storage && this.room.storage) {
-		memory.storage = Game.time;
+		memory.storage = Game.time - memory.claimed;
 	}
 }
 
