@@ -15,7 +15,7 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 24;
+	this.roomPlannerVersion = 30;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -184,11 +184,9 @@ RoomPlanner.prototype.generateDistanceMatrixes = function () {
  *   Matrix that will have a 1 at every exit tile.
  */
 RoomPlanner.prototype.prepareDistanceMatrixes = function (wallMatrix, exitMatrix) {
-	const terrain = new Room.Terrain(this.roomName);
-
 	for (let x = 0; x < 50; x++) {
 		for (let y = 0; y < 50; y++) {
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) {
 				wallMatrix.set(x, y, 255);
 				exitMatrix.set(x, y, 255);
 				continue;
@@ -198,7 +196,7 @@ RoomPlanner.prototype.prepareDistanceMatrixes = function (wallMatrix, exitMatrix
 				exitMatrix.set(x, y, 1);
 			}
 
-			this.markWallAdjacentTiles(wallMatrix, terrain, x, y);
+			this.markWallAdjacentTiles(wallMatrix, x, y);
 		}
 	}
 };
@@ -208,16 +206,14 @@ RoomPlanner.prototype.prepareDistanceMatrixes = function (wallMatrix, exitMatrix
  *
  * @param {PathFinder.CostMatrix} matrix
  *   The matrix to modify.
- * @param {Room.Terrain} terrain
- *   Terrain data for the room we are handling.
  * @param {number} x
  *   x position of the tile in question.
  * @param {number} y
  *   y position of the tile in question.
  */
-RoomPlanner.prototype.markWallAdjacentTiles = function (matrix, terrain, x, y) {
+RoomPlanner.prototype.markWallAdjacentTiles = function (matrix, x, y) {
 	utilities.handleMapArea(x, y, (ax, ay) => {
-		if (terrain.get(ax, ay) === TERRAIN_MASK_WALL) {
+		if (this.terrain.get(ax, ay) === TERRAIN_MASK_WALL) {
 			matrix.set(x, y, 1);
 			return false;
 		}
@@ -272,12 +268,11 @@ RoomPlanner.prototype.findTowerPositions = function () {
 	};
 
 	const allDirectionsSafe = _.sum(this.memory.adjacentSafe) === 4;
-	const terrain = new Room.Terrain(this.roomName);
 	for (let x = 1; x < 49; x++) {
 		for (let y = 1; y < 49; y++) {
 			if (this.buildingMatrix.get(x, y) !== 0 && this.buildingMatrix.get(x, y) !== 10) continue;
 			if (this.safetyMatrix.get(x, y) !== 1) continue;
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
 			let score = 0;
 
 			let tileDir;
@@ -325,6 +320,7 @@ RoomPlanner.prototype.placeFlags = function () {
 	// @todo Build small ramparts on spawns and on paths close to exit
 	// where enemy ranged creeps might reach.
 	const start = Game.cpu.getUsed();
+	this.terrain = new Room.Terrain(this.roomName);
 
 	if (!this.memory.wallDistanceMatrix) {
 		this.generateDistanceMatrixes();
@@ -427,19 +423,88 @@ RoomPlanner.prototype.placeFlags = function () {
 		}
 
 		if (this.room.sources) {
+			this.memory.sources = {};
 			for (const source of this.room.sources) {
-				const sourceRoads = this.scanAndAddRoad(source.pos, this.roomCenterEntrances);
+				// Find adjacent space that will provide most building space.
+				let bestPos;
+				utilities.handleMapArea(source.pos.x, source.pos.y, (x, y) => {
+					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+					let numFreeTiles = 0;
+					utilities.handleMapArea(x, y, (x2, y2) => {
+						if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
+
+						numFreeTiles++;
+					});
+
+					if (!bestPos || bestPos.numFreeTiles < numFreeTiles) {
+						bestPos = {x, y, numFreeTiles};
+					}
+				});
+
+				const harvestPosition = new RoomPosition(bestPos.x, bestPos.y, this.roomName);
+				this.placeFlag(harvestPosition, 'harvester', null);
+				this.placeFlag(harvestPosition, 'bay_center', null);
+
+				// Discourage roads through spots around harvest position.
+				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+					if (this.buildingMatrix.get(x, y) < 10) this.buildingMatrix.set(x, y, 10);
+				});
+
+				const sourceRoads = this.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
 				for (const pos of sourceRoads) {
 					this.placeFlag(pos, 'road.source', null);
 				}
 
-				this.placeContainer(sourceRoads, 'source');
+				this.placeFlag(harvestPosition, 'container.source', null);
+				this.placeFlag(harvestPosition, 'container', null);
 
-				// Place a link near sources, but off the calculated path.
-				this.placeLink(sourceRoads, 'source');
+				// Setup memory for quick access to harvest spots.
+				this.memory.sources[source.id] = {
+					harvestPos: utilities.serializePosition(harvestPosition, this.roomName),
+				};
 
 				// Make sure no other paths get led through harvester position.
-				this.buildingMatrix.set(sourceRoads[0].x, sourceRoads[0].y, 255);
+				this.buildingMatrix.set(harvestPosition.x, harvestPosition.y, 255);
+
+				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+					if (!this.isBuildableTile(x, y)) return;
+					if (x === harvestPosition.x && y === harvestPosition.y) return;
+
+					// Only place spawn where a road tile is adjacent, so creeps can
+					// actually exit when a harvester is on its spot.
+					let spawnPlaced = false
+					utilities.handleMapArea(x, y, (x2, y2) => {
+						if (this.buildingMatrix.get(x2, y2) !== 1) return;
+
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'spawn');
+						spawnPlaced = true;
+						return false;
+					});
+
+					if (spawnPlaced) return false;
+				});
+
+				let linkPlaced = false;
+				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+					if (!this.isBuildableTile(x, y)) return;
+					if (x === harvestPosition.x && y === harvestPosition.y) return;
+
+					if (!linkPlaced) {
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'link');
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'link.source');
+						linkPlaced = true;
+					}
+					else {
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension');
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension.harvester');
+					}
+				});
+
 			}
 		}
 	}
@@ -463,6 +528,15 @@ RoomPlanner.prototype.placeFlags = function () {
 
 	const end = Game.cpu.getUsed();
 	console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
+
+	// Reset harvest position info for harvesters in case they are not correctly
+	// assigned any more.
+	if (this.room) {
+		_.each(this.room.creepsByRole.harvester, creep => {
+			delete creep.memory.harvestPos;
+			delete creep.memory.noHarvestPos;
+		});
+	}
 };
 
 /**
@@ -474,11 +548,10 @@ RoomPlanner.prototype.placeFlags = function () {
  *   List of potential room core positions to add to.
  */
 RoomPlanner.prototype.prepareBuildingMatrix = function (potentialWallPositions, potentialCenterPositions) {
-	const terrain = new Room.Terrain(this.roomName);
 	this.buildingMatrix = new PathFinder.CostMatrix();
 	for (let x = 0; x < 50; x++) {
 		for (let y = 0; y < 50; y++) {
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) {
 				this.buildingMatrix.set(x, y, 255);
 				continue;
 			}
@@ -711,6 +784,7 @@ RoomPlanner.prototype.placeBays = function () {
 			if (!this.isBuildableTile(x, y)) return;
 
 			this.placeFlag(new RoomPosition(x, y, pos.roomName), 'extension');
+			this.placeFlag(new RoomPosition(x, y, pos.roomName), 'extension.bay');
 		});
 
 		// Reinitialize pathfinding.
@@ -1032,7 +1106,7 @@ RoomPlanner.prototype.isBuildableTile = function (x, y, allowRoads) {
 	if (matrixValue > 100) return false;
 
 	// Tiles next to walls are fine for building, just not so much for pathing.
-	if (matrixValue === 10 && this.wallDistanceMatrix.get(x, y) === 1) return true;
+	if (matrixValue === 10 && this.wallDistanceMatrix.get(x, y) < 3) return true;
 
 	// @todo Find out why this check was initially introduced.
 	if (matrixValue > 1) return false;
@@ -1192,22 +1266,21 @@ RoomPlanner.prototype.pruneWalls = function (walls) {
 
 	// Prepare CostMatrix and exit points.
 	const exits = [];
-	const terrain = new Room.Terrain(this.roomName);
 
 	for (let i = 0; i < 50; i++) {
-		if (terrain.get(0, i) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.W)) {
+		if (this.terrain.get(0, i) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.W)) {
 			exits.push(utilities.encodePosition(new RoomPosition(0, i, this.roomName)));
 		}
 
-		if (terrain.get(49, i) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.E)) {
+		if (this.terrain.get(49, i) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.E)) {
 			exits.push(utilities.encodePosition(new RoomPosition(49, i, this.roomName)));
 		}
 
-		if (terrain.get(i, 0) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.N)) {
+		if (this.terrain.get(i, 0) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.N)) {
 			exits.push(utilities.encodePosition(new RoomPosition(i, 0, this.roomName)));
 		}
 
-		if (terrain.get(i, 49) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.S)) {
+		if (this.terrain.get(i, 49) !== TERRAIN_MASK_WALL && (!this.memory.adjacentSafe || !this.memory.adjacentSafe.S)) {
 			exits.push(utilities.encodePosition(new RoomPosition(i, 49, this.roomName)));
 		}
 	}
