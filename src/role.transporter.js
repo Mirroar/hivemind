@@ -568,7 +568,7 @@ TransporterRole.prototype.addStorageEnergyDeliveryOptions = function (options) {
 				priority: 0,
 				weight: 0,
 				type: 'position',
-				object: creep.room.getPositionAt(storagePosition.x - 1, storagePosition.y),
+				object: creep.room.getPositionAt(storagePosition.x, storagePosition.y),
 				resourceType: RESOURCE_ENERGY,
 			});
 		}
