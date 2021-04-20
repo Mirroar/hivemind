@@ -362,7 +362,7 @@ RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites
  *   Number of ticks since intel was last gathered in this room.
  */
 RoomIntel.prototype.getAge = function () {
-	return Game.time - (this.memory.lastScan || 0);
+	return Game.time - (this.memory.lastScan || -10000);
 };
 
 /**
