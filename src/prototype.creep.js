@@ -3,8 +3,9 @@
 /* global Creep ERR_NOT_ENOUGH_RESOURCES RESOURCE_ENERGY STRUCTURE_LINK */
 
 if (!Creep.prototype.__enhancementsLoaded) {
-	require('./prototype.creep.movement');
 	require('./prototype.creep.military');
+	require('./prototype.creep.movement');
+	require('./prototype.creep.train');
 
 	/**
 	 * Transfer resources to a target, if the creep carries any.

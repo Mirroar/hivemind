@@ -275,6 +275,10 @@ BrawlerRole.prototype.addMilitaryHealOptions = function (creep, options) {
  *   The creep to run logic for.
  */
 BrawlerRole.prototype.performMilitaryMove = function (creep) {
+	if (creep.isPartOfTrain()) {
+		if (this.performTrainMove(creep) !== OK) return;
+	}
+
 	if (creep.memory.fillWithEnergy) {
 		if (_.sum(creep.carry) < creep.carryCapacity) {
 			this.transporterRole.performGetEnergy(creep);
@@ -357,6 +361,53 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 	creep.moveTo(25, 25, {
 		reusePath: 50,
 	});
+};
+
+BrawlerRole.prototype.performTrainMove = function (creep) {
+	// @todo Implement joined room border traversal.
+
+	if (!creep.isTrainFullySpawned()) {
+		// @todo Refresh creep if spawning takes a long time.
+
+		// Stay inside of spawn room.
+		const roomCenter = new RoomPosition(25, 25, creep.pos.roomName);
+		if (creep.pos.getRangeTo(roomCenter) > 20) {
+			creep.moveToRange(roomCenter, 20);
+			return ERR_BUSY;
+		}
+
+		// Move randomly around the room to not block spawns or other creeps.
+		creep.move(1 + Math.floor(Math.random() * 8));
+	}
+
+	// Only the train head will schedule movement intents. The other creeps will
+	// move when the head moves.
+	if (!creep.isTrainHead()) return ERR_NOT_OWNER;
+
+	// Make sure train is joined.
+	if (!creep.isTrainJoined()) {
+		creep.joinTrain();
+		return ERR_BUSY;
+	}
+
+	// If any segment is fatigued, we can't move, or only move adjacent to
+	// next segment.
+	const segments = this.getTrainParts();
+	for (const segment of segments) {
+		if (segment.fatigue > 0) return ERR_TIRED;
+	}
+
+	// Head may move. Make sure all other parts follow.
+	for (let i = 1; i < segments.length; i++) {
+		if (segments[i].pos.roomName !== segments[i - 1].pos.roomName) {
+			segments[i].moveToRange(segments[i - 1].pos, 1);
+			continue;
+		}
+
+		segments[i].move(segments[i].pos.getDirectionTo(segments[i - 1].pos));
+	}
+
+	return OK;
 };
 
 /**
