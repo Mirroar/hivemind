@@ -336,7 +336,7 @@ module.exports = class RoomManager {
 		const structures = this.structuresByType[structureType] || [];
 		const sites = this.constructionSitesByType[structureType] || [];
 
-		let limit = CONTROLLER_STRUCTURES[structureType][this.room.controller.level];
+		let limit = Math.min(CONTROLLER_STRUCTURES[structureType][this.room.controller.level], _.size(this.room.roomPlanner.getLocations(locationType)));
 		if (amount) {
 			limit = amount + structures.length + sites.length - limit;
 		}
