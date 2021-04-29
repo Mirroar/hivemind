@@ -7,6 +7,21 @@ const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
 const stats = require('./stats');
 
+const RESPONSE_NONE = 0;
+const RESPONSE_MINI_BRAWLER = 1;
+const RESPONSE_FULL_BRAWLER = 2;
+const RESPONSE_BLINKY = 3;
+const RESPONSE_ATTACK_HEAL_TRAIN = 4;
+const RESPONSE_ATTACK_BLINKY_TRAIN = 5;
+const RESPONSE_RANGED_HEAL_TRAIN = 6;
+const RESPONSE_RANGED_BLINKY_TRAIN = 7;
+const RESPONSE_BLINKY_BLINKY_TRAIN = 8;
+const RESPONSE_BLINKY_HEAL_TRAIN = 9;
+const RESPONSE_QUAD = 10;
+
+const SEGMENT_HEAL = 1;
+const SEGMENT_BLINKY = 2;
+
 module.exports = class BrawlerSpawnRole extends SpawnRole {
 	/**
 	 * Adds brawler spawn options for the given room.
@@ -19,6 +34,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		this.getLowLevelRoomSpawnOptions(room, options);
 		this.getRemoteDefenseSpawnOptions(room, options);
+		this.getTrainPartSpawnOptions(room, options);
 	}
 
 	/**
@@ -66,17 +82,16 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.storage === storagePos && creep.memory.target === targetPos);
 			if (_.size(brawlers) > 0) continue;
 
-			const creepSize = this.getDefenseCreepSize(room, roomMemory.enemies);
+			const responseType = this.getDefenseCreepSize(room, roomMemory.enemies);
 
-			if (creepSize === 0) continue;
+			if (responseType === RESPONSE_NONE) continue;
 
 			options.push({
 				priority: 3,
 				weight: 1,
 				targetPos,
-				maxAttack: creepSize === 1 ? 4 : null,
 				pathTarget: utilities.encodePosition(pos),
-				creepSize,
+				responseType,
 			});
 		}
 	}
@@ -87,10 +102,19 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const defaultHeal = 3;
 
 		const enemyPower = enemyData.damage + (enemyData.heal * 5);
+		const isRangedEnemy = (enemyData.parts[RANGED_ATTACK] || 0) > 0;
 
 		// For small attackers that should be defeated easily, use simple brawler.
 		if (enemyPower < (defaultAttack * ATTACK_POWER) + (defaultHeal * HEAL_POWER * 5)) {
-			return 1;
+			return RESPONSE_MINI_BRAWLER;
+		}
+
+		// If damage and heal suffices, use single melee / heal creep.
+		const brawlerBody = this.getBrawlerCreepBody(room);
+		const numBrawlerAttack = _.filter(brawlerBody, p => p === ATTACK).length;
+		const numBrawlerHeal = _.filter(brawlerBody, p => p === HEAL).length;
+		if (!isRangedEnemy && enemyPower < (numBrawlerAttack * ATTACK_POWER) + (numBrawlerHeal * HEAL_POWER * 5)) {
+			return RESPONSE_FULL_BRAWLER;
 		}
 
 		// If damage and heal suffices, use single range / heal creep.
@@ -98,25 +122,63 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const numBlinkyRanged = _.filter(blinkyBody, p => p === RANGED_ATTACK).length;
 		const numBlinkyHeal = _.filter(blinkyBody, p => p === HEAL).length;
 		if (enemyPower < (numBlinkyRanged * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
-			return 2;
+			return RESPONSE_BLINKY;
 		}
 
 		// If needed, use 2-creep train.
-		const rangedBody = this.getRangedBody(room);
-		const healBody = this.getHealBody(room);
+		const attackBody = this.getAttackCreepBody(room);
+		const rangedBody = this.getRangedCreepBody(room);
+		const healBody = this.getHealCreepBody(room);
+		const numTrainAttack = _.filter(attackBody, p => p === ATTACK).length;
 		const numTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
 		const numTrainHeal = _.filter(healBody, p => p === HEAL).length;
-		if (enemyPower < (numTrainRanged * RANGED_ATTACK_POWER) + (numTrainHeal * HEAL_POWER * 5)) {
-			return 3;
+
+		if (!isRangedEnemy && enemyPower < (numTrainAttack * ATTACK_POWER) + (numTrainHeal * HEAL_POWER * 5)) {
+			return RESPONSE_ATTACK_HEAL_TRAIN;
 		}
 
-		// For more damage, can use ranged + blinky train.
-		if (enemyPower < ((numTrainRanged + numBlinkyRanged) * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
-			return 4;
+		if (!isRangedEnemy && enemyPower < (numTrainAttack * ATTACK_POWER) + (numBlinkyRanged * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
+			return RESPONSE_ATTACK_BLINKY_TRAIN;
 		}
+
+		if (enemyPower < ((numTrainRanged + numBlinkyRanged) * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
+			return RESPONSE_RANGED_BLINKY_TRAIN;
+		}
+
+		if (enemyPower < (2 * numBlinkyRanged * RANGED_ATTACK_POWER) + (2 * numBlinkyHeal * HEAL_POWER * 5)) {
+			return RESPONSE_BLINKY_BLINKY_TRAIN;
+		}
+
+		if (enemyPower < (numTrainRanged * RANGED_ATTACK_POWER) + (numTrainHeal * HEAL_POWER * 5)) {
+			return RESPONSE_RANGED_HEAL_TRAIN;
+		}
+
+		if (enemyPower < (numBlinkyRanged * RANGED_ATTACK_POWER) + ((numTrainHeal + numBlinkyHeal) * HEAL_POWER * 5)) {
+			return RESPONSE_BLINKY_HEAL_TRAIN;
+		}
+
+		// @todo Otherwise, decide on spawning a quad, once we can use one.
 
 		// If attacker too strong, don't spawn defense at all.
-		return 0;
+		return RESPONSE_NONE;
+	}
+
+	/**
+	 * Spawns additional segments of a creep train.
+	 */
+	getTrainPartSpawnOptions(room, options) {
+		const trainStarters = _.filter(room.creepsByRole.brawler || [], creep => creep.memory.trainStarter && creep.memory.trainPartsToSpawn.length > 0);
+
+		for (const creep of trainStarters) {
+			const segmentType = creep.memory.trainPartsToSpawn[0];
+
+			options.push({
+				priority: 4,
+				weight: 1,
+				trainStarter: creep.id,
+				segmentType,
+			});
+		}
 	}
 
 	/**
@@ -131,28 +193,72 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room, option) {
+		if (option.responseType) {
+			switch (option.responseType) {
+				case RESPONSE_MINI_BRAWLER:
+				case RESPONSE_FULL_BRAWLER:
+					return this.getBrawlerCreepBody(room, option.responseType === RESPONSE_MINI_BRAWLER ? 4 : null);
+
+				case RESPONSE_BLINKY:
+				case RESPONSE_BLINKY_BLINKY_TRAIN:
+				case RESPONSE_BLINKY_HEAL_TRAIN:
+					return this.getBlinkyCreepBody(room);
+
+				case RESPONSE_RANGED_HEAL_TRAIN:
+				case RESPONSE_RANGED_BLINKY_TRAIN:
+					return this.getRangedCreepBody(room);
+
+				case RESPONSE_ATTACK_HEAL_TRAIN:
+				case RESPONSE_ATTACK_BLINKY_TRAIN:
+					return this.getAttackCreepBody(room);
+
+				default:
+					return this.getBrawlerCreepBody(room);
+			}
+		}
+		else if (option.trainStarter) {
+			switch (option.segmentType) {
+				case SEGMENT_HEAL:
+					return this.getHealCreepBody(room);
+
+				default:
+					return this.getBlinkyCreepBody(room);
+			}
+		}
+
+		return this.getBrawlerCreepBody(room);
+	}
+
+	getBrawlerCreepBody(room, maxAttackParts) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			option.maxAttack && {[ATTACK]: option.maxAttack}
+			maxAttackParts && {[ATTACK]: maxAttackParts}
 		);
 	}
 
 	getBlinkyCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
+			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.35, [HEAL]: 0.15},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
-	getRangedBody(room) {
+	getAttackCreepBody(room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.5, [ATTACK]: 0.5},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+		);
+	}
+
+	getRangedCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
-	getHealBody(room) {
+	getHealCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [HEAL]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
@@ -171,11 +277,43 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room, option) {
-		return {
+		const memory = {
 			storage: utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos),
 			target: option.targetPos || utilities.encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
 		};
+
+		switch (option.responseType) {
+			case RESPONSE_ATTACK_HEAL_TRAIN:
+			case RESPONSE_RANGED_HEAL_TRAIN:
+			case RESPONSE_BLINKY_HEAL_TRAIN:
+				memory.train = {
+					starter: true,
+					partsToSpawn: [SEGMENT_HEAL],
+				};
+				break;
+
+			case RESPONSE_ATTACK_BLINKY_TRAIN:
+			case RESPONSE_RANGED_BLINKY_TRAIN:
+			case RESPONSE_BLINKY_BLINKY_TRAIN:
+				memory.train = {
+					starter: true,
+					partsToSpawn: [SEGMENT_BLINKY],
+				};
+				break;
+
+			default:
+				// No other segments need spawning.
+				break;
+		}
+
+		if (option.trainStarter) {
+			memory.train = {
+				id: option.trainStarter,
+			};
+		}
+
+		return memory;
 	}
 
 	/**
@@ -191,6 +329,12 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	 *   The name of the new creep.
 	 */
 	onSpawn(room, option, body, name) {
+		if (option.trainStarter) {
+			// Remove segment from train spawn queue.
+			const creep = Game.getObjectById(option.trainStarter);
+			creep.memory.train.partsToSpawn = creep.memory.train.partsToSpawn.slice(1);
+		}
+
 		const position = option.targetPos;
 		if (!position) return;
 

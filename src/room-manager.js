@@ -94,7 +94,12 @@ module.exports = class RoomManager {
 		if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === this.room.name && this.room.controller.level < 4) {
 			// In our first room, getting more extensions is pretty important for
 			// spawning bigger creeps asap.
-			this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
+			if (this.room.controller.level >= 3) {
+				// We can now build extensions near energy sources, since harvesters are now
+				// big enough that one will be able to harvest all available energy.
+				this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
+			}
+			this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
 		}
 
 		// Build road to sources asap to make getting energy easier.
@@ -139,6 +144,12 @@ module.exports = class RoomManager {
 
 		// Make sure extensions are built in the right place, remove otherwise.
 		this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
+		if (this.room.controller.level >= 3) {
+			// We can now build extensions near energy sources, since harvesters are now
+			// big enough that one will be able to harvest all available energy.
+			this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
+		}
+		this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
 		this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
 
 		// Also build terminal when available.
@@ -325,7 +336,7 @@ module.exports = class RoomManager {
 		const structures = this.structuresByType[structureType] || [];
 		const sites = this.constructionSitesByType[structureType] || [];
 
-		let limit = CONTROLLER_STRUCTURES[structureType][this.room.controller.level];
+		let limit = Math.min(CONTROLLER_STRUCTURES[structureType][this.room.controller.level], _.size(this.room.roomPlanner.getLocations(locationType)));
 		if (amount) {
 			limit = amount + structures.length + sites.length - limit;
 		}

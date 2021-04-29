@@ -428,7 +428,7 @@ RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites
  *   Number of ticks since intel was last gathered in this room.
  */
 RoomIntel.prototype.getAge = function () {
-	return Game.time - (this.memory.lastScan || 0);
+	return Game.time - (this.memory.lastScan || -10000);
 };
 
 /**
@@ -533,12 +533,12 @@ RoomIntel.prototype.getCostMatrix = function () {
 		const matrix = new PathFinder.CostMatrix();
 
 		for (const location of this.memory.pathfinderPositions.obstacles) {
-			const pos = utilities.decodePosition(location);
+			const pos = utilities.deserializePosition(location, this.roomName);
 			matrix.set(pos.x, pos.y, 0xFF);
 		}
 
 		for (const location of this.memory.pathfinderPositions.roads) {
-			const pos = utilities.decodePosition(location);
+			const pos = utilities.deserializePosition(location, this.roomName);
 			if (matrix.get(pos.x, pos.y) === 0) {
 				matrix.set(pos.x, pos.y, 1);
 			}

@@ -91,6 +91,8 @@ InterShardProcess.prototype.updateShardInfo = function () {
  * Determines CPU allocation for each active shard.
  */
 InterShardProcess.prototype.distributeCPU = function () {
+	if (!Game.cpu.setShardLimits) return;
+
 	// Collect information about shards so we can estimate CPU needs.
 	this._shardData = {
 		total: {

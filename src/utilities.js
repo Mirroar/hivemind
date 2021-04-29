@@ -226,14 +226,14 @@ const utilities = {
 			structures,
 			constructionSites,
 			structure => {
-				const location = utilities.encodePosition(structure.pos);
+				const location = utilities.serializePosition(structure.pos, roomName);
 				if (!_.contains(result.obstacles, location)) {
 					result.roads.push(location);
 				}
 			},
-			structure => result.obstacles.push(utilities.encodePosition(structure.pos)),
+			structure => result.obstacles.push(utilities.serializePosition(structure.pos, roomName)),
 			(x, y) => {
-				const location = utilities.encodePosition(new RoomPosition(x, y, roomName));
+				const location = utilities.serializeCoords(x, y);
 				if (!_.contains(result.obstacles, location)) {
 					result.obstacles.push(location);
 				}
@@ -545,6 +545,35 @@ const utilities = {
 		if (parts && parts.length > 0) {
 			return new RoomPosition(parts[2], parts[3], parts[1]);
 		}
+	},
+
+	serializeCoords(x, y, roomName) {
+		const coords = x + (50 * y);
+
+		if (!roomName) return coords;
+
+		return [coords, roomName];
+	},
+
+	serializePosition(position, fixedRoom) {
+		return utilities.serializeCoords(position.x, position.y, position.roomName === fixedRoom ? null : position.roomName);
+	},
+
+	deserializePosition(coords, fixedRoom) {
+		// Fallback for old string positions.
+		if (typeof coords === 'string') return utilities.decodePosition(coords);
+
+		// Numbers are positions without a room name.
+		if (typeof coords === 'number') {
+			const x = coords % 50;
+			const y = Math.floor(coords / 50);
+			return new RoomPosition(x, y, fixedRoom);
+		};
+
+		// Last alternative: Array of coords and room name.
+		const x = coords[0] % 50;
+		const y = Math.floor(coords[0] / 50);
+		return new RoomPosition(x, y, coords[1]);
 	},
 
 	xOffsets: {

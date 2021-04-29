@@ -13,6 +13,7 @@ const interShard = {
 	 *   This shard's inter-shard memory.
 	 */
 	getLocalMemory() {
+		if (typeof InterShardMemory === 'undefined') return {};
 		if (!this._memory || Game.time !== this._memoryAge) {
 			this._memory = JSON.parse(InterShardMemory.getLocal()) || {};
 			this._memoryAge = Game.time;
@@ -30,6 +31,7 @@ const interShard = {
 	writeLocalMemory() {
 		// @todo Only serialize memory once per tick.
 		if (!this._memory) return;
+		if (typeof InterShardMemory === 'undefined') return;
 
 		InterShardMemory.setLocal(JSON.stringify(this._memory));
 	},
@@ -44,6 +46,8 @@ const interShard = {
 	 *   The shard's inter-shard memory.
 	 */
 	getRemoteMemory(shardName) {
+		if (typeof InterShardMemory === 'undefined') return {};
+
 		return JSON.parse(InterShardMemory.getRemote(shardName)) || {};
 	},
 

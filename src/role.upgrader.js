@@ -34,7 +34,7 @@ UpgraderRole.prototype.run = function (creep) {
 	}
 
 	if (creep.memory.upgrading) {
-		this.performUpgrade(creep);
+		this.performUpgrade(creep, true);
 		return;
 	}
 
@@ -55,6 +55,8 @@ UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 	const distance = creep.pos.getRangeTo(controller);
 	if (distance > 1) {
 		creep.moveToRange(controller, 1);
+		// @todo If there are no free tiles at range 1, stay at range 2, etc.
+		// to save movement intents and pathfinding.
 	}
 
 	if (distance <= 3) {
@@ -66,6 +68,7 @@ UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
 	}
 
 	// Keep syphoning energy from link or controller to ideally never stop upgrading.
+	// @todo Do it when energy is less than 2 ticks of upgrading.
 	if (allowRefilling && _.sum(creep.carry) < creep.carryCapacity * 0.5) {
 		let withdrawn = false;
 		if (creep.room.memory.controllerLink) {

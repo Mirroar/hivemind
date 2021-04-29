@@ -222,6 +222,7 @@ TransporterRole.prototype.ensureValidDeliveryTarget = function () {
 	if (creep.memory.deliverTarget.type === 'bay') {
 		const target = _.find(creep.room.bays, bay => bay.name === creep.memory.order.target);
 		if (!target) return false;
+		if (target.hasHarvester()) return false;
 
 		if (target.energy < target.energyCapacity) return true;
 	}
@@ -368,8 +369,10 @@ TransporterRole.prototype.addSpawnBuildingDeliveryOptions = function (options) {
 	// Primarily fill spawn and extenstions.
 	const targets = creep.room.find(FIND_STRUCTURES, {
 		filter: structure => {
-			return ((structure.structureType === STRUCTURE_EXTENSION && !structure.isBayExtension()) ||
-					structure.structureType === STRUCTURE_SPAWN) && structure.energy < structure.energyCapacity;
+			return (
+				(structure.structureType === STRUCTURE_EXTENSION && !structure.isBayExtension()) ||
+				(structure.structureType === STRUCTURE_SPAWN && (!structure.isBaySpawn() || creep.room.controller.level < 3))) &&
+				structure.energy < structure.energyCapacity;
 		},
 	});
 
@@ -395,6 +398,7 @@ TransporterRole.prototype.addSpawnBuildingDeliveryOptions = function (options) {
 		const target = bay;
 
 		if (target.energy >= target.energyCapacity) continue;
+		if (target.hasHarvester()) continue;
 
 		const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
 
@@ -574,7 +578,7 @@ TransporterRole.prototype.addStorageEnergyDeliveryOptions = function (options) {
 				priority: 0,
 				weight: 0,
 				type: 'position',
-				object: creep.room.getPositionAt(storagePosition.x - 1, storagePosition.y),
+				object: creep.room.getPositionAt(storagePosition.x, storagePosition.y),
 				resourceType: RESOURCE_ENERGY,
 			});
 		}

@@ -5,6 +5,8 @@ OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
 
 const utilities = require('./utilities');
 
+const bayStructures = [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_LINK, STRUCTURE_CONTAINER];
+
 /**
  * Bays collect extensions into a single entity for more efficient refilling.
  * @constructor
@@ -12,9 +14,10 @@ const utilities = require('./utilities');
  * @param {RoomPosition} pos
  *   Room position around which this bay is placed.
  */
-const Bay = function (pos) {
+const Bay = function (pos, hasHarvester) {
 	this.pos = pos;
 	this.name = utilities.encodePosition(pos);
+	this._hasHarvester = hasHarvester;
 
 	if (!Memory.rooms[pos.roomName].bays) Memory.rooms[pos.roomName].bays = {};
 	if (!Memory.rooms[pos.roomName].bays[this.name]) Memory.rooms[pos.roomName].bays[this.name] = {};
@@ -24,7 +27,7 @@ const Bay = function (pos) {
 
 	if (!this.memory.extensions || Game.time % 100 === 38) {
 		const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-			filter: structure => structure.structureType === STRUCTURE_EXTENSION && structure.isOperational(),
+			filter: structure => bayStructures.indexOf(structure.structureType) > -1 && structure.isOperational(),
 		});
 		this.memory.extensions = _.map(extensions, 'id');
 	}
@@ -51,8 +54,13 @@ const Bay = function (pos) {
 			if (!extension) continue;
 
 			this.extensions.push(extension);
-			this.energy += extension.energy;
-			this.energyCapacity += extension.energyCapacity;
+
+			if (extension.energyCapacity) {
+				if (extension.structureType === STRUCTURE_EXTENSION || extension.structureType === STRUCTURE_SPAWN) {
+					this.energy += extension.energy;
+					this.energyCapacity += extension.energyCapacity;
+				}
+			}
 		}
 	}
 
@@ -87,18 +95,36 @@ Bay.prototype.hasExtension = function (extension) {
 };
 
 /**
+ *
+ */
+Bay.prototype.hasHarvester = function () {
+	return this._hasHarvester;
+};
+
+/**
+ *
+ */
+Bay.prototype.needsRefill = function () {
+	return this.energy < this.energyCapacity;
+};
+
+/**
  * Refills this bay using energy carried by the given creep.
  *
  * @param {Creep} creep
  *   A creep with carry parts and energy in store.
  */
 Bay.prototype.refillFrom = function (creep) {
-	for (const extension of this.extensions) {
-		if (extension.energy < extension.energyCapacity) {
-			creep.transfer(extension, RESOURCE_ENERGY);
-			break;
-		}
-	}
+	const needsRefill = _.filter(this.extensions, e => {
+		if (e.energyCapacity) return e.energy < e.energyCapacity;
+		if (e.store) return e.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+
+		return false;
+	});
+
+	const target = _.min(needsRefill, e => bayStructures.indexOf(e.structureType));
+
+	creep.transfer(target, RESOURCE_ENERGY);
 };
 
 module.exports = Bay;

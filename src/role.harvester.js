@@ -10,6 +10,7 @@ STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES */
 
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
+const utilities = require('./utilities');
 
 const HarvesterRole = function () {
 	Role.call(this);
@@ -31,12 +32,17 @@ HarvesterRole.prototype = Object.create(Role.prototype);
  */
 HarvesterRole.prototype.run = function (creep) {
 	this.transporterRole.creep = creep;
-	const carryAmount = _.sum(creep.carry);
+
+	const carryAmount = creep.store.getUsedCapacity();
 	if (!creep.memory.harvesting && carryAmount <= 0) {
 		this.setHarvesterState(creep, true);
 	}
-	else if (creep.memory.harvesting && carryAmount >= creep.carryCapacity) {
-		this.setHarvesterState(creep, false);
+	else if (creep.memory.harvesting && carryAmount >= creep.store.getCapacity()) {
+		// Have harvester explicitly deliver resources, unless it's a fixed energy
+		// harvester with no need to move.
+		if (creep.memory.fixedMineralSource || _.size(creep.room.creepsByRole.transporter) === 0) {
+			this.setHarvesterState(creep, false);
+		}
 	}
 
 	if (creep.memory.harvesting) {
@@ -45,6 +51,22 @@ HarvesterRole.prototype.run = function (creep) {
 	}
 
 	this.performHarvesterDeliver(creep);
+};
+
+/**
+ * @todo
+ */
+HarvesterRole.prototype.determineHarvestPosition = function (creep, source) {
+	if (creep.memory.harvestPos || creep.memory.noHarvestPos) return;
+
+	const sourceMemory = creep.room.roomPlanner.memory.sources;
+	if (sourceMemory && sourceMemory[source.id]) {
+		creep.memory.harvestPos = sourceMemory[source.id].harvestPos;
+	}
+
+	if (!creep.memory.harvestPos) {
+		creep.memory.noHarvestPos = true;
+	}
 };
 
 /**
@@ -78,37 +100,97 @@ HarvesterRole.prototype.performHarvest = function (creep) {
 		// @todo Just in case, handle source not existing anymore, or missing extractor.
 	}
 
-	if (creep.pos.getRangeTo(source) > 1) {
-		creep.moveToRange(source, 1);
+	this.determineHarvestPosition(creep, source);
+
+	// By default, just move to range 1 of the source.
+	let targetPos = source.pos;
+	let targetRange = 1;
+
+	// If available, move onto a harvest position.
+	if (creep.memory.harvestPos) {
+		const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
+		if (harvestPosition.lookFor(LOOK_CREEPS).length === 0) {
+			targetPos = harvestPosition;
+			targetRange = 0;
+		}
 	}
-	else {
-		creep.harvest(source);
+
+	if (creep.pos.getRangeTo(targetPos) > targetRange) {
+		creep.moveToRange(targetPos, targetRange);
+		return;
 	}
+
+	creep.harvest(source);
+
+	// If there's a harvester bay, transfer resources into it.
+	if (this.depositInBay(creep)) return;
 
 	// If there's a link or controller nearby, directly deposit resources.
-	if (_.sum(creep.carry) > creep.carryCapacity * 0.5) {
-		let target = source.getNearbyContainer();
-		if (creep.carry.energy > 0) {
-			const link = source.getNearbyLink();
-			if (link && link.energy < link.energyCapacity) {
-				target = link;
-			}
-			else {
-				// Check for other nearby links.
-				const links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
-				if (links.length > 0) {
-					target = links[0];
-				}
+	this.depositResources(creep, source);
+};
+
+/**
+ *
+ */
+HarvesterRole.prototype.depositInBay = function (creep) {
+	if (!creep.memory.harvestPos) return false ;
+	const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
+	const bay = _.find(creep.room.bays, bay => bay.name === utilities.encodePosition(harvestPosition));
+
+	if (!bay) return false;
+	if (creep.pos.x !== bay.pos.x || creep.pos.y !== bay.pos.y) return false;
+
+	if (creep.store.getUsedCapacity() > creep.store.getCapacity() * (bay.needsRefill() ? 0.3 : 0.8)) bay.refillFrom(creep);
+	if (bay.needsRefill()) this.pickupEnergy(creep);
+
+	return true;
+};
+
+/**
+ *
+ */
+HarvesterRole.prototype.pickupEnergy = function (creep) {
+	const resources = creep.pos.lookFor(LOOK_RESOURCES);
+	const energy = _.find(resources, r => r.resourceType === RESOURCE_ENERGY);
+	if (energy) {
+		creep.pickup(energy);
+		return;
+	}
+
+	const structures = creep.pos.lookFor(LOOK_STRUCTURES);
+	const container = _.find(structures, s => s.structureType === STRUCTURE_CONTAINER);
+	if (container && (container.store.energy || 0) > 0) {
+		creep.withdraw(container, RESOURCE_ENERGY);
+	}
+};
+
+/**
+ *
+ */
+HarvesterRole.prototype.depositResources = function (creep, source) {
+	if (creep.store.getFreeCapacity() > creep.store.getCapacity() * 0.5) return;
+
+	let target = source.getNearbyContainer();
+	if (creep.store.energy > 0) {
+		const link = source.getNearbyLink();
+		if (link && link.energy < link.energyCapacity) {
+			target = link;
+		}
+		else {
+			// Check for other nearby links.
+			const links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
+			if (links.length > 0) {
+				target = links[0];
 			}
 		}
+	}
 
-		if (target) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
-				creep.transferAny(target);
-			}
+	if (target) {
+		if (creep.pos.getRangeTo(target) > 1) {
+			creep.moveToRange(target, 1);
+		}
+		else {
+			creep.transferAny(target);
 		}
 	}
 };
@@ -124,11 +206,11 @@ HarvesterRole.prototype.performMineralHarvesterDeliver = function (creep) {
 	const container = source.getNearbyContainer();
 	let target;
 	// By default, deliver to room's terminal if there's space.
-	if (container && _.sum(container.store) + creep.carryCapacity <= container.storeCapacity) {
+	if (container && _.sum(container.store) + creep.store.getCapacity() <= container.storeCapacity) {
 		target = container;
 	}
 	else {
-		target = creep.room.getBestStorageTarget(creep.carryCapacity, source.mineralType);
+		target = creep.room.getBestStorageTarget(creep.store.getCapacity(), source.mineralType);
 	}
 
 	if (target) {
@@ -188,11 +270,11 @@ HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
 		});
 
 		if (sites.length > 0) {
-			if (creep.pos.getRangeTo(target) > 3) {
-				creep.moveToRange(target, 3);
+			if (creep.pos.getRangeTo(sites[0]) > 3) {
+				creep.moveToRange(sites[0], 3);
 			}
 			else {
-				creep.build(target);
+				creep.build(sites[0]);
 			}
 
 			return;

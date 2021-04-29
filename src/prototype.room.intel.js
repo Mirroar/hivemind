@@ -87,7 +87,13 @@ Room.prototype.enhanceData = function () {
 	this.bays = [];
 	if (this.isMine()) {
 		for (const pos of this.roomPlanner.getLocations('bay_center')) {
-			this.bays.push(new Bay(pos));
+			let hasHarvester = false;
+			if (this.roomPlanner.isPlannedLocation(pos, 'harvester')) {
+				// @todo Don't use pos.lookFor, instead filter this.creepsByRole.harvester.
+				const creeps = pos.lookFor(LOOK_CREEPS);
+				hasHarvester = creeps.length > 0 && creeps[0].memory.role === 'harvester';
+			}
+			this.bays.push(new Bay(pos, hasHarvester));
 		}
 	}
 

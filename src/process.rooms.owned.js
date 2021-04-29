@@ -13,6 +13,8 @@ const RoomDefenseProcess = require('./process.rooms.owned.defense');
 const RoomManagerProcess = require('./process.rooms.owned.manager');
 const RoomSongsProcess = require('./process.rooms.owned.songs');
 
+const gatherStats = true;
+
 /**
  * Manages rooms we own.
  * @constructor
@@ -107,6 +109,37 @@ OwnedRoomProcess.prototype.run = function () {
 			priority: PROCESS_PRIORITY_LOW,
 		});
 	});
+
+	if (gatherStats) {
+		hivemind.runSubProcess('rooms_stats', () => {
+			this.gatherStats();
+		});
+	}
 };
+
+OwnedRoomProcess.prototype.gatherStats = function () {
+	const roomName = this.room.name;
+
+	if (!Memory.roomStats) Memory.roomStats = {};
+	if (!Memory.roomStats[roomName]) {
+		Memory.roomStats[roomName] = {
+			claimed: Game.time,
+		};
+	}
+
+	const memory = Memory.roomStats[roomName];
+	const key = 'rcl' + this.room.controller.level;
+	if (!memory[key]) memory[key] = Game.time - memory.claimed;
+
+	if (!memory.tower) {
+		if (this.room.find(FIND_STRUCTURES, {filter: (s) => s.structureType === STRUCTURE_TOWER}).length > 0) {
+			memory.tower = Game.time - memory.claimed;
+		}
+	}
+
+	if (!memory.storage && this.room.storage) {
+		memory.storage = Game.time - memory.claimed;
+	}
+}
 
 module.exports = OwnedRoomProcess;
