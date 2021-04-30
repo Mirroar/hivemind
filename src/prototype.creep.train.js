@@ -24,7 +24,8 @@ Creep.prototype.getTrainId = function () {
 
 Creep.prototype.isTrainFullySpawned = function () {
 	const trainId = this.getTrainId();
-	if (Memory.creeps[trainId] && _.size(Memory.creeps[trainId].train.partsToSpawn) > 0) return false;
+	const headSegment = Game.getObjectById(trainId);
+	if (headSegment && _.size(headSegment.memory.train.partsToSpawn) > 0) return false;
 
 	return true;
 }

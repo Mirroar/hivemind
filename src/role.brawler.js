@@ -117,17 +117,17 @@ BrawlerRole.prototype.getAvailableMilitaryTargets = function (creep) {
 	if (creep.pos.roomName !== targetPosition.roomName) return options;
 
 	// Find enemies to attack.
-	if (creep.memory.body.attack) {
+	if (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK]) {
 		this.addMilitaryAttackOptions(creep, options);
 	}
 
 	// Find friendlies to heal.
-	if (creep.memory.body.heal) {
+	if (creep.memory.body[HEAL]) {
 		this.addMilitaryHealOptions(creep, options);
 	}
 
 	// Attack / Reserve controllers.
-	if (creep.memory.body.claim && creep.memory.body.claim >= 5) {
+	if (creep.memory.body[CLAIM] && creep.memory.body[CLAIM] >= 5) {
 		if (creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
 			options.push({
 				priority: 5,
@@ -138,7 +138,7 @@ BrawlerRole.prototype.getAvailableMilitaryTargets = function (creep) {
 		}
 	}
 
-	if (creep.memory.body.claim && creep.room.controller && !creep.room.controller.owner) {
+	if (creep.memory.body[CLAIM] && creep.room.controller && !creep.room.controller.owner) {
 		options.push({
 			priority: 4,
 			weight: 0,
@@ -300,10 +300,25 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 	if (creep.memory.target) {
 		const targetPosition = utilities.decodePosition(creep.memory.target);
 		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
-		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+		let enemiesNearby = false;
+		_.each(creep.room.enemyCreeps, (hostiles, owner) => {
+			if (hivemind.relations.isAlly(owner)) return;
+
+			_.each(hostiles, c => {
+				if (!c.isDangerous()) return;
+
+				enemiesNearby = true;
+				return false;
+			});
+
+			if (enemiesNearby) return false;
+		});
+
+		if (!enemiesNearby && (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget()))) {
 			if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
 				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
 				// @todo This is cross-room movement and should therefore only calculate a path once.
+				// @todo If there are enemies in the current room, fight them!
 				creep.moveToRange(targetPosition, 3);
 			}
 
@@ -315,7 +330,7 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 		// @todo For some reason, using goTo instead of moveTo here results in
 		// a lot of "trying to follow non-existing path" errors moving across rooms.
 		// Maybe because it clashes with other movement further down this method.
-		creep.moveTo(targetPosition, {maxRooms: 1});
+		if (targetPosition.roomName === creep.pos.roomName) creep.moveTo(targetPosition, {maxRooms: 1});
 	}
 
 	if (creep.memory.order) {
@@ -378,6 +393,7 @@ BrawlerRole.prototype.performTrainMove = function (creep) {
 
 		// Move randomly around the room to not block spawns or other creeps.
 		creep.move(1 + Math.floor(Math.random() * 8));
+		return ERR_BUSY;
 	}
 
 	// Only the train head will schedule movement intents. The other creeps will
@@ -392,7 +408,7 @@ BrawlerRole.prototype.performTrainMove = function (creep) {
 
 	// If any segment is fatigued, we can't move, or only move adjacent to
 	// next segment.
-	const segments = this.getTrainParts();
+	const segments = creep.getTrainParts();
 	for (const segment of segments) {
 		if (segment.fatigue > 0) return ERR_TIRED;
 	}
@@ -611,24 +627,28 @@ BrawlerRole.prototype.militaryRoomReached = function (creep) {
  * @param {Creep} creep
  *   The creep to run logic for.
  * @return {boolean}
- *   True if an attack was made.
+ *   True if an attack was made. Will be false even if a ranged attack was made.
  */
 BrawlerRole.prototype.performMilitaryAttack = function (creep) {
-	if (!creep.memory.order) return;
+	if (creep.memory.order) {
+		// Attack ordered target first.
+		const target = Game.getObjectById(creep.memory.order.target);
 
-	const target = Game.getObjectById(creep.memory.order.target);
-
-	if (target && !target.my && this.attackMilitaryTarget(creep, target)) return true;
+		if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || 0) > 0;
+	}
 
 	// See if enemies are nearby, attack one of those.
-	const hostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
+	const hostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
 	for (const hostile of hostiles) {
 		// Check if enemy is harmless, and ignore it.
 		if (!hostile.isDangerous()) continue;
 		if (hostile.owner && hivemind.relations.isAlly(hostile.owner.username)) continue;
 
-		if (creep.attack(hostile) === OK) {
+		if (creep.memory.body[ATTACK] && creep.attack(hostile) === OK) {
 			return true;
+		}
+		if (creep.memory.body[RANGED_ATTACK] && creep.rangedAttack(hostile) === OK) {
+			return false;
 		}
 	}
 
@@ -663,7 +683,7 @@ BrawlerRole.prototype.performMilitaryAttack = function (creep) {
  *   Target to try and attack.
  *
  * @return {boolean}
- *   True if an attack was made.
+ *   True if an attack or ranged attack was made.
  */
 BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 	if (target instanceof StructureController) {
@@ -688,7 +708,10 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 		}
 	}
 	else if (!target.owner || !hivemind.relations.isAlly(target.owner.username)) {
-		if (creep.attack(target) === OK) {
+		if (creep.memory.body[ATTACK] && creep.attack(target) === OK) {
+			return true;
+		}
+		if (creep.memory.body[RANGED_ATTACK] && creep.rangedAttack(target) === OK) {
 			return true;
 		}
 	}
@@ -718,7 +741,7 @@ BrawlerRole.prototype.performMilitaryHeal = function (creep) {
 		filter: creep => creep.hits < creep.hitsMax,
 	});
 	if (_.size(nearbyDamaged) > 0) {
-		if (creep.heal(nearbyDamaged[0]) === OK) {
+		if (creep.heal(_.max(nearbyDamaged, creep => creep.hitsMax - creep.hits)) === OK) {
 			return true;
 		}
 	}

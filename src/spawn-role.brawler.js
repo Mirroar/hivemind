@@ -167,10 +167,10 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	 * Spawns additional segments of a creep train.
 	 */
 	getTrainPartSpawnOptions(room, options) {
-		const trainStarters = _.filter(room.creepsByRole.brawler || [], creep => creep.memory.trainStarter && creep.memory.trainPartsToSpawn.length > 0);
+		const trainStarters = _.filter(room.creepsByRole.brawler || [], creep => creep.memory.train && _.size(creep.memory.train.partsToSpawn) > 0);
 
 		for (const creep of trainStarters) {
-			const segmentType = creep.memory.trainPartsToSpawn[0];
+			const segmentType = creep.memory.train.partsToSpawn[0];
 
 			options.push({
 				priority: 4,
