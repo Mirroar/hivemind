@@ -15,7 +15,7 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 30;
+	this.roomPlannerVersion = 31;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -450,7 +450,7 @@ RoomPlanner.prototype.placeFlags = function () {
 				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
 					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
-					if (this.buildingMatrix.get(x, y) < 10) this.buildingMatrix.set(x, y, 10);
+					if (this.buildingMatrix.get(x, y) < 10 && this.buildingMatrix.get(x, y) !== 1) this.buildingMatrix.set(x, y, 10);
 				});
 
 				const sourceRoads = this.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
