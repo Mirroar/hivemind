@@ -468,6 +468,7 @@ const utilities = {
 		let best = null;
 
 		for (const option of options) {
+			if (option.priority < 0) continue;
 			if (!best || option.priority > best.priority || (option.priority === best.priority && option.weight > best.weight)) {
 				best = option;
 			}

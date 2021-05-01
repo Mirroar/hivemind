@@ -15,6 +15,7 @@ module.exports = class GathererSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room, options) {
 		if (!room.storage) return;
+		if (room.getStoredEnergy() < 5000) return;
 
 		_.each(room.memory.abandonedResources, (resources, roomName) => {
 			const numGatherers = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.targetRoom === roomName && creep.memory.origin === room.name).length;

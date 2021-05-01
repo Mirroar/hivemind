@@ -260,6 +260,10 @@ BuilderRole.prototype.modifyRepairDefensesOption = function (creep, option, targ
 		option.priority++;
 		option.weight++;
 	}
+	else if (creep.room.getStoredEnergy() < 5000) {
+		// Don't strengthen ramparts too much if room is struggling for energy.
+		option.priority = -1;
+	}
 };
 
 /**

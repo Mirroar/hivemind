@@ -18,6 +18,11 @@ module.exports = class ScoutSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		this.addIntershardSpawnOptions(room, options);
 
+		// Don't spawn scouts in quick succession.
+		// If they die immediately, the might be running into enemies right outside
+		// of the room.
+		if (room.memory.recentScout && Game.time - (room.memory.recentScout || -500) < 500) return;
+
 		const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
 		if (_.size(roomScouts) > 0 || !room.needsScout()) return;
 
@@ -107,7 +112,10 @@ module.exports = class ScoutSpawnRole extends SpawnRole {
 	 *   The name of the new creep.
 	 */
 	onSpawn(room, option) {
-		if (!option.portalTarget) return;
+		if (!option.portalTarget) {
+			room.memory.recentScout = Game.time;
+			return;
+		}
 
 		// Store scout spawn time in intershard memory.
 		const memory = interShard.getLocalMemory();

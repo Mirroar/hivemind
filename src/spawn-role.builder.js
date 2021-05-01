@@ -63,10 +63,11 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we have a lot of energy to spare.
-		if (room.storage && room.storage.store.energy > 400000) {
+		const availableEnergy = room.getStoredEnergy();
+		if (availableEnergy > 400000) {
 			maxWorkParts *= 2;
 		}
-		else if (room.storage && room.storage.store.energy > 200000) {
+		else if (availableEnergy > 200000) {
 			maxWorkParts *= 1.5;
 		}
 

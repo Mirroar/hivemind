@@ -403,6 +403,11 @@ Room.prototype.getBestStorageTarget = function (amount, resourceType) {
 			return this.terminal;
 		}
 
+		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 5000) {
+			// Make sure terminal has energy for transactions.
+			return this.terminal;
+		}
+
 		if (storageFree >= amount && terminalFree >= amount && (this.storage.store[resourceType] || 0) / storageFree < (this.terminal.store[resourceType] || 0) / terminalFree) {
 			return this.storage;
 		}
