@@ -1,7 +1,8 @@
 'use strict';
 
-/* global RoomVisual FIND_STRUCTURES STRUCTURE_EXTENSION
-OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY */
+/* global RoomVisual FIND_STRUCTURES STRUCTURE_EXTENSION STRUCTURE_SPAWN
+OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY STRUCTURE_TOWER
+STRUCTURE_LINK STRUCTURE_CONTAINER */
 
 const utilities = require('./utilities');
 
@@ -13,6 +14,8 @@ const bayStructures = [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, ST
  *
  * @param {RoomPosition} pos
  *   Room position around which this bay is placed.
+ * @param {boolean} hasHarvester
+ *   Whether a harvester is in this bay to fill it.
  */
 const Bay = function (pos, hasHarvester) {
 	this.pos = pos;
@@ -95,14 +98,20 @@ Bay.prototype.hasExtension = function (extension) {
 };
 
 /**
+ * Checks if a harvester is in this bay.
  *
+ * @return {boolean}
+ *   True if a harvester is in this bay.
  */
 Bay.prototype.hasHarvester = function () {
 	return this._hasHarvester;
 };
 
 /**
+ * Checks if this bay needs to be filled with more energy.
  *
+ * @return {boolean}
+ *   True if more energy is neeeded.
  */
 Bay.prototype.needsRefill = function () {
 	return this.energy < this.energyCapacity;

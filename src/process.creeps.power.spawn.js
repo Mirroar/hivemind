@@ -28,6 +28,9 @@ module.exports = class SpawnPowerCreepsProcess extends Process {
 	 * Assigns power creep to best room without a power creep.
 	 *
 	 * @todo This gets more complicated once factories are involved.
+	 *
+	 * @param {PowerCreep} creep
+	 *   The power creep that needs to be assigned a room.
 	 */
 	assignPowerCreep(creep) {
 		const roomsWithoutPC = _.filter(Game.rooms, room => {
@@ -59,7 +62,6 @@ module.exports = class SpawnPowerCreepsProcess extends Process {
 
 		if (!bestRoom) return;
 
-		// hivemind.log('creeps').debug('Assigning power creep', creep.name, 'to', bestRoom.name);
 		creep.memory.singleRoom = bestRoom.name;
 	}
 };

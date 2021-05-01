@@ -99,6 +99,7 @@ module.exports = class RoomManager {
 				// big enough that one will be able to harvest all available energy.
 				this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
 			}
+
 			this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
 		}
 
@@ -149,6 +150,7 @@ module.exports = class RoomManager {
 			// big enough that one will be able to harvest all available energy.
 			this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
 		}
+
 		this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
 		this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
 

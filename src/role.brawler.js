@@ -1,9 +1,10 @@
 'use strict';
 
-/* global hivemind StructureController FIND_HOSTILE_CREEPS
-STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER
-LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME
-FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE */
+/* global hivemind RoomPosition StructureController FIND_HOSTILE_CREEPS ATTACK
+STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
+LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
+FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
+ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK */
 
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
@@ -647,6 +648,7 @@ BrawlerRole.prototype.performMilitaryAttack = function (creep) {
 		if (creep.memory.body[ATTACK] && creep.attack(hostile) === OK) {
 			return true;
 		}
+
 		if (creep.memory.body[RANGED_ATTACK] && creep.rangedAttack(hostile) === OK) {
 			return false;
 		}
@@ -711,6 +713,7 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 		if (creep.memory.body[ATTACK] && creep.attack(target) === OK) {
 			return true;
 		}
+
 		if (creep.memory.body[RANGED_ATTACK] && creep.rangedAttack(target) === OK) {
 			return true;
 		}

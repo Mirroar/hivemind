@@ -1,7 +1,7 @@
 'use strict';
 
-/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT
-PROCESS_PRIORITY_ALWAYS POWER_SPAWN_ENERGY_RATIO */
+/* global hivemind PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT FIND_STRUCTURES
+PROCESS_PRIORITY_ALWAYS POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
 
 const Process = require('./process');
 
@@ -132,7 +132,7 @@ OwnedRoomProcess.prototype.gatherStats = function () {
 	if (!memory[key]) memory[key] = Game.time - memory.claimed;
 
 	if (!memory.tower) {
-		if (this.room.find(FIND_STRUCTURES, {filter: (s) => s.structureType === STRUCTURE_TOWER}).length > 0) {
+		if (this.room.find(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length > 0) {
 			memory.tower = Game.time - memory.claimed;
 		}
 	}
@@ -140,6 +140,6 @@ OwnedRoomProcess.prototype.gatherStats = function () {
 	if (!memory.storage && this.room.storage) {
 		memory.storage = Game.time - memory.claimed;
 	}
-}
+};
 
 module.exports = OwnedRoomProcess;

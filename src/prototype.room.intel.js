@@ -1,7 +1,7 @@
 'use strict';
 
 /* global Room FIND_STRUCTURES STRUCTURE_CONTAINER FIND_HOSTILE_CREEPS
-STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER
+STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
 const utilities = require('./utilities');
@@ -93,6 +93,7 @@ Room.prototype.enhanceData = function () {
 				const creeps = pos.lookFor(LOOK_CREEPS);
 				hasHarvester = creeps.length > 0 && creeps[0].memory.role === 'harvester';
 			}
+
 			this.bays.push(new Bay(pos, hasHarvester));
 		}
 	}

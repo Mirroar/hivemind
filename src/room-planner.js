@@ -476,7 +476,7 @@ RoomPlanner.prototype.placeFlags = function () {
 
 					// Only place spawn where a road tile is adjacent, so creeps can
 					// actually exit when a harvester is on its spot.
-					let spawnPlaced = false
+					let spawnPlaced = false;
 					utilities.handleMapArea(x, y, (x2, y2) => {
 						if (this.buildingMatrix.get(x2, y2) !== 1) return;
 
@@ -494,17 +494,16 @@ RoomPlanner.prototype.placeFlags = function () {
 					if (!this.isBuildableTile(x, y)) return;
 					if (x === harvestPosition.x && y === harvestPosition.y) return;
 
-					if (!linkPlaced) {
+					if (linkPlaced) {
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension');
+						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension.harvester');
+					}
+					else {
 						this.placeFlag(new RoomPosition(x, y, this.roomName), 'link');
 						this.placeFlag(new RoomPosition(x, y, this.roomName), 'link.source');
 						linkPlaced = true;
 					}
-					else {
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension');
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension.harvester');
-					}
 				});
-
 			}
 		}
 	}

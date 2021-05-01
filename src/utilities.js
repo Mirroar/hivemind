@@ -567,7 +567,7 @@ const utilities = {
 			const x = coords % 50;
 			const y = Math.floor(coords / 50);
 			return new RoomPosition(x, y, fixedRoom);
-		};
+		}
 
 		// Last alternative: Array of coords and room name.
 		const x = coords[0] % 50;

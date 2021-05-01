@@ -17,7 +17,6 @@ const RESPONSE_RANGED_HEAL_TRAIN = 6;
 const RESPONSE_RANGED_BLINKY_TRAIN = 7;
 const RESPONSE_BLINKY_BLINKY_TRAIN = 8;
 const RESPONSE_BLINKY_HEAL_TRAIN = 9;
-const RESPONSE_QUAD = 10;
 
 const SEGMENT_HEAL = 1;
 const SEGMENT_BLINKY = 2;
@@ -165,6 +164,11 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 
 	/**
 	 * Spawns additional segments of a creep train.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object[]} options
+	 *   A list of spawn options to add to.
 	 */
 	getTrainPartSpawnOptions(room, options) {
 		const trainStarters = _.filter(room.creepsByRole.brawler || [], creep => creep.memory.train && _.size(creep.memory.train.partsToSpawn) > 0);

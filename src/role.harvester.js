@@ -1,7 +1,7 @@
 'use strict';
 
-/* global FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY
-STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES */
+/* global FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY LOOK_CREEPS
+STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES LOOK_RESOURCES LOOK_STRUCTURES */
 
 // @todo Rewrite delivery part using transporter logic.
 // @todo Just make the harvester build a container when none is available.
@@ -54,7 +54,12 @@ HarvesterRole.prototype.run = function (creep) {
 };
 
 /**
- * @todo
+ * Determines where a harvester's fixed position should be.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {Source} source
+ *   The source this harvester is assigned to.
  */
 HarvesterRole.prototype.determineHarvestPosition = function (creep, source) {
 	if (creep.memory.harvestPos || creep.memory.noHarvestPos) return;
@@ -130,10 +135,16 @@ HarvesterRole.prototype.performHarvest = function (creep) {
 };
 
 /**
+ * Deposits energy in a harvester's bay.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ *
+ * @return {boolean}
+ *   True if the harvester is in a bay.
  */
 HarvesterRole.prototype.depositInBay = function (creep) {
-	if (!creep.memory.harvestPos) return false ;
+	if (!creep.memory.harvestPos) return false;
 	const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
 	const bay = _.find(creep.room.bays, bay => bay.name === utilities.encodePosition(harvestPosition));
 
@@ -147,7 +158,10 @@ HarvesterRole.prototype.depositInBay = function (creep) {
 };
 
 /**
+ * Makes a harvester pickup energy from the ground or a close container.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
  */
 HarvesterRole.prototype.pickupEnergy = function (creep) {
 	const resources = creep.pos.lookFor(LOOK_RESOURCES);
@@ -165,7 +179,12 @@ HarvesterRole.prototype.pickupEnergy = function (creep) {
 };
 
 /**
+ * Makes a harvester deposit resources in nearby structures.
  *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ * @param {Source} source
+ *   The source this harvester is assigned to.
  */
 HarvesterRole.prototype.depositResources = function (creep, source) {
 	if (creep.store.getFreeCapacity() > creep.store.getCapacity() * 0.5) return;

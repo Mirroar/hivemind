@@ -1,7 +1,6 @@
 'use strict';
 
-/* global hivemind Creep ATTACK RANGED_ATTACK HEAL MOVE TOUGH BOOSTS
-ATTACK_POWER HEAL_POWER RANGED_ATTACK_POWER RANGED_HEAL_POWER */
+/* global Creep */
 
 /**
  * Determines if a creep is part of a creep train.
@@ -10,17 +9,17 @@ ATTACK_POWER HEAL_POWER RANGED_ATTACK_POWER RANGED_HEAL_POWER */
  *   True if the creep is part of a train.
  */
 Creep.prototype.isPartOfTrain = function () {
-	return this.memory.train ? true : false;
+	return Boolean(this.memory.train);
 };
 
 Creep.prototype.isTrainHead = function () {
 	// @todo What if the head dies?
 	return this.getTrainId() === this.id;
-}
+};
 
 Creep.prototype.getTrainId = function () {
 	return this.memory.train.id || this.id;
-}
+};
 
 Creep.prototype.isTrainFullySpawned = function () {
 	const trainId = this.getTrainId();
@@ -28,7 +27,7 @@ Creep.prototype.isTrainFullySpawned = function () {
 	if (headSegment && _.size(headSegment.memory.train.partsToSpawn) > 0) return false;
 
 	return true;
-}
+};
 
 Creep.prototype.getTrainParts = function () {
 	// @todo Guaruantee stable order of creeps.
@@ -48,7 +47,7 @@ Creep.prototype.getTrainParts = function () {
 	}
 
 	return segments;
-}
+};
 
 Creep.prototype.isTrainJoined = function () {
 	const segments = this.getTrainParts();
@@ -62,7 +61,7 @@ Creep.prototype.isTrainJoined = function () {
 	}
 
 	return true;
-}
+};
 
 Creep.prototype.joinTrain = function () {
 	const segments = this.getTrainParts();
@@ -72,13 +71,13 @@ Creep.prototype.joinTrain = function () {
 		let moveForward = false;
 		let moveBack = false;
 
-		if (segments[i].pos.roomName !== segments[i - 1].pos.roomName) {
-			moveForward = true;
-		}
-		else {
+		if (segments[i].pos.roomName === segments[i - 1].pos.roomName) {
 			const distance = segments[i].pos.getRangeTo(segments[i - 1].pos);
 			if (distance > 1) moveForward = true;
 			if (distance > 2 && canMoveBack) moveBack = true;
+		}
+		else {
+			moveForward = true;
 		}
 
 		if (moveForward) {
@@ -99,4 +98,4 @@ Creep.prototype.joinTrain = function () {
 			canMoveBack = false;
 		}
 	}
-}
+};
