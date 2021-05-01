@@ -77,7 +77,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
 			// in a different way.
-			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || 0) < 1000) continue;
+			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -1000) < 1000) continue;
 
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.storage === storagePos && creep.memory.target === targetPos);
 			if (_.size(brawlers) > 0) continue;
