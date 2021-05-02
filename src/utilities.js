@@ -5,6 +5,8 @@ OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART STRUCTURE_ROAD BODYPART_COST
 TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT
 STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
 
+const cache = require('./cache');
+
 const utilities = {
 
 	/**
@@ -358,14 +360,14 @@ const utilities = {
 	 *   The requested cost matrix.
 	 */
 	getCostMatrix(roomName, options) {
-		const matrixCache = utilities.getCache('costMatix', 500);
-
 		if (!options) {
 			options = {};
 		}
 
 		let cacheKey = roomName;
 		let matrix;
+		const matrixCache = cache.inHeap('costMatrix', 500);
+
 		if (!matrixCache[cacheKey]) {
 			const roomIntel = hivemind.roomIntel(roomName);
 			matrix = roomIntel.getCostMatrix();
@@ -384,31 +386,6 @@ const utilities = {
 		}
 
 		return matrixCache[cacheKey];
-	},
-
-	/**
-	 * Provides an object that is stored in heap memory.
-	 *
-	 * @param {string} bin
-	 *   Name of the requested cache bin.
-	 * @param {number} maxAge
-	 *   Maximum age of cached data in ticks.
-	 *
-	 * @return {Object}
-	 *   The requested cache object.
-	 */
-	getCache(bin, maxAge) {
-		if (!utilities.cacheStorage) utilities.cacheStorage = {};
-
-		// Clear cost matrix cache from time to time.
-		if (!utilities.cacheStorage[bin] || Game.time - !utilities.cacheStorage[bin].created > maxAge * hivemind.getThrottleMultiplier()) {
-			utilities.cacheStorage[bin] = {
-				data: {},
-				created: Game.time,
-			};
-		}
-
-		return utilities.cacheStorage[bin].data;
 	},
 
 	/**

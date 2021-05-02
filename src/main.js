@@ -35,6 +35,8 @@ require('./manager.military');
 require('./manager.source');
 /* eslint-enable import/no-unassigned-import */
 
+const cache = require('./cache');
+
 // Allow profiling of code.
 const profiler = require('./profiler');
 const stats = require('./stats');
@@ -215,6 +217,12 @@ module.exports = {
 
 				delete Memory.squads[squadName];
 			});
+		}
+
+		// Periodically garbage collect in caches.
+		if (Game.time % 253 === 0) {
+			cache.collectGarbage();
+			cache.collectGarbage(Memory);
 		}
 	},
 

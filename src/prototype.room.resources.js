@@ -3,6 +3,7 @@
 /* global hivemind Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
+const cache = require('./cache');
 const utilities = require('./utilities');
 
 /**
@@ -228,13 +229,11 @@ Room.prototype.getRemoteReservePositions = function () {
  *   - reservePositions
  */
 Room.prototype.getRemoteHarvestInfo = function () {
-	const cache = utilities.getCache('remoteHarvestSources_' + this.name, 100);
-
-	if (!cache.rooms) {
-		this.generateRemoteHarvestInfo(cache);
-	}
-
-	return cache;
+	return cache.inHeap(
+		'remoteHarvestSources_' + this.name,
+		100,
+		() => this.generateRemoteHarvestInfo()
+	);
 };
 
 /**
@@ -243,7 +242,8 @@ Room.prototype.getRemoteHarvestInfo = function () {
  * @param {Object} cache
  *   The cache object to write information into.
  */
-Room.prototype.generateRemoteHarvestInfo = function (cache) {
+Room.prototype.generateRemoteHarvestInfo = function () {
+	const cache = {};
 	cache.rooms = [];
 	cache.harvestPositions = [];
 	cache.reservePositions = [];
@@ -275,6 +275,8 @@ Room.prototype.generateRemoteHarvestInfo = function (cache) {
 			cache.reservePositions.push(position);
 		}
 	}
+
+	return cache;
 };
 
 /**
