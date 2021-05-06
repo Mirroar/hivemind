@@ -180,7 +180,7 @@ HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
 	}
 
 	if (sourcePosition.roomName !== creep.pos.roomName) {
-		creep.moveTo(sourcePosition);
+		creep.moveToRange(sourcePosition, 1);
 		return;
 	}
 
@@ -194,31 +194,18 @@ HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
 
 		if (container) {
 			if (creep.pos.getRangeTo(container) > 1) {
-				creep.moveTo(container);
+				creep.moveToRange(container, 1);
 			}
-			else if (!actionTaken) {
+			else if (!actionTaken && (container.store.energy || 0) > creep.store.getCapacity() / 2) {
 				creep.withdraw(container, RESOURCE_ENERGY);
 				actionTaken = true;
 			}
 		}
 	}
 
-	// Also lighten the load of harvesters nearby.
-	const harvester = sourcePosition.findClosestByRange(FIND_CREEPS, {
-		filter: harvester => harvester.my && harvester.memory.role === 'harvester.remote' && harvester.carry.energy > harvester.carryCapacity * 0.5 && creep.pos.getRangeTo(harvester) <= 3,
-	});
-	if (harvester && !actionTaken) {
-		if (creep.pos.getRangeTo(harvester) > 1) {
-			creep.moveTo(harvester);
-		}
-		else {
-			harvester.transfer(creep, RESOURCE_ENERGY);
-		}
-	}
-
 	// If all else fails, make sure we're close enough to our source.
 	if (creep.pos.getRangeTo(sourcePosition) > 2) {
-		creep.moveTo(sourcePosition);
+		creep.moveToRange(sourcePosition, 2);
 	}
 
 	// Repair / build roads, even when just waiting for more energy.
@@ -256,7 +243,7 @@ HaulerRole.prototype.pickupNearbyEnergy = function (creep) {
 	if (!resource) {
 		// @todo Check if there's a valid (short) path to the resource.
 		const resources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-			filter: resource => resource.resourceType === RESOURCE_ENERGY,
+			filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= 100,
 		});
 		if (resources.length > 0) {
 			resource = resources[0];
@@ -266,7 +253,7 @@ HaulerRole.prototype.pickupNearbyEnergy = function (creep) {
 
 	if (resource) {
 		if (creep.pos.getRangeTo(resource) > 1) {
-			creep.moveTo(resource);
+			creep.moveToRange(resource, 1);
 			return;
 		}
 
@@ -453,7 +440,7 @@ HaulerRole.prototype.ensureRemoteHarvestContainerIsBuilt = function (creep, sour
 
 			if (harvestMemory.cachedPath) {
 				const path = utilities.deserializePositionPath(harvestMemory.cachedPath.path);
-				const containerPosition = path[path.length - 2];
+				const containerPosition = path[path.length - 1];
 				containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
 			}
 		}

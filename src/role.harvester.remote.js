@@ -1,6 +1,6 @@
 'use strict';
 
-/* global LOOK_STRUCTURES STRUCTURE_ROAD OK RESOURCE_ENERGY
+/* global LOOK_STRUCTURES STRUCTURE_ROAD OK RESOURCE_ENERGY LOOK_CREEPS
 FIND_SOURCES FIND_STRUCTURES STRUCTURE_CONTAINER */
 
 const utilities = require('./utilities');
@@ -109,12 +109,12 @@ RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
 	}
 
 	if (sourcePosition.roomName !== creep.pos.roomName) {
-		creep.moveTo(sourcePosition);
+		creep.moveToRange(sourcePosition, 1);
 		return;
 	}
 
 	// Check if a container nearby is in need of repairs, since we can handle
-	// it better than haulers do.
+	// it with less intents than haulers do.
 	const workParts = creep.memory.body.work || 0;
 	const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
 		filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.hits <= structure.hitsMax - (workParts * 100),
@@ -147,7 +147,7 @@ RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
 	}
 
 	if (creep.pos.getRangeTo(source) > 1) {
-		creep.moveTo(source);
+		creep.moveToRange(source, 1);
 	}
 	else {
 		creep.harvest(source);
@@ -158,7 +158,14 @@ RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
 	const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
 	if (harvestMemory.hasContainer) {
 		const container = Game.getObjectById(harvestMemory.containerId);
-		if (_.sum(creep.carry) >= creep.carryCapacity * 0.5 && creep.pos.getRangeTo(container) <= 1) {
+		const range = creep.pos.getRangeTo(container);
+		if (range === 1 && container.pos.getRangeTo(source) === 1) {
+			// Move onto container if it's not occupied by another creep.
+			if (container.pos.lookFor(LOOK_CREEPS).length === 0) {
+				creep.move(creep.pos.getDirectionTo(container.pos));
+			}
+		}
+		if (range === 1 && _.sum(creep.carry) >= creep.carryCapacity * 0.8) {
 			creep.transfer(container, RESOURCE_ENERGY);
 		}
 	}
@@ -216,13 +223,13 @@ RemoteHarvesterRole.prototype.performRemoteHarvesterDeliver = function (creep) {
 		const container = Game.getObjectById(harvestMemory.containerId);
 		if (container) {
 			if (creep.pos.getRangeTo(container) > 1) {
-				creep.moveTo(container);
+				creep.moveToRange(container, 1);
 			}
 			else {
 				creep.transfer(container, RESOURCE_ENERGY);
 			}
 
-			if (_.sum(container.store) >= container.storeCapacity) {
+			if (container.store.getFreeCapacity() <= 0) {
 				// Just drop energy right here, somebody will pick it up later, right?
 				creep.drop(RESOURCE_ENERGY);
 			}
