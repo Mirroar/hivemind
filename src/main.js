@@ -224,6 +224,13 @@ module.exports = {
 			cache.collectGarbage();
 			cache.collectGarbage(Memory);
 		}
+
+		// Periodically clean memory that is no longer needed.
+		if (Game.time % 1234 === 56) {
+			for (const roomName in Memory.rooms || {}) {
+				if (Memory.rooms[roomName].bays) delete Memory.rooms[roomName].bays;
+			}
+		}
 	},
 
 	/**
