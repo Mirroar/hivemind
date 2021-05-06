@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Added `cache.js` containing general caching functionality for use in other modules.
+- Added slightly modified version of `packrat.js` that can deal with higher numbers in room names.
 
 ### Removed
 - Removed `utilities.getCache()` in favor of new caching API.

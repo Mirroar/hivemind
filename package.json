@@ -62,6 +62,7 @@
 			"Memory"
 		],
 		"ignores": [
+			"src/packrat.js",
 			"src/screeps-profiler.js",
 			"src/snippets.js",
 			"mock/constants.js"

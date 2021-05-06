@@ -8,6 +8,7 @@ STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 const interShard = require('./intershard');
 const NavMesh = require('./nav-mesh');
+const packrat = require('./packrat');
 const utilities = require('./utilities');
 
 const RoomIntel = function (roomName) {
@@ -340,15 +341,17 @@ RoomIntel.prototype.gatherInvaderIntel = function (structures) {
  */
 RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
 	this.memory.costMatrix = utilities.generateCostMatrix(this.roomName, structures, constructionSites).serialize();
-	this.memory.pathfinderPositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
+	const obstaclePositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
+	this.memory.costPositions = [packrat.packCoordList(obstaclePositions.obstacles), packrat.packCoordList(obstaclePositions.roads)];
 
 	const matrixSize = JSON.stringify(this.memory.costMatrix).length;
-	const listSize = JSON.stringify(this.memory.pathfinderPositions).length;
+	const listSize = JSON.stringify(this.memory.costPositions).length;
 
 	hivemind.log('intel', this.roomName).debug('Obstacle list takes', Math.ceil(10000 * listSize / matrixSize) / 100, '% of matrix storage size -', listSize, '/', matrixSize);
 
+	delete this.memory.pathfinderPositions;
 	if (matrixSize < listSize) {
-		delete this.memory.pathfinderPositions;
+		delete this.memory.costPositions;
 	}
 	else {
 		delete this.memory.costMatrix;
@@ -452,16 +455,22 @@ RoomIntel.prototype.getMineralPosition = function () {
 RoomIntel.prototype.getCostMatrix = function () {
 	if (this.memory.costMatrix) return PathFinder.CostMatrix.deserialize(this.memory.costMatrix);
 
-	if (this.memory.pathfinderPositions) {
+	let obstaclePositions;
+	if (this.memory.costPositions) {
+		obstaclePositions = {
+			obstacles: packrat.unpackCoordListAsPosList(this.memory.costPositions[0], this.roomName),
+			roads: packrat.unpackCoordListAsPosList(this.memory.costPositions[1], this.roomName),
+		};
+	}
+
+	if (obstaclePositions) {
 		const matrix = new PathFinder.CostMatrix();
 
-		for (const location of this.memory.pathfinderPositions.obstacles) {
-			const pos = utilities.deserializePosition(location, this.roomName);
+		for (const pos of obstaclePositions.obstacles) {
 			matrix.set(pos.x, pos.y, 0xFF);
 		}
 
-		for (const location of this.memory.pathfinderPositions.roads) {
-			const pos = utilities.deserializePosition(location, this.roomName);
+		for (const pos of obstaclePositions.roads) {
 			if (matrix.get(pos.x, pos.y) === 0) {
 				matrix.set(pos.x, pos.y, 1);
 			}
@@ -469,8 +478,6 @@ RoomIntel.prototype.getCostMatrix = function () {
 
 		return matrix;
 	}
-
-	if (Game.rooms[this.roomName]) return Game.rooms[this.roomName].generateCostMatrix();
 
 	return new PathFinder.CostMatrix();
 };
@@ -483,7 +490,7 @@ RoomIntel.prototype.getCostMatrix = function () {
  */
 RoomIntel.prototype.hasCostMatrixData = function () {
 	if (this.memory.costMatrix) return true;
-	if (this.memory.pathfinderPositions) return true;
+	if (this.memory.costPositions) return true;
 
 	return false;
 };
