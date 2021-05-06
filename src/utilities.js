@@ -364,28 +364,30 @@ const utilities = {
 			options = {};
 		}
 
-		let cacheKey = roomName;
-		let matrix;
-		const matrixCache = cache.inHeap('costMatrix', 500);
-
-		if (!matrixCache[cacheKey]) {
-			const roomIntel = hivemind.roomIntel(roomName);
-			matrix = roomIntel.getCostMatrix();
-			matrixCache[cacheKey] = matrix;
-		}
-
-		matrix = matrixCache[cacheKey];
+		let cacheKey = 'costMatrix:' + roomName;
+		let matrix = cache.inHeap(
+			cacheKey,
+			500,
+			() => {
+				const roomIntel = hivemind.roomIntel(roomName);
+				return roomIntel.getCostMatrix();
+			}
+		);
 
 		if (matrix && options.singleRoom) {
 			// Highly discourage room exits if creep is supposed to stay in a room.
 			cacheKey += ':singleRoom';
 
-			if (!matrixCache[cacheKey]) {
-				matrixCache[cacheKey] = this.generateSingleRoomCostMatrix(matrix, roomName);
-			}
+			matrix = cache.inHeap(
+				cacheKey,
+				500,
+				() => {
+					return this.generateSingleRoomCostMatrix(matrix, roomName);
+				}
+			);
 		}
 
-		return matrixCache[cacheKey];
+		return matrix;
 	},
 
 	/**
