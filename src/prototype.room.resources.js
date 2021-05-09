@@ -4,7 +4,6 @@
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
 const cache = require('./cache');
-const utilities = require('./utilities');
 
 /**
  * Determines maximum storage capacity within a room.
@@ -239,8 +238,11 @@ Room.prototype.getRemoteHarvestInfo = function () {
 /**
  * Generates cached data about remoute harvest targets for the current room.
  *
- * @param {Object} cache
- *   The cache object to write information into.
+ * @return {Object}
+ *   Information about the room's remote harvest activity. Contains the keys:
+ *   - rooms: Rooms that are being remote harvested.
+ *   - harvestPositions: Positions of sources that should be harvested.
+ *   - reservePositions: Positions of controllers that need to be reserved.
  */
 Room.prototype.generateRemoteHarvestInfo = function () {
 	const cache = {};

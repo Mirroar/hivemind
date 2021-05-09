@@ -1,96 +1,57 @@
 'use strict';
 
-/* global hivemind Source Mineral StructureKeeperLair LOOK_TERRAIN
+/* global Source Mineral StructureKeeperLair LOOK_TERRAIN
 FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR */
 
-/**
- * Adds additional data to room objects.
- *
- * Should be invoked for each spawn early in the script's lifetime.
- *
- * @param {string} collection
- *   Either 'sources' or 'mineralt'.
- * @param {string} creepAttribute
- *   Either 'fixedSource' or 'fixedMineral'.
- */
-const enhanceData = function (collection, creepAttribute) {
-	const roomMemory = Memory.rooms[this.pos.roomName];
+const cache = require('./cache');
 
-	if (!roomMemory[collection]) {
-		roomMemory[collection] = {};
-	}
+// Define quick access property source.harvesters.
+Object.defineProperty(Source.prototype, 'harvesters', {
+	/**
+	 * Gets a source's assigned harvesters.
+	 *
+	 * @return {Creep[]}
+	 *   Harvesters for this source.
+	 */
+	get() {
+		return cache.inObject(this, 'harvesters', 1, () => {
+			const harvesters = [];
+			for (const harvester of _.values(this.room.creepsByRole.harvester) || []) {
+				if (harvester.memory.fixedSource === this.id) {
+					harvesters.push(harvester);
+				}
+			}
 
-	if (!roomMemory[collection][this.id]) {
-		roomMemory[collection][this.id] = {};
-	}
+			return harvesters;
+		});
+	},
+	enumerable: false,
+	configurable: true,
+});
 
-	this.memory = roomMemory[collection][this.id];
+// Define quick access property mineral.harvesters.
+Object.defineProperty(Mineral.prototype, 'harvesters', {
+	/**
+	 * Gets a mineral's assigned harvesters.
+	 *
+	 * @return {Creep[]}
+	 *   Harvesters for this mineral.
+	 */
+	get() {
+		return cache.inObject(this, 'harvesters', 1, () => {
+			const harvesters = [];
+			for (const harvester of _.values(this.room.creepsByRole.harvester) || []) {
+				if (harvester.memory.fixedMineral === this.id) {
+					harvesters.push(harvester);
+				}
+			}
 
-	// Collect assigned harvesters.
-	this.harvesters = [];
-	for (const harvester of _.values(this.room.creepsByRole.harvester) || []) {
-		if (harvester.memory[creepAttribute] === this.id) {
-			this.harvesters.push(harvester);
-		}
-	}
-};
-
-/**
- * Adds additional data to sources.
- */
-Source.prototype.enhanceData = function () {
-	enhanceData.call(this, 'sources', 'fixedSource');
-};
-
-/**
- * Adds additional data to minerals.
- */
-Mineral.prototype.enhanceData = function () {
-	enhanceData.call(this, 'minerals', 'fixedMineral');
-};
-
-/**
- * Finds all adjacent squares that are not blocked by walls.
- *
- * @return {RoomPosition[]}
- *   Any squares next to this source that a creep can be positioned on.
- */
-const getAdjacentFreeSquares = function () {
-	const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
-	const adjacentTerrain = [];
-	for (const tile of terrain) {
-		if (tile.x === this.pos.x && tile.y === this.pos.y) {
-			continue;
-		}
-
-		if (tile.terrain === 'plain' || tile.terrain === 'swamp') {
-			// @todo Make sure no structures are blocking this tile.
-			adjacentTerrain.push(this.room.getPositionAt(tile.x, tile.y));
-		}
-	}
-
-	return adjacentTerrain;
-};
-
-/**
- * Finds all adjacent squares that are not blocked by walls.
- *
- * @return {RoomPosition[]}
- *   Any squares next to this source that a creep can be positioned on.
- */
-Source.prototype.getAdjacentFreeSquares = function () {
-	return getAdjacentFreeSquares.call(this);
-};
-
-/**
- * Finds all adjacent squares that are not blocked by walls.
- *
- * @return {RoomPosition[]}
- *   Any squares next to this mineral that a creep can be positioned on.
- */
-Mineral.prototype.getAdjacentFreeSquares = function () {
-	return getAdjacentFreeSquares.call(this);
-};
+			return harvesters;
+		});
+	},
+	enumerable: false,
+	configurable: true,
+});
 
 /**
  * Calculates and caches the number of walkable tiles around a source.
@@ -99,12 +60,19 @@ Mineral.prototype.getAdjacentFreeSquares = function () {
  *   Maximum number of harvesters on this source.
  */
 const getNumHarvestSpots = function () {
-	if (!this.memory.maxHarvestersCalculated || Game.time - this.memory.maxHarvestersCalculated > 1000 * hivemind.getThrottleMultiplier()) {
-		this.memory.maxHarvestersCalculated = Game.time;
-		this.memory.maxHarvesters = this.getAdjacentFreeSquares().length;
-	}
+	return cache.inHeap('numFreeSquares:' + this.id, 5000, () => {
+		const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
+		const adjacentTerrain = [];
+		for (const tile of terrain) {
+			if (tile.x === this.pos.x && tile.y === this.pos.y) continue;
+			if (tile.terrain === 'plain' || tile.terrain === 'swamp') {
+				// @todo Make sure no structures are blocking this tile.
+				adjacentTerrain.push(tile);
+			}
+		}
 
-	return this.memory.maxHarvesters;
+		return adjacentTerrain.length;
+	});
 };
 
 /**
@@ -134,22 +102,20 @@ Mineral.prototype.getNumHarvestSpots = function () {
  *   A container close to this source.
  */
 const getNearbyContainer = function () {
-	if (!this.memory.nearbyContainerCalculated || Game.time - this.memory.nearbyContainerCalculated > 150 * hivemind.getThrottleMultiplier()) {
-		this.memory.nearbyContainerCalculated = Game.time;
-		this.memory.targetContainer = null;
-
+	const containerId = cache.inHeap('container:' + this.id, 150, () => {
+		// @todo Could use old data and just check if object still exits.
 		// Check if there is a container nearby.
 		const structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
 			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
 		});
 		if (structures.length > 0) {
 			const structure = this.pos.findClosestByRange(structures);
-			this.memory.targetContainer = structure.id;
+			return structure.id;
 		}
-	}
+	});
 
-	if (this.memory.targetContainer) {
-		return Game.getObjectById(this.memory.targetContainer);
+	if (containerId) {
+		return Game.getObjectById(containerId);
 	}
 };
 
@@ -180,22 +146,20 @@ Mineral.prototype.getNearbyContainer = function () {
  *   A link close to this source.
  */
 Source.prototype.getNearbyLink = function () {
-	if (!this.memory.nearbyLinkCalculated || Game.time - this.memory.nearbyLinkCalculated > 1000 * hivemind.getThrottleMultiplier()) {
-		this.memory.nearbyLinkCalculated = Game.time;
-		this.memory.targetLink = null;
-
+	const linkId = cache.inHeap('link:' + this.id, 1000, () => {
+		// @todo Could use old data and just check if object still exits.
 		// Check if there is a link nearby.
 		const structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
 			filter: structure => structure.structureType === STRUCTURE_LINK,
 		});
 		if (structures.length > 0) {
 			const structure = this.pos.findClosestByRange(structures);
-			this.memory.targetLink = structure.id;
+			return structure.id;
 		}
-	}
+	});
 
-	if (this.memory.targetLink) {
-		return Game.getObjectById(this.memory.targetLink);
+	if (linkId) {
+		return Game.getObjectById(linkId);
 	}
 };
 
@@ -206,23 +170,20 @@ Source.prototype.getNearbyLink = function () {
  *   The lair protecting this source.
  */
 const getNearbyLair = function () {
-	if (!this.memory.nearbyLairCalculated || Game.time - this.memory.nearbyLairCalculated > 125000 * hivemind.getThrottleMultiplier()) {
-		// This information really shouldn't ever change.
-		this.memory.nearbyLairCalculated = Game.time;
-		this.memory.nearbyLair = null;
-
-		// Check if there is a link nearby.
+	const lairId = cache.inHeap('lair:' + this.id, 150000, () => {
+		// @todo Could use old data and just check if object still exits.
+		// Check if there is a lair nearby.
 		const structures = this.pos.findInRange(FIND_STRUCTURES, 10, {
 			filter: structure => structure.structureType === STRUCTURE_KEEPER_LAIR,
 		});
 		if (structures.length > 0) {
 			const structure = this.pos.findClosestByRange(structures);
-			this.memory.nearbyLair = structure.id;
+			return structure.id;
 		}
-	}
+	});
 
-	if (this.memory.nearbyLair) {
-		return Game.getObjectById(this.memory.nearbyLair);
+	if (lairId) {
+		return Game.getObjectById(lairId);
 	}
 };
 
@@ -246,6 +207,12 @@ Mineral.prototype.getNearbyLair = function () {
 	return getNearbyLair.call(this);
 };
 
+/**
+ * Checks if a keeper lair is considered dangerous.
+ *
+ * @return {boolean}
+ *   True if a source keeper is spawned or about to spawn.
+ */
 StructureKeeperLair.prototype.isDangerous = function () {
 	return !this.ticksToSpawn || this.ticksToSpawn < 20;
 };

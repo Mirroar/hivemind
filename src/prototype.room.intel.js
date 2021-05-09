@@ -73,14 +73,9 @@ Room.prototype.enhanceData = function () {
 
 	// Register sources and minerals.
 	this.sources = this.find(FIND_SOURCES);
-	for (const source of this.sources) {
-		source.enhanceData();
-	}
-
 	const minerals = this.find(FIND_MINERALS);
 	for (const mineral of minerals) {
 		this.mineral = mineral;
-		this.mineral.enhanceData();
 	}
 
 	// Register bays.
