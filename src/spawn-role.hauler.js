@@ -116,6 +116,8 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 *   An object containing body part weights, keyed by type.
 	 */
 	getBodyWeights() {
+		// @todo Spawn without work parts most of the time. Only add work parts
+		// when roads need to be built, or at least one road is at < 25% hits.
 		return {[MOVE]: 0.35, [WORK]: 0.05, [CARRY]: 0.6};
 	}
 

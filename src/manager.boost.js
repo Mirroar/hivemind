@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind Room BOOSTS FIND_STRUCTURES STRUCTURE_LAB LAB_BOOST_MINERAL
+/* global Room BOOSTS FIND_STRUCTURES STRUCTURE_LAB LAB_BOOST_MINERAL
 LAB_BOOST_ENERGY OK */
 
 const cache = require('./cache');
@@ -21,7 +21,37 @@ Room.prototype.getAvailableBoosts = function (type) {
 		this,
 		'availableBoosts',
 		1,
-		() => this.calculateAvailableBoosts()
+		() => {
+			const boosts = {};
+
+			const storage = this.storage || {store: {}};
+			const terminal = this.terminal || {store: {}};
+			const resourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
+
+			_.each(BOOSTS, mineralBoosts => {
+				for (const mineralType in mineralBoosts) {
+					// Only boost using the best boosts. We'll make sure we have what we need through trading.
+					if (mineralType.indexOf('X') === -1) continue;
+
+					const boostValues = mineralBoosts[mineralType];
+
+					if (_.indexOf(resourceTypes, mineralType) === -1) continue;
+
+					_.each(boostValues, (boostValue, boostType) => {
+						if (!boosts[boostType]) {
+							boosts[boostType] = {};
+						}
+
+						boosts[boostType][mineralType] = {
+							effect: boostValue,
+							available: Math.floor((storage.store[mineralType] || 0 + terminal.store[mineralType] || 0) / 10),
+						};
+					});
+				}
+			});
+
+			return boosts;
+		}
 	);
 
 	if (type) {
@@ -29,41 +59,6 @@ Room.prototype.getAvailableBoosts = function (type) {
 	}
 
 	return availableBoosts;
-};
-
-/**
- * Collects information about available boosts in a room.
- */
-Room.prototype.calculateAvailableBoosts = function () {
-	const boosts = {};
-
-	const storage = this.storage || {store: {}};
-	const terminal = this.terminal || {store: {}};
-	const resourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
-
-	_.each(BOOSTS, mineralBoosts => {
-		for (const mineralType in mineralBoosts) {
-			// Only boost using the best boosts. We'll make sure we have what we need through trading.
-			if (mineralType.indexOf('X') === -1) continue;
-
-			const boostValues = mineralBoosts[mineralType];
-
-			if (_.indexOf(resourceTypes, mineralType) === -1) continue;
-
-			_.each(boostValues, (boostValue, boostType) => {
-				if (!boosts[boostType]) {
-					boosts[boostType] = {};
-				}
-
-				boosts[boostType][mineralType] = {
-					effect: boostValue,
-					available: Math.floor((storage.store[mineralType] || 0 + terminal.store[mineralType] || 0) / 10),
-				};
-			});
-		}
-	});
-
-	return boosts;
 };
 
 /**
@@ -136,7 +131,7 @@ Room.prototype.getBoostLabMemory = function () {
 					return {[labId]: previousCache.data[labId]};
 				}
 
-				return{[labId]: {}};
+				return {[labId]: {}};
 			}
 		}
 	);

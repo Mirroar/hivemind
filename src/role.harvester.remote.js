@@ -165,6 +165,7 @@ RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
 				creep.move(creep.pos.getDirectionTo(container.pos));
 			}
 		}
+
 		if (range === 1 && _.sum(creep.carry) >= creep.carryCapacity * 0.8) {
 			creep.transfer(container, RESOURCE_ENERGY);
 		}
