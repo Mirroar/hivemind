@@ -57,7 +57,7 @@ const cache = {
   inObject(o, cacheKey, maxAge, generateCallback) {
     if (!o._cache) o._cache = {};
     if (!o._cache[cacheKey] || Game.time - !o._cache[cacheKey].created > maxAge * hivemind.getThrottleMultiplier()) {
-      const data = generateCallback ? generateCallback({}, o._cache[cacheKey]) : {};
+      const data = generateCallback ? generateCallback(o._cache[cacheKey]) : {};
 
       o._cache[cacheKey] = {
         data,
