@@ -3,6 +3,8 @@
 /* global hivemind Room BOOSTS FIND_STRUCTURES STRUCTURE_LAB LAB_BOOST_MINERAL
 LAB_BOOST_ENERGY OK */
 
+const cache = require('./cache');
+
 /**
  * Collects available boosts in a room, optionally filtered by effect.
  *
@@ -15,21 +17,24 @@ LAB_BOOST_ENERGY OK */
  *   parts that can be boosted.
  */
 Room.prototype.getAvailableBoosts = function (type) {
-	if (!this.boostsCache) {
-		this.fillBoostCache();
-	}
+	const availableBoosts = cache.inObject(
+		this,
+		'availableBoosts',
+		1,
+		() => this.calculateAvailableBoosts()
+	);
 
 	if (type) {
-		return this.boostsCache[type];
+		return availableBoosts[type];
 	}
 
-	return this.boostsCache;
+	return availableBoosts;
 };
 
 /**
  * Collects information about available boosts in a room.
  */
-Room.prototype.fillBoostCache = function () {
+Room.prototype.calculateAvailableBoosts = function () {
 	const boosts = {};
 
 	const storage = this.storage || {store: {}};
@@ -58,7 +63,7 @@ Room.prototype.fillBoostCache = function () {
 		}
 	});
 
-	this.boostsCache = boosts;
+	return boosts;
 };
 
 /**
@@ -89,34 +94,9 @@ Room.prototype.canSpawnBoostedCreeps = function () {
 Room.prototype.getBoostLabs = function () {
 	// @todo Make room planner decide which are boost labs, or hijack
 	// reaction labs when necessary.
+	const labMemory = this.getBoostLabMemory();
+
 	const boostLabs = [];
-	if (!this.boostManager) return boostLabs;
-
-	if (!this.memory.boostManager.labLastChecked || Game.time - this.memory.boostManager.labLastChecked > 1000 * hivemind.getThrottleMultiplier()) {
-		this.memory.boostManager.labLastChecked = Game.time;
-
-		const labs = this.find(FIND_STRUCTURES, {
-			filter: structure => {
-				if (structure.structureType !== STRUCTURE_LAB) return false;
-				if (this.memory.labs && _.contains(this.memory.labs.reactor, structure.id)) return false;
-				if (this.memory.labs && structure.id === this.memory.labs.source1) return false;
-				if (this.memory.labs && structure.id === this.memory.labs.source2) return false;
-				if (!structure.isOperational()) return false;
-
-				return true;
-			},
-		});
-
-		if (labs.length > 0) {
-			if (!this.memory.boostManager.labs[labs[0].id]) {
-				// Set this lab as new boost lab.
-				this.memory.boostManager.labs = {};
-				this.memory.boostManager.labs[labs[0].id] = {};
-			}
-		}
-	}
-
-	const labMemory = this.memory.boostManager.labs;
 	_.each(labMemory, (data, id) => {
 		const lab = Game.getObjectById(id);
 		if (lab && lab.isOperational()) {
@@ -128,6 +108,38 @@ Room.prototype.getBoostLabs = function () {
 	});
 
 	return boostLabs;
+};
+
+Room.prototype.getBoostLabMemory = function () {
+	return cache.inMemory(
+		'boostLabs:' + this.name,
+		1000,
+		previousCache => {
+			if (!this.boostManager) return {};
+
+			const labs = this.find(FIND_STRUCTURES, {
+				filter: structure => {
+					if (structure.structureType !== STRUCTURE_LAB) return false;
+					if (this.memory.labs && _.contains(this.memory.labs.reactor, structure.id)) return false;
+					if (this.memory.labs && structure.id === this.memory.labs.source1) return false;
+					if (this.memory.labs && structure.id === this.memory.labs.source2) return false;
+					if (!structure.isOperational()) return false;
+
+					return true;
+				},
+			});
+
+			if (labs.length > 0) {
+				const labId = labs[0].id;
+				if (previousCache && previousCache.data && previousCache.data[labId]) {
+					// Keep boost lab memory from last call.
+					return {[labId]: previousCache.data[labId]};
+				}
+
+				return{[labId]: {}};
+			}
+		}
+	);
 };
 
 /**
@@ -151,8 +163,9 @@ const BoostManager = function (roomName) {
 		this.memory.creepsToBoost = {};
 	}
 
-	if (!this.memory.labs) {
-		this.memory.labs = {};
+	if (this.memory.labs) {
+		// Clean up old lab data.
+		delete this.memory.labs;
 	}
 
 	// @todo Clean out this.memory.creepsToBoost of creeps that no longer exist.
@@ -207,36 +220,33 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
 		return false;
 	}
 
-	const labMemory = this.memory.labs;
+	const labMemory = this.room.getBoostLabMemory();
 	let hasMoved = false;
-	// @todo This is ugly, break up the double loop.
-	_.each(boostMemory, (amount, resourceType) => {
-		// Find lab to get boosted at.
-		_.each(labMemory, (data, id) => {
-			if (data.resourceType !== resourceType) return;
+	// Find lab to get boosted at.
+	_.each(labMemory, (data, id) => {
+		const resourceType = data.resourceType;
+		if (!boostMemory[resourceType]) return;
+		const amount = boostMemory[resourceType];
 
-			const lab = Game.getObjectById(id);
-			if (!lab) return;
+		const lab = Game.getObjectById(id);
+		if (!lab) return;
 
-			if (creep.pos.getRangeTo(lab) > 1) {
-				// Get close enough to lab.
-				creep.moveToRange(lab, 1);
+		if (creep.pos.getRangeTo(lab) > 1) {
+			// Get close enough to lab.
+			creep.moveToRange(lab, 1);
+		}
+		else if (lab.mineralType === resourceType && lab.mineralAmount >= amount * LAB_BOOST_MINERAL && lab.energy >= amount * LAB_BOOST_ENERGY) {
+			// If there is enough energy and resources, boost!
+			if (lab.boostCreep(creep) === OK) {
+				// @todo Prevent trying to boost another creep with this lab on this turn.
+				// Awesome, boost has been applied (in theory).
+				// Clear partial memory, to prevent trying to boost again.
+				delete boostMemory[resourceType];
 			}
-			else if (lab.mineralType === resourceType && lab.mineralAmount >= amount * LAB_BOOST_MINERAL && lab.energy >= amount * LAB_BOOST_ENERGY) {
-				// If there is enough energy and resources, boost!
-				if (lab.boostCreep(creep) === OK) {
-					// @todo Prevent trying to boost another creep with this lab on this turn.
-					// Awesome, boost has been applied (in theory).
-					// Clear partial memory, to prevent trying to boost again.
-					delete boostMemory[resourceType];
-				}
-			}
+		}
 
-			hasMoved = true;
-			return false;
-		});
-
-		if (hasMoved) return false;
+		hasMoved = true;
+		return false;
 	});
 
 	return hasMoved;
@@ -270,44 +280,45 @@ BoostManager.prototype.getLabOrders = function () {
 		delete this.memory.creepsToBoost[creepName];
 	}
 
+	const labMemory = this.room.getBoostLabMemory();
 	for (const lab of labs) {
-		if (!this.memory.labs[lab.id]) {
-			this.memory.labs[lab.id] = {};
+		if (!labMemory[lab.id]) {
+			labMemory[lab.id] = {};
 		}
 
-		if (!this.memory.labs[lab.id].resourceType || !queuedBoosts[this.memory.labs[lab.id].resourceType]) {
+		if (!labMemory[lab.id].resourceType || !queuedBoosts[labMemory[lab.id].resourceType]) {
 			const unassigned = _.filter(_.keys(queuedBoosts), resourceType => {
-				return _.filter(labs, lab => this.memory.labs[lab.id].resourceType === resourceType).length === 0;
+				return _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0;
 			});
 
 			if (unassigned.length === 0) {
-				delete this.memory.labs[lab.id].resourceType;
+				delete labMemory[lab.id].resourceType;
 			}
 			else {
-				this.memory.labs[lab.id].resourceType = unassigned[0];
+				labMemory[lab.id].resourceType = unassigned[0];
 			}
 		}
 
-		if (this.memory.labs[lab.id].resourceType) {
-			const resourceType = this.memory.labs[lab.id].resourceType;
-			this.memory.labs[lab.id].resourceAmount = queuedBoosts[resourceType] * LAB_BOOST_MINERAL;
-			this.memory.labs[lab.id].energyAmount = queuedBoosts[resourceType] * LAB_BOOST_ENERGY;
+		if (labMemory[lab.id].resourceType) {
+			const resourceType = labMemory[lab.id].resourceType;
+			labMemory[lab.id].resourceAmount = queuedBoosts[resourceType] * LAB_BOOST_MINERAL;
+			labMemory[lab.id].energyAmount = queuedBoosts[resourceType] * LAB_BOOST_ENERGY;
 		}
 		else {
-			delete this.memory.labs[lab.id].resourceAmount;
-			delete this.memory.labs[lab.id].energyAmount;
+			delete labMemory[lab.id].resourceAmount;
+			delete labMemory[lab.id].energyAmount;
 		}
 	}
 
 	// Make sure to delete memory of any labs no longer used for boosting.
-	const unusedLabs = _.filter(_.keys(this.memory.labs), id => {
+	const unusedLabs = _.filter(_.keys(labMemory), id => {
 		return _.filter(labs, lab => lab.id === id).length === 0;
 	});
 	for (const id of unusedLabs) {
-		delete this.memory.labs[id];
+		delete labMemory[id];
 	}
 
-	return this.memory.labs;
+	return labMemory;
 };
 
 /**
