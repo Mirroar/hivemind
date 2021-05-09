@@ -188,9 +188,9 @@ Creep.prototype.getOntoCachedPath = function () {
 		}
 		else {
 			this.say('Searching');
+			this.moveTo(this._decodedPath[0]);
 		}
 
-		this.moveTo(this._decodedPath[0]);
 		this.memory.moveBlocked = true;
 		return true;
 	}
@@ -388,8 +388,8 @@ Creep.prototype.goTo = function (target, options) {
 		if (this.memory.moveBlocked) {
 			// Seems like we can't move on the target space for some reason right now.
 			// This should be rare, so we use the default pathfinder to get us the rest of the way there.
-			if (this.pos.getRangeTo(target) > range && this.pos.getRangeTo(target) < range + 5) {
-				const result = this.moveTo(target);
+			if (this.pos.getRangeTo(target) > range) {
+				const result = this.moveTo(target, {range});
 				if (result === ERR_NO_PATH) return false;
 			}
 			else if (this.pos.roomName === targetPos.roomName) {
