@@ -71,6 +71,29 @@ Hivemind.prototype.onTickStart = function () {
 
 	// Refresh reference to memory object.
 	this.memory = Memory.hivemind;
+
+	this.gatherCpuStats();
+};
+
+/**
+ * Gather CPU stats for periodic reports.
+ */
+Hivemind.prototype.gatherCpuStats = function () {
+	if (!Memory.strategy) return;
+	if (!Memory.strategy.reports) return;
+	if (!Memory.strategy.reports.data) return;
+	if (!Memory.strategy.reports.data.cpu) Memory.strategy.reports.data.cpu = {};
+
+	const memory = Memory.strategy.reports.data.cpu;
+	memory.totalTicks = (memory.totalTicks || 0) + 1;
+	memory.bucket = (memory.bucket || 0) + Game.cpu.bucket;
+	memory.cpu = (memory.cpu || 0) + (stats.getStat('cpu_total', 1) || 0);
+	memory.cpuTotal = (memory.cpuTotal || 0) + Game.cpu.limit;
+
+	if (global._wasReset) {
+		memory.globalResets = (memory.globalResets || 0) + 1;
+		global._wasReset = false;
+	}
 };
 
 /**

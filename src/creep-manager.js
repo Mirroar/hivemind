@@ -165,6 +165,39 @@ CreepManager.prototype.report = function () {
 		const total = this.performance.total.throttled + this.performance.total.run;
 		hivemind.log('creeps').debug(this.performance.total.throttled, 'of', total, 'creeps have been throttled due to bucket this tick.');
 	}
+
+	if (!Memory.strategy) return;
+	if (!Memory.strategy.reports) return;
+	if (!Memory.strategy.reports.data) return;
+	const memory = Memory.strategy.reports.data.cpu;
+
+	if (!memory.creeps) {
+		memory.creeps = {
+			max: {},
+			roles: {},
+		};
+	}
+
+	// Record highest creep CPU usage each turn.
+	// @todo Might even want to report creep name along with it, or room it's in.
+
+	// Save stats for each creep role.
+	for (const roleId in this.roles) {
+		if (!this.performance[roleId]) continue;
+		const perf = this.performance[roleId];
+		const total = perf.throttled + perf.run;
+		if (!memory.creeps.roles[roleId]) {
+			memory.creeps.roles[roleId] = {
+				total: 0,
+				throttled: 0,
+				cpu: 0,
+			};
+		}
+
+		memory.creeps.roles[roleId].total += total;
+		memory.creeps.roles[roleId].throttled += perf.throttled;
+		memory.creeps.roles[roleId].cpu += perf.total;
+	}
 };
 
 module.exports = CreepManager;

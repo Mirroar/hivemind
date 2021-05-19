@@ -38,6 +38,7 @@ ReportProcess.prototype.initMemory = function (baseTimestamp) {
 			power: [],
 			storedPower: this.getStoredPower(),
 			remoteHarvestCount: Memory.strategy.remoteHarvesting.currentCount,
+			cpu: {},
 		},
 	};
 
@@ -82,6 +83,7 @@ ReportProcess.prototype.normalizeDate = function (date) {
 ReportProcess.prototype.generateReport = function () {
 	this.generateLevelReport('gcl', 'Control Points');
 	this.generateLevelReport('gpl', 'Power');
+	this.generateCPUReport();
 	this.generateRemoteMiningReport();
 	this.generatePowerReport();
 
@@ -151,6 +153,24 @@ ReportProcess.prototype.getStoredPower = function () {
 	});
 
 	return amount;
+};
+
+/**
+ * Generates report email for CPU stats.
+ */
+ReportProcess.prototype.generateCPUReport = function () {
+	let reportText = this.generateHeading('💻 CPU Usage');
+
+	const values = this.memory.data.cpu;
+	const buckedAverage = values.bucket / values.totalTicks;
+	const cpuAverage = values.cpu / values.totalTicks;
+	const cpuTotalAverage = values.cpuTotal / values.totalTicks;
+	const cpuPercent = 100 * cpuAverage / cpuTotalAverage;
+
+	reportText += 'Bucket: ' + buckedAverage.toPrecision(4) + '<br>';
+	reportText += 'CPU: ' + cpuAverage.toPrecision(3) + '/' + cpuTotalAverage.toPrecision(3) + ' (' + cpuPercent.toPrecision(3) + '%)<br>';
+
+	Game.notify(reportText);
 };
 
 /**

@@ -10,6 +10,7 @@ require('./prototype.room');
 require('./prototype.structure');
 
 console.log('new global reset');
+global._wasReset = true;
 
 // Create kernel object.
 const Hivemind = require('./hivemind');
