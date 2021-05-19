@@ -1,15 +1,24 @@
 'use strict';
 
-/* global hivemind RESOURCES_ALL RESOURCE_ENERGY RESOURCE_POWER OK
-ORDER_BUY ORDER_SELL */
+/* global hivemind RESOURCES_ALL RESOURCE_ENERGY RESOURCE_POWER OK RESOURCE_OPS
+ORDER_BUY ORDER_SELL PIXEL */
 
+const cache = require('./cache');
 const Process = require('./process');
+const utilities = require('./utilities');
 
 // @todo Move to configuration eventually.
 const shouldBuyEnergy = false;
 const shouldBuyPixels = true;
-const shouldSellPower = false;
+const shouldSellPower = true;
 const shouldSellOps = true;
+
+// Minimum value for a trade. Would be cool if this was a game constant.
+const minTradeValue = 0.001;
+// Amount of credits to keep in reserve for creating orders.
+const creditReserve = 10000;
+// Lookup for lab reaction recipes.
+const recipes = utilities.getReactionRecipes();
 
 /**
  * Automatically trades resources on the open market.
@@ -22,9 +31,6 @@ const shouldSellOps = true;
  */
 const TradeProcess = function (params, data) {
 	Process.call(this, params, data);
-
-	// Would be cool if this was a game constant, but oh well...
-	this.minTradeValue = 0.001;
 };
 
 TradeProcess.prototype = Object.create(Process.prototype);
@@ -35,42 +41,62 @@ TradeProcess.prototype = Object.create(Process.prototype);
 TradeProcess.prototype.run = function () {
 	this.removeOldTrades();
 
+	this.availableCredits = Math.max(0, Game.market.credits - creditReserve);
+
 	const resources = this.getRoomResourceStates();
 	const total = resources.total;
+	const maxStorage = total.rooms * STORAGE_CAPACITY / 20;
+	const highStorage = total.rooms * STORAGE_CAPACITY / 50;
+	const lowStorage = total.rooms * Math.min(STORAGE_CAPACITY / 100, 20000);
+	const minStorage = total.rooms * Math.min(STORAGE_CAPACITY / 200, 10000);
 
 	for (const resourceType of RESOURCES_ALL) {
 		const tier = this.getResourceTier(resourceType);
 
 		if (tier === 1) {
-			const maxStorage = total.rooms * 50000;
-			const highStorage = total.rooms * 20000;
-			const lowStorage = total.rooms * 10000;
-			const minStorage = total.rooms * 5000;
-
 			// Check for base resources we have too much of.
 			if ((total.resources[resourceType] || 0) > maxStorage) {
 				this.instaSellResources(resourceType, resources.rooms);
 			}
-			else if ((total.resources[resourceType] || 0) > highStorage) {
+
+			if ((total.resources[resourceType] || 0) > highStorage) {
 				this.trySellResources(resourceType, resources.rooms);
 			}
-			else if ((total.resources[resourceType] || 0) < lowStorage && Game.market.credits > 1000) {
-				// @todo Actually iterate over all tier 1 resources to make sure we buy every type.
+
+			// Check for base resources we're missing.
+			if ((total.resources[resourceType] || 0) < lowStorage && this.availableCredits > 0) {
 				this.tryBuyResources(resourceType, resources.rooms);
 			}
-			else if ((total.resources[resourceType] || 0) < minStorage && Game.market.credits > 10000) {
-				// @todo Actually iterate over all tier 1 resources to make sure we buy every type.
+
+			if ((total.resources[resourceType] || 0) < minStorage && this.availableCredits > 0) {
 				this.instaBuyResources(resourceType, resources.rooms);
+			}
+		}
+		else if (recipes[resourceType]) {
+			// Check if we can make a nice profit selling some boost compounds.
+			const resourceWorth = this.calculateWorth(resourceType);
+			if (resourceWorth) {
+				const history = this.getPriceData(resourceType);
+				if (history && history.average && history.average > resourceWorth) {
+					// Alright, looks like we can make a profit by selling this!
+					if ((total.resources[resourceType] || 0) > minStorage) {
+						this.instaSellResources(resourceType, resources.rooms);
+					}
+
+					if ((total.resources[resourceType] || 0) > minStorage) {
+						this.trySellResources(resourceType, resources.rooms);
+					}
+				}
 			}
 		}
 	}
 
-	if (Game.market.credits > 5000 && shouldBuyEnergy) {
+	if (this.availableCredits > 0 && shouldBuyEnergy) {
 		// Also try to cheaply buy some energy for rooms that are low on it.
 		_.each(resources.rooms, (roomState, roomName) => {
 			if (!roomState.canTrade) return;
 			if (roomState.isEvacuating) return;
-			if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > 100000) return;
+			if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > STORAGE_CAPACITY / 10) return;
 
 			// @todo Force creating a buy order for every affected room.
 			const temp = {
@@ -80,16 +106,32 @@ TradeProcess.prototype.run = function () {
 		});
 	}
 
-	if (Game.market.credits > 10000 && shouldBuyPixels) {
-		// @todo Try to buy pixels when price is low.
+	if (this.availableCredits > 0 && shouldBuyPixels) {
+		// Try to buy pixels when price is low.
+		this.tryBuyResources(PIXEL);
+		this.instaBuyResources(PIXEL);
 	}
 
-	if (Game.market.credits > 10000 && shouldSellPower) {
-		// @todo Try to buy pixels when price is low.
+	if (shouldSellPower) {
+		// Sell excess power we can't apply to our account.
+		if ((total.resources[RESOURCE_POWER] || 0) > highStorage) {
+			this.instaSellResources(RESOURCE_POWER, resources.rooms);
+		}
+
+		if ((total.resources[RESOURCE_POWER] || 0) > lowStorage) {
+			this.trySellResources(RESOURCE_POWER, resources.rooms);
+		}
 	}
 
-	if (Game.market.credits > 10000 && shouldSellOps) {
-		// @todo Try to buy pixels when price is low.
+	if (shouldSellOps) {
+		// Sell excess ops.
+		if ((total.resources[RESOURCE_OPS] || 0) > lowStorage) {
+			this.instaSellResources(RESOURCE_OPS, resources.rooms);
+		}
+
+		if ((total.resources[RESOURCE_OPS] || 0) > minStorage) {
+			this.trySellResources(RESOURCE_OPS, resources.rooms);
+		}
 	}
 };
 
@@ -144,10 +186,14 @@ TradeProcess.prototype.instaSellResources = function (resourceType, rooms) {
 	const room = Game.rooms[roomName];
 
 	const bestOrder = this.findBestBuyOrder(resourceType, roomName);
-
+	const history = this.getPriceData(resourceType);
 	if (!bestOrder) return;
+	if (!history) return;
 
-	const amount = Math.min(5000, bestOrder.amount);
+	hivemind.log('trade', roomName).debug('Could sell', resourceType, 'for', bestOrder.price, '- we want at least', history.average + history.stdDev / 2);
+	if (bestOrder.price < history.average + history.stdDev / 2) return;
+
+	const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount);
 	const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
 
 	if (amount > (room.terminal.store[resourceType] || 0)) {
@@ -191,29 +237,37 @@ TradeProcess.prototype.instaSellResources = function (resourceType, rooms) {
  *   Resource states for rooms to check, keyed by room name.
  */
 TradeProcess.prototype.instaBuyResources = function (resourceType, rooms) {
+	const isIntershardResource = INTERSHARD_RESOURCES.indexOf(resourceType) !== -1;
+
 	// Find room with lowest amount of this resource.
-	const roomName = this.getLowestResourceState(resourceType, rooms);
-	if (!roomName) return;
+	const roomName = isIntershardResource ? null : this.getLowestResourceState(resourceType, rooms);
+	if (!roomName && !isIntershardResource) return;
 
 	const room = Game.rooms[roomName];
 
 	const bestOrder = this.findBestSellOrder(resourceType, roomName);
-
+	const history = this.getPriceData(resourceType);
 	if (!bestOrder) return;
+	if (!history) return;
 
-	const amount = Math.min(5000, bestOrder.amount);
-	const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
+	hivemind.log('trade', roomName).debug('Could buy', resourceType, 'for', bestOrder.price, '- we want to spend at most', history.average - Math.min(history.stdDev / 5, history.average * 0.1));
+	if (bestOrder.price > history.average - Math.min(history.stdDev / 5, history.average * 0.1)) return;
 
-	if (transactionCost > room.terminal.store.energy) {
-		if (room.memory.fillTerminal) {
-			hivemind.log('trade', roomName).info('Busy, can\'t prepare', transactionCost, 'energy for buying', amount, resourceType);
+	const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount);
+	if (!isIntershardResource) {
+		const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
+
+		if (transactionCost > room.terminal.store.energy) {
+			if (room.memory.fillTerminal) {
+				hivemind.log('trade', roomName).info('Busy, can\'t prepare', transactionCost, 'energy for buying', amount, resourceType);
+			}
+			else {
+				room.prepareForTrading(RESOURCE_ENERGY, transactionCost);
+				hivemind.log('trade', roomName).info('Preparing', transactionCost, 'energy for buying', amount, resourceType, 'from', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
+			}
+
+			return;
 		}
-		else {
-			room.prepareForTrading(RESOURCE_ENERGY, transactionCost);
-			hivemind.log('trade', roomName).info('Preparing', transactionCost, 'energy for buying', amount, resourceType, 'from', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
-		}
-
-		return;
 	}
 
 	hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
@@ -235,10 +289,7 @@ TradeProcess.prototype.instaBuyResources = function (resourceType, rooms) {
  *   If set, only check agains orders from rooms given by `rooms` parameter.
  */
 TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOtherRooms) {
-	let npcPrice = 1;
-	if (resourceType === RESOURCE_ENERGY) {
-		npcPrice = 0.1;
-	}
+	const isIntershardResource = INTERSHARD_RESOURCES.indexOf(resourceType) !== -1;
 
 	if (_.filter(Game.market.orders, order => {
 		if (order.type === ORDER_BUY && order.resourceType === resourceType) {
@@ -253,37 +304,39 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 	}
 
 	// Find room with lowest amount of this resource.
-	const roomName = this.getLowestResourceState(resourceType, rooms);
-	if (!roomName) return;
+	const roomName = isIntershardResource ? null : this.getLowestResourceState(resourceType, rooms);
+	if (!roomName && !isIntershardResource) return;
 
 	// Find comparable deals for buying this resource.
 	const bestBuyOrder = this.findBestBuyOrder(resourceType, roomName);
-	const bestSellOrder = this.findBestSellOrder(resourceType, roomName);
+	const history = this.getPriceData(resourceType);
+	if (!history) return;
 
-	let offerPrice;
-	if (bestBuyOrder && bestSellOrder) {
-		hivemind.log('trade', roomName).info(resourceType, 'is currently being bought for', bestBuyOrder.price, 'and sold for', bestSellOrder.price, 'credits.');
-		offerPrice = Math.min(bestBuyOrder.price * 0.9, bestSellOrder.price * 0.9);
-	}
-	else if (bestBuyOrder) {
-		// Nobody is selling this resource, so adapt to the current buy price.
+	let offerPrice = history.average - Math.min(history.stdDev / 2, history.average * 0.2);
+	if (bestBuyOrder) {
+		// Adapt to the current buy price, if it's to our benefit.
 		hivemind.log('trade', roomName).info(resourceType, 'is currently being bought for', bestBuyOrder.price);
-		offerPrice = bestBuyOrder.price * 0.9;
+		offerPrice = Math.min(offerPrice, bestBuyOrder.price * 1.01);
 	}
 	else {
-		// Nobody is buying this resource, try to get NPC price for it.
+		// Nobody is buying this resource, try to get it for very cheap.
 		hivemind.log('trade', roomName).info('Nobody else is currently buying', resourceType);
-		offerPrice = npcPrice;
+		offerPrice = history.average - Math.min(history.stdDev, history.average * 0.8);
 	}
 
-	if (offerPrice < this.minTradeValue) offerPrice = this.minTradeValue;
+	hivemind.log('trade', roomName).debug('Could offer to buy', resourceType, 'for', offerPrice, '- we want to spend at most', history.average - Math.min(history.stdDev / 2, history.average * 0.2));
+	if (offerPrice > history.average - Math.min(history.stdDev / 2, history.average * 0.2)) return;
+
+	if (offerPrice < minTradeValue) offerPrice = minTradeValue;
+
+	let amount = this.getMaxOrderAmount(resourceType);
+
+	// Make sure we have enough credits to actually buy this.
+	if (this.availableCredits < amount * offerPrice) return;
 
 	hivemind.log('trade', roomName).debug('Offering to buy for', offerPrice);
 
-	// Make sure we have enough credits to actually buy this.
-	if (Game.market.credits < 10000 * offerPrice) return;
-
-	const result = Game.market.createOrder(ORDER_BUY, resourceType, offerPrice, 10000, roomName);
+	const result = Game.market.createOrder(ORDER_BUY, resourceType, offerPrice, amount, roomName);
 	if (result !== OK) {
 		hivemind.log('trade', roomName).error('Could not create buy order:', result);
 	}
@@ -298,8 +351,6 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
  *   Resource states for rooms to check, keyed by room name.
  */
 TradeProcess.prototype.trySellResources = function (resourceType, rooms) {
-	const npcPrice = 1;
-
 	if (_.filter(Game.market.orders, order => order.type === ORDER_SELL && order.resourceType === resourceType).length > 0) {
 		return;
 	}
@@ -309,31 +360,36 @@ TradeProcess.prototype.trySellResources = function (resourceType, rooms) {
 	if (!roomName) return;
 
 	// Find comparable deals for selling this resource.
-	const bestBuyOrder = this.findBestBuyOrder(resourceType, roomName);
 	const bestSellOrder = this.findBestSellOrder(resourceType, roomName);
+	const history = this.getPriceData(resourceType);
+	if (!history) return;
 
-	let offerPrice;
-	if (bestBuyOrder && bestSellOrder) {
-		hivemind.log('trade', roomName).info(resourceType, 'is currently being bought for', bestBuyOrder.price, 'and sold for', bestSellOrder.price, 'credits.');
-		offerPrice = Math.max(bestBuyOrder.price / 0.9, bestSellOrder.price / 0.9);
-	}
-	else if (bestSellOrder) {
-		// Nobody is buying this resource, so adapt to the current sell price.
+	let offerPrice = history.average + history.stdDev / 2;
+	if (bestSellOrder) {
+		// Adapt to the current sale price if it's to our benefit.
 		hivemind.log('trade', roomName).info(resourceType, 'is currently being sold for', bestSellOrder.price);
-		offerPrice = bestSellOrder.price / 0.9;
+		offerPrice = Math.min(Math.max(offerPrice, bestSellOrder.price * 0.99), (history.average * 1.5) + (history.stdDev * 2));
 	}
 	else {
 		// Nobody is selling this resource, try to get a greedy price for it.
 		hivemind.log('trade', roomName).info('Nobody else is currently selling', resourceType);
-		offerPrice = npcPrice * 5;
+		offerPrice = (history.average * 1.5) + (history.stdDev * 2);
+	}
+
+	hivemind.log('trade', roomName).debug('Could offer to sell', resourceType, 'for', offerPrice, '- we want at least', history.average + history.stdDev / 2);
+	if (offerPrice < history.average + history.stdDev / 2) return;
+
+	const amount = this.getMaxOrderAmount(resourceType);
+	// Make sure we have enough credits to actually sell this, otherwise try
+	// filling other player's orders.
+	if (Game.market.credits < amount * offerPrice * 0.05) {
+		this.instaSellResources(resourceType, rooms);
+		return;
 	}
 
 	hivemind.log('trade', roomName).debug('Offering to sell for', offerPrice);
 
-	// Make sure we have enough credits to actually sell this.
-	if (Game.market.credits < 10000 * offerPrice * 0.05) return;
-
-	Game.market.createOrder(ORDER_SELL, resourceType, offerPrice, 10000, roomName);
+	Game.market.createOrder(ORDER_SELL, resourceType, offerPrice, amount, roomName);
 };
 
 /**
@@ -406,7 +462,7 @@ TradeProcess.prototype.findBestBuyOrder = function (resourceType, roomName) {
 	let bestOrder;
 	_.each(orders, order => {
 		if (order.amount < 100) return;
-		const transactionCost = Game.market.calcTransactionCost(1000, roomName, order.roomName);
+		const transactionCost = INTERSHARD_RESOURCES.indexOf(resourceType) === -1 ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
 		const credits = 1000 * order.price;
 		const score = credits - (0.3 * transactionCost);
 
@@ -438,7 +494,7 @@ TradeProcess.prototype.findBestSellOrder = function (resourceType, roomName) {
 	let bestOrder;
 	_.each(orders, order => {
 		if (order.amount < 100) return;
-		const transactionCost = Game.market.calcTransactionCost(1000, roomName, order.roomName);
+		const transactionCost = INTERSHARD_RESOURCES.indexOf(resourceType) === -1 ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
 		const credits = 1000 * order.price;
 		const score = credits + (0.3 * transactionCost);
 
@@ -485,6 +541,83 @@ TradeProcess.prototype.getResourceTier = function (resourceType) {
 	}
 
 	return tier;
+};
+
+/**
+ * Decides how much resource should be traded at once.
+ *
+ * This is to make sure we don't pay huge amounts on market fees for trades
+ * that will never be completed.
+ */
+TradeProcess.prototype.getMaxOrderAmount = function (resourceType) {
+	const history = this.getPriceData(resourceType);
+	if (!history) return 0;
+
+	if (history.average < 10 && history.total > 10000) return 10000;
+	if (history.average < 100 && history.total > 1000) return 1000;
+	if (history.average < 1000 && history.total > 100) return 100;
+	if (history.average < 10000 && history.total > 10) return 10;
+
+	return 1;
+};
+
+/**
+ * Analyzes market history to decite on resource price.
+ */
+TradeProcess.prototype.getPriceData = function (resourceType) {
+	return cache.inHeap('price:' + resourceType, 5000, () => {
+		const history = Game.market.getHistory(resourceType);
+
+		// There needs to be a few days of price data before we consider dealing.
+		if (history.length < 4) return null;
+
+		// Find days with highest and lowest deal values.
+		const minDay = _.min(history, 'avgPrice');
+		const maxDay = _.max(history, 'avgPrice');
+		const maxDev = _.max(history, 'stddevPrice');
+
+		let count = 0;
+		let totalValue = 0;
+		let totalDev = 0;
+		_.each(history, day => {
+			// Skip days with highest and lowest deal values as outliers.
+			if (day.date === minDay.date) return;
+			if (day.date === maxDay.date) return;
+			if (day.date === maxDev.date) return;
+			if (day.resourceType !== resourceType) return;
+
+			count += day.volume;
+			totalValue += day.volume * day.avgPrice;
+			totalDev += day.volume * day.stddevPrice;
+		});
+
+		return {
+			total: count,
+			average: totalValue / count,
+			stdDev: totalDev / count,
+		};
+	});
+};
+
+/**
+ * Calculates estimated worth of lab reaction compounds.
+ */
+TradeProcess.prototype.calculateWorth = function (resourceType) {
+	return cache.inHeap('resourceWorth:' + resourceType, 5000, () => {
+		const history = this.getPriceData(resourceType);
+		if (!recipes[resourceType]) {
+			return history ? history.average : 0;
+		}
+
+		const reagentWorth = _.reduce(recipes[resourceType], (total, componentType) => {
+			const componentWorth = this.calculateWorth(componentType);
+			const componentHistory = this.getPriceData(componentType);
+			return total + Math.max(componentWorth, componentHistory ? componentHistory.average : 0);
+		}, 0);
+
+		// Add 0.1% to price for each tick needed to produce this reagent.
+		return reagentWorth * (1 + 0.001 * (REACTION_TIME[resourceType] || 0));
+	});
 };
 
 module.exports = TradeProcess;

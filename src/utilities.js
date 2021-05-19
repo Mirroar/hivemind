@@ -797,6 +797,26 @@ const utilities = {
 		}
 	},
 
+	/**
+	 * Generates lookup table for the ingredients used to crate a compound.
+	 */
+	getReactionRecipes() {
+		return cache.inHeap('reverseReactions', 100000, () => {
+			const recipes = {};
+
+			for (const resourceType in REACTIONS) {
+				for (const resourceType2 in REACTIONS[resourceType]) {
+					const result = REACTIONS[resourceType][resourceType2];
+					if (recipes[result]) continue;
+
+					recipes[result] = [resourceType, resourceType2];
+				}
+			}
+
+			return recipes;
+		});
+	},
+
 };
 
 module.exports = utilities;
