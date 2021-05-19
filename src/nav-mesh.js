@@ -316,11 +316,11 @@ module.exports = class NavMesh {
 				pos: exit.center,
 				roomName: startRoom,
 				parent: null,
-				pathLength: roomMemory.paths[exit.id][0],
+				pathLength: roomMemory.paths[exit.id] ? roomMemory.paths[exit.id][0] : 50,
 				heuristic: (Game.map.getRoomLinearDistance(startRoom, endRoom) - 1) * 50,
 			};
 			openList.push(entry);
-			openListLookup[exit.center] = true;
+			openListLookup[startRoom + '/' + exit.center] = true;
 		}
 
 		while (openList.length > 0) {
@@ -328,7 +328,7 @@ module.exports = class NavMesh {
 			const nextRoom = this.getAdjacentRoom(current.roomName, current.exitId);
 			const correspondingExit = this.getCorrespondingExitId(current.exitId);
 			let costMultiplier = 1;
-			closedList[current.pos] = true;
+			closedList[current.roomName + '/' + current.pos] = true;
 
 			if (current.roomName === endRoom) {
 				// @todo There might be shorter paths to the actual endPosition.
@@ -352,7 +352,7 @@ module.exports = class NavMesh {
 				const exitPos = roomMemory.exits[correspondingExit].center;
 				if (closedList[exitPos]) continue;
 
-				closedList[exitPos] = true;
+				closedList[nextRoom + '/' + exitPos] = true;
 			}
 
 			const roomIntel = hivemind.roomIntel(nextRoom);
@@ -386,8 +386,8 @@ module.exports = class NavMesh {
 
 			for (const exit of availableExits) {
 				// Check if in closed list.
-				if (closedList[exit.center]) continue;
-				if (openListLookup[exit.center]) continue;
+				if (closedList[nextRoom + '/' + exit.center]) continue;
+				if (openListLookup[nextRoom + '/' + exit.center]) continue;
 
 				// If there's a weird path mismatch, skip.
 				const noPath1 = !roomMemory.paths[exit.id] || !roomMemory.paths[exit.id][correspondingExit];
@@ -410,8 +410,8 @@ module.exports = class NavMesh {
 				}
 
 				openList.push(item);
-				openListLookup[exit.center] = true;
-				openListLookup[item.pos] = true;
+				openListLookup[nextRoom + '/' + exit.center] = true;
+				openListLookup[nextRoom + '/' + item.pos] = true;
 			}
 		}
 
