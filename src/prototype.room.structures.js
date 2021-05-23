@@ -22,12 +22,11 @@ Room.prototype.generateLinkNetwork = function () {
 	// use the room planner.
 	const controllerLinkId = this.memory.controllerLink;
 	const sourceLinkIds = [];
-	if (this.memory.sources) {
-		for (const id in this.memory.sources) {
-			if (this.memory.sources[id].targetLink) {
-				sourceLinkIds.push(this.memory.sources[id].targetLink);
-			}
-		}
+	for (const source of this.sources) {
+		const link = source.getNearbyLink();
+		if (!link) continue;
+
+		sourceLinkIds.push(link.id);
 	}
 
 	// Add links to network.

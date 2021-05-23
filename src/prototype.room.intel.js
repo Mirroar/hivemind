@@ -4,10 +4,11 @@
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
-const utilities = require('./utilities');
 const Bay = require('./manager.bay');
+const cache = require('./cache');
 const Exploit = require('./manager.exploit');
 const RoomDefense = require('./room-defense');
+const utilities = require('./utilities');
 
 // Define quick access property room.enemyCreeps.
 Object.defineProperty(Room.prototype, 'enemyCreeps', {
@@ -49,6 +50,50 @@ Object.defineProperty(Room.prototype, 'defense', {
 	configurable: true,
 });
 
+// Define quick access property room.sources
+Object.defineProperty(Room.prototype, 'sources', {
+
+	/**
+	 * Gets a room's sources.
+	 *
+	 * @return {Source[]}
+	 *   The room's sources.
+	 */
+	get() {
+		return cache.inObject(this, 'sources', 1, () => {
+			const sourceIds = cache.inHeap('sources:' + this.name, 10000, () => {
+				return _.map(this.find(FIND_SOURCES), 'id');
+			});
+
+			return _.map(sourceIds, Game.getObjectById);
+		});
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.mineral
+Object.defineProperty(Room.prototype, 'mineral', {
+
+	/**
+	 * Gets a room's mineral.
+	 *
+	 * @return {Source[]}
+	 *   The room's mineral.
+	 */
+	get() {
+		return cache.inObject(this, 'mineral', 1, () => {
+			const mineralIds = cache.inHeap('mineral:' + this.name, 10000, () => {
+				return _.map(this.find(FIND_MINERALS), 'id');
+			});
+
+			return mineralIds[0] && Game.getObjectById(mineralIds[0]);
+		});
+	},
+	enumerable: false,
+	configurable: true,
+});
+
 /**
  * Adds some additional data to room objects.
  */
@@ -69,13 +114,6 @@ Room.prototype.enhanceData = function () {
 	if (!this.creeps) {
 		this.creeps = {};
 		this.creepsByRole = {};
-	}
-
-	// Register sources and minerals.
-	this.sources = this.find(FIND_SOURCES);
-	const minerals = this.find(FIND_MINERALS);
-	for (const mineral of minerals) {
-		this.mineral = mineral;
 	}
 
 	// Register bays.

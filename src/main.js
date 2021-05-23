@@ -232,9 +232,11 @@ module.exports = {
 
 		// Periodically clean memory that is no longer needed.
 		if (Game.time % 1234 === 56) {
-			for (const roomName in Memory.rooms || {}) {
-				if (Memory.rooms[roomName].bays) delete Memory.rooms[roomName].bays;
-			}
+			_.each(Memory.rooms, roomMemory => {
+				if (roomMemory.bays) delete roomMemory.bays;
+				if (roomMemory.sources) delete roomMemory.sources;
+				if (roomMemory.minerals) delete roomMemory.minerals;
+			});
 		}
 	},
 
