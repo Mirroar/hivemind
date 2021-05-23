@@ -320,7 +320,7 @@ TransporterRole.prototype.getAvailableDeliveryTargets = function () {
 		const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
 		_.each(roomSellOrders, order => {
 			if (order.resourceType !== resourceType) return;
-			if (terminal.store[order.resourceType] || 0 >= order.remainingAmount) return;
+			if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
 			if (creep.room.isClearingTerminal()) return;
 			if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
 
@@ -1213,7 +1213,7 @@ TransporterRole.prototype.addTerminalOperationResourceOptions = function (option
 
 	const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
 	_.each(roomSellOrders, order => {
-		if (terminal.store[order.resourceType] || 0 >= order.remainingAmount) return;
+		if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
 		if (!storage.store[order.resourceType]) return;
 		if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
 
@@ -1225,7 +1225,7 @@ TransporterRole.prototype.addTerminalOperationResourceOptions = function (option
 			resourceType: order.resourceType,
 		});
 	});
-}
+};
 
 /**
  * Adds options for picking up dropped resources to priority list.

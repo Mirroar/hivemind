@@ -819,19 +819,22 @@ const utilities = {
 
 	/**
 	 * Generates lookup table for the ingredients used to crate a compound.
+	 *
+	 * @return {Object}
+	 *   A list of recipe reaction components, keyed by the name of the created
+	 *   compound.
 	 */
 	getReactionRecipes() {
 		return cache.inHeap('reverseReactions', 100000, () => {
 			const recipes = {};
 
-			for (const resourceType in REACTIONS) {
-				for (const resourceType2 in REACTIONS[resourceType]) {
-					const result = REACTIONS[resourceType][resourceType2];
-					if (recipes[result]) continue;
+			_.each(REACTIONS, (reaction, resourceType) => {
+				_.each(reaction, (result, resourceType2) => {
+					if (recipes[result]) return;
 
 					recipes[result] = [resourceType, resourceType2];
-				}
-			}
+				});
+			});
 
 			return recipes;
 		});

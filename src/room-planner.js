@@ -398,10 +398,11 @@ RoomPlanner.prototype.placeFlags = function () {
 		// We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
 		if (this.room.controller) {
 			const controllerRoads = this.scanAndAddRoad(this.room.controller.pos, this.roomCenterEntrances);
-			for (const i in controllerRoads) {
+			for (const pos of controllerRoads) {
 				// Keep spot next to controller free for upgrader to occupy.
-				this.placeFlag(controllerRoads[i], 'road.controller', null);
+				this.placeFlag(pos, 'road.controller', null);
 			}
+
 			// Make sure no other paths get led through harvester position.
 			this.buildingMatrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
 

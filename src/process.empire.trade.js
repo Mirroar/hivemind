@@ -1,7 +1,8 @@
 'use strict';
 
 /* global hivemind RESOURCES_ALL RESOURCE_ENERGY RESOURCE_POWER OK RESOURCE_OPS
-ORDER_BUY ORDER_SELL PIXEL */
+ORDER_BUY ORDER_SELL PIXEL STORAGE_CAPACITY INTERSHARD_RESOURCES
+REACTION_TIME */
 
 const cache = require('./cache');
 const Process = require('./process');
@@ -190,8 +191,9 @@ TradeProcess.prototype.instaSellResources = function (resourceType, rooms) {
 	if (!bestOrder) return;
 	if (!history) return;
 
-	hivemind.log('trade', roomName).debug('Could sell', resourceType, 'for', bestOrder.price, '- we want at least', history.average + history.stdDev / 2);
-	if (bestOrder.price < history.average + history.stdDev / 2) return;
+	const minPrice = history.average + (history.stdDev / 2);
+	hivemind.log('trade', roomName).debug('Could sell', resourceType, 'for', bestOrder.price, '- we want at least', minPrice);
+	if (bestOrder.price < minPrice) return;
 
 	const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount);
 	const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
@@ -250,11 +252,15 @@ TradeProcess.prototype.instaBuyResources = function (resourceType, rooms) {
 	if (!bestOrder) return;
 	if (!history) return;
 
-	hivemind.log('trade', roomName).debug('Could buy', resourceType, 'for', bestOrder.price, '- we want to spend at most', history.average - Math.min(history.stdDev / 5, history.average * 0.1));
-	if (bestOrder.price > history.average - Math.min(history.stdDev / 5, history.average * 0.1)) return;
+	const maxPrice = history.average - Math.min(history.stdDev / 5, history.average * 0.1);
+	hivemind.log('trade', roomName).debug('Could buy', resourceType, 'for', bestOrder.price, '- we want to spend at most', maxPrice);
+	if (bestOrder.price > maxPrice) return;
 
 	const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount);
-	if (!isIntershardResource) {
+	if (isIntershardResource) {
+		hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each.');
+	}
+	else {
 		const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
 
 		if (transactionCost > room.terminal.store.energy) {
@@ -268,9 +274,9 @@ TradeProcess.prototype.instaBuyResources = function (resourceType, rooms) {
 
 			return;
 		}
-	}
 
-	hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy');
+		hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy.');
+	}
 
 	const result = Game.market.deal(bestOrder.id, amount, roomName);
 	if (result !== OK) {
@@ -312,7 +318,8 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 	const history = this.getPriceData(resourceType);
 	if (!history) return;
 
-	let offerPrice = history.average - Math.min(history.stdDev / 2, history.average * 0.2);
+	const maxPrice = history.average - Math.min(history.stdDev / 2, history.average * 0.2);
+	let offerPrice = maxPrice;
 	if (bestBuyOrder) {
 		// Adapt to the current buy price, if it's to our benefit.
 		hivemind.log('trade', roomName).info(resourceType, 'is currently being bought for', bestBuyOrder.price);
@@ -324,12 +331,12 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 		offerPrice = history.average - Math.min(history.stdDev, history.average * 0.8);
 	}
 
-	hivemind.log('trade', roomName).debug('Could offer to buy', resourceType, 'for', offerPrice, '- we want to spend at most', history.average - Math.min(history.stdDev / 2, history.average * 0.2));
-	if (offerPrice > history.average - Math.min(history.stdDev / 2, history.average * 0.2)) return;
+	hivemind.log('trade', roomName).debug('Could offer to buy', resourceType, 'for', offerPrice, '- we want to spend at most', maxPrice);
+	if (offerPrice > maxPrice) return;
 
 	if (offerPrice < minTradeValue) offerPrice = minTradeValue;
 
-	let amount = this.getMaxOrderAmount(resourceType);
+	const amount = this.getMaxOrderAmount(resourceType);
 
 	// Make sure we have enough credits to actually buy this.
 	if (this.availableCredits < amount * offerPrice) return;
@@ -364,7 +371,8 @@ TradeProcess.prototype.trySellResources = function (resourceType, rooms) {
 	const history = this.getPriceData(resourceType);
 	if (!history) return;
 
-	let offerPrice = history.average + history.stdDev / 2;
+	const minPrice = history.average + (history.stdDev / 2);
+	let offerPrice = minPrice;
 	if (bestSellOrder) {
 		// Adapt to the current sale price if it's to our benefit.
 		hivemind.log('trade', roomName).info(resourceType, 'is currently being sold for', bestSellOrder.price);
@@ -376,8 +384,8 @@ TradeProcess.prototype.trySellResources = function (resourceType, rooms) {
 		offerPrice = (history.average * 1.5) + (history.stdDev * 2);
 	}
 
-	hivemind.log('trade', roomName).debug('Could offer to sell', resourceType, 'for', offerPrice, '- we want at least', history.average + history.stdDev / 2);
-	if (offerPrice < history.average + history.stdDev / 2) return;
+	hivemind.log('trade', roomName).debug('Could offer to sell', resourceType, 'for', offerPrice, '- we want at least', minPrice);
+	if (offerPrice < minPrice) return;
 
 	const amount = this.getMaxOrderAmount(resourceType);
 	// Make sure we have enough credits to actually sell this, otherwise try
@@ -548,6 +556,12 @@ TradeProcess.prototype.getResourceTier = function (resourceType) {
  *
  * This is to make sure we don't pay huge amounts on market fees for trades
  * that will never be completed.
+ *
+ * @param {String} resourceType
+ *   The resource type for which we need information.
+ *
+ * @return {Number}
+ *   Maximum amount of this resource to trade in a single transaction.
  */
 TradeProcess.prototype.getMaxOrderAmount = function (resourceType) {
 	const history = this.getPriceData(resourceType);
@@ -562,7 +576,16 @@ TradeProcess.prototype.getMaxOrderAmount = function (resourceType) {
 };
 
 /**
- * Analyzes market history to decite on resource price.
+ * Analyzes market history to decide on resource price.
+ *
+ * @param {String} resourceType
+ *   The resource type for which we need information.
+ *
+ * @return {Object}
+ *  An object with price data containing the following keys:
+ *  - total: Amount of this resource traded recently.
+ *  - average: Adjusted average price of this resource.
+ *  - stdDev: Adjusted standard deviation for this resource's price.
  */
 TradeProcess.prototype.getPriceData = function (resourceType) {
 	return cache.inHeap('price:' + resourceType, 5000, () => {
@@ -601,6 +624,12 @@ TradeProcess.prototype.getPriceData = function (resourceType) {
 
 /**
  * Calculates estimated worth of lab reaction compounds.
+ *
+ * @param {String} resourceType
+ *   The resource type for which we need information.
+ *
+ * @return {Number}
+ *   Estimated worth of the given resource in credits.
  */
 TradeProcess.prototype.calculateWorth = function (resourceType) {
 	return cache.inHeap('resourceWorth:' + resourceType, 5000, () => {
@@ -616,7 +645,7 @@ TradeProcess.prototype.calculateWorth = function (resourceType) {
 		}, 0);
 
 		// Add 0.1% to price for each tick needed to produce this reagent.
-		return reagentWorth * (1 + 0.001 * (REACTION_TIME[resourceType] || 0));
+		return reagentWorth * (1 + (0.001 * (REACTION_TIME[resourceType] || 0)));
 	});
 };
 

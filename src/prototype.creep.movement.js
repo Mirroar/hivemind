@@ -122,9 +122,10 @@ Creep.prototype.followCachedPath = function () {
 
 		if (this.pos.getRangeTo(pos) > 0) {
 			this.say('S:' + pos.x + 'x' + pos.y);
-			if (this.moveTo(pos) == ERR_NO_PATH) {
+			if (this.moveTo(pos) === ERR_NO_PATH) {
 				this.manageBlockingCreeps();
 			}
+
 			return;
 		}
 
@@ -217,19 +218,18 @@ Creep.prototype.getOntoCachedPath = function () {
 			// Check if a path position is nearby, and blocked by a creep.
 			this.manageBlockingCreeps();
 		}
+
 		this.say('getonit');
 		return true;
 	}
 };
 
 Creep.prototype.manageBlockingCreeps = function () {
-	this.room.visual.text("O", this.pos);
-
+	// @todo This needs some debugging and testing, ideally with room visuals.
 	if (typeof this.memory.cachedPath.position === 'undefined') {
 		for (const pos of this._decodedPath) {
 			if (pos.getRangeTo(this.pos) > 1) continue;
 
-			this.room.visual.text("b", pos);
 			const creep = pos.lookFor(LOOK_CREEPS)[0];
 			if (creep) {
 				creep._blockingCreepMovement = this;
@@ -244,7 +244,6 @@ Creep.prototype.manageBlockingCreeps = function () {
 	if (!pos || pos.roomName !== this.pos.roomName) return;
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on current target tile.
-		this.room.visual.text("f", pos);
 		const creep = pos.lookFor(LOOK_CREEPS)[0];
 		if (creep) creep._blockingCreepMovement = this;
 		return;
@@ -254,11 +253,10 @@ Creep.prototype.manageBlockingCreeps = function () {
 	if (!pos || pos.roomName !== this.pos.roomName) return;
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on next target tile.
-		this.room.visual.text("F", pos);
 		const creep = pos.lookFor(LOOK_CREEPS)[0];
 		if (creep) creep._blockingCreepMovement = this;
 	}
-}
+};
 
 /**
  * Checks if movement last tick brought us on the next position of our path.

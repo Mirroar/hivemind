@@ -45,7 +45,6 @@ const stats = require('./stats');
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 
-// @todo Do not send any remote harvesters or claimers until enemies in a room should have expired. Maybe scout from time to time.
 // @todo make unarmed creeps run from hostiles.
 
 // @todo Spawn creeps using "sequences" where more control is needed.

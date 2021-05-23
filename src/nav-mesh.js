@@ -18,6 +18,9 @@ module.exports = class NavMesh {
 
 	/**
 	 * (Re-)generates nav mesh info for a room.
+	 *
+	 * @param {String} roomName
+	 *   Name of the target room.
 	 */
 	generateForRoom(roomName) {
 		// Mesh doesn't need to be updated very often.
@@ -63,6 +66,9 @@ module.exports = class NavMesh {
 
 	/**
 	 * Detects groups of exit tiles in a room.
+	 *
+	 * @return {Object[]}
+	 *   An array of exit information objects.
 	 */
 	getExitInfo() {
 		const exits = [];

@@ -72,6 +72,7 @@ ScoutRole.prototype.performScout = function (creep) {
 			if (!creep.moveToRoom(creep.memory.scoutTarget, true)) {
 				this.chooseScoutTarget(creep, true);
 			}
+
 			return;
 		}
 	}

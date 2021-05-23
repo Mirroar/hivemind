@@ -61,6 +61,9 @@ module.exports = class MapVisualsProcess extends Process {
 		Game.map.visual.text(info.expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
 	}
 
+	/**
+	 * Visualizes nav mesh data.
+	 */
 	drawNavMesh() {
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
