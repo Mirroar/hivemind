@@ -4,7 +4,7 @@
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
-LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES
+LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
 const utilities = require('./utilities');
@@ -316,7 +316,24 @@ TransporterRole.prototype.getAvailableDeliveryTargets = function () {
 			}
 		}
 
-		// The following only only concerns resources other than energy.
+		// If it's needed for trading, store in terminal.
+		const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
+		_.each(roomSellOrders, order => {
+			if (order.resourceType !== resourceType) return;
+			if (terminal.store[order.resourceType] || 0 >= order.remainingAmount) return;
+			if (creep.room.isClearingTerminal()) return;
+			if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
+
+			options.push({
+				priority: 4,
+				weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+				type: 'structure',
+				object: terminal,
+				resourceType,
+			});
+		});
+
+		// The following only concerns resources other than energy.
 		if (resourceType === RESOURCE_ENERGY || creep.carry[resourceType] <= 0) continue;
 
 		const storageTarget = creep.room.getBestStorageTarget(creep.carry[resourceType], resourceType);
@@ -845,26 +862,7 @@ TransporterRole.prototype.getAvailableSources = function () {
 
 	// @todo Take resources from storage if terminal is relatively empty.
 
-	// Take resources from storage to terminal for transfer if requested.
-	if (creep.room.memory.fillTerminal && !creep.room.isClearingTerminal()) {
-		const resourceType = creep.room.memory.fillTerminal;
-		if (storage && terminal && storage.store[resourceType]) {
-			if (_.sum(terminal.store) < terminal.storeCapacity - 10000) {
-				options.push({
-					priority: 4,
-					weight: 0,
-					type: 'structure',
-					object: storage,
-					resourceType,
-				});
-			}
-		}
-		else {
-			// No more of these resources can be taken into terminal.
-			delete creep.room.memory.fillTerminal;
-		}
-	}
-
+	this.addTerminalOperationResourceOptions(options);
 	this.addDroppedResourceOptions(options);
 	this.addTombstoneResourceOptions(options);
 	this.addRuinResourceOptions(options);
@@ -1179,6 +1177,55 @@ TransporterRole.prototype.addLinkEnergySourceOptions = function (options) {
 		options.push(option);
 	}
 };
+
+/**
+ * Take resources that need to be put in terminal for trading.
+ *
+ * @param {Array} options
+ *   A list of potential resource sources.
+ */
+TransporterRole.prototype.addTerminalOperationResourceOptions = function (options) {
+	const creep = this.creep;
+	const storage = creep.room.storage;
+	const terminal = creep.room.terminal;
+	if (creep.room.isClearingTerminal()) return;
+	if (!storage || !terminal) return;
+
+	// Take resources from storage to terminal for transfer if requested.
+	if (creep.room.memory.fillTerminal) {
+		const resourceType = creep.room.memory.fillTerminal;
+		if (storage.store[resourceType]) {
+			if (_.sum(terminal.store) < terminal.storeCapacity - 10000) {
+				options.push({
+					priority: 4,
+					weight: 0,
+					type: 'structure',
+					object: storage,
+					resourceType,
+				});
+			}
+		}
+		else {
+			// No more of these resources can be taken into terminal.
+			delete creep.room.memory.fillTerminal;
+		}
+	}
+
+	const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
+	_.each(roomSellOrders, order => {
+		if (terminal.store[order.resourceType] || 0 >= order.remainingAmount) return;
+		if (!storage.store[order.resourceType]) return;
+		if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
+
+		options.push({
+			priority: 4,
+			weight: 0,
+			type: 'structure',
+			object: storage,
+			resourceType: order.resourceType,
+		});
+	});
+}
 
 /**
  * Adds options for picking up dropped resources to priority list.
