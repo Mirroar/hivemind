@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL
+/* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL REACTIONS
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART STRUCTURE_ROAD BODYPART_COST
 TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT
 STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
@@ -137,12 +137,12 @@ const utilities = {
 					}
 				}
 
-				// Work with roads and structures in a room.
 				const options = {};
 				if (addOptions && addOptions.singleRoom && addOptions.singleRoom === roomName) {
 					options.singleRoom = true;
 				}
 
+				// Work with roads and structures in a room.
 				const costs = utilities.getCostMatrix(roomName, options);
 
 				// Also try not to drive through bays.
@@ -228,7 +228,7 @@ const utilities = {
 			structures,
 			constructionSites,
 			structure => {
-				const location = utilities.serializePosition(structure.pos, roomName);
+				const location = utilities.serializeCoords(structure.pos.x, structure.pos.y);
 				if (!_.contains(result.obstacles, location)) {
 					result.roads.push(location);
 				}
@@ -531,6 +531,26 @@ const utilities = {
 		if (!roomName) return coords;
 
 		return [coords, roomName];
+	},
+
+	deserializeCoords(coords) {
+		// Fallback for old string positions.
+		if (typeof coords === 'string') {
+			const pos = utilities.decodePosition(coords);
+			return {x: pos.x, y: pos.y};
+		}
+
+		// Numbers are positions without a room name.
+		if (typeof coords === 'number') {
+			const x = coords % 50;
+			const y = Math.floor(coords / 50);
+			return {x, y};
+		}
+
+		// Last alternative: Array of coords and room name.
+		const x = coords[0] % 50;
+		const y = Math.floor(coords[0] / 50);
+		return {x, y};
 	},
 
 	serializePosition(position, fixedRoom) {

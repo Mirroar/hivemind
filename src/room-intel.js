@@ -342,7 +342,7 @@ RoomIntel.prototype.gatherInvaderIntel = function (structures) {
 RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
 	this.memory.costMatrix = utilities.generateCostMatrix(this.roomName, structures, constructionSites).serialize();
 	const obstaclePositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
-	this.memory.costPositions = [packrat.packCoordList(obstaclePositions.obstacles), packrat.packCoordList(obstaclePositions.roads)];
+	this.memory.costPositions = [packrat.packCoordList(_.map(obstaclePositions.obstacles, utilities.deserializeCoords)), packrat.packCoordList(_.map(obstaclePositions.roads, utilities.deserializeCoords))];
 
 	const matrixSize = JSON.stringify(this.memory.costMatrix).length;
 	const listSize = JSON.stringify(this.memory.costPositions).length;
