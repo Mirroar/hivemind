@@ -88,6 +88,24 @@ CreepsProcess.prototype.run = function () {
 	hivemind.runProcess('creeps_power_spawn', SpawnPowerCreepsProcess, {
 		interval: 10,
 	});
+
+	// Move blocking creeps if necessary.
+	_.each(Game.creeps, creep => {
+		if (creep._blockingCreepMovement) {
+			creep.room.visual.text('X', creep.pos);
+		}
+
+		if (creep._blockingCreepMovement && !creep._hasMoveIntent) {
+			if (creep.pos.getRangeTo(creep._blockingCreepMovement) === 1) {
+				// Swap with blocked creep.
+				creep.move(creep.pos.getDirectionTo(creep._blockingCreepMovement.pos));
+				creep._blockingCreepMovement.move(creep._blockingCreepMovement.pos.getDirectionTo(creep.pos));
+			}
+			else {
+				creep.moveTo(creep._blockingCreepMovement.pos, {range: 1});
+			}
+		}
+	});
 };
 
 module.exports = CreepsProcess;

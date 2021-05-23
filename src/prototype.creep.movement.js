@@ -107,6 +107,7 @@ Creep.prototype.hasArrived = function () {
  * @todo Sometimes we get stuck on a cicle of "getonit" and "Skip: 1".
  */
 Creep.prototype.followCachedPath = function () {
+	this._hasMoveIntent = true;
 	this.memory.moveBlocked = false;
 	if (!this.memory.cachedPath || !this.memory.cachedPath.path || _.size(this.memory.cachedPath.path) === 0) {
 		this.clearCachedPath();
@@ -121,7 +122,9 @@ Creep.prototype.followCachedPath = function () {
 
 		if (this.pos.getRangeTo(pos) > 0) {
 			this.say('S:' + pos.x + 'x' + pos.y);
-			this.moveTo(pos);
+			if (this.moveTo(pos) == ERR_NO_PATH) {
+				this.manageBlockingCreeps();
+			}
 			return;
 		}
 
@@ -185,6 +188,9 @@ Creep.prototype.getOntoCachedPath = function () {
 		// @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
 		if (this.pos.roomName === this._decodedPath[0].roomName) {
 			this.say('Blocked');
+
+			// If a creep is blocking the next spot, tell it to move over if possible.
+			this.manageBlockingCreeps();
 		}
 		else {
 			this.say('Searching');
@@ -207,11 +213,52 @@ Creep.prototype.getOntoCachedPath = function () {
 	}
 	else {
 		// Get closer to the path.
-		this.moveTo(target);
+		if (this.moveTo(target) === ERR_NO_PATH) {
+			// Check if a path position is nearby, and blocked by a creep.
+			this.manageBlockingCreeps();
+		}
 		this.say('getonit');
 		return true;
 	}
 };
+
+Creep.prototype.manageBlockingCreeps = function () {
+	this.room.visual.text("O", this.pos);
+
+	if (typeof this.memory.cachedPath.position === 'undefined') {
+		for (const pos of this._decodedPath) {
+			if (pos.getRangeTo(this.pos) > 1) continue;
+
+			this.room.visual.text("b", pos);
+			const creep = pos.lookFor(LOOK_CREEPS)[0];
+			if (creep) {
+				creep._blockingCreepMovement = this;
+				return;
+			}
+		}
+
+		return;
+	}
+
+	let pos = this._decodedPath[this.memory.cachedPath.position];
+	if (!pos || pos.roomName !== this.pos.roomName) return;
+	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
+		// Push away creep on current target tile.
+		this.room.visual.text("f", pos);
+		const creep = pos.lookFor(LOOK_CREEPS)[0];
+		if (creep) creep._blockingCreepMovement = this;
+		return;
+	}
+
+	pos = this._decodedPath[this.memory.cachedPath.position + 1];
+	if (!pos || pos.roomName !== this.pos.roomName) return;
+	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
+		// Push away creep on next target tile.
+		this.room.visual.text("F", pos);
+		const creep = pos.lookFor(LOOK_CREEPS)[0];
+		if (creep) creep._blockingCreepMovement = this;
+	}
+}
 
 /**
  * Checks if movement last tick brought us on the next position of our path.
@@ -257,11 +304,15 @@ Creep.prototype.moveAroundObstacles = function () {
 
 	// Record recent positions the creep has been on.
 	// @todo Using Game.time here is unwise in case the creep is being throttled.
+	// @todo Push and slice an array instead.
 	if (!this.memory.cachedPath.lastPositions) {
 		this.memory.cachedPath.lastPositions = {};
 	}
 
-	this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = utilities.encodePosition(this.pos);
+	if (!this.fatigue) {
+		// If we're not fatigued, we're kind of stuck.
+		this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = utilities.encodePosition(this.pos);
+	}
 
 	// Go around obstacles if necessary.
 	if (this.memory.cachedPath.forceGoTo) return;
@@ -283,8 +334,12 @@ Creep.prototype.moveAroundObstacles = function () {
 
 	if (!stuck) return;
 
+	// If a creep is blocking the next spot, tell it to move over if possible.
+	this.manageBlockingCreeps();
+
 	// Try to find next free tile on the path.
 	let i = this.memory.cachedPath.position + 1;
+
 	while (i < this._decodedPath.length) {
 		const pos = this._decodedPath[i];
 		if (pos.roomName !== this.pos.roomName) {
@@ -354,6 +409,7 @@ Creep.prototype.goTo = function (target, options) {
 	if (!target) return false;
 	if (!options) options = {};
 
+	this._hasMoveIntent = true;
 	if (!this.memory.go || this.memory.go.lastAccess < Game.time - 10) {
 		// Reset pathfinder memory.
 		this.memory.go = {
@@ -569,3 +625,4 @@ PowerCreep.prototype.goTo = Creep.prototype.goTo;
 PowerCreep.prototype.calculateGoToPath = Creep.prototype.calculateGoToPath;
 PowerCreep.prototype.moveToRoom = Creep.prototype.moveToRoom;
 PowerCreep.prototype.calculateRoomPath = Creep.prototype.calculateRoomPath;
+PowerCreep.prototype.manageBlockingCreeps = Creep.prototype.manageBlockingCreeps;
