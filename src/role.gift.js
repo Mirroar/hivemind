@@ -1,9 +1,11 @@
 'use strict';
 
 const Role = require('./role');
+const ScoutRole = require('./role.scout');
 
 const GiftRole = function () {
 	Role.call(this);
+	this.scoutRole = new ScoutRole();
 };
 
 GiftRole.prototype = Object.create(Role.prototype);
@@ -15,15 +17,15 @@ GiftRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 GiftRole.prototype.run = function (creep) {
-	const storage = creep.room.storage;
-	if (!storage) {
-		// Nothing to gift if we have no storage.
+	if (_.sum(creep.carry) >= creep.carryCapacity * 0.95) {
+		// If we're (nearly) full, embark.
 		this.performGiftTransport(creep);
 		return;
 	}
 
-	if (_.sum(creep.carry) >= creep.carryCapacity * 0.95) {
-		// If we're (nearly) full, embark.
+	const storage = creep.room.storage;
+	if (!storage) {
+		// Nothing to gift if we have no storage.
 		this.performGiftTransport(creep);
 		return;
 	}
@@ -77,7 +79,13 @@ GiftRole.prototype.performGiftTransport = function (creep) {
 
 	// @todo Move to a nearby owned room with enough space left.
 	// @todo Move to a known enemy room and suicide.
-	creep.memory.role = 'scout';
+	this.scoutRole.run(creep);
+
+	if (creep.memory.origin && creep.pos.roomName !== creep.memory.origin && creep.isInRoom()) {
+		// We're outside of our origin room. Suicide to get rid of resource and save
+		// CPU.
+		creep.suicide();
+	}
 };
 
 module.exports = GiftRole;
