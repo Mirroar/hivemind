@@ -224,6 +224,15 @@ OperatorRole.prototype.addTransferOpsOptions = function (options) {
 OperatorRole.prototype.performOrder = function () {
 	if (!this.hasOrder()) return;
 
+	if (this.creep.memory.order.target) {
+		const target = Game.getObjectById(this.creep.memory.order.target);
+
+		if (!target || target.pos.roomName !== this.creep.pos.roomName) {
+			delete this.creep.memory.order;
+			return;
+		}
+	}
+
 	this[this.creep.memory.order.type]();
 };
 
