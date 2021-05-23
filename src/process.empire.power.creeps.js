@@ -57,7 +57,8 @@ module.exports = class ManagePowerCreepsProcess extends Process {
 				continue;
 			}
 
-			creep.upgrade(powerOption);
+			const result = creep.upgrade(powerOption);
+			hivemind.log('creeps').info('Upgrading power', powerOption, 'of power creep', creep.name, ':', result);
 			return;
 		}
 	}
