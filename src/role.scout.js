@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind RoomPosition */
+/* global hivemind RoomPosition OK */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -63,9 +63,35 @@ ScoutRole.prototype.performScout = function (creep) {
 		creep.room.visual.text(creep.memory.scoutTarget, creep.pos);
 	}
 
-	if (!creep.moveToRoom(creep.memory.scoutTarget, true)) this.chooseScoutTarget(creep);
+	if (this.isOscillating(creep) || this.isStuck(creep)) this.chooseScoutTarget(creep, true);
 
-	if (this.isOscillating(creep) || this.isStuck(creep)) this.chooseScoutTarget(creep);
+	const targetPosition = new RoomPosition(25, 25, creep.memory.scoutTarget);
+	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
+	if (creep.memory.moveWithoutNavMesh) {
+		if (!isInTargetRoom || !creep.isInRoom()) {
+			if (!creep.moveToRoom(creep.memory.scoutTarget, true)) {
+				this.chooseScoutTarget(creep, true);
+			}
+			return;
+		}
+	}
+	else {
+		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+			if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
+				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
+
+				// Don't want to go to scout target without using navmesh. So instead,
+				// we decide on a new scout target.
+				creep.memory.moveWithoutNavMesh = true;
+			}
+
+			return;
+		}
+
+		creep.stopNavMeshMove();
+	}
+
+	this.chooseScoutTarget(creep);
 };
 
 /**
@@ -73,9 +99,21 @@ ScoutRole.prototype.performScout = function (creep) {
  *
  * @param {Creep} creep
  *   The creep to run logic for.
+ * @param {boolean} invalidateOldTarget
+ *   If true, the old scout target is deemed invalid and will no longer be
+ *   scouted by this creep.
  */
-ScoutRole.prototype.chooseScoutTarget = function (creep) {
-	creep.memory.scoutTarget = null;
+ScoutRole.prototype.chooseScoutTarget = function (creep, invalidateOldTarget) {
+	if (creep.memory.scoutTarget && invalidateOldTarget) {
+		if (!creep.memory.invalidScoutTargets) {
+			creep.memory.invalidScoutTargets = [];
+		}
+
+		creep.memory.invalidScoutTargets.push(creep.memory.scoutTarget);
+	}
+
+	delete creep.memory.scoutTarget;
+	delete creep.memory.moveWithoutNavMesh;
 	if (!creep.memory.origin) creep.memory.origin = creep.room.name;
 	if (!Memory.strategy) return;
 
@@ -84,6 +122,7 @@ ScoutRole.prototype.chooseScoutTarget = function (creep) {
 	let best = null;
 	for (const info of _.values(memory.roomList)) {
 		if (info.roomName === creep.pos.roomName) continue;
+		if (creep.memory.invalidScoutTargets && creep.memory.invalidScoutTargets.indexOf(info.roomName) !== -1) continue;
 
 		if (info.origin !== creep.memory.origin) continue;
 		if (info.scoutPriority <= 0) continue;
