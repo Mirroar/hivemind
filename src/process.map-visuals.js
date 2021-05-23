@@ -52,7 +52,7 @@ module.exports = class MapVisualsProcess extends Process {
 	drawExpansionStatus(roomName) {
 		const info = Memory.strategy.roomList[roomName];
 
-		if (info.harvestActive) {
+		if (Memory.strategy.remoteHarvesting.rooms.indexOf(roomName) !== -1) {
 			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
 		}
 

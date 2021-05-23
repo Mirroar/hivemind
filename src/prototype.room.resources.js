@@ -252,9 +252,9 @@ Room.prototype.generateRemoteHarvestInfo = function () {
 
 	if (!Memory.strategy) return;
 
-	for (const info of _.values(Memory.strategy.roomList)) {
+	for (const roomName of Memory.strategy.remoteHarvesting.rooms || []) {
+		const info = Memory.strategy.roomList[roomName];
 		if (info.origin !== this.name) continue;
-		if (!info.harvestActive) continue;
 
 		cache.rooms.push(info);
 		const roomIntel = hivemind.roomIntel(info.roomName);

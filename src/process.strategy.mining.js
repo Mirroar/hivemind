@@ -24,6 +24,7 @@ const RemoteMiningProcess = function (params, data) {
 		Memory.strategy.remoteHarvesting = {
 			currentCount: 2,
 			lastCheck: Game.time,
+			rooms: [],
 		};
 	}
 };
@@ -37,6 +38,7 @@ RemoteMiningProcess.prototype = Object.create(Process.prototype);
 RemoteMiningProcess.prototype.run = function () {
 	const memory = Memory.strategy;
 	const sourceRooms = {};
+	memory.remoteHarvesting.rooms = [];
 
 	// Determine how much remote mining each room can handle.
 	_.each(Game.rooms, room => {
@@ -59,8 +61,6 @@ RemoteMiningProcess.prototype.run = function () {
 	// multiple origins.
 	const harvestRooms = [];
 	_.each(memory.roomList, info => {
-		info.harvestActive = false;
-
 		// Ignore rooms that are not profitable to harvest from.
 		if (!info.harvestPriority || info.harvestPriority <= 0.1) return;
 
@@ -82,7 +82,7 @@ RemoteMiningProcess.prototype.run = function () {
 
 		if (availableHarvestRoomCount < memory.remoteHarvesting.currentCount) {
 			// Harvest from this room.
-			info.harvestActive = true;
+			memory.remoteHarvesting.rooms.push(info.roomName);
 		}
 
 		availableHarvestRoomCount++;
