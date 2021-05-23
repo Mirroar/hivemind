@@ -1,7 +1,7 @@
 'use strict';
 
-/* global RESOURCE_POWER FIND_STRUCTURES STRUCTURE_POWER_BANK
-FIND_DROPPED_RESOURCES */
+/* global hivemind RoomPosition RESOURCE_POWER FIND_STRUCTURES OK
+STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES */
 
 const Role = require('./role');
 
@@ -23,10 +23,19 @@ PowerHaulerRole.prototype.run = function (creep) {
 		return;
 	}
 
-	if (creep.pos.roomName !== creep.memory.targetRoom) {
-		creep.moveToRoom(creep.memory.targetRoom);
+	const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
+	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
+	if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+		if (creep.moveUsingNavMesh(targetPosition) !== OK) {
+			hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
+			// @todo This is cross-room movement and should therefore only calculate a path once.
+			creep.moveToRange(targetPosition, 3);
+		}
+
 		return;
 	}
+
+	creep.stopNavMeshMove();
 
 	const powerBanks = creep.room.find(FIND_STRUCTURES, {
 		filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
@@ -52,10 +61,19 @@ PowerHaulerRole.prototype.run = function (creep) {
  *   The creep to run logic for.
  */
 PowerHaulerRole.prototype.returnHome = function (creep) {
-	if (creep.pos.roomName !== creep.memory.sourceRoom) {
-		creep.moveToRoom(creep.memory.sourceRoom);
+	const targetPosition = new RoomPosition(25, 25, creep.memory.sourceRoom);
+	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
+	if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+		if (creep.moveUsingNavMesh(targetPosition) !== OK) {
+			hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
+			// @todo This is cross-room movement and should therefore only calculate a path once.
+			creep.moveToRange(targetPosition, 3);
+		}
+
 		return;
 	}
+
+	creep.stopNavMeshMove();
 
 	// Put power in storage.
 	if ((creep.carry[RESOURCE_POWER] || 0) > 0) {

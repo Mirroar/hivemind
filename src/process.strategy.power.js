@@ -1,8 +1,10 @@
 'use strict';
 
-/* global hivemind CREEP_SPAWN_TIME MAX_CREEP_SIZE CONTROLLER_STRUCTURES
-STRUCTURE_POWER_SPAWN ERR_NO_PATH ATTACK_POWER */
+/* global hivemind RoomPosition CREEP_SPAWN_TIME MAX_CREEP_SIZE
+CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN ERR_NO_PATH ATTACK_POWER
+ERR_NO_PATH POWER_BANK_CAPACITY_MAX */
 
+const NavMesh = require('./nav-mesh');
 const Process = require('./process');
 
 /**
@@ -47,6 +49,7 @@ PowerMiningProcess.prototype.shouldRun = function () {
 PowerMiningProcess.prototype.run = function () {
 	// @todo Add throttle like with remote harvesting.
 	const memory = Memory.strategy.power;
+	const mesh = new NavMesh();
 
 	_.each(memory.rooms, (info, roomName) => {
 		// @todo Skip room if we already decided to harvest it.
@@ -76,6 +79,9 @@ PowerMiningProcess.prototype.run = function () {
 		// Skip if this doesn't need harvesting anymore.
 		if (info.amount <= 0 || info.hits <= 0) return;
 
+		// Skip if low amount.
+		if (info.amount < POWER_BANK_CAPACITY_MAX / 4) return;
+
 		const dps = info.hits / timeRemaining;
 
 		// @todo Maybe adjust strategy to use dedicated attackers and healers if space is limited.
@@ -99,14 +105,15 @@ PowerMiningProcess.prototype.run = function () {
 			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) return;
 			if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) return;
 
-			const roomRoute = Game.map.findRoute(room.name, roomName);
-			if (roomRoute === ERR_NO_PATH || roomRoute.length > 10) return;
+			// @todo Use actual position of power cache.
+			const roomRoute = mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, roomName));
+			if (roomRoute.incomplete || roomRoute.path.length > 10) return;
 
-			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.length);
+			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
 
 			potentialSpawns.push({
 				room: room.name,
-				distance: roomRoute.length,
+				distance: roomRoute.path.length,
 			});
 		});
 

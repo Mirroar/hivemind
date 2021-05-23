@@ -1,6 +1,6 @@
 'use strict';
 
-/* global RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK
+/* global hivemind RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
 POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
 FIND_DROPPED_RESOURCES RESOURCE_POWER */
 
@@ -23,11 +23,19 @@ PowerHarvesterRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 PowerHarvesterRole.prototype.run = function (creep) {
-	if (creep.pos.roomName !== creep.memory.targetRoom) {
-		// @todo Call simple military defense code when necessary.
-		creep.moveToRoom(creep.memory.targetRoom);
+	const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
+	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
+	if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+		if (creep.moveUsingNavMesh(targetPosition) !== OK) {
+			hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
+			// @todo This is cross-room movement and should therefore only calculate a path once.
+			creep.moveToRange(targetPosition, 3);
+		}
+
 		return;
 	}
+
+	creep.stopNavMeshMove();
 
 	const powerBanks = creep.room.find(FIND_STRUCTURES, {
 		filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
