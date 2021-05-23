@@ -15,7 +15,7 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 31;
+	this.roomPlannerVersion = 32;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -399,9 +399,11 @@ RoomPlanner.prototype.placeFlags = function () {
 		if (this.room.controller) {
 			const controllerRoads = this.scanAndAddRoad(this.room.controller.pos, this.roomCenterEntrances);
 			for (const i in controllerRoads) {
-				if (i === 0) continue;
+				// Keep spot next to controller free for upgrader to occupy.
 				this.placeFlag(controllerRoads[i], 'road.controller', null);
 			}
+			// Make sure no other paths get led through harvester position.
+			this.buildingMatrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
 
 			this.placeContainer(controllerRoads, 'controller');
 
@@ -433,6 +435,7 @@ RoomPlanner.prototype.placeFlags = function () {
 					let numFreeTiles = 0;
 					utilities.handleMapArea(x, y, (x2, y2) => {
 						if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
+						if (this.buildingMatrix.get(x2, y2) >= 100) return;
 
 						numFreeTiles++;
 					});
