@@ -40,17 +40,16 @@ ReactionsProcess.prototype.run = function () {
 		if (amount <= 0 || !REACTIONS[resourceType]) return;
 
 		_.each(REACTIONS[resourceType], (targetType, resourceType2) => {
-			if (roomData.totalResources[targetType] > 10000) return;
-
-			if ((roomData.totalResources[resourceType2] || 0) <= 0) return;
-
-			let resourceAmount = Math.min(amount, roomData.totalResources[resourceType2]);
+			const amount2 = roomData.totalResources[resourceType2] || 0;
+			const resultAmount = roomData.totalResources[targetType] || 0;
+			if (resultAmount > 10000) return;
+			if (amount2 <= 0) return;
 
 			// Also prioritize reactions whose product we don't have much of.
-			resourceAmount -= (roomData.totalResources[targetType] || 0);
+			const maxProduction = Math.min(amount, amount2) - resultAmount;
 
-			if (!mostResources || mostResources < resourceAmount) {
-				mostResources = resourceAmount;
+			if (!mostResources || mostResources < maxProduction) {
+				mostResources = maxProduction;
 				bestReaction = [resourceType, resourceType2];
 			}
 		});
