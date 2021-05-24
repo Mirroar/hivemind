@@ -6,6 +6,8 @@ const interShard = require('./intershard');
 const Process = require('./process');
 const utilities = require('./utilities');
 
+const preserveExpansionReasons = false;
+
 /**
  * Decides room priorities for scouting, harvesting and expansion.
  * @constructor
@@ -272,7 +274,13 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
 
-	Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
+	// Preserve expansion score reasons if needed.
+	const cacheValue = [result.score, Game.time];
+	if (preserveExpansionReasons) {
+		cacheValue.push(result.reasons);
+	}
+
+	Memory.strategy._expansionScoreCache[roomName] = cacheValue;
 };
 
 /**
