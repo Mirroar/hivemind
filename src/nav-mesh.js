@@ -24,8 +24,8 @@ module.exports = class NavMesh {
 	 */
 	generateForRoom(roomName) {
 		// Mesh doesn't need to be updated very often.
-		// @todo Allow forcing update for when we dismantled a structure.
-		if (this.memory.rooms[roomName] && this.memory.rooms[roomName].paths && Game.time - this.memory.rooms[roomName].gen < 10000 * hivemind.getThrottleMultiplier()) return;
+		// @todo Allow forcing update for when we dismantle a structure.
+		if (this.memory.rooms[roomName] && this.memory.rooms[roomName].paths && !hivemind.hasIntervalPassed(10000, this.memory.rooms[roomName].gen)) return;
 
 		this.terrain = new Room.Terrain(roomName);
 		this.costMatrix = utilities.getCostMatrix(roomName).clone();

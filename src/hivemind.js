@@ -235,7 +235,7 @@ Hivemind.prototype.initializeProcessStats = function (id) {
  */
 Hivemind.prototype.isProcessAllowedToRun = function (stats, options) {
 	// Initialize process timing parameters.
-	let interval = options.interval || 1;
+	const interval = options.interval || 1;
 	const priority = options.priority || PROCESS_PRIORITY_DEFAULT;
 	const stopAt = options.stopAt || priorityEffects[priority].stopAt || 0;
 	const throttleAt = options.throttleAt || priorityEffects[priority].throttleAt || 0;
@@ -246,10 +246,30 @@ Hivemind.prototype.isProcessAllowedToRun = function (stats, options) {
 	// No need to throttle if no interval is set.
 	if (interval === 0 || priority === PROCESS_PRIORITY_ALWAYS) return true;
 
-	interval *= this.getThrottleMultiplier(stopAt, throttleAt);
-
 	// Run process if interval has elapsed.
-	return Game.time - stats.lastRun > interval;
+	return this.hasIntervalPassed(interval, stats.lastRun, stopAt, throttleAt);
+};
+
+/**
+ * Checks if a given interval has passed, throttled by CPU usage.
+ *
+ * @param {number} interval
+ *   Minimum tick interval to wait.
+ * @param {number} startTime
+ *   Game tick on which the interval started.
+ * @param {number} stopAt
+ *   Minimum amount of bucket needed for this operation to run.
+ * @param {number} throttleAt
+ *   Amount of bucket at which this operation should always run.
+ *
+ * @return {boolean}
+ *   True if the interval has passed and we have sufficient cpu resources.
+ */
+Hivemind.prototype.hasIntervalPassed = function (interval, startTime, stopAt, throttleAt) {
+	if (Game.time - startTime < interval) return false;
+	if (Game.time - startTime < interval * this.getThrottleMultiplier(stopAt, throttleAt)) return false;
+
+	return true;
 };
 
 /**

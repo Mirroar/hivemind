@@ -290,7 +290,7 @@ ScoutProcess.prototype.setExpansionScoreCache = function (roomName, result) {
 ScoutProcess.prototype.getExpansionScoreFromCache = function (roomName, result) {
 	if (!Memory.strategy._expansionScoreCache) return false;
 	if (!Memory.strategy._expansionScoreCache[roomName]) return false;
-	if (Memory.strategy._expansionScoreCache[roomName][1] < Game.time - (5000 * hivemind.getThrottleMultiplier())) return false;
+	if (hivemind.hasIntervalPassed(5000, Memory.strategy._expansionScoreCache[roomName][1])) return false;
 
 	result.addScore(Memory.strategy._expansionScoreCache[roomName][0], 'fromCache');
 	if (Memory.strategy._expansionScoreCache[roomName][2]) {

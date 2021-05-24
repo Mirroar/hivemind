@@ -72,12 +72,12 @@ const utilities = {
 
 		const harvestMemory = room.memory.remoteHarvesting[sourceLocation];
 
-		if (harvestMemory.cachedPath && Game.time - harvestMemory.cachedPath.lastCalculated < 500 * hivemind.getThrottleMultiplier()) {
+		if (harvestMemory.cachedPath && !hivemind.hasIntervalPassed(500, harvestMemory.cachedPath.lastCalculated)) {
 			// No need to recalculate path.
 			return;
 		}
 
-		if (harvestMemory._noCachedPath && Game.time - harvestMemory._noCachedPath < 500 * hivemind.getThrottleMultiplier()) {
+		if (harvestMemory._noCachedPath && !hivemind.hasIntervalPassed(500, harvestMemory._noCachedPath)) {
 			// No need to recalculate path.
 			return;
 		}

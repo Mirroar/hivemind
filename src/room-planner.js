@@ -103,7 +103,7 @@ RoomPlanner.prototype.runLogic = function () {
 		return;
 	}
 
-	if (this.memory.lastRun && Game.time - this.memory.lastRun < 100 * hivemind.getThrottleMultiplier()) return;
+	if (this.memory.lastRun && !hivemind.hasIntervalPassed(100, this.memory.lastRun)) return;
 
 	this.memory.lastRun = Game.time;
 
