@@ -385,6 +385,48 @@ RoomPlanner.prototype.placeFlags = function () {
 		new RoomPosition(roomCenter.x, roomCenter.y - 2, this.roomName),
 	];
 
+	if (this.room && this.room.sources) {
+		this.memory.sources = {};
+		for (const source of this.room.sources) {
+			// Find adjacent space that will provide most building space.
+			let bestPos;
+			utilities.handleMapArea(source.pos.x, source.pos.y, (x, y) => {
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+				let numFreeTiles = 0;
+				utilities.handleMapArea(x, y, (x2, y2) => {
+					if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
+					if (this.buildingMatrix.get(x2, y2) >= 100) return;
+
+					numFreeTiles++;
+				});
+
+				if (!bestPos || bestPos.numFreeTiles < numFreeTiles) {
+					bestPos = {x, y, numFreeTiles};
+				}
+			});
+
+			const harvestPosition = new RoomPosition(bestPos.x, bestPos.y, this.roomName);
+			this.placeFlag(harvestPosition, 'harvester', null);
+			this.placeFlag(harvestPosition, 'bay_center', null);
+
+			// Discourage roads through spots around harvest position.
+			utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+				if (this.buildingMatrix.get(x, y) < 10 && this.buildingMatrix.get(x, y) !== 1) this.buildingMatrix.set(x, y, 10);
+			});
+
+			// Make sure no other paths get led through harvester position.
+			this.buildingMatrix.set(harvestPosition.x, harvestPosition.y, 255);
+
+			// Setup memory for quick access to harvest spots.
+			this.memory.sources[source.id] = {
+				harvestPos: utilities.serializePosition(harvestPosition, this.roomName),
+			};
+		}
+	}
+
 	// Find paths from each exit towards the room center for making roads.
 	for (const dir of _.keys(exitCenters)) {
 		for (const pos of exitCenters[dir]) {
@@ -426,37 +468,8 @@ RoomPlanner.prototype.placeFlags = function () {
 		}
 
 		if (this.room.sources) {
-			this.memory.sources = {};
 			for (const source of this.room.sources) {
-				// Find adjacent space that will provide most building space.
-				let bestPos;
-				utilities.handleMapArea(source.pos.x, source.pos.y, (x, y) => {
-					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-
-					let numFreeTiles = 0;
-					utilities.handleMapArea(x, y, (x2, y2) => {
-						if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
-						if (this.buildingMatrix.get(x2, y2) >= 100) return;
-
-						numFreeTiles++;
-					});
-
-					if (!bestPos || bestPos.numFreeTiles < numFreeTiles) {
-						bestPos = {x, y, numFreeTiles};
-					}
-				});
-
-				const harvestPosition = new RoomPosition(bestPos.x, bestPos.y, this.roomName);
-				this.placeFlag(harvestPosition, 'harvester', null);
-				this.placeFlag(harvestPosition, 'bay_center', null);
-
-				// Discourage roads through spots around harvest position.
-				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
-					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-
-					if (this.buildingMatrix.get(x, y) < 10 && this.buildingMatrix.get(x, y) !== 1) this.buildingMatrix.set(x, y, 10);
-				});
-
+				const harvestPosition = utilities.deserializePosition(this.memory.sources[source.id].harvestPos, this.roomName);
 				const sourceRoads = this.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
 				for (const pos of sourceRoads) {
 					this.placeFlag(pos, 'road.source', null);
@@ -464,14 +477,6 @@ RoomPlanner.prototype.placeFlags = function () {
 
 				this.placeFlag(harvestPosition, 'container.source', null);
 				this.placeFlag(harvestPosition, 'container', null);
-
-				// Setup memory for quick access to harvest spots.
-				this.memory.sources[source.id] = {
-					harvestPos: utilities.serializePosition(harvestPosition, this.roomName),
-				};
-
-				// Make sure no other paths get led through harvester position.
-				this.buildingMatrix.set(harvestPosition.x, harvestPosition.y, 255);
 
 				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
 					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
