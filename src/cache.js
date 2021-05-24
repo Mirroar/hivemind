@@ -85,6 +85,22 @@ const cache = {
 			delete o._cache[key];
 		}
 	},
+
+	/**
+	 * Deletes a cache entry forcibly.
+	 *
+	 * @param {object} o
+	 *   The object to remove cache data from. If not given, the general heap
+	 *   cache is used.
+	 * @param {string} key
+	 *   Cache key to remove data from.
+	 */
+	removeEntry(o, key) {
+		if (!o) o = heapCache;
+		if (!o._cache) return;
+
+		delete o._cache[key];
+	},
 };
 
 module.exports = cache;

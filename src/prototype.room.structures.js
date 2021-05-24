@@ -1,8 +1,9 @@
 'use strict';
 
-/* global hivemind Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
+/* global Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
 FIND_STRUCTURES */
 
+const cache = require('./cache');
 const LinkNetwork = require('./link-network');
 
 /**
@@ -48,36 +49,33 @@ Room.prototype.generateLinkNetwork = function () {
 	}
 };
 
+/**
+ * Adds short reference to a structure to a room object.
+ *
+ * @param {string} structureType
+ *   Type of structure for which to create a reference.
+ */
 Room.prototype.addStructureReference = function (structureType) {
 	if (!this.controller) return;
 
-	if (!this.memory.structureCache) {
-		this.memory.structureCache = {};
-	}
-
-	const cache = this.memory.structureCache;
-
-	if (!cache[structureType] || Game.time - cache[structureType].lastCheck > 250 * hivemind.getThrottleMultiplier()) {
-		cache[structureType] = {
-			lastCheck: Game.time,
-		};
-
+	const cacheKey = this.name + ':' + structureType + ':id';
+	const structureId = cache.inHeap(cacheKey, 250, () => {
 		if (CONTROLLER_STRUCTURES[structureType][this.controller.level] === 0) return;
 
 		// @todo Cache filtered find requests in room.
 		const structures = this.find(FIND_STRUCTURES, {filter: {structureType}});
 
 		if (structures.length > 0) {
-			cache[structureType].id = structures[0].id;
+			return structures[0].id;
 		}
-	}
+	});
 
-	if (cache[structureType].id) {
-		this[structureType] = Game.getObjectById(cache[structureType].id);
+	if (!structureId) return;
 
-		if (!this[structureType]) {
-			delete cache[structureType].id;
-		}
+	this[structureType] = Game.getObjectById(structureId);
+
+	if (!this[structureType]) {
+		cache.removeEntry(null, cacheKey);
 	}
 };
 
