@@ -5,6 +5,12 @@
 const Process = require('./process');
 const utilities = require('./utilities');
 
+const enableMapVisuals = true;
+const drawNavMesh = false;
+const drawIntelStatus = false;
+const drawMiningStatus = true;
+const expansionScoreCutoff = 4;
+
 /**
  * Displays map visuals.
  */
@@ -13,6 +19,8 @@ module.exports = class MapVisualsProcess extends Process {
 	 * Creates map visuals for our empire.
 	 */
 	run() {
+		if (!enableMapVisuals) return;
+
 		// We need to check a combination of entries in room memory, and those
 		// contained in Memory.strategy.roomList.
 		_.each(Memory.strategy.roomList, (info, roomName) => {
@@ -36,6 +44,8 @@ module.exports = class MapVisualsProcess extends Process {
 	 *   Name of the room in question.
 	 */
 	drawIntelStatus(roomName) {
+		if (!drawIntelStatus) return;
+
 		const intel = hivemind.roomIntel(roomName);
 		const age = intel.getAge();
 		const color = age < 200 ? '#00ff00' : age < 2000 ? '#ffff00' : age < 10000 ? '#ff8888' : '#888888';
@@ -52,11 +62,12 @@ module.exports = class MapVisualsProcess extends Process {
 	drawExpansionStatus(roomName) {
 		const info = Memory.strategy.roomList[roomName];
 
-		if ((Memory.strategy.remoteHarvesting.rooms || []).indexOf(roomName) !== -1) {
+		if (drawMiningStatus && (Memory.strategy.remoteHarvesting.rooms || []).indexOf(roomName) !== -1) {
 			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
 		}
 
 		if (!info.expansionScore) return;
+		if (info.expansionScore < expansionScoreCutoff) return;
 
 		Game.map.visual.text(info.expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
 	}
@@ -65,6 +76,7 @@ module.exports = class MapVisualsProcess extends Process {
 	 * Visualizes nav mesh data.
 	 */
 	drawNavMesh() {
+		if (!drawNavMesh) return;
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
 			if (!navInfo.regions) {
