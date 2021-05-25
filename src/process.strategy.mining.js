@@ -1,5 +1,7 @@
 'use strict';
 
+/* global hivemind */
+
 const Process = require('./process');
 const stats = require('./stats');
 
@@ -88,34 +90,45 @@ RemoteMiningProcess.prototype.run = function () {
 		availableHarvestRoomCount++;
 	}
 
-	// Adjust remote harvesting number periodically.
-	if (Game.time - memory.remoteHarvesting.lastCheck >= 1000) {
-		memory.remoteHarvesting.lastCheck = Game.time;
-
-		// Reduce count if we are over the available maximum.
-		if (memory.remoteHarvesting.currentCount > availableHarvestRoomCount) {
-			Game.notify('⚒ reduced remote mining count from ' + memory.remoteHarvesting.currentCount + ' to ' + availableHarvestRoomCount + ' because that is the maximum number of available rooms.');
-			memory.remoteHarvesting.currentCount = availableHarvestRoomCount;
-		}
-
-		// Check past CPU and bucket usage.
-		if (stats.getStat('bucket', 10000)) {
-			if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.95 * Game.cpu.limit) {
-				// We've been having bucket reserves and CPU cycles to spare.
-				if (memory.remoteHarvesting.currentCount < availableHarvestRoomCount) {
-					memory.remoteHarvesting.currentCount++;
-				}
-			}
-			else if (stats.getStat('bucket', 1000) <= 8000) {
-				// Bucket has seen some usage recently.
-				if (memory.remoteHarvesting.currentCount > 0) {
-					memory.remoteHarvesting.currentCount--;
-				}
-			}
-		}
-	}
+	this.adjustRemoteMiningCount(availableHarvestRoomCount);
 
 	// @todo Reduce remote harvesting if we want to expand.
+};
+
+/**
+ * Periodically Adjusts remote harvesting room count.
+ *
+ * @param {number} availableHarvestRoomCount
+ *   Maximum number of harvest rooms that might be used.
+ */
+RemoteMiningProcess.prototype.adjustRemoteMiningCount = function (availableHarvestRoomCount) {
+	const memory = Memory.strategy;
+
+	if (!memory.remoteHarvesting.lastCheck || !hivemind.hasIntervalPassed(1000, memory.remoteHarvesting.lastCheck)) return;
+
+	memory.remoteHarvesting.lastCheck = Game.time;
+
+	// Reduce count if we are over the available maximum.
+	if (memory.remoteHarvesting.currentCount > availableHarvestRoomCount) {
+		Game.notify('⚒ reduced remote mining count from ' + memory.remoteHarvesting.currentCount + ' to ' + availableHarvestRoomCount + ' because that is the maximum number of available rooms.');
+		memory.remoteHarvesting.currentCount = availableHarvestRoomCount;
+	}
+
+	// Check past CPU and bucket usage.
+	if (!stats.getStat('bucket', 10000)) return;
+
+	if (stats.getStat('bucket', 10000) >= 9500 && stats.getStat('bucket', 1000) >= 9500 && stats.getStat('cpu_total', 1000) <= 0.95 * Game.cpu.limit) {
+		// We've been having bucket reserves and CPU cycles to spare.
+		if (memory.remoteHarvesting.currentCount < availableHarvestRoomCount) {
+			memory.remoteHarvesting.currentCount++;
+		}
+	}
+	else if (stats.getStat('bucket', 1000) <= 8000) {
+		// Bucket has seen some usage recently.
+		if (memory.remoteHarvesting.currentCount > 0) {
+			memory.remoteHarvesting.currentCount--;
+		}
+	}
 };
 
 module.exports = RemoteMiningProcess;
