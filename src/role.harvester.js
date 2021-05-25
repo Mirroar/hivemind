@@ -40,7 +40,7 @@ HarvesterRole.prototype.run = function (creep) {
 	else if (creep.memory.harvesting && carryAmount >= creep.store.getCapacity()) {
 		// Have harvester explicitly deliver resources, unless it's a fixed energy
 		// harvester with no need to move.
-		if (creep.memory.fixedMineralSource || _.size(creep.room.creepsByRole.transporter) === 0) {
+		if (creep.memory.fixedSource && _.size(creep.room.creepsByRole.transporter) === 0) {
 			this.setHarvesterState(creep, false);
 		}
 	}
@@ -130,7 +130,7 @@ HarvesterRole.prototype.performHarvest = function (creep) {
 	// If there's a harvester bay, transfer resources into it.
 	if (this.depositInBay(creep)) return;
 
-	// If there's a link or controller nearby, directly deposit resources.
+	// If there's a link or container nearby, directly deposit resources.
 	this.depositResources(creep, source);
 };
 
@@ -189,100 +189,9 @@ HarvesterRole.prototype.pickupEnergy = function (creep) {
 HarvesterRole.prototype.depositResources = function (creep, source) {
 	if (creep.store.getFreeCapacity() > creep.store.getCapacity() * 0.5) return;
 
-	let target = source.getNearbyContainer();
-	if (creep.store.energy > 0) {
-		const link = source.getNearbyLink();
-		if (link && link.energy < link.energyCapacity) {
-			target = link;
-		}
-		else {
-			// Check for other nearby links.
-			const links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
-			if (links.length > 0) {
-				target = links[0];
-			}
-		}
-	}
-
-	if (target) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			creep.transferAny(target);
-		}
-	}
-};
-
-/**
- * Dumps minerals a harvester creep has gathered.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- */
-HarvesterRole.prototype.performMineralHarvesterDeliver = function (creep) {
-	const source = Game.getObjectById(creep.memory.fixedMineralSource);
-	const container = source.getNearbyContainer();
-	let target;
-	// By default, deliver to room's terminal if there's space.
-	if (container && _.sum(container.store) + creep.store.getCapacity() <= container.storeCapacity) {
-		target = container;
-	}
-	else {
-		target = creep.room.getBestStorageTarget(creep.store.getCapacity(), source.mineralType);
-	}
-
-	if (target) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
-			creep.transferAny(target);
-		}
-	}
-	else {
-		// @todo Drop on storage point, I guess? We probably shouldn't be collecting minerals if we have no place to store them.
-	}
-};
-
-/**
- * Dumps resources a harvester creep has gathered.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- */
-HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
-	if (creep.memory.fixedMineralSource) {
-		this.performMineralHarvesterDeliver(creep);
-		return;
-	}
-
-	if (!creep.memory.fixedSource) return;
-
-	const source = Game.getObjectById(creep.memory.fixedSource);
-	const targetLink = source.getNearbyLink();
 	const targetContainer = source.getNearbyContainer();
-	let target;
 
-	if (_.size(creep.room.creepsByRole.transporter) === 0) {
-		// Use transporter drop off logic.
-		this.transporterRole.performDeliver();
-		return;
-	}
-
-	// Drop off in link or container.
-	if (targetLink && targetLink.energy < targetLink.energyCapacity && creep.room.getStoredEnergy() > 10000) {
-		target = targetLink;
-	}
-	else if (targetContainer && _.sum(targetContainer.store) < targetContainer.storeCapacity) {
-		target = targetContainer;
-	}
-	else {
-		creep.drop(RESOURCE_ENERGY);
-		return;
-	}
-
-	if (source && !targetContainer && creep.pos.getRangeTo(source) <= 1) {
+	if (!targetContainer && creep.store.energy > 0) {
 		// Check if there is a container construction site nearby and help build it.
 		const sites = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
 			filter: site => site.structureType === STRUCTURE_CONTAINER,
@@ -300,17 +209,51 @@ HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
 		}
 	}
 
-	if (creep.pos.getRangeTo(target) > 1) {
-		creep.moveToRange(target, 1);
-	}
-	else {
-		creep.transfer(target, RESOURCE_ENERGY);
+	let target = source.getNearbyContainer();
+	if (creep.store.energy > 0) {
+		const link = source.getNearbyLink();
+		if (link && link.energy < link.energyCapacity) {
+			target = link;
+		}
+		else {
+			// Check for other nearby links.
+			const links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
+			if (links.length > 0) {
+				target = links[0];
+			}
+		}
 	}
 
-	if (target.store && _.sum(target.store) >= target.storeCapacity) {
-		// Drop on the spot, I guess.
-		creep.drop(RESOURCE_ENERGY);
+	if (target) {
+		const distance = creep.pos.getRangeTo(target);
+		if (distance > 1) {
+			creep.moveToRange(target, 1);
+		}
+		else if (target.structureType === STRUCTURE_CONTAINER && distance === 0) {
+			// Nothing to do, resources will drop into the container.
+		}
+		else {
+			creep.transferAny(target);
+		}
 	}
+};
+
+/**
+ * Dumps resources a harvester creep has gathered.
+ *
+ * @param {Creep} creep
+ *   The creep to run logic for.
+ */
+HarvesterRole.prototype.performHarvesterDeliver = function (creep) {
+	if (!creep.memory.fixedSource) return;
+
+	if (_.size(creep.room.creepsByRole.transporter) === 0) {
+		// Use transporter drop off logic.
+		this.transporterRole.performDeliver();
+		return;
+	}
+
+	this.setHarvesterState(creep, true);
 };
 
 module.exports = HarvesterRole;
