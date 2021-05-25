@@ -177,8 +177,8 @@ module.exports = class RoomManager {
 		// At level 3, we can build all remaining roads.
 		this.buildPlannedStructures('road', STRUCTURE_ROAD);
 
-		// In our first room, build ramparts earlier than usual.
-		if (_.size(Game.spawns) === 1) {
+		// In our first room, build ramparts earlier than usual, unless there are a lot to build.
+		if (_.size(Game.spawns) <= 1 && _.size(this.getLocations('rampart') < 50)) {
 			this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 		}
 
