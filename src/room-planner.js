@@ -15,7 +15,7 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 32;
+	this.roomPlannerVersion = 33;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
@@ -385,8 +385,8 @@ RoomPlanner.prototype.placeFlags = function () {
 		new RoomPosition(roomCenter.x, roomCenter.y - 2, this.roomName),
 	];
 
+	this.memory.sources = {};
 	if (this.room && this.room.sources) {
-		this.memory.sources = {};
 		for (const source of this.room.sources) {
 			// Find adjacent space that will provide most building space.
 			let bestPos;
@@ -465,6 +465,11 @@ RoomPlanner.prototype.placeFlags = function () {
 
 			// Make sure no other paths get led through harvester position.
 			this.buildingMatrix.set(mineralRoads[0].x, mineralRoads[0].y, 255);
+
+			// Setup memory for quick access to harvest spots.
+			this.memory.sources[this.room.mineral.id] = {
+				harvestPos: utilities.serializePosition(mineralRoads[0], this.roomName),
+			};
 		}
 
 		if (this.room.sources) {
@@ -720,22 +725,20 @@ RoomPlanner.prototype.placeContainer = function (sourceRoads, containerType) {
  *   A Position at which a container can be placed.
  */
 RoomPlanner.prototype.findContainerPosition = function (sourceRoads) {
-	if (this.isBuildableTile(sourceRoads[1].x, sourceRoads[1].y, true)) {
-		return sourceRoads[1];
-	}
-
 	if (this.isBuildableTile(sourceRoads[0].x, sourceRoads[0].y, true)) {
 		return sourceRoads[0];
 	}
 
+	if (this.isBuildableTile(sourceRoads[1].x, sourceRoads[1].y, true)) {
+		return sourceRoads[1];
+	}
+
 	for (const pos of _.slice(sourceRoads, 0, 3)) {
-		for (let dx = -1; dx <= 1; dx++) {
-			for (let dy = -1; dy <= 1; dy++) {
-				if (this.isBuildableTile(pos.x + dx, pos.y + dy, true)) {
-					return new RoomPosition(pos.x + dx, pos.y + dy, pos.roomName);
-				}
+		utilities.handleMapArea(pos.x, pos.y, (x, y) => {
+			if (this.isBuildableTile(x, y, true)) {
+				return new RoomPosition(x, y, pos.roomName);
 			}
-		}
+		});
 	}
 };
 
