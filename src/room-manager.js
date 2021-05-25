@@ -73,6 +73,7 @@ module.exports = class RoomManager {
 		for (const wall of this.structuresByType[STRUCTURE_WALL] || []) {
 			if (
 				this.roomPlanner.isPlannedLocation(wall.pos, 'road') ||
+				this.roomPlanner.isPlannedLocation(wall.pos, 'harvester') ||
 				this.roomPlanner.isPlannedLocation(wall.pos, 'spawn') ||
 				this.roomPlanner.isPlannedLocation(wall.pos, 'storage') ||
 				this.roomPlanner.isPlannedLocation(wall.pos, 'extension')
