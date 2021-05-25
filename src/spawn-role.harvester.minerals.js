@@ -53,7 +53,7 @@ module.exports = class MineralHarvesterSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [WORK]: 0.3, [CARRY]: 0.35},
+			{[MOVE]: 0.35, [WORK]: 0.6, [CARRY]: 0.05},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
