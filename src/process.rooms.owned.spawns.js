@@ -25,7 +25,7 @@ const spawnRoles = [
 ];
 const spawnClasses = {};
 const historyChunkLength = 100;
-const maxHistoryChunks = 5;
+const maxHistoryChunks = 20;
 
 for (const roleName of spawnRoles) {
 	spawnClasses[roleName] = require('./spawn-role.' + roleName);
