@@ -1,13 +1,14 @@
 'use strict';
 
-/* global ERR_NO_PATH FIND_SOURCES FIND_STRUCTURES STRUCTURE_SPAWN
+/* global hivemind ERR_NO_PATH FIND_SOURCES FIND_STRUCTURES STRUCTURE_SPAWN
 FIND_MY_STRUCTURES RESOURCE_ENERGY ERR_NOT_IN_RANGE STRUCTURE_RAMPART
 FIND_MY_CONSTRUCTION_SITES STRUCTURE_TOWER FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
 
-const utilities = require('./utilities');
+const NavMesh = require('./nav-mesh');
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
+const utilities = require('./utilities');
 
 const RemoteBuilderRole = function () {
 	Role.call(this);
@@ -17,6 +18,7 @@ const RemoteBuilderRole = function () {
 	this.throttleAt = 0;
 
 	this.transporterRole = new TransporterRole();
+	this.navMesh = new NavMesh();
 };
 
 RemoteBuilderRole.prototype = Object.create(Role.prototype);
@@ -35,6 +37,23 @@ RemoteBuilderRole.prototype.run = function (creep) {
 	}
 	else if (!creep.memory.building && creep.carry.energy === creep.carryCapacity) {
 		this.setBuilderState(true);
+	}
+
+	if (creep.memory.extraEnergyTarget) {
+		this.collectExtraEnergy();
+		return;
+	}
+
+	if (!creep.memory.extraEnergyTarget && creep.memory.sourceRoom) {
+		// Return to source room.
+		if (creep.pos.roomName === creep.memory.sourceRoom) {
+			creep.memory.singleRoom = creep.memory.sourceRoom;
+			delete creep.memory.sourceRoom;
+		}
+		else {
+			creep.moveToRoom(creep.memory.sourceRoom);
+			return;
+		}
 	}
 
 	if (creep.memory.upgrading) {
@@ -191,21 +210,6 @@ RemoteBuilderRole.prototype.performControllerUpgrade = function () {
 RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
 	// @todo Switch to using priority list to determine where to get energy.
 	const creep = this.creep;
-	if (creep.memory.extraEnergyTarget) {
-		this.collectExtraEnergy();
-		return;
-	}
-
-	if (!creep.memory.extraEnergyTarget && creep.memory.sourceRoom) {
-		// Return to source room.
-		if (creep.pos.roomName === creep.memory.sourceRoom) {
-			delete creep.memory.sourceRoom;
-		}
-		else {
-			creep.moveToRoom(creep.memory.sourceRoom);
-			return;
-		}
-	}
 
 	// Move to source room if necessary.
 	const targetPosition = utilities.decodePosition(creep.memory.target);
@@ -252,14 +256,7 @@ RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
 		}
 		else {
 			// Or even get energy from adjacent rooms if marked.
-			// @todo Automatically assign sources of adjacent safe rooms as extra
-			// energy targets.
-			// const flags = _.filter(Game.flags, flag => flag.name.startsWith('ExtraEnergy:' + creep.pos.roomName));
-			// if (flags.length > 0) {
-			// 	const flag = _.sample(flags);
-			// 	creep.memory.extraEnergyTarget = utilities.encodePosition(flag.pos);
-			// 	creep.memory.sourceRoom = creep.pos.roomName;
-			// }
+			this.setExtraEnergyTarget(creep);
 
 			this.transporterRole.performGetEnergy(creep);
 			return;
@@ -281,16 +278,36 @@ RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
 		const result = creep.moveToRange(source, 1);
 		if (!result) {
 			creep.memory.resourceTarget = null;
-
-			// @todo Automatically assign sources of adjacent safe rooms as extra
-			// energy targets.
-			// const flags = _.filter(Game.flags, flag => flag.name.startsWith('ExtraEnergy:' + creep.pos.roomName));
-			// if (flags.length > 0) {
-			// 	const flag = _.sample(flags);
-			// 	creep.memory.extraEnergyTarget = utilities.encodePosition(flag.pos);
-			// 	creep.memory.sourceRoom = creep.pos.roomName;
-			// }
+			this.setExtraEnergyTarget(creep);
 		}
+	}
+};
+
+/**
+ * Automatically assigns sources of adjacent safe rooms as extra energy targets.
+ */
+RemoteBuilderRole.prototype.setExtraEnergyTarget = function (creep) {
+	const mainIntel = hivemind.roomIntel(creep.pos.roomName);
+	const possibleSources = [];
+	for (const roomName of _.values(mainIntel.getExits())) {
+		const roomIntel = hivemind.roomIntel(roomName);
+		if (roomIntel.isClaimed()) continue;
+
+		for (const source of roomIntel.getSourcePositions()) {
+			const sourcePos = new RoomPosition(source.x, source.y, roomName);
+			// @todo limit search to distance 1.
+			const path = this.navMesh.findPath(creep.pos, sourcePos);
+			if (!path || path.incomplete) return;
+
+			possibleSources.push(sourcePos);
+		}
+	}
+
+	const targetPos = _.sample(possibleSources);
+	if (targetPos) {
+		creep.memory.extraEnergyTarget = utilities.encodePosition(targetPos);
+		creep.memory.sourceRoom = creep.pos.roomName;
+		delete creep.memory.singleRoom;
 	}
 };
 
@@ -305,10 +322,10 @@ RemoteBuilderRole.prototype.collectExtraEnergy = function () {
 
 	const pos = utilities.decodePosition(this.creep.memory.extraEnergyTarget);
 	if (this.creep.pos.getRangeTo(pos) > 1) {
-		if (this.creep.moveTo(pos) === ERR_NO_PATH) {
+		if (!this.creep.moveToRange(pos, 1)) {
 			delete this.creep.memory.extraEnergyTarget;
-			return;
 		}
+		return;
 	}
 
 	const source = this.creep.pos.findClosestByRange(FIND_SOURCES);
