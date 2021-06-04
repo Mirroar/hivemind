@@ -67,6 +67,8 @@ module.exports = {
 	 * Runs main game loop.
 	 */
 	runTick() {
+		this.useMemoryFromHeap();
+
 		if (Memory.isAccountThrottled) {
 			Game.cpu.limit = 20;
 		}
@@ -123,8 +125,25 @@ module.exports = {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
-		this.recordStats();
 		this.showDebug();
+		this.recordStats();
+	},
+
+	lastTime: 0,
+	lastMemory: null,
+	useMemoryFromHeap() {
+		if (this.lastTime && this.lastMemory && Game.time == this.lastTime + 1) {
+			delete global.Memory;
+			global.Memory = this.lastMemory;
+			RawMemory._parsed = this.lastMemory;
+		}
+		else {
+			// Force parsing of Memory.
+			Memory.rooms;
+			this.lastMemory = RawMemory._parsed;
+		}
+
+		this.lastTime = Game.time;
 	},
 
 	/**
