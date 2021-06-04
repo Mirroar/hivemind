@@ -87,17 +87,22 @@ module.exports = class SpawnManager {
 	manageSpawns(room, spawns) {
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
-		const spawn = _.sample(availableSpawns);
 
 		const options = this.getAllSpawnOptions(room);
 		const option = utilities.getBestOption(options);
+		if (!option) return;
 
-		if (option) {
-			if (!this.trySpawnCreep(room, spawn, option)) {
-				_.each(availableSpawns, s => {
-					s.waiting = true;
-				});
-			}
+		let spawn = _.sample(availableSpawns);
+		if (option.preferClosestSpawn) {
+			spawn = _.min(spawns, spawn => spawn.pos.getRangeTo(option.preferClosestSpawn));
+			// Only spawn once preferred spawn is ready.
+			if (availableSpawns.indexOf(spawn) === -1) return;
+		}
+
+		if (!this.trySpawnCreep(room, spawn, option)) {
+			_.each(availableSpawns, s => {
+				s.waiting = true;
+			});
 		}
 	}
 

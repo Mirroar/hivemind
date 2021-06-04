@@ -42,6 +42,7 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 			priority: (force ? 5 : 4),
 			weight: 1,
 			source: source.id,
+			preferClosestSpawn: source.pos,
 			size: this.getMaxWorkParts(source),
 			force,
 		});
@@ -78,6 +79,7 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 				priority: 4,
 				weight: 1 - (totalWorkParts / maxParts),
 				source: source.id,
+				preferClosestSpawn: source.pos,
 				size: maxParts,
 				force: false,
 			});
