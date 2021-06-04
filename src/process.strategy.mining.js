@@ -49,12 +49,25 @@ RemoteMiningProcess.prototype.run = function () {
 		// Start remote mining as early as RCL 2, even in first room.
 		if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === room.name && room.controller.level < 2) return;
 
-		const numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
-		if (numSpawns === 0) return;
+		let numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
+		if (numSpawns === 0) {
+			if (room.controller.level > 3 && room.controller.level < 7) {
+				// It's possible we're only moving the room's only spawn to a different
+				// location. Treat room as having one spawn so we can resume when it
+				// has been rebuilt.
+				numSpawns = 1;
+			}
+			else {
+				return;
+			}
+		}
+
+		const spawnCapacity = numSpawns * 5;
+		const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 3);
 
 		sourceRooms[room.name] = {
 			current: 0,
-			max: (4 * numSpawns) - 2,
+			max: spawnCapacity - roomNeeds,
 		};
 	});
 
