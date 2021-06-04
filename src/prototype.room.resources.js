@@ -250,7 +250,7 @@ Room.prototype.generateRemoteHarvestInfo = function () {
 	cache.harvestPositions = [];
 	cache.reservePositions = [];
 
-	if (!Memory.strategy) return;
+	if (!Memory.strategy) return cache;
 
 	for (const roomName of Memory.strategy.remoteHarvesting.rooms || []) {
 		const info = Memory.strategy.roomList[roomName];
