@@ -40,6 +40,9 @@ TradeProcess.prototype = Object.create(Process.prototype);
  * Buys and sells resources on the global market.
  */
 TradeProcess.prototype.run = function () {
+	// Only trade if we have a terminal to trade with.
+	if (_.size(_.filter(Game.rooms, room => room.isMine() && room.terminal)) === 0) return;
+
 	this.removeOldTrades();
 
 	this.availableCredits = Math.max(0, Game.market.credits - creditReserve);
