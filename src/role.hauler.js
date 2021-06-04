@@ -350,6 +350,8 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
 	if (creep.room.controller && creep.room.controller.owner) return false;
 
 	const workParts = creep.memory.body.work || 0;
+	if (workParts === 0) return false;
+
 	const pos = creep.memory.cachedPath.position;
 	const path = creep.getCachedPath();
 
