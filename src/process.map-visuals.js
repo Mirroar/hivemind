@@ -6,7 +6,6 @@ const Process = require('./process');
 const utilities = require('./utilities');
 
 const enableMapVisuals = true;
-const drawNavMesh = false;
 const drawIntelStatus = false;
 const drawMiningStatus = true;
 const expansionScoreCutoff = 4;
@@ -76,7 +75,7 @@ module.exports = class MapVisualsProcess extends Process {
 	 * Visualizes nav mesh data.
 	 */
 	drawNavMesh() {
-		if (!drawNavMesh) return;
+		if (!hivemind.settings.get('visualizeNavMesh')) return;
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
 			if (!navInfo.regions) {

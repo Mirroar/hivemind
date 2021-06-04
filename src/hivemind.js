@@ -6,6 +6,7 @@ PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 const Logger = require('./debug');
 const Relations = require('./relations');
 const RoomIntel = require('./room-intel');
+const SettingsManager = require('./settings-manager');
 const stats = require('./stats');
 
 global.PROCESS_PRIORITY_LOW = 1;
@@ -50,6 +51,7 @@ const Hivemind = function () {
 
 	this.memory = Memory.hivemind;
 	this.relations = new Relations();
+	this.settings = new SettingsManager();
 	this.loggers = {};
 	this.intel = {};
 
