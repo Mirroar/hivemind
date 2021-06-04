@@ -103,7 +103,7 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room, option) {
 		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 ? this.getBodyWeights() : this.getNoRoadsBodyWeight(),
+			room.controller.level > 3 && room.storage ? this.getBodyWeights() : this.getNoRoadsBodyWeight(),
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 			{[CARRY]: option.size}
 		);
