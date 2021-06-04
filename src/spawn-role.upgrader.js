@@ -68,24 +68,24 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
-		// Do not spawn upgraders when builders and spawns will need most of
-		// our energy.
-		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
+		const availableEnergy = room.getStoredEnergy();
+		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {
+			// Do not spawn upgraders when builders and spawns will need most of
+			// our energy.
 			return 0;
 		}
 
 		// RCL 8 rooms can't make use of more than 1 upgrader.
-		const availableEnergy = room.getStoredEnergy();
 		if (room.controller.level === 8) {
 			if (availableEnergy < 50000) return 0;
 			return 1;
 		}
 
 		// Small rooms that don't have a storage yet shouls spawn upgraders depending on available energy.
-		if (room.controller.level <= 3) {
+		if (room.controller.level <= 4 && !room.storage) {
 			const numSources = _.size(room.sources);
 			const maxUpgraders = 1 + numSources + Math.floor(availableEnergy / 1000);
-			return Math.min(maxUpgraders, 5);
+			return Math.min(maxUpgraders, 9);
 		}
 
 		// Spawn upgraders depending on stored energy.
