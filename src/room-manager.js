@@ -173,16 +173,6 @@ module.exports = class RoomManager {
 			this.buildPlannedStructures('container.mineral', STRUCTURE_CONTAINER);
 		}
 
-		if (this.room.controller.level < 3) return;
-
-		// At level 3, we can build all remaining roads.
-		this.buildPlannedStructures('road', STRUCTURE_ROAD);
-
-		// In our first room, build ramparts earlier than usual, unless there are a lot to build.
-		if (_.size(Game.spawns) <= 1 && _.size(this.getLocations('rampart') < 50)) {
-			this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
-		}
-
 		if (this.room.controller.level < 4) return;
 
 		// Make sure all requested ramparts are built.
@@ -200,6 +190,9 @@ module.exports = class RoomManager {
 		for (const structure of unwantedDefenses) {
 			this.memory.dismantle[structure.id] = 1;
 		}
+
+		// At level 4, we can build all remaining roads.
+		this.buildPlannedStructures('road', STRUCTURE_ROAD);
 
 		// Further constructions should only happen in safe rooms.
 		if (this.room.isEvacuating()) return;
