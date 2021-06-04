@@ -175,7 +175,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 		},
 	};
 
-	if ((!Memory.hivemind.canExpand) && this.getExpansionScoreFromCache(roomName, result)) {
+	if (this.getExpansionScoreFromCache(roomName, result)) {
 		return result;
 	}
 
