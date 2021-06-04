@@ -305,7 +305,7 @@ module.exports = class RoomManager {
 				}
 			}
 
-			if (buildPower > 10) {
+			if (buildPower > 15) {
 				spawn.destroy();
 				this.memory.runNextTick = true;
 				// Only kill of one spawn at a time, it should be rebuilt right away next tick!
