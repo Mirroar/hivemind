@@ -46,6 +46,7 @@ module.exports = class RoomManager {
 	 * Manages the assigned room.
 	 */
 	runLogic() {
+		delete this.memory.runNextTick;
 		if (!this.roomPlanner.isPlanningFinished()) return;
 
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
