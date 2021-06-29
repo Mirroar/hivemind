@@ -10,6 +10,10 @@ const channels = {
 		name: 'Main Loop',
 		color: '#ffffff',
 	},
+	memory: {
+		name: 'Memory',
+		color: '#ff80ff',
+	},
 	cpu: {
 		name: 'CPU',
 		color: '#ff8080',
@@ -25,6 +29,10 @@ const channels = {
 	trade: {
 		name: 'Trade',
 		color: '#80ffff',
+	},
+	strategy: {
+		name: 'Strategy',
+		color: '#ffff80',
 	},
 };
 
