@@ -163,7 +163,7 @@ Hivemind.prototype.runSubProcess = function (id, callback) {
  *   True if running processes is forbidden.
  */
 Hivemind.prototype.pullEmergengyBrake = function (id) {
-	if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.9) {
+	if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.85) {
 		if (!this.emergencyBrakeProcessId) {
 			this.emergencyBrakeProcessId = id;
 			this.log('cpu').error('Shutting down all other processes before running', id, '-', Game.cpu.getUsed(), '/', Game.cpu.tickLimit, 'cpu used!');
