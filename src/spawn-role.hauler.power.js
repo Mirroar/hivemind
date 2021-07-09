@@ -1,6 +1,6 @@
 'use strict';
 
-/* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE CARRY */
+/* global hivemind CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE CARRY */
 
 const SpawnRole = require('./spawn-role');
 
@@ -14,7 +14,7 @@ module.exports = class PowerHaulerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		if (Memory.disablePowerHarvesting) return;
+		if (!hivemind.settings.get('enablePowerMining')) return;
 		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return;
 
 		_.each(Memory.strategy.power.rooms, (info, roomName) => {

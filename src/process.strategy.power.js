@@ -37,7 +37,7 @@ PowerMiningProcess.prototype = Object.create(Process.prototype);
  */
 PowerMiningProcess.prototype.shouldRun = function () {
 	if (!Process.prototype.shouldRun.call(this)) return false;
-	if (Memory.disablePowerHarvesting) return false;
+	if (!hivemind.settings.get('enablePowerMining')) return false;
 
 	return true;
 };
@@ -74,6 +74,10 @@ PowerMiningProcess.prototype.run = function () {
 			delete memory.rooms[roomName];
 			return;
 		}
+
+		// Disregard rooms the user doesn't want harvested.
+		const roomFilter = hivemind.settings.get('powerMineRoomFilter');
+		if (roomFilter && !roomFilter(roomName)) return;
 
 		// Skip if this doesn't need harvesting anymore.
 		if (info.amount <= 0 || info.hits <= 0) return;

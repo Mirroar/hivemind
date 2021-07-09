@@ -12,6 +12,7 @@
  * @code
  * module.exports = {
  *   visualizeNavMesh: true,
+ *   enablePowerMining: Game.shard.name !== 'shard1',
  * };
  * @endcode
  *
@@ -27,6 +28,15 @@ module.exports = {
 	// on the world map.
 	visualizeNavMesh: false,
 
+
+	// Power mining:
+	// Enable power mining in general.
+	enablePowerMining: true,
+	// Filter rooms where power mining is allowed to take place. This needs to be
+	// a function that is passed a room name and returns true for allowed rooms.
+	powerMineRoomFilter: null,
+	// Spawn healers to deal with reflected damage from power sources.
+	powerMineHealers: true,
 
 	// Expansion:
 	// Maximum amount of CPU that may be spent each tick on finding a suitable

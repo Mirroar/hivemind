@@ -1,6 +1,6 @@
 'use strict';
 
-/* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE HEAL ATTACK */
+/* global hivemind CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE HEAL ATTACK */
 
 const SpawnRole = require('./spawn-role');
 
@@ -14,7 +14,7 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		if (Memory.disablePowerHarvesting) return;
+		if (!hivemind.settings.get('enablePowerMining')) return;
 		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return;
 
 		_.each(Memory.strategy.power.rooms, (info, roomName) => {
@@ -55,7 +55,7 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 			}
 
 			// Also spawn healers.
-			if (powerHealers.length < 2 && powerHarvesters.length >= powerHealers.length && timeToKill > 0) {
+			if (powerHealers.length < 2 && powerHarvesters.length >= powerHealers.length && timeToKill > 0 && hivemind.settings.get('powerMineHealers')) {
 				options.push({
 					priority: 3,
 					weight: 1,
