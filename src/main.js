@@ -21,6 +21,7 @@ global.hivemind = new Hivemind();
 const CreepsProcess = require('./process.creeps');
 const ExpandProcess = require('./process.strategy.expand');
 const InitProcess = require('./process.init');
+const interShard = require('./intershard');
 const InterShardProcess = require('./process.strategy.intershard');
 const ManagePowerCreepsProcess = require('./process.empire.power.creeps');
 const MapVisualsProcess = require('./process.map-visuals');
@@ -83,6 +84,10 @@ module.exports = {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
+		const interShardMemory = interShard.getLocalMemory();
+		const shardHasRooms = interShardMemory.info && interShardMemory.info.ownedRooms > 0;
+		const shardHasEstablishedRooms = shardHasRooms && interShardMemory.info.maxRoomLevel > 3;
+
 		hivemind.runProcess('creeps', CreepsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
@@ -94,29 +99,42 @@ module.exports = {
 			interval: 50,
 			priority: PROCESS_PRIORITY_LOW,
 		});
-		// @todo This process could be split up - decisions about when and where to expand can be executed at low priority. But management of actual expansions is high priority.
-		hivemind.runProcess('strategy.expand', ExpandProcess, {
-			interval: 50,
-			priority: PROCESS_PRIORITY_HIGH,
-		});
-		hivemind.runProcess('strategy.remote_mining', RemoteMiningProcess, {
-			interval: 100,
-		});
-		hivemind.runProcess('strategy.power_mining', PowerMiningProcess, {
-			interval: 100,
-		});
+
+		if (shardHasEstablishedRooms) {
+			// @todo This process could be split up - decisions about when and where to expand can be executed at low priority. But management of actual expansions is high priority.
+			hivemind.runProcess('strategy.expand', ExpandProcess, {
+				interval: Memory.hivemind.canExpand ? 5 : 50,
+				priority: PROCESS_PRIORITY_HIGH,
+			});
+		}
+
+		if (shardHasRooms) {
+			hivemind.runProcess('strategy.remote_mining', RemoteMiningProcess, {
+				interval: 100,
+			});
+		}
+
+		if (shardHasEstablishedRooms) {
+			hivemind.runProcess('strategy.power_mining', PowerMiningProcess, {
+				interval: 100,
+			});
+		}
+
 		hivemind.runProcess('strategy.inter_shard', InterShardProcess, {
 			interval: 100,
 			priority: PROCESS_PRIORITY_LOW,
 		});
 
-		hivemind.runProcess('empire.trade', TradeProcess, {
-			interval: 50,
-			priority: PROCESS_PRIORITY_LOW,
-		});
-		hivemind.runProcess('empire.resources', ResourcesProcess, {
-			interval: 50,
-		});
+		if (shardHasEstablishedRooms) {
+			hivemind.runProcess('empire.trade', TradeProcess, {
+				interval: 50,
+				priority: PROCESS_PRIORITY_LOW,
+			});
+			hivemind.runProcess('empire.resources', ResourcesProcess, {
+				interval: 50,
+			});
+		}
+
 		hivemind.runProcess('empire.report', ReportProcess, {
 			interval: 100,
 		});
