@@ -16,6 +16,7 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		this.addManualDismantlers(room, options);
 		this.addRoomPlannerDismantlers(room, options);
+		this.addOperationDismantlers(room, options);
 	}
 
 	/**
@@ -57,14 +58,43 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 		if (!room.roomManager.needsDismantling()) return;
 
 		const numDismantlers = _.filter(room.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === room.name && creep.memory.sourceRoom === room.name).length;
+		if (numDismantlers > 0) return;
 
-		if (numDismantlers < 1) {
-			options.push({
-				priority: 3,
-				weight: 0,
-				targetRoom: room.name,
-			});
-		}
+		options.push({
+			priority: 3,
+			weight: 0,
+			targetRoom: room.name,
+		});
+	}
+
+	/**
+	 * Adds dismantler spawn options for (remote mine) operations.
+	 *
+	 * @param {Room} room
+	 *   The room to add spawn options for.
+	 * @param {Object[]} options
+	 *   A list of spawn options to add to.
+	 */
+	addOperationDismantlers(room, options) {
+		const operations = _.filter(Game.operationsByType.mining, o => o.needsDismantler());
+		_.each(operations, operation => {
+			const locations = operation.getMiningLocationsByRoom()[room.name];
+			if (!locations || locations.length === 0) return;
+
+			for (const sourceLocation of locations) {
+				if (!operation.needsDismantler(sourceLocation)) continue;
+
+				const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], creep => creep.memory.source === sourceLocation).length;
+				if (numDismantlers > 0) continue;
+
+				options.push({
+					priority: 3,
+					weight: 0,
+					operation: operation.name,
+					source: sourceLocation,
+				});
+			}
+		});
 	}
 
 	/**
@@ -97,6 +127,13 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room, option) {
+		if (option.operation) {
+			return {
+				operation: option.operation,
+				source: option.source,
+			};
+		}
+
 		return {
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,

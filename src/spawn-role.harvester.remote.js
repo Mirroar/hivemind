@@ -1,10 +1,9 @@
 'use strict';
 
-/* global MOVE WORK CARRY */
+/* global MOVE WORK CARRY RESOURCE_ENERGY */
 
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
-const stats = require('./stats');
 
 module.exports = class RemoteHarvesterSpawnRole extends SpawnRole {
 	/**
@@ -16,41 +15,35 @@ module.exports = class RemoteHarvesterSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		if (!room.memory.remoteHarvesting) return;
-
-		const storagePos = utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos);
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
-			utilities.precalculatePaths(room, pos);
 			const targetPos = utilities.encodePosition(pos);
-			if (!room.memory.remoteHarvesting[targetPos]) continue;
+			const operation = Game.operations['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
-			// @todo Or in any room on the route, actually.
-			const roomMemory = Memory.rooms[pos.roomName];
-			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) continue;
+			if (!operation || operation.isUnderAttack() || operation.needsDismantler(targetPos)) continue;
 
-			const harvestMemory = room.memory.remoteHarvesting[targetPos];
-			const cachedPathLength = harvestMemory.cachedPath && harvestMemory.cachedPath.path && harvestMemory.cachedPath.path.length;
-			if (!cachedPathLength) continue;
-
-			const travelTimeSpawn = harvestMemory.travelTime || cachedPathLength;
-			const isEstablished = harvestMemory.revenue > 0;
+			// Don't spawn if there is no full path.
+			const paths = operation.getPaths();
+			const path = paths[targetPos];
+			const travelTime = path && path.travelTime;
+			if (!travelTime) continue;
 
 			const harvesters = _.filter(
 				Game.creepsByRole['harvester.remote'] || {},
 				creep => {
 					// @todo Instead of filtering for every room, this could be grouped once per tick.
-					if (creep.memory.storage !== storagePos || creep.memory.source !== targetPos) return false;
+					if (creep.memory.source !== targetPos) return false;
 
 					if (creep.spawning) return true;
-					if (!travelTimeSpawn) return true;
-					if (creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500) return true;
+					if (creep.ticksToLive > travelTime || creep.ticksToLive > 500) return true;
 
 					return false;
 				}
 			);
-			harvestMemory.harvesters = _.map(harvesters, 'id');
+
+			// @todo Allow spawning multiple harvesters if more work parts are needed,
+			// but no more than available spaces around the source.
 
 			if (_.size(harvesters) > 0) continue;
 
@@ -58,9 +51,10 @@ module.exports = class RemoteHarvesterSpawnRole extends SpawnRole {
 				priority: 3,
 				weight: 1,
 				targetPos,
-				isEstablished,
+				// @todo Consider established when roads are fully built.
+				isEstablished: operation.hasContainer(targetPos),
 				// Use less work parts if room is not reserved yet.
-				size: Game.rooms[pos.roomName] && Game.rooms[pos.roomName].isMine(true) ? 6 : 3,
+				size: operation.getHarvesterSize(targetPos),
 			});
 		}
 	}
@@ -80,7 +74,7 @@ module.exports = class RemoteHarvesterSpawnRole extends SpawnRole {
 		// @todo Also use high number of work parts if road still needs to be built.
 		// @todo Use calculated max size like normal harvesters when established.
 		// Use less move parts if a road has already been established.
-		const bodyWeights = option.isEstablished ? {[MOVE]: 0.35, [WORK]: 0.55, [CARRY]: 0.1} : {[MOVE]: 0.5, [WORK]: 0.2, [CARRY]: 0.3};
+		const bodyWeights = option.isEstablished ? {[MOVE]: 0.35, [WORK]: 0.55, [CARRY]: 0.1} : {[MOVE]: 0.5, [WORK]: 0.5, [CARRY]: 0.1};
 
 		return this.generateCreepBodyFromWeights(
 			bodyWeights,
@@ -102,8 +96,8 @@ module.exports = class RemoteHarvesterSpawnRole extends SpawnRole {
 	 */
 	getCreepMemory(room, option) {
 		return {
-			storage: utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos),
 			source: option.targetPos,
+			operation: 'mine:' + utilities.decodePosition(option.targetPos).roomName,
 		};
 	}
 
@@ -120,9 +114,10 @@ module.exports = class RemoteHarvesterSpawnRole extends SpawnRole {
 	 *   The name of the new creep.
 	 */
 	onSpawn(room, option, body) {
-		const position = option.targetPos;
-		if (!position) return;
+		const operationName = 'mine:' + utilities.decodePosition(option.targetPos).roomName;
+		const operation = Game.operations[operationName];
+		if (!operation) return;
 
-		stats.addRemoteHarvestCost(room.name, position, this.calculateBodyCost(body));
+		operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
 	}
 };

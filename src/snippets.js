@@ -21,6 +21,9 @@ JSON.stringify(_.sortBy(_.map(Memory.hivemind.process, (a, b) => {a.name = b; re
 // Find out which operations use a lot of CPU
 const m = []; _.each(Memory.operations, (o, name) => {m.push({name, cpu: o.stats.cpu / o.statTicks})}); JSON.stringify(_.sortBy(m, 'cpu'));
 
+// Find out which mining operations are most profitable per CPU used
+const m = []; _.each(Memory.operations, (o, name) => {if (o.type !== 'mining') return; m.push({name, income: o.stats.energy / o.stats.cpu})}); JSON.stringify(_.sortBy(m, 'income'));
+
 // Find out where a lot of memory is used:
 JSON.stringify(_.sortBy(_.map(Memory, (data, key) => {return {key, size: JSON.stringify(data).length}}), 'size'));
 JSON.stringify(_.reduce(_.map(Memory.rooms, (roomData) => {const result = {}; _.each(roomData, (data, key) => result[key] = JSON.stringify(data).length); return result}), (total, item) => {_.each(item, (value, key) => total[key] = (total[key] || 0) + value); return total}));

@@ -1,12 +1,10 @@
 'use strict';
 
-/* global FIND_DROPPED_RESOURCES RESOURCE_ENERGY FIND_SOURCES
-ERR_NO_PATH OK ERR_NOT_IN_RANGE FIND_STRUCTURES STRUCTURE_CONTAINER
-FIND_MY_CONSTRUCTION_SITES STRUCTURE_ROAD LOOK_STRUCTURES MAX_CONSTRUCTION_SITES
+/* global hivemind FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK
+ERR_NO_PATH ERR_NOT_IN_RANGE FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_ROAD
+FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES
 LOOK_CONSTRUCTION_SITES */
 
-// @todo When road is built, send harvester with low move _and_ carry, and let it build a container. Then, send transporters.
-// @todo Record time it takes to get to source, so a new harvester can be built in time.
 // @todo Collect energy if it's lying on the path.
 
 const utilities = require('./utilities');
@@ -25,6 +23,8 @@ HaulerRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 HaulerRole.prototype.run = function (creep) {
+	if (!hivemind.segmentMemory.isReady()) return;
+
 	if (creep.memory.delivering && creep.carry.energy === 0) {
 		this.setHaulerState(creep, false);
 	}
@@ -34,9 +34,12 @@ HaulerRole.prototype.run = function (creep) {
 
 	if (creep.memory.delivering) {
 		// Repair / build roads on the way home.
-		const targetPosition = utilities.decodePosition(creep.memory.storage);
-		if (targetPosition.roomName !== creep.pos.roomName && Game.cpu.bucket > 3000) {
-			this.performBuildRoad(creep);
+
+		if (creep.operation) {
+			const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
+			if (creep.pos.roomName !== sourceRoom && Game.cpu.bucket > 3000) {
+				this.performBuildRoad(creep);
+			}
 		}
 
 		this.performHaulerDeliver(creep);
@@ -57,14 +60,12 @@ HaulerRole.prototype.run = function (creep) {
 HaulerRole.prototype.setHaulerState = function (creep, delivering) {
 	creep.memory.delivering = delivering;
 
-	if (creep.memory.source) {
-		const targetPosition = utilities.decodePosition(creep.memory.storage);
-		const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
+	if (!creep.operation) return;
 
-		if (harvestMemory.cachedPath) {
-			creep.setCachedPath(harvestMemory.cachedPath.path, delivering, 1);
-		}
-	}
+	const paths = creep.operation.getPaths();
+	if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return;
+
+	creep.setCachedPath(utilities.serializePositionPath(paths[creep.memory.source].path), !delivering, 1);
 };
 
 /**
@@ -74,15 +75,18 @@ HaulerRole.prototype.setHaulerState = function (creep, delivering) {
  *   The creep to run logic for.
  */
 HaulerRole.prototype.performHaulerDeliver = function (creep) {
-	const targetPosition = utilities.decodePosition(creep.memory.storage);
-	const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
+	if (!creep.operation) {
+		// @todo Operation has probably ended. Return home and suicide?
+		return;
+	}
+
+	const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
+	const target = Game.rooms[sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
+	const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
 
 	if (creep.hasCachedPath()) {
 		creep.followCachedPath();
-		if (creep.hasArrived()) {
-			creep.clearCachedPath();
-		}
-		else if (creep.pos.getRangeTo(targetPosition) <= 3) {
+		if (creep.hasArrived() || creep.pos.getRangeTo(targetPosition) <= 3) {
 			creep.clearCachedPath();
 		}
 		else {
@@ -91,58 +95,55 @@ HaulerRole.prototype.performHaulerDeliver = function (creep) {
 	}
 
 	if (targetPosition.roomName !== creep.pos.roomName) {
-		creep.moveTo(targetPosition);
+		creep.moveToRange(targetPosition, 1);
 
 		return;
 	}
 
 	// @todo If no storage is available, use default delivery method.
-	const target = creep.room.getBestStorageTarget(creep.carry.energy, RESOURCE_ENERGY);
-	if (!target || _.sum(target.store) + creep.carry.energy >= target.storeCapacity) {
-		// Container is full, drop energy instead.
+	if (!target || creep.carry.energy > target.store.getFreeCapacity()) {
+		// Storage structure is full, drop energy instead.
 		const storageLocation = creep.room.getStorageLocation();
-		if (storageLocation) {
-			if (creep.pos.x !== storageLocation.x || creep.pos.y !== storageLocation.y) {
-				const result = creep.moveTo(storageLocation.x, storageLocation.y);
-				if (result === ERR_NO_PATH && creep.drop(RESOURCE_ENERGY) === OK) {
+		if (!storageLocation) {
+			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+			if (creep.drop(RESOURCE_ENERGY) === OK) creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			return;
+		}
+
+		if (creep.pos.x !== storageLocation.x || creep.pos.y !== storageLocation.y) {
+			const result = creep.moveTo(storageLocation.x, storageLocation.y);
+			if (result === ERR_NO_PATH && creep.drop(RESOURCE_ENERGY) === OK) {
+				// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+				creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+				return;
+			}
+
+			const pos = utilities.encodePosition(creep.pos);
+			if (creep.memory.lastWaitPosition === pos) {
+				creep.memory.lastWaitCount = (creep.memory.lastWaitCount || 0) + 1;
+				if (creep.memory.lastWaitCount > 10 && creep.drop(RESOURCE_ENERGY) === OK) {
 					// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-					harvestMemory.revenue += creep.carry.energy;
+					creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+					delete creep.memory.lastWaitCount;
 					return;
 				}
-
-				const pos = utilities.encodePosition(creep.pos);
-				if (creep.memory.lastWaitPosition === pos) {
-					creep.memory.lastWaitCount = (creep.memory.lastWaitCount || 0) + 1;
-					if (creep.memory.lastWaitCount > 10 && creep.drop(RESOURCE_ENERGY) === OK) {
-						// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-						harvestMemory.revenue += creep.carry.energy;
-						delete creep.memory.lastWaitCount;
-						return;
-					}
-				}
-				else {
-					delete creep.memory.lastWaitCount;
-					creep.memory.lastWaitPosition = pos;
-				}
 			}
-			else if (creep.drop(RESOURCE_ENERGY) === OK) {
-				// Dropoff spot reached, drop energy.
-				// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-				harvestMemory.revenue += creep.carry.energy;
-				return;
+			else {
+				delete creep.memory.lastWaitCount;
+				creep.memory.lastWaitPosition = pos;
 			}
 		}
 		else if (creep.drop(RESOURCE_ENERGY) === OK) {
+			// Dropoff spot reached, drop energy.
 			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-			harvestMemory.revenue += creep.carry.energy;
+			creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
 			return;
 		}
 	}
 
 	const result = creep.transfer(target, RESOURCE_ENERGY);
 	if (result === OK) {
-		// @todo This might be wrong if energy only fits into container partially.
-		harvestMemory.revenue += creep.carry.energy;
+		creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
 	}
 	else if (result === ERR_NOT_IN_RANGE) {
 		creep.moveTo(target);
@@ -156,8 +157,6 @@ HaulerRole.prototype.performHaulerDeliver = function (creep) {
  *   The creep to run logic for.
  */
 HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
-	if (!creep.memory.source) return;
-
 	const sourcePosition = utilities.decodePosition(creep.memory.source);
 
 	if (creep.hasCachedPath()) {
@@ -172,7 +171,7 @@ HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
 			return;
 		}
 	}
-	else if (creep.pos.getRangeTo(sourcePosition) > 10) {
+	else if (creep.pos.roomName !== sourcePosition.roomName || creep.pos.getRangeTo(sourcePosition) > 10) {
 		// This creep _should_ be on a cached path!
 		// It probably just spawned.
 		this.setHaulerState(creep, false);
@@ -184,23 +183,29 @@ HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
 		return;
 	}
 
-	let actionTaken = this.pickupNearbyEnergy(creep);
+	const actionTaken = this.pickupNearbyEnergy(creep);
 
 	// Get energy from target container.
-	const targetPosition = utilities.decodePosition(creep.memory.storage);
-	const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
-	if (harvestMemory.hasContainer) {
-		const container = Game.getObjectById(harvestMemory.containerId);
+	if (!creep.operation) {
+		// @todo Operation has probably ended. Return home and suicide?
+		return;
+	}
 
-		if (container) {
-			if (creep.pos.getRangeTo(container) > 1) {
-				creep.moveToRange(container, 1);
-			}
-			else if (!actionTaken && (container.store.energy || 0) > creep.store.getCapacity() / 2) {
+	const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
+	const container = creep.operation.getContainer(creep.memory.source);
+	if (container) {
+		if (creep.pos.getRangeTo(container) > 1) {
+			creep.moveToRange(container, 1);
+		}
+		else {
+			const willFillCreep = (container.store.energy || 0) >= creep.store.getFreeCapacity();
+			const relevantAmountReached = (container.store.energy || 0) >= creep.store.getCapacity() / 2;
+			if (!actionTaken && (relevantAmountReached || willFillCreep)) {
 				creep.withdraw(container, RESOURCE_ENERGY);
-				actionTaken = true;
 			}
 		}
+
+		return;
 	}
 
 	// If all else fails, make sure we're close enough to our source.
@@ -209,7 +214,7 @@ HaulerRole.prototype.performGetHaulerEnergy = function (creep) {
 	}
 
 	// Repair / build roads, even when just waiting for more energy.
-	if (!actionTaken && targetPosition.roomName !== creep.pos.roomName && !creep.room.isMine() && Game.cpu.bucket > 3000) {
+	if (!actionTaken && sourceRoom !== creep.pos.roomName && !creep.room.isMine() && Game.cpu.bucket > 3000) {
 		this.performBuildRoad(creep);
 	}
 };
@@ -273,11 +278,15 @@ HaulerRole.prototype.pickupNearbyEnergy = function (creep) {
  */
 HaulerRole.prototype.performBuildRoad = function (creep) {
 	const workParts = creep.memory.body.work || 0;
-	const sourceRoom = utilities.decodePosition(creep.memory.storage).roomName;
+	if (workParts === 0) return false;
+
+	if ((creep.store.energy || 0) === 0) return false;
+
+	if (!creep.operation) return false;
+
+	const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
 	const sourceRoomLevel = Game.rooms[sourceRoom] ? Game.rooms[sourceRoom].controller.level : 0;
 	const buildRoads = sourceRoomLevel > 3;
-
-	if (workParts === 0) return false;
 
 	this.actionTaken = false;
 
@@ -290,9 +299,11 @@ HaulerRole.prototype.performBuildRoad = function (creep) {
 			filter: structure => (structure.structureType === STRUCTURE_ROAD || structure.structureType === STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - (workParts * 100),
 		});
 		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-			Memory.rooms[sourceRoom].remoteHarvesting[creep.memory.source].buildCost += workParts;
-			creep.repair(needsRepair);
-			this.actionTaken = true;
+			if (creep.repair(needsRepair) === OK) {
+				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
+				this.actionTaken = true;
+			}
+
 			// If structure is especially damaged, stay here to keep repairing.
 			if (needsRepair.hits < needsRepair.hitsMax - (workParts * 2 * 100)) {
 				return true;
@@ -301,17 +312,10 @@ HaulerRole.prototype.performBuildRoad = function (creep) {
 	}
 
 	// Check source container and repair that, too.
-	const sourcePosition = utilities.decodePosition(creep.memory.source);
-	const sources = creep.room.find(FIND_SOURCES, {
-		filter: source => source.pos.x === sourcePosition.x && source.pos.y === sourcePosition.y,
-	});
-
-	if (sources.length > 0) {
-		if (this.ensureRemoteHarvestContainerIsBuilt(creep, sources[0])) return true;
-	}
+	if (this.ensureRemoteHarvestContainerIsBuilt(creep)) return true;
 
 	const needsBuilding = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
-		filter: site => site.structureType === STRUCTURE_ROAD || site.structureType === STRUCTURE_CONTAINER,
+		filter: site => site.structureType === STRUCTURE_CONTAINER || site.structureType === STRUCTURE_ROAD,
 	});
 	if (needsBuilding && creep.pos.getRangeTo(needsBuilding) <= 3) {
 		if (this.actionTaken) {
@@ -319,11 +323,11 @@ HaulerRole.prototype.performBuildRoad = function (creep) {
 			return true;
 		}
 
-		creep.build(needsBuilding);
-
-		const buildCost = Math.min(creep.carry.energy, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
-		Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += buildCost;
-		this.actionTaken = true;
+		if (creep.build(needsBuilding) === OK) {
+			const buildCost = Math.min(creep.store.energy || 0, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
+			creep.operation.addResourceCost(buildCost, RESOURCE_ENERGY);
+			this.actionTaken = true;
+		}
 
 		// Stay here if more building is needed.
 		if (needsBuilding.progressTotal - needsBuilding.progress > workParts * 10) {
@@ -349,6 +353,8 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
 	// the room planner should handle everything.
 	if (creep.room.controller && creep.room.controller.owner) return false;
 
+	if ((creep.store.energy || 0) === 0) return false;
+
 	const workParts = creep.memory.body.work || 0;
 	if (workParts === 0) return false;
 
@@ -373,9 +379,11 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
 				// Many repairs to do, so stay here for next tick.
 				if (this.actionTaken) return true;
 
-				Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
-				creep.repair(structure);
-				this.actionTaken = true;
+				if (creep.repair(structure) === OK) {
+					creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
+					this.actionTaken = true;
+				}
+
 				// If structure is especially damaged, stay here to keep repairing.
 				if (structure.hits < structure.hitsMax - (workParts * 2 * 100)) {
 					return true;
@@ -390,6 +398,7 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
 			const numSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
 			if (sites.length === 0 && numSites < 5) {
 				if (position.createConstructionSite(STRUCTURE_ROAD) === OK) {
+					// Stay here to build the new construction site.
 					return true;
 				}
 			}
@@ -402,51 +411,48 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
  *
  * @param {Creep} creep
  *   The creep to run logic for.
- * @param {Source} source
- *   The source we're checking.
  *
  * @return {boolean}
  *   Whether the creep should stay on this spot for further repairs.
  */
-HaulerRole.prototype.ensureRemoteHarvestContainerIsBuilt = function (creep, source) {
+HaulerRole.prototype.ensureRemoteHarvestContainerIsBuilt = function (creep) {
+	if ((creep.store.energy || 0) === 0) return false;
+
 	const workParts = creep.memory.body.work || 0;
+	if (workParts === 0) return false;
 
-	// Check if container is built at target location.
-	const container = source.getNearbyContainer();
-	if (container) {
-		if (creep.pos.getRangeTo(container) <= 3 && container.hits < container.hitsMax - (workParts * 100)) {
-			// Many repairs to do, so stay here for next tick.
-			if (this.actionTaken) return true;
+	if (creep.operation.hasContainer()) {
+		// Make sure container is in good condition.
+		const container = creep.operation.getContainer(creep.memory.source);
+		if (creep.pos.getRangeTo(container) > 3 || container.hits > container.hitsMax - (workParts * 100)) return false;
 
-			Memory.rooms[utilities.decodePosition(creep.memory.storage).roomName].remoteHarvesting[creep.memory.source].buildCost += workParts;
-			creep.repair(container);
+		// Many repairs to do, so stay here for next tick.
+		if (this.actionTaken) return true;
+
+		if (creep.repair(container) === OK) {
+			creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
 			this.actionTaken = true;
-			// If structure is especially damaged, stay here to keep repairing.
-			if (container.hits < container.hitsMax - (workParts * 2 * 100)) {
-				return true;
-			}
 		}
-	}
-	else {
-		// Check if there is a container or construction site nearby.
-		const structures = source.pos.findInRange(FIND_STRUCTURES, 3, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
-		});
-		const sites = source.pos.findInRange(FIND_MY_CONSTRUCTION_SITES, 3, {
-			filter: site => site.structureType === STRUCTURE_CONTAINER,
-		});
-		if (structures.length === 0 && sites.length === 0) {
-			// Place a container construction site for this source.
-			const targetPosition = utilities.decodePosition(creep.memory.storage);
-			const harvestMemory = Memory.rooms[targetPosition.roomName].remoteHarvesting[creep.memory.source];
 
-			if (harvestMemory.cachedPath) {
-				const path = utilities.deserializePositionPath(harvestMemory.cachedPath.path);
-				const containerPosition = path[path.length - 1];
-				containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
-			}
+		// If structure is especially damaged, stay here to keep repairing.
+		if (container.hits < container.hitsMax - (workParts * 2 * 100)) {
+			return true;
 		}
+
+		return false;
 	}
+
+	// Check if there is a container or construction site nearby.
+	const containerPosition = creep.operation.getContainerPosition(creep.memory.source);
+	if (!containerPosition || containerPosition.roomName !== creep.pos.roomName) return false;
+
+	const sites = _.filter(containerPosition.lookFor(LOOK_CONSTRUCTION_SITES), site => site.structureType === STRUCTURE_CONTAINER);
+	if (sites.length === 0) {
+		// Place a container construction site for this source.
+		containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
+	}
+
+	return false;
 };
 
 module.exports = HaulerRole;

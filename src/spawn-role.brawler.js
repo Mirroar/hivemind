@@ -1,11 +1,10 @@
 'use strict';
 
 /* global hivemind RoomPosition MOVE ATTACK HEAL RANGED_ATTACK ATTACK_POWER
-RANGED_ATTACK_POWER HEAL_POWER */
+RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
-const stats = require('./stats');
 
 const RESPONSE_NONE = 0;
 const RESPONSE_MINI_BRAWLER = 1;
@@ -67,20 +66,24 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	getRemoteDefenseSpawnOptions(room, options) {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
-			const roomMemory = Memory.rooms[pos.roomName];
-			if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
+			const operation = Game.operations['mine:' + pos.roomName];
 
-			const storagePos = utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos);
-			const targetPos = utilities.encodePosition(new RoomPosition(25, 25, pos.roomName));
+			// @todo If the operation has multiple source rooms, use the one
+			// that has better spawn capacity or higher RCL.
+
+			// Only spawn if there are enemies.
+			if (!operation || !operation.isUnderAttack()) continue;
 
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
 			// in a different way.
+			const targetPos = utilities.encodePosition(new RoomPosition(25, 25, pos.roomName));
 			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -1000) < 1000) continue;
 
-			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.storage === storagePos && creep.memory.target === targetPos);
+			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.operation === 'mine:' + pos.roomName);
 			if (_.size(brawlers) > 0) continue;
 
+			const roomMemory = Memory.rooms[pos.roomName];
 			const responseType = this.getDefenseCreepSize(room, roomMemory.enemies);
 
 			if (responseType === RESPONSE_NONE) continue;
@@ -282,9 +285,9 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	 */
 	getCreepMemory(room, option) {
 		const memory = {
-			storage: utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos),
 			target: option.targetPos || utilities.encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
+			operation: option.targetPos && ('mine:' + utilities.decodePosition(option.targetPos).roomName),
 		};
 
 		switch (option.responseType) {
@@ -342,10 +345,15 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const position = option.targetPos;
 		if (!position) return;
 
+		const operation = Game.operations['mine:' + utilities.decodePosition(position).roomName];
+		if (operation) {
+			// @todo This will probably not record costs of later parts of a train.
+			operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
+		}
+
 		if (!room.memory.recentBrawler) room.memory.recentBrawler = {};
 		room.memory.recentBrawler[position] = Game.time;
 
 		hivemind.log('creeps', room.name).info('Spawning new brawler', name, 'to defend', position);
-		stats.addRemoteHarvestDefenseCost(room.name, position, this.calculateBodyCost(body));
 	}
 };

@@ -56,65 +56,6 @@ const utilities = {
 	},
 
 	/**
-	 * Calculates and stores paths for remote harvesting.
-	 *
-	 * @param {Room} room
-	 *   Source room for the harvestint operation
-	 * @param {RoomPosition} sourcePos
-	 *   Position of the source to harvest.
-	 */
-	precalculatePaths(room, sourcePos) {
-		if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.5) return;
-
-		const sourceLocation = utilities.encodePosition(sourcePos);
-
-		if (!room.memory.remoteHarvesting) {
-			room.memory.remoteHarvesting = {};
-		}
-
-		if (!room.memory.remoteHarvesting[sourceLocation]) {
-			room.memory.remoteHarvesting[sourceLocation] = {};
-		}
-
-		const harvestMemory = room.memory.remoteHarvesting[sourceLocation];
-
-		if (harvestMemory.cachedPath && !hivemind.hasIntervalPassed(500, harvestMemory.cachedPath.lastCalculated)) {
-			// No need to recalculate path.
-			return;
-		}
-
-		if (harvestMemory._noCachedPath && !hivemind.hasIntervalPassed(500, harvestMemory._noCachedPath)) {
-			// No need to recalculate path.
-			return;
-		}
-
-		delete harvestMemory.cachedPath;
-		delete harvestMemory._noCachedPath;
-		const startLocation = room.getStorageLocation();
-		let startPosition = new RoomPosition(startLocation.x, startLocation.y, room.name);
-		if (room.storage) {
-			startPosition = room.storage.pos;
-		}
-
-		const endPosition = sourcePos;
-
-		const result = utilities.getPath(startPosition, {pos: endPosition, range: 1});
-
-		if (result && !result.incomplete && result.path.length < 150) {
-			hivemind.log('pathfinder').debug('New path calculated from', startPosition, 'to', endPosition);
-
-			harvestMemory.cachedPath = {
-				lastCalculated: Game.time,
-				path: utilities.serializePositionPath(result.path),
-			};
-		}
-		else {
-			console.log('No path found!');
-			harvestMemory._noCachedPath = Game.time;
-		}
-	},
-
-	/**
 	 * Finds a path using PathFinder.search.
 	 *
 	 * @param {RoomPosition} startPosition

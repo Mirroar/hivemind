@@ -275,6 +275,7 @@ module.exports = {
 				delete roomMemory.sources;
 				delete roomMemory.minerals;
 				delete roomMemory.structureCache;
+				delete roomMemory.remoteHarvesting;
 			});
 		}
 	},

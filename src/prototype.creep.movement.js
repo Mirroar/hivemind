@@ -552,7 +552,7 @@ Creep.prototype.moveToRoom = function (roomName, allowDanger) {
  *   could be found.
  */
 Creep.prototype.calculateRoomPath = function (roomName, allowDanger) {
-	return this.room.calculateRoomPath(roomName, allowDanger);
+	return this.room.calculateRoomPath(roomName, {allowDanger});
 };
 
 Creep.prototype.isInRoom = function () {

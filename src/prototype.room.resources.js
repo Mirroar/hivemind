@@ -3,7 +3,7 @@
 /* global hivemind Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
-const cache = require('./cache');
+const utilities = require('./utilities');
 
 /**
  * Determines maximum storage capacity within a room.
@@ -189,23 +189,22 @@ Room.prototype.stopTradePreparation = function () {
 };
 
 /**
- * Gets a list of remote mining targets designated for this room.
- *
- * @return {string[]}
- *   A list of room names to harvest from.
- */
-Room.prototype.getRemoteHarvestTargets = function () {
-	return this.getRemoteHarvestInfo().rooms;
-};
-
-/**
  * Returns the position of all sources that should be remote harvested.
  *
  * @return {RoomPosition[]}
  *   An array of objects containing information about remote harvest targets.
  */
 Room.prototype.getRemoteHarvestSourcePositions = function () {
-	return this.getRemoteHarvestInfo().harvestPositions;
+	const harvestPositions = [];
+	_.each(Game.operationsByType.mining, operation => {
+		const locations = operation.getMiningLocationsByRoom();
+
+		_.each(locations[this.name], location => {
+			harvestPositions.push(utilities.decodePosition(location));
+		});
+	});
+
+	return harvestPositions;
 };
 
 /**
@@ -215,70 +214,27 @@ Room.prototype.getRemoteHarvestSourcePositions = function () {
  *   An array of objects containing information about controller targets.
  */
 Room.prototype.getRemoteReservePositions = function () {
-	return this.getRemoteHarvestInfo().reservePositions;
-};
+	const reservePositions = [];
+	_.each(Game.operationsByType.mining, operation => {
+		const roomName = operation.getClaimerSourceRoom();
+		if (this.name !== roomName) return;
 
-/**
- * Collects remote harves information for a room.
- *
- * @return {Object}
- *   Remote harvest info containing the following keys:
- *   - rooms
- *   - harvestPositions
- *   - reservePositions
- */
-Room.prototype.getRemoteHarvestInfo = function () {
-	return cache.inHeap(
-		'remoteHarvestSources_' + this.name,
-		100,
-		() => this.generateRemoteHarvestInfo()
-	);
-};
+		const position = hivemind.roomIntel(operation.getRoom()).getControllerPosition();
+		if (!position) return;
 
-/**
- * Generates cached data about remoute harvest targets for the current room.
- *
- * @return {Object}
- *   Information about the room's remote harvest activity. Contains the keys:
- *   - rooms: Rooms that are being remote harvested.
- *   - harvestPositions: Positions of sources that should be harvested.
- *   - reservePositions: Positions of controllers that need to be reserved.
- */
-Room.prototype.generateRemoteHarvestInfo = function () {
-	const cache = {};
-	cache.rooms = [];
-	cache.harvestPositions = [];
-	cache.reservePositions = [];
-
-	if (!Memory.strategy) return cache;
-
-	for (const roomName of Memory.strategy.remoteHarvesting.rooms || []) {
-		const info = Memory.strategy.roomList[roomName];
-		if (info.origin !== this.name) continue;
-
-		cache.rooms.push(info);
-		const roomIntel = hivemind.roomIntel(info.roomName);
-		const sources = roomIntel.getSourcePositions();
-		for (const pos of sources) {
-			cache.harvestPositions.push(new RoomPosition(pos.x, pos.y, info.roomName));
-		}
-
-		const position = roomIntel.getControllerPosition();
-		if (position) {
-			cache.reservePositions.push(position);
-		}
-	}
+		reservePositions.push(position);
+	});
 
 	// Add positions of nearby safe rooms.
 	const safeRooms = this.roomPlanner ? this.roomPlanner.getAdjacentSafeRooms() : [];
 	for (const roomName of safeRooms) {
 		const position = hivemind.roomIntel(roomName).getControllerPosition();
-		if (position) {
-			cache.reservePositions.push(position);
-		}
+		if (!position) continue;
+
+		reservePositions.push(position);
 	}
 
-	return cache;
+	return reservePositions;
 };
 
 /**

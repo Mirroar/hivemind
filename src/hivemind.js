@@ -9,6 +9,7 @@ const RoomIntel = require('./room-intel');
 const SegmentedMemory = require('./segmented-memory');
 const SettingsManager = require('./settings-manager');
 const stats = require('./stats');
+const utilities = require('./utilities');
 
 global.PROCESS_PRIORITY_LOW = 1;
 global.PROCESS_PRIORITY_DEFAULT = 2;
@@ -391,6 +392,18 @@ Hivemind.prototype.migrateData = function () {
 
 		this.segmentMemory.forceSave();
 		this.memory.roomPlannerMigrated = true;
+	}
+
+	if (!this.memory.remoteMinersMigrated) {
+		_.each(Memory.creeps, memory => {
+			if (['harvester.remote', 'hauler', 'claimer'].indexOf(memory.role) === -1) return;
+			if (!memory.source) return;
+
+			const pos = utilities.decodePosition(memory.source);
+			memory.operation = 'mine:' + pos.roomName;
+		});
+
+		this.memory.remoteMinersMigrated = true;
 	}
 
 	return false;

@@ -10,6 +10,7 @@ const Squad = require('./manager.squad');
 
 const operationClasses = {
 	default: require('./operation'),
+	mining: require('./operation.remote-mining'),
 	room: require('./operation.room'),
 };
 

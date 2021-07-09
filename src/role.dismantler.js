@@ -1,8 +1,10 @@
 'use strict';
 
-/* global RoomPosition FIND_FLAGS LOOK_STRUCTURES */
+/* global RoomPosition FIND_FLAGS LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
+STRUCTURE_RAMPART */
 
 const Role = require('./role');
+const utilities = require('./utilities');
 
 const DismantlerRole = function () {
 	Role.call(this);
@@ -33,6 +35,11 @@ DismantlerRole.prototype.run = function (creep) {
 	}
 
 	if (creep.memory.dismantling) {
+		if (creep.operation) {
+			this.performOperationDismantle(creep);
+			return;
+		}
+
 		this.performDismantle(creep);
 		return;
 	}
@@ -50,6 +57,58 @@ DismantlerRole.prototype.run = function (creep) {
  */
 DismantlerRole.prototype.setDismantlerState = function (creep, dismantling) {
 	creep.memory.dismantling = dismantling;
+};
+
+DismantlerRole.prototype.performOperationDismantle = function (creep) {
+	if (!creep.memory.finishedPositions) creep.memory.finishedPositions = [];
+	if (!creep.operation.needsDismantler(creep.memory.source)) {
+		// @todo Return home and suicide.
+		const targetPos = new RoomPosition(24, 24, creep.memory.sourceRoom);
+		if (targetPos.roomName === creep.pos.roomName && creep.pos.getRangeTo(targetPos) <= 20) return;
+
+		creep.moveToRange(targetPos, 20);
+		return;
+	}
+
+	const targetPositions = creep.operation.getDismantlePositions(creep.memory.source);
+	let target;
+	for (const pos of targetPositions) {
+		if (creep.memory.finishedPositions.indexOf(utilities.encodePosition(pos)) !== -1) continue;
+
+		if (pos.roomName === creep.pos.roomName) {
+			const structures = _.filter(
+				pos.lookFor(LOOK_STRUCTURES),
+				s => OBSTACLE_OBJECT_TYPES.indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
+			);
+
+			if (structures.length === 0) {
+				creep.memory.finishedPositions.push(utilities.encodePosition(pos));
+				continue;
+			}
+		}
+
+		target = pos;
+		break;
+	}
+
+	if (!target) {
+		// Just to be sure, start again from the top.
+		delete creep.memory.finishedPositions;
+		return;
+	}
+
+	if (creep.pos.roomName !== target.roomName || creep.pos.getRangeTo(target) > 1) {
+		// Get into range of target tile.
+		creep.moveToRange(target, 1);
+		return;
+	}
+
+	const structures = _.filter(
+		target.lookFor(LOOK_STRUCTURES),
+		s => OBSTACLE_OBJECT_TYPES.indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
+	);
+
+	creep.dismantle(structures[0]);
 };
 
 /**
@@ -127,6 +186,11 @@ DismantlerRole.prototype.performDismantlerDeliver = function (creep) {
 	}
 
 	const location = creep.room.getStorageLocation();
+	if (!location) {
+		creep.dropAny();
+		return;
+	}
+
 	const pos = new RoomPosition(location.x, location.y, creep.pos.roomName);
 	if (creep.pos.getRangeTo(pos) > 0) {
 		creep.moveTo(pos);

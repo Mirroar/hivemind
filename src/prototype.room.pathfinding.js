@@ -37,17 +37,22 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
  *
  * @param {string} targetRoom
  *   Name of the room to navigate to.
- * @param {boolean} allowDanger
- *   If true, creep may move through unsafe rooms.
+ * @param {object} options
+ *   - maxPathLength: Paths longer than this will be discarded.
+ *   - allowDanger: If true, creep may move through unsafe rooms.
  *
  * @return {string[]}
  *   An array of room names a creep needs to move throught to reach targetRoom.
  */
-Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
+Room.prototype.calculateRoomPath = function (targetRoom, options) {
 	const roomName = this.name;
+
+	if (!options) options = {};
 
 	const openList = {};
 	const closedList = {};
+	const allowDanger = options.allowDanger;
+	const maxPathLength = options.maxPathLength;
 
 	openList[roomName] = {
 		range: 0,
@@ -75,30 +80,47 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 		if (!nextRoom) break;
 
 		const info = openList[nextRoom];
+		delete openList[nextRoom];
+		closedList[nextRoom] = true;
 
 		// We're done if we reached targetRoom.
 		if (nextRoom === targetRoom) {
 			finalPath = info.path;
+			break;
+		}
+
+		if (maxPathLength && info.path.length >= maxPathLength) {
+			// Don't add more exits if max path length has been reached.
+			continue;
 		}
 
 		// Add unhandled adjacent rooms to open list.
-		const exits = hivemind.roomIntel(nextRoom).getExits();
-		for (const exit of _.values(exits)) {
+		let exits;
+		if (hivemind.segmentMemory.isReady()) {
+			exits = _.values(hivemind.roomIntel(nextRoom).getExits());
+		}
+		else {
+			exits = _.values(Game.map.describeExits(nextRoom));
+		}
+
+		for (const exit of exits) {
 			if (openList[exit] || closedList[exit]) continue;
 
-			const exitIntel = hivemind.roomIntel(exit);
-			if (exitIntel.isOwned()) {
-				if (!allowDanger) continue;
+			if (hivemind.segmentMemory.isReady()) {
+				const exitIntel = hivemind.roomIntel(exit);
+				if (exitIntel.isOwned()) {
+					if (!allowDanger) continue;
 
-				cost *= 5;
-			}
-			else if (exitIntel.isClaimed()) {
-				cost *= 1.5;
-			}
+					cost *= 5;
+				}
+				else if (exitIntel.isClaimed()) {
+					cost *= 1.5;
+				}
 
-			if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-				// Allow pathing through source keeper rooms since we can safely avoid them most of the time.
-				cost *= 2;
+				if (_.size(exitIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+					// Allow pathing through source keeper rooms since we can safely avoid them most of the time.
+					cost *= 2;
+				}
 			}
 
 			const distance = Game.map.getRoomLinearDistance(exit, targetRoom);
@@ -118,9 +140,6 @@ Room.prototype.calculateRoomPath = function (targetRoom, allowDanger) {
 				path,
 			};
 		}
-
-		delete openList[nextRoom];
-		closedList[nextRoom] = true;
 	}
 
 	return finalPath;

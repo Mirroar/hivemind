@@ -3,6 +3,7 @@
 /* global hivemind */
 
 const Process = require('./process');
+const RemoteMiningOperation = require('./operation.remote-mining');
 const stats = require('./stats');
 
 /**
@@ -104,6 +105,7 @@ RemoteMiningProcess.prototype.run = function () {
 	}
 
 	this.adjustRemoteMiningCount(availableHarvestRoomCount);
+	this.manageOperations();
 
 	// @todo Reduce remote harvesting if we want to expand.
 };
@@ -128,18 +130,43 @@ RemoteMiningProcess.prototype.adjustRemoteMiningCount = function (availableHarve
 	}
 
 	// Check past CPU and bucket usage.
-	if ((stats.getStat('bucket', 10000) || 10000) >= 9500 && (stats.getStat('bucket', 1000) || 10000) >= 9500 && (stats.getStat('cpu_total', 1000) || 0.5) <= 0.95 * Game.cpu.limit) {
+	const longTermBucket = stats.getStat('bucket', 10000) || 10000;
+	const shortTermBucket = stats.getStat('bucket', 1000) || 10000;
+	const cpuUsage = stats.getStat('cpu_total', 1000) || 0.5;
+	if (longTermBucket >= 9500 && shortTermBucket >= 9500 && cpuUsage <= 0.95 * Game.cpu.limit) {
 		// We've been having bucket reserves and CPU cycles to spare.
 		if (memory.remoteHarvesting.currentCount < availableHarvestRoomCount) {
 			memory.remoteHarvesting.currentCount++;
 		}
 	}
-	else if ((stats.getStat('bucket', 1000) || 10000) <= 8000) {
+	else if (shortTermBucket <= 8000) {
 		// Bucket has seen some usage recently.
 		if (memory.remoteHarvesting.currentCount > 0) {
 			memory.remoteHarvesting.currentCount--;
 		}
 	}
+};
+
+/**
+ * Creates or terminates remote mining operations based on selected rooms.
+ */
+RemoteMiningProcess.prototype.manageOperations = function () {
+	const memory = Memory.strategy;
+
+	// Create operations for selected rooms.
+	for (const roomName of memory.remoteHarvesting.rooms) {
+		if (!Game.operationsByType.mining['mine:' + roomName]) {
+			const operation = new RemoteMiningOperation('mine:' + roomName);
+			operation.setRoom(roomName);
+		}
+	}
+
+	// Stop operations for rooms that are no longer selected.
+	_.each(Game.operationsByType.mining, op => {
+		if (memory.remoteHarvesting.rooms.indexOf(op.roomName) === -1) {
+			op.terminate();
+		}
+	});
 };
 
 module.exports = RemoteMiningProcess;

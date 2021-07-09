@@ -6,6 +6,7 @@ LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK */
 
+const PathManager = require('./remote-path-manager');
 const Role = require('./role');
 const TransporterRole = require('./role.transporter');
 const utilities = require('./utilities');
@@ -58,10 +59,10 @@ BrawlerRole.prototype.initBrawlerState = function (creep) {
 
 	if (creep.memory.pathTarget) {
 		// Reuse remote harvesting path.
-		const harvestMemory = creep.room.memory.remoteHarvesting;
-		const pathTarget = creep.memory.pathTarget;
-		if (harvestMemory && harvestMemory[pathTarget] && harvestMemory[pathTarget].cachedPath) {
-			creep.setCachedPath(harvestMemory[pathTarget].cachedPath.path);
+		const pathManager = new PathManager();
+		const path = pathManager.getPathFor(utilities.decodePosition(creep.memory.pathTarget));
+		if (path) {
+			creep.setCachedPath(utilities.serializePositionPath(path), true);
 		}
 	}
 };

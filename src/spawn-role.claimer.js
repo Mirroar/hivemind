@@ -1,6 +1,6 @@
 'use strict';
 
-/* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX */
+/* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
@@ -20,8 +20,11 @@ module.exports = class ClaimerSpawnRole extends SpawnRole {
 
 		const reservePositions = room.getRemoteReservePositions();
 		for (const pos of reservePositions) {
-			// Cache path when possible.
-			utilities.precalculatePaths(room, pos);
+			const operation = Game.operations['mine:' + pos.roomName];
+
+			// Don't spawn if enemies are in the room.
+			// @todo Or in any room on the route, actually.
+			if (!operation || operation.isUnderAttack() || operation.needsDismantler()) continue;
 
 			const claimers = _.filter(Game.creepsByRole.claimer || {}, creep => creep.memory.mission === 'reserve' && creep.memory.target === utilities.encodePosition(pos));
 			if (_.size(claimers) > 0) continue;
@@ -79,6 +82,29 @@ module.exports = class ClaimerSpawnRole extends SpawnRole {
 		return {
 			target: utilities.encodePosition(option.targetPos),
 			mission: 'reserve',
+			// The creep might not belong to a mining operation, but there's no harm
+			// if the operation doesn't exist.
+			operation: 'mine:' + option.targetPos.roomName,
 		};
+	}
+
+	/**
+	 * Act when a creep belonging to this spawn role is successfully spawning.
+	 *
+	 * @param {Room} room
+	 *   The room the creep is spawned in.
+	 * @param {Object} option
+	 *   The spawn option which caused the spawning.
+	 * @param {string[]} body
+	 *   The body generated for this creep.
+	 * @param {string} name
+	 *   The name of the new creep.
+	 */
+	onSpawn(room, option, body) {
+		const operationName = 'mine:' + option.targetPos.roomName;
+		const operation = Game.operations[operationName];
+		if (!operation) return;
+
+		operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
 	}
 };

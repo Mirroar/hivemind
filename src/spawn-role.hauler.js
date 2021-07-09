@@ -1,11 +1,9 @@
 'use strict';
 
-/* global MOVE WORK CARRY SOURCE_ENERGY_CAPACITY ENERGY_REGEN_TIME
-CARRY_CAPACITY */
+/* global MOVE WORK CARRY RESOURCE_ENERGY */
 
 const utilities = require('./utilities');
 const SpawnRole = require('./spawn-role');
-const stats = require('./stats');
 
 module.exports = class HaulerSpawnRole extends SpawnRole {
 	/**
@@ -17,66 +15,49 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		if (!room.memory.remoteHarvesting) return;
-
-		const storagePos = utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos);
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
-			utilities.precalculatePaths(room, pos);
 			const targetPos = utilities.encodePosition(pos);
-			if (!room.memory.remoteHarvesting[targetPos]) continue;
+			const operation = Game.operations['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
 			// @todo Or in any room on the route, actually.
-			const roomMemory = Memory.rooms[pos.roomName];
-			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) continue;
+			if (!operation || operation.isUnderAttack() || !operation.shouldSpawnHaulers(targetPos)) continue;
 
-			const harvestMemory = room.memory.remoteHarvesting[targetPos];
-			const cachedPathLength = harvestMemory.cachedPath && harvestMemory.cachedPath.path && harvestMemory.cachedPath.path.length;
-			if (!cachedPathLength) continue;
+			// Don't spawn if there is no full path.
+			const paths = operation.getPaths();
+			const path = paths[targetPos];
+			const travelTime = path && path.travelTime;
+			if (!travelTime) continue;
 
-			const travelTime = cachedPathLength || harvestMemory.travelTime;
-			const travelTimeSpawn = harvestMemory.travelTime || cachedPathLength;
+			const requiredCarryParts = operation.getHaulerSize(targetPos);
+
+			// Determine how many haulers to spawn for this route.
+			// If we cannot create big enough haulers (yet), create more of them!
+			const maximumBody = this.generateCreepBodyFromWeights(
+				this.getBodyWeights(),
+				room.energyCapacityAvailable,
+				{[CARRY]: requiredCarryParts}
+			);
+			const carryPartsPerHauler = _.countBy(maximumBody)[CARRY];
+
+			const multiplier = Math.ceil(Math.min(requiredCarryParts / carryPartsPerHauler, 3));
+			const baseHaulers = operation.getHaulerCount();
+			const maxHaulers = baseHaulers * multiplier;
+			const adjustedCarryParts = Math.ceil(requiredCarryParts / multiplier);
 
 			const haulers = _.filter(
 				Game.creepsByRole.hauler || {},
 				creep => {
 					// @todo Instead of filtering for every room, this could be grouped once per tick.
-					if (creep.memory.storage !== storagePos || creep.memory.source !== targetPos) return false;
+					if (creep.memory.source !== targetPos) return false;
 
 					if (creep.spawning) return true;
-					if (!travelTimeSpawn) return true;
-					if (creep.ticksToLive > travelTimeSpawn || creep.ticksToLive > 500) return true;
+					if (creep.ticksToLive > travelTime || creep.ticksToLive > 500) return true;
 
 					return false;
 				}
 			);
-
-			// Determine how many haulers to spawn for this route.d
-			let maxHaulers = 0;
-			let requiredCarryParts;
-			if (harvestMemory.revenue > 0 || harvestMemory.hasContainer) {
-				maxHaulers = 1;
-
-				if (Game.rooms[pos.roomName] && Game.rooms[pos.roomName].isMine(true)) {
-					maxHaulers = 2;
-				}
-			}
-
-			if (travelTime) {
-				requiredCarryParts = Math.ceil(travelTime * SOURCE_ENERGY_CAPACITY / ENERGY_REGEN_TIME / CARRY_CAPACITY);
-
-				// If we cannot create big enough haulers (yet), create more of them!
-				const maximumBody = this.generateCreepBodyFromWeights(
-					this.getBodyWeights(),
-					room.energyCapacityAvailable,
-					{[CARRY]: requiredCarryParts}
-				);
-				const carryPartsPerHauler = _.countBy(maximumBody)[CARRY];
-
-				const multiplier = Math.min(requiredCarryParts / carryPartsPerHauler, 3);
-				maxHaulers *= multiplier;
-			}
 
 			if (_.size(haulers) >= maxHaulers) continue;
 
@@ -84,8 +65,7 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 				priority: 3,
 				weight: 0.8,
 				targetPos,
-				// Use less work parts if room is not reserved yet.
-				size: requiredCarryParts,
+				size: adjustedCarryParts,
 			});
 		}
 	}
@@ -116,7 +96,7 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 *   An object containing body part weights, keyed by type.
 	 */
 	getBodyWeights() {
-		// @todo Spawn without work parts most of the time. Only add work parts
+		// @todo Always spawn without work parts. Spawn a dedicated builder
 		// when roads need to be built, or at least one road is at < 25% hits.
 		return {[MOVE]: 0.35, [WORK]: 0.05, [CARRY]: 0.6};
 	}
@@ -144,8 +124,10 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 */
 	getCreepMemory(room, option) {
 		return {
+			// @todo Get rid of storage position
 			storage: utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos),
 			source: option.targetPos,
+			operation: 'mine:' + utilities.decodePosition(option.targetPos).roomName,
 		};
 	}
 
@@ -162,9 +144,10 @@ module.exports = class HaulerSpawnRole extends SpawnRole {
 	 *   The name of the new creep.
 	 */
 	onSpawn(room, option, body) {
-		const position = option.targetPos;
-		if (!position) return;
+		const operationName = 'mine:' + utilities.decodePosition(option.targetPos).roomName;
+		const operation = Game.operations[operationName];
+		if (!operation) return;
 
-		stats.addRemoteHarvestCost(room.name, position, this.calculateBodyCost(body));
+		operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
 	}
 };
