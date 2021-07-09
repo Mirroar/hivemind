@@ -6,6 +6,7 @@ PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 const Logger = require('./debug');
 const Relations = require('./relations');
 const RoomIntel = require('./room-intel');
+const SegmentedMemory = require('./segmented-memory');
 const SettingsManager = require('./settings-manager');
 const stats = require('./stats');
 
@@ -52,6 +53,7 @@ const Hivemind = function () {
 	this.memory = Memory.hivemind;
 	this.relations = new Relations();
 	this.settings = new SettingsManager();
+	this.segmentMemory = new SegmentedMemory();
 	this.loggers = {};
 	this.intel = {};
 
@@ -119,9 +121,12 @@ Hivemind.prototype.gatherCpuStats = function () {
  *     start to run less often.
  *   - stopAt: Override at what amount of free bucket this process should no
  *     no longer run.
+ *   - requireSegments: If true, the process may only run after segment memory
+ *     has been fully loaded.
  */
 Hivemind.prototype.runProcess = function (id, ProcessConstructor, options) {
 	if (this.pullEmergengyBrake(id)) return;
+	if (options && options.requireSegments && !this.segmentMemory.isReady()) return;
 
 	// @todo Add CPU usage histogram data for some processes.
 	const stats = this.initializeProcessStats(id);

@@ -69,6 +69,8 @@ module.exports = {
 	runTick() {
 		this.useMemoryFromHeap();
 
+		hivemind.segmentMemory.manage();
+
 		if (Memory.isAccountThrottled) {
 			Game.cpu.limit = 20;
 		}
