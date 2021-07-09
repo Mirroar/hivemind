@@ -39,6 +39,15 @@
 				"error",
 				"multi-line"
 			],
+			"import/no-unresolved": [
+				"error",
+				{
+					"ignore": [
+						"relations.local",
+						"settings.local"
+					]
+				}
+			],
 			"import/no-unassigned-import": [
 				"error",
 				{
