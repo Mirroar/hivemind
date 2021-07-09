@@ -7,6 +7,8 @@ STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
 
 const cache = require('./cache');
 
+let ownUserName;
+
 const utilities = {
 
 	/**
@@ -16,13 +18,17 @@ const utilities = {
 	 *   The determined user name.
 	 */
 	getUsername() {
+		if (ownUserName) return ownUserName;
+
 		if (_.size(Game.spawns) === 0) {
 			if (_.size(Game.creeps) === 0) return '@undefined';
 
-			return _.sample(Game.creeps).owner.username;
+			ownUserName = _.sample(Game.creeps).owner.username;
+			return ownUserName;
 		}
 
-		return _.sample(Game.spawns).owner.username;
+		ownUserName = _.sample(Game.spawns).owner.username;
+		return ownUserName;
 	},
 
 	/**
