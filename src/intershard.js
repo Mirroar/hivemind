@@ -13,7 +13,14 @@ const interShard = {
 	 *   This shard's inter-shard memory.
 	 */
 	getLocalMemory() {
-		if (typeof InterShardMemory === 'undefined') return {};
+		if (typeof InterShardMemory === 'undefined') {
+			// Create mock intershard memory object.
+			if (!Memory.interShardReplacement) Memory.interShardReplacement = {};
+
+			this._memory = Memory.interShardReplacement;
+			return this._memory;
+		}
+
 		if (!this._memory || Game.time !== this._memoryAge) {
 			this._memory = JSON.parse(InterShardMemory.getLocal()) || {};
 			this._memoryAge = Game.time;
