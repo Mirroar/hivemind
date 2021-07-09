@@ -38,6 +38,12 @@ module.exports = {
 	// Spawn healers to deal with reflected damage from power sources.
 	powerMineHealers: true,
 
+	// Scouting:
+	// Interval for running room prioritizing process.
+	scoutProcessInterval: 25,
+	// Maximum amount of CPU to spend on prioritizing rooms when the process runs.
+	maxRoomPrioritizationCpuPerTick: 50,
+
 	// Expansion:
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.

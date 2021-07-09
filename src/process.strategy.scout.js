@@ -29,14 +29,42 @@ ScoutProcess.prototype = Object.create(Process.prototype);
 
 /**
  * Calculates all rooms' priorities.
+ *
+ * This will happen in cycles to reduce cpu usage for a single tick.
  */
 ScoutProcess.prototype.run = function () {
+	// @todo Clean old entries from Memory.strategy._expansionScoreCache.
+
 	Memory.strategy.roomList = this.generateScoutTargets();
 	this.generateMineralStatus();
 
+	const maxCpuUsage = hivemind.settings.get('maxRoomPrioritizationCpuPerTick');
+	const startTime = Game.cpu.getUsed();
+
 	// Add data to scout list for creating priorities.
+	let allDone = true;
+	let checkedCount = 0;
+	if (!Memory.strategy.roomListProgress) Memory.strategy.roomListProgress = [];
 	for (const roomName of _.keys(Memory.strategy.roomList)) {
+		// Ignore rooms we already checked recently.
+		if (Memory.strategy.roomListProgress.indexOf(roomName) > -1) continue;
+
 		this.calculateRoomPriorities(roomName);
+		Memory.strategy.roomListProgress.push(roomName);
+		checkedCount++;
+
+		if (Game.cpu.getUsed() - startTime > maxCpuUsage) {
+			allDone = false;
+			const numRooms = _.size(Memory.strategy.roomList);
+			const progress = Memory.strategy.roomListProgress.length / numRooms;
+			hivemind.log('strategy').debug('Terminated room prioritization after checking', checkedCount, 'of', numRooms, 'rooms (', (progress * 100).toPrecision(3) + '%', 'done).');
+			break;
+		}
+	}
+
+	if (allDone) {
+		// Restart prioritizing rooms on the next run.
+		delete Memory.strategy.roomListProgress;
 	}
 };
 
@@ -47,10 +75,8 @@ ScoutProcess.prototype.run = function () {
  *   Name of the room for which to calculate priorities.
  */
 ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
-	const roomList = Memory.strategy.roomList;
 	const roomIntel = hivemind.roomIntel(roomName);
-
-	const info = roomList[roomName];
+	const info = Memory.strategy.roomList[roomName];
 
 	info.roomName = roomName;
 	info.scoutPriority = 0;

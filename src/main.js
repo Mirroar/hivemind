@@ -98,7 +98,7 @@ module.exports = {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 		hivemind.runProcess('strategy.scout', ScoutProcess, {
-			interval: 50,
+			interval: hivemind.settings.get('scoutProcessInterval'),
 			priority: PROCESS_PRIORITY_LOW,
 			requireSegments: true,
 		});
