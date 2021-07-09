@@ -312,10 +312,12 @@ HelperRole.prototype.performHelperLabGather = function (creep, orders) {
 				if (!target || !target.store[resourceType]) {
 					// Something went wrong, we don't actually have enough of this stuff.
 					// Delete any boost orders using this resource.
-					creep.room.boostManager.memory.creepsToBoost = _.filter(
-						creep.room.boostManager.memory.creepsToBoost,
-						resources => !_.contains(_.keys(resources), resourceType)
-					);
+					for (const creepName of _.keys(creep.room.boostManager.memory.creepsToBoost)) {
+						const resources = creep.room.boostManager.memory.creepsToBoost[creepName];
+						if (_.contains(_.keys(resources), resourceType)) {
+							delete creep.room.boostManager.memory.creepsToBoost[creepName];
+						}
+					}
 
 					return true;
 				}

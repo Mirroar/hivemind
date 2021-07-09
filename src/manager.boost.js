@@ -154,7 +154,7 @@ const BoostManager = function (roomName) {
 
 	this.memory = Memory.rooms[roomName].boostManager;
 
-	if (!this.memory.creepsToBoost) {
+	if (!this.memory.creepsToBoost || (typeof this.memory.creepsToBoost.length !== 'undefined')) {
 		this.memory.creepsToBoost = {};
 	}
 
