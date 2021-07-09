@@ -52,6 +52,9 @@ module.exports = class HelperSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room) {
-		return {singleRoom: room.name};
+		return {
+			singleRoom: room.name,
+			operation: 'room:' + room.name,
+		};
 	}
 };

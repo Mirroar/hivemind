@@ -100,6 +100,7 @@ module.exports = class DismantlerSpawnRole extends SpawnRole {
 		return {
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,
+			operation: 'room:' + room.name,
 		};
 	}
 

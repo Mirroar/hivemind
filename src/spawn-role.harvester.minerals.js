@@ -73,6 +73,7 @@ module.exports = class MineralHarvesterSpawnRole extends SpawnRole {
 		return {
 			singleRoom: room.name,
 			fixedMineralSource: option.source,
+			operation: 'room:' + room.name,
 		};
 	}
 

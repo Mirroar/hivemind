@@ -103,7 +103,11 @@ CreepManager.prototype.runCreepLogic = function (creep) {
 		this.roles[roleId].run(creep);
 	}
 
-	this.recordCreepCpuStats(roleId, Game.cpu.getUsed() - startTime);
+	const totalTime = Game.cpu.getUsed() - startTime;
+	this.recordCreepCpuStats(roleId, totalTime);
+	if (creep.memory.operation && Game.operations[creep.memory.operation]) {
+		Game.operations[creep.memory.operation].addCpuCost(totalTime);
+	}
 };
 
 /**

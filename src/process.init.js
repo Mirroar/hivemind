@@ -8,6 +8,11 @@ const RoomPlanner = require('./room-planner');
 const RoomManager = require('./room-manager');
 const Squad = require('./manager.squad');
 
+const operationClasses = {
+	default: require('./operation'),
+	room: require('./operation.room'),
+};
+
 /**
  * Initializes member variables that should be available to all processes.
  * @constructor
@@ -31,10 +36,25 @@ InitProcess.prototype.run = function () {
 	Game.exploits = {};
 	Game.creepsByRole = {};
 	Game.exploitTemp = {};
+	Game.operations = {};
+	Game.operationsByType = {};
 
 	// Add data to global Game object.
 	_.each(Memory.squads, (data, squadName) => {
 		Game.squads[squadName] = new Squad(squadName);
+	});
+	_.each(operationClasses, (opClass, opType) => {
+		Game.operationsByType[opType] = {};
+	});
+	_.each(Memory.operations, (data, opName) => {
+		if (data.shouldTerminate) {
+			delete Memory.operations[opName];
+			return;
+		}
+
+		const operation = new operationClasses[data.type](opName);
+		Game.operations[opName] = operation;
+		Game.operationsByType[data.type][opName] = operation;
 	});
 
 	// Cache creeps per room and role.

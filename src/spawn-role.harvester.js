@@ -167,6 +167,7 @@ module.exports = class HarvesterSpawnRole extends SpawnRole {
 		return {
 			singleRoom: room.name,
 			fixedSource: option.source,
+			operation: 'room:' + room.name,
 		};
 	}
 };

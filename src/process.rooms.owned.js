@@ -11,6 +11,7 @@ const ManageLinksProcess = require('./process.rooms.owned.links');
 const ManageSpawnsProcess = require('./process.rooms.owned.spawns');
 const RoomDefenseProcess = require('./process.rooms.owned.defense');
 const RoomManagerProcess = require('./process.rooms.owned.manager');
+const RoomOperation = require('./operation.room');
 const RoomSongsProcess = require('./process.rooms.owned.songs');
 
 const gatherStats = true;
@@ -35,6 +36,15 @@ OwnedRoomProcess.prototype = Object.create(Process.prototype);
  * Manages one of our rooms.
  */
 OwnedRoomProcess.prototype.run = function () {
+	const startTime = Game.cpu.getUsed();
+
+	const operationName = 'room:' + this.room.name;
+	let operation = Game.operationsByType.room[operationName];
+	if (!operation) {
+		operation = new RoomOperation(operationName);
+		operation.setRoom(this.room.name);
+	}
+
 	hivemind.runSubProcess('rooms_roomplanner', () => {
 		// RoomPlanner has its own 100 tick throttling, so we runLogic every tick.
 		if (this.room.roomPlanner) this.room.roomPlanner.runLogic();
@@ -115,6 +125,9 @@ OwnedRoomProcess.prototype.run = function () {
 			this.gatherStats();
 		});
 	}
+
+	const totalTime = Game.cpu.getUsed() - startTime;
+	operation.addCpuCost(totalTime);
 };
 
 OwnedRoomProcess.prototype.gatherStats = function () {

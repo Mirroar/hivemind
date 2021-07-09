@@ -7,6 +7,22 @@ if (!Creep.prototype.__enhancementsLoaded) {
 	require('./prototype.creep.movement');
 	require('./prototype.creep.train');
 
+	// Define quick access property creep.operation.
+	Object.defineProperty(Creep.prototype, 'operation', {
+
+		/**
+		 * Gets the operation this creep belongs to, if any.
+		 *
+		 * @return {Operation}
+		 *   The operation this creep belongs to.
+		 */
+		get() {
+			return Game.operations[this.memory.operation || ''];
+		},
+		enumerable: false,
+		configurable: true,
+	});
+
 	/**
 	 * Transfer resources to a target, if the creep carries any.
 	 *
