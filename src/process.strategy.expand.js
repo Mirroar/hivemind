@@ -1,10 +1,11 @@
 'use strict';
 
-/* global PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
+/* global hivemind PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
 const interShard = require('./intershard');
+const NavMesh = require('./nav-mesh');
 const Process = require('./process');
 const Squad = require('./manager.squad');
 const stats = require('./stats');
@@ -30,6 +31,7 @@ const ExpandProcess = function (params, data) {
 	}
 
 	this.memory = Memory.strategy.expand;
+	this.navMesh = new NavMesh();
 };
 
 ExpandProcess.prototype = Object.create(Process.prototype);
@@ -47,7 +49,7 @@ ExpandProcess.prototype.run = function () {
 	// If we have many rooms with remote harvesting, be a bit more lenient
 	// on CPU cap for claiming a new room. Remote harvesting can always be
 	// dialed back to the most efficient rooms to save CPU.
-	const cpuLimit = harvestRooms / (ownedRooms + 1) < 2 ? 0.8 : 1;
+	const cpuLimit = harvestRooms < 5 ? 0.8 : 1;
 
 	const hasFreeControlLevels = ownedRooms < Game.gcl.level;
 	const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
@@ -80,7 +82,27 @@ ExpandProcess.prototype.chooseNewExpansionTarget = function () {
 	// Choose a room to expand to.
 	// @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
 	let bestTarget = null;
+	const startTime = Game.cpu.getUsed();
+	if (this.memory.inProgress) {
+		bestTarget = this.memory.inProgress.bestTarget;
+	}
+	else {
+		this.memory.inProgress = {
+			rooms: {},
+			bestTarget: null,
+		};
+	}
+
 	for (const info of _.values(Memory.strategy.roomList)) {
+		if (Game.cpu.getUsed() - startTime >= hivemind.settings.get('maxExpansionCpuPerTick')) {
+			// Don't spend more than 30 cpu trying to find a target each tick.
+			hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
+			return;
+		}
+
+		if (this.memory.inProgress.rooms[info.roomName]) continue;
+
+		this.memory.inProgress.rooms[info.roomName] = true;
 		if (!info.expansionScore || info.expansionScore <= 0) continue;
 		if (bestTarget && bestTarget.expansionScore >= info.expansionScore) continue;
 		if (Game.rooms[info.roomName] && Game.rooms[info.roomName].isMine()) continue;
@@ -92,9 +114,11 @@ ExpandProcess.prototype.chooseNewExpansionTarget = function () {
 		info.spawnRoom = bestSpawn;
 
 		bestTarget = info;
+		this.memory.inProgress.bestTarget = bestTarget;
 	}
 
 	if (bestTarget) {
+		delete this.memory.inProgress;
 		this.startExpansion(bestTarget);
 	}
 };
@@ -121,6 +145,7 @@ ExpandProcess.prototype.startExpansion = function (roomInfo) {
 	squad.setPath(null);
 	this.memory.started = Game.time;
 
+	hivemind.log('strategy').info('🏴 Started expanding to ' + roomInfo.roomName);
 	Game.notify('🏴 Started expanding to ' + roomInfo.roomName);
 };
 
@@ -208,8 +233,8 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return;
 		if (room.getStoredEnergy() < 50000) return;
 
-		const path = room.calculateRoomPath(info.roomName);
-		if (!path || path.length > 15) return;
+		const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
+		if (!path || path.incomplete) return;
 
 		const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
 		const supportSquad = new Squad(squadName);
@@ -343,8 +368,8 @@ ExpandProcess.prototype.checkAccessPath = function () {
 
 	const originRoom = Game.rooms[info.spawnRoom];
 	if (originRoom) {
-		const path = originRoom.calculateRoomPath(info.roomName);
-		if (!path || path.length > 10) {
+		const path = this.navMesh.findPath(new RoomPosition(25, 25, originRoom.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 500});
+		if (!path || path.incomplete) {
 			// Path is too long, claimers might not even reach.
 			if (!this.memory.pathBlocked) {
 				this.memory.pathBlocked = Game.time;
@@ -387,8 +412,8 @@ ExpandProcess.prototype.findClosestSpawn = function (targetRoom) {
 		if (room.name === targetRoom) return;
 		if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 10) return;
 
-		const path = room.calculateRoomPath(targetRoom);
-		if (!path || path.length > 10) return;
+		const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500});
+		if (!path || path.incomplete) return;
 
 		if (!bestRoom || bestLength > path.length) {
 			bestRoom = room;

@@ -347,6 +347,10 @@ module.exports = class NavMesh {
 				};
 			}
 
+			if (options.maxPathLength && current.pathLength >= options.maxPathLength) {
+				continue;
+			}
+
 			const roomMemory = this.memory.rooms[nextRoom];
 			if (!roomMemory) {
 				// @todo Fallback to basic exit info? Or generate nav mesh on the fly

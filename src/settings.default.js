@@ -5,10 +5,10 @@
  *
  * Please do not edit these settings directly, as they might be overwritten
  * should you update to a newer release of the bot.
- * Instead, you may create a file named `settings.js` where you may override
- * any setting from this file.
+ * Instead, you may create a file named `settings.local.js` where you may
+ * override any setting from this file.
  *
- * Example `settings.js`:
+ * Example `settings.local.js`:
  * @code
  * module.exports = {
  *   visualizeNavMesh: true,
@@ -22,7 +22,14 @@
  * @endcode
  */
 module.exports = {
-  // If true, lines representing connections in the bot's nav mesh will be drawn
-  // on the world map.
-  visualizeNavMesh: false,
+	// Visualization:
+	// If true, lines representing connections in the bot's nav mesh will be drawn
+	// on the world map.
+	visualizeNavMesh: false,
+
+
+	// Expansion:
+	// Maximum amount of CPU that may be spent each tick on finding a suitable
+	// expansion target.
+	maxExpansionCpuPerTick: 30,
 };
