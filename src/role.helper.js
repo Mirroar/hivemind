@@ -50,6 +50,8 @@ HelperRole.prototype.run = function (creep) {
  *   The creep to run logic for.
  */
 HelperRole.prototype.parkHelper = function (creep) {
+	if (!creep.room.roomPlanner) return;
+
 	const targetPos = _.sample(creep.room.roomPlanner.getLocations('helper_parking'));
 	if (!targetPos) return;
 

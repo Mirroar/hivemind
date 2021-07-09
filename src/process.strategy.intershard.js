@@ -172,6 +172,8 @@ InterShardProcess.prototype.manageScouting = function () {
  * Manages requesting an expansion squad from a nearby shard.
  */
 InterShardProcess.prototype.manageExpanding = function () {
+	if (!hivemind.segmentMemory.isReady()) return;
+
 	if (this.memory.info.ownedRooms > 0) {
 		// Remove expansion request when our room has hopefully stabilized.
 		if (this.memory.info.maxRoomLevel >= 4) {
@@ -194,7 +196,6 @@ InterShardProcess.prototype.manageExpanding = function () {
 
 	const targetRoom = this.memory.info.rooms.bestExpansion.name;
 	const roomIntel = hivemind.roomIntel(targetRoom);
-	if (!roomIntel) return;
 
 	const expansionInfo = {
 		room: targetRoom,

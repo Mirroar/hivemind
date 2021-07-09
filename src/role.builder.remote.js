@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind ERR_NO_PATH FIND_SOURCES FIND_STRUCTURES STRUCTURE_SPAWN
+/* global hivemind RoomPosition FIND_SOURCES FIND_STRUCTURES STRUCTURE_SPAWN
 FIND_MY_STRUCTURES RESOURCE_ENERGY ERR_NOT_IN_RANGE STRUCTURE_RAMPART
 FIND_MY_CONSTRUCTION_SITES STRUCTURE_TOWER FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
@@ -287,17 +287,20 @@ RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
  * Automatically assigns sources of adjacent safe rooms as extra energy targets.
  */
 RemoteBuilderRole.prototype.setExtraEnergyTarget = function (creep) {
+	if (!hivemind.segmentMemory.isReady()) return;
+
 	const mainIntel = hivemind.roomIntel(creep.pos.roomName);
 	const possibleSources = [];
 	for (const roomName of _.values(mainIntel.getExits())) {
 		const roomIntel = hivemind.roomIntel(roomName);
 		if (roomIntel.isClaimed()) continue;
+		// @todo Also don't allow source keeper rooms.
 
 		for (const source of roomIntel.getSourcePositions()) {
 			const sourcePos = new RoomPosition(source.x, source.y, roomName);
 			// @todo limit search to distance 1.
 			const path = this.navMesh.findPath(creep.pos, sourcePos);
-			if (!path || path.incomplete) return;
+			if (!path || path.incomplete) continue;
 
 			possibleSources.push(sourcePos);
 		}
@@ -325,6 +328,7 @@ RemoteBuilderRole.prototype.collectExtraEnergy = function () {
 		if (!this.creep.moveToRange(pos, 1)) {
 			delete this.creep.memory.extraEnergyTarget;
 		}
+
 		return;
 	}
 

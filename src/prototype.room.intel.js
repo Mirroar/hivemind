@@ -118,7 +118,7 @@ Room.prototype.enhanceData = function () {
 
 	// Register bays.
 	this.bays = [];
-	if (this.isMine()) {
+	if (this.isMine() && this.roomPlanner) {
 		for (const pos of this.roomPlanner.getLocations('bay_center')) {
 			let hasHarvester = false;
 			if (this.roomPlanner.isPlannedLocation(pos, 'harvester')) {

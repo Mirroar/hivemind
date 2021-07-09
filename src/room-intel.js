@@ -14,15 +14,12 @@ const utilities = require('./utilities');
 const RoomIntel = function (roomName) {
 	this.roomName = roomName;
 
-	if (!Memory.rooms[roomName]) {
-		Memory.rooms[roomName] = {};
+	const key = 'intel:' + roomName;
+	if (!hivemind.segmentMemory.has(key)) {
+		hivemind.segmentMemory.set(key, {});
 	}
 
-	if (!Memory.rooms[roomName].intel) {
-		Memory.rooms[roomName].intel = {};
-	}
-
-	this.memory = Memory.rooms[roomName].intel;
+	this.memory = hivemind.segmentMemory.get(key);
 };
 
 /**
@@ -340,22 +337,23 @@ RoomIntel.prototype.gatherInvaderIntel = function (structures) {
  *   An object containing Arrays of construction sites, keyed by structure type.
  */
 RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
-	this.memory.costMatrix = utilities.generateCostMatrix(this.roomName, structures, constructionSites).serialize();
 	const obstaclePositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
-	this.memory.costPositions = [packrat.packCoordList(_.map(obstaclePositions.obstacles, utilities.deserializeCoords)), packrat.packCoordList(_.map(obstaclePositions.roads, utilities.deserializeCoords))];
-
-	const matrixSize = JSON.stringify(this.memory.costMatrix).length;
-	const listSize = JSON.stringify(this.memory.costPositions).length;
-
-	hivemind.log('intel', this.roomName).debug('Obstacle list takes', Math.ceil(10000 * listSize / matrixSize) / 100, '% of matrix storage size -', listSize, '/', matrixSize);
+	this.memory.costPositions = [
+		packrat.packCoordList(_.map(obstaclePositions.obstacles, utilities.deserializeCoords)),
+		packrat.packCoordList(_.map(obstaclePositions.roads, utilities.deserializeCoords)),
+	];
 
 	delete this.memory.pathfinderPositions;
-	if (matrixSize < listSize) {
-		delete this.memory.costPositions;
-	}
-	else {
-		delete this.memory.costMatrix;
-	}
+	delete this.memory.costMatrix;
+};
+
+/**
+ * Gets coordinates of all known roads in the room.
+ */
+RoomIntel.prototype.getRoadCoords = function () {
+	if (!this.memory.costPositions) return [];
+
+	return packrat.unpackCoordList(this.memory.costPositions[1]);
 };
 
 /**
@@ -391,6 +389,13 @@ RoomIntel.prototype.isClaimed = function () {
 	if (this.memory.reservation && this.memory.reservation.username && this.memory.reservation.username !== utilities.getUsername()) return true;
 
 	return false;
+};
+
+/**
+ * Gets info about a room's reservation status.
+ */
+RoomIntel.prototype.getReservationStatus = function () {
+	return this.memory.reservation;
 };
 
 /**

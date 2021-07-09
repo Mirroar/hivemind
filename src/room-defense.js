@@ -17,6 +17,8 @@ const RoomDefense = function (roomName) {
  *   True if all planned ramparts are built and strong enough.
  */
 RoomDefense.prototype.isWallIntact = function () {
+	if (!this.room.roomPlanner) return true;
+
 	const rampartPositions = this.room.roomPlanner.getLocations('rampart');
 	const requiredHits = 25000 * this.room.controller.level * this.room.controller.level;
 

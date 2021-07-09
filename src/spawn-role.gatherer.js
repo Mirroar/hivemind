@@ -26,7 +26,7 @@ module.exports = class GathererSpawnRole extends SpawnRole {
 			// pesky walls / ramparts.
 			if (Game.shard.name === 'shard0' || Game.shard.name === 'shard1') return;
 			if (numGatherers > 0) return;
-			if (hivemind.roomIntel(roomName).isOwned()) return;
+			if (!hivemind.segmentMemory.isReady() || hivemind.roomIntel(roomName).isOwned()) return;
 
 			options.push({
 				priority: 2,

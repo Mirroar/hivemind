@@ -261,6 +261,8 @@ OperatorRole.prototype.performWait = function () {
 		this.orderFinished();
 	}
 
+	if (!this.creep.room.roomPlanner) return;
+
 	const targetPos = _.sample(this.creep.room.roomPlanner.getLocations('helper_parking'));
 	if (!targetPos) return;
 

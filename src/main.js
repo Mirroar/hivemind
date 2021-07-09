@@ -72,6 +72,8 @@ module.exports = {
 
 		hivemind.segmentMemory.manage();
 
+		if (hivemind.migrateData()) return;
+
 		if (Memory.isAccountThrottled) {
 			Game.cpu.limit = 20;
 		}
@@ -98,6 +100,7 @@ module.exports = {
 		hivemind.runProcess('strategy.scout', ScoutProcess, {
 			interval: 50,
 			priority: PROCESS_PRIORITY_LOW,
+			requireSegments: true,
 		});
 
 		if (shardHasEstablishedRooms) {
@@ -226,17 +229,11 @@ module.exports = {
 		}
 
 		// Periodically clean old room memory.
-		if (Game.time % 3738 === 2100) {
+		if (Game.time % 3738 === 2100 && hivemind.segmentMemory.isReady()) {
 			let count = 0;
 			_.each(Memory.rooms, (memory, roomName) => {
 				if (hivemind.roomIntel(roomName).getAge() > 100000) {
 					delete Memory.rooms[roomName];
-					count++;
-					return;
-				}
-
-				if (memory.roomPlanner && (!Game.rooms[roomName] || !Game.rooms[roomName].isMine())) {
-					delete memory.roomPlanner;
 					count++;
 				}
 			});
@@ -245,6 +242,9 @@ module.exports = {
 				hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
 			}
 		}
+
+		// @todo Periodically clean old room intel from segment memory.
+		// @todo Periodically clean old room planner from segment memory.
 
 		// Periodically clean old squad memory.
 		if (Game.time % 548 === 3) {

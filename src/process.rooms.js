@@ -32,6 +32,7 @@ RoomsProcess.prototype.run = function () {
 		hivemind.runProcess('rooms_intel', RoomIntelProcess, {
 			room,
 			priority: PROCESS_PRIORITY_ALWAYS,
+			requireSegments: true,
 		});
 
 		// Manage owned rooms.
@@ -46,7 +47,7 @@ RoomsProcess.prototype.run = function () {
 
 		// Add roomPlanner to expansion target room.
 		// @todo Maybe move to extra process, this is misplaced in this loop.
-		if (Memory.strategy && Memory.strategy.expand && Memory.strategy.expand.currentTarget && Memory.strategy.expand.currentTarget.roomName === roomName) {
+		if (Memory.strategy && Memory.strategy.expand && Memory.strategy.expand.currentTarget && Memory.strategy.expand.currentTarget.roomName === roomName && hivemind.segmentMemory.isReady()) {
 			room.roomPlanner = new RoomPlanner(roomName);
 			room.roomManager = new RoomManager(room);
 

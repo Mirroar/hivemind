@@ -44,6 +44,7 @@ module.exports = class MapVisualsProcess extends Process {
 	 */
 	drawIntelStatus(roomName) {
 		if (!drawIntelStatus) return;
+		if (!hivemind.segmentMemory.isReady()) return;
 
 		const intel = hivemind.roomIntel(roomName);
 		const age = intel.getAge();

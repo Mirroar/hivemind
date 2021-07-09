@@ -361,21 +361,21 @@ module.exports = class NavMesh {
 				closedList[nextRoom + '/' + exitPos] = true;
 			}
 
-			const roomIntel = hivemind.roomIntel(nextRoom);
-			if (roomIntel.isOwned()) {
-				if (!options.allowDanger) continue;
+			if (hivemind.segmentMemory.isReady()) {
+				const roomIntel = hivemind.roomIntel(nextRoom);
+				if (roomIntel.isOwned()) {
+					if (!options.allowDanger) continue;
 
-				costMultiplier *= 5;
-			}
-			else if (roomIntel.isClaimed()) {
-				costMultiplier *= 1.5;
-			}
+					costMultiplier *= 5;
+				}
+				else if (roomIntel.isClaimed()) {
+					costMultiplier *= 1.5;
+				}
 
-			if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-				// @todo Allow pathing through source keeper rooms if we can safely avoid them.
-				if (!options.allowDanger) continue;
-
-				costMultiplier *= 2;
+				if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+					// Allow pathing through source keeper rooms since we can safely avoid them.
+					costMultiplier *= 2;
+				}
 			}
 
 			availableExits = [];

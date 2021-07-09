@@ -63,6 +63,7 @@ HarvesterRole.prototype.run = function (creep) {
  */
 HarvesterRole.prototype.determineHarvestPosition = function (creep, source) {
 	if (creep.memory.harvestPos || creep.memory.noHarvestPos) return;
+	if (!creep.room.roomPlanner) return;
 
 	const sourceMemory = creep.room.roomPlanner.memory.sources;
 	if (sourceMemory && sourceMemory[source.id]) {

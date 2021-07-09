@@ -65,6 +65,16 @@ ScoutRole.prototype.performScout = function (creep) {
 
 	if (this.isOscillating(creep) || this.isStuck(creep)) this.chooseScoutTarget(creep, true);
 
+	if (!creep.memory.scoutTarget) {
+		// Just stand around somewhere.
+		const target = new RoomPosition(25, 25, creep.pos.roomName);
+		if (creep.pos.getRangeTo(target) > 3) {
+			creep.moveToRange(target, 3);
+		}
+
+		return;
+	}
+
 	const targetPosition = new RoomPosition(25, 25, creep.memory.scoutTarget);
 	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 	if (creep.memory.moveWithoutNavMesh) {
@@ -117,6 +127,7 @@ ScoutRole.prototype.chooseScoutTarget = function (creep, invalidateOldTarget) {
 	delete creep.memory.moveWithoutNavMesh;
 	if (!creep.memory.origin) creep.memory.origin = creep.room.name;
 	if (!Memory.strategy) return;
+	if (!hivemind.segmentMemory.isReady()) return;
 
 	const memory = Memory.strategy;
 

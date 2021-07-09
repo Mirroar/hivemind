@@ -58,8 +58,8 @@ module.exports = class BuilderSpawnRole extends SpawnRole {
 
 		// There are a lot of ramparts in planned rooms, spawn builders appropriately.
 		// @todo Only if they are not fully built, of course.
-		if (room.roomPlanner && room.roomPlanner.memory.locations && room.controller.level >= 4) {
-			maxWorkParts += _.size(room.roomPlanner.memory.locations.rampart) / 10;
+		if (room.roomPlanner && room.controller.level >= 4) {
+			maxWorkParts += _.size(room.roomPlanner.getLocations('rampart')) / 10;
 		}
 
 		// Add more builders if we have a lot of energy to spare.

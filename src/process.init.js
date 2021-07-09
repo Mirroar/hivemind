@@ -1,5 +1,7 @@
 'use strict';
 
+/* global hivemind */
+
 const BoostManager = require('./manager.boost');
 const Process = require('./process');
 const RoomPlanner = require('./room-planner');
@@ -42,7 +44,7 @@ InitProcess.prototype.run = function () {
 
 	_.each(Game.rooms, room => {
 		if (room.isMine()) {
-			room.roomPlanner = new RoomPlanner(room.name);
+			if (hivemind.segmentMemory.isReady()) room.roomPlanner = new RoomPlanner(room.name);
 			room.roomManager = new RoomManager(room);
 			room.boostManager = new BoostManager(room.name);
 			room.generateLinkNetwork();

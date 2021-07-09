@@ -37,7 +37,7 @@ OwnedRoomProcess.prototype = Object.create(Process.prototype);
 OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_roomplanner', () => {
 		// RoomPlanner has its own 100 tick throttling, so we runLogic every tick.
-		this.room.roomPlanner.runLogic();
+		if (this.room.roomPlanner) this.room.roomPlanner.runLogic();
 	});
 
 	const prioritizeRoomManager = this.room.roomManager.shouldRunImmediately();

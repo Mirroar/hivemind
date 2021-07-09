@@ -10,10 +10,10 @@ _.forEach(Game.rooms.E49S48.find(FIND_CONSTRUCTION_SITES), s => s.remove());
 Memory.hivemind.showProcessDebug = 100;
 
 // Draw room planner debug visuals for 100 ticks.
-Memory.rooms.E49S51.roomPlanner.drawDebug = 100;
+Game.rooms.E49S51.roomPlanner.memory.drawDebug = 100;
 
 // Re-run room planner for a room.
-Memory.rooms.E49S51.roomPlanner.plannerVersion = 0;
+Game.rooms.E49S51.roomPlanner.memory.plannerVersion = 0;
 
 // Find out which processes use a lot of CPU
 JSON.stringify(_.sortBy(_.map(Memory.hivemind.process, (a, b) => {a.name = b; return a}), a => -a.cpu));

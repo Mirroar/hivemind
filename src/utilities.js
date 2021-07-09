@@ -137,7 +137,7 @@ const utilities = {
 
 			roomCallback: roomName => {
 				// If a room is considered inaccessible, don't look for paths through it.
-				if (!allowDanger && hivemind.roomIntel(roomName).isOwned()) {
+				if (!allowDanger && hivemind.segmentMemory.isReady() && hivemind.roomIntel(roomName).isOwned()) {
 					if (!addOptions || !addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
 						return false;
 					}
@@ -292,57 +292,59 @@ const utilities = {
 			}
 		});
 
-		const roomIntel = hivemind.roomIntel(roomName);
-		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
-			// @todo If we're running a (successful) exploit in this room, tiles
-			// should not be marked inaccessible.
-			// Add area around keeper lairs as obstacles.
-			_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
-				utilities.handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
-					sourceKeeperCallback(x, y);
-				}, 3);
-			});
+		if (hivemind.segmentMemory.isReady()) {
+			const roomIntel = hivemind.roomIntel(roomName);
+			if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
+				// @todo If we're running a (successful) exploit in this room, tiles
+				// should not be marked inaccessible.
+				// Add area around keeper lairs as obstacles.
+				_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
+					utilities.handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
+						sourceKeeperCallback(x, y);
+					}, 3);
+				});
 
-			// Add area around sources as obstacles.
-			_.each(roomIntel.getSourcePositions(), sourceInfo => {
-				utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
-					sourceKeeperCallback(x, y);
-				}, 4);
-			});
+				// Add area around sources as obstacles.
+				_.each(roomIntel.getSourcePositions(), sourceInfo => {
+					utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+						sourceKeeperCallback(x, y);
+					}, 4);
+				});
 
-			// Add area around mineral as obstacles.
-			const mineralInfo = roomIntel.getMineralPosition();
-			if (mineralInfo) {
-				utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
-					sourceKeeperCallback(x, y);
-				}, 4);
+				// Add area around mineral as obstacles.
+				const mineralInfo = roomIntel.getMineralPosition();
+				if (mineralInfo) {
+					utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+						sourceKeeperCallback(x, y);
+					}, 4);
+				}
 			}
-		}
 
-		// For exit consistency, we need to check corresponding exit
-		// tiles of adjacend rooms, and if blocked by source keepers, block tiles
-		// in our own room as well.
-		const exits = roomIntel.getExits();
-		for (const dir of [TOP, BOTTOM, LEFT, RIGHT]) {
-			if (!exits[dir]) continue;
+			// For exit consistency, we need to check corresponding exit
+			// tiles of adjacend rooms, and if blocked by source keepers, block tiles
+			// in our own room as well.
+			const exits = roomIntel.getExits();
+			for (const dir of [TOP, BOTTOM, LEFT, RIGHT]) {
+				if (!exits[dir]) continue;
 
-			const otherRoomName = exits[dir];
-			const otherRoomIntel = hivemind.roomIntel(otherRoomName);
-			if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
+				const otherRoomName = exits[dir];
+				const otherRoomIntel = hivemind.roomIntel(otherRoomName);
+				if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
 
-			const matrix = utilities.getCostMatrix(otherRoomName);
-			if (dir === TOP || dir === BOTTOM) {
-				const y = (dir === TOP ? 0 : 49);
-				for (let x = 1; x < 49; x++) {
-					if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
+				const matrix = utilities.getCostMatrix(otherRoomName);
+				if (dir === TOP || dir === BOTTOM) {
+					const y = (dir === TOP ? 0 : 49);
+					for (let x = 1; x < 49; x++) {
+						if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
+					}
+
+					continue;
 				}
 
-				continue;
-			}
-
-			const x = (dir === LEFT ? 0 : 49);
-			for (let y = 1; y < 49; y++) {
-				if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
+				const x = (dir === LEFT ? 0 : 49);
+				for (let y = 1; y < 49; y++) {
+					if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
+				}
 			}
 		}
 
@@ -371,16 +373,16 @@ const utilities = {
 		}
 
 		let cacheKey = 'costMatrix:' + roomName;
-		let matrix = cache.inHeap(
+		let matrix = hivemind.segmentMemory.isReady() ? cache.inHeap(
 			cacheKey,
 			500,
 			() => {
 				const roomIntel = hivemind.roomIntel(roomName);
 				return roomIntel.getCostMatrix();
 			}
-		);
+		) : new PathFinder.CostMatrix();
 
-		if (matrix && options.singleRoom) {
+		if (matrix && options.singleRoom && hivemind.segmentMemory.isReady()) {
 			// Highly discourage room exits if creep is supposed to stay in a room.
 			cacheKey += ':singleRoom';
 

@@ -19,15 +19,12 @@ const RoomPlanner = function (roomName) {
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
 
-	if (!Memory.rooms[roomName]) {
-		Memory.rooms[roomName] = {};
+	const key = 'planner:' + roomName;
+	if (!hivemind.segmentMemory.has(key)) {
+		hivemind.segmentMemory.set(key, {});
 	}
 
-	if (!Memory.rooms[roomName].roomPlanner) {
-		Memory.rooms[roomName].roomPlanner = {};
-	}
-
-	this.memory = Memory.rooms[roomName].roomPlanner;
+	this.memory = hivemind.segmentMemory.get(key);
 
 	if ((this.memory.drawDebug || 0) > 0) {
 		this.memory.drawDebug--;
@@ -83,6 +80,7 @@ RoomPlanner.prototype.drawDebug = function () {
  */
 RoomPlanner.prototype.runLogic = function () {
 	if (Game.cpu.bucket < 3500) return;
+	if (!hivemind.segmentMemory.isReady()) return;
 
 	// Recalculate room layout if using a new version.
 	if (!this.memory.plannerVersion || this.memory.plannerVersion !== this.roomPlannerVersion) {
@@ -125,16 +123,10 @@ RoomPlanner.prototype.runLogic = function () {
  *   Value to set in the pathfinding costmatrix at this position (Default 255).
  */
 RoomPlanner.prototype.placeFlag = function (pos, locationType, pathFindingCost) {
+	if (!this.memory.locations) this.memory.locations = {};
+	if (!this.memory.locations[locationType]) this.memory.locations[locationType] = {};
+
 	const posName = utilities.encodePosition(pos);
-
-	if (!this.memory.locations) {
-		this.memory.locations = {};
-	}
-
-	if (!this.memory.locations[locationType]) {
-		this.memory.locations[locationType] = {};
-	}
-
 	this.memory.locations[locationType][posName] = 1;
 
 	if (typeof pathFindingCost === 'undefined') {

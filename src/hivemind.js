@@ -346,11 +346,54 @@ Hivemind.prototype.log = function (channel, roomName) {
  *   The requested RoomIntel object.
  */
 Hivemind.prototype.roomIntel = function (roomName) {
+	if (!this.segmentMemory.isReady()) throw new Error('Memory is not ready to generate room intel for room ' + roomName + '.');
+
 	if (!this.intel[roomName]) {
 		this.intel[roomName] = new RoomIntel(roomName);
 	}
 
 	return this.intel[roomName];
+};
+
+/**
+ * Migrates data from an older hivemind version to this one.
+ *
+ * @return {boolean}
+ *   True if a migration is in progress, to prevent execution of other code.
+ */
+Hivemind.prototype.migrateData = function () {
+	// Move room intel into segment memory.
+	if (!this.memory.intelMigrated) {
+		if (!this.segmentMemory.isReady()) return true;
+
+		_.each(Memory.rooms, (memory, roomName) => {
+			if (!memory.intel) return;
+
+			const key = 'intel:' + roomName;
+			this.segmentMemory.set(key, memory.intel);
+			delete memory.intel;
+		});
+
+		this.segmentMemory.forceSave();
+		this.memory.intelMigrated = true;
+	}
+
+	if (!this.memory.roomPlannerMigrated) {
+		if (!this.segmentMemory.isReady()) return true;
+
+		_.each(Memory.rooms, (memory, roomName) => {
+			if (!memory.roomPlanner) return;
+
+			const key = 'planner:' + roomName;
+			this.segmentMemory.set(key, memory.roomPlanner);
+			delete memory.roomPlanner;
+		});
+
+		this.segmentMemory.forceSave();
+		this.memory.roomPlannerMigrated = true;
+	}
+
+	return false;
 };
 
 /**
