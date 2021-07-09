@@ -45,6 +45,8 @@ module.exports = {
 	maxRoomPrioritizationCpuPerTick: 50,
 
 	// Expansion:
+	// Number of ticks we may cache expansion scores.
+	expansionScoreCacheDuration: 20000,
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
