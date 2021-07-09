@@ -273,6 +273,11 @@ Hivemind.prototype.isProcessAllowedToRun = function (stats, options) {
  *   True if the interval has passed and we have sufficient cpu resources.
  */
 Hivemind.prototype.hasIntervalPassed = function (interval, startTime, stopAt, throttleAt) {
+	// An interval of 0 always means caching for the current tick only.
+	if (interval === 0) return Game.time !== startTime;
+
+	// We check if the interval has actually been passed before adjusting
+	// based on throttling to save Game.cpu.getUsed() calls.
 	if (Game.time - startTime < interval) return false;
 	if (Game.time - startTime < interval * this.getThrottleMultiplier(stopAt, throttleAt)) return false;
 
