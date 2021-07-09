@@ -1,8 +1,9 @@
 'use strict';
 
-/* global Memory hivemind RoomPosition OBSERVER_RANGE */
+/* global hivemind RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY */
 
 const interShard = require('./intershard');
+const PathManager = require('./remote-path-manager');
 const Process = require('./process');
 const utilities = require('./utilities');
 
@@ -19,6 +20,8 @@ const preserveExpansionReasons = false;
  */
 const ScoutProcess = function (params, data) {
 	Process.call(this, params, data);
+
+	this.pathManager = new PathManager();
 
 	if (!Memory.strategy) {
 		Memory.strategy = {};
@@ -151,26 +154,17 @@ ScoutProcess.prototype.calculateHarvestScore = function (roomName) {
 	const info = Memory.strategy.roomList[roomName];
 
 	if (!info.safePath) return 0;
-	if (info.range === 0 || info.range > 3) return 0;
+	if (info.range === 0 || info.range > hivemind.settings.get('maxRemoteMineRoomDistance')) return 0;
 
 	let income = -2000; // Flat cost for room reservation
 	let pathLength = 0;
 	const sourcePositions = hivemind.roomIntel(roomName).getSourcePositions();
 	for (const pos of sourcePositions) {
-		income += 3000;
-		pathLength += info.range * 50; // Flag path length if it has not been calculated yet.
-		if (typeof pos === 'object' && Game.rooms[info.origin] && Game.rooms[info.origin].isMine()) {
-			const sourcePos = new RoomPosition(pos.x, pos.y, roomName);
-			utilities.precalculatePaths(Game.rooms[info.origin], sourcePos);
+		const path = this.pathManager.getPathFor(new RoomPosition(pos.x, pos.y, roomName));
+		if (!path) continue;
 
-			if (Memory.rooms[info.origin].remoteHarvesting) {
-				const harvestMemory = Memory.rooms[info.origin].remoteHarvesting[utilities.encodePosition(sourcePos)];
-				if (harvestMemory && harvestMemory.cachedPath) {
-					pathLength -= info.range * 50;
-					pathLength += harvestMemory.cachedPath.path.length;
-				}
-			}
-		}
+		income += SOURCE_ENERGY_CAPACITY;
+		pathLength += path.length;
 	}
 
 	// @todo Add score if this is a safe room (that will be reserved
