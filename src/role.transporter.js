@@ -1535,11 +1535,7 @@ TransporterRole.prototype.addLabResourceOptions = function (options) {
 				resourceType: lab.mineralType,
 			};
 
-			if (lab.mineralAmount > lab.mineralCapacity * 0.3) {
-				option.priority++;
-			}
-
-			if (lab.mineralAmount > lab.mineralCapacity * 0.6) {
+			if (lab.mineralAmount > lab.mineralCapacity * 0.8) {
 				option.priority++;
 			}
 
@@ -1547,15 +1543,19 @@ TransporterRole.prototype.addLabResourceOptions = function (options) {
 				option.priority++;
 			}
 
+			if (lab.mineralAmount > lab.mineralCapacity * 0.95) {
+				option.priority++;
+			}
+
 			if (currentReaction) {
 				// If we're doing a different reaction now, clean out faster!
 				if (REACTIONS[currentReaction[0]][currentReaction[1]] !== lab.mineralType) {
-					option.priority = 4;
+					option.priority = 3;
 					option.weight = 0;
 				}
 			}
 
-			options.push(option);
+			if (option.priority > 0) options.push(option);
 		}
 	}
 
