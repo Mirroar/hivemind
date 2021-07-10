@@ -1,6 +1,6 @@
 'use strict';
 
-/* global OK */
+/* global hivemind OK */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -43,23 +43,18 @@ ClaimerRole.prototype.run = function (creep) {
  */
 ClaimerRole.prototype.moveToTargetRoom = function (creep) {
 	const targetPosition = utilities.decodePosition(creep.memory.target);
-	if (!creep.hasCachedPath() && Memory.rooms[creep.room.name].remoteHarvesting && Memory.rooms[creep.room.name].remoteHarvesting[creep.memory.target]) {
-		const harvestMemory = Memory.rooms[creep.room.name].remoteHarvesting[creep.memory.target];
-
-		if (harvestMemory.cachedPath) {
-			creep.setCachedPath(harvestMemory.cachedPath.path, false, 1);
+	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
+	if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
+		if (creep.moveUsingNavMesh(targetPosition) !== OK) {
+			hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
+			// @todo This is cross-room movement and should therefore only calculate a path once.
+			creep.moveToRange(targetPosition, 3);
 		}
+
+		return true;
 	}
 
-	if (creep.hasCachedPath()) {
-		if (creep.hasArrived() || creep.pos.getRangeTo(targetPosition) < 3) {
-			creep.clearCachedPath();
-		}
-		else {
-			creep.followCachedPath();
-			return true;
-		}
-	}
+	creep.stopNavMeshMove();
 
 	return false;
 };
