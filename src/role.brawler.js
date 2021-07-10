@@ -700,6 +700,11 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 			const squad = Game.squads[creep.memory.squadName];
 			const targetPos = squad && squad.getTarget();
 			if (targetPos && targetPos.getRangeTo(target) === 0) {
+				if (target.reservation && target.reservation.username !== utilities.getUsername()) {
+					creep.attackController(target);
+					return true;
+				}
+
 				if (creep.claimController(target) === OK) {
 					return true;
 				}
