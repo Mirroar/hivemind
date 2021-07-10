@@ -468,25 +468,24 @@ RoomPlanner.prototype.placeFlags = function () {
 		}
 	}
 
+	// Add road to controller.
+	const controllerRoads = this.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
+	for (const pos of controllerRoads) {
+		this.placeFlag(pos, 'road.controller', null);
+	}
+
+	this.placeContainer(controllerRoads, 'controller');
+
+	// Make sure no other paths get led through upgrader position.
+	this.buildingMatrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
+
+	// Place a link near controller, but off the calculated path.
+	this.placeLink(controllerRoads, 'controller');
+
 	if (this.room) {
 		// @todo Have intelManager save locations (not just IDs) of minerals, so we don't need room access here.
-		// @todo Use source and controller positions from room intel.
+		// @todo Use source positions from room intel.
 		// We also save which road belongs to which path, so we can selectively autobuild roads during room bootstrap instead of building all roads at once.
-		if (this.room.controller) {
-			const controllerRoads = this.scanAndAddRoad(this.room.controller.pos, this.roomCenterEntrances);
-			for (const pos of controllerRoads) {
-				// Keep spot next to controller free for upgrader to occupy.
-				this.placeFlag(pos, 'road.controller', null);
-			}
-
-			// Make sure no other paths get led through harvester position.
-			this.buildingMatrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
-
-			this.placeContainer(controllerRoads, 'controller');
-
-			// Place a link near controller, but off the calculated path.
-			this.placeLink(controllerRoads, 'controller');
-		}
 
 		if (this.room.mineral) {
 			this.placeFlag(this.room.mineral.pos, 'extractor');
