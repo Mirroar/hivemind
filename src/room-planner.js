@@ -517,41 +517,45 @@ RoomPlanner.prototype.placeFlags = function () {
 				this.placeFlag(harvestPosition, 'container.source', null);
 				this.placeFlag(harvestPosition, 'container', null);
 
-				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
-					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-					if (!this.isBuildableTile(x, y)) return;
-					if (x === harvestPosition.x && y === harvestPosition.y) return;
+				if (this.canPlaceMore('spawn')) {
+					utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+						if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+						if (!this.isBuildableTile(x, y)) return;
+						if (x === harvestPosition.x && y === harvestPosition.y) return;
 
-					// Only place spawn where a road tile is adjacent, so creeps can
-					// actually exit when a harvester is on its spot.
-					let spawnPlaced = false;
-					utilities.handleMapArea(x, y, (x2, y2) => {
-						if (this.buildingMatrix.get(x2, y2) !== 1) return;
+						// Only place spawn where a road tile is adjacent, so creeps can
+						// actually exit when a harvester is on its spot.
+						let spawnPlaced = false;
+						utilities.handleMapArea(x, y, (x2, y2) => {
+							if (this.buildingMatrix.get(x2, y2) !== 1) return;
 
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'spawn');
-						spawnPlaced = true;
-						return false;
+							this.placeFlag(new RoomPosition(x, y, this.roomName), 'spawn');
+							spawnPlaced = true;
+							return false;
+						});
+
+						if (spawnPlaced) return false;
 					});
+				}
 
-					if (spawnPlaced) return false;
-				});
+				if (this.canPlaceMore('link')) {
+					let linkPlaced = false;
+					utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+						if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+						if (!this.isBuildableTile(x, y)) return;
+						if (x === harvestPosition.x && y === harvestPosition.y) return;
 
-				let linkPlaced = false;
-				utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
-					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-					if (!this.isBuildableTile(x, y)) return;
-					if (x === harvestPosition.x && y === harvestPosition.y) return;
-
-					if (linkPlaced) {
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension');
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension.harvester');
-					}
-					else {
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'link');
-						this.placeFlag(new RoomPosition(x, y, this.roomName), 'link.source');
-						linkPlaced = true;
-					}
-				});
+						if (linkPlaced) {
+							this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension');
+							this.placeFlag(new RoomPosition(x, y, this.roomName), 'extension.harvester');
+						}
+						else {
+							this.placeFlag(new RoomPosition(x, y, this.roomName), 'link');
+							this.placeFlag(new RoomPosition(x, y, this.roomName), 'link.source');
+							linkPlaced = true;
+						}
+					});
+				}
 			}
 		}
 	}
