@@ -303,18 +303,22 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 		const targetPosition = utilities.decodePosition(creep.memory.target);
 		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 		let enemiesNearby = false;
-		_.each(creep.room.enemyCreeps, (hostiles, owner) => {
-			if (hivemind.relations.isAlly(owner)) return;
+		if (creep.memory.body.attack || creep.memory.body.rangedAttack || creep.memory.body.heal) {
+			// Check for enemies and interrupt move accordingly.
+			_.each(creep.room.enemyCreeps, (hostiles, owner) => {
+				if (hivemind.relations.isAlly(owner)) return;
 
-			_.each(hostiles, c => {
-				if (!c.isDangerous()) return;
+				_.each(hostiles, c => {
+					if (!c.isDangerous()) return;
+					if (c.owner.username === 'Screeps' || c.owner.username === 'Invader') return;
 
-				enemiesNearby = true;
-				return false;
+					enemiesNearby = true;
+					return false;
+				});
+
+				if (enemiesNearby) return false;
 			});
-
-			if (enemiesNearby) return false;
-		});
+		}
 
 		if (!enemiesNearby && (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget()))) {
 			if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
