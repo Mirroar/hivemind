@@ -374,6 +374,16 @@ module.exports = class RoomManager {
 	buildEndgameStructures() {
 		// Make sure labs are built in the right place, remove otherwise.
 		this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
+		if (CONTROLLER_STRUCTURES[this.room.controller.level] === 3) {
+			// Build reaction labs first if we only have enough to start reactions.
+			this.buildPlannedStructures('lab.reaction', STRUCTURE_LAB);
+		}
+		else {
+			// Build boost lab with priority.
+			this.buildPlannedStructures('lab.boost', STRUCTURE_LAB);
+		}
+
+		// Build remaining labs.
 		this.buildPlannedStructures('lab', STRUCTURE_LAB);
 
 		// Make sure all current nukers have been built.
