@@ -57,6 +57,10 @@ module.exports = {
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
 
+	// Room planning:
+	enableMinCutRamparts: false,
+	minCutRampartDistance: 4,
+
 	// Room management:
 	// Number of hits for walls / ramparts needed for more expensive structures
 	// to be built.

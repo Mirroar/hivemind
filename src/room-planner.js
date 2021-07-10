@@ -16,9 +16,13 @@ const MAX_ROOM_LEVEL = 8;
  *   Name of the room this room planner is assigned to.
  */
 const RoomPlanner = function (roomName) {
-	this.roomPlannerVersion = 33;
+	this.roomPlannerVersion = 34;
 	this.roomName = roomName;
 	this.room = Game.rooms[roomName]; // Will not always be available.
+	if (hivemind.settings.get('enableMinCutRamparts')) {
+		this.minCut = require('./mincut');
+		this.minCutBounds = [];
+	}
 
 	const key = 'planner:' + roomName;
 	if (!hivemind.segmentMemory.has(key)) {
@@ -137,6 +141,25 @@ RoomPlanner.prototype.placeFlag = function (pos, locationType, pathFindingCost) 
 	if (pathFindingCost && this.buildingMatrix.get(pos.x, pos.y) < 100) {
 		this.buildingMatrix.set(pos.x, pos.y, pathFindingCost);
 	}
+
+	if (this.minCut) {
+		const baseType = locationType.split('.')[0];
+		if (CONTROLLER_STRUCTURES[baseType] && ['extension', 'road', 'container', 'extractor'].indexOf(baseType) === -1) {
+			this.protectPosition(pos);
+		}
+	}
+};
+
+/**
+ * Adds a position to be protected by minCut.
+ */
+RoomPlanner.prototype.protectPosition = function (pos) {
+	const distance = hivemind.settings.get('minCutRampartDistance');
+	const x1 = Math.max(2, pos.x - distance);
+	const x2 = Math.min(47, pos.x + distance);
+	const y1 = Math.max(2, pos.y - distance);
+	const y2 = Math.min(47, pos.y + distance);
+	this.minCutBounds.push({x1, x2, y1, y2});
 };
 
 /**
@@ -244,7 +267,7 @@ RoomPlanner.prototype.markDistanceTiles = function (matrix, distance, x, y) {
 };
 
 /**
- * Find positions from where many exit tiles are in short range.
+ * Find positions from where many exit / rampart tiles are in short range.
  *
  * @return {object}
  *   An object keyed by exit direction containing objects with the following
@@ -284,13 +307,22 @@ RoomPlanner.prototype.findTowerPositions = function () {
 			// Don't count exits toward "safe" rooms or dead ends.
 			if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
 
-			for (const dir in this.exitTiles) {
-				// Don't score distance to exits toward "safe" rooms or dead ends.
-				// Unless all directions are safe.
-				if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
-
-				for (const pos of this.exitTiles[dir]) {
+			if (this.minCut) {
+				// Add score for ramparts in range.
+				for (const pos of this.getLocations('rampart')) {
 					score += 1 / pos.getRangeTo(x, y);
+				}
+			}
+			else {
+				// Add score for exit tiles in range.
+				for (const dir in this.exitTiles) {
+					// Don't score distance to exits toward "safe" rooms or dead ends.
+					// Unless all directions are safe.
+					if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
+
+					for (const pos of this.exitTiles[dir]) {
+						score += 1 / pos.getRangeTo(x, y);
+					}
 				}
 			}
 
@@ -320,6 +352,8 @@ RoomPlanner.prototype.placeFlags = function () {
 		return;
 	}
 
+	const roomIntel = hivemind.roomIntel(this.roomName);
+
 	// Reset location memory, to be replaced with new flags.
 	this.memory.locations = {};
 	this.wallDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.wallDistanceMatrix);
@@ -339,6 +373,8 @@ RoomPlanner.prototype.placeFlags = function () {
 
 	// Decide where exit regions are and where walls should be placed.
 	const exitCenters = this.findExitCenters();
+
+	const controllerPosition = roomIntel.getControllerPosition();
 
 	// Decide where room center should be by averaging exit positions.
 	let cx = 0;
@@ -360,13 +396,18 @@ RoomPlanner.prototype.placeFlags = function () {
 	this.roomCenter = roomCenter;
 	this.placeFlag(roomCenter, 'center', null);
 
-	// Do another flood fill pass from interesting positions to remove walls that don't protect anything.
-	this.pruneWalls(potentialWallPositions);
+	if (this.minCut) {
+		this.protectPosition(controllerPosition);
+	}
+	else {
+		// Do another flood fill pass from interesting positions to remove walls that don't protect anything.
+		this.pruneWalls(potentialWallPositions);
 
-	// Actually place ramparts.
-	for (const i in potentialWallPositions) {
-		if (potentialWallPositions[i].isRelevant) {
-			this.placeFlag(potentialWallPositions[i], 'rampart', null);
+		// Actually place ramparts.
+		for (const i in potentialWallPositions) {
+			if (potentialWallPositions[i].isRelevant) {
+				this.placeFlag(potentialWallPositions[i], 'rampart', null);
+			}
 		}
 	}
 
@@ -529,6 +570,34 @@ RoomPlanner.prototype.placeFlags = function () {
 	this.placeAll('powerSpawn', true);
 	this.placeAll('nuker', true);
 	this.placeAll('observer', false);
+
+	if (this.minCut) {
+		// Protect exits to safe rooms.
+		const bounds = {x1: 0, x2: 49, y1: 0, y2: 49};
+		for (const exitDir of _.keys(this.memory.adjacentSafe)) {
+			if (!this.memory.adjacentSafe[exitDir]) continue;
+
+			if (exitDir === 'N') bounds.protectTopExits = true;
+			if (exitDir === 'S') bounds.protectBottomExits = true;
+			if (exitDir === 'W') bounds.protectLeftExits = true;
+			if (exitDir === 'E') bounds.protectRightExits = true;
+		}
+
+		const rampartCoords = this.minCut.getCutTiles(this.roomName, this.minCutBounds, bounds);
+		for (const coord of rampartCoords) {
+			potentialWallPositions.push(new RoomPosition(coord.x, coord.y, this.roomName));
+		}
+
+		this.pruneWalls(potentialWallPositions);
+
+		// Actually place ramparts.
+		for (const i in potentialWallPositions) {
+			if (potentialWallPositions[i].isRelevant) {
+				this.placeFlag(potentialWallPositions[i], 'rampart', null);
+			}
+		}
+	}
+
 	this.placeTowers();
 	this.placeSpawnWalls();
 
@@ -595,7 +664,7 @@ RoomPlanner.prototype.prepareBuildingMatrix = function (potentialWallPositions, 
 				// Avoid area near exits and room walls to not get shot at.
 				this.buildingMatrix.set(x, y, 10);
 
-				if (exitDistance === 3) {
+				if (exitDistance === 3 && !this.minCut) {
 					potentialWallPositions.push(new RoomPosition(x, y, this.roomName));
 				}
 			}
