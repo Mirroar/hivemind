@@ -56,4 +56,9 @@ module.exports = {
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
+
+	// Room management:
+	// Number of hits for walls / ramparts needed for more expensive structures
+	// to be built.
+	minWallIntegrity: 500000,
 };

@@ -1,11 +1,11 @@
 'use strict';
 
-/* global Structure STRUCTURE_ROAD STRUCTURE_WALL STRUCTURE_SPAWN STRUCTURE_LINK
+/* global hivemind Structure STRUCTURE_ROAD STRUCTURE_WALL STRUCTURE_SPAWN
 STRUCTURE_CONTAINER STRUCTURE_TOWER STRUCTURE_EXTENSION STRUCTURE_RAMPART
 STRUCTURE_TERMINAL STRUCTURE_STORAGE STRUCTURE_EXTRACTOR STRUCTURE_LAB
 STRUCTURE_NUKER STRUCTURE_POWER_SPAWN STRUCTURE_OBSERVER LOOK_STRUCTURES
 LOOK_CONSTRUCTION_SITES CONSTRUCTION_COST CREEP_LIFE_TIME MAX_CONSTRUCTION_SITES
-FIND_STRUCTURES CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK
+FIND_STRUCTURES CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
 module.exports = class RoomManager {
@@ -360,7 +360,7 @@ module.exports = class RoomManager {
 		for (const pos of this.roomPlanner.getLocations('rampart')) {
 			// Check if there's a rampart here already.
 			const structures = pos.lookFor(LOOK_STRUCTURES);
-			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= 500000).length === 0) {
+			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= hivemind.settings.get('minWallIntegrity')).length === 0) {
 				return false;
 			}
 		}
