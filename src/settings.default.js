@@ -28,6 +28,12 @@ module.exports = {
 	// on the world map.
 	visualizeNavMesh: false,
 
+	// Remote mining:
+	// The maximum distance for rooms to be mined.
+	maxRemoteMineRoomDistance: 3,
+	// The maximum path length from a source to a storage. Any more and the source
+	// will not be mined.
+	maxRemoteMinePathLength: 150,
 
 	// Power mining:
 	// Enable power mining in general.

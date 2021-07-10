@@ -1,8 +1,9 @@
 'use strict';
 
-/* global hivemind PathFinder Room RoomPosition RoomVisual
+/* global hivemind PathFinder Room RoomPosition RoomVisual OBSTACLE_OBJECT_TYPES
 CONTROLLER_STRUCTURES TERRAIN_MASK_WALL FIND_SOURCES FIND_MINERALS */
 
+const cache = require('./cache');
 const utilities = require('./utilities');
 
 const MAX_ROOM_LEVEL = 8;
@@ -1461,6 +1462,37 @@ RoomPlanner.prototype.isPlanningFinished = function () {
 	if (!this.memory.locations.observer && this.memory.planningTries <= 10) return false;
 
 	return true;
+};
+
+/**
+ * Gets a cost matrix representing this room when it's fully built.
+ *
+ * @return {PathFinder.CostMatrix}
+ *   The requested cost matrix.
+ */
+RoomPlanner.prototype.getNavigationMatrix = function () {
+	return cache.inHeap(500, 'plannerCostMatrix:' + this.roomName, () => {
+		const matrix = new PathFinder.CostMatrix();
+
+		_.each(this.memory.locations, (locations, locationType) => {
+			if (locationType !== 'road' && OBSTACLE_OBJECT_TYPES.indexOf(locationType) === -1) return;
+
+			_.each(locations, (_, location) => {
+				const pos = utilities.decodePosition(location);
+
+				if (locationType === 'road') {
+					if (matrix.get(pos.x, pos.y) === 0) {
+						matrix.set(pos.x, pos.y, 1);
+					}
+				}
+				else {
+					matrix.set(pos.x, pos.y, 255);
+				}
+			});
+		});
+
+		return matrix;
+	});
 };
 
 module.exports = RoomPlanner;
