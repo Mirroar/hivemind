@@ -113,14 +113,14 @@ ClaimerRole.prototype.performClaim = function (creep) {
 ClaimerRole.prototype.performReserve = function (creep) {
 	const targetPosition = utilities.decodePosition(creep.memory.target);
 	if (targetPosition.roomName !== creep.pos.roomName) {
-		creep.moveTo(targetPosition);
+		creep.moveToRange(targetPosition, 1);
 		return;
 	}
 
 	const target = creep.room.controller;
 
 	if (creep.pos.getRangeTo(target) > 1) {
-		creep.moveTo(target);
+		creep.moveToRange(target, 1);
 	}
 	else {
 		if (creep.room.controller.reservation && creep.room.controller.reservation.username !== utilities.getUsername()) {

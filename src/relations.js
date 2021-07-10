@@ -8,7 +8,6 @@ const Relations = function () {
 	this.allies = [];
 
 	try {
-		// eslint-disable-next-line import/no-unresolved
 		const localRelations = require('./relations.local');
 
 		if (localRelations.allies) {

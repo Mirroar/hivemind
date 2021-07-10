@@ -155,13 +155,14 @@ module.exports = {
 	lastTime: 0,
 	lastMemory: null,
 	useMemoryFromHeap() {
-		if (this.lastTime && this.lastMemory && Game.time == this.lastTime + 1) {
+		if (this.lastTime && this.lastMemory && Game.time === this.lastTime + 1) {
 			delete global.Memory;
 			global.Memory = this.lastMemory;
 			RawMemory._parsed = this.lastMemory;
 		}
 		else {
 			// Force parsing of Memory.
+			// eslint-disable-next-line no-unused-expressions
 			Memory.rooms;
 			this.lastMemory = RawMemory._parsed;
 		}
