@@ -525,7 +525,7 @@ TradeProcess.prototype.removeOldTrades = function () {
 	_.each(Game.market.orders, order => {
 		const age = Game.time - order.created;
 
-		if (age > 100000 || order.remainingAmount < 100) {
+		if (age > 100000 || order.remainingAmount === 0) {
 			// Nobody seems to be buying or selling this order, cancel it.
 			hivemind.log('trade', order.roomName).debug('Cancelling old trade', order.type + 'ing', order.remainingAmount, order.resourceType, 'for', order.price, 'each after', age, 'ticks.');
 			Game.market.cancelOrder(order.id);
