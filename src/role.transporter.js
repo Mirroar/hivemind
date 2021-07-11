@@ -863,9 +863,9 @@ TransporterRole.prototype.getAvailableSources = function () {
 	// @todo Take resources from storage if terminal is relatively empty.
 
 	this.addTerminalOperationResourceOptions(options);
-	this.addDroppedResourceOptions(options);
-	this.addTombstoneResourceOptions(options);
-	this.addRuinResourceOptions(options);
+	this.addObjectResourceOptions(options, FIND_DROPPED_RESOURCES, 'resource');
+	this.addObjectResourceOptions(options, FIND_TOMBSTONES, 'tombstone');
+	this.addObjectResourceOptions(options, FIND_RUINS, 'tombstone');
 	this.addContainerResourceOptions(options);
 	this.addHighLevelResourceOptions(options);
 	this.addEvacuatingRoomResourceOptions(options);
@@ -895,9 +895,9 @@ TransporterRole.prototype.getAvailableEnergySources = function () {
 	}
 
 	this.addStorageEnergySourceOptions(options, storagePriority);
-	this.addDroppedEnergySourceOptions(options, storagePriority);
-	this.addTombstoneEnergySourceOptions(options);
-	this.addRuinEnergySourceOptions(options);
+	this.addObjectEnergySourceOptions(options, FIND_DROPPED_RESOURCES, 'resource', storagePriority);
+	this.addObjectEnergySourceOptions(options, FIND_TOMBSTONES, 'tombstone', storagePriority);
+	this.addObjectEnergySourceOptions(options, FIND_RUINS, 'tombstone', storagePriority);
 	this.addContainerEnergySourceOptions(options);
 	this.addLinkEnergySourceOptions(options);
 
@@ -933,36 +933,40 @@ TransporterRole.prototype.addStorageEnergySourceOptions = function (options, sto
 };
 
 /**
- * Adds options for picking up dropped energy to priority list.
+ * Adds options for picking up energy from room objects to priority list.
  *
  * @param {Array} options
  *   A list of potential energy sources.
- * @param {number} storagePriority
- *   Priority assigned for transporters picking up from storage.
+ * @param {String} findConstant
+ *   The type of find operation to run, e.g. FIND_DROPPED_RESOURCES.
+ * @param {string} optionType
+ *   Type designation of added resource options.
  */
-TransporterRole.prototype.addDroppedEnergySourceOptions = function (options, storagePriority) {
+TransporterRole.prototype.addObjectEnergySourceOptions = function (options, findConstant, optionType, storagePriority) {
 	const creep = this.creep;
 
 	// Get storage location, since that is a low priority source for transporters.
 	const storagePosition = creep.room.getStorageLocation();
 
 	// Look for energy on the ground.
-	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
-		filter: resource => {
-			if (resource.resourceType === RESOURCE_ENERGY) {
-				const result = PathFinder.search(creep.pos, resource.pos);
-				if (!result.incomplete) return true;
-			}
+	const targets = creep.room.find(findConstant, {
+		filter: target => {
+			const store = target.store || {[target.resourceType]: target.amount};
+			if (store[RESOURCE_ENERGY] || 0 < 20) return false;
 
-			return false;
+			const result = PathFinder.search(creep.pos, target.pos);
+			if (result.incomplete) return false;
+
+			return true;
 		},
 	});
 
 	for (const target of targets) {
+		const store = target.store || {[target.resourceType]: target.amount};
 		const option = {
-			priority: 2,
-			weight: target.amount / 100, // @todo Also factor in distance.
-			type: 'resource',
+			priority: 4,
+			weight: store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
+			type: 'tombstone',
 			object: target,
 			resourceType: RESOURCE_ENERGY,
 		};
@@ -971,121 +975,18 @@ TransporterRole.prototype.addDroppedEnergySourceOptions = function (options, sto
 			option.priority = creep.memory.role === 'transporter' ? storagePriority : 5;
 		}
 		else {
-			if (target.amount < 100) {
-				option.priority--;
-			}
+			if (store[RESOURCE_ENERGY] < 100) option.priority--;
+			if (store[RESOURCE_ENERGY] < 200) option.priority--;
 
-			if (target.amount < 200) {
-				option.priority--;
-			}
-
-			if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
-
-			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
-			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
-		}
-
-		if (creep.room.getFreeStorage() < target.amount) {
-			// If storage is super full, try leaving stuff on the ground.
-			option.priority -= 2;
-		}
-
-		options.push(option);
-	}
-};
-
-/**
- * Adds options for picking up energy from tombstones to priority list.
- *
- * @param {Array} options
- *   A list of potential energy sources.
- */
-TransporterRole.prototype.addTombstoneEnergySourceOptions = function (options) {
-	const creep = this.creep;
-
-	// Look for energy on the ground.
-	const targets = creep.room.find(FIND_TOMBSTONES, {
-		filter: tomb => {
-			if (tomb.store.energy > 0) {
-				const result = PathFinder.search(creep.pos, tomb.pos);
-				if (!result.incomplete) return true;
-			}
-
-			return false;
-		},
-	});
-
-	for (const target of targets) {
-		const option = {
-			priority: 4,
-			weight: target.store.energy / 100, // @todo Also factor in distance.
-			type: 'tombstone',
-			object: target,
-			resourceType: RESOURCE_ENERGY,
-		};
-
-		if (target.store.energy < 100) {
-			option.priority--;
-		}
-
-		if (target.store.energy < 200) {
-			option.priority--;
+			// If spawn / extensions need filling, transporters should not pick up
+			// energy from random targets as readily, instead prioritize storage.
+			if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.memory.role === 'transporter') option.priority -= 2;
 		}
 
 		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 
-		if (creep.room.getFreeStorage() < target.store.energy) {
-			// If storage is super full, try leaving stuff on the ground.
-			option.priority -= 2;
-		}
-
-		options.push(option);
-	}
-};
-
-/**
- * Adds options for picking up energy from tombstones to priority list.
- *
- * @param {Array} options
- *   A list of potential energy sources.
- */
-TransporterRole.prototype.addRuinEnergySourceOptions = function (options) {
-	const creep = this.creep;
-
-	// Look for energy on the ground.
-	const targets = creep.room.find(FIND_RUINS, {
-		filter: ruin => {
-			if (ruin.store.energy > 0) {
-				const result = PathFinder.search(creep.pos, ruin.pos);
-				if (!result.incomplete) return true;
-			}
-
-			return false;
-		},
-	});
-
-	for (const target of targets) {
-		const option = {
-			priority: 4,
-			weight: target.store.energy / 100, // @todo Also factor in distance.
-			type: 'tombstone',
-			object: target,
-			resourceType: RESOURCE_ENERGY,
-		};
-
-		if (target.store.energy < 100) {
-			option.priority--;
-		}
-
-		if (target.store.energy < 200) {
-			option.priority--;
-		}
-
-		option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
-		option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
-
-		if (creep.room.getFreeStorage() < target.store.energy) {
+		if (creep.room.getFreeStorage() < store[RESOURCE_ENERGY]) {
 			// If storage is super full, try leaving stuff on the ground.
 			option.priority -= 2;
 		}
@@ -1228,19 +1129,24 @@ TransporterRole.prototype.addTerminalOperationResourceOptions = function (option
 };
 
 /**
- * Adds options for picking up dropped resources to priority list.
+ * Adds options for picking up resources from certain objects to priority list.
  *
  * @param {Array} options
  *   A list of potential resource sources.
+ * @param {String} findConstant
+ *   The type of find operation to run, e.g. FIND_DROPPED_RESOURCES.
+ * @param {string} optionType
+ *   Type designation of added resource options.
  */
-TransporterRole.prototype.addDroppedResourceOptions = function (options) {
+TransporterRole.prototype.addObjectResourceOptions = function (options, findConstant, optionType) {
 	const creep = this.creep;
 
 	// Look for resources on the ground.
-	const targets = creep.room.find(FIND_DROPPED_RESOURCES, {
-		filter: resource => {
-			if (resource.amount > 10 && resource.resourceType !== RESOURCE_ENERGY) {
-				const result = PathFinder.search(creep.pos, resource.pos);
+	const targets = creep.room.find(findConstant, {
+		filter: target => {
+			const store = target.store || {[target.resourceType]: target.amount};
+			if (_.sum(store) > 10) {
+				const result = PathFinder.search(creep.pos, target.pos);
 				if (!result.incomplete) return true;
 			}
 
@@ -1249,59 +1155,15 @@ TransporterRole.prototype.addDroppedResourceOptions = function (options) {
 	});
 
 	for (const target of targets) {
-		if (!creep.room.storage && target.resourceType !== RESOURCE_ENERGY) continue;
-
-		const option = {
-			priority: 4,
-			weight: target.amount / 30, // @todo Also factor in distance.
-			type: 'resource',
-			object: target,
-			resourceType: target.resourceType,
-		};
-
-		if (target.resourceType === RESOURCE_POWER) {
-			option.priority++;
-		}
-
-		if (creep.room.getFreeStorage() < target.amount) {
-			// If storage is super full, try leaving stuff on the ground.
-			option.priority -= 2;
-		}
-
-		options.push(option);
-	}
-};
-
-/**
- * Adds options for picking up resources from tombstones to priority list.
- *
- * @param {Array} options
- *   A list of potential resource sources.
- */
-TransporterRole.prototype.addTombstoneResourceOptions = function (options) {
-	const creep = this.creep;
-
-	// Look for resources on the ground.
-	const targets = creep.room.find(FIND_TOMBSTONES, {
-		filter: tomb => {
-			if (_.sum(tomb.store) > 10) {
-				const result = PathFinder.search(creep.pos, tomb.pos);
-				if (!result.incomplete) return true;
-			}
-
-			return false;
-		},
-	});
-
-	for (const target of targets) {
-		for (const resourceType of _.keys(target.store)) {
+		const store = target.store || {[target.resourceType]: target.amount};
+		for (const resourceType of _.keys(store)) {
 			if (resourceType === RESOURCE_ENERGY) continue;
-			if (target.store[resourceType] === 0) continue;
+			if (store[resourceType] === 0) continue;
 
 			const option = {
 				priority: 4,
-				weight: target.store[resourceType] / 30, // @todo Also factor in distance.
-				type: 'tombstone',
+				weight: store[resourceType] / 30, // @todo Also factor in distance.
+				type: optionType,
 				object: target,
 				resourceType,
 			};
@@ -1310,55 +1172,7 @@ TransporterRole.prototype.addTombstoneResourceOptions = function (options) {
 				option.priority++;
 			}
 
-			if (creep.room.getFreeStorage() < target.store[resourceType]) {
-				// If storage is super full, try leaving stuff on the ground.
-				option.priority -= 2;
-			}
-
-			options.push(option);
-		}
-	}
-};
-
-/**
- * Adds options for picking up resources from ruins to priority list.
- *
- * @param {Array} options
- *   A list of potential resource sources.
- */
-TransporterRole.prototype.addRuinResourceOptions = function (options) {
-	const creep = this.creep;
-
-	// Look for resources on the ground.
-	const targets = creep.room.find(FIND_RUINS, {
-		filter: ruin => {
-			if (_.sum(ruin.store) > 10) {
-				const result = PathFinder.search(creep.pos, ruin.pos);
-				if (!result.incomplete) return true;
-			}
-
-			return false;
-		},
-	});
-
-	for (const target of targets) {
-		for (const resourceType of _.keys(target.store)) {
-			if (resourceType === RESOURCE_ENERGY) continue;
-			if (target.store[resourceType] === 0) continue;
-
-			const option = {
-				priority: 4,
-				weight: target.store[resourceType] / 30, // @todo Also factor in distance.
-				type: 'tombstone',
-				object: target,
-				resourceType,
-			};
-
-			if (resourceType === RESOURCE_POWER) {
-				option.priority++;
-			}
-
-			if (creep.room.getFreeStorage() < target.store[resourceType]) {
+			if (creep.room.getFreeStorage() < store[resourceType]) {
 				// If storage is super full, try leaving stuff on the ground.
 				option.priority -= 2;
 			}
