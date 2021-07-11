@@ -16,6 +16,7 @@ const RESPONSE_RANGED_HEAL_TRAIN = 6;
 const RESPONSE_RANGED_BLINKY_TRAIN = 7;
 const RESPONSE_BLINKY_BLINKY_TRAIN = 8;
 const RESPONSE_BLINKY_HEAL_TRAIN = 9;
+const RESPONSE_ATTACKER = 10;
 
 const SEGMENT_HEAL = 1;
 const SEGMENT_BLINKY = 2;
@@ -105,6 +106,11 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 
 		const enemyPower = enemyData.damage + (enemyData.heal * 5);
 		const isRangedEnemy = (enemyData.parts[RANGED_ATTACK] || 0) > 0;
+
+		// Use a reasonable attacker for destroying invader cores.
+		if (enemyPower === 0) {
+			return RESPONSE_ATTACKER;
+		}
 
 		// For small attackers that should be defeated easily, use simple brawler.
 		if (enemyPower < (defaultAttack * ATTACK_POWER) + (defaultHeal * HEAL_POWER * 5)) {
@@ -215,6 +221,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 				case RESPONSE_RANGED_BLINKY_TRAIN:
 					return this.getRangedCreepBody(room);
 
+				case RESPONSE_ATTACKER:
 				case RESPONSE_ATTACK_HEAL_TRAIN:
 				case RESPONSE_ATTACK_BLINKY_TRAIN:
 					return this.getAttackCreepBody(room);
@@ -251,10 +258,11 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		);
 	}
 
-	getAttackCreepBody(room) {
+	getAttackCreepBody(room, maxAttackParts) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
+			maxAttackParts && {[ATTACK]: maxAttackParts}
 		);
 	}
 
