@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind PathFinder */
+/* global hivemind PathFinder STRUCTURE_KEEPER_LAIR */
 
 const cache = require('./cache');
 const packrat = require('./packrat');
@@ -42,16 +42,38 @@ module.exports = class RemotePathManager {
 				maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
 				roomCallback: roomName => {
 					return cache.inHeap('remotePathManagerCostMatrix:' + roomName, 1000, () => {
+						const roomIntel = hivemind.roomIntel(roomName);
+
+						// Don't path through rooms owned by other players.
+						if (roomIntel.isOwned()) return false;
+
+						// Initialize a cost matrix for this room.
 						const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 						const matrix = isMyRoom ? Game.rooms[roomName].roomPlanner.getNavigationMatrix().clone() : new PathFinder.CostMatrix();
 
 						// @todo Set to 1 for each road used by other active remote mining paths in this room.
 
 						// For now, we just use road locations from intel as a guide.
-						const roomIntel = hivemind.roomIntel(roomName);
 						const roads = roomIntel.getRoadCoords();
 						for (const road of roads) {
 							matrix.set(road.x, road.y, 1);
+						}
+
+						if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+							// Disallow areas around source keeper sources.
+							_.each(roomIntel.getSourcePositions(), sourceInfo => {
+								utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+									matrix.set(x, y, 255);
+								}, 4);
+							});
+
+							// Disallow areas around source keeper minerals.
+							const mineralInfo = roomIntel.getMineralPosition();
+							if (mineralInfo) {
+								utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+									matrix.set(x, y, 255);
+								}, 4);
+							}
 						}
 
 						return matrix;
