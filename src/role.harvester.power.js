@@ -2,7 +2,7 @@
 
 /* global hivemind RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
 POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
-FIND_DROPPED_RESOURCES RESOURCE_POWER */
+FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS */
 
 const Role = require('./role');
 
@@ -23,6 +23,8 @@ PowerHarvesterRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 PowerHarvesterRole.prototype.run = function (creep) {
+	this.attackNearby(creep);
+
 	const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
 	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 	if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
@@ -79,6 +81,20 @@ PowerHarvesterRole.prototype.run = function (creep) {
 	}
 };
 
+PowerHarvesterRole.prototype.attackNearby = function (creep) {
+	if (creep.memory.isHealer) return;
+
+	const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
+		filter: c => !hivemind.relations.isAlly(c.owner.username),
+	});
+	if (targets.length === 0) return;
+
+	const highestValue = _.max(targets, c => c.getDamageCapacity(1) + (c.getHealCapacity(1) * 2));
+	if (!highestValue) return;
+
+	if (creep.attack(highestValue) === OK) creep._hasAttacked = true;
+};
+
 /**
  * Makes this creep attack a power bank.
  *
@@ -111,6 +127,8 @@ PowerHarvesterRole.prototype.attackPowerBank = function (creep, powerBank) {
 		}
 	}
 	else {
+		if (creep._hasAttacked) return;
+
 		if (creep.pos.getRangeTo(powerBank) > 1) {
 			creep.moveToRange(powerBank, 1);
 			return;
