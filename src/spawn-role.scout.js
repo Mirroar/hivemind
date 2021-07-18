@@ -1,6 +1,6 @@
 'use strict';
 
-/* global MOVE */
+/* global hivemind MOVE */
 
 const interShard = require('./intershard');
 const utilities = require('./utilities');
@@ -24,10 +24,10 @@ module.exports = class ScoutSpawnRole extends SpawnRole {
 		if (room.memory.recentScout && Game.time - (room.memory.recentScout || -500) < 500) return;
 
 		const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
-		if (_.size(roomScouts) > 0 || !room.needsScout()) return;
+		if (_.size(roomScouts) >= hivemind.settings.get('maxScoutsPerRoom') || !room.needsScout()) return;
 
 		options.push({
-			priority: 1,
+			priority: hivemind.settings.get('scoutSpawnPriority'),
 			weight: 0,
 		});
 	}
@@ -54,7 +54,7 @@ module.exports = class ScoutSpawnRole extends SpawnRole {
 				if (Memory.strategy.roomList[pos.roomName].origin !== room.name) return;
 
 				options.push({
-					priority: 1,
+					priority: hivemind.settings.get('scoutSpawnPriority'),
 					weight: 0,
 					shard: shardName,
 					portalTarget: portalPos,

@@ -49,6 +49,8 @@ module.exports = {
 	scoutProcessInterval: 25,
 	// Maximum amount of CPU to spend on prioritizing rooms when the process runs.
 	maxRoomPrioritizationCpuPerTick: 50,
+	maxScoutsPerRoom: 1,
+	scoutSpawnPriority: 1,
 
 	// Expansion:
 	// Number of ticks we may cache expansion scores.
