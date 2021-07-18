@@ -1,6 +1,6 @@
 'use strict';
 
-/* global hivemind */
+/* global hivemind PWR_OPERATE_SPAWN POWER_INFO */
 
 const Process = require('./process');
 const RemoteMiningOperation = require('./operation.remote-mining');
@@ -63,12 +63,25 @@ RemoteMiningProcess.prototype.run = function () {
 			}
 		}
 
-		const spawnCapacity = numSpawns * 5;
+		let spawnCapacity = numSpawns * 5;
 		const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 3);
+
+		// Increase spawn capacity if there's a power creep that can help.
+		const powerCreep = _.filter(Game.powerCreeps, creep => {
+			if (!creep.shard) return false;
+			if (creep.shard !== Game.shard.name) return false;
+			if (creep.pos.roomName !== room.name) return false;
+
+			return true;
+		})[0];
+		if (powerCreep) {
+			const operateSpawnLevel = (powerCreep.powers[PWR_OPERATE_SPAWN] || {}).level || 0;
+			if (operateSpawnLevel > 0) spawnCapacity /= POWER_INFO[PWR_OPERATE_SPAWN].effect[operateSpawnLevel - 1];
+		}
 
 		sourceRooms[room.name] = {
 			current: 0,
-			max: spawnCapacity - roomNeeds,
+			max: Math.floor(spawnCapacity - roomNeeds),
 		};
 	});
 
