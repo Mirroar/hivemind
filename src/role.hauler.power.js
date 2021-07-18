@@ -1,7 +1,7 @@
 'use strict';
 
 /* global hivemind RoomPosition RESOURCE_POWER FIND_STRUCTURES OK
-STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES */
+STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES FIND_RUINS */
 
 const Role = require('./role');
 
@@ -107,14 +107,18 @@ PowerHaulerRole.prototype.pickupPower = function (creep) {
 	const powerResources = creep.room.find(FIND_DROPPED_RESOURCES, {
 		filter: resource => resource.resourceType === RESOURCE_POWER,
 	});
+	const powerRuins = creep.room.find(FIND_RUINS, {
+		filter: ruin => (ruin.store.power || 0) > 0,
+	});
 
-	if (_.sum(creep.carry) >= creep.carryCapacity || powerResources.length === 0) {
+	if (creep.store.getFreeCapacity() === 0 || powerResources.length + powerRuins.length === 0) {
+		// @todo Loot anything else nearby, like tombstones and dropped resources.
 		// Return home.
 		creep.memory.isReturning = true;
 		return;
 	}
 
-	if (powerResources.length <= 0) {
+	if (powerResources.length + powerRuins.length === 0) {
 		// Return home.
 		if (_.sum(creep.carry) > 0) {
 			creep.memory.isReturning = true;
@@ -129,12 +133,23 @@ PowerHaulerRole.prototype.pickupPower = function (creep) {
 		return;
 	}
 
-	if (creep.pos.getRangeTo(powerResources[0]) > 1) {
-		creep.moveToRange(powerResources[0], 1);
-		return;
+	if (powerResources.length > 0) {
+		if (creep.pos.getRangeTo(powerResources[0]) > 1) {
+			creep.moveToRange(powerResources[0], 1);
+			return;
+		}
+
+		creep.pickup(powerResources[0]);
 	}
 
-	creep.pickup(powerResources[0]);
+	if (powerRuins.length > 0) {
+		if (creep.pos.getRangeTo(powerRuins[0]) > 1) {
+			creep.moveToRange(powerRuins[0], 1);
+			return;
+		}
+
+		creep.withdraw(powerRuins[0], RESOURCE_POWER);
+	}
 };
 
 module.exports = PowerHaulerRole;
