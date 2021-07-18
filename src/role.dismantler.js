@@ -35,7 +35,7 @@ DismantlerRole.prototype.run = function (creep) {
 	}
 
 	if (creep.memory.dismantling) {
-		if (creep.operation) {
+		if (creep.operation && creep.operation.type === 'mining') {
 			this.performOperationDismantle(creep);
 			return;
 		}
