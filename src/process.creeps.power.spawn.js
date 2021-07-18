@@ -35,7 +35,7 @@ module.exports = class SpawnPowerCreepsProcess extends Process {
 	assignPowerCreep(creep) {
 		const roomsWithoutPC = _.filter(Game.rooms, room => {
 			if (!room.isMine()) return false;
-			if (room.controller.level < 8) return false;
+			if (!room.powerSpawn) return false;
 
 			const powerCreepsInRoom = _.filter(Game.powerCreeps, creep => {
 				if (creep.memory.singleRoom && creep.memory.singleRoom === room.name) return true;
