@@ -65,4 +65,11 @@ module.exports = {
 	// Number of hits for walls / ramparts needed for more expensive structures
 	// to be built.
 	minWallIntegrity: 500000,
+
+	// Trade:
+	enableTradeManagement: true,
+	allowBuyingEnergy: false,
+	allowBuyingPixels: false,
+	allowSellingPower: true,
+	allowSellingOps: true,
 };

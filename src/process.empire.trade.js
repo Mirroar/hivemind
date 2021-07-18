@@ -8,12 +8,6 @@ const cache = require('./cache');
 const Process = require('./process');
 const utilities = require('./utilities');
 
-// @todo Move to configuration eventually.
-const shouldBuyEnergy = false;
-const shouldBuyPixels = true;
-const shouldSellPower = true;
-const shouldSellOps = true;
-
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
 // Amount of credits to keep in reserve for creating orders.
@@ -40,6 +34,8 @@ TradeProcess.prototype = Object.create(Process.prototype);
  * Buys and sells resources on the global market.
  */
 TradeProcess.prototype.run = function () {
+	if (!hivemind.settings.get('enableTradeManagement')) return;
+
 	// Only trade if we have a terminal to trade with.
 	if (_.size(_.filter(Game.rooms, room => room.isMine() && room.terminal)) === 0) return;
 
@@ -95,7 +91,7 @@ TradeProcess.prototype.run = function () {
 		}
 	}
 
-	if (this.availableCredits > 0 && shouldBuyEnergy) {
+	if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingEnergy')) {
 		// Also try to cheaply buy some energy for rooms that are low on it.
 		_.each(resources.rooms, (roomState, roomName) => {
 			if (!roomState.canTrade) return;
@@ -110,13 +106,13 @@ TradeProcess.prototype.run = function () {
 		});
 	}
 
-	if (this.availableCredits > 0 && shouldBuyPixels) {
+	if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingPixels')) {
 		// Try to buy pixels when price is low.
 		this.tryBuyResources(PIXEL);
 		this.instaBuyResources(PIXEL);
 	}
 
-	if (shouldSellPower) {
+	if (hivemind.settings.get('allowSellingPower')) {
 		// Sell excess power we can't apply to our account.
 		if ((total.resources[RESOURCE_POWER] || 0) > highStorage) {
 			this.instaSellResources(RESOURCE_POWER, resources.rooms);
@@ -127,7 +123,7 @@ TradeProcess.prototype.run = function () {
 		}
 	}
 
-	if (shouldSellOps) {
+	if (hivemind.settings.get('allowSellingOps')) {
 		// Sell excess ops.
 		if ((total.resources[RESOURCE_OPS] || 0) > lowStorage) {
 			this.instaSellResources(RESOURCE_OPS, resources.rooms);
