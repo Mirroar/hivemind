@@ -18,6 +18,12 @@ ScoutRole.prototype = Object.create(Role.prototype);
  *   The creep to run logic for.
  */
 ScoutRole.prototype.run = function (creep) {
+	if (creep.memory.justSpawned) {
+		// No attack notifications for scouts, please.
+		creep.notifyWhenAttacked(false);
+		delete creep.memory.justSpawned;
+	}
+
 	if (!creep.memory.scoutTarget && !creep.memory.portalTarget) {
 		this.chooseScoutTarget(creep);
 	}

@@ -90,7 +90,7 @@ module.exports = class ScoutSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room, option) {
-		const memory = {origin: room.name};
+		const memory = {origin: room.name, justSpawned: true};
 
 		if (option.portalTarget) {
 			memory.portalTarget = option.portalTarget;
