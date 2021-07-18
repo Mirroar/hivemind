@@ -104,6 +104,10 @@ module.exports = class SpawnManager {
 				s.waiting = true;
 			});
 		}
+
+		_.each(spawns, spawn => {
+			spawn.numSpawnOptions = _.size(options);
+		});
 	}
 
 	/**

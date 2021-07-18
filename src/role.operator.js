@@ -1,7 +1,8 @@
 'use strict';
 
 /* global OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE PWR_REGEN_MINERAL
-PWR_OPERATE_STORAGE RESOURCE_OPS STORAGE_CAPACITY */
+PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
+FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -55,6 +56,8 @@ OperatorRole.prototype.chooseOrder = function () {
 	this.addRegenSourcesOptions(options);
 	this.addRegenMineralOptions(options);
 	this.addOperateStorageOptions(options);
+	this.addOperateSpawnOptions(options);
+	this.addOperateExtensionOptions(options);
 	this.addTransferOpsOptions(options);
 
 	this.creep.memory.order = utilities.getBestOption(options);
@@ -92,7 +95,7 @@ OperatorRole.prototype.addWaitOptions = function (options) {
 		type: 'performWait',
 		priority: 1,
 		weight: 0,
-		timer: 10,
+		timer: 5,
 	});
 };
 
@@ -176,11 +179,11 @@ OperatorRole.prototype.addOperateStorageOptions = function (options) {
 	if (!this.creep.powers[PWR_OPERATE_STORAGE]) return;
 	if (this.creep.powers[PWR_OPERATE_STORAGE].level < 1) return;
 	if (this.creep.powers[PWR_OPERATE_STORAGE].cooldown > 0) return;
+	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_STORAGE].ops) return;
 
 	const storage = this.creep.room.storage;
 	if (!storage) return;
 	if (_.sum(storage.store) < STORAGE_CAPACITY * 0.9) return;
-	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_STORAGE].ops) return;
 
 	if (!storage) return;
 
@@ -194,6 +197,92 @@ OperatorRole.prototype.addOperateStorageOptions = function (options) {
 		target: storage.id,
 		priority: 4,
 		weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_OPERATE_STORAGE].duration),
+	});
+};
+
+/**
+ * Adds options for operating a spawn, speeding up spawning.
+ *
+ * @param {Array} options
+ *   A list of potential power creep orders.
+ */
+OperatorRole.prototype.addOperateSpawnOptions = function (options) {
+	if (!this.creep.powers[PWR_OPERATE_SPAWN]) return;
+	if (this.creep.powers[PWR_OPERATE_SPAWN].level < 1) return;
+	if (this.creep.powers[PWR_OPERATE_SPAWN].cooldown > 0) return;
+	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_SPAWN].ops) return;
+
+	// @todo Make sure we're not waiting on energy.
+
+	const spawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
+		if (spawn.structureType !== STRUCTURE_SPAWN) return false;
+		const activeEffect = _.first(_.filter(spawn.effects, effect => effect.power === PWR_OPERATE_SPAWN));
+		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
+		if (ticksRemaining > 50) return false;
+
+		// Make sure the spawn actually needs support with spawning.
+		if (!this.creep.room.memory.spawns) return false;
+
+		const memory = this.creep.room.memory.spawns[spawn.id];
+		const historyChunkLength = 100;
+		const totalTicks = memory.ticks + (memory.history.length * historyChunkLength);
+		const spawningTicks = _.reduce(memory.history, (total, h) => total + h.spawning, memory.spawning);
+
+		if ((memory.options || 0) < 2 && spawningTicks / totalTicks < 0.8) return false;
+
+		return true;
+	});
+	if (!spawn) return;
+
+	const activeEffect = _.first(_.filter(spawn.effects, effect => effect.power === PWR_OPERATE_SPAWN));
+	const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
+	options.push({
+		type: 'usePower',
+		power: PWR_OPERATE_SPAWN,
+		target: spawn.id,
+		priority: 4,
+		weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_OPERATE_SPAWN].duration),
+	});
+};
+
+/**
+ * Adds options for operating extensions, speeding up spawning.
+ *
+ * @param {Array} options
+ *   A list of potential power creep orders.
+ */
+OperatorRole.prototype.addOperateExtensionOptions = function (options) {
+	if (!this.creep.powers[PWR_OPERATE_EXTENSION]) return;
+	if (this.creep.powers[PWR_OPERATE_EXTENSION].level < 1) return;
+	if (this.creep.powers[PWR_OPERATE_EXTENSION].cooldown > 0) return;
+	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_EXTENSION].ops) return;
+
+	// Don't operate extensions if they're almost full anyways.
+	if (this.creep.room.energyAvailable > this.creep.room.energyCapacityAvailable * 0.8) return;
+
+	const spawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
+		if (spawn.structureType !== STRUCTURE_SPAWN) return false;
+
+		// Make sure the spawn actually needs support with spawning.
+		if (!this.creep.room.memory.spawns) return false;
+		if ((this.creep.room.memory.spawns[spawn.id].options || 0) < 2) return false;
+
+		// Don't support if there is still time for transporters to handle refilling.
+		if (spawn.spawning && spawn.spawning.remainingTime > 5) return false;
+
+		return true;
+	});
+	if (!spawn) return;
+
+	const storage = this.creep.room.getBestStorageSource(RESOURCE_ENERGY);
+	if (!storage) return;
+
+	options.push({
+		type: 'usePower',
+		power: PWR_OPERATE_EXTENSION,
+		target: storage.id,
+		priority: 3,
+		weight: 1,
 	});
 };
 
