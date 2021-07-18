@@ -353,12 +353,11 @@ const utilities = {
 	generateSingleRoomCostMatrix(matrix, roomName) {
 		const newMatrix = matrix.clone();
 		const terrain = new Room.Terrain(roomName);
-		for (let x = 0; x < 50; x++) {
-			for (let y = 0; y < 50; y++) {
-				if ((x === 0 || y === 0 || x === 49 || y === 49) && terrain.get(x, y) !== TERRAIN_MASK_WALL) {
-					newMatrix.set(x, y, 50);
-				}
-			}
+		for (let i = 1; i < 49; i++) {
+			if (terrain.get(i, 0) !== TERRAIN_MASK_WALL) newMatrix.set(i, 0, 50);
+			if (terrain.get(0, i) !== TERRAIN_MASK_WALL) newMatrix.set(0, i, 50);
+			if (terrain.get(i, 49) !== TERRAIN_MASK_WALL) newMatrix.set(i, 49, 50);
+			if (terrain.get(49, i) !== TERRAIN_MASK_WALL) newMatrix.set(49, i, 50);
 		}
 
 		return newMatrix;
