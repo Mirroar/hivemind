@@ -372,31 +372,39 @@ module.exports = class RoomManager {
 	 * Builds structures that are relevant in fully built rooms only.
 	 */
 	buildEndgameStructures() {
-		// Make sure labs are built in the right place, remove otherwise.
-		this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
-		if (CONTROLLER_STRUCTURES[this.room.controller.level] === 3) {
-			// Build reaction labs first if we only have enough to start reactions.
-			this.buildPlannedStructures('lab.reaction', STRUCTURE_LAB);
+		if (hivemind.settings.get('constructLabs')) {
+			// Make sure labs are built in the right place, remove otherwise.
+			this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
+			if (CONTROLLER_STRUCTURES[this.room.controller.level] === 3) {
+				// Build reaction labs first if we only have enough to start reactions.
+				this.buildPlannedStructures('lab.reaction', STRUCTURE_LAB);
+			}
+			else {
+				// Build boost lab with priority.
+				this.buildPlannedStructures('lab.boost', STRUCTURE_LAB);
+
+				// Build remaining labs.
+				this.buildPlannedStructures('lab', STRUCTURE_LAB);
+			}
 		}
-		else {
-			// Build boost lab with priority.
-			this.buildPlannedStructures('lab.boost', STRUCTURE_LAB);
+
+		if (hivemind.settings.get('constructNukers')) {
+			// Make sure all current nukers have been built.
+			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
+			this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
 		}
 
-		// Build remaining labs.
-		this.buildPlannedStructures('lab', STRUCTURE_LAB);
+		if (hivemind.settings.get('constructPowerSpawns')) {
+			// Make sure all current power spawns have been built.
+			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
+			this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
+		}
 
-		// Make sure all current nukers have been built.
-		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
-		this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
-
-		// Make sure all current power spawns have been built.
-		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN, 1);
-		this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
-
-		// Make sure all current observers have been built.
-		if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
-		this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
+		if (hivemind.settings.get('constructObservers')) {
+			// Make sure all current observers have been built.
+			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
+			this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
+		}
 	}
 
 	/**
