@@ -38,6 +38,7 @@ module.exports = {
 	// Power mining:
 	// Enable power mining in general.
 	enablePowerMining: true,
+	powerMiningCheckInterval: 100,
 	// Filter rooms where power mining is allowed to take place. This needs to be
 	// a function that is passed a room name and returns true for allowed rooms.
 	powerMineRoomFilter: null,

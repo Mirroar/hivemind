@@ -119,7 +119,7 @@ module.exports = {
 
 		if (shardHasEstablishedRooms) {
 			hivemind.runProcess('strategy.power_mining', PowerMiningProcess, {
-				interval: 100,
+				interval: hivemind.settings.get('powerMiningCheckInterval'),
 			});
 		}
 
