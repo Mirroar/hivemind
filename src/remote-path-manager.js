@@ -52,11 +52,10 @@ module.exports = class RemotePathManager {
 						const matrix = isMyRoom ? Game.rooms[roomName].roomPlanner.getNavigationMatrix().clone() : new PathFinder.CostMatrix();
 
 						// @todo Set to 1 for each road used by other active remote mining paths in this room.
-
 						// For now, we just use road locations from intel as a guide.
 						const roads = roomIntel.getRoadCoords();
 						for (const road of roads) {
-							matrix.set(road.x, road.y, 1);
+							if (matrix.get(road.x, road.y) === 0) matrix.set(road.x, road.y, 1);
 						}
 
 						if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
