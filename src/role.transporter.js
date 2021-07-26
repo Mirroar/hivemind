@@ -532,7 +532,7 @@ TransporterRole.prototype.addTowerDeliveryOptions = function (options) {
 TransporterRole.prototype.addHighLevelEnergyDeliveryOptions = function (options) {
 	const room = this.creep.room;
 	if (room.isEvacuating()) return;
-	if (room.getCurrentResourceAmount(RESOURCE_ENERGY) < 100000) return;
+	if (room.getCurrentResourceAmount(RESOURCE_ENERGY) < hivemind.settings.get('minEnergyForPowerProcessing')) return;
 
 	const targets = room.find(FIND_STRUCTURES, {
 		filter: structure => {

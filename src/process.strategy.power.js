@@ -1,7 +1,7 @@
 'use strict';
 
 /* global hivemind RoomPosition CREEP_SPAWN_TIME MAX_CREEP_SIZE ATTACK_POWER
-CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN POWER_BANK_CAPACITY_MAX */
+CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN */
 
 const NavMesh = require('./nav-mesh');
 const Process = require('./process');
@@ -83,16 +83,14 @@ PowerMiningProcess.prototype.run = function () {
 		if (info.amount <= 0 || info.hits <= 0) return;
 
 		// Skip if low amount.
-		if (info.amount < POWER_BANK_CAPACITY_MAX / 4) return;
+		if (info.amount < hivemind.settings.get('powerBankMinAmount')) return;
 
 		const dps = info.hits / timeRemaining;
-
-		// @todo Maybe adjust strategy to use dedicated attackers and healers if space is limited.
-
 		const partsPerDPS = 2 / ATTACK_POWER;
 		const numCreeps = Math.ceil(dps * partsPerDPS / MAX_CREEP_SIZE);
 
 		if (numCreeps > Math.min(5, info.freeTiles)) {
+			// We can't attack with enough creeps.
 			delete memory.rooms[roomName];
 			return;
 		}
@@ -104,7 +102,7 @@ PowerMiningProcess.prototype.run = function () {
 		_.each(Game.rooms, room => {
 			if (!room.isMine()) return;
 			if (room.isFullOnPower()) return;
-			if (room.getStoredEnergy() < 75000) return;
+			if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) return;
 			if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) return;
 			if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) return;
 

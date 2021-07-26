@@ -47,8 +47,9 @@ module.exports = {
 	// Filter rooms where power mining is allowed to take place. This needs to be
 	// a function that is passed a room name and returns true for allowed rooms.
 	powerMineRoomFilter: null,
-	// Spawn healers to deal with reflected damage from power sources.
-	powerMineHealers: true,
+	powerBankMinAmount: POWER_BANK_CAPACITY_MAX / 4,
+	minEnergyForPowerHarvesting: 75000,
+	minEnergyForPowerProcessing: 100000,
 
 	// Power creeps:
 	powerPriorities: [
