@@ -6,8 +6,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Only deserialize `Memory` on a global reset to save CPU.
+- Added a settings manager and several settings to customize the bot's behavior. See `settings.default.js` for more information.
+- Remote builders (used when expanding) will not automatically harvest energy in nearby rooms when the target room's sources are depleted.
+- Added a manager for segmented memory that loads on a new global and saves every 100 ticks.
+- Room intel and room planner now use segmented memory.
+- Added operations that are able to keep track of certain stats.
+- Added room operations to track room CPU usage.
+- Converted remote mining code to operations to keep track of spent and gained resources and CPU usage, and for better code structure.
+- Structures blocking a remote mining path will now automatically be dismantled.
+- Added a remote path manager that manages the paths for remote mining.
+- Added the ability to place ramparts using mincut algorithm instead of at room borders (disabled by default).
+- Operator power creeps can now boost spawns and extensions.
+- More remote mining is possible in a room with a spawn-boosting power creep.
+
+### Changed
+- Improved calculation of how many remote mines a room can handle.
+- Improved drop harvesting for harvesters and mineral harvesters to save CPU.
+- Expansion target is now chosen across multiple ticks to prevent CPU timeouts.
+- Scout targets are now chosen across multiple ticks to prevent CPU timeouts.
+- Bigger attack creeps are used to destroy invader cores more efficiently.
+- Power haulers can now pick up power from ruins.
+- Power harvesters attack nearby hostile creeps.
+
+### Removed
+
+## [2.0.1] - 2021-05-23
+Caution: This release has an error caused in the map visuals process, which might limit functionality.
+
+### Added
 - Added `cache.js` containing general caching functionality for use in other modules.
 - Added slightly modified version of `packrat.js` that can deal with higher numbers in room names.
+- Added CPU statistics to daily reports.
+- Some basic map visuals showing scout status, expansion scores and remote mining status.
+- Creeps may push other non-moving creeps out of the way after a while.
+
+### Changed
+- Much improved trade logic that utilizes market history instead of only current prices.
 
 ### Removed
 - Removed `utilities.getCache()` in favor of new caching API.
