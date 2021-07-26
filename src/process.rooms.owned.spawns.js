@@ -62,6 +62,9 @@ ManageSpawnsProcess.prototype.run = function () {
 	this.collectSpawnStats(roomSpawns);
 };
 
+/**
+ * Collects stats for each spawn in memory.
+ */
 ManageSpawnsProcess.prototype.collectSpawnStats = function (spawns) {
 	if (!this.room.memory.spawns) this.room.memory.spawns = {};
 	const memory = this.room.memory.spawns;
@@ -73,6 +76,7 @@ ManageSpawnsProcess.prototype.collectSpawnStats = function (spawns) {
 				spawning: 0,
 				waiting: 0,
 				history: [],
+				options: 0,
 			};
 		}
 
@@ -80,6 +84,7 @@ ManageSpawnsProcess.prototype.collectSpawnStats = function (spawns) {
 		spawnMemory.ticks++;
 		if (spawn.spawning) spawnMemory.spawning++;
 		if (spawn.waiting) spawnMemory.waiting++;
+		spawnMemory.options = spawn.numSpawnOptions;
 
 		if (spawnMemory.ticks >= historyChunkLength) {
 			// Save current history as new chunk.
