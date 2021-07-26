@@ -151,6 +151,7 @@ TransporterRole.prototype.performDeliver = function () {
 		}
 		else {
 			creep.transfer(target, creep.memory.order.resourceType);
+			delete creep.memory.deliverTarget;
 		}
 
 		return;
@@ -952,7 +953,7 @@ TransporterRole.prototype.addObjectEnergySourceOptions = function (options, find
 	const targets = creep.room.find(findConstant, {
 		filter: target => {
 			const store = target.store || {[target.resourceType]: target.amount};
-			if (store[RESOURCE_ENERGY] || 0 < 20) return false;
+			if ((store[RESOURCE_ENERGY] || 0) < 20) return false;
 
 			const result = PathFinder.search(creep.pos, target.pos);
 			if (result.incomplete) return false;
@@ -1177,6 +1178,9 @@ TransporterRole.prototype.addObjectResourceOptions = function (options, findCons
 				option.priority -= 2;
 			}
 
+			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 2;
+			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 2;
+
 			options.push(option);
 		}
 	}
@@ -1210,6 +1214,8 @@ TransporterRole.prototype.addContainerResourceOptions = function (options) {
 				object: container,
 				resourceType,
 			};
+
+			option.priority -= room.getCreepsWithOrder('getResource', container.id).length * 2;
 
 			options.push(option);
 		}
