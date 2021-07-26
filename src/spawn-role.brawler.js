@@ -33,6 +33,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		this.getLowLevelRoomSpawnOptions(room, options);
 		this.getRemoteDefenseSpawnOptions(room, options);
+		this.getPowerHarvestDefenseSpawnOptions(room, options);
 		this.getTrainPartSpawnOptions(room, options);
 	}
 
@@ -95,8 +96,44 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 				targetPos,
 				pathTarget: utilities.encodePosition(pos),
 				responseType,
+				operation: operation.name,
 			});
 		}
+	}
+
+	getPowerHarvestDefenseSpawnOptions(room, options) {
+		if (!hivemind.settings.get('enablePowerMining')) return;
+		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return;
+
+		_.each(Memory.strategy.power.rooms, (info, roomName) => {
+			if (!info.isActive) return;
+			if (!info.spawnRooms[room.name]) return;
+
+			const roomMemory = Memory.rooms[roomName];
+			if (!roomMemory || !roomMemory.enemies) return;
+			if (roomMemory.enemies.safe) return;
+
+			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.target && utilities.decodePosition(creep.memory.target).roomName === roomName);
+			if (_.size(brawlers) > 0) return;
+
+			// We don't care about melee attacks, plenty of attack creeps in the
+			// room when we're harvesting power.
+			const enemies = _.cloneDeep(roomMemory.enemies);
+			delete enemies.parts[ATTACK];
+			// @todo Retain information about enemy boosts affecting damage.
+			enemies.damage = enemies.parts[RANGED_ATTACK] * RANGED_ATTACK_POWER;
+
+			const responseType = this.getDefenseCreepSize(room, enemies);
+
+			if (responseType === RESPONSE_NONE) return;
+
+			options.push({
+				priority: 4,
+				weight: 1,
+				targetPos: utilities.encodePosition(new RoomPosition(24, 24, roomName)),
+				responseType,
+			});
+		});
 	}
 
 	getDefenseCreepSize(room, enemyData) {
@@ -350,10 +387,12 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			creep.memory.train.partsToSpawn = creep.memory.train.partsToSpawn.slice(1);
 		}
 
+		if (!option.operation) return;
+
 		const position = option.targetPos;
 		if (!position) return;
 
-		const operation = Game.operations['mine:' + utilities.decodePosition(position).roomName];
+		const operation = Game.operations[option.operation];
 		if (operation) {
 			// @todo This will probably not record costs of later parts of a train.
 			operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
