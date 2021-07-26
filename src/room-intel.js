@@ -33,9 +33,9 @@ RoomIntel.prototype.gatherIntel = function () {
 	this.registerScoutAttempt();
 
 	// @todo Have process logic handle throttling of this task.
-	let lastScanThreshold = 500;
+	let lastScanThreshold = hivemind.settings.get('roomIntelCacheDuration');
 	if (Game.cpu.bucket < 5000) {
-		lastScanThreshold = 2500;
+		lastScanThreshold *= 5;
 	}
 
 	if (intel.lastScan && !hivemind.hasIntervalPassed(lastScanThreshold, intel.lastScan)) return;
@@ -212,6 +212,8 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 
 		if (!Memory.strategy.power.rooms[this.roomName] || !Memory.strategy.power.rooms[this.roomName].isActive) {
 			Memory.strategy.power.rooms[this.roomName] = this.memory.power;
+
+			// @todo Update info when gathering is active.
 		}
 	}
 };

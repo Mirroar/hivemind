@@ -75,6 +75,9 @@ module.exports = {
 	maxRoomPrioritizationCpuPerTick: 50,
 	maxScoutsPerRoom: 1,
 	scoutSpawnPriority: 1,
+	roomScoutInterval: 5000,
+	highwayScoutInterval: 1000,
+	roomIntelCacheDuration: 500,
 
 	// Expansion:
 	// Number of ticks we may cache expansion scores.
