@@ -303,7 +303,7 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 		const targetPosition = utilities.decodePosition(creep.memory.target);
 		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 		let enemiesNearby = false;
-		if (creep.memory.body.attack || creep.memory.body.rangedAttack || creep.memory.body.heal) {
+		if (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || creep.memory.body[HEAL]) {
 			// Check for enemies and interrupt move accordingly.
 			_.each(creep.room.enemyCreeps, (hostiles, owner) => {
 				if (hivemind.relations.isAlly(owner)) return;
@@ -639,7 +639,7 @@ BrawlerRole.prototype.performMilitaryAttack = function (creep) {
 		// Attack ordered target first.
 		const target = Game.getObjectById(creep.memory.order.target);
 
-		if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || 0) > 0;
+		if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || 0) > 0;
 	}
 
 	// See if enemies are nearby, attack one of those.
