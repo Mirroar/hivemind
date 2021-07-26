@@ -97,6 +97,9 @@ module.exports = class RemoteMiningOperation extends Operation {
 		return _.first(_.keys(this.getMiningLocationsByRoom()));
 	}
 
+	/**
+	 * Gets the remote paths associated with this operation.
+	 */
 	getPaths() {
 		return cache.inObject(this, 0, 'getPaths', () => {
 			if (!hivemind.segmentMemory.isReady()) return {};
@@ -280,6 +283,9 @@ module.exports = class RemoteMiningOperation extends Operation {
 		return this.hasReservation() ? 2 : 1;
 	}
 
+	/**
+	 * Determines whether the source / room needs a dismantler.
+	 */
 	needsDismantler(sourceLocation) {
 		if (!hivemind.segmentMemory.isReady()) return false;
 		if (sourceLocation) return this.getDismantlePositions(sourceLocation).length > 0;
@@ -292,6 +298,9 @@ module.exports = class RemoteMiningOperation extends Operation {
 		return result;
 	}
 
+	/**
+	 * Gets the positions on the remote path that are obstructed.
+	 */
 	getDismantlePositions(sourceLocation) {
 		if (!hivemind.segmentMemory.isReady()) return [];
 
@@ -311,6 +320,9 @@ module.exports = class RemoteMiningOperation extends Operation {
 					roomName = pos.roomName;
 					matrix = utilities.getCostMatrix(roomName);
 				}
+
+				// Don't try to dismantle things in our own rooms.
+				if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
 
 				if (matrix.get(pos.x, pos.y) >= 100) {
 					// Blocked tile found on path. Add to dismantle targets.
