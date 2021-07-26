@@ -1553,7 +1553,7 @@ RoomPlanner.prototype.getNavigationMatrix = function () {
 		const matrix = new PathFinder.CostMatrix();
 
 		_.each(this.memory.locations, (locations, locationType) => {
-			if (locationType !== 'road' && OBSTACLE_OBJECT_TYPES.indexOf(locationType) === -1) return;
+			if (['road', 'harvester', 'bay_center'].indexOf(locationType) === -1 && OBSTACLE_OBJECT_TYPES.indexOf(locationType) === -1) return;
 
 			_.each(locations, (_, location) => {
 				const pos = utilities.decodePosition(location);
