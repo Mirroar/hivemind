@@ -142,7 +142,6 @@ ExpandProcess.prototype.startExpansion = function (roomInfo) {
 	squad.setUnitCount('brawler', 1);
 	squad.setUnitCount('singleClaim', 1);
 	squad.setUnitCount('builder', 2);
-	squad.setPath(null);
 	this.memory.started = Game.time;
 
 	hivemind.log('strategy').info('🏴 Started expanding to ' + roomInfo.roomName);
@@ -246,8 +245,6 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		if (Math.random() < 0.05 && !this.memory.claimed) {
 			supportSquad.setUnitCount('singleClaim', 1);
 		}
-
-		supportSquad.setPath(null);
 
 		activeSquads[squadName] = true;
 	});

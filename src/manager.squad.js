@@ -115,18 +115,6 @@ Squad.prototype.getOrders = function () {
 };
 
 /**
- * Sets a waypoint path for all units of this squad to follow after spawning.
- *
- * @param {string} pathName
- *   Name of the waypoint path to follow.
- */
-Squad.prototype.setPath = function (pathName) {
-	this.memory.pathName = pathName;
-
-	// @todo If there are creeps already spawned, send them on the path.
-};
-
-/**
  * Orders squad to spawn in the given room.
  *
  * @param {string} roomName
