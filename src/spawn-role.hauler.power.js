@@ -23,19 +23,17 @@ module.exports = class PowerHaulerSpawnRole extends SpawnRole {
 
 			// @todo Determine supposed time until we crack open the power bank.
 			// Then we can stop spawning attackers and spawn haulers instead.
-			const timeToKill = info.hits / info.dps;
-			if (timeToKill > (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + (CREEP_LIFE_TIME / 3)) return;
+			const travelTime = 50 * info.spawnRooms[room.name].distance;
+			const timeToKill = 0.8 * info.hits / info.dps;
+			if (timeToKill > (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + Math.max(CREEP_LIFE_TIME / 3, travelTime)) return;
 
 			// Time to spawn haulers!
 			const powerHaulers = _.filter(Game.creepsByRole['hauler.power'] || {}, creep => creep.memory.targetRoom === roomName);
-			let totalCapacity = 0;
-			_.each(powerHaulers, creep => {
-				totalCapacity += creep.carryCapacity;
-			});
+			const totalCapacity = _.reduce(powerHaulers, (total, creep) => total + creep.carryCapacity, 0);
 
-			if (totalCapacity < info.amount * 1.2 / _.size(info.spawnRooms)) {
+			if (totalCapacity < info.amount * 1.2) {
 				options.push({
-					priority: 3,
+					priority: hivemind.settings.get('powerMineCreepPriority'),
 					weight: 0.5,
 					targetRoom: roomName,
 				});
@@ -55,8 +53,9 @@ module.exports = class PowerHaulerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room) {
+		const moveRatio = hivemind.settings.get('powerHaulerMoveRatio');
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [CARRY]: 0.65},
+			{[MOVE]: moveRatio, [CARRY]: 1 - moveRatio},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}

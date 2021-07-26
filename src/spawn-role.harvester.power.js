@@ -1,6 +1,7 @@
 'use strict';
 
-/* global hivemind CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE HEAL ATTACK */
+/* global hivemind CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE HEAL
+ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER */
 
 const SpawnRole = require('./spawn-role');
 
@@ -25,6 +26,9 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 			// Then we can stop spawning attackers and spawn haulers instead.
 			const travelTime = 50 * info.spawnRooms[room.name].distance;
 			const timeToKill = info.hits / info.dps;
+			const effectiveLifetime = 1 - (travelTime / CREEP_LIFE_TIME);
+			const expectedDps = info.dps / _.size(info.spawnRooms);
+			const expectedHps = expectedDps * POWER_BANK_HIT_BACK;
 
 			// We're assigned to spawn creeps for this power gathering operation!
 			const powerHarvesters = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
@@ -46,18 +50,25 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 				return false;
 			});
 
-			if (powerHarvesters.length < 2 && powerHarvesters.length <= powerHealers.length && timeToKill > 0) {
+			// Spawn attackers before healers.
+			const currentDps = _.reduce(powerHarvesters, (total, creep) => total + (creep.memory.body[ATTACK] * ATTACK_POWER * effectiveLifetime), 0);
+			const currentHps = _.reduce(powerHealers, (total, creep) => total + (creep.memory.body[HEAL] * HEAL_POWER * effectiveLifetime), 0);
+
+			const dpsRatio = currentDps / expectedDps;
+			const hpsRatio = expectedHps ? currentHps / expectedHps : 1;
+
+			if (currentDps < expectedDps && dpsRatio <= hpsRatio && timeToKill > 0) {
 				options.push({
-					priority: 3,
+					priority: hivemind.settings.get('powerMineCreepPriority'),
 					weight: 1,
 					targetRoom: roomName,
 				});
 			}
 
 			// Also spawn healers.
-			if (powerHealers.length < 2 && powerHarvesters.length >= powerHealers.length && timeToKill > 0 && hivemind.settings.get('powerMineHealers')) {
+			if (currentHps < expectedHps && dpsRatio > hpsRatio && timeToKill > 0) {
 				options.push({
-					priority: 3,
+					priority: hivemind.settings.get('powerMineCreepPriority'),
 					weight: 1,
 					targetRoom: roomName,
 					isHealer: true,
@@ -78,19 +89,18 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room, option) {
-		const body = [];
 		const functionalPart = option.isHealer ? HEAL : ATTACK;
+		const body = this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.5, [functionalPart]: 0.5},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+		);
 
-		for (let i = 0; i < MAX_CREEP_SIZE; i++) {
-			// First half is all move parts.
-			if (i < MAX_CREEP_SIZE / 2) {
-				body.push(MOVE);
-				continue;
-			}
+		// Move parts should come first to soak up damage.
+		_.sortBy(body, partType => {
+			if (partType === MOVE) return 0;
 
-			// The rest is functional parts.
-			body.push(functionalPart);
-		}
+			return 1;
+		});
 
 		return body;
 	}

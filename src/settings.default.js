@@ -48,6 +48,8 @@ module.exports = {
 	// a function that is passed a room name and returns true for allowed rooms.
 	powerMineRoomFilter: null,
 	powerBankMinAmount: POWER_BANK_CAPACITY_MAX / 4,
+	powerMineCreepPriority: 3,
+	powerHaulerMoveRatio: 0.35,
 	minEnergyForPowerHarvesting: 75000,
 	minEnergyForPowerProcessing: 100000,
 
