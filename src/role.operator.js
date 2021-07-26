@@ -58,7 +58,8 @@ OperatorRole.prototype.chooseOrder = function () {
 	this.addOperateStorageOptions(options);
 	this.addOperateSpawnOptions(options);
 	this.addOperateExtensionOptions(options);
-	this.addTransferOpsOptions(options);
+	this.addDepositOpsOptions(options);
+	this.addRetrieveOpsOptions(options);
 
 	this.creep.memory.order = utilities.getBestOption(options);
 };
@@ -292,15 +293,35 @@ OperatorRole.prototype.addOperateExtensionOptions = function (options) {
  * @param {Array} options
  *   A list of potential power creep orders.
  */
-OperatorRole.prototype.addTransferOpsOptions = function (options) {
+OperatorRole.prototype.addDepositOpsOptions = function (options) {
 	if (!this.creep.carry[RESOURCE_OPS]) return;
 	if (_.sum(this.creep.carry) < this.creep.carryCapacity * 0.9) return;
 
-	const storage = this.creep.room.storage;
+	const storage = this.creep.room.getBestStorageTarget(RESOURCE_OPS);
 	if (!storage) return;
 
 	options.push({
 		type: 'depositOps',
+		target: storage.id,
+		priority: 2,
+		weight: 0,
+	});
+};
+
+/**
+ * Adds options for transferring extra ops to storage.
+ *
+ * @param {Array} options
+ *   A list of potential power creep orders.
+ */
+OperatorRole.prototype.addRetrieveOpsOptions = function (options) {
+	if ((this.creep.carry[RESOURCE_OPS] || 0) > this.creep.carryCapacity * 0.1) return;
+
+	const storage = this.creep.room.getBestStorageSource(RESOURCE_OPS);
+	if (!storage) return;
+
+	options.push({
+		type: 'retrieveOps',
 		target: storage.id,
 		priority: 2,
 		weight: 0,
@@ -399,10 +420,30 @@ OperatorRole.prototype.depositOps = function () {
 		return;
 	}
 
+	const amount = Math.min(Math.floor(this.creep.store.getCapacity() / 2), this.creep.store[RESOURCE_OPS] || 0);
 	if (this.creep.pos.getRangeTo(storage) > 1) {
 		this.creep.moveToRange(storage, 1);
 	}
-	else if (this.creep.transfer(storage, RESOURCE_OPS) === OK) {
+	else if (this.creep.transfer(storage, RESOURCE_OPS, amount) === OK) {
+		this.orderFinished();
+	}
+};
+
+/**
+ *
+ */
+OperatorRole.prototype.retrieveOps = function () {
+	const storage = Game.getObjectById(this.creep.memory.order.target);
+	if (!storage) {
+		this.orderFinished();
+		return;
+	}
+
+	const amount = Math.min(Math.floor(this.creep.store.getCapacity() / 2), storage.store[RESOURCE_OPS] || 0);
+	if (this.creep.pos.getRangeTo(storage) > 1) {
+		this.creep.moveToRange(storage, 1);
+	}
+	else if (this.creep.withdraw(storage, RESOURCE_OPS, amount) === OK) {
 		this.orderFinished();
 	}
 };
@@ -420,7 +461,7 @@ OperatorRole.prototype.orderFinished = function () {
 OperatorRole.prototype.generateOps = function () {
 	if (this.creep.room.controller && !this.creep.room.controller.isPowerEnabled) return;
 	if (this.creep._powerUsed) return;
-	if (_.sum(this.creep.carry) === this.creep.carryCapacity) return;
+	if (this.creep.store.getFreeCapacity() === 0) return;
 	if (!this.creep.powers[PWR_GENERATE_OPS]) return;
 	if (this.creep.powers[PWR_GENERATE_OPS].level < 1) return;
 	if (this.creep.powers[PWR_GENERATE_OPS].cooldown > 0) return;
