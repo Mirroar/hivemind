@@ -1,5 +1,10 @@
 'use strict';
 
+/* global POWER_BANK_CAPACITY_MAX PWR_REGEN_SOURCE PWR_REGEN_MINERAL
+PWR_OPERATE_CONTROLLER PWR_OPERATE_SPAWN PWR_OPERATE_TOWER PWR_OPERATE_EXTENSION
+PWR_OPERATE_LAB PWR_OPERATE_OBSERVER PWR_OPERATE_TERMINAL PWR_OPERATE_FACTORY
+PWR_OPERATE_STORAGE PWR_GENERATE_OPS */
+
 /**
  * This file contains the default settings for hivemind.
  *
@@ -44,6 +49,23 @@ module.exports = {
 	powerMineRoomFilter: null,
 	// Spawn healers to deal with reflected damage from power sources.
 	powerMineHealers: true,
+
+	// Power creeps:
+	powerPriorities: [
+		PWR_OPERATE_FACTORY,
+		PWR_REGEN_SOURCE,
+		PWR_REGEN_MINERAL,
+		PWR_OPERATE_STORAGE,
+		PWR_GENERATE_OPS,
+		PWR_OPERATE_CONTROLLER,
+		PWR_OPERATE_SPAWN,
+		PWR_OPERATE_TOWER,
+		PWR_OPERATE_EXTENSION,
+		PWR_OPERATE_LAB,
+		PWR_OPERATE_OBSERVER,
+		PWR_OPERATE_TERMINAL,
+	],
+	operatorEachRoom: false,
 
 	// Scouting:
 	// Interval for running room prioritizing process.

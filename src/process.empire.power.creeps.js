@@ -1,26 +1,9 @@
 'use strict';
 
 /* global hivemind PowerCreep POWER_CREEP_MAX_LEVEL POWER_CLASS POWER_INFO
-PWR_REGEN_SOURCE PWR_REGEN_MINERAL PWR_OPERATE_STORAGE PWR_GENERATE_OPS
-PWR_OPERATE_CONTROLLER PWR_OPERATE_SPAWN PWR_OPERATE_TOWER PWR_OPERATE_EXTENSION
-PWR_OPERATE_LAB PWR_OPERATE_OBSERVER PWR_OPERATE_TERMINAL PWR_OPERATE_FACTORY */
+PWR_OPERATE_FACTORY */
 
 const Process = require('./process');
-
-const powerPriorities = [
-	PWR_OPERATE_FACTORY,
-	PWR_REGEN_SOURCE,
-	PWR_REGEN_MINERAL,
-	PWR_OPERATE_STORAGE,
-	PWR_GENERATE_OPS,
-	PWR_OPERATE_CONTROLLER,
-	PWR_OPERATE_SPAWN,
-	PWR_OPERATE_TOWER,
-	PWR_OPERATE_EXTENSION,
-	PWR_OPERATE_LAB,
-	PWR_OPERATE_OBSERVER,
-	PWR_OPERATE_TERMINAL,
-];
 
 module.exports = class ManagePowerCreepsProcess extends Process {
 	/**
@@ -32,8 +15,9 @@ module.exports = class ManagePowerCreepsProcess extends Process {
 
 		hivemind.log('creeps').info('Unused power creep levels:', Game.gpl.level - usedGpl);
 
-		const creepToUpgrade = _.find(Game.powerCreeps, creep => creep.level < POWER_CREEP_MAX_LEVEL);
-		if (creepToUpgrade) {
+		const smallPCLevel = hivemind.settings.get('operatorEachRoom');
+		const creepToUpgrade = _.min(Game.powerCreeps, creep => creep.level);
+		if (creepToUpgrade.level < POWER_CREEP_MAX_LEVEL && (!smallPCLevel || creepToUpgrade.level < smallPCLevel)) {
 			this.upgradePowerCreep(creepToUpgrade);
 		}
 		else if (Game.gpl.level - usedGpl > 1) {
@@ -43,7 +27,7 @@ module.exports = class ManagePowerCreepsProcess extends Process {
 	}
 
 	upgradePowerCreep(creep) {
-		for (const powerOption of powerPriorities) {
+		for (const powerOption of hivemind.settings.get('powerPriorities')) {
 			// Check if this power could be upgraded.
 			const info = POWER_INFO[powerOption];
 			const currentLevel = (creep.powers[powerOption] || {}).level || 0;
