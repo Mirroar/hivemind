@@ -2,7 +2,7 @@
 
 /* global hivemind RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
 POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
-FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS */
+FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK */
 
 const Role = require('./role');
 
@@ -24,6 +24,8 @@ PowerHarvesterRole.prototype = Object.create(Role.prototype);
  */
 PowerHarvesterRole.prototype.run = function (creep) {
 	this.attackNearby(creep);
+	this.chaseNearbyRanged(creep);
+	if (creep._hasAttacked) return;
 
 	const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
 	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
@@ -92,7 +94,30 @@ PowerHarvesterRole.prototype.attackNearby = function (creep) {
 	const highestValue = _.max(targets, c => c.getDamageCapacity(1) + (c.getHealCapacity(1) * 2));
 	if (!highestValue) return;
 
-	if (creep.attack(highestValue) === OK) creep._hasAttacked = true;
+	if (creep.attack(highestValue) === OK) {
+		creep._hasAttacked = true;
+
+		// Chase if target tries to run away.
+		creep.move(creep.pos.getDirectionTo(highestValue.pos));
+	}
+};
+
+PowerHarvesterRole.prototype.chaseNearbyRanged = function (creep) {
+	if (creep.memory.isHealer) return;
+	if (creep._hasAttacked) return;
+	if (creep.pos.roomName !== creep.memory.targetRoom) return;
+
+	const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
+		filter: c => !hivemind.relations.isAlly(c.owner.username) && _.any(c.body, p => p.type === RANGED_ATTACK),
+	});
+	if (targets.length === 0) return;
+
+	// @todo Only chase each enemy with 1 power harvester max.
+	const highestValue = _.max(targets, c => c.getDamageCapacity(1) + (c.getHealCapacity(1) * 2) - (c.pos.getRangeTo(creep.pos) * 5));
+	if (!highestValue) return;
+
+	creep.moveToRange(highestValue.pos, 1);
+	creep._hasAttacked = true;
 };
 
 /**
@@ -127,8 +152,6 @@ PowerHarvesterRole.prototype.attackPowerBank = function (creep, powerBank) {
 		}
 	}
 	else {
-		if (creep._hasAttacked) return;
-
 		if (creep.pos.getRangeTo(powerBank) > 1) {
 			creep.moveToRange(powerBank, 1);
 			return;
