@@ -182,7 +182,7 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	if (!powerBank || powerBank.hits === 0 || powerBank.power === 0) return;
 
 	// For now, send a notification!
-	hivemind.log('intel', this.roomName).info('Power bank containing', powerBank.amount, 'power found!');
+	hivemind.log('intel', this.roomName).info('Power bank containing', powerBank.power, 'power found!');
 
 	// Find out how many access points there are around this power bank.
 	const terrain = new Room.Terrain(this.roomName);
