@@ -295,8 +295,12 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 		return;
 	}
 
+	let allowDanger = true;
 	if (creep.memory.squadName) {
 		this.performSquadMove(creep);
+
+		// Don't move expansion squads through enemy rooms.
+		if (creep.memory.squadName.startsWith('expand')) allowDanger = false;
 	}
 
 	if (creep.memory.target) {
@@ -321,7 +325,7 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 		}
 
 		if (!enemiesNearby && (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget()))) {
-			if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
+			if (creep.moveUsingNavMesh(targetPosition, {allowDanger}) !== OK) {
 				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
 				// @todo This is cross-room movement and should therefore only calculate a path once.
 				creep.moveToRange(targetPosition, 3);
