@@ -2,7 +2,8 @@
 
 /* global hivemind RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
 POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
-FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK */
+FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
+POWER_BANK_HIT_BACK */
 
 const Role = require('./role');
 
@@ -157,7 +158,7 @@ PowerHarvesterRole.prototype.attackPowerBank = function (creep, powerBank) {
 			return;
 		}
 
-		if (creep.hits >= creep.hitsMax * 0.7) {
+		if (creep.hits >= creep.hitsMax * 0.7 || POWER_BANK_HIT_BACK === 0) {
 			creep.attack(powerBank);
 		}
 	}
