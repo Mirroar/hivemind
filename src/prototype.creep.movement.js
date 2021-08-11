@@ -624,3 +624,8 @@ PowerCreep.prototype.calculateGoToPath = Creep.prototype.calculateGoToPath;
 PowerCreep.prototype.moveToRoom = Creep.prototype.moveToRoom;
 PowerCreep.prototype.calculateRoomPath = Creep.prototype.calculateRoomPath;
 PowerCreep.prototype.manageBlockingCreeps = Creep.prototype.manageBlockingCreeps;
+PowerCreep.prototype.isInRoom = Creep.prototype.isInRoom;
+PowerCreep.prototype.moveUsingNavMesh = Creep.prototype.moveUsingNavMesh;
+PowerCreep.prototype.getNavMeshMoveTarget = Creep.prototype.getNavMeshMoveTarget;
+PowerCreep.prototype.stopNavMeshMove = Creep.prototype.stopNavMeshMove;
+
