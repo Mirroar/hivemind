@@ -1,10 +1,10 @@
 'use strict';
 
-/* global hivemind RoomPosition StructureController FIND_HOSTILE_CREEPS ATTACK
+/* global hivemind PathFinder RoomPosition StructureController ATTACK
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
-ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK */
+ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
 const PathManager = require('./remote-path-manager');
 const Role = require('./role');
@@ -168,8 +168,7 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
 
 	if (enemies && enemies.length > 0) {
 		for (const enemy of enemies) {
-			// Check if enemy is harmless, and ignore it.
-			if (!enemy.isDangerous()) continue;
+			if (hivemind.relations.isAlly(creep.owner.username)) continue;
 
 			const option = {
 				priority: 5,
@@ -177,6 +176,11 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
 				type: 'hostilecreep',
 				object: enemy,
 			};
+
+			// Check if enemy is harmless, and adjust priority.
+			if (!enemy.isDangerous()) {
+				option.priority = 1;
+			}
 
 			// @todo Calculate weight / priority from distance, HP left, parts.
 
@@ -344,23 +348,7 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 
 	if (creep.memory.order) {
 		const target = Game.getObjectById(creep.memory.order.target);
-
-		if (target) {
-			if (creep.memory.body.attack) {
-				const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
-				creep.moveTo(target, {
-					reusePath: 5,
-					ignoreDestructibleStructures: ignore,
-					maxRooms: 1,
-				});
-			}
-			else {
-				creep.goTo(target, {
-					range: 1,
-					maxRooms: 1,
-				});
-			}
-		}
+		this.moveToEngageTarget(creep, target);
 
 		return;
 	}
@@ -384,6 +372,63 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 
 	creep.moveTo(25, 25, {
 		reusePath: 50,
+	});
+};
+
+BrawlerRole.prototype.moveToEngageTarget = function (creep, target) {
+	if (!target) {
+		// @todo Still try to avoid other hostiles.
+		creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 10);
+
+		return;
+	}
+
+	if (creep.memory.body[ATTACK]) {
+		// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
+		const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
+		creep.moveTo(target, {
+			reusePath: 0,
+			ignoreDestructibleStructures: ignore,
+			maxRooms: 1,
+		});
+
+		return;
+	}
+
+	if (creep.memory.body[RANGED_ATTACK]) {
+		// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
+		const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
+		if (creep.pos.getRangeTo(target.pos) >= 3) {
+			creep.moveTo(target, {
+				reusePath: 0,
+				ignoreDestructibleStructures: ignore,
+				maxRooms: 1,
+				range: 2,
+			});
+
+			return;
+		}
+
+		// @todo Only flee from melee creeps.
+		// @todo Adjust cost matrix to disincentivize tiles around hostiles.
+		// @todo Include friendly creeps in obstacle list to prevent blocking.
+		const result = PathFinder.search(creep.pos, {pos: target.pos, range: 3}, {
+			roomCallback: roomName => utilities.getCostMatrix(roomName),
+			flee: true,
+			maxRooms: 1,
+		});
+
+		if (result.path && result.path.length > 0) {
+			creep.move(creep.pos.getDirectionTo(result.path[0]));
+		}
+
+		return;
+	}
+
+	// Non-combat creeps just move toward their target.
+	creep.goTo(target, {
+		range: 1,
+		maxRooms: 1,
 	});
 };
 
