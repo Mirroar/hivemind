@@ -100,6 +100,7 @@ module.exports = {
 	constructNukers: true,
 	constructPowerSpawns: true,
 	constructObservers: true,
+	minEnergyToUpgradeAtRCL8: 50000,
 	rampartWhitelistedUsers: [],
 	maxVisitorsPerUser: 0,
 

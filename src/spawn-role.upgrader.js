@@ -77,7 +77,7 @@ module.exports = class UpgraderSpawnRole extends SpawnRole {
 
 		// RCL 8 rooms can't make use of more than 1 upgrader.
 		if (room.controller.level === 8) {
-			if (availableEnergy < 50000) return 0;
+			if (availableEnergy < hivemind.settings.get('minEnergyToUpgradeAtRCL8')) return 0;
 			return 1;
 		}
 
