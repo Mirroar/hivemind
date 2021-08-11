@@ -100,6 +100,8 @@ module.exports = {
 	constructNukers: true,
 	constructPowerSpawns: true,
 	constructObservers: true,
+	rampartWhitelistedUsers: [],
+	maxVisitorsPerUser: 0,
 
 	// Trade:
 	enableTradeManagement: true,
