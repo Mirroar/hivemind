@@ -1,8 +1,9 @@
 'use strict';
 
-/* global OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE PWR_REGEN_MINERAL
+/* global hivemind RoomPosition OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE
 PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
-FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY */
+FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
+PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME */
 
 const utilities = require('./utilities');
 const Role = require('./role');
@@ -21,6 +22,19 @@ OperatorRole.prototype = Object.create(Role.prototype);
  */
 OperatorRole.prototype.run = function (creep) {
 	this.creep = creep;
+
+	if (this.creep.memory.newTargetRoom) {
+		delete this.creep.memory.singleRoom;
+		if (this.moveToTargetRoom()) {
+			// Keep generating ops.
+			this.generateOps();
+			return;
+		}
+
+		this.creep.memory.singleRoom = this.creep.memory.newTargetRoom;
+		delete this.creep.memory.newTargetRoom;
+	}
+
 	if (!this.hasOrder()) {
 		this.chooseOrder();
 	}
@@ -28,6 +42,39 @@ OperatorRole.prototype.run = function (creep) {
 	this.performOrder();
 
 	this.generateOps();
+};
+
+/**
+ * Moves this power creep to its assigned room if possible.
+ *
+ * @returns {boolean}
+ *   True if the creep is in the process of moving to another room.
+ */
+OperatorRole.prototype.moveToTargetRoom = function () {
+	const isInTargetRoom = this.creep.pos.roomName === this.creep.memory.newTargetRoom;
+
+	if (isInTargetRoom && (this.creep.isInRoom() || !this.creep.getNavMeshMoveTarget())) return false;
+
+	// @todo Use target room's power spawn position.
+	const targetPosition = new RoomPosition(25, 25, this.creep.memory.newTargetRoom);
+
+	// If there's a power spawn in the room, use it if necessary so we can
+	// survive long journeys.
+	if (this.creep.ticksToLive < POWER_CREEP_LIFE_TIME * 0.8 && this.creep.room.powerSpawn) {
+		this.performRenew();
+
+		return true;
+	}
+
+	// @todo If we're in a room with a storage, clear out creep's store.
+
+	if (this.creep.moveUsingNavMesh(targetPosition) !== OK) {
+		hivemind.log('creeps').debug(this.creep.name, 'can\'t move from', this.creep.pos.roomName, 'to', targetPosition.roomName);
+		// @todo This is cross-room movement and should therefore only calculate a path once.
+		this.creep.moveToRange(targetPosition, 3);
+	}
+
+	return true;
 };
 
 /**
