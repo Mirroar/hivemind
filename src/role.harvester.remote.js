@@ -78,7 +78,9 @@ RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
 	// it with less intents than haulers do.
 	const workParts = creep.memory.body.work || 0;
 	const needsBuild = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
-		filter: site => (site.structureType === STRUCTURE_CONTAINER),
+		// It's important we build nearby roads as their sites may prevent the
+		// container construction site from being placed.
+		filter: site => (site.structureType === STRUCTURE_CONTAINER) || (site.structureType === STRUCTURE_ROAD),
 	});
 	if (needsBuild && creep.pos.getRangeTo(needsBuild) <= 3 && creep.store.energy >= workParts * 5 && workParts > 0) {
 		if (creep.build(needsBuild) === OK) {
