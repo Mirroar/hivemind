@@ -1,6 +1,6 @@
 'use strict';
 
-/* global Creep Room FIND_CREEPS FIND_STRUCTURES BOOSTS ATTACK
+/* global hivemind Creep Room FIND_CREEPS FIND_STRUCTURES BOOSTS ATTACK
 RANGED_ATTACK HEAL STRUCTURE_TOWER TOWER_POWER_HEAL TOWER_POWER_ATTACK
 ATTACK_POWER RANGED_ATTACK_POWER HEAL_POWER RANGED_HEAL_POWER
 CARRY CLAIM MOVE TOUGH WORK */
@@ -36,7 +36,7 @@ Room.prototype.assertMilitarySituation = function () {
 			// @todo Filter out civilian creeps to save on CPU.
 			this.militaryObjects.myCreeps.push(creep);
 		}
-		else if (creep.isDangerous()) {
+		else if (creep.isDangerous() && !hivemind.relations.isAlly(creep.owner.username)) {
 			this.militaryObjects.creeps.push(creep);
 		}
 	}
@@ -74,7 +74,12 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
 	let hostile;
 	let targets;
 	let allies;
-	if (!creep.my && creep.isDangerous()) {
+	if (creep.my) {
+		hostile = false;
+		targets = this.militaryObjects.creeps;
+		allies = this.militaryObjects.myCreeps;
+	}
+	else {
 		this.visual.circle(creep.pos, {
 			fill: 'transparent',
 			stroke: 'red',
@@ -84,14 +89,6 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
 		hostile = true;
 		targets = this.militaryObjects.myCreeps;
 		allies = this.militaryObjects.creeps;
-	}
-	else if (creep.my) {
-		hostile = false;
-		targets = this.militaryObjects.creeps;
-		allies = this.militaryObjects.myCreeps;
-	}
-	else {
-		return;
 	}
 
 	// @todo Move boosted part calculation into a creep function.
@@ -119,14 +116,14 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
 		totalParts[part.type] = (totalParts[part.type] || 0) + amount;
 	}
 
-	const assertAllTargets = function (targets, range, amount, type) {
+	const assertAllTargets = (targets, range, amount, type) => {
 		if (amount <= 0) return;
 
 		for (const target of targets) {
 			const pos = target.pos;
-			if (creep.pos.getRangeTo(pos) <= range) {
-				this.addMilitaryAssertion(pos.x, pos.y, amount, type);
-			}
+			if (creep.pos.getRangeTo(pos) > range) continue;
+
+			this.addMilitaryAssertion(pos.x, pos.y, amount, type);
 		}
 	};
 
@@ -134,7 +131,7 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
 	assertAllTargets(targets, 1, ATTACK_POWER * totalParts[ATTACK], hostile ? 'damage' : 'myDamage');
 
 	// No need to factor in potential explosion use, as it does the same
-	// or less damage as a ranged attack.
+	// or less damage per tick as a ranged attack.
 	assertAllTargets(targets, 3, RANGED_ATTACK_POWER * totalParts[RANGED_ATTACK], hostile ? 'damage' : 'myDamage');
 
 	assertAllTargets(allies, 3, RANGED_HEAL_POWER * totalParts[HEAL], hostile ? 'healing' : 'myHealing');
@@ -166,21 +163,19 @@ Room.prototype.assertMilitaryStructurePower = function (structure) {
 		allies = this.militaryObjects.creeps;
 	}
 
-	if (structure.structureType === STRUCTURE_TOWER) {
-		for (const ally of allies) {
-			const pos = ally.pos;
-			const power = structure.getPowerAtRange(structure.pos.getRangeTo(pos));
-			this.addMilitaryAssertion(pos.x, pos.y, power * TOWER_POWER_HEAL, hostile ? 'healing' : 'myHealing');
-		}
-
-		for (const target of targets) {
-			const pos = target.pos;
-			const power = structure.getPowerAtRange(structure.pos.getRangeTo(pos));
-			this.addMilitaryAssertion(pos.x, pos.y, power * TOWER_POWER_ATTACK, hostile ? 'damage' : 'myDamage');
-		}
-
-		// @todo Factor repair power.
+	for (const ally of allies) {
+		const pos = ally.pos;
+		const power = structure.getPowerAtRange(structure.pos.getRangeTo(pos));
+		this.addMilitaryAssertion(pos.x, pos.y, power * TOWER_POWER_HEAL, hostile ? 'healing' : 'myHealing');
 	}
+
+	for (const target of targets) {
+		const pos = target.pos;
+		const power = structure.getPowerAtRange(structure.pos.getRangeTo(pos));
+		this.addMilitaryAssertion(pos.x, pos.y, power * TOWER_POWER_ATTACK, hostile ? 'damage' : 'myDamage');
+	}
+
+	// @todo Factor repair power.
 };
 
 /**
@@ -252,9 +247,11 @@ Room.prototype.assertTargetPriorities = function () {
 Room.prototype.getTowerTarget = function () {
 	let max = null;
 	for (const creep of this.militaryObjects.creeps) {
-		if (creep.militaryPriority && creep.militaryPriority > 0 && (!max || max.militaryPriority < creep.militaryPriority)) {
-			max = creep;
-		}
+		if (!creep.militaryPriority) return;
+		if (creep.militaryPriority <= 0) return;
+		if (max && max.militaryPriority > creep.militaryPriority) return;
+
+		max = creep;
 	}
 
 	return max;
