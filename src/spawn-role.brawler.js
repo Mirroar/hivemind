@@ -31,30 +31,9 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getSpawnOptions(room, options) {
-		this.getLowLevelRoomSpawnOptions(room, options);
 		this.getRemoteDefenseSpawnOptions(room, options);
 		this.getPowerHarvestDefenseSpawnOptions(room, options);
 		this.getTrainPartSpawnOptions(room, options);
-	}
-
-	/**
-	 * Adds brawler spawn options for low level rooms.
-	 *
-	 * @param {Room} room
-	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
-	 */
-	getLowLevelRoomSpawnOptions(room, options) {
-		// In low level rooms, add defenses!
-		if (room.controller.level >= 4) return;
-		if (!room.memory.enemies || room.memory.enemies.safe) return;
-		if (_.size(room.creepsByRole.brawler) >= 2) return;
-
-		options.push({
-			priority: 5,
-			weight: 1,
-		});
 	}
 
 	/**
