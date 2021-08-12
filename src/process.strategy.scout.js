@@ -220,8 +220,17 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 
 	// Add score for harvest room sources.
 	const exits = roomIntel.getExits();
+	let hasHighwayExit = false;
 	for (const adjacentRoom of _.values(exits)) {
 		result.addScore(this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
+
+		if (adjacentRoom.endsWith('0') || adjacentRoom.substr(2).startsWith('0')) {
+			hasHighwayExit = true;
+		}
+	}
+
+	if (hasHighwayExit) {
+		result.addScore(hivemind.settings.get('expansionScoreBonusHighwayExit'), 'highwayExit');
 	}
 
 	// Check if expanding here creates a safe direction for another of our rooms.

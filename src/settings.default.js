@@ -88,6 +88,9 @@ module.exports = {
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
 
+	// Expansion scoring:
+	expansionScoreBonusHighwayExit: 0,
+
 	// Room planning:
 	enableMinCutRamparts: false,
 	minCutRampartDistance: 4,
