@@ -1,8 +1,11 @@
 'use strict';
 
-/* global hivemind CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE HEAL
-ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER */
+/* global hivemind RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
+ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
+const cache = require('./cache');
+const NavMesh = require('./nav-mesh');
+const packrat = require('./packrat');
 const SpawnRole = require('./spawn-role');
 
 module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
@@ -22,42 +25,49 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 			if (!info.isActive) return;
 			if (!info.spawnRooms[room.name]) return;
 
-			// @todo Determine realistic time until we crack open the power bank.
-			// Then we can stop spawning attackers and spawn haulers instead.
-			const travelTime = 50 * info.spawnRooms[room.name].distance;
-			const timeToKill = info.hits / info.dps;
-			const effectiveLifetime = 1 - (travelTime / CREEP_LIFE_TIME);
-			const expectedDps = info.dps / _.size(info.spawnRooms);
-			const expectedHps = expectedDps * POWER_BANK_HIT_BACK;
-
 			// We're assigned to spawn creeps for this power gathering operation!
-			const powerHarvesters = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
-				if (creep.memory.sourceRoom === room.name && creep.memory.targetRoom === roomName && !creep.memory.isHealer) {
-					if ((creep.ticksToLive || CREEP_LIFE_TIME) >= (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + travelTime) {
-						return true;
-					}
-				}
+			const activePowerHarvesters = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
+				if (creep.memory.isHealer) return false;
+				if (creep.memory.sourceRoom !== room.name) return false;
+				if (creep.memory.targetRoom !== roomName) return false;
 
-				return false;
+				const travelTime = this.getTravelTime(creep.memory.sourceRoom, creep.memory.targetRoom) || info.spawnRooms[room.name].distance * 50;
+				if ((creep.ticksToLive || CREEP_LIFE_TIME) < (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + travelTime) return false;
+
+				return true;
 			});
-			const powerHealers = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
-				if (creep.memory.sourceRoom === room.name && creep.memory.targetRoom === roomName && creep.memory.isHealer) {
-					if ((creep.ticksToLive || CREEP_LIFE_TIME) >= (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + travelTime) {
-						return true;
-					}
-				}
+			const activePowerHealers = _.filter(Game.creepsByRole['harvester.power'] || [], creep => {
+				if (!creep.memory.isHealer) return false;
+				if (creep.memory.sourceRoom !== room.name) return false;
+				if (creep.memory.targetRoom !== roomName) return false;
 
-				return false;
+				const travelTime = this.getTravelTime(creep.memory.sourceRoom, creep.memory.targetRoom) || info.spawnRooms[room.name].distance * 50;
+				if ((creep.ticksToLive || CREEP_LIFE_TIME) < (CREEP_SPAWN_TIME * MAX_CREEP_SIZE) + travelTime) return false;
+
+				return true;
 			});
 
 			// Spawn attackers before healers.
-			const currentDps = _.reduce(powerHarvesters, (total, creep) => total + (creep.memory.body[ATTACK] * ATTACK_POWER * effectiveLifetime), 0);
-			const currentHps = _.reduce(powerHealers, (total, creep) => total + (creep.memory.body[HEAL] * HEAL_POWER * effectiveLifetime), 0);
+			const currentDps = _.reduce(
+				activePowerHarvesters,
+				(total, creep) => {
+					return total + (creep.memory.body[ATTACK] * ATTACK_POWER);
+				}, 0);
+			const currentHps = _.reduce(
+				activePowerHealers,
+				(total, creep) => {
+					return total + (creep.memory.body[HEAL] * HEAL_POWER);
+				}, 0);
 
+			// @todo Determine realistic time until we crack open the power bank.
+			// Then we can stop spawning attackers and spawn haulers instead.
+			const timeToKill = info.hits / info.dps;
+			const expectedDps = info.dps;
+			const expectedHps = expectedDps * POWER_BANK_HIT_BACK;
 			const dpsRatio = currentDps / expectedDps;
 			const hpsRatio = expectedHps ? currentHps / expectedHps : 1;
 
-			if (currentDps < expectedDps && dpsRatio <= hpsRatio && timeToKill > 0) {
+			if (currentDps < expectedDps && dpsRatio <= hpsRatio && timeToKill > 0 && activePowerHarvesters.length < info.freeTiles) {
 				options.push({
 					priority: hivemind.settings.get('powerMineCreepPriority'),
 					weight: 1,
@@ -74,6 +84,26 @@ module.exports = class PowerHarvesterSpawnRole extends SpawnRole {
 					isHealer: true,
 				});
 			}
+		});
+	}
+
+	getTravelTime(sourceRoom, targetRoom) {
+		if (!hivemind.segmentMemory.isReady()) return;
+
+		return cache.inHeap('powerTravelTime:' + sourceRoom + ':' + targetRoom, 1000, () => {
+			const mesh = new NavMesh();
+			if (!Game.rooms[sourceRoom]) return;
+			if (!Game.rooms[sourceRoom].isMine()) return;
+
+			const info = Memory.strategy.power.rooms[targetRoom];
+			if (!info) return;
+
+			const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
+			const targetPos = info.pos ? packrat.unpackCoordAsPos(info.pos, targetRoom) : new RoomPosition(25, 25, targetRoom);
+			const result = mesh.findPath(sourcePos, targetPos);
+			if (result.incomplete) return;
+
+			return result.path.length;
 		});
 	}
 
