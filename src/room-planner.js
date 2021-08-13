@@ -1489,7 +1489,7 @@ RoomPlanner.prototype.getRoomCenter = function () {
 		return pos;
 	}
 
-	// @todo Remove once we can guarantee there always is a center.
+	// Fallback value if for some reason there is no assigned center position.
 	return new RoomPosition(25, 25, this.roomName);
 };
 
