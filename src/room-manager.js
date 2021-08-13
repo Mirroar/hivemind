@@ -105,9 +105,6 @@ module.exports = class RoomManager {
 			this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
 		}
 
-		// Build road to sources asap to make getting energy easier.
-		this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
-
 		// Make sure all current spawns have been built.
 		const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
 		const roomSpawnSites = this.constructionSitesByType[STRUCTURE_SPAWN] || [];
@@ -122,6 +119,9 @@ module.exports = class RoomManager {
 		}
 
 		this.buildPlannedStructures('wall.blocker', STRUCTURE_WALL);
+
+		// Build road to sources asap to make getting energy easier.
+		this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
 
 		// Build road to controller for easier upgrading.
 		this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
