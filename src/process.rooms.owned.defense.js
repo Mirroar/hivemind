@@ -27,6 +27,7 @@ RoomDefenseProcess.prototype = Object.create(Process.prototype);
 RoomDefenseProcess.prototype.run = function () {
 	this.manageTowers();
 	this.manageSafeMode();
+	this.room.defense.openRampartsToFriendlies();
 };
 
 /**
@@ -54,7 +55,7 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 				filter: creep => {
 					for (const i in creep.body) {
 						if (creep.body[i].type === HEAL && creep.body[i].hits > 0) {
-							return creep.isDangerous();
+							return creep.isDangerous() || this.room.defense.isThief(creep);
 						}
 					}
 
@@ -62,7 +63,7 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 				},
 			});
 			const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-				filter: creep => creep.isDangerous(),
+				filter: creep => creep.isDangerous() || this.room.defense.isThief(creep),
 			});
 
 			if (closestHostileHealer) {
