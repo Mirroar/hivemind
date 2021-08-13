@@ -101,8 +101,6 @@ Squad.prototype.disband = function () {
  *   An array of objects containing squad orders.
  */
 Squad.prototype.getOrders = function () {
-	if (!this.memory.fullySpawned) return [];
-
 	// Check if there is a target for this squad.
 	const targetPos = this.getTarget();
 	if (!targetPos) return [];
