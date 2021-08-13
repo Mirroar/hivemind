@@ -98,9 +98,9 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 			// We don't care about melee attacks, plenty of attack creeps in the
 			// room when we're harvesting power.
 			const enemies = _.cloneDeep(roomMemory.enemies);
-			delete enemies.parts[ATTACK];
 			// @todo Retain information about enemy boosts affecting damage.
-			enemies.damage = enemies.parts[RANGED_ATTACK] * RANGED_ATTACK_POWER;
+			enemies.damage -= (enemies.parts[ATTACK] || 0) * ATTACK_POWER * 0.9;
+			if (enemies.parts[ATTACK]) enemies.parts[ATTACK] *= 0.1;
 
 			const responseType = this.getDefenseCreepSize(room, enemies);
 
@@ -311,7 +311,7 @@ module.exports = class BrawlerSpawnRole extends SpawnRole {
 		const memory = {
 			target: option.targetPos || utilities.encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
-			operation: option.targetPos && ('mine:' + utilities.decodePosition(option.targetPos).roomName),
+			operation: option.operation,
 		};
 
 		switch (option.responseType) {
