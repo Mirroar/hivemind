@@ -4,9 +4,9 @@
 
 ## Info
 
-This is a bot for the game [screeps](https://screeps.com), intended to be used as a fully automated partner / opponent on private servers.
+This is an open source bot for the game [screeps](https://screeps.com), intended to be used as a fully automated partner / opponent on private servers.
 
-Most of the code originated from an AI written on the official servers. Due to that, several mechanisms for manually interacting with it still exist, mostly triggered by placing flags. Nonetheless, this code is intended to be used without interaction, and the aforementioned mechanisms might be removed in future versions.
+Most of the code originated from an AI written on the official servers. It is intended to be used without interaction, but there are some things that can be triggered manually, and the bot can be customized through several settings.
 
 ## Official servers
 
