@@ -198,6 +198,7 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 		hits: powerBank.hits,
 		decays: Game.time + (powerBank.ticksToDecay || POWER_BANK_DECAY),
 		freeTiles: numFreeTiles,
+		pos: packrat.packCoord({x: powerBank.pos.x, y: powerBank.pos.y}),
 	};
 
 	// Also store room in strategy memory for easy access.
@@ -266,8 +267,6 @@ RoomIntel.prototype.gatherStructureIntel = function (structures, structureType) 
  *   An array of Ruin objects.
  */
 RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins) {
-	delete this.memory.abandonedResources;
-
 	// Find origin room.
 	if (!Memory.strategy) return;
 	if (!Memory.strategy.roomList) return;
@@ -275,6 +274,8 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 	if (!strategyInfo || !strategyInfo.origin) return;
 
 	const roomMemory = Memory.rooms[strategyInfo.origin];
+	if (!roomMemory) return;
+
 	if (!roomMemory.abandonedResources) roomMemory.abandonedResources = {};
 	delete roomMemory.abandonedResources[this.roomName];
 
