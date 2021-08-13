@@ -17,6 +17,7 @@ const creepRoles = [
 	'dismantler',
 	'gatherer',
 	'gift',
+	'guardian',
 	'harvester',
 	'harvester.exploit',
 	'harvester.power',

@@ -18,6 +18,7 @@ const spawnRoles = [
 	'hauler',
 	'hauler.power',
 	'helper',
+	'room-defense',
 	'scout',
 	'squad',
 	'transporter',
