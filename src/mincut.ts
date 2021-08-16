@@ -341,16 +341,18 @@ const minCutInterface = {
 		for (let j = 0; j < rect.length; j++) {
 			r = rect[j];
 			// Test sizes of rectangles
-			if (r.x1 >= r.x2 || r.y1 >= r.y2) {
-				return console.log('ERROR: Rectangle nr.', j, JSON.stringify(r), 'is invalid.');
+			if (r.x1 > r.x2 || r.y1 > r.y2) {
+				console.log('ERROR: Rectangle nr.', j, JSON.stringify(r), 'is invalid.');
+				continue;
 			}
 
 			if (r.x1 < bounds.x1 || r.x2 > bounds.x2 || r.y1 < bounds.y1 || r.y2 > bounds.y2) {
-				return console.log('ERROR: Rectangle nr.', j, JSON.stringify(r), 'is out of bounds:', JSON.stringify(bounds));
+				console.log('ERROR: Rectangle nr.', j, JSON.stringify(r), 'is out of bounds:', JSON.stringify(bounds));
+				continue;
 			}
 
-			for (let x = r.x1; x < r.x2 + 1; x++) {
-				for (let y = r.y1; y < r.y2 + 1; y++) {
+			for (let x = r.x1; x <= r.x2; x++) {
+				for (let y = r.y1; y <= r.y2; y++) {
 					if (x === r.x1 || x === r.x2 || y === r.y1 || y === r.y2) {
 						if (roomTerrain[x][y] === NORMAL) roomTerrain[x][y] = PROTECTED;
 					}
