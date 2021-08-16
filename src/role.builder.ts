@@ -218,7 +218,10 @@ BuilderRole.prototype.addRepairOptions = function (creep, options) {
 
 		if (target.hits >= (option.maxHealth || target.hitsMax)) continue;
 
-		option.priority -= creep.room.getCreepsWithOrder('repair', target.id).length;
+		// Spread out repairs unless room is under attack.
+		if (creep.room.defense.getEnemyStrength() === 0) {
+			option.priority -= creep.room.getCreepsWithOrder('repair', target.id).length;
+		}
 
 		options.push(option);
 	}
