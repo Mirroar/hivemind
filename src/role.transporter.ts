@@ -758,8 +758,26 @@ TransporterRole.prototype.performGetResources = function (calculateSourceCallbac
 
 	const resourceType = creep.memory.order && creep.memory.order.resourceType;
 	let orderDone = false;
-	if (target.amount) {
+	if (target instanceof Resource) {
 		orderDone = creep.pickup(target) === OK;
+		if (
+			orderDone &&
+			creep.store.getFreeCapacity() > target.amount
+		) {
+			const containers = _.filter(target.pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_CONTAINER);
+			if (containers.length && (containers[0].store.getUsedCapacity(target.resourceType) || 0) > 0) {
+				// We have picked up energy dropped on the ground probably due to a full
+				// container. Pick up resources from the container next.
+				creep.memory.sourceTarget = containers[0].id;
+				creep.memory.order = {
+					type: 'getResource',
+					target: containers[0].id,
+					resourceType: target.resourceType,
+				};
+				// Don't try to determine another source.
+				return;
+			}
+		}
 	}
 	else {
 		orderDone = creep.withdraw(target, resourceType) === OK;
