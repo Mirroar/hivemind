@@ -114,22 +114,27 @@ PowerHaulerRole.prototype.returnHome = function (creep) {
 
 	creep.stopNavMeshMove();
 
-	// Put power in storage.
-	if ((creep.carry[RESOURCE_POWER] || 0) > 0) {
-		const target = creep.room.getBestStorageTarget(creep.carry[RESOURCE_POWER], RESOURCE_POWER);
+	// Put resources in storage.
+	if (creep.store.getUsedCapacity() > 0) {
+		for (const resourceType of _.keys(creep.store)) {
+			if ((creep.store[resourceType] || 0) === 0) continue;
 
-		if (target) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
+			const target = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
+
+			if (target) {
+				if (creep.pos.getRangeTo(target) > 1) {
+					creep.moveToRange(target, 1);
+					return;
+				}
+
+				creep.transfer(target, resourceType);
 				return;
 			}
 
-			creep.transferAny(target);
+			// Whelp, no delivery target. Let transporters handle it.
+			creep.drop(resourceType);
 			return;
 		}
-
-		// Whelp, no delivery target. Let transporters handle it.
-		creep.drop(RESOURCE_POWER);
 	}
 	else {
 		delete creep.memory.isReturning;
