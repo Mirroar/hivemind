@@ -95,8 +95,6 @@ PowerMiningProcess.prototype.run = function () {
 			return;
 		}
 
-		hivemind.log('strategy').debug('Gathering ' + info.amount + ' power in ' + roomName + ' would need ' + dps + ' DPS, or ' + numCreeps + ' attack creeps.');
-
 		// Determine which rooms need to spawn creeps.
 		let potentialSpawns = [];
 		_.each(Game.rooms, room => {
