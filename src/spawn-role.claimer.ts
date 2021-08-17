@@ -1,5 +1,11 @@
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
+declare global {
+	interface RoomMemory {
+		lastClaim,
+	}
+}
+
 import utilities from './utilities';
 import SpawnRole from './spawn-role';
 
@@ -18,7 +24,7 @@ export default class ClaimerSpawnRole extends SpawnRole {
 
 		const reservePositions = room.getRemoteReservePositions();
 		for (const pos of reservePositions) {
-			const operation = Game.operations['mine:' + pos.roomName];
+			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
 			// @todo Or in any room on the route, actually.

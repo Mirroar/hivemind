@@ -1,4 +1,4 @@
-/* global hivemind RoomPosition SOURCE_ENERGY_CAPACITY CARRY_CAPACITY
+/* global RoomPosition SOURCE_ENERGY_CAPACITY CARRY_CAPACITY
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
@@ -88,6 +88,8 @@ export default class RemoteMiningOperation extends Operation {
 		for (const roomName in locations) {
 			if (locations[roomName].indexOf(sourceLocation) !== -1) return roomName;
 		}
+
+		return null;
 	}
 
 	/**
@@ -212,7 +214,7 @@ export default class RemoteMiningOperation extends Operation {
 
 			const containerId = this.memory.status[sourceLocation].containerId;
 			if (containerId) {
-				const container = Game.getObjectById(containerId);
+				const container: StructureContainer = Game.getObjectById(containerId);
 				if (!container || container.structureType !== STRUCTURE_CONTAINER) {
 					delete this.memory.status[sourceLocation].containerId;
 					return false;
@@ -223,7 +225,7 @@ export default class RemoteMiningOperation extends Operation {
 
 			const containerPosition = this.getContainerPosition(sourceLocation);
 			if (!containerPosition) return false;
-			const structures = _.filter(containerPosition.lookFor(LOOK_STRUCTURES), struct => struct.structureType === STRUCTURE_CONTAINER);
+			const structures = _.filter(containerPosition.lookFor(LOOK_STRUCTURES), (struct: AnyStructure) => struct.structureType === STRUCTURE_CONTAINER);
 
 			if (structures.length > 0) {
 				this.memory.status[sourceLocation].containerId = structures[0].id;
@@ -288,13 +290,13 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Determines whether the source / room needs a dismantler.
 	 */
-	needsDismantler(sourceLocation) {
+	needsDismantler(sourceLocation?: string): boolean {
 		if (!hivemind.segmentMemory.isReady()) return false;
 		if (sourceLocation) return this.getDismantlePositions(sourceLocation).length > 0;
 
 		let result = false;
 		for (const pos of this.getSourcePositions()) {
-			result |= this.needsDismantler(utilities.encodePosition(pos));
+			result = result || this.needsDismantler(utilities.encodePosition(pos));
 		}
 
 		return result;

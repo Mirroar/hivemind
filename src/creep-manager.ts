@@ -3,6 +3,7 @@ declare global {
 		body,
 		origin,
 		targetRoom,
+		mission,
 	}
 }
 

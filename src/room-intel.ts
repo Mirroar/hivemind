@@ -1,6 +1,4 @@
-'use strict';
-
-/* global hivemind PathFinder Room RoomPosition FIND_STRUCTURES
+/* global PathFinder Room RoomPosition FIND_STRUCTURES
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY STRUCTURE_PORTAL
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
@@ -8,12 +6,13 @@ STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 declare global {
 	interface RoomMemory {
-		intel: any,
+		intel,
+		enemies,
+		abandonedResources,
 	}
 }
 
 import hivemind from './hivemind';
-
 import interShard from './intershard';
 import NavMesh from './nav-mesh';
 import * as packrat from './packrat';
@@ -114,7 +113,7 @@ RoomIntel.prototype.gatherControllerIntel = function (room) {
  * @param {Room} room
  *   The room to gather resource intel on.
  */
-RoomIntel.prototype.gatherResourceIntel = function (room) {
+RoomIntel.prototype.gatherResourceIntel = function (room: Room) {
 	// Check sources.
 	this.memory.sources = _.map(
 		room.find(FIND_SOURCES),
@@ -186,7 +185,7 @@ RoomIntel.prototype.gatherTerrainIntel = function () {
 RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 	delete this.memory.power;
 
-	const powerBank = _.first(powerBanks);
+	const powerBank: StructurePowerBank = _.first(powerBanks);
 	if (!powerBank || powerBank.hits === 0 || powerBank.power === 0) return;
 
 	// For now, send a notification!
@@ -321,7 +320,7 @@ RoomIntel.prototype.gatherAbandonedResourcesIntel = function (structures, ruins)
 RoomIntel.prototype.gatherInvaderIntel = function (structures) {
 	delete this.memory.invaderInfo;
 
-	const core = _.first(structures[STRUCTURE_INVADER_CORE]);
+	const core: StructureInvaderCore = _.first(structures[STRUCTURE_INVADER_CORE]);
 	if (!core) return;
 
 	// Commit basic invader core info.
@@ -385,6 +384,8 @@ RoomIntel.prototype.getAge = function () {
  */
 RoomIntel.prototype.isClaimable = function () {
 	if (this.memory.hasController) return true;
+
+	return false;
 };
 
 /**
@@ -528,9 +529,9 @@ RoomIntel.prototype.getExits = function () {
  *   Position of this room's controller.
  */
 RoomIntel.prototype.getControllerPosition = function () {
-	if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return;
+	if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return null;
 
-	const controller = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
+	const controller: {x: number, y: number} = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
 	return new RoomPosition(controller.x, controller.y, this.roomName);
 };
 
@@ -707,7 +708,7 @@ RoomIntel.prototype.handleAdjacentRoom = function (roomData, openList, closedLis
 
 	// Add new adjacent rooms to openList if available.
 	const roomExits = roomIntel.getExits();
-	for (const roomName of _.values(roomExits)) {
+	for (const roomName of _.values<string>(roomExits)) {
 		if (roomData.range >= 3) {
 			// Room has open exits more than 3 rooms away.
 			// Mark direction as unsafe.
