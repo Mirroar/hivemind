@@ -40,6 +40,7 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 	if (towers.length === 0) return;
 
 	const hostileCreeps = this.room.find(FIND_HOSTILE_CREEPS);
+	const maxRepairRange = TOWER_OPTIMAL_RANGE + ((TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE) / 2);
 	for (const tower of towers) {
 		// Attack enemies.
 		if (hostileCreeps.length > 0) {
@@ -65,7 +66,7 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 		}
 
 		// Repair ramparts during a strong attack.
-		if (this.room.defense.getEnemyStrength() > 1) {
+		if (this.room.defense.getEnemyStrength() > 1 && tower.store.getUsedCapacity() > tower.store.getCapacity() / 2) {
 			let availableRamparts = [];
 			for (const creep of hostileCreeps) {
 				if (!creep.isDangerous()) continue;
@@ -73,12 +74,12 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 
 				if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
 					availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
-						filter: s => s.structureType === STRUCTURE_RAMPART,
+						filter: s => s.structureType === STRUCTURE_RAMPART && s.pos.getRangeTo(tower.pos) <= maxRepairRange,
 					}));
 				}
 				else {
 					availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-						filter: s => s.structureType === STRUCTURE_RAMPART,
+						filter: s => s.structureType === STRUCTURE_RAMPART && s.pos.getRangeTo(tower.pos) <= maxRepairRange,
 					}));
 				}
 			}
