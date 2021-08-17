@@ -1,6 +1,7 @@
 /* global FIND_MY_STRUCTURES STRUCTURE_TOWER FIND_HOSTILE_CREEPS FIND_MY_CREEPS
 HEAL */
 
+import hivemind from './hivemind';
 import Process from './process';
 
 /**
@@ -42,36 +43,15 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 	for (const tower of towers) {
 		// Attack enemies.
 		if (hostileCreeps.length > 0) {
-			// @todo Use new military manager when performance is stable.
-			// const target = this.room.getTowerTarget(tower);
-			// if (target) {
-			// 	tower.attack(target);
-			// 	continue;
-			// }
+			// Use new military manager if possible.
+			const target = this.room.getTowerTarget(tower);
+			if (!target) continue;
 
-			const closestHostileHealer = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-				filter: creep => {
-					for (const i in creep.body) {
-						if (creep.body[i].type === HEAL && creep.body[i].hits > 0) {
-							return creep.isDangerous() || this.room.defense.isThief(creep);
-						}
-					}
-
-					return false;
-				},
-			});
-			const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
-				filter: creep => creep.isDangerous() || this.room.defense.isThief(creep),
-			});
-
-			if (closestHostileHealer) {
-				tower.attack(closestHostileHealer);
-				continue;
+			if (target.my) {
+				tower.heal(target);
 			}
-
-			if (closestHostile) {
-				tower.attack(closestHostile);
-				continue;
+			else {
+				tower.attack(target);
 			}
 		}
 
@@ -82,6 +62,28 @@ RoomDefenseProcess.prototype.manageTowers = function () {
 		});
 		if (damaged) {
 			tower.heal(damaged);
+		}
+
+		// Repair ramparts during a strong attack.
+		if (this.room.defense.getEnemyStrength() > 1) {
+			let availableRamparts = [];
+			for (const creep of hostileCreeps) {
+				if (!creep.isDangerous()) continue;
+				if (hivemind.relations.isAlly(creep.owner.username)) continue;
+
+				if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
+					availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
+						filter: s => s.structureType === STRUCTURE_RAMPART,
+					}));
+				}
+				else {
+					availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+						filter: s => s.structureType === STRUCTURE_RAMPART,
+					}));
+				}
+			}
+
+			tower.repair(_.min(availableRamparts, 'hits'));
 		}
 	}
 };
@@ -96,8 +98,9 @@ RoomDefenseProcess.prototype.manageSafeMode = function () {
 	if (this.room.defense.getEnemyStrength() < 2) return;
 	if (this.room.defense.isWallIntact()) return;
 
-	Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
-	this.room.controller.activateSafeMode();
+	if (this.room.controller.activateSafeMode() === OK) {
+		Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
+	}
 };
 
 export default RoomDefenseProcess;
