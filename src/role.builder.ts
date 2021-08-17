@@ -257,15 +257,28 @@ BuilderRole.prototype.modifyRepairDefensesOption = function (creep, option, targ
 	option.weight = 1 - (target.hits / maxHealth);
 	option.maxHealth = maxHealth;
 
-	if (target.structureType === STRUCTURE_RAMPART && target.hits < 10000 && creep.room.controller.level >= 3) {
-		// Low ramparts get special treatment so they don't decay.
-		option.priority++;
-		option.priority++;
-		option.weight++;
-	}
-	else if (creep.room.getStoredEnergy() < 5000) {
-		// Don't strengthen ramparts too much if room is struggling for energy.
-		option.priority = -1;
+	if (target.structureType === STRUCTURE_RAMPART) {
+		if (target.hits < 10000 && creep.room.controller.level >= 3) {
+			// Low ramparts get special treatment so they don't decay.
+			option.priority++;
+			option.priority++;
+			option.weight++;
+		}
+		else if (creep.room.getStoredEnergy() < 5000) {
+			// Don't strengthen ramparts too much if room is struggling for energy.
+			option.priority = -1;
+		}
+		if (target.hits < 3000000 && creep.room.controller.level >= 6) {
+			// Once we have a terminal, get ramparts to a level where we can
+			// comfortably defend the room.
+			option.priority++;
+		}
+		else if (creep.room.defense.getEnemyStrength() > 1) {
+			// Repair defenses as much as possible to keep invaders out.
+			option.priority++;
+			option.priority++;
+			option.weight++;
+		}
 	}
 };
 
