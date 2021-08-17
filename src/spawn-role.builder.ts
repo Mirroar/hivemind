@@ -1,7 +1,6 @@
-'use strict';
+/* global FIND_MY_CONSTRUCTION_SITES FIND_MY_STRUCTURES MOVE WORK CARRY */
 
-/* global FIND_MY_CONSTRUCTION_SITES MOVE WORK CARRY */
-
+import cache from './cache';
 import SpawnRole from './spawn-role';
 
 export default class BuilderSpawnRole extends SpawnRole {
@@ -76,6 +75,12 @@ export default class BuilderSpawnRole extends SpawnRole {
 			maxWorkParts *= 2;
 		}
 
+		// Add more builders if we have a terminal, but ramparts are too low to
+		// reasonably protect the room.
+		if (room.terminal && this.getLowestRampartValue(room) < 3000000 && availableEnergy > 10000) {
+			maxWorkParts *= 2.5;
+		}
+
 		if (room.controller.level > 3) {
 			// Spawn more builders depending on total size of current construction sites.
 			// @todo Use hitpoints of construction sites vs number of work parts as a guide.
@@ -83,6 +88,22 @@ export default class BuilderSpawnRole extends SpawnRole {
 		}
 
 		return maxWorkParts;
+	}
+
+	/**
+	 * Gets lowest number of hit points of all ramparts in the room.
+	 *
+	 * @return {number}
+	 *   Number of hits for the lowest rampart.
+	 */
+	getLowestRampartValue(room: Room) {
+		return cache.inHeap('lowestRampart:' + room.name, 100, () => {
+			const ramparts = room.find(FIND_MY_STRUCTURES, {
+				filter: s => s.structureType === STRUCTURE_RAMPART,
+			});
+
+			return _.min(ramparts, 'hits').hits;
+		});
 	}
 
 	/**
