@@ -249,11 +249,12 @@ Room.prototype.assertTargetPriorities = function () {
 	for (const creep of this.militaryObjects.creeps) {
 		const potentialDamage = this.getMilitaryAssertion(creep.pos.x, creep.pos.y, 'myDamage');
 		const potentialHealing = this.getMilitaryAssertion(creep.pos.x, creep.pos.y, 'healing');
+		const effectiveDamage = creep.getEffectiveDamage(potentialDamage);
 
 		// @todo Potential damage will have to be reduced if creep has boosted tough parts.
 
-		if (potentialDamage > potentialHealing) {
-			creep.militaryPriority = creep.getMilitaryValue() * (potentialDamage - potentialHealing);
+		if (effectiveDamage > potentialHealing) {
+			creep.militaryPriority = creep.getMilitaryValue() * (effectiveDamage - potentialHealing);
 		}
 	}
 };
