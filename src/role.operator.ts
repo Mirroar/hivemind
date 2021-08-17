@@ -3,7 +3,7 @@
 /* global hivemind RoomPosition OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE
 PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
 FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
-PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME */
+PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
 import utilities from './utilities';
 import Role from './role';
@@ -105,6 +105,7 @@ OperatorRole.prototype.chooseOrder = function () {
 	this.addOperateStorageOptions(options);
 	this.addOperateSpawnOptions(options);
 	this.addOperateExtensionOptions(options);
+	this.addOperateTowerOptions(options);
 	this.addDepositOpsOptions(options);
 	this.addRetrieveOpsOptions(options);
 
@@ -332,6 +333,39 @@ OperatorRole.prototype.addOperateExtensionOptions = function (options) {
 		priority: 3,
 		weight: 1,
 	});
+};
+
+/**
+ * Adds options for operating a storage, increasing its size.
+ *
+ * @param {Array} options
+ *   A list of potential power creep orders.
+ */
+OperatorRole.prototype.addOperateTowerOptions = function (options) {
+	if (!this.creep.powers[PWR_OPERATE_TOWER]) return;
+	if (this.creep.powers[PWR_OPERATE_TOWER].level < 1) return;
+	if (this.creep.powers[PWR_OPERATE_TOWER].cooldown > 0) return;
+	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_TOWER].ops) return;
+	if (this.creep.room.defense.getEnemyStrength() === 0) return;
+
+	const towers = this.creep.room.find(FIND_MY_STRUCTURES, {
+		filter: s => s.structureType === STRUCTURE_TOWER,
+	});
+	if (!towers || towers.length === 0) return;
+
+	for (const tower of towers) {
+		const activeEffect = _.first(_.filter(tower.effects, effect => effect.power === PWR_OPERATE_TOWER));
+		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
+		if (ticksRemaining > POWER_INFO[PWR_OPERATE_TOWER].duration / 5) continue;
+
+		options.push({
+			type: 'usePower',
+			power: PWR_OPERATE_TOWER,
+			target: tower.id,
+			priority: 5,
+			weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_OPERATE_TOWER].duration),
+		});
+	}
 };
 
 /**
