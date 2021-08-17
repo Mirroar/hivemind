@@ -26,6 +26,9 @@ import hivemind from './hivemind';
  * Scans the room for military targets, grades them, etc.
  */
 Room.prototype.assertMilitarySituation = function () {
+	if (this._sitRepBuilt) return;
+
+	this._sitRepBuilt = true;
 	this.sitRep = {
 		damage: {},
 		healing: {},
