@@ -232,6 +232,17 @@ RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
 		return;
 	}
 
+	if (creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] > 5000) {
+		if (creep.pos.getRangeTo(creep.room.storage) > 1) {
+			creep.moveToRange(creep.room.storage, 1);
+		}
+		else {
+			creep.withdraw(creep.room.storage, RESOURCE_ENERGY);
+		}
+
+		return;
+	}
+
 	if (!creep.memory.resourceTarget) {
 		// Try getting energy from full containers.
 		const container = creep.pos.findClosestByPath(FIND_STRUCTURES, {
