@@ -11,8 +11,13 @@ declare global {
 				warning: number,
 				critical: number,
 			},
+			numbers: number[],
+			max: number,
+			currentOffset: number,
 		},
 	}
+
+	type TileCallback = (x: number, y: number) => boolean | void;
 }
 
 import cache from './cache';
@@ -82,7 +87,7 @@ const utilities = {
 	 *   Result of the pathfinding operation.
 	 */
 	getPath(startPosition: RoomPosition, endPosition, allowDanger?: boolean, addOptions?: any) {
-		const options = {
+		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
 			maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
@@ -95,7 +100,9 @@ const utilities = {
 					}
 				}
 
-				const options = {};
+				const options = {
+					singleRoom: false,
+				};
 				if (addOptions && addOptions.singleRoom && addOptions.singleRoom === roomName) {
 					options.singleRoom = true;
 				}
@@ -512,7 +519,7 @@ const utilities = {
 		const parts = position.match(/^(.*)@(\d*)x(\d*)$/);
 
 		if (parts && parts.length > 0) {
-			return new RoomPosition(parts[2], parts[3], parts[1]);
+			return new RoomPosition(parseInt(parts[2]), parseInt(parts[3]), parts[1]);
 		}
 
 		return null;
@@ -718,7 +725,7 @@ const utilities = {
 	 * @return {boolean}
 	 *   True if the operation is allowed to run.
 	 */
-	throttle(offset, minBucket, maxBucket) {
+	throttle(offset: number, minBucket?: number, maxBucket?: number) {
 		utilities.initThrottleMemory();
 
 		if (!offset) offset = 0;
@@ -765,6 +772,9 @@ const utilities = {
 					warning: 5000,
 					critical: 2000,
 				},
+				numbers: null,
+				max: null,
+				currentOffset: 0,
 			};
 		}
 
@@ -796,7 +806,7 @@ const utilities = {
 	 * @param {number} range
 	 *   (Optional) Range around the center to run code for. Defaults to 1.
 	 */
-	handleMapArea(x, y, callback, range) {
+	handleMapArea(x: number, y: number, callback: TileCallback, range?: number) {
 		if (typeof range === 'undefined') range = 1;
 		for (let dx = -range; dx <= range; dx++) {
 			if (x + dx < 0) continue;

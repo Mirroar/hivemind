@@ -1,7 +1,16 @@
-'use strict';
-
 /* global Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
 FIND_STRUCTURES */
+
+declare global {
+	interface Room {
+		generateLinkNetwork,
+		addStructureReference,
+		setEvacuating,
+		isEvacuating,
+		setClearingTerminal,
+		isClearingTerminal,
+	}
+}
 
 import cache from './cache';
 import LinkNetwork from './link-network';

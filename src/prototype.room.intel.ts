@@ -4,6 +4,25 @@
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
+declare global {
+	interface Room {
+		creepsByRole: {
+			[key: string]: Creep[],
+		},
+		enemyCreeps: {
+			[key: string]: Creep[],
+		},
+		defense,
+		enhanceData,
+		scan,
+		updateControllerContainer,
+		updateControllerLink,
+		updateStorageLink,
+		needsScout,
+		isMine,
+	}
+}
+
 import Bay from './manager.bay';
 import cache from './cache';
 import Exploit from './manager.exploit';

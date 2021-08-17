@@ -7,6 +7,19 @@
  * Refactored and cleaned up by Mirroar.
  */
 
+declare global {
+	interface MinCutRect {
+		x1: number,
+		y1: number,
+		x2: number,
+		y2: number,
+		protectTopExits?: boolean,
+		protectBottomExits?: boolean,
+		protectLeftExits?: boolean,
+		protectRightExits?: boolean,
+	}
+}
+
 const UNWALKABLE = -1;
 const NORMAL = 0;
 const PROTECTED = 1;
@@ -98,7 +111,7 @@ function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 
 /**
  * Marks protected exits.
  */
-function addProtectedExitsToRoomArray(roomArray, bounds) {
+function addProtectedExitsToRoomArray(roomArray: number[][], bounds: MinCutRect) {
 	if (bounds.protectTopExits) {
 		for (let x = 1; x < 49; x++) {
 			if (roomArray[x][1] === TO_EXIT) roomArray[x][1] = PROTECTED;

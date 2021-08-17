@@ -726,12 +726,14 @@ TransporterRole.prototype.ensureValidDeliveryTargetObject = function (target, re
 	if (resourceType === RESOURCE_GHODIUM && target.ghodiumCapacity && target.ghodium < target.ghodiumCapacity) return true;
 	if (resourceType === RESOURCE_POWER && target.powerCapacity && target.power < target.powerCapacity) return true;
 	if (target.mineralCapacity && ((target.mineralType || resourceType) === resourceType) && target.mineralAmount < target.mineralCapacity) return true;
+
+	return false;
 };
 
 /**
  * Makes this creep collect resources.
  *
- * @param {Function } calculateSourceCallback
+ * @param {Function} calculateSourceCallback
  *   Optional callback to use when a new source target needs to be chosen.
  */
 TransporterRole.prototype.performGetResources = function (calculateSourceCallback) {
@@ -750,7 +752,7 @@ TransporterRole.prototype.performGetResources = function (calculateSourceCallbac
 		return;
 	}
 
-	const target = Game.getObjectById(creep.memory.sourceTarget);
+	const target: RoomObject = Game.getObjectById(creep.memory.sourceTarget);
 	if (creep.pos.getRangeTo(target) > 1) {
 		creep.moveToRange(target, 1);
 		return;

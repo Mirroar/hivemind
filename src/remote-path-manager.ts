@@ -4,7 +4,7 @@
 
 import hivemind from './hivemind';
 import cache from './cache';
-import packrat from './packrat';
+import * as packrat from './packrat';
 import utilities from './utilities';
 
 export default class RemotePathManager {

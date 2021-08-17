@@ -1,6 +1,16 @@
-'use strict';
+/* global RawMemory */
 
-/* global hivemind RawMemory */
+declare global {
+	interface Memory {
+		segmented: {
+			lastFullSave: number,
+			startSegment: number,
+			endSegment: number,
+		}
+	}
+}
+
+import hivemind from './hivemind';
 
 const maxActiveSegments = 10;
 const maxSegmentLength = 100 * 1000;
@@ -8,6 +18,13 @@ const maxSegmentLength = 100 * 1000;
 export default class SegmentedMemory {
 
 	_isReady: boolean;
+	memory;
+	data;
+	loadedSegments;
+	totalLength: number;
+	savedKeys;
+	currentSegment: number;
+	startSegment: number;
 
 	constructor() {
 		this._isReady = false;

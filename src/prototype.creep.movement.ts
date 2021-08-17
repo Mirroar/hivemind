@@ -1,10 +1,59 @@
 'use strict';
 
-/* global hivemind Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
+/* global Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
-import utilities from './utilities';
+declare global {
+	interface Creep {
+		moveToRange,
+		setCachedPath,
+		getCachedPath,
+		hasCachedPath,
+		clearCachedPath,
+		hasArrived,
+		followCachedPath,
+		getOntoCachedPath,
+		manageBlockingCreeps,
+		incrementCachedPathPosition,
+		moveAroundObstacles,
+		canMoveOnto,
+		goTo,
+		calculateGoToPath,
+		moveToRoom,
+		calculateRoomPath,
+		isInRoom,
+		moveUsingNavMesh,
+		getNavMeshMoveTarget,
+		stopNavMeshMove,
+	}
+
+	interface PowerCreep {
+		moveToRange,
+		setCachedPath,
+		getCachedPath,
+		hasCachedPath,
+		clearCachedPath,
+		hasArrived,
+		followCachedPath,
+		getOntoCachedPath,
+		manageBlockingCreeps,
+		incrementCachedPathPosition,
+		moveAroundObstacles,
+		canMoveOnto,
+		goTo,
+		calculateGoToPath,
+		moveToRoom,
+		calculateRoomPath,
+		isInRoom,
+		moveUsingNavMesh,
+		getNavMeshMoveTarget,
+		stopNavMeshMove,
+	}
+}
+
+import hivemind from './hivemind';
 import NavMesh from './nav-mesh';
+import utilities from './utilities';
 
 // @todo For multi-room movement we could save which rooms we're travelling through, and recalculate (part of) the path when a CostMatrix changes.
 // That info should probably live in global memory, we don't want that serialized...
@@ -446,7 +495,7 @@ Creep.prototype.goTo = function (target, options) {
 				const result = this.moveTo(target, {range});
 				if (result === ERR_NO_PATH) return false;
 			}
-			else if (this.pos.roomName === targetPos.roomName) {
+			else if (this.pos.roomName === target.roomName) {
 				return false;
 			}
 		}
@@ -471,7 +520,7 @@ Creep.prototype.calculateGoToPath = function (target, options) {
 	const targetPos = utilities.encodePosition(target);
 	this.memory.go.target = targetPos;
 
-	const pfOptions = {};
+	const pfOptions: PathFinderOpts = {};
 	if (this.memory.singleRoom) {
 		if (this.pos.roomName === this.memory.singleRoom) {
 			pfOptions.maxRooms = 1;

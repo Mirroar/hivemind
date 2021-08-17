@@ -13,7 +13,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room, options) {
 		const maxUpgraders = this.getUpgraderAmount(room);
 		const numUpgraders = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
 		if (numUpgraders < maxUpgraders) {
@@ -33,7 +33,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   The requested number of upgraders.
 	 */
-	getUpgraderAmount(room) {
+	getUpgraderAmount(room: Room): number {
 		const maxUpgraders = this.getBaseUpgraderAmount(room);
 
 		if (maxUpgraders === 0) {
@@ -63,7 +63,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   The requested number of upgraders.
 	 */
-	getBaseUpgraderAmount(room) {
+	getBaseUpgraderAmount(room: Room): number {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
@@ -107,7 +107,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		let bodyWeights = {[MOVE]: 0.35, [WORK]: 0.3, [CARRY]: 0.35};
 		if (room.memory.controllerContainer || room.memory.controllerLink) {
 			// If there is easy access to energy, we can save on move an carry parts.
@@ -132,7 +132,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room) {
+	getCreepMemory(room: Room) {
 		return {
 			singleRoom: room.name,
 			operation: 'room:' + room.name,
@@ -152,9 +152,9 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room, option, body) {
-		if (room.getStoredEnergy() < 200000) return;
-		if (room.controller.level < 8) return;
+	getCreepBoosts(room: Room, option, body: BodyPartConstant[]) {
+		if (room.getStoredEnergy() < 200000) return {};
+		if (room.controller.level < 8) return {};
 
 		return this.generateCreepBoosts(room, body, WORK, 'upgradeController');
 	}

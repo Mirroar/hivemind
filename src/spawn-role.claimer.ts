@@ -1,5 +1,3 @@
-'use strict';
-
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
 import utilities from './utilities';

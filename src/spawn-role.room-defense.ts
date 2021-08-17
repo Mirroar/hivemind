@@ -1,7 +1,6 @@
-'use strict';
+/* global MOVE ATTACK WORK CARRY HEAL */
 
-/* global hivemind MOVE ATTACK WORK CARRY HEAL */
-
+import hivemind from './hivemind';
 import SpawnRole from './spawn-role';
 
 const RESPONSE_NONE = 0;
@@ -55,7 +54,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
 
-		const responseType = this.getDefenseCreepSize(room, room.memory.enemies);
+		const responseType = this.getDefenseCreepSize(room);
 
 		if (responseType === RESPONSE_NONE) return;
 
@@ -85,7 +84,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 
 		// @todo Send energy to rooms under attack for assistance.
 
-		const responseType = this.getDefenseCreepSize(room, room.memory.enemies);
+		const responseType = this.getDefenseCreepSize(room);
 
 		if (responseType === RESPONSE_NONE) return;
 
@@ -197,6 +196,8 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		else if (option.creepRole === 'guardian') {
 			return this.generateCreepBoosts(room, body, ATTACK, 'attack');
 		}
+
+		return null;
 	}
 
 	/**

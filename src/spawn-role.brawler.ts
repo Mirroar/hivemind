@@ -1,10 +1,17 @@
-'use strict';
-
-/* global hivemind RoomPosition MOVE ATTACK HEAL RANGED_ATTACK ATTACK_POWER
+/* global RoomPosition MOVE ATTACK HEAL RANGED_ATTACK ATTACK_POWER
 RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
-import utilities from './utilities';
+declare global {
+	interface RoomMemory {
+		recentBrawler: {
+			[key: string]: number,
+		}
+	}
+}
+
+import hivemind from './hivemind';
 import SpawnRole from './spawn-role';
+import utilities from './utilities';
 
 const RESPONSE_NONE = 0;
 const RESPONSE_MINI_BRAWLER = 1;
@@ -259,7 +266,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		return this.getBrawlerCreepBody(room);
 	}
 
-	getBrawlerCreepBody(room, maxAttackParts) {
+	getBrawlerCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -267,14 +274,14 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		);
 	}
 
-	getBlinkyCreepBody(room) {
+	getBlinkyCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.35, [HEAL]: 0.15},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
-	getAttackCreepBody(room, maxAttackParts) {
+	getAttackCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -282,14 +289,14 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		);
 	}
 
-	getRangedCreepBody(room) {
+	getRangedCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
-	getHealCreepBody(room) {
+	getHealCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [HEAL]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
@@ -307,7 +314,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option) {
 		const memory = {
 			target: option.targetPos || utilities.encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
@@ -359,10 +366,10 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room, option, body, name) {
+	onSpawn(room: Room, option, body: BodyPartConstant[], name: string) {
 		if (option.trainStarter) {
 			// Remove segment from train spawn queue.
-			const creep = Game.getObjectById(option.trainStarter);
+			const creep: Creep = Game.getObjectById(option.trainStarter);
 			creep.memory.train.partsToSpawn = creep.memory.train.partsToSpawn.slice(1);
 		}
 

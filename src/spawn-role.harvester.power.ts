@@ -1,11 +1,10 @@
-'use strict';
-
-/* global hivemind RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
+/* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
+import hivemind from './hivemind';
 import cache from './cache';
 import NavMesh from './nav-mesh';
-import packrat from './packrat';
+import * as packrat from './packrat';
 import SpawnRole from './spawn-role';
 
 export default class PowerHarvesterSpawnRole extends SpawnRole {
@@ -87,21 +86,21 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 		});
 	}
 
-	getTravelTime(sourceRoom, targetRoom) {
+	getTravelTime(sourceRoom: string, targetRoom: string) {
 		if (!hivemind.segmentMemory.isReady()) return;
 
 		return cache.inHeap('powerTravelTime:' + sourceRoom + ':' + targetRoom, 1000, () => {
 			const mesh = new NavMesh();
-			if (!Game.rooms[sourceRoom]) return;
-			if (!Game.rooms[sourceRoom].isMine()) return;
+			if (!Game.rooms[sourceRoom]) return null;
+			if (!Game.rooms[sourceRoom].isMine()) return null;
 
 			const info = Memory.strategy.power.rooms[targetRoom];
-			if (!info) return;
+			if (!info) return null;
 
 			const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
 			const targetPos = info.pos ? packrat.unpackCoordAsPos(info.pos, targetRoom) : new RoomPosition(25, 25, targetRoom);
 			const result = mesh.findPath(sourcePos, targetPos);
-			if (result.incomplete) return;
+			if (result.incomplete) return null;
 
 			return result.path.length;
 		});

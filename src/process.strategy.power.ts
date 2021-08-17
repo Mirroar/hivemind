@@ -1,8 +1,7 @@
-'use strict';
-
-/* global hivemind RoomPosition CREEP_SPAWN_TIME MAX_CREEP_SIZE ATTACK_POWER
+/* global RoomPosition CREEP_SPAWN_TIME MAX_CREEP_SIZE ATTACK_POWER
 CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN */
 
+import hivemind from './hivemind';
 import NavMesh from './nav-mesh';
 import Process from './process';
 

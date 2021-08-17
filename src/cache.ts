@@ -1,5 +1,3 @@
-'use strict';
-
 import hivemind from './hivemind';
 
 const heapCache = {};

@@ -1,6 +1,8 @@
 export default class SettingsManager {
 
-	values: [];
+	values: {
+		[key: string]: any,
+	};
 
 	/**
 	 * Creates a new SettingsManager instance.
@@ -13,7 +15,7 @@ export default class SettingsManager {
 
 		// Add user settings from file.
 		try {
-			import localSettings from './settings.local';
+			const localSettings = require('./settings.local');
 
 			if (localSettings) {
 				_.each(localSettings, (value, key) => {

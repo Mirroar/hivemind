@@ -95,7 +95,7 @@ PowerHaulerRole.prototype.run = function (creep) {
  * @param {Creep} creep
  *   The creep to run logic for.
  */
-PowerHaulerRole.prototype.returnHome = function (creep) {
+PowerHaulerRole.prototype.returnHome = function (creep: Creep) {
 	const targetPosition = new RoomPosition(25, 25, creep.memory.sourceRoom);
 	const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 

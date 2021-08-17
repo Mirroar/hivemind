@@ -1,8 +1,17 @@
 'use strict';
 
-/* global hivemind Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
+/* global Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
 STRUCTURE_KEEPER_LAIR */
 
+declare global {
+	interface Room {
+		getCostMatrix,
+		generateCostMatrix,
+		calculateRoomPath,
+	}
+}
+
+import hivemind from './hivemind';
 import utilities from './utilities';
 
 Room.prototype.getCostMatrix = function () {

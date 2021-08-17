@@ -16,7 +16,7 @@ import hivemind from './hivemind';
 
 import interShard from './intershard';
 import NavMesh from './nav-mesh';
-import packrat from './packrat';
+import * as packrat from './packrat';
 import utilities from './utilities';
 
 const RoomIntel = function (roomName) {

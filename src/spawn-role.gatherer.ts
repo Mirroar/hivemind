@@ -1,7 +1,6 @@
-'use strict';
+/* global MOVE CARRY */
 
-/* global hivemind MOVE CARRY */
-
+import hivemind from './hivemind';
 import SpawnRole from './spawn-role';
 
 export default class GathererSpawnRole extends SpawnRole {

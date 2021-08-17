@@ -1,9 +1,14 @@
-'use strict';
-
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
+
+declare global {
+	interface CreepMemory {
+		source,
+	}
+}
 
 import utilities from './utilities';
 import SpawnRole from './spawn-role';
+import RemoteMiningOperation from './operation.remote-mining';
 
 export default class HaulerSpawnRole extends SpawnRole {
 	/**
@@ -18,7 +23,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const targetPos = utilities.encodePosition(pos);
-			const operation = Game.operations['mine:' + pos.roomName];
+			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
 			// @todo Or in any room on the route, actually.

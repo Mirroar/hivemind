@@ -1,5 +1,3 @@
-'use strict';
-
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
 
 import utilities from './utilities';
@@ -18,7 +16,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const targetPos = utilities.encodePosition(pos);
-			const operation = Game.operations['mine:' + pos.roomName];
+			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
 			if (!operation || operation.isUnderAttack() || operation.needsDismantler(targetPos)) continue;

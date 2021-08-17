@@ -1,11 +1,10 @@
-'use strict';
-
-/* global hivemind FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN
+/* global FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN
 STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER */
 
-import utilities from './utilities';
+import hivemind from './hivemind';
 import Role from './role';
 import TransporterRole from './role.transporter';
+import utilities from './utilities';
 
 /**
  * Builders stay in their spawn room and build or repair structures.
@@ -94,7 +93,7 @@ BuilderRole.prototype.performRepair = function (creep) {
 		return false;
 	}
 
-	const target = Game.getObjectById(creep.memory.order.target);
+	const target: Structure = Game.getObjectById(creep.memory.order.target);
 	if (!target) {
 		this.calculateBuilderTarget(creep);
 		return true;
@@ -186,6 +185,7 @@ BuilderRole.prototype.addRepairOptions = function (creep, options) {
 			weight: 1 - (target.hits / target.hitsMax),
 			type: 'repair',
 			object: target,
+			maxHealth: null,
 		};
 
 		if (target.structureType === STRUCTURE_WALL || target.structureType === STRUCTURE_RAMPART) {

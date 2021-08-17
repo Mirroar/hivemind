@@ -1,5 +1,3 @@
-'use strict';
-
 /* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO MOVE WORK CARRY */
 
 import SpawnRole from './spawn-role';
@@ -69,7 +67,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		}
 
 		// Remote builders want access to sources as well, so spawn less harvesters.
-		for (const creep of _.values(source.room.creepsByRole['builder.remote']) || {}) {
+		for (const creep of _.values<Creep>(source.room.creepsByRole['builder.remote']) || []) {
 			totalWorkParts += (creep.memory.body.work || 0) / 2;
 		}
 
@@ -121,7 +119,6 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 *   Number of needed work parts.
 	 */
 	getMaxWorkParts(source) {
-		// @todo Factor in whether we control this room.
 		let numParts = source.energyCapacity / ENERGY_REGEN_TIME / 2;
 
 		_.each(source.effects, effect => {

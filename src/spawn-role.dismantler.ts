@@ -1,5 +1,3 @@
-'use strict';
-
 /* global MOVE WORK */
 
 import SpawnRole from './spawn-role';
@@ -53,7 +51,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addRoomPlannerDismantlers(room, options) {
+	addRoomPlannerDismantlers(room: Room, options) {
 		if (room.isEvacuating()) return;
 		if (!room.roomManager.needsDismantling()) return;
 

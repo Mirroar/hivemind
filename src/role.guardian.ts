@@ -1,12 +1,6 @@
-'use strict';
-
 /* global hivemind FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
-interface Creep {
-	goTo: (pos: RoomPosition) => void,
-	isDangerous: () => boolean,
-}
-
+import hivemind from './hivemind';
 import Role from './role';
 
 const filterEnemyCreeps = (c: Creep) => !hivemind.relations.isAlly(c.owner.username) && c.isDangerous();

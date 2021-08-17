@@ -1,5 +1,12 @@
-import hivemind from './hivemind';
+declare global {
+	interface CreepMemory {
+		body,
+		origin,
+		targetRoom,
+	}
+}
 
+import hivemind from './hivemind';
 import utilities from './utilities';
 
 /**

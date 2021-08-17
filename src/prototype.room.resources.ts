@@ -1,8 +1,30 @@
-'use strict';
-
-/* global hivemind Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
+/* global Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
+declare global {
+	interface Room {
+		getStorageLimit,
+		getFreeStorage,
+		getCurrentResourceAmount,
+		getStoredEnergy,
+		getCurrentMineralAmount,
+		isFullOnEnergy,
+		isFullOnPower,
+		isFullOnMinerals,
+		isFullOn,
+		getStorageLocation,
+		prepareForTrading,
+		stopTradePreparation,
+		getRemoteHarvestSourcePositions,
+		getRemoteReservePositions,
+		getResourceState,
+		getBestStorageTarget,
+		getBestStorageSource,
+		getBestCircumstancialStorageSource,
+	}
+}
+
+import hivemind from './hivemind';
 import utilities from './utilities';
 
 /**
@@ -248,7 +270,7 @@ Room.prototype.getRemoteReservePositions = function () {
  *   - canTrade: Whether the room can perform trades.
  */
 Room.prototype.getResourceState = function () {
-	if (!this.isMine()) return;
+	if (!this.isMine()) return {};
 
 	const storage = this.storage;
 	const terminal = this.terminal;
@@ -260,6 +282,8 @@ Room.prototype.getResourceState = function () {
 		addResource(resourceType, amount) {
 			this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
 		},
+		isEvacuating: false,
+		mineralType: null,
 	};
 	if (storage && terminal) {
 		roomData.canTrade = true;

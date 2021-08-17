@@ -87,7 +87,7 @@ export default class SpawnRole {
 	 * @return {string[]}
 	 *   List of parts that make up the requested creep.
 	 */
-	generateCreepBodyFromWeights(weights, maxCost: number, maxParts): BodyPartConstant[] {
+	generateCreepBodyFromWeights(weights, maxCost: number, maxParts?: {[key: string]: number}): BodyPartConstant[] {
 		const totalWeight = _.sum(weights);
 		const newParts = {};
 		let size = 0;
@@ -186,7 +186,7 @@ export default class SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	generateCreepBoosts(room, body, partType, boostType) {
+	generateCreepBoosts(room: Room, body: BodyPartConstant[], partType: BodyPartConstant, boostType: string) {
 		if (!room.canSpawnBoostedCreeps()) return {};
 
 		const availableBoosts = room.getAvailableBoosts(boostType);
@@ -216,7 +216,7 @@ export default class SpawnRole {
 	 * @return {number}
 	 *   The energy cost of the provided body.
 	 */
-	calculateBodyCost(body) {
+	calculateBodyCost(body: BodyPartConstant[]): number {
 		return _.reduce(body, (sum, part) => sum + BODYPART_COST[part], 0);
 	}
 };

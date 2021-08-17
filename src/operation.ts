@@ -12,12 +12,21 @@ declare global {
 			[key: string]: Operation,
 		},
 		operationsByType: {
+			mining: {
+				[key: string]: RemoteMiningOperation,
+			},
+			room: {
+				[key: string]: RoomOperation,
+			},
 			[key: string]: {
 				[key: string]: Operation,
 			},
 		},
 	}
 }
+
+import RemoteMiningOperation from './operation.remote-mining';
+import RoomOperation from './operation.room';
 
 export default class Operation {
 	name: string;

@@ -1,5 +1,3 @@
-'use strict';
-
 /* global FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR MOVE WORK CARRY */
 
 import SpawnRole from './spawn-role';

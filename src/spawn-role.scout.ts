@@ -1,7 +1,6 @@
-'use strict';
+/* global MOVE */
 
-/* global hivemind MOVE */
-
+import hivemind from './hivemind';
 import interShard from './intershard';
 import utilities from './utilities';
 import SpawnRole from './spawn-role';
@@ -90,7 +89,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room, option) {
-		const memory = {origin: room.name, justSpawned: true};
+		const memory = {origin: room.name, justSpawned: true, portalTarget: null};
 
 		if (option.portalTarget) {
 			memory.portalTarget = option.portalTarget;

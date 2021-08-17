@@ -1,6 +1,7 @@
 /* global Creep ERR_NOT_ENOUGH_RESOURCES RESOURCE_ENERGY STRUCTURE_LINK */
 
 interface Creep {
+	operation,
 	transferAny,
 	dropAny,
 	enhanceData,

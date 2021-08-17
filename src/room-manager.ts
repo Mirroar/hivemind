@@ -1,6 +1,4 @@
-'use strict';
-
-/* global hivemind Structure STRUCTURE_ROAD STRUCTURE_WALL STRUCTURE_SPAWN
+/* global Structure STRUCTURE_ROAD STRUCTURE_WALL STRUCTURE_SPAWN
 STRUCTURE_CONTAINER STRUCTURE_TOWER STRUCTURE_EXTENSION STRUCTURE_RAMPART
 STRUCTURE_TERMINAL STRUCTURE_STORAGE STRUCTURE_EXTRACTOR STRUCTURE_LAB
 STRUCTURE_NUKER STRUCTURE_POWER_SPAWN STRUCTURE_OBSERVER LOOK_STRUCTURES
@@ -8,14 +6,43 @@ LOOK_CONSTRUCTION_SITES CONSTRUCTION_COST CREEP_LIFE_TIME MAX_CONSTRUCTION_SITES
 FIND_STRUCTURES CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
+declare global {
+	interface Structure {
+		needsDismantling,
+	}
+
+	interface Room {
+		roomManager: RoomManager,
+	}
+
+	interface RoomMemory {
+		manager,
+	}
+}
+
+import hivemind from './hivemind';
+
 export default class RoomManager {
+	room: Room;
+	roomPlanner;
+	memory;
+	roomConstructionSites: ConstructionSite[];
+	constructionSitesByType: {
+		[key: string]: ConstructionSite[],
+	};
+	roomStructures: Structure[];
+	structuresByType: {
+		[key: string]: Structure[],
+	};
+	newStructures: number;
+
 	/**
 	 * Creates a new RoomManager object.
 	 *
 	 * @param {Room} room
 	 *   The room to manage.
 	 */
-	constructor(room) {
+	constructor(room: Room) {
 		this.room = room;
 		this.roomPlanner = room.roomPlanner;
 
@@ -215,7 +242,7 @@ export default class RoomManager {
 	buildPlannedStructures(locationType, structureType) {
 		let canBuildMore = true;
 		for (const pos of this.roomPlanner.getLocations(locationType)) {
-			canBuildMore &= this.tryBuild(pos, structureType);
+			canBuildMore = canBuildMore && this.tryBuild(pos, structureType);
 		}
 
 		return canBuildMore;
@@ -292,7 +319,7 @@ export default class RoomManager {
 			}
 
 			let buildPower = 0;
-			for (const creep of _.values(this.room.creepsByRole.builder)) {
+			for (const creep of _.values<Creep>(this.room.creepsByRole.builder)) {
 				if (creep.ticksToLive) {
 					buildPower += creep.memory.body.work * creep.ticksToLive / CREEP_LIFE_TIME;
 				}
@@ -329,7 +356,7 @@ export default class RoomManager {
 	 * @param {number} amount
 	 *   Maximum number of structures to remove during a single tick.
 	 */
-	removeUnplannedStructures(locationType, structureType, amount) {
+	removeUnplannedStructures(locationType, structureType, amount?: number) {
 		const structures = this.structuresByType[structureType] || [];
 		const sites = this.constructionSitesByType[structureType] || [];
 
@@ -359,7 +386,7 @@ export default class RoomManager {
 	checkWallIntegrity() {
 		for (const pos of this.roomPlanner.getLocations('rampart')) {
 			// Check if there's a rampart here already.
-			const structures = pos.lookFor(LOOK_STRUCTURES);
+			const structures: AnyStructure[] = pos.lookFor(LOOK_STRUCTURES);
 			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= hivemind.settings.get('minWallIntegrity')).length === 0) {
 				return false;
 			}
@@ -427,7 +454,7 @@ export default class RoomManager {
 		if (!this.needsDismantling()) return null;
 
 		for (const id of _.keys(this.memory.dismantle)) {
-			const structure = Game.getObjectById(id);
+			const structure: AnyOwnedStructure = Game.getObjectById(id);
 			if (!structure) {
 				delete this.memory.dismantle[id];
 				continue;
