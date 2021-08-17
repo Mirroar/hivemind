@@ -39,11 +39,6 @@ RoomIntelProcess.prototype.findHostiles = function () {
 	let healCapacity = 0;
 	let damageCapacity = 0;
 
-	// @todo Reactivate new military manager when performance is stable.
-	// if (hostiles.length > 0) {
-	// 	this.room.assertMilitarySituation();
-	// }
-
 	_.each(this.room.enemyCreeps, (hostiles, owner) => {
 		if (hivemind.relations.isAlly(owner)) return;
 
@@ -61,6 +56,10 @@ RoomIntelProcess.prototype.findHostiles = function () {
 			}
 		}
 	});
+
+	if (this.room.isMine() && !safe) {
+		this.room.assertMilitarySituation();
+	}
 
 	for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
 		if (structure.structureType === STRUCTURE_INVADER_CORE) {
