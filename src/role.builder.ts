@@ -317,6 +317,11 @@ BuilderRole.prototype.addBuildOptions = function (creep, options) {
 			option.priority = 5;
 		}
 
+		if ([STRUCTURE_LAB, STRUCTURE_NUKER].indexOf(target.structureType) !== -1) {
+			// Expensive structures should only be built with excess energy.
+			option.priority--;
+		}
+
 		options.push(option);
 	}
 };
