@@ -1,11 +1,19 @@
 /* global PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT FIND_STRUCTURES
 PROCESS_PRIORITY_ALWAYS POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
 
-import Process from './process';
+declare global {
+	interface Memory {
+		roomStats,
+	}
+}
+
+import * as Hivemind from './hivemind';
+import hivemind from './hivemind';
 import InactiveStructuresProcess from './process.rooms.owned.inactive-structures';
 import ManageLabsProcess from './process.rooms.owned.labs';
 import ManageLinksProcess from './process.rooms.owned.links';
 import ManageSpawnsProcess from './process.rooms.owned.spawns';
+import Process from './process';
 import RoomDefenseProcess from './process.rooms.owned.defense';
 import RoomManagerProcess from './process.rooms.owned.manager';
 import RoomOperation from './operation.room';
@@ -52,7 +60,7 @@ OwnedRoomProcess.prototype.run = function () {
 		hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
 			interval: prioritizeRoomManager ? 0 : 100,
 			room: this.room,
-			priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
+			priority: prioritizeRoomManager ? Hivemind.PROCESS_PRIORITY_ALWAYS : Hivemind.PROCESS_PRIORITY_DEFAULT,
 		});
 	});
 
@@ -60,7 +68,7 @@ OwnedRoomProcess.prototype.run = function () {
 		hivemind.runProcess(this.room.name + '_inactive_structs', InactiveStructuresProcess, {
 			interval: 500,
 			room: this.room,
-			priority: PROCESS_PRIORITY_LOW,
+			priority: Hivemind.PROCESS_PRIORITY_LOW,
 		});
 	});
 
@@ -68,7 +76,7 @@ OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_defense', () => {
 		hivemind.runProcess(this.room.name + '_defense', RoomDefenseProcess, {
 			room: this.room,
-			priority: PROCESS_PRIORITY_ALWAYS,
+			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
 		});
 	});
 
@@ -88,7 +96,7 @@ OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_spawns', () => {
 		hivemind.runProcess(this.room.name + '_spawns', ManageSpawnsProcess, {
 			room: this.room,
-			priority: PROCESS_PRIORITY_ALWAYS,
+			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
 		});
 	});
 
@@ -113,7 +121,7 @@ OwnedRoomProcess.prototype.run = function () {
 		// Sing a song.
 		hivemind.runProcess(this.room.name + '_song', RoomSongsProcess, {
 			room: this.room,
-			priority: PROCESS_PRIORITY_LOW,
+			priority: Hivemind.PROCESS_PRIORITY_LOW,
 		});
 	});
 

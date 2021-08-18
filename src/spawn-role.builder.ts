@@ -20,9 +20,12 @@ export default class BuilderSpawnRole extends SpawnRole {
 			numWorkParts += creep.memory.body.work || 0;
 		});
 
+		const availableEnergy = room.getStoredEnergy();
+		const needToBuildRamparts = room.terminal && this.getLowestRampartValue(room) < 3000000 && availableEnergy > 10000;
+
 		if (numWorkParts < maxWorkParts) {
 			options.push({
-				priority: 3,
+				priority: needToBuildRamparts ? 5 : 3,
 				weight: 0.5,
 				size: room.isEvacuating() ? 3 : null,
 			});

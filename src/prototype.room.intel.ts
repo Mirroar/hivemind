@@ -1,5 +1,3 @@
-'use strict';
-
 /* global Room FIND_STRUCTURES STRUCTURE_CONTAINER FIND_HOSTILE_CREEPS
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
@@ -12,14 +10,19 @@ declare global {
 		enemyCreeps: {
 			[key: string]: Creep[],
 		},
-		defense,
+		defense: RoomDefense,
+		sources: Source[],
+		mineral: Mineral,
 		enhanceData,
 		scan,
 		updateControllerContainer,
 		updateControllerLink,
 		updateStorageLink,
 		needsScout,
-		isMine,
+		isMine: (allowReserved?: boolean) => boolean,
+		nuker?: StructureNuker,
+		powerSpawn?: StructurePowerSpawn,
+		observer?: StructureObserver,
 	}
 }
 
@@ -183,7 +186,7 @@ Room.prototype.updateControllerContainer = function () {
 	// Check if the controller has a container nearby.
 	// Use room planner locations if available.
 	if (this.roomPlanner) {
-		const containerPositions = this.roomPlanner.getLocations('container.controller');
+		const containerPositions: RoomPosition[] = this.roomPlanner.getLocations('container.controller');
 		if (containerPositions.length > 0) {
 			const structures = this.find(FIND_STRUCTURES, {
 				filter: structure => structure.structureType === STRUCTURE_CONTAINER &&
@@ -207,7 +210,7 @@ Room.prototype.updateControllerLink = function () {
 	// Check if the controller has a link nearby.
 	// Use room planner locations if available.
 	if (this.roomPlanner) {
-		const linkPositions = this.roomPlanner.getLocations('link.controller');
+		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.controller');
 		if (linkPositions.length > 0) {
 			const structures = this.find(FIND_STRUCTURES, {
 				filter: structure => structure.structureType === STRUCTURE_LINK &&
@@ -233,7 +236,7 @@ Room.prototype.updateStorageLink = function () {
 	// Check if storage has a link nearby.
 	// Use room planner locations if available.
 	if (this.roomPlanner) {
-		const linkPositions = this.roomPlanner.getLocations('link.storage');
+		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.storage');
 		if (linkPositions.length > 0) {
 			const structures = this.find(FIND_STRUCTURES, {
 				filter: structure => structure.structureType === STRUCTURE_LINK &&
@@ -260,7 +263,7 @@ Room.prototype.needsScout = function () {
 	if (!Memory.strategy) return false;
 
 	const room = this;
-	return _.any(Memory.strategy.roomList, info => info.origin === room.name && info.scoutPriority >= 1);
+	return _.any(Memory.strategy.roomList, (info: any) => info.origin === room.name && info.scoutPriority >= 1);
 };
 
 /**
@@ -272,7 +275,7 @@ Room.prototype.needsScout = function () {
  * @return {boolean}
  *   True if the room is owned / reserved by the player.
  */
-Room.prototype.isMine = function (allowReserved) {
+Room.prototype.isMine = function (allowReserved?: boolean) {
 	if (!this.controller) return false;
 	if (this.controller.my) return true;
 

@@ -1,11 +1,10 @@
-'use strict';
-
-/* global hivemind PathFinder RoomPosition StructureController ATTACK
+/* global PathFinder RoomPosition StructureController ATTACK
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
+import hivemind from './hivemind';
 import PathManager from './remote-path-manager';
 import Role from './role';
 import TransporterRole from './role.transporter';
@@ -162,7 +161,7 @@ BrawlerRole.prototype.getAvailableMilitaryTargets = function (creep) {
  * @param {Array} options
  *   An array of target options for this creep.
  */
-BrawlerRole.prototype.addMilitaryAttackOptions = function (creep, options) {
+BrawlerRole.prototype.addMilitaryAttackOptions = function (creep: Creep, options) {
 	const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
 	const targetPosition = utilities.decodePosition(creep.memory.target);
 
@@ -314,17 +313,19 @@ BrawlerRole.prototype.performMilitaryMove = function (creep) {
 		if (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || creep.memory.body[HEAL]) {
 			// Check for enemies and interrupt move accordingly.
 			_.each(creep.room.enemyCreeps, (hostiles, owner) => {
-				if (hivemind.relations.isAlly(owner)) return;
+				if (hivemind.relations.isAlly(owner)) return null;
 
 				_.each(hostiles, c => {
-					if (!c.isDangerous()) return;
-					if (c.owner.username === 'Screeps' || c.owner.username === 'Invader') return;
+					if (!c.isDangerous()) return null;
+					if (c.owner.username === 'Screeps' || c.owner.username === 'Invader') return null;
 
 					enemiesNearby = true;
 					return false;
 				});
 
 				if (enemiesNearby) return false;
+
+				return null;
 			});
 		}
 
@@ -573,7 +574,7 @@ BrawlerRole.prototype.performExploitPatrol = function (creep) {
 
 	const id = creep.memory.patrolPoint;
 	for (const id2 of _.keys(exploit.memory.lairs)) {
-		const otherLair = Game.getObjectById(id2);
+		const otherLair: StructureKeeperLair = Game.getObjectById(id2);
 		if (!otherLair) continue;
 
 		let time = otherLair.ticksToSpawn || 0;
@@ -686,7 +687,7 @@ BrawlerRole.prototype.militaryRoomReached = function (creep) {
 BrawlerRole.prototype.performMilitaryAttack = function (creep) {
 	if (creep.memory.order) {
 		// Attack ordered target first.
-		const target = Game.getObjectById(creep.memory.order.target);
+		const target: Creep | AnyOwnedStructure = Game.getObjectById(creep.memory.order.target);
 
 		if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || 0) > 0;
 	}
@@ -776,6 +777,8 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
 			return true;
 		}
 	}
+
+	return false;
 };
 
 /**
@@ -788,7 +791,7 @@ BrawlerRole.prototype.attackMilitaryTarget = function (creep, target) {
  */
 BrawlerRole.prototype.performMilitaryHeal = function (creep) {
 	if (creep.memory.order) {
-		const target = Game.getObjectById(creep.memory.order.target);
+		const target: Creep | AnyOwnedStructure = Game.getObjectById(creep.memory.order.target);
 
 		if (target && (target.my || (target.owner && hivemind.relations.isAlly(target.owner.username)))) {
 			if (creep.heal(target) === OK) {

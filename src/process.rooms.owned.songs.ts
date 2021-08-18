@@ -71,7 +71,7 @@ RoomSongsProcess.prototype.run = function () {
 
 	if (!song.lines[this.memory.currentBeat] || song.lines[this.memory.currentBeat] === '') return;
 
-	const creeps = _.filter(this.room.creeps, creep => song.roles.includes(creep.memory.role));
+	const creeps = _.filter(this.room.creeps, (creep: Creep) => song.roles.includes(creep.memory.role));
 	if (creeps.length <= 0) return;
 
 	const creep = creeps[Math.floor(Math.random() * creeps.length)];

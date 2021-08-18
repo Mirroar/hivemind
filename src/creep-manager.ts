@@ -1,9 +1,22 @@
 declare global {
 	interface CreepMemory {
+		blockedPathCounter,
 		body,
-		origin,
-		targetRoom,
+		currentLair,
+		deliverTarget,
+		exploitName,
+		fixedMineral,
+		fixedSource,
+		harvestPos,
+		isHealer,
+		isReturning,
 		mission,
+		order,
+		origin,
+		pickupResources,
+		sourceRoom,
+		target,
+		targetRoom,
 	}
 }
 

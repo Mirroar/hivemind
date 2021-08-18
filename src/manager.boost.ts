@@ -9,6 +9,14 @@ declare global {
 		getBoostLabs,
 		getBoostLabMemory,
 	}
+
+	interface CreepMemory {
+		needsBoosting,
+	}
+
+	interface RoomMemory {
+		boostManager,
+	}
 }
 
 import cache from './cache';
@@ -101,7 +109,7 @@ Room.prototype.getBoostLabs = function () {
 
 	const boostLabs = [];
 	_.each(labMemory, (data, id) => {
-		const lab = Game.getObjectById(id);
+		const lab: StructureLab = Game.getObjectById(id);
 		if (lab && lab.isOperational()) {
 			boostLabs.push(lab);
 		}
@@ -141,6 +149,8 @@ Room.prototype.getBoostLabMemory = function () {
 
 				return {[labId]: {}};
 			}
+
+			return {};
 		}
 	);
 };
@@ -228,11 +238,11 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
 	// Find lab to get boosted at.
 	_.each(labMemory, (data, id) => {
 		const resourceType = data.resourceType;
-		if (!boostMemory[resourceType]) return;
+		if (!boostMemory[resourceType]) return null;
 		const amount = boostMemory[resourceType];
 
-		const lab = Game.getObjectById(id);
-		if (!lab) return;
+		const lab: StructureLab = Game.getObjectById(id);
+		if (!lab) return null;
 
 		if (creep.pos.getRangeTo(lab) > 1) {
 			// Get close enough to lab.
@@ -262,7 +272,7 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
  *   Boosting information, keyed by lab id.
  */
 BoostManager.prototype.getLabOrders = function () {
-	const labs = this.room.getBoostLabs();
+	const labs: StructureLab[] = this.room.getBoostLabs();
 
 	if (_.size(this.memory.creepsToBoost) === 0) return {};
 

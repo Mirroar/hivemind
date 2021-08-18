@@ -1,12 +1,11 @@
-'use strict';
-
-/* global hivemind PathFinder Room RoomPosition FIND_DROPPED_RESOURCES
+/* global PathFinder Room RoomPosition FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
+import hivemind from './hivemind';
 import utilities from './utilities';
 import Role from './role';
 
@@ -35,7 +34,7 @@ TransporterRole.prototype.run = function (creep) {
 		}
 
 		if (creep.memory.order && creep.memory.order.target) {
-			const target = Game.getObjectById(creep.memory.order.target);
+			const target: RoomObject = Game.getObjectById(creep.memory.order.target);
 			if (target && target.pos && target.pos.roomName !== creep.memory.singleRoom) {
 				this.setTransporterState(creep.memory.delivering);
 			}
@@ -134,7 +133,7 @@ TransporterRole.prototype.bayUnstuck = function () {
  * Makes this creep deliver carried energy somewhere.
  */
 TransporterRole.prototype.performDeliver = function () {
-	const creep = this.creep;
+	const creep: Creep = this.creep;
 
 	if (!this.ensureValidDeliveryTarget()) {
 		delete creep.memory.deliverTarget;
@@ -144,7 +143,7 @@ TransporterRole.prototype.performDeliver = function () {
 	const best = creep.memory.deliverTarget;
 
 	if (typeof best === 'string') {
-		const target = Game.getObjectById(best);
+		const target: AnyOwnedStructure = Game.getObjectById(best);
 
 		if (creep.pos.getRangeTo(target) > 1) {
 			creep.moveToRange(target, 1);
@@ -160,7 +159,7 @@ TransporterRole.prototype.performDeliver = function () {
 	if (best.type === 'bay') {
 		const target = _.find(creep.room.bays, bay => bay.name === creep.memory.order.target);
 
-		if (creep.pos.getRangeTo(target) > 0) {
+		if (creep.pos.getRangeTo(target.pos) > 0) {
 			creep.moveToRange(target);
 		}
 		else {
@@ -208,7 +207,7 @@ TransporterRole.prototype.performDeliver = function () {
  *   True if the target is valid and can receive the needed resource.
  */
 TransporterRole.prototype.ensureValidDeliveryTarget = function () {
-	const creep = this.creep;
+	const creep: Creep = this.creep;
 
 	if (!creep.memory.deliverTarget) this.calculateDeliveryTarget();
 	if (!creep.memory.deliverTarget) return false;
@@ -432,8 +431,8 @@ TransporterRole.prototype.addSpawnBuildingDeliveryOptions = function (options) {
  *   A list of potential delivery targets.
  */
 TransporterRole.prototype.addContainerEnergyDeliveryOptions = function (options) {
-	const room = this.creep.room;
-	const targets = room.find(FIND_STRUCTURES, {
+	const room: Room = this.creep.room;
+	const targets = room.find<StructureContainer>(FIND_STRUCTURES, {
 		filter: structure => {
 			if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.energy >= structure.storeCapacity) return false;
 
@@ -445,7 +444,7 @@ TransporterRole.prototype.addContainerEnergyDeliveryOptions = function (options)
 
 			// Do not deliver to containers used as harvester drop off points.
 			if (structure.room.sources) {
-				for (const source of _.values(structure.room.sources)) {
+				for (const source of _.values<Source>(structure.room.sources)) {
 					const container = source.getNearbyContainer();
 					if (container && container.id === structure.id) {
 						return false;
@@ -679,7 +678,7 @@ TransporterRole.prototype.addLabResourceDeliveryOptions = function (options, res
 	const creep = this.creep;
 	if (creep.room.memory.currentReaction && !creep.room.isEvacuating()) {
 		if (resourceType === creep.room.memory.currentReaction[0]) {
-			const lab = Game.getObjectById(creep.room.memory.labs.source1);
+			const lab: StructureLab = Game.getObjectById(creep.room.memory.labs.source1);
 			if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
 				options.push({
 					priority: 4,
@@ -692,7 +691,7 @@ TransporterRole.prototype.addLabResourceDeliveryOptions = function (options, res
 		}
 
 		if (resourceType === creep.room.memory.currentReaction[1]) {
-			const lab = Game.getObjectById(creep.room.memory.labs.source2);
+			const lab: StructureLab = Game.getObjectById(creep.room.memory.labs.source2);
 			if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
 				options.push({
 					priority: 4,
@@ -802,7 +801,7 @@ TransporterRole.prototype.ensureValidResourceSource = function (calculateSourceC
 
 	if (!creep.memory.sourceTarget) calculateSourceCallback();
 
-	const target = Game.getObjectById(creep.memory.sourceTarget);
+	const target: RoomObject = Game.getObjectById(creep.memory.sourceTarget);
 	const resourceType = creep.memory.order && creep.memory.order.resourceType;
 	if (!target) return false;
 	if (creep.memory.singleRoom && target.pos.roomName !== creep.memory.singleRoom) return false;
@@ -1045,7 +1044,7 @@ TransporterRole.prototype.addContainerEnergySourceOptions = function (options) {
 			resourceType: RESOURCE_ENERGY,
 		};
 
-		for (const sourceData of _.values(target.room.memory.sources)) {
+		for (const sourceData of _.values<any>(target.room.memory.sources)) {
 			if (sourceData.targetContainer !== target.id) continue;
 
 			option.priority++;
@@ -1364,7 +1363,7 @@ TransporterRole.prototype.addLabResourceOptions = function (options) {
 	const labs = room.memory.labs.reactor;
 	for (const labID of labs) {
 		// Clear out reaction labs.
-		const lab = Game.getObjectById(labID);
+		const lab: StructureLab = Game.getObjectById(labID);
 
 		if (lab && lab.mineralAmount > 0) {
 			const option = {
@@ -1402,7 +1401,7 @@ TransporterRole.prototype.addLabResourceOptions = function (options) {
 	if (!currentReaction) return;
 
 	// Clear out labs with wrong resources.
-	let lab = Game.getObjectById(room.memory.labs.source1);
+	let lab: StructureLab = Game.getObjectById(room.memory.labs.source1);
 	if (lab && lab.mineralAmount > 0 && lab.mineralType !== currentReaction[0]) {
 		const option = {
 			priority: 3,

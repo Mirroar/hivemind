@@ -1,10 +1,9 @@
-'use strict';
-
-/* global hivemind RoomPosition OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE
+/* global RoomPosition OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE
 PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
 FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
 PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
+import hivemind from './hivemind';
 import utilities from './utilities';
 import Role from './role';
 
@@ -175,8 +174,8 @@ OperatorRole.prototype.addRegenSourcesOptions = function (options) {
 	if (this.creep.powers[PWR_REGEN_SOURCE].level < 1) return;
 	if (this.creep.powers[PWR_REGEN_SOURCE].cooldown > 0) return;
 
-	_.each(this.creep.room.sources, source => {
-		const activeEffect = _.first(_.filter(source.effects, effect => effect.power === PWR_REGEN_SOURCE));
+	_.each(this.creep.room.sources, (source: Source) => {
+		const activeEffect = _.first(_.filter(source.effects, effect => effect.effect === PWR_REGEN_SOURCE));
 		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 		if (ticksRemaining > POWER_INFO[PWR_REGEN_SOURCE].duration / 5) return;
 
@@ -201,11 +200,11 @@ OperatorRole.prototype.addRegenMineralOptions = function (options) {
 	if (this.creep.powers[PWR_REGEN_MINERAL].level < 1) return;
 	if (this.creep.powers[PWR_REGEN_MINERAL].cooldown > 0) return;
 
-	const mineral = this.creep.room.mineral;
+	const mineral: Mineral = this.creep.room.mineral;
 	if (!mineral) return;
 	if (mineral.ticksToRegeneration && mineral.ticksToRegeneration > 0) return;
 
-	const activeEffect = _.first(_.filter(mineral.effects, effect => effect.power === PWR_REGEN_MINERAL));
+	const activeEffect = _.first(_.filter(mineral.effects, effect => effect.effect === PWR_REGEN_MINERAL));
 	const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 	if (ticksRemaining > POWER_INFO[PWR_REGEN_MINERAL].duration / 5) return;
 
@@ -230,13 +229,13 @@ OperatorRole.prototype.addOperateStorageOptions = function (options) {
 	if (this.creep.powers[PWR_OPERATE_STORAGE].cooldown > 0) return;
 	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_STORAGE].ops) return;
 
-	const storage = this.creep.room.storage;
+	const storage: StructureStorage = this.creep.room.storage;
 	if (!storage) return;
-	if (_.sum(storage.store) < STORAGE_CAPACITY * 0.9) return;
+	if (storage.store.getUsedCapacity() < STORAGE_CAPACITY * 0.9) return;
 
 	if (!storage) return;
 
-	const activeEffect = _.first(_.filter(storage.effects, effect => effect.power === PWR_OPERATE_STORAGE));
+	const activeEffect = _.first(_.filter(storage.effects, effect => effect.effect === PWR_OPERATE_STORAGE));
 	const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 	if (ticksRemaining > POWER_INFO[PWR_OPERATE_STORAGE].duration / 5) return;
 
@@ -263,9 +262,9 @@ OperatorRole.prototype.addOperateSpawnOptions = function (options) {
 
 	// @todo Make sure we're not waiting on energy.
 
-	const spawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
+	const spawn: StructureSpawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
 		if (spawn.structureType !== STRUCTURE_SPAWN) return false;
-		const activeEffect = _.first(_.filter(spawn.effects, effect => effect.power === PWR_OPERATE_SPAWN));
+		const activeEffect = _.first(_.filter(spawn.effects, effect => effect.effect === PWR_OPERATE_SPAWN));
 		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 		if (ticksRemaining > 50) return false;
 
@@ -275,7 +274,7 @@ OperatorRole.prototype.addOperateSpawnOptions = function (options) {
 		const memory = this.creep.room.memory.spawns[spawn.id];
 		const historyChunkLength = 100;
 		const totalTicks = memory.ticks + (memory.history.length * historyChunkLength);
-		const spawningTicks = _.reduce(memory.history, (total, h) => total + h.spawning, memory.spawning);
+		const spawningTicks = _.reduce(memory.history, (total, h: any) => total + h.spawning, memory.spawning);
 
 		if ((memory.options || 0) < 2 && spawningTicks / totalTicks < 0.8) return false;
 
@@ -283,7 +282,7 @@ OperatorRole.prototype.addOperateSpawnOptions = function (options) {
 	});
 	if (!spawn) return;
 
-	const activeEffect = _.first(_.filter(spawn.effects, effect => effect.power === PWR_OPERATE_SPAWN));
+	const activeEffect = _.first(_.filter(spawn.effects, effect => effect.effect === PWR_OPERATE_SPAWN));
 	const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 	options.push({
 		type: 'usePower',
@@ -309,7 +308,7 @@ OperatorRole.prototype.addOperateExtensionOptions = function (options) {
 	// Don't operate extensions if they're almost full anyways.
 	if (this.creep.room.energyAvailable > this.creep.room.energyCapacityAvailable * 0.8) return;
 
-	const spawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
+	const spawn: StructureSpawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
 		if (spawn.structureType !== STRUCTURE_SPAWN) return false;
 
 		// Make sure the spawn actually needs support with spawning.
@@ -348,13 +347,13 @@ OperatorRole.prototype.addOperateTowerOptions = function (options) {
 	if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_TOWER].ops) return;
 	if (this.creep.room.defense.getEnemyStrength() === 0) return;
 
-	const towers = this.creep.room.find(FIND_MY_STRUCTURES, {
+	const towers: StructureTower[] = this.creep.room.find(FIND_MY_STRUCTURES, {
 		filter: s => s.structureType === STRUCTURE_TOWER,
 	});
 	if (!towers || towers.length === 0) return;
 
 	for (const tower of towers) {
-		const activeEffect = _.first(_.filter(tower.effects, effect => effect.power === PWR_OPERATE_TOWER));
+		const activeEffect = _.first(_.filter(tower.effects, effect => effect.effect === PWR_OPERATE_TOWER));
 		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 		if (ticksRemaining > POWER_INFO[PWR_OPERATE_TOWER].duration / 5) continue;
 
@@ -416,7 +415,7 @@ OperatorRole.prototype.performOrder = function () {
 	if (!this.hasOrder()) return;
 
 	if (this.creep.memory.order.target) {
-		const target = Game.getObjectById(this.creep.memory.order.target);
+		const target: RoomObject = Game.getObjectById(this.creep.memory.order.target);
 
 		if (!target || target.pos.roomName !== this.creep.pos.roomName) {
 			delete this.creep.memory.order;
@@ -514,7 +513,7 @@ OperatorRole.prototype.depositOps = function () {
  *
  */
 OperatorRole.prototype.retrieveOps = function () {
-	const storage = Game.getObjectById(this.creep.memory.order.target);
+	const storage: StructureStorage = Game.getObjectById(this.creep.memory.order.target);
 	if (!storage) {
 		this.orderFinished();
 		return;

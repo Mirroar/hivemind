@@ -1,5 +1,3 @@
-'use strict';
-
 /* global Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
@@ -25,6 +23,8 @@ declare global {
 		moveUsingNavMesh,
 		getNavMeshMoveTarget,
 		stopNavMeshMove,
+		_blockingCreepMovement,
+		_hasMoveIntent,
 	}
 
 	interface PowerCreep {
@@ -48,6 +48,8 @@ declare global {
 		moveUsingNavMesh,
 		getNavMeshMoveTarget,
 		stopNavMeshMove,
+		_blockingCreepMovement,
+		_hasMoveIntent,
 	}
 }
 
@@ -271,6 +273,8 @@ Creep.prototype.getOntoCachedPath = function () {
 		this.say('getonit');
 		return true;
 	}
+
+	return false;
 };
 
 Creep.prototype.manageBlockingCreeps = function () {
@@ -362,7 +366,7 @@ Creep.prototype.moveAroundObstacles = function () {
 	}
 
 	// Go around obstacles if necessary.
-	if (this.memory.cachedPath.forceGoTo) return;
+	if (this.memory.cachedPath.forceGoTo) return false;
 
 	// Check if we've moved at all during the previous ticks.
 	let stuck = false;
@@ -376,10 +380,12 @@ Creep.prototype.moveAroundObstacles = function () {
 				stuck = false;
 				return false;
 			}
+
+			return null;
 		});
 	}
 
-	if (!stuck) return;
+	if (!stuck) return false;
 
 	// If a creep is blocking the next spot, tell it to move over if possible.
 	this.manageBlockingCreeps();
@@ -408,6 +414,8 @@ Creep.prototype.moveAroundObstacles = function () {
 
 	this.memory.cachedPath.forceGoTo = i;
 	delete this.memory.cachedPath.lastPositions;
+
+	return false;
 };
 
 /**
@@ -520,7 +528,7 @@ Creep.prototype.calculateGoToPath = function (target, options) {
 	const targetPos = utilities.encodePosition(target);
 	this.memory.go.target = targetPos;
 
-	const pfOptions: PathFinderOpts = {};
+	const pfOptions: any = {};
 	if (this.memory.singleRoom) {
 		if (this.pos.roomName === this.memory.singleRoom) {
 			pfOptions.maxRooms = 1;

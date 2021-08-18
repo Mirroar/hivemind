@@ -76,7 +76,7 @@ ManageLinksProcess.prototype.run = function () {
 	if (this.room.linkNetwork.neutralLinks.length > 0) {
 		// Use neutral links if necessary.
 		if (!fromLink || fromLink.delta < MIN_ENERGY_TRANSFER) {
-			const sorted = _.sortBy(_.filter(this.room.linkNetwork.neutralLinks, link => link.cooldown <= 0), link => -link.energy);
+			const sorted = _.sortBy(_.filter(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.cooldown <= 0), link => -link.energy);
 			if (sorted.length > 0) {
 				fromLink = {
 					link: sorted[0],
@@ -86,7 +86,7 @@ ManageLinksProcess.prototype.run = function () {
 		}
 
 		if (!toLink || toLink.delta < MIN_ENERGY_TRANSFER) {
-			const sorted = _.sortBy(this.room.linkNetwork.neutralLinks, link => link.energy);
+			const sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.energy);
 			if (sorted.length > 0) {
 				toLink = {
 					link: sorted[0],

@@ -14,7 +14,7 @@ export default class NavMesh {
 	memory: any;
 	terrain: RoomTerrain;
 	costMatrix: CostMatrix;
-	exitLookup: {[key: number]: number};
+	exitLookup: {[key: number]: any};
 
 	constructor() {
 		if (!Memory.nav) {
@@ -136,6 +136,7 @@ export default class NavMesh {
 			maxX: 0,
 			minY: 49,
 			maxY: 0,
+			center: null,
 		};
 		let startPos = this.getUntouchedExit(region, exits);
 		let firstRegionTile = startPos;
@@ -209,6 +210,7 @@ export default class NavMesh {
 				maxX: 0,
 				minY: 49,
 				maxY: 0,
+				center: null,
 			};
 			startPos = this.getUntouchedExit(region, exits);
 			firstRegionTile = startPos;
@@ -395,7 +397,7 @@ export default class NavMesh {
 			availableExits = [];
 			if (roomMemory.regions) {
 				// Find region containing corresponding exit.
-				const region = _.filter(roomMemory.regions, region => region.exits.indexOf(correspondingExit) > -1)[0];
+				const region = _.filter(roomMemory.regions, (region: any) => region.exits.indexOf(correspondingExit) > -1)[0];
 				if (!region) continue;
 
 				availableExits = _.filter(roomMemory.exits, exit => exit.id !== correspondingExit && region.exits.indexOf(exit.id) > -1);

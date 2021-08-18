@@ -1,10 +1,15 @@
-'use strict';
-
-/* global hivemind RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
+/* global RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
 POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
 FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
 POWER_BANK_HIT_BACK */
 
+declare global {
+	interface Creep {
+		_hasAttacked: boolean,
+	}
+}
+
+import hivemind from './hivemind';
 import Role from './role';
 
 const PowerHarvesterRole = function () {
@@ -84,7 +89,7 @@ PowerHarvesterRole.prototype.run = function (creep) {
 	}
 };
 
-PowerHarvesterRole.prototype.attackNearby = function (creep) {
+PowerHarvesterRole.prototype.attackNearby = function (creep: Creep) {
 	if (creep.memory.isHealer) return;
 
 	const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
@@ -103,7 +108,7 @@ PowerHarvesterRole.prototype.attackNearby = function (creep) {
 	}
 };
 
-PowerHarvesterRole.prototype.chaseNearbyRanged = function (creep) {
+PowerHarvesterRole.prototype.chaseNearbyRanged = function (creep: Creep) {
 	if (creep.memory.isHealer) return;
 	if (creep._hasAttacked) return;
 	if (creep.pos.roomName !== creep.memory.targetRoom) return;
@@ -137,7 +142,7 @@ PowerHarvesterRole.prototype.attackPowerBank = function (creep, powerBank) {
 		// @todo Find most wounded in range 1, failing that, look further away.
 
 		if (damagedCreep) {
-			let healPower = HEAL_POWER;
+			let healPower: number = HEAL_POWER;
 			if (creep.pos.getRangeTo(damagedCreep) > 1) {
 				creep.moveToRange(damagedCreep, 1);
 				healPower = RANGED_HEAL_POWER;

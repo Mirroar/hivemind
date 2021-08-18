@@ -1,9 +1,8 @@
-'use strict';
-
-/* global hivemind PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
+/* global PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
+import hivemind from './hivemind';
 import interShard from './intershard';
 import NavMesh from './nav-mesh';
 import Process from './process';
@@ -93,7 +92,7 @@ ExpandProcess.prototype.chooseNewExpansionTarget = function () {
 		};
 	}
 
-	for (const info of _.values(Memory.strategy.roomList)) {
+	for (const info of _.values<any>(Memory.strategy.roomList)) {
 		if (Game.cpu.getUsed() - startTime >= hivemind.settings.get('maxExpansionCpuPerTick')) {
 			// Don't spend more than 30 cpu trying to find a target each tick.
 			hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
@@ -227,13 +226,13 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		// 5 Support squads max.
 		if (_.size(activeSquads) >= 5) return false;
 
-		if (!room.isMine() || room.controller.level < 4) return;
-		if (room.name === info.spawnRoom || room.name === info.roomName) return;
-		if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return;
-		if (room.getStoredEnergy() < 50000) return;
+		if (!room.isMine() || room.controller.level < 4) return null;
+		if (room.name === info.spawnRoom || room.name === info.roomName) return null;
+		if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return null;
+		if (room.getStoredEnergy() < 50000) return null;
 
 		const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
-		if (!path || path.incomplete) return;
+		if (!path || path.incomplete) return null;
 
 		const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
 		const supportSquad = new Squad(squadName);
@@ -247,6 +246,7 @@ ExpandProcess.prototype.manageExpansionSupport = function () {
 		}
 
 		activeSquads[squadName] = true;
+		return null;
 	});
 
 	// Remove support squads from older rooms.

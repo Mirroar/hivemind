@@ -2,6 +2,12 @@
 ORDER_BUY ORDER_SELL PIXEL STORAGE_CAPACITY INTERSHARD_RESOURCES
 REACTION_TIME */
 
+declare global {
+	interface RoomMemory {
+		fillTerminal,
+	}
+}
+
 import cache from './cache';
 import hivemind from './hivemind';
 import Process from './process';
@@ -150,7 +156,7 @@ TradeProcess.prototype.getRoomResourceStates = function () {
 		rooms: 0,
 	};
 
-	for (const room of _.values(Game.rooms)) {
+	for (const room of _.values<Room>(Game.rooms)) {
 		const roomData = room.getResourceState();
 		if (!roomData) continue;
 
@@ -303,6 +309,8 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 
 			return true;
 		}
+
+		return false;
 	}).length > 0) {
 		return;
 	}
@@ -341,7 +349,13 @@ TradeProcess.prototype.tryBuyResources = function (resourceType, rooms, ignoreOt
 
 	hivemind.log('trade', roomName).debug('Offering to buy for', offerPrice);
 
-	const result = Game.market.createOrder(ORDER_BUY, resourceType, offerPrice, amount, roomName);
+	const result = Game.market.createOrder({
+		type: ORDER_BUY,
+		resourceType,
+		price: offerPrice,
+		totalAmount: amount,
+		roomName,
+	});
 	if (result !== OK) {
 		hivemind.log('trade', roomName).error('Could not create buy order:', result);
 	}
@@ -395,7 +409,13 @@ TradeProcess.prototype.trySellResources = function (resourceType, rooms) {
 
 	hivemind.log('trade', roomName).debug('Offering to sell for', offerPrice);
 
-	Game.market.createOrder(ORDER_SELL, resourceType, offerPrice, amount, roomName);
+	Game.market.createOrder({
+		type: ORDER_SELL,
+		resourceType,
+		price: offerPrice,
+		totalAmount: amount,
+		roomName,
+	});
 };
 
 /**

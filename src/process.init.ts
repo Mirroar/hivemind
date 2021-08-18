@@ -46,7 +46,10 @@ InitProcess.prototype.run = function () {
 	Game.creepsByRole = {};
 	Game.exploitTemp = {};
 	Game.operations = {};
-	Game.operationsByType = {};
+	Game.operationsByType = {
+		mining: {},
+		room: {},
+	};
 
 	// Add data to global Game object.
 	_.each(Memory.squads, (data, squadName) => {

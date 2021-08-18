@@ -1,5 +1,3 @@
-'use strict';
-
 /* global RESOURCE_ENERGY */
 
 import Role from './role';
@@ -85,7 +83,7 @@ HelperRole.prototype.performHelperCleanup = function (creep, orders) {
 	const terminal = creep.room.terminal;
 
 	for (const id of _.keys(orders)) {
-		const lab = Game.getObjectById(id);
+		const lab: StructureLab = Game.getObjectById(id);
 		if (!lab) continue;
 
 		if (lab.mineralType && lab.mineralType !== orders[id].resourceType) {
@@ -190,7 +188,7 @@ HelperRole.prototype.performHelperDeliver = function (creep, orders) {
  */
 HelperRole.prototype.performHelperLabDeliver = function (creep, orders) {
 	for (const id of _.keys(orders)) {
-		const lab = Game.getObjectById(id);
+		const lab: StructureLab = Game.getObjectById(id);
 		if (!lab) continue;
 
 		const resourceType = orders[id].resourceType;
@@ -227,6 +225,8 @@ HelperRole.prototype.performHelperLabDeliver = function (creep, orders) {
 			}
 		}
 	}
+
+	return false;
 };
 
 /**
@@ -297,7 +297,7 @@ HelperRole.prototype.performHelperGather = function (creep, orders) {
 HelperRole.prototype.performHelperLabGather = function (creep, orders) {
 	for (const id of _.keys(orders)) {
 		const order = orders[id];
-		const lab = Game.getObjectById(id);
+		const lab: StructureLab = Game.getObjectById(id);
 		if (!lab) continue;
 
 		const resourceType = order.resourceType;
@@ -345,6 +345,8 @@ HelperRole.prototype.performHelperLabGather = function (creep, orders) {
 
 		return true;
 	}
+
+	return false;
 };
 
 export default HelperRole;

@@ -1,5 +1,3 @@
-'use strict';
-
 /* global Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
 STRUCTURE_KEEPER_LAIR */
 
@@ -79,7 +77,7 @@ Room.prototype.calculateRoomPath = function (targetRoom, options) {
 		let minDist;
 		let nextRoom;
 		let cost = 1;
-		_.each(openList, (info, rName) => {
+		_.each(openList, (info: any, rName) => {
 			if (!minDist || info.range + info.dist < minDist) {
 				minDist = info.range + info.dist;
 				nextRoom = rName;

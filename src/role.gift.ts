@@ -1,5 +1,3 @@
-'use strict';
-
 import Role from './role';
 import ScoutRole from './role.scout';
 

@@ -56,7 +56,7 @@ export default class SpawnRole {
 	 * @return {Object}
 	 *   The newly spawned creep's initial memory.
 	 */
-	getCreepMemory(room: Room, option) {
+	getCreepMemory(room: Room, option): CreepMemory {
 		return {};
 	}
 

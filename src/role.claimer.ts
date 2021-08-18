@@ -1,7 +1,6 @@
-'use strict';
+/* global OK */
 
-/* global hivemind OK */
-
+import hivemind from './hivemind';
 import utilities from './utilities';
 import Role from './role';
 

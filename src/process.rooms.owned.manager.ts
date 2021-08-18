@@ -1,6 +1,9 @@
 import Process from './process';
 
 export default class RoomManagerProcess extends Process {
+
+	room: Room;
+
 	/**
 	 * Manages structures in owned rooms.
 	 * @constructor

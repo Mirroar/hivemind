@@ -29,7 +29,7 @@ InactiveStructuresProcess.prototype.run = function () {
 	if (rcl >= 8) return;
 
 	this.room.memory.inactiveStructures = {};
-	const groupedStructures = _.groupBy(this.room.find(FIND_MY_STRUCTURES), 'structureType');
+	const groupedStructures: _.Dictionary<Structure[]> = _.groupBy(this.room.find(FIND_MY_STRUCTURES), 'structureType');
 	_.each(groupedStructures, (structures, structureType) => {
 		// Check if more structures than allowed exist.
 		if (!CONTROLLER_STRUCTURES[structureType] || structures.length <= CONTROLLER_STRUCTURES[structureType][rcl]) return;

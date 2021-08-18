@@ -1,12 +1,11 @@
-'use strict';
-
-/* global hivemind FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK
+/* global FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK
 ERR_NO_PATH ERR_NOT_IN_RANGE FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_ROAD
 FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES
 LOOK_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
+import hivemind from './hivemind';
 import utilities from './utilities';
 import Role from './role';
 
@@ -259,12 +258,14 @@ HaulerRole.prototype.pickupNearbyEnergy = function (creep) {
 	if (resource) {
 		if (creep.pos.getRangeTo(resource) > 1) {
 			creep.moveToRange(resource, 1);
-			return;
+			return false;
 		}
 
 		creep.pickup(resource);
 		return true;
 	}
+
+	return false;
 };
 
 /**
@@ -404,6 +405,8 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
 			}
 		}
 	}
+
+	return false;
 };
 
 /**
@@ -415,7 +418,7 @@ HaulerRole.prototype.buildRoadOnCachedPath = function (creep) {
  * @return {boolean}
  *   Whether the creep should stay on this spot for further repairs.
  */
-HaulerRole.prototype.ensureRemoteHarvestContainerIsBuilt = function (creep) {
+HaulerRole.prototype.ensureRemoteHarvestContainerIsBuilt = function (creep: Creep) {
 	if ((creep.store.energy || 0) === 0) return false;
 
 	const workParts = creep.memory.body.work || 0;
@@ -443,7 +446,7 @@ HaulerRole.prototype.ensureRemoteHarvestContainerIsBuilt = function (creep) {
 	}
 
 	// Check if there is a container or construction site nearby.
-	const containerPosition = creep.operation.getContainerPosition(creep.memory.source);
+	const containerPosition: RoomPosition = creep.operation.getContainerPosition(creep.memory.source);
 	if (!containerPosition || containerPosition.roomName !== creep.pos.roomName) return false;
 
 	const sites = _.filter(containerPosition.lookFor(LOOK_CONSTRUCTION_SITES), site => site.structureType === STRUCTURE_CONTAINER);

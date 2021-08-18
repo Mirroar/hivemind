@@ -1,5 +1,3 @@
-'use strict';
-
 /* global LOOK_STRUCTURES STRUCTURE_ROAD OK RESOURCE_ENERGY LOOK_CREEPS
 FIND_STRUCTURES STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
 FIND_MY_CONSTRUCTION_SITES */
@@ -39,13 +37,16 @@ RemoteHarvesterRole.prototype.run = function (creep) {
  *
  * @param {Creep} creep
  *   The creep to run logic for.
+ *
+ * @returns {boolean}
+ *   Whether the creep is in the process of moving.
  */
 RemoteHarvesterRole.prototype.travelToSource = function (creep) {
 	const sourcePosition = utilities.decodePosition(creep.memory.source);
 
 	if (creep.pos.roomName !== creep.operation.getRoom() && !creep.hasCachedPath()) {
 		const paths = creep.operation.getPaths();
-		if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return;
+		if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return false;
 		creep.setCachedPath(utilities.serializePositionPath(paths[creep.memory.source].path), true, 1);
 	}
 
@@ -63,6 +64,8 @@ RemoteHarvesterRole.prototype.travelToSource = function (creep) {
 		creep.moveToRange(sourcePosition, 1);
 		return true;
 	}
+
+	return false;
 };
 
 /**
@@ -71,7 +74,7 @@ RemoteHarvesterRole.prototype.travelToSource = function (creep) {
  * @param {Creep} creep
  *   The creep to run logic for.
  */
-RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
+RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep: Creep) {
 	if (creep.pos.roomName !== creep.operation.getRoom()) return;
 
 	// Check if a container nearby is in need of repairs, since we can handle
@@ -124,7 +127,7 @@ RemoteHarvesterRole.prototype.performRemoteHarvest = function (creep) {
 		// Check if there is a container or construction site nearby.
 		const containerPosition = creep.operation.getContainerPosition(creep.memory.source);
 		if (!containerPosition) return;
-		const sites = _.filter(containerPosition.lookFor(LOOK_CONSTRUCTION_SITES), site => site.structureType === STRUCTURE_CONTAINER);
+		const sites = _.filter(containerPosition.lookFor(LOOK_CONSTRUCTION_SITES), (site: ConstructionSite) => site.structureType === STRUCTURE_CONTAINER);
 		if (sites.length === 0) {
 			// Place a container construction site for this source.
 			containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
@@ -184,6 +187,8 @@ RemoteHarvesterRole.prototype.removeObstacles = function (creep) {
 			return true;
 		}
 	}
+
+	return false;
 };
 
 export default RemoteHarvesterRole;

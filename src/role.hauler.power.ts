@@ -1,9 +1,8 @@
-'use strict';
-
-/* global hivemind RoomPosition RESOURCE_POWER FIND_STRUCTURES OK ATTACK_POWER
+/* global RoomPosition RESOURCE_POWER FIND_STRUCTURES OK ATTACK_POWER
 STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES FIND_RUINS MAX_CREEP_SIZE
 FIND_TOMBSTONES */
 
+import hivemind from './hivemind';
 import Role from './role';
 
 const PowerHaulerRole = function () {

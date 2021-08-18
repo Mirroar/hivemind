@@ -1,7 +1,4 @@
-'use strict';
-
-/* global hivemind */
-
+import hivemind from './hivemind';
 import interShard from './intershard';
 import Process from './process';
 import Squad from './manager.squad';
@@ -199,6 +196,7 @@ InterShardProcess.prototype.manageExpanding = function () {
 
 	const expansionInfo = {
 		room: targetRoom,
+		portalRoom: null,
 	};
 	expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom].origin;
 

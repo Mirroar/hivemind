@@ -2,6 +2,22 @@ let usedOnStart = 0;
 let enabled = false;
 let depth = 0;
 
+declare global {
+	interface Game {
+		profiler,
+	}
+
+	interface Memory {
+		profiler,
+	}
+
+	namespace NodeJS {
+		interface Global {
+			performance,
+		}
+	}
+}
+
 function setupProfiler() {
 	depth = 0; // reset depth, this needs to be done each tick.
 	Game.profiler = {
@@ -20,7 +36,7 @@ function setupProfiler() {
 		restart() {
 			if (Profiler.isProfiling()) {
 				const filter = Memory.profiler.filter;
-				let duration = false;
+				let duration: boolean | number = false;
 				if (!!Memory.profiler.disableTick) {
 					// Calculate the original duration, profile is enabled on the tick after the first call,
 					// so add 1.
@@ -60,7 +76,7 @@ function overloadCPUCalc() {
 	if (Game.rooms.sim) {
 		usedOnStart = 0; // This needs to be reset, but only in the sim.
 		Game.cpu.getUsed = function getUsed() {
-			return performance.now() - usedOnStart;
+			return global.performance.now() - usedOnStart;
 		};
 	}
 }
@@ -141,7 +157,7 @@ const Profiler = {
 		Game.notify(Profiler.output());
 	},
 
-	output(numresults) {
+	output(numresults?: number) {
 		const displayresults = !!numresults ? numresults : 20;
 		if (!Memory.profiler || !Memory.profiler.enabledTick) {
 			return 'Profiler not active.';

@@ -1,5 +1,3 @@
-'use strict';
-
 /* global CLAIM WORK */
 
 import Role from './role';

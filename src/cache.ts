@@ -75,7 +75,7 @@ const cache = {
 	 *   The object to collect garbage on. If not given, the general heap cache is
 	 *   garbage collected.
 	 */
-	collectGarbage(o) {
+	collectGarbage(o?: any) {
 		if (!o) o = heapCache;
 
 		for (const key in o._cache || {}) {

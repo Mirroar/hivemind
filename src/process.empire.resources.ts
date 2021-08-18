@@ -53,7 +53,7 @@ ResourcesProcess.prototype.run = function () {
 		}
 
 		// Use multiple routes as long as no room is involved multiple times.
-		routes = _.filter(routes, option => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
+		routes = _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
 		best = utilities.getBestOption(routes);
 	}
 };
@@ -139,7 +139,7 @@ ResourcesProcess.prototype.getResourceStates = function () {
 	const rooms = {};
 
 	// Collect room resource states.
-	for (const room of _.values(Game.rooms)) {
+	for (const room of _.values<Room>(Game.rooms)) {
 		if (!room.isMine()) continue;
 
 		const roomData = room.getResourceState();

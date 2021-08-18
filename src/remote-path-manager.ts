@@ -1,6 +1,4 @@
-'use strict';
-
-/* global hivemind PathFinder STRUCTURE_KEEPER_LAIR */
+/* global PathFinder STRUCTURE_KEEPER_LAIR */
 
 import hivemind from './hivemind';
 import cache from './cache';
@@ -24,7 +22,7 @@ export default class RemotePathManager {
 		}
 
 		const availableSourceRooms = _.filter(Game.rooms, r => r.isMine() && Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name) <= hivemind.settings.get('maxRemoteMineRoomDistance'));
-		const sortedByDist = _.sortBy(_.values(availableSourceRooms), r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name));
+		const sortedByDist = _.sortBy(_.values<Room>(availableSourceRooms), r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name));
 
 		let minPath;
 		let minPathLength = hivemind.settings.get('maxRemoteMinePathLength') + 50;

@@ -1,7 +1,7 @@
-'use strict';
+/* global PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_ALWAYS */
 
-/* global hivemind PROCESS_PRIORITY_DEFAULT PROCESS_PRIORITY_ALWAYS */
-
+import * as Hivemind from './hivemind';
+import hivemind from './hivemind';
 import OwnedRoomProcess from './process.rooms.owned';
 import Process from './process';
 import RoomIntelProcess from './process.rooms.intel';
@@ -31,7 +31,7 @@ RoomsProcess.prototype.run = function () {
 	_.each(Game.rooms, (room, roomName) => {
 		hivemind.runProcess('rooms_intel', RoomIntelProcess, {
 			room,
-			priority: PROCESS_PRIORITY_ALWAYS,
+			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
 			requireSegments: true,
 		});
 
@@ -41,7 +41,7 @@ RoomsProcess.prototype.run = function () {
 		if (room.isMine()) {
 			hivemind.runProcess('owned_rooms', OwnedRoomProcess, {
 				room,
-				priority: PROCESS_PRIORITY_ALWAYS,
+				priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
 			});
 		}
 
@@ -61,7 +61,7 @@ RoomsProcess.prototype.run = function () {
 				hivemind.runProcess(room.name + '_manager', RoomManagerProcess, {
 					interval: prioritizeRoomManager ? 0 : 100,
 					room,
-					priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
+					priority: prioritizeRoomManager ? Hivemind.PROCESS_PRIORITY_ALWAYS : Hivemind.PROCESS_PRIORITY_DEFAULT,
 				});
 			});
 		}

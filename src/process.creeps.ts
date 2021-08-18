@@ -50,8 +50,7 @@ const CreepsProcess = function (params, data) {
 		this.creepManager.registerCreepRole(roleName, new RoleClass());
 	}
 
-	import HarvesterRole from './role.harvester';
-	this.creepManager.registerCreepRole('harvester.minerals', new HarvesterRole());
+	this.creepManager.registerCreepRole('harvester.minerals', this.creepManager.roles['harvester']);
 
 	this.powerCreepManager = new CreepManager();
 	this.powerCreepManager.registerCreepRole('operator', new OperatorRole());

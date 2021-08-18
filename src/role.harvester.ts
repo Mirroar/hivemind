@@ -1,5 +1,3 @@
-'use strict';
-
 /* global FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY LOOK_CREEPS
 STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES LOOK_RESOURCES LOOK_STRUCTURES */
 
@@ -144,7 +142,7 @@ HarvesterRole.prototype.performHarvest = function (creep) {
  * @return {boolean}
  *   True if the harvester is in a bay.
  */
-HarvesterRole.prototype.depositInBay = function (creep) {
+HarvesterRole.prototype.depositInBay = function (creep: Creep) {
 	if (!creep.memory.harvestPos) return false;
 	const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
 	const bay = _.find(creep.room.bays, bay => bay.name === utilities.encodePosition(harvestPosition));
@@ -164,7 +162,7 @@ HarvesterRole.prototype.depositInBay = function (creep) {
  * @param {Creep} creep
  *   The creep to run logic for.
  */
-HarvesterRole.prototype.pickupEnergy = function (creep) {
+HarvesterRole.prototype.pickupEnergy = function (creep: Creep) {
 	const resources = creep.pos.lookFor(LOOK_RESOURCES);
 	const energy = _.find(resources, r => r.resourceType === RESOURCE_ENERGY);
 	if (energy) {

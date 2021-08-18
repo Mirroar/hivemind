@@ -116,8 +116,8 @@ ManageSpawnsProcess.prototype.visualizeSpawning = function (spawns) {
 		// Show spawn usage stats.
 		const memory = this.room.memory.spawns[spawn.id] || {ticks: 1, spawning: 0, waiting: 0, history: []};
 		const totalTicks = memory.ticks + (memory.history.length * historyChunkLength);
-		const spawningTicks = _.reduce(memory.history, (total, h) => total + h.spawning, memory.spawning);
-		const waitingTicks = _.reduce(memory.history, (total, h) => total + h.waiting, memory.waiting);
+		const spawningTicks = _.reduce(memory.history, (total, h: any) => total + h.spawning, memory.spawning);
+		const waitingTicks = _.reduce(memory.history, (total, h: any) => total + h.waiting, memory.waiting);
 		this.room.visual.rect(spawn.pos.x - 0.5, spawn.pos.y, 1, 0.3, {fill: '#888888', opacity: 0.5});
 		this.room.visual.rect(spawn.pos.x - 0.5, spawn.pos.y, spawningTicks / totalTicks, 0.3, {fill: '#88ff88'});
 		this.room.visual.rect(spawn.pos.x - 0.5 + (spawningTicks / totalTicks), spawn.pos.y, waitingTicks / totalTicks, 0.3, {fill: '#ff8888'});

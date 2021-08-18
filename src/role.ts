@@ -12,10 +12,6 @@ declare global {
 		singleRoom?: string,
 		go?: any,
 	}
-
-	interface Creep {
-		clearCachedPath: () => void,
-	}
 }
 
 export default class Role {

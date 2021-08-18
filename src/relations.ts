@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Relations determine how we act towards other users.
  * @constructor

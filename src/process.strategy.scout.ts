@@ -1,7 +1,16 @@
-'use strict';
+/* global RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY */
 
-/* global hivemind RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY */
+declare global {
+	interface StructureObserver {
+		hasScouted: boolean,
+	}
 
+	interface RoomMemory {
+		observeTargets,
+	}
+}
+
+import hivemind from './hivemind';
 import interShard from './intershard';
 import PathManager from './remote-path-manager';
 import Process from './process';
@@ -226,7 +235,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	// Add score for harvest room sources.
 	const exits = roomIntel.getExits();
 	let hasHighwayExit = false;
-	for (const adjacentRoom of _.values(exits)) {
+	for (const adjacentRoom of _.values<string>(exits)) {
 		result.addScore(this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
 
 		if (adjacentRoom.endsWith('0') || adjacentRoom.substr(2).startsWith('0')) {
@@ -239,7 +248,7 @@ ScoutProcess.prototype.calculateExpansionScore = function (roomName) {
 	}
 
 	// Check if expanding here creates a safe direction for another of our rooms.
-	for (const otherRoom of _.values(Game.rooms)) {
+	for (const otherRoom of _.values<Room>(Game.rooms)) {
 		if (!otherRoom.isMine()) continue;
 		if (otherRoom.name === roomName) continue;
 

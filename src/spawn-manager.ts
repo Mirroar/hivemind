@@ -1,7 +1,19 @@
-'use strict';
-
 /* global BODYPART_COST OK */
 
+declare global {
+	interface StructureSpawn {
+		waiting: boolean,
+		numSpawnOptions: number,
+	}
+
+	interface Memory {
+		creepCounter: {
+			[key: string]: number,
+		}
+	}
+}
+
+import SpawnRole from './spawn-role';
 import utilities from './utilities';
 
 const roleNameMap = {
@@ -28,6 +40,11 @@ const roleNameMap = {
 };
 
 export default class SpawnManager {
+
+	roles: {
+		[key: string]: SpawnRole,
+	};
+
 	/**
 	 * Creates a new SpawnManager instance.
 	 */
@@ -84,7 +101,7 @@ export default class SpawnManager {
 	 * @param {StructureSpawn[]} spawns
 	 *   The room's spawns.
 	 */
-	manageSpawns(room, spawns) {
+	manageSpawns(room: Room, spawns: StructureSpawn[]) {
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
 
@@ -123,7 +140,7 @@ export default class SpawnManager {
 	 * @return {boolean}
 	 *   True if spawning was successful.
 	 */
-	trySpawnCreep(room, spawn, option) {
+	trySpawnCreep(room: Room, spawn: StructureSpawn, option): boolean {
 		const role = this.roles[option.role];
 		const body = role.getCreepBody(room, option);
 
@@ -180,7 +197,7 @@ export default class SpawnManager {
 	 * @return {String}
 	 *   The generated name.
 	 */
-	generateCreepName(roleId) {
+	generateCreepName(roleId: string): string {
 		// Generate creep name.
 		if (!Memory.creepCounter) {
 			Memory.creepCounter = {};
@@ -203,7 +220,7 @@ export default class SpawnManager {
 	 * @return {StructureSpawn[]}
 	 *   An array containing all spawns where spawning is possible.
 	 */
-	filterAvailableSpawns(spawns) {
+	filterAvailableSpawns(spawns: StructureSpawn[]): StructureSpawn[] {
 		return _.filter(spawns, spawn => {
 			if (spawn.spawning) return false;
 

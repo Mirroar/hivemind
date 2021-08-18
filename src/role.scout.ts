@@ -1,7 +1,6 @@
-'use strict';
+/* global RoomPosition OK */
 
-/* global hivemind RoomPosition OK */
-
+import hivemind from './hivemind';
 import utilities from './utilities';
 import Role from './role';
 
@@ -138,7 +137,7 @@ ScoutRole.prototype.chooseScoutTarget = function (creep, invalidateOldTarget) {
 	const memory = Memory.strategy;
 
 	let best = null;
-	for (const info of _.values(memory.roomList)) {
+	for (const info of _.values<any>(memory.roomList)) {
 		if (info.roomName === creep.pos.roomName) continue;
 		if (creep.memory.invalidScoutTargets && creep.memory.invalidScoutTargets.indexOf(info.roomName) !== -1) continue;
 
