@@ -125,17 +125,22 @@ ScoutProcess.prototype.calculateRoomPriorities = function (roomName) {
 
 			// Let observer scout one room per run at maximum.
 			// @todo Move this to structure management so we can scan one open room per tick.
-			const observer = Game.getObjectById(info.observer);
-			if (observer && !observer.hasScouted) {
-				observer.observeRoom(roomName);
-				observer.hasScouted = true;
+			const observer: StructureObserver = Game.getObjectById(info.observer);
+			if (observer) {
+				if (!observer.hasScouted) {
+					observer.observeRoom(roomName);
+					observer.hasScouted = true;
+				}
+				else {
+					if (!Memory.rooms[info.observerRoom].observeTargets) {
+						Memory.rooms[info.observerRoom].observeTargets = [];
+					}
+
+					Memory.rooms[info.observerRoom].observeTargets.push(roomName);
+				}
 			}
 			else {
-				if (!Memory.rooms[info.observerRoom].observeTargets) {
-					Memory.rooms[info.observerRoom].observeTargets = [];
-				}
-
-				Memory.rooms[info.observerRoom].observeTargets.push(roomName);
+				delete Memory.rooms[info.observerRoom].observeTargets;
 			}
 		}
 	}
