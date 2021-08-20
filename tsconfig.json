@@ -6,10 +6,12 @@
     "moduleResolution": "Node",
     "outDir": "dist",
     "baseUrl": "src/",
+    "rootDir": "src",
     "sourceMap": true,
-    "strict": true,
+    "strict": false,
     "experimentalDecorators": true,
     "noImplicitReturns": true,
+    "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": false
   },
