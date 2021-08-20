@@ -1,5 +1,7 @@
-src/relations.local.js
+src/*.local.ts
+dist
 
 node_modules
 gruntfile.js
 .nyc_output
+.tscache
