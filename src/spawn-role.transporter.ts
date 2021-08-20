@@ -92,7 +92,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 
 		// If we have links to beam energy around, we'll need less transporters.
 		if (room.memory.controllerLink) {
-			maxTransporters -= _.sum(room.sources, source => source.getNearbyLink() ? 1 : 0);
+			maxTransporters -= _.sum(room.sources, (source: Source) => source.getNearbyLink() ? 1 : 0);
 
 			// Need less transporters if energy gets beamed around the place a lot.
 			if (room.memory.controllerLink) {

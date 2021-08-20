@@ -6,7 +6,7 @@ const Relations = function () {
 	this.allies = [];
 
 	try {
-		import localRelations from './relations.local';
+		const localRelations = require('./relations.local');
 
 		if (localRelations.allies) {
 			for (const ally of localRelations.allies) {

@@ -172,7 +172,7 @@ HarvesterRole.prototype.pickupEnergy = function (creep: Creep) {
 
 	const structures = creep.pos.lookFor(LOOK_STRUCTURES);
 	const container = _.find(structures, s => s.structureType === STRUCTURE_CONTAINER);
-	if (container && (container.store.energy || 0) > 0) {
+	if (container && ((container as StructureContainer).store.energy || 0) > 0) {
 		creep.withdraw(container, RESOURCE_ENERGY);
 	}
 };

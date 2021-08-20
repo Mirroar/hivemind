@@ -170,7 +170,7 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep: Creep, options
 			if (hivemind.relations.isAlly(creep.owner.username)) continue;
 
 			const option = {
-				priority: 5,
+				priority: 4,
 				weight: 1 - (creep.pos.getRangeTo(enemy) / 50),
 				type: 'hostilecreep',
 				object: enemy,
@@ -198,13 +198,13 @@ BrawlerRole.prototype.addMilitaryAttackOptions = function (creep: Creep, options
 
 	// Attack structures under target flag (even if non-hostile, like walls).
 	const directStructures = targetPosition.lookFor(LOOK_STRUCTURES);
-	for (const structure of directStructures || []) {
+	for (const structure of (directStructures as AnyOwnedStructure[]) || []) {
 		structures.push(structure);
 	}
 
 	for (const structure of structures) {
 		const option = {
-			priority: 2,
+			priority: utilities.encodePosition(structure.pos) === creep.memory.target ? 5 : 2,
 			weight: 0,
 			type: 'hostilestructure',
 			object: structure,
@@ -689,7 +689,7 @@ BrawlerRole.prototype.performMilitaryAttack = function (creep) {
 		// Attack ordered target first.
 		const target: Creep | AnyOwnedStructure = Game.getObjectById(creep.memory.order.target);
 
-		if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || 0) > 0;
+		if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || 0) > 0;
 	}
 
 	// See if enemies are nearby, attack one of those.

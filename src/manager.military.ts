@@ -284,7 +284,7 @@ Room.prototype.getTowerTarget = function () {
 Room.prototype.drawMilitarySituation = function () {
 	const visual = this.visual;
 	_.each(this.sitRep.damage, (colData, x) => {
-		_.each(colData, (data, y) => {
+		_.each(colData, (data, y: number) => {
 			visual.text(data, x, y - 0.1, {
 				color: 'red',
 				font: 0.5,
@@ -302,7 +302,7 @@ Room.prototype.drawMilitarySituation = function () {
 	});
 
 	_.each(this.sitRep.myDamage, (colData, x) => {
-		_.each(colData, (data, y) => {
+		_.each(colData, (data, y: number) => {
 			visual.text(data, x, y - 0.1, {
 				color: 'red',
 				font: 0.5,

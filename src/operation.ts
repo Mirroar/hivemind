@@ -4,7 +4,7 @@ declare global {
 	}
 
 	interface CreepMemory {
-		operation: string,
+		operation?: string,
 	}
 
 	interface Game {

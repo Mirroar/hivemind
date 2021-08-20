@@ -99,18 +99,6 @@ Creep.prototype.enhanceData = function () {
 
 	room.creepsByRole[role][this.name] = this;
 
-	// Store creeps that are part of a squad in their respectice squads.
-	if (this.memory.squadName) {
-		const squad = Game.squads[this.memory.squadName];
-		if (squad) {
-			if (!squad.units[this.memory.squadUnitType]) {
-				squad.units[this.memory.squadUnitType] = [];
-			}
-
-			squad.units[this.memory.squadUnitType].push(this);
-		}
-	}
-
 	// Store creeps that are part of an exploit operation in the correct object.
 	if (this.memory.exploitName) {
 		if (!Game.exploitTemp[this.memory.exploitName]) {

@@ -765,7 +765,7 @@ TransporterRole.prototype.performGetResources = function (calculateSourceCallbac
 			orderDone &&
 			creep.store.getFreeCapacity() > target.amount
 		) {
-			const containers = _.filter(target.pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_CONTAINER);
+			const containers = _.filter(target.pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_CONTAINER) as StructureContainer[];
 			if (containers.length && (containers[0].store.getUsedCapacity(target.resourceType) || 0) > 0) {
 				// We have picked up energy dropped on the ground probably due to a full
 				// container. Pick up resources from the container next.
@@ -806,10 +806,9 @@ TransporterRole.prototype.ensureValidResourceSource = function (calculateSourceC
 	if (!target) return false;
 	if (creep.memory.singleRoom && target.pos.roomName !== creep.memory.singleRoom) return false;
 
-	if (target.store && (target.store[resourceType] || 0) > 0) return true;
-	if (target.amount && target.amount > 0) return true;
-	if (resourceType === RESOURCE_ENERGY && target.energyCapacity && target.energy > 0) return true;
-	if (target.mineralCapacity && target.mineralType === resourceType && target.mineralAmount > 0) return true;
+	if ('store' in target && ((target as AnyStoreStructure).store.getUsedCapacity(resourceType)) > 0) return true;
+	if (target instanceof Resource && target.amount > 0) return true;
+	if (target instanceof StructureLab && target.mineralType === resourceType && target.mineralAmount > 0) return true;
 
 	return false;
 };

@@ -11,11 +11,11 @@ declare global {
 	}
 
 	interface CreepMemory {
-		needsBoosting,
+		needsBoosting?: any,
 	}
 
 	interface RoomMemory {
-		boostManager,
+		boostManager?: any,
 	}
 }
 

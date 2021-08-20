@@ -2,7 +2,7 @@
 
 declare global {
 	interface CreepMemory {
-		source,
+		source?: any,
 	}
 }
 

@@ -86,7 +86,7 @@ RemoteBuilderRole.prototype.setBuilderState = function (building) {
  * Spends energy in target room by building, repairing or upgrading.
  */
 RemoteBuilderRole.prototype.performRemoteBuild = function () {
-	const creep = this.creep;
+	const creep: Creep = this.creep;
 
 	// Try and prevent controller downgrades.
 	if (creep.room.isMine() && (creep.room.controller.level < 2 || creep.room.controller.ticksToDowngrade < 500)) {
@@ -95,7 +95,7 @@ RemoteBuilderRole.prototype.performRemoteBuild = function () {
 	}
 
 	// Help by filling spawn with energy.
-	const spawns = creep.room.find(FIND_MY_STRUCTURES, {
+	const spawns = creep.room.find<StructureSpawn>(FIND_MY_STRUCTURES, {
 		filter: structure => structure.structureType === STRUCTURE_SPAWN,
 	});
 	if (spawns && spawns.length > 0 && spawns[0].energy < spawns[0].energyCapacity * 0.8) {
@@ -137,7 +137,7 @@ RemoteBuilderRole.prototype.performRemoteBuild = function () {
 		}
 	}
 
-	const target = Game.getObjectById(creep.memory.buildTarget);
+	const target: ConstructionSite = Game.getObjectById(creep.memory.buildTarget);
 	if (target) {
 		if (creep.pos.getRangeTo(target) > 3) {
 			creep.moveToRange(target, 3);
@@ -171,7 +171,7 @@ RemoteBuilderRole.prototype.saveExpiringRamparts = function () {
 	}
 
 	if (this.creep.memory.repairTarget) {
-		const target = Game.getObjectById(this.creep.memory.repairTarget);
+		const target: Structure = Game.getObjectById(this.creep.memory.repairTarget);
 		if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > 15000)) {
 			delete this.creep.memory.repairTarget;
 		}
@@ -278,7 +278,7 @@ RemoteBuilderRole.prototype.performGetRemoteBuilderEnergy = function () {
 		return;
 	}
 
-	const source = Game.getObjectById(best);
+	const source: Source = Game.getObjectById(best);
 	if (!source || source.energy <= 0) {
 		creep.memory.resourceTarget = null;
 	}
@@ -301,7 +301,7 @@ RemoteBuilderRole.prototype.setExtraEnergyTarget = function (creep) {
 
 	const mainIntel = hivemind.roomIntel(creep.pos.roomName);
 	const possibleSources = [];
-	for (const roomName of _.values(mainIntel.getExits())) {
+	for (const roomName of _.values<string>(mainIntel.getExits())) {
 		const roomIntel = hivemind.roomIntel(roomName);
 		if (roomIntel.isClaimed()) continue;
 		// @todo Also don't allow source keeper rooms.

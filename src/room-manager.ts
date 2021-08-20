@@ -16,7 +16,7 @@ declare global {
 	}
 
 	interface RoomMemory {
-		manager,
+		manager?: any,
 	}
 }
 

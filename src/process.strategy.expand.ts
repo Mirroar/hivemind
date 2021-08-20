@@ -299,7 +299,7 @@ ExpandProcess.prototype.checkClaimPath = function () {
 	}
 
 	const structures = room.find(FIND_STRUCTURES, {
-		filter: s => OBSTACLE_OBJECT_TYPES.indexOf(s.structureType) > -1 || (s.structureType === STRUCTURE_RAMPART && !s.my),
+		filter: s => (OBSTACLE_OBJECT_TYPES as string[]).indexOf(s.structureType) > -1 || (s.structureType === STRUCTURE_RAMPART && !s.my),
 	});
 	for (const structure of structures) {
 		matrix.set(structure.pos.x, structure.pos.y, 255);

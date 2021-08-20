@@ -7,7 +7,7 @@ declare global {
 	}
 
 	interface RoomMemory {
-		roomPlanner,
+		roomPlanner?: any,
 	}
 
 	interface RoomPosition {
@@ -563,15 +563,15 @@ export default class RoomPlanner {
 
 					if (this.canPlaceMore('spawn')) {
 						utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
-							if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-							if (!this.isBuildableTile(x, y)) return;
-							if (x === harvestPosition.x && y === harvestPosition.y) return;
+							if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return true;
+							if (!this.isBuildableTile(x, y)) return true;
+							if (x === harvestPosition.x && y === harvestPosition.y) return true;
 
 							// Only place spawn where a road tile is adjacent, so creeps can
 							// actually exit when a harvester is on its spot.
 							let spawnPlaced = false;
 							utilities.handleMapArea(x, y, (x2, y2) => {
-								if (this.buildingMatrix.get(x2, y2) !== 1) return;
+								if (this.buildingMatrix.get(x2, y2) !== 1) return true;
 
 								this.placeFlag(new RoomPosition(x, y, this.roomName), 'spawn');
 								spawnPlaced = true;
@@ -579,6 +579,8 @@ export default class RoomPlanner {
 							});
 
 							if (spawnPlaced) return false;
+
+							return true;
 						});
 					}
 
@@ -1610,7 +1612,7 @@ export default class RoomPlanner {
 			const matrix = new PathFinder.CostMatrix();
 
 			_.each(this.memory.locations, (locations, locationType) => {
-				if (['road', 'harvester', 'bay_center'].indexOf(locationType) === -1 && OBSTACLE_OBJECT_TYPES.indexOf(locationType) === -1) return;
+				if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) return;
 
 				_.each(locations, (_, location) => {
 					const pos = utilities.decodePosition(location);

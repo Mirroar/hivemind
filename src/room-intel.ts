@@ -6,9 +6,9 @@ STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 declare global {
 	interface RoomMemory {
-		intel,
-		enemies,
-		abandonedResources,
+		intel?: any,
+		enemies?: any,
+		abandonedResources?: any,
 	}
 }
 

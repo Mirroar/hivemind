@@ -24,6 +24,12 @@ declare global {
 		powerSpawn?: StructurePowerSpawn,
 		observer?: StructureObserver,
 	}
+
+	interface RoomMemory {
+		controllerLink?: any,
+		controllerContainer?: any,
+		storageLink?: any,
+	}
 }
 
 import Bay from './manager.bay';

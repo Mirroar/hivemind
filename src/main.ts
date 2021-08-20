@@ -5,11 +5,21 @@ PROCESS_PRIORITY_HIGH */
 
 declare global {
 	interface RoomMemory {
-		bays: any,
-		sources: any,
-		minerals: any,
-		structureCache: any,
-		remoteHarvesting: any,
+		bays?: any,
+		sources?: any,
+		minerals?: any,
+		structureCache?: any,
+		remoteHarvesting?: any,
+	}
+
+	interface RawMemory {
+		_parsed,
+	}
+
+	namespace NodeJS {
+		interface Global {
+			Memory: Memory,
+		}
 	}
 
 	const _: typeof _;

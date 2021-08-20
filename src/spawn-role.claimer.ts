@@ -2,7 +2,7 @@
 
 declare global {
 	interface RoomMemory {
-		lastClaim,
+		lastClaim?: any,
 	}
 }
 

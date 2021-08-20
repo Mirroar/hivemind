@@ -4,7 +4,7 @@ REACTION_TIME */
 
 declare global {
 	interface RoomMemory {
-		fillTerminal,
+		fillTerminal?: any,
 	}
 }
 

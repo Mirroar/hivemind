@@ -6,7 +6,7 @@ declare global {
 	}
 
 	interface RoomMemory {
-		observeTargets,
+		observeTargets?: any,
 	}
 }
 
@@ -518,7 +518,7 @@ ScoutProcess.prototype.addAdjacentRooms = function (roomName, openList, closedLi
 	if (info.range >= (Memory.hivemind.maxScoutDistance || 7)) return;
 
 	const exits = hivemind.roomIntel(roomName).getExits();
-	for (const exit of _.values(exits)) {
+	for (const exit of _.values<string>(exits)) {
 		if (openList[exit] || closedList[exit]) continue;
 
 		const roomIntel = hivemind.roomIntel(exit);

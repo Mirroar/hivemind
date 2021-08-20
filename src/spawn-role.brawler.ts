@@ -3,7 +3,7 @@ RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
 declare global {
 	interface RoomMemory {
-		recentBrawler: {
+		recentBrawler?: {
 			[key: string]: number,
 		}
 	}
@@ -54,7 +54,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	getRemoteDefenseSpawnOptions(room, options) {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
-			const operation = Game.operations['mine:' + pos.roomName];
+			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
 			// @todo If the operation has multiple source rooms, use the one
 			// that has better spawn capacity or higher RCL.
@@ -203,7 +203,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getTrainPartSpawnOptions(room, options) {
-		const trainStarters = _.filter(room.creepsByRole.brawler || [], creep => creep.memory.train && _.size(creep.memory.train.partsToSpawn) > 0);
+		const trainStarters = _.filter(room.creepsByRole.brawler || [], (creep: Creep) => creep.memory.train && _.size(creep.memory.train.partsToSpawn) > 0);
 
 		for (const creep of trainStarters) {
 			const segmentType = creep.memory.train.partsToSpawn[0];
@@ -319,6 +319,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			target: option.targetPos || utilities.encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
 			operation: option.operation,
+			train: null,
 		};
 
 		switch (option.responseType) {

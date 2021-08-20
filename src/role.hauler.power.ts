@@ -115,7 +115,7 @@ PowerHaulerRole.prototype.returnHome = function (creep: Creep) {
 
 	// Put resources in storage.
 	if (creep.store.getUsedCapacity() > 0) {
-		for (const resourceType of _.keys(creep.store)) {
+		for (const resourceType of RESOURCES_ALL) {
 			if ((creep.store[resourceType] || 0) === 0) continue;
 
 			const target = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);

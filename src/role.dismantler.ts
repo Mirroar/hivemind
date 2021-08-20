@@ -76,7 +76,7 @@ DismantlerRole.prototype.performOperationDismantle = function (creep) {
 		if (pos.roomName === creep.pos.roomName) {
 			const structures = _.filter(
 				pos.lookFor(LOOK_STRUCTURES),
-				(s: AnyStructure) => OBSTACLE_OBJECT_TYPES.indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
+				(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
 			);
 
 			if (structures.length === 0) {
@@ -103,7 +103,7 @@ DismantlerRole.prototype.performOperationDismantle = function (creep) {
 
 	const structures = _.filter(
 		target.lookFor(LOOK_STRUCTURES),
-		(s: AnyStructure) => OBSTACLE_OBJECT_TYPES.indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
+		(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
 	);
 
 	creep.dismantle(structures[0]);

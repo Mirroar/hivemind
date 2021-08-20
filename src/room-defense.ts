@@ -3,7 +3,7 @@ FIND_STRUCTURES LOOK_STRUCTURES */
 
 declare global {
 	interface RoomMemory {
-		defense,
+		defense?: any,
 	}
 }
 
@@ -70,7 +70,7 @@ export default class RoomDefense {
 				for (const part of creep.body) {
 					if (part.type === ATTACK || part.type === HEAL || part.type === CLAIM) {
 						attackStrength++;
-						if (part.boost) {
+						if (part.boost && typeof part.boost === 'string') {
 							boosts += part.boost.length;
 						}
 

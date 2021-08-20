@@ -116,7 +116,7 @@ export default class SegmentedMemory {
 				return false;
 			}
 
-			if (this.savedKeys[key]) return;
+			if (this.savedKeys[key]) return null;
 
 			const part = JSON.stringify(value);
 			const partLength = part.length + key.length + 4;
@@ -137,6 +137,8 @@ export default class SegmentedMemory {
 
 			stringified += (stringified.length > 0 ? ',' : '') + '"' + key + '":' + part;
 			this.savedKeys[key] = true;
+
+			return null;
 		});
 
 		if (allSaved) {

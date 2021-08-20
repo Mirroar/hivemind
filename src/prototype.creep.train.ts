@@ -11,7 +11,7 @@ interface Creep {
 }
 
 interface CreepMemory {
-	train,
+	train?: any,
 }
 
 /**

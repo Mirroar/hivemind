@@ -41,7 +41,7 @@ export default class Bay {
 			100,
 			() => {
 				const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-					filter: structure => bayStructures.indexOf(structure.structureType) > -1 && structure.isOperational(),
+					filter: structure => (bayStructures as string[]).indexOf(structure.structureType) > -1 && structure.isOperational(),
 				});
 				return _.map(extensions, 'id');
 			}
@@ -51,7 +51,7 @@ export default class Bay {
 		const posStructures = this.pos.lookFor(LOOK_STRUCTURES);
 		let blocked = false;
 		for (const structure of posStructures) {
-			if (OBSTACLE_OBJECT_TYPES.indexOf(structure.structureType) !== -1) {
+			if ((OBSTACLE_OBJECT_TYPES as string[]).indexOf(structure.structureType) !== -1) {
 				blocked = true;
 				break;
 			}
@@ -64,7 +64,7 @@ export default class Bay {
 		if (blocked) return;
 
 		for (const id of bayExtensions) {
-			const extension = Game.getObjectById(id);
+			const extension: StructureExtension = Game.getObjectById(id);
 			if (!extension) continue;
 
 			this.extensions.push(extension);
@@ -134,14 +134,13 @@ export default class Bay {
 	 *   A creep with carry parts and energy in store.
 	 */
 	refillFrom(creep) {
-		const needsRefill = _.filter(this.extensions, e => {
-			if (e.energyCapacity) return e.energy < e.energyCapacity;
+		const needsRefill = _.filter(this.extensions, (e: AnyStoreStructure) => {
 			if (e.store) return e.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
 
 			return false;
 		});
 
-		const target = _.min(needsRefill, e => bayStructures.indexOf(e.structureType));
+		const target = _.min(needsRefill, e => (bayStructures as string[]).indexOf(e.structureType));
 
 		creep.transfer(target, RESOURCE_ENERGY);
 	}

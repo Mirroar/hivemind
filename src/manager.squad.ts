@@ -2,7 +2,7 @@ import utilities from './utilities';
 
 declare global {
   interface CreepMemory {
-    squadName: string,
+    squadName?: string,
   }
 
   interface Memory {

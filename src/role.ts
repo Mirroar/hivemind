@@ -2,7 +2,7 @@
 
 declare global {
 	interface CreepMemory {
-		role: string,
+		role?: string,
 		singleRoom?: string,
 		go?: any,
 	}

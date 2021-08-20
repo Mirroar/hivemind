@@ -226,7 +226,7 @@ export default class GathererRole extends Role {
 
 		// Choose a resource and deliver it.
 		_.each(creep.store, (amount, resourceType) => {
-			if (!amount || amount === 0) return;
+			if (!amount || amount === 0) return null;
 
 			const target = creep.room.getBestStorageTarget(amount, resourceType);
 			if (!target) return false;

@@ -70,7 +70,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		if (this[methodName]) return this[methodName](room, option);
 
 		// If the unit type is not supported, spawn a general brawler.
-		return this.getBrawlerCreepBody(room, option);
+		return this.getBrawlerCreepBody(room);
 	}
 
 	getRangerCreepBody(room) {
@@ -163,5 +163,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		if (option.unitType === 'attacker') {
 			return this.generateCreepBoosts(room, body, ATTACK, 'attack');
 		}
+
+		return null;
 	}
 };
