@@ -71,8 +71,9 @@ import utilities from './utilities';
  * @return {boolean}
  *   Whether the movement succeeded.
  */
-Creep.prototype.moveToRange = function (target, range) {
-	return this.goTo(target, {range});
+Creep.prototype.moveToRange = function (target, range, options?: any) {
+	options.range = range;
+	return this.goTo(target, options);
 };
 
 /**
@@ -538,6 +539,7 @@ Creep.prototype.calculateGoToPath = function (target, options) {
 	}
 
 	pfOptions.maxRooms = options.maxRooms;
+	pfOptions.allowDanger = options.allowDanger;
 
 	// Always allow pathfinding in current room.
 	pfOptions.whiteListRooms = [this.pos.roomName];
@@ -639,7 +641,7 @@ Creep.prototype.moveUsingNavMesh = function (targetPos, options) {
 
 	const nextPos = utilities.decodePosition(this.memory._nmp.path[this.memory._nmpi]);
 	if (this.pos.roomName !== nextPos.roomName || this.pos.getRangeTo(nextPos) > 1) {
-		const moveResult = this.moveToRange(nextPos, 1);
+		const moveResult = this.moveToRange(nextPos, 1, options);
 		if (!moveResult) {
 			// Couldn't get to next path target.
 			// @todo Recalculate route?
@@ -650,6 +652,13 @@ Creep.prototype.moveUsingNavMesh = function (targetPos, options) {
 	// If we reach a waypoint, increment path index.
 	if (this.pos.getRangeTo(nextPos) <= 1 && this.memory._nmpi < this.memory._nmp.path.length - 1) {
 		this.memory._nmpi++;
+		const nextPos = utilities.decodePosition(this.memory._nmp.path[this.memory._nmpi]);
+		const moveResult = this.moveToRange(nextPos, 1, options);
+		if (!moveResult) {
+			// Couldn't get to next path target.
+			// @todo Recalculate route?
+			return ERR_NO_PATH;
+		}
 	}
 
 	return OK;

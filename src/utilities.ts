@@ -94,7 +94,7 @@ const utilities = {
 
 			roomCallback: roomName => {
 				// If a room is considered inaccessible, don't look for paths through it.
-				if (!allowDanger && hivemind.segmentMemory.isReady() && hivemind.roomIntel(roomName).isOwned()) {
+				if (!(allowDanger || addOptions.allowDanger) && hivemind.segmentMemory.isReady() && hivemind.roomIntel(roomName).isOwned()) {
 					if (!addOptions || !addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
 						return false;
 					}
