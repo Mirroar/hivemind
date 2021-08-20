@@ -18,6 +18,8 @@
 		"coverage": "nyc ava"
 	},
 	"devDependencies": {
+		"@babel/core": "^7.15.0",
+		"@types/lodash": "^3.10.4",
 		"@types/screeps": "^3.2.3",
 		"ava": "^1.4.1",
 		"grunt": "^1.4.1",
@@ -80,7 +82,5 @@
 			"mock/constants.js"
 		]
 	},
-	"dependencies": {
-		"@babel/core": "^7.15.0"
-	}
+	"dependencies": {}
 }
