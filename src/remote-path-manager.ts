@@ -2,7 +2,7 @@
 
 import hivemind from './hivemind';
 import cache from './cache';
-import * as packrat from './packrat';
+import {packPosList, unpackPosList} from './packrat';
 import utilities from './utilities';
 
 export default class RemotePathManager {
@@ -18,7 +18,7 @@ export default class RemotePathManager {
 		if (memory.generated && !hivemind.hasIntervalPassed(1000, memory.generated)) {
 			if (!memory.path) return null;
 
-			return packrat.unpackPosList(memory.path);
+			return unpackPosList(memory.path);
 		}
 
 		const availableSourceRooms = _.filter(Game.rooms, r => r.isMine() && Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name) <= hivemind.settings.get('maxRemoteMineRoomDistance'));
@@ -87,7 +87,7 @@ export default class RemotePathManager {
 
 		// @todo Register this path so we know which rooms it touches.
 		memory.generated = Game.time;
-		memory.path = minPath ? packrat.packPosList(minPath) : null;
+		memory.path = minPath ? packPosList(minPath) : null;
 
 		return minPath;
 	}

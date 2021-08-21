@@ -1,7 +1,4 @@
-'use strict';
-
-/* global RawMemory PROCESS_PRIORITY_ALWAYS PROCESS_PRIORITY_LOW
-PROCESS_PRIORITY_HIGH */
+/* global RawMemory */
 
 declare global {
 	interface RoomMemory {
@@ -34,7 +31,7 @@ require('./prototype.structure');
 console.log('new global reset');
 
 // Create kernel object.
-import * as Hivemind from './hivemind';
+import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from './hivemind';
 import hivemind from './hivemind';
 hivemind.logGlobalReset();
 
@@ -100,7 +97,7 @@ export default {
 		this.cleanup();
 
 		hivemind.runProcess('init', InitProcess, {
-			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
 		const interShardMemory = interShard.getLocalMemory();
@@ -108,15 +105,15 @@ export default {
 		const shardHasEstablishedRooms = shardHasRooms && interShardMemory.info.maxRoomLevel > 3;
 
 		hivemind.runProcess('creeps', CreepsProcess, {
-			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
 		hivemind.runProcess('rooms', RoomsProcess, {
-			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 		hivemind.runProcess('strategy.scout', ScoutProcess, {
 			interval: hivemind.settings.get('scoutProcessInterval'),
-			priority: Hivemind.PROCESS_PRIORITY_LOW,
+			priority: PROCESS_PRIORITY_LOW,
 			requireSegments: true,
 		});
 
@@ -124,7 +121,7 @@ export default {
 			// @todo This process could be split up - decisions about when and where to expand can be executed at low priority. But management of actual expansions is high priority.
 			hivemind.runProcess('strategy.expand', ExpandProcess, {
 				interval: Memory.hivemind.canExpand ? 5 : 50,
-				priority: Hivemind.PROCESS_PRIORITY_HIGH,
+				priority: PROCESS_PRIORITY_HIGH,
 			});
 		}
 
@@ -142,13 +139,13 @@ export default {
 
 		hivemind.runProcess('strategy.inter_shard', InterShardProcess, {
 			interval: 100,
-			priority: Hivemind.PROCESS_PRIORITY_LOW,
+			priority: PROCESS_PRIORITY_LOW,
 		});
 
 		if (shardHasEstablishedRooms) {
 			hivemind.runProcess('empire.trade', TradeProcess, {
 				interval: 50,
-				priority: Hivemind.PROCESS_PRIORITY_LOW,
+				priority: PROCESS_PRIORITY_LOW,
 			});
 			hivemind.runProcess('empire.resources', ResourcesProcess, {
 				interval: 50,
@@ -162,7 +159,7 @@ export default {
 			interval: 100,
 		});
 		hivemind.runProcess('map-visuals', MapVisualsProcess, {
-			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
 		this.showDebug();

@@ -4,7 +4,7 @@ ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 import hivemind from './hivemind';
 import cache from './cache';
 import NavMesh from './nav-mesh';
-import * as packrat from './packrat';
+import {unpackCoordAsPos} from './packrat';
 import SpawnRole from './spawn-role';
 
 export default class PowerHarvesterSpawnRole extends SpawnRole {
@@ -98,7 +98,7 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 			if (!info) return null;
 
 			const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
-			const targetPos = info.pos ? packrat.unpackCoordAsPos(info.pos, targetRoom) : new RoomPosition(25, 25, targetRoom);
+			const targetPos = info.pos ? unpackCoordAsPos(info.pos, targetRoom) : new RoomPosition(25, 25, targetRoom);
 			const result = mesh.findPath(sourcePos, targetPos);
 			if (result.incomplete) return null;
 

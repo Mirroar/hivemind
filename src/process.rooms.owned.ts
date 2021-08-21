@@ -1,5 +1,4 @@
-/* global PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT FIND_STRUCTURES
-PROCESS_PRIORITY_ALWAYS POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
+/* global FIND_STRUCTURES POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
 
 declare global {
 	interface Memory {
@@ -7,7 +6,7 @@ declare global {
 	}
 }
 
-import * as Hivemind from './hivemind';
+import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from './hivemind';
 import hivemind from './hivemind';
 import InactiveStructuresProcess from './process.rooms.owned.inactive-structures';
 import ManageLabsProcess from './process.rooms.owned.labs';
@@ -60,7 +59,7 @@ OwnedRoomProcess.prototype.run = function () {
 		hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
 			interval: prioritizeRoomManager ? 0 : 100,
 			room: this.room,
-			priority: prioritizeRoomManager ? Hivemind.PROCESS_PRIORITY_ALWAYS : Hivemind.PROCESS_PRIORITY_DEFAULT,
+			priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
 		});
 	});
 
@@ -68,7 +67,7 @@ OwnedRoomProcess.prototype.run = function () {
 		hivemind.runProcess(this.room.name + '_inactive_structs', InactiveStructuresProcess, {
 			interval: 500,
 			room: this.room,
-			priority: Hivemind.PROCESS_PRIORITY_LOW,
+			priority: PROCESS_PRIORITY_LOW,
 		});
 	});
 
@@ -76,7 +75,7 @@ OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_defense', () => {
 		hivemind.runProcess(this.room.name + '_defense', RoomDefenseProcess, {
 			room: this.room,
-			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 	});
 
@@ -96,7 +95,7 @@ OwnedRoomProcess.prototype.run = function () {
 	hivemind.runSubProcess('rooms_spawns', () => {
 		hivemind.runProcess(this.room.name + '_spawns', ManageSpawnsProcess, {
 			room: this.room,
-			priority: Hivemind.PROCESS_PRIORITY_ALWAYS,
+			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 	});
 
@@ -121,7 +120,7 @@ OwnedRoomProcess.prototype.run = function () {
 		// Sing a song.
 		hivemind.runProcess(this.room.name + '_song', RoomSongsProcess, {
 			room: this.room,
-			priority: Hivemind.PROCESS_PRIORITY_LOW,
+			priority: PROCESS_PRIORITY_LOW,
 		});
 	});
 

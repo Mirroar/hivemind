@@ -5,7 +5,7 @@ HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 import hivemind from './hivemind';
 import cache from './cache';
 import Operation from './operation';
-import * as packrat from './packrat';
+import {packPosList, unpackPosList} from './packrat';
 import PathManager from './remote-path-manager';
 import utilities from './utilities';
 
@@ -132,7 +132,7 @@ export default class RemoteMiningOperation extends Operation {
 					const sourceRoom = path[path.length - 1].roomName;
 					return {
 						accessible: true,
-						path: packrat.packPosList(path),
+						path: packPosList(path),
 						sourceRoom,
 						travelTime,
 						requiredCarryParts,
@@ -143,7 +143,7 @@ export default class RemoteMiningOperation extends Operation {
 				if (info.accessible) {
 					result[sourceLocation] = {
 						accessible: info.accessible,
-						path: packrat.unpackPosList(info.path),
+						path: unpackPosList(info.path),
 						sourceRoom: info.sourceRoom,
 						travelTime: info.travelTime,
 						requiredCarryParts: info.requiredCarryParts,
@@ -334,9 +334,9 @@ export default class RemoteMiningOperation extends Operation {
 				}
 			}
 
-			return packrat.packPosList(blockedTiles);
+			return packPosList(blockedTiles);
 		});
 
-		return packrat.unpackPosList(cached);
+		return unpackPosList(cached);
 	}
 };

@@ -15,7 +15,7 @@ declare global {
 import hivemind from './hivemind';
 import interShard from './intershard';
 import NavMesh from './nav-mesh';
-import * as packrat from './packrat';
+import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from './packrat';
 import utilities from './utilities';
 
 const RoomIntel = function (roomName) {
@@ -205,7 +205,7 @@ RoomIntel.prototype.gatherPowerIntel = function (powerBanks) {
 		hits: powerBank.hits,
 		decays: Game.time + (powerBank.ticksToDecay || POWER_BANK_DECAY),
 		freeTiles: numFreeTiles,
-		pos: packrat.packCoord({x: powerBank.pos.x, y: powerBank.pos.y}),
+		pos: packCoord({x: powerBank.pos.x, y: powerBank.pos.y}),
 	};
 
 	// Also store room in strategy memory for easy access.
@@ -349,8 +349,8 @@ RoomIntel.prototype.gatherInvaderIntel = function (structures) {
 RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites) {
 	const obstaclePositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
 	this.memory.costPositions = [
-		packrat.packCoordList(_.map(obstaclePositions.obstacles, utilities.deserializeCoords)),
-		packrat.packCoordList(_.map(obstaclePositions.roads, utilities.deserializeCoords)),
+		packCoordList(_.map(obstaclePositions.obstacles, utilities.deserializeCoords)),
+		packCoordList(_.map(obstaclePositions.roads, utilities.deserializeCoords)),
 	];
 
 	delete this.memory.pathfinderPositions;
@@ -363,7 +363,7 @@ RoomIntel.prototype.generateCostMatrix = function (structures, constructionSites
 RoomIntel.prototype.getRoadCoords = function () {
 	if (!this.memory.costPositions) return [];
 
-	return packrat.unpackCoordList(this.memory.costPositions[1]);
+	return unpackCoordList(this.memory.costPositions[1]);
 };
 
 /**
@@ -475,8 +475,8 @@ RoomIntel.prototype.getCostMatrix = function () {
 	let obstaclePositions;
 	if (this.memory.costPositions) {
 		obstaclePositions = {
-			obstacles: packrat.unpackCoordListAsPosList(this.memory.costPositions[0], this.roomName),
-			roads: packrat.unpackCoordListAsPosList(this.memory.costPositions[1], this.roomName),
+			obstacles: unpackCoordListAsPosList(this.memory.costPositions[0], this.roomName),
+			roads: unpackCoordListAsPosList(this.memory.costPositions[1], this.roomName),
 		};
 	}
 
