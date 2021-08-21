@@ -18,6 +18,7 @@ declare global {
 
 import cache from './cache';
 import hivemind from './hivemind';
+import minCut from './mincut';
 import utilities from './utilities';
 
 const MAX_ROOM_LEVEL = 8;
@@ -55,7 +56,7 @@ export default class RoomPlanner {
 		this.roomName = roomName;
 		this.room = Game.rooms[roomName]; // Will not always be available.
 		if (hivemind.settings.get('enableMinCutRamparts')) {
-			this.minCut = require('./mincut');
+			this.minCut = minCut;
 			this.minCutBounds = [];
 		}
 

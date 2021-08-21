@@ -3,12 +3,13 @@ FIND_STRUCTURES */
 
 declare global {
 	interface Room {
-		generateLinkNetwork,
 		addStructureReference,
-		setEvacuating,
-		isEvacuating,
-		setClearingTerminal,
+		generateLinkNetwork,
 		isClearingTerminal,
+		isEvacuating,
+		linkNetwork: LinkNetwork,
+		setClearingTerminal,
+		setEvacuating,
 	}
 }
 

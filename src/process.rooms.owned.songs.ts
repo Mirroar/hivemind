@@ -1,3 +1,9 @@
+declare global {
+	interface RoomMemory {
+		roleplay,
+	}
+}
+
 import Process from './process';
 
 /* eslint-disable array-element-newline */
@@ -34,48 +40,49 @@ const songs = {
 };
 /* eslint-enable array-element-newline */
 
-/**
- * Makes creeps sing songs.
- * @constructor
- *
- * @param {object} params
- *   Options on how to run this process.
- * @param {object} data
- *   Memory object allocated for this process' stats.
- */
-const RoomSongsProcess = function (params, data) {
-	Process.call(this, params, data);
-	this.room = params.room;
+export default class RoomSongsProcess extends Process {
+	room: Room;
+	memory;
 
-	// Initialize memory.
-	if (!this.room.memory.roleplay) this.room.memory.roleplay = {};
-	if (!this.room.memory.roleplay.roomSong) this.room.memory.roleplay.roomSong = {};
-	this.memory = this.room.memory.roleplay.roomSong;
-};
+	/**
+	 * Makes creeps sing songs.
+	 * @constructor
+	 *
+	 * @param {object} params
+	 *   Options on how to run this process.
+	 * @param {object} data
+	 *   Memory object allocated for this process' stats.
+	 */
+	constructor(params, data) {
+		super(params, data);
+		this.room = params.room;
 
-RoomSongsProcess.prototype = Object.create(Process.prototype);
+		// Initialize memory.
+		if (!this.room.memory.roleplay) this.room.memory.roleplay = {};
+		if (!this.room.memory.roleplay.roomSong) this.room.memory.roleplay.roomSong = {};
+		this.memory = this.room.memory.roleplay.roomSong;
+	}
 
-/**
- * Sings a song in our room.
- */
-RoomSongsProcess.prototype.run = function () {
-	// @todo Choose from multiple songs.
-	if (!this.memory.name) this.memory.name = 'harder';
-	if (!songs[this.memory.name]) return;
-	const song = songs[this.memory.name];
+	/**
+	 * Sings a song in our room.
+	 */
+	run = function () {
+		// @todo Choose from multiple songs.
+		if (!this.memory.name) this.memory.name = 'harder';
+		if (!songs[this.memory.name]) return;
+		const song = songs[this.memory.name];
 
-	// Increment beat.
-	if (!this.memory.currentBeat) this.memory.currentBeat = 0;
-	this.memory.currentBeat++;
-	if (this.memory.currentBeat >= song.lines.length) this.memory.currentBeat = 0;
+		// Increment beat.
+		if (!this.memory.currentBeat) this.memory.currentBeat = 0;
+		this.memory.currentBeat++;
+		if (this.memory.currentBeat >= song.lines.length) this.memory.currentBeat = 0;
 
-	if (!song.lines[this.memory.currentBeat] || song.lines[this.memory.currentBeat] === '') return;
+		if (!song.lines[this.memory.currentBeat] || song.lines[this.memory.currentBeat] === '') return;
 
-	const creeps = _.filter(this.room.creeps, (creep: Creep) => song.roles.includes(creep.memory.role));
-	if (creeps.length <= 0) return;
+		const creeps = _.filter(this.room.creeps, (creep: Creep) => song.roles.includes(creep.memory.role));
+		if (creeps.length <= 0) return;
 
-	const creep = creeps[Math.floor(Math.random() * creeps.length)];
-	creep.say(song.lines[this.memory.currentBeat], true);
-};
-
-export default RoomSongsProcess;
+		const creep = creeps[Math.floor(Math.random() * creeps.length)];
+		creep.say(song.lines[this.memory.currentBeat], true);
+	}
+}

@@ -1,5 +1,6 @@
+import profiler from './screeps-profiler';
+
 const useProfiler = false;
-let profiler;
 
 import Bay from './manager.bay';
 import BoostManager from './manager.boost';
@@ -11,7 +12,6 @@ import stats from './stats';
 import utilities from './utilities';
 
 if (useProfiler) {
-	profiler = require('./screeps-profiler');
 	// Enable profiling of all methods in Game object prototypes defined up to now.
 	profiler.enable();
 	profiler.registerClass(Game.map, 'Map');
@@ -28,4 +28,4 @@ if (useProfiler) {
 	profiler.registerObject(utilities, 'utilities');
 }
 
-export default profiler;
+export {profiler, useProfiler};

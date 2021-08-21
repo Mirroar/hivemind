@@ -1,7 +1,5 @@
-/* global Room */
-
-require('./prototype.room.creeps');
-require('./prototype.room.intel');
-require('./prototype.room.pathfinding');
-require('./prototype.room.resources');
-require('./prototype.room.structures');
+import './prototype.room.creeps';
+import './prototype.room.intel';
+import './prototype.room.pathfinding';
+import './prototype.room.resources';
+import './prototype.room.structures';

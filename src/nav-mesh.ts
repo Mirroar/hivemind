@@ -288,7 +288,7 @@ export default class NavMesh {
 		return paths;
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: any) {
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: any): {path?: RoomPosition[], incomplete: boolean} {
 		if (!options) options = {};
 
 		const startRoom = startPos.roomName;

@@ -1,21 +1,23 @@
 /* global Creep ERR_NOT_ENOUGH_RESOURCES RESOURCE_ENERGY STRUCTURE_LINK */
 
-interface Creep {
-	operation,
-	transferAny,
-	dropAny,
-	enhanceData,
-}
+declare global {
+	interface Creep {
+		operation,
+		transferAny,
+		dropAny,
+		enhanceData,
+	}
 
-interface Game {
-	exploitTemp: {
-		[key: string]: string[],
+	interface Game {
+		exploitTemp: {
+			[key: string]: string[],
+		}
 	}
 }
 
-require('./prototype.creep.military');
-require('./prototype.creep.movement');
-require('./prototype.creep.train');
+import './prototype.creep.military';
+import './prototype.creep.movement';
+import './prototype.creep.train';
 
 // Define quick access property creep.operation.
 Object.defineProperty(Creep.prototype, 'operation', {
@@ -108,3 +110,5 @@ Creep.prototype.enhanceData = function () {
 		Game.exploitTemp[this.memory.exploitName].push(this.id);
 	}
 };
+
+export {};

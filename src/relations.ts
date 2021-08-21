@@ -1,3 +1,5 @@
+import localRelations from './relations.local';
+
 /**
  * Relations determine how we act towards other users.
  * @constructor
@@ -5,17 +7,10 @@
 const Relations = function () {
 	this.allies = [];
 
-	try {
-		const localRelations = require('./relations.local');
-
-		if (localRelations.allies) {
-			for (const ally of localRelations.allies) {
-				this.allies.push(ally);
-			}
+	if (localRelations && localRelations.allies) {
+		for (const ally of localRelations.allies) {
+			this.allies.push(ally);
 		}
-	}
-	catch (error) {
-		// No local relations declared, ignore.
 	}
 };
 

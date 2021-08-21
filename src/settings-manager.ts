@@ -1,3 +1,6 @@
+import defaultSettings from './settings.default';
+import localSettings from './settings.local';
+
 export default class SettingsManager {
 
 	values: {
@@ -11,22 +14,15 @@ export default class SettingsManager {
 	 */
 	constructor() {
 		// Load base settings.
-		this.values = require('./settings.default');
+		this.values = defaultSettings;
 
 		// Add user settings from file.
-		try {
-			const localSettings = require('./settings.local');
+		if (localSettings) {
+			_.each(localSettings, (value, key) => {
+				if (typeof this.values[key] === 'undefined') return;
 
-			if (localSettings) {
-				_.each(localSettings, (value, key) => {
-					if (typeof this.values[key] === 'undefined') return;
-
-					this.values[key] = value;
-				});
-			}
-		}
-		catch (error) {
-			// No local settings declared, ignore the error.
+				this.values[key] = value;
+			});
 		}
 
 		// Add user settings from memory.

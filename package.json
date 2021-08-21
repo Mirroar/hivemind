@@ -19,6 +19,8 @@
 	},
 	"devDependencies": {
 		"@babel/core": "^7.15.0",
+		"@rollup/plugin-commonjs": "^20.0.0",
+		"@rollup/plugin-node-resolve": "^13.0.4",
 		"@types/lodash": "^3.10.4",
 		"@types/node": "^13.13.52",
 		"@types/screeps": "^3.2.3",
@@ -28,6 +30,12 @@
 		"grunt-ts": "^6.0.0-beta.22",
 		"lodash": "^3.0.0",
 		"nyc": "^13.3.0",
+		"prettier": "^2.3.2",
+		"rollup": "^2.56.2",
+		"rollup-plugin-clear": "^2.0.7",
+		"rollup-plugin-screeps": "^1.0.1",
+		"rollup-plugin-typescript2": "^0.30.0",
+		"source-map": "~0.6.1",
 		"ts-node": "^10.2.1",
 		"typescript": "^4.3.5",
 		"xo": "^0.44.0"

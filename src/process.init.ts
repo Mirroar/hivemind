@@ -5,6 +5,10 @@ import RoomPlanner from './room-planner';
 import RoomManager from './room-manager';
 import Squad from './manager.squad';
 
+import Operation from './operation';
+import MiningOperation from './operation.remote-mining';
+import RoomOperation from './operation.room';
+
 declare global {
 	interface Game {
 		exploits,
@@ -17,73 +21,58 @@ declare global {
 }
 
 const operationClasses = {
-	default: require('./operation'),
-	mining: require('./operation.remote-mining'),
-	room: require('./operation.room'),
+	default: Operation,
+	mining: MiningOperation,
+	room: RoomOperation,
 };
 
-/**
- * Initializes member variables that should be available to all processes.
- * @constructor
- *
- * @param {object} params
- *   Options on how to run this process.
- * @param {object} data
- *   Memory object allocated for this process' stats.
- */
-const InitProcess = function (params, data) {
-	Process.call(this, params, data);
-};
+export default class InitProcess extends Process {
+	/**
+	 * @override
+	 */
+	run() {
+		Game.squads = {};
+		Game.exploits = {};
+		Game.creepsByRole = {};
+		Game.exploitTemp = {};
+		Game.operations = {};
+		Game.operationsByType = {
+			mining: {},
+			room: {},
+		};
 
-InitProcess.prototype = Object.create(Process.prototype);
+		// Add data to global Game object.
+		_.each(Memory.squads, (data, squadName) => {
+			Game.squads[squadName] = new Squad(squadName);
+		});
+		_.each(operationClasses, (opClass, opType) => {
+			Game.operationsByType[opType] = {};
+		});
+		_.each(Memory.operations, (data, opName) => {
+			if (data.shouldTerminate) {
+				delete Memory.operations[opName];
+				return;
+			}
 
-/**
- * @override
- */
-InitProcess.prototype.run = function () {
-	Game.squads = {};
-	Game.exploits = {};
-	Game.creepsByRole = {};
-	Game.exploitTemp = {};
-	Game.operations = {};
-	Game.operationsByType = {
-		mining: {},
-		room: {},
-	};
+			const operation = new operationClasses[data.type](opName);
+			Game.operations[opName] = operation;
+			Game.operationsByType[data.type][opName] = operation;
+		});
 
-	// Add data to global Game object.
-	_.each(Memory.squads, (data, squadName) => {
-		Game.squads[squadName] = new Squad(squadName);
-	});
-	_.each(operationClasses, (opClass, opType) => {
-		Game.operationsByType[opType] = {};
-	});
-	_.each(Memory.operations, (data, opName) => {
-		if (data.shouldTerminate) {
-			delete Memory.operations[opName];
-			return;
-		}
+		// Cache creeps per room and role.
+		_.each(Game.creeps, creep => {
+			creep.enhanceData();
+		});
 
-		const operation = new operationClasses[data.type](opName);
-		Game.operations[opName] = operation;
-		Game.operationsByType[data.type][opName] = operation;
-	});
+		_.each(Game.rooms, room => {
+			if (room.isMine()) {
+				if (hivemind.segmentMemory.isReady()) room.roomPlanner = new RoomPlanner(room.name);
+				room.roomManager = new RoomManager(room);
+				room.boostManager = new BoostManager(room.name);
+				room.generateLinkNetwork();
+			}
 
-	// Cache creeps per room and role.
-	_.each(Game.creeps, creep => {
-		creep.enhanceData();
-	});
-
-	_.each(Game.rooms, room => {
-		if (room.isMine()) {
-			if (hivemind.segmentMemory.isReady()) room.roomPlanner = new RoomPlanner(room.name);
-			room.roomManager = new RoomManager(room);
-			room.boostManager = new BoostManager(room.name);
-			room.generateLinkNetwork();
-		}
-
-		room.enhanceData();
-	});
-};
-
-export default InitProcess;
+			room.enhanceData();
+		});
+	}
+}

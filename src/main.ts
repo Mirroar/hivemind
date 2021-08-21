@@ -23,10 +23,10 @@ declare global {
 }
 
 // Make sure game object prototypes are enhanced.
-require('./prototype.construction-site');
-require('./prototype.creep');
-require('./prototype.room');
-require('./prototype.structure');
+import './prototype.construction-site';
+import './prototype.creep';
+import './prototype.room';
+import './prototype.structure';
 
 console.log('new global reset');
 
@@ -52,14 +52,14 @@ import ScoutProcess from './process.strategy.scout';
 import TradeProcess from './process.empire.trade';
 
 /* eslint-disable import/no-unassigned-import */
-require('./manager.military');
-require('./manager.source');
+import './manager.military';
+import './manager.source';
 /* eslint-enable import/no-unassigned-import */
 
 import cache from './cache';
 
 // Allow profiling of code.
-import profiler from './profiler';
+import {profiler, useProfiler} from './profiler';
 import stats from './stats';
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
@@ -74,7 +74,7 @@ export default {
 	 * Wrapper for main game loop to optionally use profiler.
 	 */
 	loop() {
-		if (profiler) {
+		if (useProfiler) {
 			profiler.wrap(this.runTick);
 		}
 		else {

@@ -4,30 +4,52 @@ import Process from './process';
 import SpawnPowerCreepsProcess from './process.creeps.power.spawn';
 import utilities from './utilities';
 
+import brawlerRole from './role.brawler';
+import builderRole from './role.builder';
+import exploitBuilderRole from './role.builder.exploit';
+import remoteBuilderRole from './role.builder.remote';
+import claimerRole from './role.claimer';
+import dismantlerRole from './role.dismantler';
+import gathererRole from './role.gatherer';
+import giftRole from './role.gift';
+import guardianRole from './role.guardian';
+import harvesterRole from './role.harvester';
+import exploitHarvesterRole from './role.harvester.exploit';
+import poweHarvesterRole from './role.harvester.power';
+import remoteHarvesterRole from './role.harvester.remote';
+import haulerRole from './role.hauler';
+import exploitHaulerRole from './role.hauler.exploit';
+import powerHaulerRole from './role.hauler.power';
+import helperRole from './role.helper';
+import scoutRole from './role.scout';
+import transporterRole from './role.transporter';
+import unassignedRole from './role.unassigned';
+import upgraderRole from './role.upgrader';
+
 // Normal creep roles.
-const creepRoles = [
-	'brawler',
-	'builder',
-	'builder.exploit',
-	'builder.remote',
-	'claimer',
-	'dismantler',
-	'gatherer',
-	'gift',
-	'guardian',
-	'harvester',
-	'harvester.exploit',
-	'harvester.power',
-	'harvester.remote',
-	'hauler',
-	'hauler.exploit',
-	'hauler.power',
-	'helper',
-	'scout',
-	'transporter',
-	'unassigned',
-	'upgrader',
-];
+const creepRoles = {
+	'brawler': brawlerRole,
+	'builder': builderRole,
+	'builder.exploit': exploitBuilderRole,
+	'builder.remote': remoteBuilderRole,
+	'claimer': claimerRole,
+	'dismantler': dismantlerRole,
+	'gatherer': gathererRole,
+	'gift': giftRole,
+	'guardian': guardianRole,
+	'harvester': harvesterRole,
+	'harvester.exploit': exploitHarvesterRole,
+	'harvester.power': poweHarvesterRole,
+	'harvester.remote': remoteHarvesterRole,
+	'hauler': haulerRole,
+	'hauler.exploit': exploitHaulerRole,
+	'hauler.power': powerHaulerRole,
+	'helper': helperRole,
+	'scout': scoutRole,
+	'transporter': transporterRole,
+	'unassigned': unassignedRole,
+	'upgrader': upgraderRole,
+};
 
 // Power creep roles.
 import OperatorRole from './role.operator';
@@ -45,8 +67,8 @@ const CreepsProcess = function (params, data) {
 	Process.call(this, params, data);
 
 	this.creepManager = new CreepManager();
-	for (const roleName of creepRoles) {
-		const RoleClass = require('./role.' + roleName);
+	for (const roleName in creepRoles) {
+		const RoleClass = creepRoles[roleName];
 		this.creepManager.registerCreepRole(roleName, new RoleClass());
 	}
 
