@@ -22,6 +22,10 @@ declare global {
 		getBestStorageSource,
 		getBestCircumstancialStorageSource,
 	}
+
+	interface RoomMemory {
+		fillTerminalAmount,
+	}
 }
 
 import hivemind from './hivemind';

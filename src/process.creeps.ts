@@ -54,77 +54,78 @@ const creepRoles = {
 // Power creep roles.
 import OperatorRole from './role.operator';
 
-/**
- * Runs logic for all creeps and power creeps.
- * @constructor
- *
- * @param {object} params
- *   Options on how to run this process.
- * @param {object} data
- *   Memory object allocated for this process' stats.
- */
-const CreepsProcess = function (params, data) {
-	Process.call(this, params, data);
+export default class CreepsProcess extends Process {
+	creepManager: CreepManager;
+	powerCreepManager: CreepManager;
 
-	this.creepManager = new CreepManager();
-	for (const roleName in creepRoles) {
-		const RoleClass = creepRoles[roleName];
-		this.creepManager.registerCreepRole(roleName, new RoleClass());
+	/**
+	 * Runs logic for all creeps and power creeps.
+	 * @constructor
+	 *
+	 * @param {object} params
+	 *   Options on how to run this process.
+	 * @param {object} data
+	 *   Memory object allocated for this process' stats.
+	 */
+	constructor(params, data) {
+		super(params, data);
+
+		this.creepManager = new CreepManager();
+		for (const roleName in creepRoles) {
+			const RoleClass = creepRoles[roleName];
+			this.creepManager.registerCreepRole(roleName, new RoleClass());
+		}
+
+		this.creepManager.registerCreepRole('harvester.minerals', this.creepManager.roles['harvester']);
+
+		this.powerCreepManager = new CreepManager();
+		this.powerCreepManager.registerCreepRole('operator', new OperatorRole());
 	}
 
-	this.creepManager.registerCreepRole('harvester.minerals', this.creepManager.roles['harvester']);
-
-	this.powerCreepManager = new CreepManager();
-	this.powerCreepManager.registerCreepRole('operator', new OperatorRole());
-};
-
-CreepsProcess.prototype = Object.create(Process.prototype);
-
-/**
- * Runs logic for all creeps.
- */
-CreepsProcess.prototype.run = function () {
-	// Run normal creeps.
-	this.creepManager.onTickStart();
-	_.each(Game.creepsByRole, (creeps, role) => {
-		hivemind.runSubProcess('creeps_' + role, () => {
-			utilities.bubbleWrap(() => {
-				this.creepManager.manageCreeps(creeps);
+	/**
+	 * Runs logic for all creeps.
+	 */
+	run() {
+		// Run normal creeps.
+		this.creepManager.onTickStart();
+		_.each(Game.creepsByRole, (creeps, role) => {
+			hivemind.runSubProcess('creeps_' + role, () => {
+				utilities.bubbleWrap(() => {
+					this.creepManager.manageCreeps(creeps);
+				});
 			});
 		});
-	});
-	this.creepManager.report();
+		this.creepManager.report();
 
-	// Run power creeps.
-	const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
-	this.powerCreepManager.onTickStart();
-	utilities.bubbleWrap(() => {
-		this.powerCreepManager.manageCreeps(powerCreeps);
-	});
-	this.powerCreepManager.report();
+		// Run power creeps.
+		const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
+		this.powerCreepManager.onTickStart();
+		utilities.bubbleWrap(() => {
+			this.powerCreepManager.manageCreeps(powerCreeps);
+		});
+		this.powerCreepManager.report();
 
-	// Spawn power creeps.
-	hivemind.runProcess('creeps_power_spawn', SpawnPowerCreepsProcess, {
-		interval: 10,
-	});
+		// Spawn power creeps.
+		hivemind.runProcess('creeps_power_spawn', SpawnPowerCreepsProcess, {
+			interval: 10,
+		});
 
-	// Move blocking creeps if necessary.
-	_.each(Game.creeps, creep => {
-		if (creep._blockingCreepMovement) {
-			creep.room.visual.text('X', creep.pos);
-		}
-
-		if (creep._blockingCreepMovement && !creep._hasMoveIntent) {
-			if (creep.pos.getRangeTo(creep._blockingCreepMovement) === 1) {
-				// Swap with blocked creep.
-				creep.move(creep.pos.getDirectionTo(creep._blockingCreepMovement.pos));
-				creep._blockingCreepMovement.move(creep._blockingCreepMovement.pos.getDirectionTo(creep.pos));
+		// Move blocking creeps if necessary.
+		_.each(Game.creeps, creep => {
+			if (creep._blockingCreepMovement) {
+				creep.room.visual.text('X', creep.pos);
 			}
-			else {
-				creep.moveTo(creep._blockingCreepMovement.pos, {range: 1});
-			}
-		}
-	});
-};
 
-export default CreepsProcess;
+			if (creep._blockingCreepMovement && !creep._hasMoveIntent) {
+				if (creep.pos.getRangeTo(creep._blockingCreepMovement) === 1) {
+					// Swap with blocked creep.
+					creep.move(creep.pos.getDirectionTo(creep._blockingCreepMovement.pos));
+					creep._blockingCreepMovement.move(creep._blockingCreepMovement.pos.getDirectionTo(creep.pos));
+				}
+				else {
+					creep.moveTo(creep._blockingCreepMovement.pos, {range: 1});
+				}
+			}
+		});
+	}
+}

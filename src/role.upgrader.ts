@@ -3,160 +3,160 @@
 import Role from './role';
 import TransporterRole from './role.transporter';
 
-const UpgraderRole = function () {
-	Role.call(this);
+export default class UpgraderRole extends Role {
+	transporterRole: TransporterRole;
 
-	// Upgraders have high priority because we need to praise the GCL!
-	this.stopAt = 0;
-	this.throttleAt = 2000;
+	constructor() {
+		super();
 
-	this.transporterRole = new TransporterRole();
-};
+		// Upgraders have high priority because we need to praise the GCL!
+		this.stopAt = 0;
+		this.throttleAt = 2000;
 
-UpgraderRole.prototype = Object.create(Role.prototype);
-
-/**
- * Makes a creep behave like an upgrader.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- */
-UpgraderRole.prototype.run = function (creep) {
-	if (creep.memory.upgrading && creep.carry.energy === 0) {
-		this.setUpgraderState(creep, false);
+		this.transporterRole = new TransporterRole();
 	}
 
-	if (!creep.memory.upgrading && (creep.carry.energy === creep.carryCapacity || (creep.carry.energy > 0 && creep.room.memory.controllerContainer))) {
-		this.setUpgraderState(creep, true);
+	/**
+	 * Makes a creep behave like an upgrader.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 */
+	run(creep) {
+		if (creep.memory.upgrading && creep.carry.energy === 0) {
+			this.setUpgraderState(creep, false);
+		}
+
+		if (!creep.memory.upgrading && (creep.carry.energy === creep.carryCapacity || (creep.carry.energy > 0 && creep.room.memory.controllerContainer))) {
+			this.setUpgraderState(creep, true);
+		}
+
+		if (creep.memory.upgrading) {
+			this.performUpgrade(creep, true);
+			return;
+		}
+
+		this.performGetUpgraderEnergy(creep);
 	}
 
-	if (creep.memory.upgrading) {
-		this.performUpgrade(creep, true);
-		return;
-	}
+	/**
+	 * Makes the creep use energy reserves to upgrade the room's controller.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {boolean} allowRefilling
+	 *   Whether the creep may take energy from controller link or container.
+	 */
+	performUpgrade(creep, allowRefilling) {
+		// Upgrade controller.
+		const controller = creep.room.controller;
+		const distance = creep.pos.getRangeTo(controller);
+		if (distance > 1) {
+			creep.moveToRange(controller, 1);
+			// @todo If there are no free tiles at range 1, stay at range 2, etc.
+			// to save movement intents and pathfinding.
+		}
 
-	this.performGetUpgraderEnergy(creep);
-};
+		if (distance <= 3) {
+			creep.upgradeController(controller);
 
-/**
- * Makes the creep use energy reserves to upgrade the room's controller.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- * @param {boolean} allowRefilling
- *   Whether the creep may take energy from controller link or container.
- */
-UpgraderRole.prototype.performUpgrade = function (creep, allowRefilling) {
-	// Upgrade controller.
-	const controller = creep.room.controller;
-	const distance = creep.pos.getRangeTo(controller);
-	if (distance > 1) {
-		creep.moveToRange(controller, 1);
-		// @todo If there are no free tiles at range 1, stay at range 2, etc.
-		// to save movement intents and pathfinding.
-	}
+			if (distance === 1 && controller.sign && controller.sign.username) {
+				creep.signController(controller, '');
+			}
+		}
 
-	if (distance <= 3) {
-		creep.upgradeController(controller);
+		// Keep syphoning energy from link or controller to ideally never stop upgrading.
+		// @todo Do it when energy is less than 2 ticks of upgrading.
+		if (allowRefilling && _.sum(creep.carry) < creep.carryCapacity * 0.5) {
+			let withdrawn = false;
+			if (creep.room.memory.controllerLink) {
+				const controllerLink: StructureLink = Game.getObjectById(creep.room.memory.controllerLink);
+				if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1) {
+					if (creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
+						withdrawn = true;
+					}
+				}
+			}
 
-		if (distance === 1 && controller.sign && controller.sign.username) {
-			creep.signController(controller, '');
+			if (!withdrawn && creep.room.memory.controllerContainer) {
+				const controllerContainer: StructureContainer = Game.getObjectById(creep.room.memory.controllerContainer);
+				if (controllerContainer && controllerContainer.store.energy > 50 && creep.pos.getRangeTo(controllerContainer) <= 1) {
+					if (creep.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
+						withdrawn = true;
+					}
+				}
+			}
 		}
 	}
 
-	// Keep syphoning energy from link or controller to ideally never stop upgrading.
-	// @todo Do it when energy is less than 2 ticks of upgrading.
-	if (allowRefilling && _.sum(creep.carry) < creep.carryCapacity * 0.5) {
-		let withdrawn = false;
+	/**
+	 * Makes the creep gather energy as an upgrader.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 */
+	performGetUpgraderEnergy(creep) {
+		// Ideally, get energy from a link or container close to the controller.
 		if (creep.room.memory.controllerLink) {
-			const controllerLink: StructureLink = Game.getObjectById(creep.room.memory.controllerLink);
-			if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1) {
-				if (creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
-					withdrawn = true;
+			const target: StructureLink = Game.getObjectById(creep.room.memory.controllerLink);
+			if (target && target.energy > 50) {
+				if (creep.pos.getRangeTo(target) > 1) {
+					creep.moveToRange(target, 1);
 				}
+				else {
+					creep.withdraw(target, RESOURCE_ENERGY);
+				}
+
+				return;
 			}
 		}
 
-		if (!withdrawn && creep.room.memory.controllerContainer) {
-			const controllerContainer: StructureContainer = Game.getObjectById(creep.room.memory.controllerContainer);
-			if (controllerContainer && controllerContainer.store.energy > 50 && creep.pos.getRangeTo(controllerContainer) <= 1) {
-				if (creep.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
-					withdrawn = true;
+		if (creep.room.memory.controllerContainer) {
+			const target: StructureContainer = Game.getObjectById(creep.room.memory.controllerContainer);
+			if (target && target.store.energy > 50) {
+				if (creep.pos.getRangeTo(target) > 1) {
+					creep.moveToRange(target, 1);
 				}
+				else {
+					creep.withdraw(target, RESOURCE_ENERGY);
+				}
+
+				return;
 			}
 		}
-	}
-};
 
-/**
- * Makes the creep gather energy as an upgrader.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- */
-UpgraderRole.prototype.performGetUpgraderEnergy = function (creep) {
-	// Ideally, get energy from a link or container close to the controller.
-	if (creep.room.memory.controllerLink) {
-		const target: StructureLink = Game.getObjectById(creep.room.memory.controllerLink);
-		if (target && target.energy > 50) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
+		// Could also try to get energy from another nearby container.
+		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id !== creep.room.memory.controllerContainer,
+		});
+		if (otherContainers && otherContainers.length > 0) {
+			if (creep.pos.getRangeTo(otherContainers[0]) > 1) {
+				creep.moveToRange(otherContainers[0], 1);
 			}
 			else {
-				creep.withdraw(target, RESOURCE_ENERGY);
+				creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
 			}
 
 			return;
 		}
-	}
 
-	if (creep.room.memory.controllerContainer) {
-		const target: StructureContainer = Game.getObjectById(creep.room.memory.controllerContainer);
-		if (target && target.store.energy > 50) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
-				creep.withdraw(target, RESOURCE_ENERGY);
-			}
+		// Otherwise, get energy from anywhere.
+		this.transporterRole.performGetEnergy(creep);
 
-			return;
+		if (creep.carry.energy > 0) {
+			this.setUpgraderState(creep, true);
 		}
 	}
 
-	// Could also try to get energy from another nearby container.
-	const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
-		filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id !== creep.room.memory.controllerContainer,
-	});
-	if (otherContainers && otherContainers.length > 0) {
-		if (creep.pos.getRangeTo(otherContainers[0]) > 1) {
-			creep.moveToRange(otherContainers[0], 1);
-		}
-		else {
-			creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
-		}
-
-		return;
+	/**
+	 * Puts this creep into or out of upgrade mode.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to run logic for.
+	 * @param {boolean} upgrading
+	 *   Whether the creep should be praising the controller.
+	 */
+	setUpgraderState(creep, upgrading) {
+		creep.memory.upgrading = upgrading;
 	}
-
-	// Otherwise, get energy from anywhere.
-	this.transporterRole.performGetEnergy(creep);
-
-	if (creep.carry.energy > 0) {
-		this.setUpgraderState(creep, true);
-	}
-};
-
-/**
- * Puts this creep into or out of upgrade mode.
- *
- * @param {Creep} creep
- *   The creep to run logic for.
- * @param {boolean} upgrading
- *   Whether the creep should be praising the controller.
- */
-UpgraderRole.prototype.setUpgraderState = function (creep, upgrading) {
-	creep.memory.upgrading = upgrading;
-};
-
-export default UpgraderRole;
+}
