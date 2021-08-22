@@ -109,6 +109,16 @@ Creep.prototype.enhanceData = function () {
 
 		Game.exploitTemp[this.memory.exploitName].push(this.id);
 	}
+
+	// Store creeps that are part of an exploit operation in the correct object.
+	if (this.memory.squadName) {
+		const squad = Game.squads[this.memory.squadName];
+		if (!squad.units[this.memory.squadUnitType]) {
+			squad.units[this.memory.squadUnitType] = [];
+		}
+
+		squad.units[this.memory.squadUnitType].push(this.id);
+	}
 };
 
 export {};

@@ -27,7 +27,7 @@ export default class ManageLinksProcess extends Process {
 	 *   True if this process may be run.
 	 */
 	shouldRun() {
-		if (!Process.prototype.shouldRun.call(this)) return false;
+		if (!super.shouldRun()) return false;
 		if (!this.room.linkNetwork) return false;
 
 		return true;

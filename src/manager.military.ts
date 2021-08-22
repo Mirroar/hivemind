@@ -266,6 +266,7 @@ Room.prototype.assertTargetPriorities = function () {
  *   An enemy creep to shoot.
  */
 Room.prototype.getTowerTarget = function () {
+	this.assertMilitarySituation();
 	let max = null;
 	for (const creep of this.militaryObjects.creeps) {
 		if (!creep.militaryPriority) return;

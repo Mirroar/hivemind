@@ -72,6 +72,7 @@ import utilities from './utilities';
  *   Whether the movement succeeded.
  */
 Creep.prototype.moveToRange = function (target, range, options?: any) {
+	if (!options) options = {};
 	options.range = range;
 	return this.goTo(target, options);
 };

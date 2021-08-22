@@ -3,6 +3,7 @@
 /* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
 
 import SpawnRole from './spawn-role';
+import Squad from './manager.squad';
 
 export default class SquadSpawnRole extends SpawnRole {
 	/**
@@ -38,7 +39,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {string|null}
 	 *   Type of the unit that needs spawning.
 	 */
-	needsSpawning(squad) {
+	needsSpawning(squad: Squad) {
 		const neededUnits = [];
 		for (const unitType in squad.memory.composition) {
 			if (squad.memory.composition[unitType] > _.size(squad.units[unitType])) {

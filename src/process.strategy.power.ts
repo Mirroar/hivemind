@@ -34,7 +34,7 @@ export default class PowerMiningProcess extends Process {
 	 *   True if power harvesting is enabled.
 	 */
 	shouldRun() {
-		if (!Process.prototype.shouldRun.call(this)) return false;
+		if (!super.shouldRun()) return false;
 		if (!hivemind.settings.get('enablePowerMining')) return false;
 
 		return true;
