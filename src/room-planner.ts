@@ -221,8 +221,8 @@ export default class RoomPlanner {
 
 			for (let x = 0; x < 50; x++) {
 				for (let y = 0; y < 50; y++) {
-					done = done && !this.markDistanceTiles(wallMatrix, currentDistance, x, y);
-					done = done && !this.markDistanceTiles(exitMatrix, currentDistance, x, y);
+					if (this.markDistanceTiles(wallMatrix, currentDistance, x, y)) done = false;
+					if (this.markDistanceTiles(exitMatrix, currentDistance, x, y)) done = false;
 				}
 			}
 
@@ -295,7 +295,7 @@ export default class RoomPlanner {
 	 * @return {boolean}
 	 *   True if tile value was modified.
 	 */
-	markDistanceTiles(matrix: CostMatrix, distance: number, x: number, y: number) {
+	markDistanceTiles(matrix: CostMatrix, distance: number, x: number, y: number): boolean {
 		if (matrix.get(x, y) !== 0) return false;
 
 		let modified = false;
