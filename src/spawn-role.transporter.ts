@@ -34,6 +34,8 @@ export default class TransporterSpawnRole extends SpawnRole {
 			}
 			else {
 				option.force = true;
+				option.priority = 6;
+				option.weight = 1;
 			}
 
 			options.push(option);
