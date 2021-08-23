@@ -439,6 +439,10 @@ export default class RoomPlanner {
 
 		// Find closest position with distance from walls around there.
 		const roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(potentialCenterPositions);
+		if (!roomCenter) {
+			hivemind.log('rooms', this.roomName).error('Could not find a suitable center position!', utilities.renderCostMatrix(this.wallDistanceMatrix), utilities.renderCostMatrix(this.exitDistanceMatrix), utilities.renderCostMatrix(this.buildingMatrix));
+			return;
+		}
 		this.roomCenter = roomCenter;
 		this.placeFlag(roomCenter, 'center', null);
 
@@ -651,6 +655,8 @@ export default class RoomPlanner {
 
 		this.placeTowers();
 		this.placeSpawnWalls();
+
+		hivemind.log('rooms', this.roomName).info('Finished room planning: ', utilities.renderCostMatrix(this.wallDistanceMatrix), utilities.renderCostMatrix(this.exitDistanceMatrix), utilities.renderCostMatrix(this.buildingMatrix));
 
 		const end = Game.cpu.getUsed();
 		console.log('Planning for', this.roomName, 'took', end - start, 'CPU');

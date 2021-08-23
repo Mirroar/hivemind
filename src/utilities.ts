@@ -843,6 +843,35 @@ const utilities = {
 		});
 	},
 
+	/**
+	 * Outputs a cost matrix as a table for console output.
+	 */
+	renderCostMatrix(matrix: CostMatrix): string {
+		let output = '<table style="display: inline-block">';
+		for (let y = 0; y < 50; y++) {
+			output += '<tr style="height: 2px">'
+			for (let x = 0; x < 50; x++) {
+				let color = 'black';
+				const value = matrix.get(x, y);
+				if (value >= 100) color = 'red'
+				else if (value >= 50) {
+					color = 'rgb(255, ' + Math.round(255 * (1 - (value - 50) / 50)) + ', 0)';
+				}
+				else if (value > 0) {
+					color = 'rgb(' + Math.round(255 * value / 50) + ', 255, 0)';
+				}
+				else {
+					color = 'gray';
+				}
+
+				output += '<td style="width: 2px; background: ' + color + '"></td>';
+			}
+			output += '</tr>';
+		}
+		output += '</table>';
+		return output;
+	}
+
 };
 
 export default utilities;
