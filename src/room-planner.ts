@@ -213,6 +213,20 @@ export default class RoomPlanner {
 
 		this.prepareDistanceMatrixes(wallMatrix, exitMatrix);
 
+		this.propagateDistanceValues(wallMatrix);
+		this.propagateDistanceValues(exitMatrix);
+
+		this.memory.wallDistanceMatrix = wallMatrix.serialize();
+		this.memory.exitDistanceMatrix = exitMatrix.serialize();
+	};
+
+	/**
+	 * Tries to fill all 0 values in the cost matrix with distance to nearest 1.
+	 *
+	 * @param {PathFinder.CostMatrix} matrix
+	 *   The cost matrix to modify.
+	 */
+	propagateDistanceValues(matrix: CostMatrix) {
 		// @todo Use some kind of flood fill to calculate these faster.
 		let currentDistance = 1;
 		let done = false;
@@ -221,17 +235,13 @@ export default class RoomPlanner {
 
 			for (let x = 0; x < 50; x++) {
 				for (let y = 0; y < 50; y++) {
-					if (this.markDistanceTiles(wallMatrix, currentDistance, x, y)) done = false;
-					if (this.markDistanceTiles(exitMatrix, currentDistance, x, y)) done = false;
+					if (this.markDistanceTiles(matrix, currentDistance, x, y)) done = false;
 				}
 			}
 
 			currentDistance++;
 		}
-
-		this.memory.wallDistanceMatrix = wallMatrix.serialize();
-		this.memory.exitDistanceMatrix = exitMatrix.serialize();
-	};
+	}
 
 	/**
 	 * Initializes wall and exit distance matrix with walls and adjacent tiles.
