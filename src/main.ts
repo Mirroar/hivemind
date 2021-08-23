@@ -23,6 +23,8 @@ declare global {
 }
 
 // Make sure game object prototypes are enhanced.
+import { ErrorMapper } from "utils/ErrorMapper";
+
 import './prototype.construction-site';
 import './prototype.creep';
 import './prototype.room';
@@ -68,7 +70,7 @@ import stats from './stats';
 
 // @todo Spawn creeps using "sequences" where more control is needed.
 
-export default {
+const main = {
 
 	/**
 	 * Wrapper for main game loop to optionally use profiler.
@@ -306,3 +308,7 @@ export default {
 	},
 
 };
+
+export const loop = ErrorMapper.wrapLoop(() => {
+	main.loop();
+});
