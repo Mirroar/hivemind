@@ -1040,40 +1040,54 @@ export default class RoomPlanner {
 	placeTowers() {
 		const positions = this.findTowerPositions();
 		while (this.canPlaceMore('tower')) {
-			let info = null;
-			let bestDir = null;
-			for (const dir of _.keys(positions)) {
-				for (const tile of positions[dir].tiles) {
-					if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count === positions[dir].count)) {
-						info = tile;
-						bestDir = dir;
+			const newTowers = [];
+
+			while(newTowers.length < this.remainingStructureCount('tower')) {
+				let info = null;
+				let bestDir = null;
+				for (const dir of _.keys(positions)) {
+					for (const tile of positions[dir].tiles) {
+						if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count === positions[dir].count)) {
+							info = tile;
+							bestDir = dir;
+						}
 					}
 				}
+
+				if (!info) break;
+
+				info.score = -1;
+
+				// Make sure it's possible to refill this tower.
+				const result = PathFinder.search(info.pos, this.roomCenterEntrances, {
+					roomCallback: () => this.buildingMatrix,
+					maxRooms: 1,
+					plainCost: 1,
+					swampCost: 1, // We don't care about cost, just about possibility.
+				});
+				if (result.incomplete) continue;
+
+				positions[bestDir].count++;
+				const towerPosition = new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName);
+				newTowers.push(towerPosition);
+				this.placeFlag(towerPosition, 'tower_placeholder');
 			}
 
-			if (!info) break;
+			// Also create roads to all towers.
+			for (const pos of newTowers) {
+				// Check if access is still possible.
+				const result = PathFinder.search(pos, this.roomCenterEntrances, {
+					roomCallback: () => this.buildingMatrix,
+					maxRooms: 1,
+					plainCost: 1,
+					swampCost: 1, // We don't care about cost, just about possibility.
+				});
+				// @todo Decrement counter for tower direction.
+				if (result.incomplete) continue;
 
-			info.score = -1;
-
-			// Make sure it's possible to refill this tower.
-			const matrix = this.buildingMatrix;
-			const result = PathFinder.search(info.pos, this.roomCenterEntrances, {
-				roomCallback: () => matrix,
-				maxRooms: 1,
-				plainCost: 1,
-				swampCost: 1, // We don't care about cost, just about possibility.
-			});
-			if (result.incomplete) continue;
-
-			positions[bestDir].count++;
-			this.placeFlag(new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName), 'tower');
-		}
-
-		// Also create roads to all towers.
-		for (const posName of _.keys(this.memory.locations.tower)) {
-			const pos = utilities.decodePosition(posName);
-
-			this.placeAccessRoad(pos);
+				this.placeFlag(pos, 'tower');
+				this.placeAccessRoad(pos);
+			}
 		}
 	};
 
@@ -1275,8 +1289,21 @@ export default class RoomPlanner {
 	 *   True if the current controller level allows more of this structure.
 	 */
 	canPlaceMore(structureType: StructureConstant): boolean {
-		return _.size(this.memory.locations[structureType] || []) < CONTROLLER_STRUCTURES[structureType][MAX_ROOM_LEVEL];
+		return this.remainingStructureCount(structureType) > 0;
 	};
+
+	/**
+	 * Determines the number of structures of a type that could be placed.
+	 *
+	 * @param {string} structureType
+	 *   The type of structure to check for.
+	 *
+	 * @return {number}
+	 *   The number of structures of the given type that may still be placed.
+	 */
+	remainingStructureCount(structureType: StructureConstant): number {
+		return CONTROLLER_STRUCTURES[structureType][MAX_ROOM_LEVEL] - _.size(this.memory.locations[structureType] || []);
+	}
 
 	/**
 	 * Removes all pathfinding options that use the given position.
