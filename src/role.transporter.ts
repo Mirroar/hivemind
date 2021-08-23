@@ -744,6 +744,7 @@ export default class TransporterRole extends Role {
 
 		if (!this.ensureValidResourceSource(calculateSourceCallback)) {
 			delete creep.memory.sourceTarget;
+			delete creep.memory.order;
 			if (creep.memory.role === 'transporter' && creep.store.getUsedCapacity() > 0) {
 				// Deliver what we already have stored, if no more can be found for picking up.
 				this.setTransporterState(true);
@@ -797,16 +798,16 @@ export default class TransporterRole extends Role {
 	 * @return {boolean}
 	 *   True if the target is valid and contains the needed resource.
 	 */
-	ensureValidResourceSource(calculateSourceCallback) {
+	ensureValidResourceSource(calculateSourceCallback: () => void): boolean {
 		const creep = this.creep;
 
 		if (!creep.memory.sourceTarget) calculateSourceCallback();
 
 		const target: RoomObject = Game.getObjectById(creep.memory.sourceTarget);
-		const resourceType = creep.memory.order && creep.memory.order.resourceType;
 		if (!target) return false;
 		if (creep.memory.singleRoom && target.pos.roomName !== creep.memory.singleRoom) return false;
 
+		const resourceType = creep.memory.order && creep.memory.order.resourceType;
 		if ('store' in target && ((target as AnyStoreStructure).store.getUsedCapacity(resourceType)) > 0) return true;
 		if (target instanceof Resource && target.amount > 0) return true;
 		if (target instanceof StructureLab && target.mineralType === resourceType && target.mineralAmount > 0) return true;

@@ -60,6 +60,9 @@ export default class BuilderRole extends Role {
 			return;
 		}
 
+		if (creep.memory.sourceTarget && !creep.memory.order) {
+			delete creep.memory.sourceTarget;
+		}
 		this.transporterRole.performGetEnergy(creep);
 	}
 
@@ -73,6 +76,7 @@ export default class BuilderRole extends Role {
 	 */
 	setBuilderState(creep, repairing) {
 		creep.memory.repairing = repairing;
+		delete creep.memory.sourceTarget;
 		delete creep.memory.order;
 	}
 
