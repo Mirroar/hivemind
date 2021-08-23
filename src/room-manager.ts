@@ -47,7 +47,7 @@ export default class RoomManager {
 		this.roomPlanner = room.roomPlanner;
 
 		if (!Memory.rooms[room.name]) {
-			Memory.rooms[room.name] = {};
+			Memory.rooms[room.name] = {} as RoomMemory;
 		}
 
 		if (!Memory.rooms[room.name].manager) {
