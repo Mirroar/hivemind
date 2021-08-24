@@ -10,7 +10,26 @@ import Squad from './manager.squad';
 import stats from './stats';
 
 export default class ExpandProcess extends Process {
-	memory;
+	memory: {
+		started?: number,
+		claimed?: number,
+		currentTarget,
+		inProgress: {
+			rooms: {
+				[roomName: string]: boolean,
+			},
+			bestTarget, // @todo RoomListItem
+		},
+		pathBlocked: number,
+		evacuatingRoom: {
+			name: string,
+			cooldown: number,
+		},
+		failedExpansions: {
+			roomName: string,
+			time: number,
+		}[],
+	};
 	navMesh: NavMesh;
 
 	/**
@@ -82,10 +101,12 @@ export default class ExpandProcess extends Process {
 	chooseNewExpansionTarget() {
 		// Choose a room to expand to.
 		// @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
-		let bestTarget = null;
+		let bestTarget;
+		let modifiedBestExpansionScore: number;
 		const startTime = Game.cpu.getUsed();
 		if (this.memory.inProgress) {
 			bestTarget = this.memory.inProgress.bestTarget;
+			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget);
 		}
 		else {
 			this.memory.inProgress = {
@@ -98,6 +119,7 @@ export default class ExpandProcess extends Process {
 			if (Game.cpu.getUsed() - startTime >= hivemind.settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than 30 cpu trying to find a target each tick.
 				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
+				hivemind.log('strategy').debug('Current best target:', bestTarget ? bestTarget.roomName : 'N/A', '@', bestTarget ? modifiedBestExpansionScore : 'N/A');
 				return;
 			}
 
@@ -105,7 +127,9 @@ export default class ExpandProcess extends Process {
 
 			this.memory.inProgress.rooms[info.roomName] = true;
 			if (!info.expansionScore || info.expansionScore <= 0) continue;
-			if (bestTarget && bestTarget.expansionScore >= info.expansionScore) continue;
+
+			const modifiedExpansionScore = this.getModifiedExpansionScore(info);
+			if (bestTarget && modifiedBestExpansionScore >= modifiedExpansionScore) continue;
 			if (Game.rooms[info.roomName] && Game.rooms[info.roomName].isMine()) continue;
 
 			// Don't try to expand to a room that can't be reached safely.
@@ -122,6 +146,28 @@ export default class ExpandProcess extends Process {
 			delete this.memory.inProgress;
 			this.startExpansion(bestTarget);
 		}
+	}
+
+	/**
+	 * Gets the modified expansion score for a room.
+	 *
+	 * This takes into account failed expansion attempts in close proximity to
+	 * the target room.
+	 */
+	getModifiedExpansionScore(info): number {
+		let score = info.expansionScore || 0;
+
+		for (const failedAttempt of this.memory.failedExpansions || []) {
+			const distance = Game.map.getRoomLinearDistance(info.roomName, failedAttempt.roomName);
+			let multiplier = 1;
+			if (Game.time - failedAttempt.time > 250000) continue;
+			if (Game.time - failedAttempt.time > 50000) multiplier = 1 - ((failedAttempt.time - 50000) / 200000);
+
+			if (distance === 0) score -= multiplier;
+			else if (distance < 3) score -= multiplier / (distance + 1);
+		}
+
+		return score;
 	}
 
 	/**
@@ -177,6 +223,7 @@ export default class ExpandProcess extends Process {
 				}
 
 				if (room.controller.level > 3 && room.storage) {
+					// Room has RCL 4 and a storage, it can fend for itself now. Success!
 					this.stopExpansion();
 					return;
 				}
@@ -186,14 +233,46 @@ export default class ExpandProcess extends Process {
 			}
 		}
 
-		// @todo Abort if claiming takes too long and we don't have anything
-		// to dismantle in the way of the controller.
-
-		// If a lot of time has passed, let the room fend for itself anyways,
-		// either it will be lost or fix itself.
-		if (Game.time - this.memory.claimed > 50 * CREEP_LIFE_TIME) {
+		if (this.hasExpansionFailed()) {
+			this.recordFailedExpansion();
 			this.stopExpansion();
 		}
+	}
+
+	/**
+	 * Determines if the current expansion effort has failed.
+	 */
+	hasExpansionFailed(): boolean {
+		// Abort if claiming takes too long.
+		// @todo And we don't have anything to dismantle in the way of the controller.
+		if (!this.memory.claimed && Game.time - this.memory.started > 5 * CREEP_LIFE_TIME) return true;
+
+		// If a lot of time has passed after claiming, let the room fend for itself
+		// anyways, either it will be lost or fix itself.
+		if (this.memory.claimed && Game.time - this.memory.claimed > 50 * CREEP_LIFE_TIME) return true;
+
+		// If we lose control of the room, there's been a problem.
+		const room = Game.rooms[this.memory.currentTarget.roomName];
+		if (this.memory.claimed && (!room || !room.controller.my)) return true;
+
+		// @todo Think about any more cases we need to cover.
+		return false;
+	}
+
+	/**
+	 * Keeps track of failes expansions so the next expansion goes somewhere else.
+	 */
+	recordFailedExpansion() {
+		const roomName = this.memory.currentTarget.roomName;
+		if (!this.memory.failedExpansions) this.memory.failedExpansions = [];
+
+		this.memory.failedExpansions.push({
+			roomName,
+			time: Game.time,
+		});
+
+		hivemind.log('strategy').info('💀 Expanding to ' + roomName + ' has failed. A new target will be chosen soon.');
+		Game.notify('💀 Expanding to ' + roomName + ' has failed. A new target will be chosen soon.');
 	}
 
 	/**
@@ -210,8 +289,10 @@ export default class ExpandProcess extends Process {
 			}
 		});
 
-		Memory.strategy.expand = {};
-		this.memory = Memory.strategy.expand;
+		delete this.memory.currentTarget;
+		delete this.memory.started;
+		delete this.memory.claimed;
+		delete this.memory.pathBlocked;
 	}
 
 	/**
@@ -449,6 +530,7 @@ export default class ExpandProcess extends Process {
 		Game.rooms[roomName].setEvacuating(true);
 		this.memory.evacuatingRoom = {
 			name: roomName,
+			cooldown: null,
 		};
 		Game.notify('💀 Evacuating ' + roomName + ' to free up CPU cycles for expanding. Possible Target: ' + shardMemory.info.rooms.bestExpansion.name);
 	}

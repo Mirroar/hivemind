@@ -228,6 +228,7 @@ export default class ScoutProcess extends Process {
 		result.addScore(roomIntel.getSourcePositions().length, 'numSources');
 
 		// Having a mineral source is good.
+		// We prefer rooms with minerals of which we have few / no sources.
 		const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 		if (roomIntel.getMineralType()) {
 			// In our own rooms, calculate the score this has gotten us.
@@ -305,7 +306,6 @@ export default class ScoutProcess extends Process {
 
 		this.setExpansionScoreCache(roomName, result);
 
-		// @todo Prefer rooms with minerals we have little sources of.
 		return result;
 	}
 
