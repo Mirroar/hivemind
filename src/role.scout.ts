@@ -1,5 +1,28 @@
 /* global RoomPosition OK */
 
+declare global {
+	interface ScoutCreep extends Creep {
+		memory: ScoutCreepMemory,
+		heapMemory: ScoutCreepHeapMemory,
+	}
+
+	interface ScoutCreepMemory extends CreepMemory {
+		role: 'scout',
+		disableNotifications?: boolean,
+		scoutTarget?: string,
+		portalTarget?: string,
+		invalidScoutTargets?: string[],
+	}
+
+	interface ScoutCreepHeapMemory extends CreepHeapMemory {
+		moveWithoutNavMesh?: boolean,
+		_roomHistory: string[],
+		_posHistory: string[],
+		_lastPos: string,
+		_stuckCount: number,
+	}
+}
+
 import hivemind from './hivemind';
 import utilities from './utilities';
 import Role from './role';
@@ -11,11 +34,11 @@ export default class ScoutRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
-		if (creep.memory.justSpawned) {
+	run(creep: ScoutCreep) {
+		if (creep.memory.disableNotifications) {
 			// No attack notifications for scouts, please.
 			creep.notifyWhenAttacked(false);
-			delete creep.memory.justSpawned;
+			delete creep.memory.disableNotifications;
 		}
 
 		if (!creep.memory.scoutTarget && !creep.memory.portalTarget) {
@@ -31,7 +54,7 @@ export default class ScoutRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performScout(creep) {
+	performScout(creep: ScoutCreep) {
 		if (creep.memory.portalTarget) {
 			const portalPosition = utilities.decodePosition(creep.memory.portalTarget);
 			if (creep.pos.roomName === portalPosition.roomName) {
@@ -77,7 +100,7 @@ export default class ScoutRole extends Role {
 
 		const targetPosition = new RoomPosition(25, 25, creep.memory.scoutTarget);
 		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
-		if (creep.memory.moveWithoutNavMesh) {
+		if (creep.heapMemory.moveWithoutNavMesh) {
 			if (!isInTargetRoom || !creep.isInRoom()) {
 				if (!creep.moveToRoom(creep.memory.scoutTarget, true)) {
 					this.chooseScoutTarget(creep, true);
@@ -91,9 +114,8 @@ export default class ScoutRole extends Role {
 				if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
 					hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
 
-					// Don't want to go to scout target without using navmesh. So instead,
-					// we decide on a new scout target.
-					creep.memory.moveWithoutNavMesh = true;
+					// Try moving to target room without using nav mesh.
+					creep.heapMemory.moveWithoutNavMesh = true;
 				}
 
 				return;
@@ -114,7 +136,7 @@ export default class ScoutRole extends Role {
 	 *   If true, the old scout target is deemed invalid and will no longer be
 	 *   scouted by this creep.
 	 */
-	chooseScoutTarget(creep, invalidateOldTarget?: boolean) {
+	chooseScoutTarget(creep: ScoutCreep, invalidateOldTarget?: boolean) {
 		if (creep.memory.scoutTarget && invalidateOldTarget) {
 			if (!creep.memory.invalidScoutTargets) {
 				creep.memory.invalidScoutTargets = [];
@@ -124,15 +146,14 @@ export default class ScoutRole extends Role {
 		}
 
 		delete creep.memory.scoutTarget;
-		delete creep.memory.moveWithoutNavMesh;
+		delete creep.heapMemory.moveWithoutNavMesh;
 		if (!creep.memory.origin) creep.memory.origin = creep.room.name;
 		if (!Memory.strategy) return;
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		const memory = Memory.strategy;
-
 		let best = null;
-		for (const info of _.values<any>(memory.roomList)) {
+		for (const info of _.values<any>(Memory.strategy.roomList)) {
+			if (!info.roomName) continue;
 			if (info.roomName === creep.pos.roomName) continue;
 			if (creep.memory.invalidScoutTargets && creep.memory.invalidScoutTargets.indexOf(info.roomName) !== -1) continue;
 
@@ -163,12 +184,12 @@ export default class ScoutRole extends Role {
 		}
 	}
 
-	isOscillating(creep) {
-		if (!creep.memory._roomHistory) creep.memory._roomHistory = [];
-		const history = creep.memory._roomHistory;
+	isOscillating(creep: ScoutCreep) {
+		if (!creep.heapMemory._roomHistory) creep.heapMemory._roomHistory = [];
+		const history = creep.heapMemory._roomHistory;
 
 		if (history.length === 0 || history[history.length - 1] !== creep.pos.roomName) history.push(creep.pos.roomName);
-		if (history.length > 20) creep.memory._roomHistory = history.slice(-10);
+		if (history.length > 20) creep.heapMemory._roomHistory = history.slice(-10);
 
 		if (
 			history.length >= 10 &&
@@ -181,38 +202,38 @@ export default class ScoutRole extends Role {
 			history[history.length - 7] === history[history.length - 9] &&
 			history[history.length - 8] === history[history.length - 10]
 		) {
-			delete creep.memory._roomHistory;
+			delete creep.heapMemory._roomHistory;
 			return true;
 		}
 
 		return this.isTileOscillating(creep);
 	}
 
-	isTileOscillating(creep) {
-		if (!creep.memory._posHistory) creep.memory._posHistory = [];
-		const history = creep.memory._posHistory;
+	isTileOscillating(creep: ScoutCreep) {
+		if (!creep.heapMemory._posHistory) creep.heapMemory._posHistory = [];
+		const history = creep.heapMemory._posHistory;
 		const pos = utilities.encodePosition(creep.pos);
 
 		if (history.length === 0 || history[history.length - 1] !== pos) history.push(pos);
-		if (history.length > 30) creep.memory._posHistory = history.slice(-20);
+		if (history.length > 30) creep.heapMemory._posHistory = history.slice(-20);
 		if (_.filter(history, v => v === pos).length >= 5) {
-			delete creep.memory._posHistory;
+			delete creep.heapMemory._posHistory;
 			return true;
 		}
 
 		return false;
 	}
 
-	isStuck(creep) {
+	isStuck(creep: ScoutCreep) {
 		const pos = utilities.encodePosition(creep.pos);
 
-		if (!creep.memory._lastPos || creep.memory._lastPos !== pos) {
-			creep.memory._lastPos = pos;
-			creep.memory._stuckCount = 1;
+		if (!creep.heapMemory._lastPos || creep.heapMemory._lastPos !== pos) {
+			creep.heapMemory._lastPos = pos;
+			creep.heapMemory._stuckCount = 1;
 			return false;
 		}
 
-		if (creep.memory._stuckCount++ < 10) return false;
+		if (creep.heapMemory._stuckCount++ < 10) return false;
 
 		return true;
 	}
