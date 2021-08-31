@@ -222,6 +222,7 @@ export default class ExpandProcess extends Process {
 					// Remove claimer from composition once room has been claimed.
 					this.memory.claimed = Game.time;
 					squad.setUnitCount('singleClaim', 0);
+					squad.setUnitCount('claimer', 0);
 				}
 
 				if (room.controller.level > 3 && room.storage) {
@@ -231,6 +232,15 @@ export default class ExpandProcess extends Process {
 				}
 			}
 			else {
+				if (room.controller.reservation && room.controller.reservation.ticksToEnd > 100) {
+					squad.setUnitCount('singleClaim', 0);
+					squad.setUnitCount('claimer', Math.ceil(room.controller.reservation.ticksToEnd / 2000));
+				}
+				else {
+					squad.setUnitCount('singleClaim', 1);
+					squad.setUnitCount('claimer', 0);
+				}
+
 				this.checkClaimPath();
 			}
 		}
@@ -305,6 +315,7 @@ export default class ExpandProcess extends Process {
 		if (!info) return;
 
 		const activeSquads = {};
+		info.supportingRooms = [];
 
 		// @todo Start with closest rooms first.
 		_.each(Game.rooms, room => {
@@ -330,6 +341,7 @@ export default class ExpandProcess extends Process {
 				supportSquad.setUnitCount('singleClaim', 1);
 			}
 
+			info.supportingRooms.push(room.name);
 			activeSquads[squadName] = true;
 			return null;
 		});
