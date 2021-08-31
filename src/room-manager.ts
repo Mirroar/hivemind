@@ -239,10 +239,13 @@ export default class RoomManager {
 	 * @return {boolean}
 	 *   True if we can continue building.
 	 */
-	buildPlannedStructures(locationType, structureType) {
+	buildPlannedStructures(locationType: string, structureType: StructureConstant): boolean {
 		let canBuildMore = true;
 		for (const pos of this.roomPlanner.getLocations(locationType)) {
-			canBuildMore = canBuildMore && this.tryBuild(pos, structureType);
+			if (this.tryBuild(pos, structureType)) continue;
+
+			canBuildMore = false;
+			break;
 		}
 
 		return canBuildMore;

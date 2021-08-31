@@ -18,7 +18,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 		this.addIntershardSpawnOptions(room, options);
 
 		// Don't spawn scouts in quick succession.
-		// If they die immediately, the might be running into enemies right outside
+		// If they die immediately, they might be running into enemies right outside
 		// of the room.
 		if (room.memory.recentScout && Game.time - (room.memory.recentScout || -500) < 500) return;
 

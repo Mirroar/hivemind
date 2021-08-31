@@ -51,7 +51,7 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
  * @return {string[]}
  *   An array of room names a creep needs to move throught to reach targetRoom.
  */
-Room.prototype.calculateRoomPath = function (targetRoom, options) {
+Room.prototype.calculateRoomPath = function (targetRoom: string, options) {
 	const roomName = this.name;
 
 	if (!options) options = {};

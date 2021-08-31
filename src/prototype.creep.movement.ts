@@ -572,7 +572,7 @@ Creep.prototype.calculateGoToPath = function (target, options) {
  * @return {boolean}
  *   True if movement is possible and ongoing.
  */
-Creep.prototype.moveToRoom = function (roomName, allowDanger) {
+Creep.prototype.moveToRoom = function (roomName: string, allowDanger?: boolean) {
 	// Make sure we recalculate path if target changes.
 	if (this.memory._mtrTarget !== roomName) {
 		delete this.memory.nextRoom;
@@ -611,7 +611,7 @@ Creep.prototype.moveToRoom = function (roomName, allowDanger) {
  *   An array of room names, not including the current room, or null if no path
  *   could be found.
  */
-Creep.prototype.calculateRoomPath = function (roomName, allowDanger) {
+Creep.prototype.calculateRoomPath = function (roomName: string, allowDanger?: boolean) {
 	return this.room.calculateRoomPath(roomName, {allowDanger});
 };
 
