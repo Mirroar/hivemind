@@ -200,7 +200,9 @@ export default class BrawlerRole extends Role {
 		// Attack structures under target flag (even if non-hostile, like walls).
 		const directStructures = targetPosition.lookFor(LOOK_STRUCTURES);
 		for (const structure of (directStructures as AnyOwnedStructure[]) || []) {
-			structures.push(structure);
+			if (structure.structureType !== STRUCTURE_CONTROLLER && structure.hits) {
+				structures.push(structure);
+			}
 		}
 
 		for (const structure of structures) {
