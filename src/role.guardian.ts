@@ -39,7 +39,15 @@ export default class GuardianRole extends Role {
 		const ramparts: StructureRampart[] = [];
 		for (const target of targets) {
 			const closestRampart = target.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-				filter: s => s.structureType === STRUCTURE_RAMPART,
+				filter: s => {
+					if (s.structureType !== STRUCTURE_RAMPART) return false;
+
+					// Only target ramparts not occupied by another creep.
+					const occupyingCreeps = s.pos.lookFor(LOOK_CREEPS);
+					if (occupyingCreeps.length > 0 && occupyingCreeps[0].id !== creep.id) return false;
+
+					return true;
+				},
 			}) as StructureRampart;
 			if (ramparts.indexOf(closestRampart) === -1) ramparts.push(closestRampart);
 		}
