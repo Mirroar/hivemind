@@ -16,6 +16,7 @@ declare global {
 	namespace NodeJS {
 		interface Global {
 			Memory: Memory,
+			hivemind: typeof hivemind,
 		}
 	}
 
@@ -35,6 +36,7 @@ console.log('new global reset');
 // Create kernel object.
 import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from './hivemind';
 import hivemind from './hivemind';
+global.hivemind = hivemind;
 hivemind.logGlobalReset();
 
 // Load top-level processes.
