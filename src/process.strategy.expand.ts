@@ -54,6 +54,8 @@ export default class ExpandProcess extends Process {
 
 		this.memory = Memory.strategy.expand;
 		this.navMesh = new NavMesh();
+
+		// @todo Clean failed attempts memory of old attempts.
 	}
 
 	/**
@@ -160,8 +162,8 @@ export default class ExpandProcess extends Process {
 		for (const failedAttempt of this.memory.failedExpansions || []) {
 			const distance = Game.map.getRoomLinearDistance(info.roomName, failedAttempt.roomName);
 			let multiplier = 1;
-			if (Game.time - failedAttempt.time > 250000) continue;
-			if (Game.time - failedAttempt.time > 50000) multiplier = 1 - ((failedAttempt.time - 50000) / 200000);
+			if (Game.time - failedAttempt.time > 1000000) continue;
+			if (Game.time - failedAttempt.time > 100000) multiplier = 1 - ((failedAttempt.time - 100000) / 900000);
 
 			if (distance === 0) score -= multiplier;
 			else if (distance < 3) score -= multiplier / (distance + 1);
