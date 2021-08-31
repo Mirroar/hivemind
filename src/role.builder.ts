@@ -242,10 +242,14 @@ export default class BuilderRole extends Role {
 	 * @param {Structure} target
 	 *   The defensive structure in question.
 	 */
-	modifyRepairDefensesOption(creep, option, target) {
+	modifyRepairDefensesOption(creep: Creep, option, target) {
 		option.priority--;
 		if (target.structureType === STRUCTURE_WALL) {
 			option.priority--;
+			if (creep.room.roomPlanner && !creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall')) {
+				option.priority = -1;
+				return;
+			}
 		}
 
 		// Walls and ramparts get repaired up to a certain health level.
