@@ -46,13 +46,17 @@ export default class RoomDefenseProcess extends Process {
 			if (hostileCreeps.length > 0) {
 				// Use new military manager if possible.
 				const target = this.room.getTowerTarget(tower);
-				if (!target) continue;
+				if (target) {
+					this.room.visual.line(tower.pos.x, tower.pos.y, target.pos.x, target.pos.y, {color: 'red'});
 
-				if (target.my) {
-					tower.heal(target);
-				}
-				else {
-					tower.attack(target);
+					if (target.my) {
+						tower.heal(target);
+					}
+					else {
+						tower.attack(target);
+					}
+
+					continue;
 				}
 			}
 
