@@ -121,6 +121,8 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room, option) {
+		if (option.creepRole === 'builder') return this.getRepairCreepBody(room);
+
 		if (option.responseType) {
 			switch (option.responseType) {
 				case RESPONSE_ATTACKER:
@@ -128,8 +130,6 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 					return this.getAttackCreepBody(room);
 			}
 		}
-
-		if (option.creepRole === 'builder') return this.getRepairCreepBody(room);
 
 		return this.getBrawlerCreepBody(room);
 	}
