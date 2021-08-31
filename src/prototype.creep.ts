@@ -2,11 +2,14 @@
 
 declare global {
 	interface Creep {
+		heapMemory: CreepHeapMemory,
 		operation,
 		transferAny,
 		dropAny,
 		enhanceData,
 	}
+
+	interface CreepHeapMemory {}
 
 	interface Game {
 		exploitTemp: {
@@ -18,6 +21,29 @@ declare global {
 import './prototype.creep.military';
 import './prototype.creep.movement';
 import './prototype.creep.train';
+
+// @todo Periodically clear heap memory of deceased creeps.
+const creepHeapMemory: {
+	[id: string]: CreepHeapMemory,
+} = {};
+
+// Define quick access property creep.heapMemory.
+Object.defineProperty(Creep.prototype, 'heapMemory', {
+
+	/**
+	 * Gets semi-persistent memory for a creep.
+	 *
+	 * @return {Operation}
+	 *   The operation this creep belongs to.
+	 */
+	get() {
+		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {};
+
+		return creepHeapMemory[this.id];
+	},
+	enumerable: false,
+	configurable: true,
+});
 
 // Define quick access property creep.operation.
 Object.defineProperty(Creep.prototype, 'operation', {
