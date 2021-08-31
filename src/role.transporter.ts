@@ -802,6 +802,7 @@ export default class TransporterRole extends Role {
 		const creep = this.creep;
 
 		if (!creep.memory.sourceTarget) calculateSourceCallback();
+		if (!creep.memory.order) return false;
 
 		const target: RoomObject = Game.getObjectById(creep.memory.sourceTarget);
 		if (!target) return false;
