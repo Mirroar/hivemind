@@ -1049,6 +1049,9 @@ export default class RoomPlanner {
 	 */
 	placeTowers() {
 		const positions = this.findTowerPositions();
+		const costMatrixBackup: {
+			[location: string]: number,
+		} = {};
 		while (this.canPlaceMore('tower')) {
 			const newTowers = [];
 
@@ -1080,6 +1083,7 @@ export default class RoomPlanner {
 				positions[bestDir].count++;
 				const towerPosition = new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName);
 				newTowers.push(towerPosition);
+				costMatrixBackup[utilities.encodePosition(info.pos)] = this.buildingMatrix.get(info.pos.x, info.pos.y);
 				this.placeFlag(towerPosition, 'tower_placeholder');
 			}
 
@@ -1098,6 +1102,13 @@ export default class RoomPlanner {
 				this.placeFlag(pos, 'tower');
 				this.placeAccessRoad(pos);
 			}
+		}
+
+		// Restore building matrix values for subsequent operations.
+		for (const pos of this.getLocations('tower_placeholder')) {
+			if (this.isPlannedLocation(pos, 'tower')) continue;
+
+			this.buildingMatrix.set(pos.x, pos.y, costMatrixBackup[utilities.encodePosition(pos)]);
 		}
 	};
 
