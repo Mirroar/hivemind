@@ -80,6 +80,7 @@ export default class InterShardProcess extends Process {
 	 * Determines CPU allocation for each active shard.
 	 */
 	distributeCPU() {
+		// @todo Only run on "main" shard.
 		if (!Game.cpu.setShardLimits) return;
 
 		// Collect information about shards so we can estimate CPU needs.
@@ -131,10 +132,19 @@ export default class InterShardProcess extends Process {
 				this._shardData[shardName].neededCpu += 1;
 			}
 		}
-		else if (this.memory.info.maxRoomLevel === 8) {
-			// If we have at least one level 8 room, assign a little CPU to unexplored
-			// shards for scouting.
-			this._shardData[shardName].neededCpu = 0.5;
+		else {
+			_.each(this._shardData, (data, compareShard) => {
+				if (compareShard === 'total') return;
+
+				const compareMemory = compareShard === Game.shard.name ? interShard.getLocalMemory() : interShard.getRemoteMemory(compareShard);
+				if (!compareMemory.info) return;
+				if (!compareMemory.portals || !compareMemory.portals[shardName]) return;
+				if ((compareMemory.info.maxRoomLevel || 0) < 8) return;
+
+				// If we have at least one level 8 room, assign a little CPU to unexplored
+				// adjacent shards for scouting.
+				this._shardData[shardName].neededCpu = 0.5;
+			});
 		}
 
 		this._shardData.total.neededCpu += this._shardData[shardName].neededCpu;
