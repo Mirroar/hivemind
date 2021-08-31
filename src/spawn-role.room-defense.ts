@@ -59,7 +59,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		if (responseType === RESPONSE_NONE) return;
 
 		// @todo Limit defense creeps to number of threats.
-		if (_.size(room.creepsByRole.guardian) >= 2) return;
+		if (_.size(room.creepsByRole.guardian) >= 5) return;
 
 		options.push({
 			priority: 5,
