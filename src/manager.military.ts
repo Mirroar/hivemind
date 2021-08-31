@@ -8,7 +8,7 @@ declare global {
 		assertMilitarySituation,
 		assertMilitaryCreepPower,
 		assertMilitaryStructurePower,
-		addMilitaryAssertion,
+		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void,
 		getMilitaryAssertion,
 		assertTargetPriorities,
 		getTowerTarget,
@@ -18,6 +18,29 @@ declare global {
 	interface Creep {
 		getMilitaryValue,
 	}
+}
+
+interface SitRep {
+	damage: {
+		[x: number]: {
+			[y: number]: number,
+		}
+	},
+	healing: {
+		[x: number]: {
+			[y: number]: number,
+		}
+	},
+	myDamage: {
+		[x: number]: {
+			[y: number]: number,
+		}
+	},
+	myHealing: {
+		[x: number]: {
+			[y: number]: number,
+		}
+	},
 }
 
 import hivemind from './hivemind';
@@ -91,9 +114,9 @@ Room.prototype.assertMilitarySituation = function () {
  *   The creep to asses.
  */
 Room.prototype.assertMilitaryCreepPower = function (creep) {
-	let hostile;
-	let targets;
-	let allies;
+	let hostile: boolean;
+	let targets: Creep[];
+	let allies: Creep[];
 	if (creep.my) {
 		hostile = false;
 		targets = this.militaryObjects.creeps;
@@ -136,7 +159,7 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
 		totalParts[part.type] = (totalParts[part.type] || 0) + amount;
 	}
 
-	const assertAllTargets = (targets, range, amount, type) => {
+	const assertAllTargets = (targets: Creep[], range: number, amount: number, type: string) => {
 		if (amount <= 0) return;
 
 		for (const target of targets) {
@@ -210,7 +233,8 @@ Room.prototype.assertMilitaryStructurePower = function (structure) {
  * @param {string} type
  *   The type of value to save.
  */
-Room.prototype.addMilitaryAssertion = function (x, y, amount, type) {
+Room.prototype.addMilitaryAssertion = function (x: number, y: number, amount: number, type: string): void {
+	if (!amount) return;
 	if (x < 0 || x > 49 || y < 0 || y > 49 || amount <= 0) return;
 
 	if (!this.sitRep[type][x]) {
@@ -249,12 +273,15 @@ Room.prototype.assertTargetPriorities = function () {
 	for (const creep of this.militaryObjects.creeps) {
 		const potentialDamage = this.getMilitaryAssertion(creep.pos.x, creep.pos.y, 'myDamage');
 		const potentialHealing = this.getMilitaryAssertion(creep.pos.x, creep.pos.y, 'healing');
+		// Potential damage is reduced if creep has boosted tough parts.
 		const effectiveDamage = creep.getEffectiveDamage(potentialDamage);
 
-		// @todo Potential damage will have to be reduced if creep has boosted tough parts.
+		const visual = this.visual;
 
 		if (effectiveDamage > potentialHealing) {
-			creep.militaryPriority = creep.getMilitaryValue() * (effectiveDamage - potentialHealing);
+			// @todo Reduce priority (even stop targeting) when close to exit, to prevent tower drain by fleeing.
+			creep.militaryPriority = creep.getMilitaryValue() * (effectiveDamage - potentialHealing) * (creep.hitsMax / creep.hits) * creep.ticksToLive / CREEP_LIFE_TIME;
+			visual.text(creep.militaryPriority.toPrecision(2), creep.pos.x + 1, creep.pos.y + 0.2, {font: 0.5, color: 'yellow'})
 		}
 	}
 };
@@ -269,12 +296,14 @@ Room.prototype.getTowerTarget = function () {
 	this.assertMilitarySituation();
 	let max = null;
 	for (const creep of this.militaryObjects.creeps) {
-		if (!creep.militaryPriority) return;
-		if (creep.militaryPriority <= 0) return;
-		if (max && max.militaryPriority > creep.militaryPriority) return;
+		if (!creep.militaryPriority) continue;
+		if (creep.militaryPriority <= 0) continue;
+		if (max && max.militaryPriority > creep.militaryPriority) continue;
 
 		max = creep;
 	}
+
+	if (max) this.visual.circle(max.pos.x, max.pos.y, 2, {fill: 'red'});
 
 	return max;
 };
@@ -284,36 +313,36 @@ Room.prototype.getTowerTarget = function () {
  */
 Room.prototype.drawMilitarySituation = function () {
 	const visual = this.visual;
-	_.each(this.sitRep.damage, (colData, x) => {
+	_.each(this.sitRep.damage, (colData, x: number) => {
 		_.each(colData, (data, y: number) => {
-			visual.text(data, x, y - 0.1, {
+			visual.text(data, x * 1, 1 * y - 0.1, {
 				color: 'red',
 				font: 0.5,
 			});
 		});
 	});
 
-	_.each(this.sitRep.healing, (colData, x) => {
-		_.each(colData, (data, y) => {
-			visual.text(data, x, y + 0.4, {
+	_.each(this.sitRep.healing, (colData, x: number) => {
+		_.each(colData, (data, y: number) => {
+			visual.text(data, x * 1, (1 * y) + 0.4, {
 				color: 'green',
 				font: 0.5,
 			});
 		});
 	});
 
-	_.each(this.sitRep.myDamage, (colData, x) => {
+	_.each(this.sitRep.myDamage, (colData, x: number) => {
 		_.each(colData, (data, y: number) => {
-			visual.text(data, x, y - 0.1, {
+			visual.text(data, x * 1, 1 * y - 0.1, {
 				color: 'red',
 				font: 0.5,
 			});
 		});
 	});
 
-	_.each(this.sitRep.myHealing, (colData, x) => {
-		_.each(colData, (data, y) => {
-			visual.text(data, x, y + 0.4, {
+	_.each(this.sitRep.myHealing, (colData, x: number) => {
+		_.each(colData, (data, y: number) => {
+			visual.text(data, x * 1, (1 * y) + 0.4, {
 				color: 'green',
 				font: 0.5,
 			});
