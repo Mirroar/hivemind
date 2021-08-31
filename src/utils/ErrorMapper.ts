@@ -56,11 +56,13 @@ export class ErrorMapper {
           }
         } else {
           // no known position
-          break;
+          outStack += '\n' + match[0];
+          continue;
         }
       } else {
-        // no more parseable lines
-        break;
+        // Line is not source mapped.
+        outStack += '\n' + match[0];
+        continue;
       }
     }
 
@@ -78,7 +80,9 @@ export class ErrorMapper {
             const message = `Source maps don't work in the simulator - displaying original error`;
             console.log(`<span style='color:red'>${message}<br>${_.escape(e.stack)}</span>`);
           } else {
-            console.log(`<span style='color:red'>${_.escape(this.sourceMappedStackTrace(e))}</span>`);
+            const message = _.escape(this.sourceMappedStackTrace(e));
+            console.log(`<span style='color:red'>${message}</span>`);
+            Game.notify(message);
           }
         } else {
           // can't handle it

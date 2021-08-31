@@ -22,6 +22,7 @@ declare global {
 
 import cache from './cache';
 import hivemind from './hivemind';
+import { ErrorMapper } from './utils/ErrorMapper';
 
 let ownUserName;
 
@@ -66,8 +67,12 @@ const utilities = {
 				errorLocation = hivemind.currentProcess.constructor.name;
 			}
 
-			Game.notify(error.name + ' in ' + errorLocation + ':<br>' + error.stack);
-			console.log(error.name + ' in ' + errorLocation + ':<br>' + error.stack);
+			let stackTrace = error.stack;
+			if (error instanceof Error) {
+				stackTrace = _.escape(ErrorMapper.sourceMappedStackTrace(error));
+			}
+			Game.notify(error.name + ' in ' + errorLocation + ':<br>' + stackTrace);
+			console.log('<span style="color:red">' + error.name + ' in ' + errorLocation + ':<br>' + stackTrace + '</span>');
 		}
 	},
 
