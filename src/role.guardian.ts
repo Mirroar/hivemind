@@ -52,7 +52,7 @@ export default class GuardianRole extends Role {
 			if (ramparts.indexOf(closestRampart) === -1) ramparts.push(closestRampart);
 		}
 
-		return _.min(ramparts, (s: StructureRampart) => s.pos.getRangeTo(creep.pos) + s.pos.getRangeTo(s.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
+		return _.min(ramparts, (s: StructureRampart) => s.pos.getRangeTo(creep.pos) / 2 + s.pos.getRangeTo(s.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
 			filter: filterEnemyCreeps,
 		})));
 	}
