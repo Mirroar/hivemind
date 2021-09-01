@@ -26,10 +26,10 @@ declare global {
 // Make sure game object prototypes are enhanced.
 import { ErrorMapper } from "utils/ErrorMapper";
 
-import './prototype.construction-site';
-import './prototype.creep';
-import './prototype.room';
-import './prototype.structure';
+import './prototype/construction-site';
+import './prototype/creep';
+import './prototype/room';
+import './prototype/structure';
 
 console.log('new global reset');
 

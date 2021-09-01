@@ -32,11 +32,11 @@ declare global {
 	}
 }
 
-import Bay from './manager.bay';
-import cache from './cache';
-import Exploit from './manager.exploit';
-import RoomDefense from './room-defense';
-import utilities from './utilities';
+import Bay from '../manager.bay';
+import cache from '../cache';
+import Exploit from '../manager.exploit';
+import RoomDefense from '../room-defense';
+import utilities from '../utilities';
 
 // Define quick access property room.enemyCreeps.
 Object.defineProperty(Room.prototype, 'enemyCreeps', {

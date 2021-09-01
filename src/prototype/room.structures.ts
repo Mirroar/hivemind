@@ -13,8 +13,8 @@ declare global {
 	}
 }
 
-import cache from './cache';
-import LinkNetwork from './link-network';
+import cache from '../cache';
+import LinkNetwork from '../link-network';
 
 /**
  * Moves creep within a certain range of a target.

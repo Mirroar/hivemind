@@ -11,7 +11,7 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
+import hivemind from '../hivemind';
 
 /**
  * Determines if a creep is dangerous and should be attacked.

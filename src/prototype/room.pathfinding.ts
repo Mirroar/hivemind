@@ -9,8 +9,8 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import utilities from './utilities';
+import hivemind from '../hivemind';
+import utilities from '../utilities';
 
 Room.prototype.getCostMatrix = function () {
 	return utilities.getCostMatrix(this.name);

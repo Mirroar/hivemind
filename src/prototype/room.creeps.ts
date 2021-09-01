@@ -2,11 +2,11 @@
  * Contains room prototype enhancements concerned with managing creeps.
  */
 
+/* global Room */
+
 interface Room {
   getCreepsWithOrder,
 }
-
-/* global Room */
 
 /**
  * Finds all creeps in this room with a given order.

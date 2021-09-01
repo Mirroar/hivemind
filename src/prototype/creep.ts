@@ -18,9 +18,9 @@ declare global {
 	}
 }
 
-import './prototype.creep.military';
-import './prototype.creep.movement';
-import './prototype.creep.train';
+import './creep.military';
+import './creep.movement';
+import './creep.train';
 
 // @todo Periodically clear heap memory of deceased creeps.
 const creepHeapMemory: {
