@@ -276,16 +276,17 @@ export default class RoomManager {
 		const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
 		for (const i in sites) {
 			if (sites[i].structureType === structureType) {
-				// Structure is being built, wait until finished.
-				return false;
+				// Structure is being built, continue.
+				return true;
 			}
 		}
 
-		if (this.newStructures + this.roomConstructionSites.length < 5 && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
+		const canCreateMoreSites = this.newStructures + this.roomConstructionSites.length < 5;
+		if (canCreateMoreSites && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
 			if (pos.createConstructionSite(structureType) === OK) {
 				this.newStructures++;
-				// Structure is being built, wait until finished.
-				return false;
+				// Structure is being built, continue.
+				return true;
 			}
 
 			// Some other structure is blocking or we can't build more of this structure.
