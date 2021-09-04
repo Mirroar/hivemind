@@ -23,9 +23,9 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import utilities from './utilities';
-import Role from './role';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
+import Role from 'role';
 
 export default class ScoutRole extends Role {
 	/**

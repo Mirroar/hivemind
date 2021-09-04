@@ -25,8 +25,8 @@ declare global {
 	}
 }
 
-import RemoteMiningOperation from './operation.remote-mining';
-import RoomOperation from './operation.room';
+import RemoteMiningOperation from 'operation.remote-mining';
+import RoomOperation from 'operation.room';
 
 export default class Operation {
 	name: string;

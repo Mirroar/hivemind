@@ -1,9 +1,9 @@
 /* global MOVE */
 
-import hivemind from './hivemind';
-import interShard from './intershard';
-import utilities from './utilities';
-import SpawnRole from './spawn-role';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import utilities from 'utilities';
+import SpawnRole from 'spawn-role';
 
 export default class ScoutSpawnRole extends SpawnRole {
 	/**

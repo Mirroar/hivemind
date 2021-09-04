@@ -1,5 +1,5 @@
-import './room.creeps';
-import './room.intel';
-import './room.pathfinding';
-import './room.resources';
-import './room.structures';
+import 'prototype/room.creeps';
+import 'prototype/room.intel';
+import 'prototype/room.pathfinding';
+import 'prototype/room.resources';
+import 'prototype/room.structures';

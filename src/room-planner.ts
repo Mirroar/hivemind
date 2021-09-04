@@ -16,10 +16,10 @@ declare global {
 	}
 }
 
-import cache from './cache';
-import hivemind from './hivemind';
-import minCut from './mincut';
-import utilities from './utilities';
+import cache from 'cache';
+import hivemind from 'hivemind';
+import minCut from 'mincut';
+import utilities from 'utilities';
 
 const MAX_ROOM_LEVEL = 8;
 

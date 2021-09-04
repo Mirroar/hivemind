@@ -4,11 +4,11 @@ LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
-import hivemind from './hivemind';
-import PathManager from './remote-path-manager';
-import Role from './role';
-import TransporterRole from './role.transporter';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import PathManager from 'remote-path-manager';
+import Role from 'role';
+import TransporterRole from 'role.transporter';
+import utilities from 'utilities';
 
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
@@ -577,7 +577,7 @@ export default class BrawlerRole extends Role {
 
 		const id = creep.memory.patrolPoint;
 		for (const id2 of _.keys(exploit.memory.lairs)) {
-			const otherLair: StructureKeeperLair = Game.getObjectById(id2);
+			const otherLair = Game.getObjectById<StructureKeeperLair>(id2);
 			if (!otherLair) continue;
 
 			let time = otherLair.ticksToSpawn || 0;
@@ -690,7 +690,7 @@ export default class BrawlerRole extends Role {
 	performMilitaryAttack(creep) {
 		if (creep.memory.order) {
 			// Attack ordered target first.
-			const target: Creep | AnyOwnedStructure = Game.getObjectById(creep.memory.order.target);
+			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
 
 			if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || 0) > 0;
 		}
@@ -794,7 +794,7 @@ export default class BrawlerRole extends Role {
 	 */
 	performMilitaryHeal(creep) {
 		if (creep.memory.order) {
-			const target: Creep | AnyOwnedStructure = Game.getObjectById(creep.memory.order.target);
+			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
 
 			if (target && (target.my || (target.owner && hivemind.relations.isAlly(target.owner.username)))) {
 				if (creep.heal(target) === OK) {

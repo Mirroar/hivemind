@@ -1,8 +1,8 @@
 /* global RoomPosition FIND_FLAGS LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
 STRUCTURE_RAMPART */
 
-import Role from './role';
-import utilities from './utilities';
+import Role from 'role';
+import utilities from 'utilities';
 
 export default class DismantlerRole extends Role {
 	/**

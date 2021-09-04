@@ -1,8 +1,8 @@
-import hivemind from './hivemind';
-import interShard from './intershard';
-import Process from './process';
-import Squad from './manager.squad';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import Process from 'process/process';
+import Squad from 'manager.squad';
+import utilities from 'utilities';
 
 /**
  * Chooses rooms for expansion and sends creeps there.

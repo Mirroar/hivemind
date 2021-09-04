@@ -1,11 +1,11 @@
 /* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
-import hivemind from './hivemind';
-import cache from './cache';
-import NavMesh from './nav-mesh';
-import {unpackCoordAsPos} from './packrat';
-import SpawnRole from './spawn-role';
+import hivemind from 'hivemind';
+import cache from 'cache';
+import NavMesh from 'nav-mesh';
+import {unpackCoordAsPos} from 'packrat';
+import SpawnRole from 'spawn-role';
 
 export default class PowerHarvesterSpawnRole extends SpawnRole {
 	/**

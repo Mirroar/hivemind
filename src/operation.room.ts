@@ -1,4 +1,4 @@
-import Operation from './operation';
+import Operation from 'operation';
 
 export default class RoomOperation extends Operation {
 	constructor(name) {

@@ -12,11 +12,11 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import interShard from './intershard';
-import NavMesh from './nav-mesh';
-import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from './packrat';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import NavMesh from 'nav-mesh';
+import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'packrat';
+import utilities from 'utilities';
 
 const RoomIntel = function (roomName) {
 	this.roomName = roomName;

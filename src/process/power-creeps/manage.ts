@@ -1,8 +1,8 @@
 /* global PowerCreep POWER_CREEP_MAX_LEVEL POWER_CLASS POWER_INFO
 PWR_OPERATE_FACTORY */
 
-import hivemind from './hivemind';
-import Process from './process';
+import hivemind from 'hivemind';
+import Process from 'process/process';
 
 export default class ManagePowerCreepsProcess extends Process {
 	/**

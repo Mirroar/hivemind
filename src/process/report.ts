@@ -1,6 +1,6 @@
 /* global RESOURCE_POWER */
 
-import Process from './process';
+import Process from 'process/process';
 
 export default class ReportProcess extends Process {
 	memory;

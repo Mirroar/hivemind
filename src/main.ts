@@ -34,37 +34,38 @@ import './prototype/structure';
 console.log('new global reset');
 
 // Create kernel object.
-import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from './hivemind';
-import hivemind from './hivemind';
+import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
+import hivemind from 'hivemind';
 global.hivemind = hivemind;
 hivemind.logGlobalReset();
 
 // Load top-level processes.
-import CreepsProcess from './process.creeps';
-import ExpandProcess from './process.strategy.expand';
-import InitProcess from './process.init';
-import interShard from './intershard';
-import InterShardProcess from './process.strategy.intershard';
-import ManagePowerCreepsProcess from './process.empire.power.creeps';
-import MapVisualsProcess from './process.map-visuals';
-import PowerMiningProcess from './process.strategy.power';
-import RemoteMiningProcess from './process.strategy.mining';
-import ReportProcess from './process.empire.report';
-import ResourcesProcess from './process.empire.resources';
-import RoomsProcess from './process.rooms';
-import ScoutProcess from './process.strategy.scout';
-import TradeProcess from './process.empire.trade';
+import CreepsProcess from 'process/creeps';
+import ExpandProcess from 'process/strategy/expand';
+import InitProcess from 'process/init';
+import interShard from 'intershard';
+import InterShardProcess from 'process/strategy/intershard';
+import ManagePowerCreepsProcess from 'process/power-creeps/manage';
+import MapVisualsProcess from 'process/map-visuals';
+import PowerMiningProcess from 'process/strategy/power';
+import RemoteMiningProcess from 'process/strategy/mining';
+import ReportProcess from 'process/report';
+import ResourcesProcess from 'process/resources';
+import RoomsProcess from 'process/rooms';
+import ScoutProcess from 'process/strategy/scout';
+import SpawnPowerCreepsProcess from 'process/power-creeps/spawn';
+import TradeProcess from 'process/trade';
 
 /* eslint-disable import/no-unassigned-import */
 import './manager.military';
 import './manager.source';
 /* eslint-enable import/no-unassigned-import */
 
-import cache from './cache';
+import cache from 'cache';
 
 // Allow profiling of code.
-import {profiler, useProfiler} from './profiler';
-import stats from './stats';
+import {profiler, useProfiler} from 'profiler';
+import stats from 'stats';
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 
@@ -159,7 +160,10 @@ const main = {
 		hivemind.runProcess('empire.report', ReportProcess, {
 			interval: 100,
 		});
-		hivemind.runProcess('empire.power_creeps', ManagePowerCreepsProcess, {
+		hivemind.runProcess('empire.power_creeps.manage', ManagePowerCreepsProcess, {
+			interval: 100,
+		});
+		hivemind.runProcess('empire.power_creeps.spawn', SpawnPowerCreepsProcess, {
 			interval: 100,
 		});
 		hivemind.runProcess('map-visuals', MapVisualsProcess, {

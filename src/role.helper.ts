@@ -1,6 +1,6 @@
 /* global RESOURCE_ENERGY */
 
-import Role from './role';
+import Role from 'role';
 
 export default class HelperRole extends Role {
 	/**
@@ -81,7 +81,7 @@ export default class HelperRole extends Role {
 		const terminal = creep.room.terminal;
 
 		for (const id of _.keys(orders)) {
-			const lab: StructureLab = Game.getObjectById(id);
+			const lab = Game.getObjectById<StructureLab>(id);
 			if (!lab) continue;
 
 			if (lab.mineralType && lab.mineralType !== orders[id].resourceType) {
@@ -188,7 +188,7 @@ export default class HelperRole extends Role {
 	 */
 	performHelperLabDeliver(creep, orders) {
 		for (const id of _.keys(orders)) {
-			const lab: StructureLab = Game.getObjectById(id);
+			const lab = Game.getObjectById<StructureLab>(id);
 			if (!lab) continue;
 
 			const resourceType = orders[id].resourceType;
@@ -297,7 +297,7 @@ export default class HelperRole extends Role {
 	performHelperLabGather(creep, orders) {
 		for (const id of _.keys(orders)) {
 			const order = orders[id];
-			const lab: StructureLab = Game.getObjectById(id);
+			const lab = Game.getObjectById<StructureLab>(id);
 			if (!lab) continue;
 
 			const resourceType = order.resourceType;

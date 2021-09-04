@@ -28,8 +28,8 @@ declare global {
 	}
 }
 
-import hivemind from '../hivemind';
-import utilities from '../utilities';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
 
 /**
  * Determines maximum storage capacity within a room.

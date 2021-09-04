@@ -1,5 +1,5 @@
-import defaultSettings from './settings.default';
-import localSettings from './settings.local';
+import defaultSettings from 'settings.default';
+import localSettings from 'settings.local';
 
 export default class SettingsManager {
 

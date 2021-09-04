@@ -5,9 +5,9 @@ STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
-import hivemind from './hivemind';
-import utilities from './utilities';
-import Role from './role';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
+import Role from 'role';
 
 export default class TransporterRole extends Role {
 	creep: Creep;
@@ -35,7 +35,7 @@ export default class TransporterRole extends Role {
 			}
 
 			if (creep.memory.order && creep.memory.order.target) {
-				const target: RoomObject = Game.getObjectById(creep.memory.order.target);
+				const target = Game.getObjectById<RoomObject>(creep.memory.order.target);
 				if (target && target.pos && target.pos.roomName !== creep.memory.singleRoom) {
 					this.setTransporterState(creep.memory.delivering);
 				}
@@ -144,7 +144,7 @@ export default class TransporterRole extends Role {
 		const best = creep.memory.deliverTarget;
 
 		if (typeof best === 'string') {
-			const target: AnyOwnedStructure = Game.getObjectById(best);
+			const target = Game.getObjectById<AnyOwnedStructure>(best);
 
 			if (creep.pos.getRangeTo(target) > 1) {
 				creep.moveToRange(target, 1);
@@ -679,7 +679,7 @@ export default class TransporterRole extends Role {
 		const creep = this.creep;
 		if (creep.room.memory.currentReaction && !creep.room.isEvacuating()) {
 			if (resourceType === creep.room.memory.currentReaction[0]) {
-				const lab: StructureLab = Game.getObjectById(creep.room.memory.labs.source1);
+				const lab = Game.getObjectById<StructureLab>(creep.room.memory.labs.source1);
 				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
 					options.push({
 						priority: 4,
@@ -692,7 +692,7 @@ export default class TransporterRole extends Role {
 			}
 
 			if (resourceType === creep.room.memory.currentReaction[1]) {
-				const lab: StructureLab = Game.getObjectById(creep.room.memory.labs.source2);
+				const lab = Game.getObjectById<StructureLab>(creep.room.memory.labs.source2);
 				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
 					options.push({
 						priority: 4,
@@ -753,7 +753,7 @@ export default class TransporterRole extends Role {
 			return;
 		}
 
-		const target: Resource | AnyStoreStructure = Game.getObjectById(creep.memory.sourceTarget);
+		const target = Game.getObjectById<Resource | AnyStoreStructure>(creep.memory.sourceTarget);
 		if (creep.pos.getRangeTo(target) > 1) {
 			creep.moveToRange(target, 1);
 			return;
@@ -804,7 +804,7 @@ export default class TransporterRole extends Role {
 		if (!creep.memory.sourceTarget) calculateSourceCallback();
 		if (!creep.memory.order) return false;
 
-		const target: RoomObject = Game.getObjectById(creep.memory.sourceTarget);
+		const target = Game.getObjectById<RoomObject>(creep.memory.sourceTarget);
 		if (!target) return false;
 		if (creep.memory.singleRoom && target.pos.roomName !== creep.memory.singleRoom) return false;
 
@@ -1365,7 +1365,7 @@ export default class TransporterRole extends Role {
 		const labs = room.memory.labs.reactor;
 		for (const labID of labs) {
 			// Clear out reaction labs.
-			const lab: StructureLab = Game.getObjectById(labID);
+			const lab = Game.getObjectById<StructureLab>(labID);
 
 			if (lab && lab.mineralAmount > 0) {
 				const option = {
@@ -1403,7 +1403,7 @@ export default class TransporterRole extends Role {
 		if (!currentReaction) return;
 
 		// Clear out labs with wrong resources.
-		let lab: StructureLab = Game.getObjectById(room.memory.labs.source1);
+		let lab = Game.getObjectById<StructureLab>(room.memory.labs.source1);
 		if (lab && lab.mineralAmount > 0 && lab.mineralType !== currentReaction[0]) {
 			const option = {
 				priority: 3,
@@ -1416,7 +1416,7 @@ export default class TransporterRole extends Role {
 			options.push(option);
 		}
 
-		lab = Game.getObjectById(room.memory.labs.source2);
+		lab = Game.getObjectById<StructureLab>(room.memory.labs.source2);
 		if (lab && lab.mineralAmount > 0 && lab.mineralType !== currentReaction[1]) {
 			const option = {
 				priority: 3,

@@ -2,8 +2,8 @@
 FIND_STRUCTURES STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
 FIND_MY_CONSTRUCTION_SITES */
 
-import utilities from './utilities';
-import Role from './role';
+import utilities from 'utilities';
+import Role from 'role';
 
 export default class RemoteHarvesterRole extends Role {
 	constructor() {

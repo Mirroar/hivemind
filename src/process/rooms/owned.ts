@@ -6,17 +6,17 @@ declare global {
 	}
 }
 
-import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from './hivemind';
-import hivemind from './hivemind';
-import InactiveStructuresProcess from './process.rooms.owned.inactive-structures';
-import ManageLabsProcess from './process.rooms.owned.labs';
-import ManageLinksProcess from './process.rooms.owned.links';
-import ManageSpawnsProcess from './process.rooms.owned.spawns';
-import Process from './process';
-import RoomDefenseProcess from './process.rooms.owned.defense';
-import RoomManagerProcess from './process.rooms.owned.manager';
-import RoomOperation from './operation.room';
-import RoomSongsProcess from './process.rooms.owned.songs';
+import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import hivemind from 'hivemind';
+import InactiveStructuresProcess from 'process/rooms/owned/inactive-structures';
+import ManageLabsProcess from 'process/rooms/owned/labs';
+import ManageLinksProcess from 'process/rooms/owned/links';
+import ManageSpawnsProcess from 'process/rooms/owned/spawns';
+import Process from 'process/process';
+import RoomDefenseProcess from 'process/rooms/owned/defense';
+import RoomManagerProcess from 'process/rooms/owned/manager';
+import RoomOperation from 'operation.room';
+import RoomSongsProcess from 'process/rooms/owned/songs';
 
 const gatherStats = true;
 

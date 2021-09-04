@@ -5,7 +5,7 @@
     "target": "es2017",
     "moduleResolution": "Node",
     "outDir": "dist",
-    "baseUrl": "src/",
+    "baseUrl": "./src",
     "rootDir": "src",
     "sourceMap": true,
     "strict": false,

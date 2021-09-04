@@ -1,8 +1,8 @@
 /* global FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE
 MOVE WORK CARRY CONTROLLER_MAX_UPGRADE_PER_TICK */
 
-import hivemind from './hivemind';
-import SpawnRole from './spawn-role';
+import hivemind from 'hivemind';
+import SpawnRole from 'spawn-role';
 
 export default class UpgraderSpawnRole extends SpawnRole {
 	/**

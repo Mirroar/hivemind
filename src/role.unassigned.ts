@@ -1,6 +1,6 @@
 /* global CLAIM WORK */
 
-import Role from './role';
+import Role from 'role';
 
 export default class UnassignedRole extends Role {
 	/**

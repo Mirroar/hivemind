@@ -1,8 +1,8 @@
 /* global OK */
 
-import hivemind from './hivemind';
-import utilities from './utilities';
-import Role from './role';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
+import Role from 'role';
 
 export default class ClaimerRole extends Role {
 	constructor() {

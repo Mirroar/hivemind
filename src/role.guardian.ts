@@ -1,7 +1,7 @@
 /* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
-import hivemind from './hivemind';
-import Role from './role';
+import hivemind from 'hivemind';
+import Role from 'role';
 
 const filterEnemyCreeps = (c: Creep) => !hivemind.relations.isAlly(c.owner.username) && c.isDangerous();
 

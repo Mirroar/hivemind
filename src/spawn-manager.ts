@@ -13,8 +13,8 @@ declare global {
 	}
 }
 
-import SpawnRole from './spawn-role';
-import utilities from './utilities';
+import SpawnRole from 'spawn-role';
+import utilities from 'utilities';
 
 const roleNameMap = {
 	builder: 'B',

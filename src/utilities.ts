@@ -20,9 +20,9 @@ declare global {
 	type TileCallback = (x: number, y: number) => boolean | void;
 }
 
-import cache from './cache';
-import hivemind from './hivemind';
-import { ErrorMapper } from './utils/ErrorMapper';
+import cache from 'cache';
+import hivemind from 'hivemind';
+import { ErrorMapper } from 'utils/ErrorMapper';
 
 let ownUserName;
 

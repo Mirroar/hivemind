@@ -1,13 +1,13 @@
-import hivemind from './hivemind';
-import BoostManager from './manager.boost';
-import Process from './process';
-import RoomPlanner from './room-planner';
-import RoomManager from './room-manager';
-import Squad from './manager.squad';
+import hivemind from 'hivemind';
+import BoostManager from 'manager.boost';
+import Process from 'process/process';
+import RoomPlanner from 'room-planner';
+import RoomManager from 'room-manager';
+import Squad from 'manager.squad';
 
-import Operation from './operation';
-import MiningOperation from './operation.remote-mining';
-import RoomOperation from './operation.room';
+import Operation from 'operation';
+import MiningOperation from 'operation.remote-mining';
+import RoomOperation from 'operation.room';
 
 declare global {
 	interface Game {

@@ -6,7 +6,7 @@ declare global {
 	}
 }
 
-import Process from './process';
+import Process from 'process/process';
 
 export default class InactiveStructuresProcess extends Process {
 	room: Room;

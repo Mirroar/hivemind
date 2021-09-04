@@ -9,9 +9,9 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import SpawnRole from './spawn-role';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import SpawnRole from 'spawn-role';
+import utilities from 'utilities';
 
 const RESPONSE_NONE = 0;
 const RESPONSE_MINI_BRAWLER = 1;
@@ -370,7 +370,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	onSpawn(room: Room, option, body: BodyPartConstant[], name: string) {
 		if (option.trainStarter) {
 			// Remove segment from train spawn queue.
-			const creep: Creep = Game.getObjectById(option.trainStarter);
+			const creep = Game.getObjectById<Creep>(option.trainStarter);
 			creep.memory.train.partsToSpawn = creep.memory.train.partsToSpawn.slice(1);
 		}
 

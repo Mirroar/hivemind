@@ -1,7 +1,7 @@
 /* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE CARRY */
 
-import hivemind from './hivemind';
-import SpawnRole from './spawn-role';
+import hivemind from 'hivemind';
+import SpawnRole from 'spawn-role';
 
 export default class PowerHaulerSpawnRole extends SpawnRole {
 	/**

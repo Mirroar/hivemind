@@ -4,28 +4,28 @@ declare global {
 	}
 }
 
-import Process from './process';
-import SpawnManager from './spawn-manager';
+import Process from 'process/process';
+import SpawnManager from 'spawn-manager';
 
-import brawlerSpawnRole from './spawn-role.brawler';
-import builderSpawnRole from './spawn-role.builder';
-import claimerSpawnRole from './spawn-role.claimer';
-import dismantlerSpawnRole from './spawn-role.dismantler';
-import exploitSpawnRole from './spawn-role.exploit';
-import gathererSpawnRole from './spawn-role.gatherer';
-import giftSpawnRole from './spawn-role.gift';
-import harvesterSpawnRole from './spawn-role.harvester';
-import mineralHarvesterSpawnRole from './spawn-role.harvester.minerals';
-import powerHarvesterSpawnRole from './spawn-role.harvester.power';
-import remoteHarvesrterSpawnRole from './spawn-role.harvester.remote';
-import haulerSpawnRole from './spawn-role.hauler';
-import powerHaulerSpawnRole from './spawn-role.hauler.power';
-import helperSpawnRole from './spawn-role.helper';
-import roomDefenseSpawnRole from './spawn-role.room-defense';
-import scoutSpawnRole from './spawn-role.scout';
-import squadSpawnRole from './spawn-role.squad';
-import transporterSpawnRole from './spawn-role.transporter';
-import upgraderSpawnRole from './spawn-role.upgrader';
+import brawlerSpawnRole from 'spawn-role.brawler';
+import builderSpawnRole from 'spawn-role.builder';
+import claimerSpawnRole from 'spawn-role.claimer';
+import dismantlerSpawnRole from 'spawn-role.dismantler';
+import exploitSpawnRole from 'spawn-role.exploit';
+import gathererSpawnRole from 'spawn-role.gatherer';
+import giftSpawnRole from 'spawn-role.gift';
+import harvesterSpawnRole from 'spawn-role.harvester';
+import mineralHarvesterSpawnRole from 'spawn-role.harvester.minerals';
+import powerHarvesterSpawnRole from 'spawn-role.harvester.power';
+import remoteHarvesrterSpawnRole from 'spawn-role.harvester.remote';
+import haulerSpawnRole from 'spawn-role.hauler';
+import powerHaulerSpawnRole from 'spawn-role.hauler.power';
+import helperSpawnRole from 'spawn-role.helper';
+import roomDefenseSpawnRole from 'spawn-role.room-defense';
+import scoutSpawnRole from 'spawn-role.scout';
+import squadSpawnRole from 'spawn-role.squad';
+import transporterSpawnRole from 'spawn-role.transporter';
+import upgraderSpawnRole from 'spawn-role.upgrader';
 
 const spawnClasses = {
 	'brawler': brawlerSpawnRole,

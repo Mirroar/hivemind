@@ -5,9 +5,9 @@ LOOK_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
-import hivemind from './hivemind';
-import utilities from './utilities';
-import Role from './role';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
+import Role from 'role';
 
 export default class HaulerRole extends Role {
 	actionTaken: boolean;

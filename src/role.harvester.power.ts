@@ -9,8 +9,8 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import Role from './role';
+import hivemind from 'hivemind';
+import Role from 'role';
 
 export default class PowerHarvesterRole extends Role {
 	constructor() {

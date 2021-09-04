@@ -1,7 +1,7 @@
 /* global RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER */
 
-import Role from './role';
-import TransporterRole from './role.transporter';
+import Role from 'role';
+import TransporterRole from 'role.transporter';
 
 export default class UpgraderRole extends Role {
 	transporterRole: TransporterRole;
@@ -70,7 +70,7 @@ export default class UpgraderRole extends Role {
 		if (allowRefilling && _.sum(creep.carry) < creep.carryCapacity * 0.5) {
 			let withdrawn = false;
 			if (creep.room.memory.controllerLink) {
-				const controllerLink: StructureLink = Game.getObjectById(creep.room.memory.controllerLink);
+				const controllerLink = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
 				if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1) {
 					if (creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
 						withdrawn = true;
@@ -79,7 +79,7 @@ export default class UpgraderRole extends Role {
 			}
 
 			if (!withdrawn && creep.room.memory.controllerContainer) {
-				const controllerContainer: StructureContainer = Game.getObjectById(creep.room.memory.controllerContainer);
+				const controllerContainer = Game.getObjectById<StructureContainer>(creep.room.memory.controllerContainer);
 				if (controllerContainer && controllerContainer.store.energy > 50 && creep.pos.getRangeTo(controllerContainer) <= 1) {
 					if (creep.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
 						withdrawn = true;
@@ -98,7 +98,7 @@ export default class UpgraderRole extends Role {
 	performGetUpgraderEnergy(creep) {
 		// Ideally, get energy from a link or container close to the controller.
 		if (creep.room.memory.controllerLink) {
-			const target: StructureLink = Game.getObjectById(creep.room.memory.controllerLink);
+			const target = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
 			if (target && target.energy > 50) {
 				if (creep.pos.getRangeTo(target) > 1) {
 					creep.moveToRange(target, 1);
@@ -112,7 +112,7 @@ export default class UpgraderRole extends Role {
 		}
 
 		if (creep.room.memory.controllerContainer) {
-			const target: StructureContainer = Game.getObjectById(creep.room.memory.controllerContainer);
+			const target = Game.getObjectById<StructureContainer>(creep.room.memory.controllerContainer);
 			if (target && target.store.energy > 50) {
 				if (creep.pos.getRangeTo(target) > 1) {
 					creep.moveToRange(target, 1);

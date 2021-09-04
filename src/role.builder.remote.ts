@@ -3,11 +3,11 @@ FIND_MY_STRUCTURES RESOURCE_ENERGY ERR_NOT_IN_RANGE STRUCTURE_RAMPART
 FIND_MY_CONSTRUCTION_SITES STRUCTURE_TOWER FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
 
-import hivemind from './hivemind';
-import NavMesh from './nav-mesh';
-import Role from './role';
-import TransporterRole from './role.transporter';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import NavMesh from 'nav-mesh';
+import Role from 'role';
+import TransporterRole from 'role.transporter';
+import utilities from 'utilities';
 
 export default class RemoteBuilderRole extends Role {
 	transporterRole: TransporterRole;
@@ -140,7 +140,7 @@ export default class RemoteBuilderRole extends Role {
 			}
 		}
 
-		const target: ConstructionSite = Game.getObjectById(creep.memory.buildTarget);
+		const target = Game.getObjectById<ConstructionSite>(creep.memory.buildTarget);
 		if (target) {
 			if (creep.pos.getRangeTo(target) > 3) {
 				creep.moveToRange(target, 3);
@@ -174,7 +174,7 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		if (this.creep.memory.repairTarget) {
-			const target: Structure = Game.getObjectById(this.creep.memory.repairTarget);
+			const target = Game.getObjectById<Structure>(this.creep.memory.repairTarget);
 			if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > 15000)) {
 				delete this.creep.memory.repairTarget;
 			}
@@ -281,7 +281,7 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
-		const source: Source = Game.getObjectById(best);
+		const source = Game.getObjectById<Source>(best);
 		if (!source || source.energy <= 0) {
 			creep.memory.resourceTarget = null;
 		}

@@ -1,9 +1,9 @@
 /* global RoomPosition */
 
-import cache from './cache';
-import hivemind from './hivemind';
-import Process from './process';
-import utilities from './utilities';
+import cache from 'cache';
+import hivemind from 'hivemind';
+import Process from 'process/process';
+import utilities from 'utilities';
 
 // @todo Move constants to settings.
 const enableMapVisuals = true;

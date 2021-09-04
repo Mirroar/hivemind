@@ -1,7 +1,7 @@
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
 
-import utilities from './utilities';
-import SpawnRole from './spawn-role';
+import utilities from 'utilities';
+import SpawnRole from 'spawn-role';
 
 export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	/**

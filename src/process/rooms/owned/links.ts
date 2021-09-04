@@ -1,7 +1,7 @@
 /* global LINK_CAPACITY */
 
-import hivemind from './hivemind';
-import Process from './process';
+import hivemind from 'hivemind';
+import Process from 'process/process';
 
 export default class ManageLinksProcess extends Process {
 	room: Room;

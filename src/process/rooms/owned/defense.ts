@@ -1,8 +1,8 @@
 /* global FIND_MY_STRUCTURES STRUCTURE_TOWER FIND_HOSTILE_CREEPS FIND_MY_CREEPS
 HEAL */
 
-import hivemind from './hivemind';
-import Process from './process';
+import hivemind from 'hivemind';
+import Process from 'process/process';
 
 export default class RoomDefenseProcess extends Process {
 	room: Room;

@@ -1,6 +1,6 @@
 /* global MOVE WORK */
 
-import SpawnRole from './spawn-role';
+import SpawnRole from 'spawn-role';
 
 export default class DismantlerSpawnRole extends SpawnRole {
 	/**

@@ -1,8 +1,8 @@
 /* global RESOURCE_ENERGY */
 
-import hivemind from './hivemind';
-import Process from './process';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import Process from 'process/process';
+import utilities from 'utilities';
 
 /**
  * Sends resources between owned rooms when needed.

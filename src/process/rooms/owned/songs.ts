@@ -4,7 +4,7 @@ declare global {
 	}
 }
 
-import Process from './process';
+import Process from 'process/process';
 
 /* eslint-disable array-element-newline */
 const songs = {

@@ -2,8 +2,8 @@
 
 /* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
 
-import SpawnRole from './spawn-role';
-import Squad from './manager.squad';
+import SpawnRole from 'spawn-role';
+import Squad from 'manager.squad';
 
 export default class SquadSpawnRole extends SpawnRole {
 	/**

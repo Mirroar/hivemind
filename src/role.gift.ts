@@ -1,5 +1,5 @@
-import Role from './role';
-import ScoutRole from './role.scout';
+import Role from 'role';
+import ScoutRole from 'role.scout';
 
 export default class GiftRole extends Role {
 	scoutRole: ScoutRole;

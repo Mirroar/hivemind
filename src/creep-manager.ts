@@ -30,8 +30,8 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
 
 export default class CreepManager {
 	roles;

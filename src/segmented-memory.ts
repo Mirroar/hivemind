@@ -10,7 +10,7 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
+import hivemind from 'hivemind';
 
 const maxActiveSegments = 10;
 const maxSegmentLength = 100 * 1000;

@@ -7,7 +7,7 @@ declare global {
 	}
 }
 
-import Process from './process';
+import Process from 'process/process';
 
 export default class ReactionsProcess extends Process {
 	room: Room;

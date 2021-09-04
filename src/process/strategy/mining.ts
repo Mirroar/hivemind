@@ -1,9 +1,9 @@
 /* global PWR_OPERATE_SPAWN POWER_INFO */
 
-import hivemind from './hivemind';
-import Process from './process';
-import RemoteMiningOperation from './operation.remote-mining';
-import stats from './stats';
+import hivemind from 'hivemind';
+import Process from 'process/process';
+import RemoteMiningOperation from 'operation.remote-mining';
+import stats from 'stats';
 
 export default class RemoteMiningProcess extends Process {
 	/**

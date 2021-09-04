@@ -24,7 +24,7 @@ declare global {
 	}
 }
 
-import cache from './cache';
+import cache from 'cache';
 
 // Define quick access property source.harvesters.
 Object.defineProperty(Source.prototype, 'harvesters', {

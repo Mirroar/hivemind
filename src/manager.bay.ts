@@ -8,8 +8,8 @@ declare global {
 	}
 }
 
-import cache from './cache';
-import utilities from './utilities';
+import cache from 'cache';
+import utilities from 'utilities';
 
 const bayStructures = [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_LINK, STRUCTURE_CONTAINER];
 

@@ -1,4 +1,4 @@
-import Process from './process';
+import Process from 'process/process';
 
 export default class SpawnPowerCreepsProcess extends Process {
 	/**

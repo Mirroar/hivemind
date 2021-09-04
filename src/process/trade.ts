@@ -8,10 +8,10 @@ declare global {
 	}
 }
 
-import cache from './cache';
-import hivemind from './hivemind';
-import Process from './process';
-import utilities from './utilities';
+import cache from 'cache';
+import hivemind from 'hivemind';
+import Process from 'process/process';
+import utilities from 'utilities';
 
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;

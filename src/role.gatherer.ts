@@ -1,8 +1,8 @@
 /* global FIND_STRUCTURES FIND_RUINS FIND_DROPPED_RESOURCES FIND_TOMBSTONES
 STRUCTURE_STORAGE STRUCTURE_TERMINAL */
 
-import utilities from './utilities';
-import Role from './role';
+import utilities from 'utilities';
+import Role from 'role';
 
 /**
  * Gatherers collect resources from safe sources outside their spawn room.

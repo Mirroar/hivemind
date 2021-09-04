@@ -6,9 +6,9 @@ STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES LOOK_RESOURCES LOOK_STRUCTURES */
 // @todo Merge fixedMineralSource into fixedSource.
 // @todo Stop harvesting when container and link are full.
 
-import Role from './role';
-import TransporterRole from './role.transporter';
-import utilities from './utilities';
+import Role from 'role';
+import TransporterRole from 'role.transporter';
+import utilities from 'utilities';
 
 export default class HarvesterRole extends Role {
 	transporterRole: TransporterRole;

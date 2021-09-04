@@ -1,7 +1,7 @@
 /* global FIND_HOSTILE_STRUCTURES STRUCTURE_INVADER_CORE */
 
-import hivemind from './hivemind';
-import Process from './process';
+import hivemind from 'hivemind';
+import Process from 'process/process';
 
 export default class RoomIntelProcess extends Process {
 	room: Room;

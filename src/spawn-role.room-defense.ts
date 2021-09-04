@@ -1,7 +1,7 @@
 /* global MOVE ATTACK WORK CARRY HEAL */
 
-import hivemind from './hivemind';
-import SpawnRole from './spawn-role';
+import hivemind from 'hivemind';
+import SpawnRole from 'spawn-role';
 
 const RESPONSE_NONE = 0;
 const RESPONSE_ATTACKER = 1;

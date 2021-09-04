@@ -6,7 +6,7 @@ declare global {
 	}
 }
 
-import utilities from './utilities';
+import utilities from 'utilities';
 
 const interShard = {
 

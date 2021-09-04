@@ -1,6 +1,6 @@
 /* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO MOVE WORK CARRY */
 
-import SpawnRole from './spawn-role';
+import SpawnRole from 'spawn-role';
 
 export default class HarvesterSpawnRole extends SpawnRole {
 	/**

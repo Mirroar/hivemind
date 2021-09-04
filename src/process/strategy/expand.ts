@@ -2,12 +2,12 @@
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
-import hivemind from './hivemind';
-import interShard from './intershard';
-import NavMesh from './nav-mesh';
-import Process from './process';
-import Squad from './manager.squad';
-import stats from './stats';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import NavMesh from 'nav-mesh';
+import Process from 'process/process';
+import Squad from 'manager.squad';
+import stats from 'stats';
 
 export default class ExpandProcess extends Process {
 	memory: {

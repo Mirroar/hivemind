@@ -1,4 +1,4 @@
-import hivemind from './hivemind';
+import hivemind from 'hivemind';
 
 const heapCache = {};
 

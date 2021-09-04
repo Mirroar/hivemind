@@ -1,10 +1,10 @@
 /* global FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN
 STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER */
 
-import hivemind from './hivemind';
-import Role from './role';
-import TransporterRole from './role.transporter';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import Role from 'role';
+import TransporterRole from 'role.transporter';
+import utilities from 'utilities';
 
 // @todo Calculate from constants.
 const wallHealth = {
@@ -98,7 +98,7 @@ export default class BuilderRole extends Role {
 			return false;
 		}
 
-		const target: Structure = Game.getObjectById(creep.memory.order.target);
+		const target = Game.getObjectById<Structure>(creep.memory.order.target);
 		if (!target) {
 			this.calculateBuilderTarget(creep);
 			return true;

@@ -1,4 +1,4 @@
-import utilities from './utilities';
+import utilities from 'utilities';
 
 declare global {
 	interface CreepMemory {

@@ -6,8 +6,8 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import Process from './process';
+import hivemind from 'hivemind';
+import Process from 'process/process';
 
 export default class ReactionsProcess extends Process {
 	room: Room;

@@ -1,6 +1,6 @@
 /* global FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR MOVE WORK CARRY */
 
-import SpawnRole from './spawn-role';
+import SpawnRole from 'spawn-role';
 
 export default class MineralHarvesterSpawnRole extends SpawnRole {
 	/**

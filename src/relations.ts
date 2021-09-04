@@ -1,4 +1,4 @@
-import localRelations from './relations.local';
+import localRelations from 'relations.local';
 
 /**
  * Relations determine how we act towards other users.

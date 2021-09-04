@@ -43,7 +43,7 @@ interface SitRep {
 	},
 }
 
-import hivemind from './hivemind';
+import hivemind from 'hivemind';
 
 /**
  * Scans the room for military targets, grades them, etc.

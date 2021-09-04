@@ -10,11 +10,11 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import interShard from './intershard';
-import PathManager from './remote-path-manager';
-import Process from './process';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import PathManager from 'remote-path-manager';
+import Process from 'process/process';
+import utilities from 'utilities';
 
 const preserveExpansionReasons = false;
 
@@ -137,7 +137,7 @@ export default class ScoutProcess extends Process {
 
 				// Let observer scout one room per run at maximum.
 				// @todo Move this to structure management so we can scan one open room per tick.
-				const observer: StructureObserver = Game.getObjectById(info.observer);
+				const observer = Game.getObjectById<StructureObserver>(info.observer);
 				if (observer) {
 					if (!observer.hasScouted) {
 						observer.observeRoom(roomName);

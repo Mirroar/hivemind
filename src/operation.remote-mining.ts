@@ -2,12 +2,12 @@
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
-import hivemind from './hivemind';
-import cache from './cache';
-import Operation from './operation';
-import {packPosList, unpackPosList} from './packrat';
-import PathManager from './remote-path-manager';
-import utilities from './utilities';
+import hivemind from 'hivemind';
+import cache from 'cache';
+import Operation from 'operation';
+import {packPosList, unpackPosList} from 'packrat';
+import PathManager from 'remote-path-manager';
+import utilities from 'utilities';
 
 /**
  * This kind of operation handles all remote mining.
@@ -214,7 +214,7 @@ export default class RemoteMiningOperation extends Operation {
 
 			const containerId = this.memory.status[sourceLocation].containerId;
 			if (containerId) {
-				const container: StructureContainer = Game.getObjectById(containerId);
+				const container = Game.getObjectById<StructureContainer>(containerId);
 				if (!container || container.structureType !== STRUCTURE_CONTAINER) {
 					delete this.memory.status[sourceLocation].containerId;
 					return false;

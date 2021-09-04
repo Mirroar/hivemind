@@ -19,7 +19,7 @@ declare global {
 	}
 }
 
-import cache from './cache';
+import cache from 'cache';
 
 /**
  * Collects available boosts in a room, optionally filtered by effect.
@@ -109,7 +109,7 @@ Room.prototype.getBoostLabs = function () {
 
 	const boostLabs = [];
 	_.each(labMemory, (data, id) => {
-		const lab: StructureLab = Game.getObjectById(id);
+		const lab = Game.getObjectById<StructureLab>(id);
 		if (lab && lab.isOperational()) {
 			boostLabs.push(lab);
 		}
@@ -241,7 +241,7 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
 		if (!boostMemory[resourceType]) return null;
 		const amount = boostMemory[resourceType];
 
-		const lab: StructureLab = Game.getObjectById(id);
+		const lab = Game.getObjectById<StructureLab>(id);
 		if (!lab) return null;
 
 		if (creep.pos.getRangeTo(lab) > 1) {

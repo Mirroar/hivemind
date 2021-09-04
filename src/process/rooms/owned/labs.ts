@@ -1,8 +1,8 @@
-import hivemind from './hivemind';
-import {PROCESS_PRIORITY_LOW} from './hivemind';
-import Process from './process';
-import ReactionsProcess from './process.rooms.owned.labs.reactions';
-import PositionsProcess from './process.rooms.owned.labs.position';
+import hivemind from 'hivemind';
+import {PROCESS_PRIORITY_LOW} from 'hivemind';
+import Process from 'process/process';
+import ReactionsProcess from 'process/rooms/owned/labs.reactions';
+import PositionsProcess from 'process/rooms/owned/labs.position';
 
 export default class ManageLabsProcess extends Process {
 	room: Room;
@@ -45,8 +45,8 @@ export default class ManageLabsProcess extends Process {
 
 		if (!memory.currentReaction) return;
 
-		const source1: StructureLab = Game.getObjectById(memory.labs.source1);
-		const source2: StructureLab = Game.getObjectById(memory.labs.source2);
+		const source1 = Game.getObjectById<StructureLab>(memory.labs.source1);
+		const source2 = Game.getObjectById<StructureLab>(memory.labs.source2);
 		if (!source1 || !source2) return;
 		if (source1.mineralType !== memory.currentReaction[0] || source2.mineralType !== memory.currentReaction[1]) return;
 
@@ -54,7 +54,7 @@ export default class ManageLabsProcess extends Process {
 		if (!labs) return;
 
 		for (const reactorID of labs) {
-			const reactor: StructureLab = Game.getObjectById(reactorID);
+			const reactor = Game.getObjectById<StructureLab>(reactorID);
 
 			if (reactor && reactor.cooldown <= 0) {
 				reactor.runReaction(source1, source2);

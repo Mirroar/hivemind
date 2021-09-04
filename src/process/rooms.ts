@@ -1,11 +1,11 @@
-import {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from './hivemind';
-import hivemind from './hivemind';
-import OwnedRoomProcess from './process.rooms.owned';
-import Process from './process';
-import RoomIntelProcess from './process.rooms.intel';
-import RoomManager from './room-manager';
-import RoomManagerProcess from './process.rooms.owned.manager';
-import RoomPlanner from './room-planner';
+import {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import hivemind from 'hivemind';
+import OwnedRoomProcess from 'process/rooms/owned';
+import Process from 'process/process';
+import RoomIntelProcess from 'process/rooms/intel';
+import RoomManager from 'room-manager';
+import RoomManagerProcess from 'process/rooms/owned/manager';
+import RoomPlanner from 'room-planner';
 
 /**
  * Runs logic for all rooms we have visibility in.

@@ -14,9 +14,9 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
-import utilities from './utilities';
-import Role from './role';
+import hivemind from 'hivemind';
+import utilities from 'utilities';
+import Role from 'role';
 
 export default class OperatorRole extends Role {
 	creep: PowerCreep;
@@ -422,7 +422,7 @@ export default class OperatorRole extends Role {
 		if (!this.hasOrder()) return;
 
 		if (this.creep.memory.order.target) {
-			const target: RoomObject = Game.getObjectById(this.creep.memory.order.target);
+			const target = Game.getObjectById<RoomObject>(this.creep.memory.order.target);
 
 			if (!target || target.pos.roomName !== this.creep.pos.roomName) {
 				delete this.creep.memory.order;
@@ -485,7 +485,7 @@ export default class OperatorRole extends Role {
 	 */
 	usePower() {
 		const power = this.creep.memory.order.power;
-		const target: RoomObject = this.creep.memory.order.target && Game.getObjectById(this.creep.memory.order.target);
+		const target = this.creep.memory.order.target && Game.getObjectById<RoomObject>(this.creep.memory.order.target);
 		const range = POWER_INFO[power].range || 1;
 
 		if (target && this.creep.pos.getRangeTo(target) > range) {
@@ -501,7 +501,7 @@ export default class OperatorRole extends Role {
 	 *
 	 */
 	depositOps() {
-		const storage: StructureStorage | StructureTerminal = Game.getObjectById(this.creep.memory.order.target);
+		const storage = Game.getObjectById<StructureStorage | StructureTerminal>(this.creep.memory.order.target);
 		if (!storage) {
 			this.orderFinished();
 			return;
@@ -520,7 +520,7 @@ export default class OperatorRole extends Role {
 	 *
 	 */
 	retrieveOps() {
-		const storage: StructureStorage | StructureTerminal = Game.getObjectById(this.creep.memory.order.target);
+		const storage = Game.getObjectById<StructureStorage | StructureTerminal>(this.creep.memory.order.target);
 		if (!storage) {
 			this.orderFinished();
 			return;

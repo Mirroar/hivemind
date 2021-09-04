@@ -20,7 +20,7 @@ declare global {
 	}
 }
 
-import hivemind from './hivemind';
+import hivemind from 'hivemind';
 
 export default class RoomManager {
 	room: Room;
@@ -458,7 +458,7 @@ export default class RoomManager {
 		if (!this.needsDismantling()) return null;
 
 		for (const id of _.keys(this.memory.dismantle)) {
-			const structure: AnyOwnedStructure = Game.getObjectById(id);
+			const structure = Game.getObjectById<AnyOwnedStructure>(id);
 			if (!structure) {
 				delete this.memory.dismantle[id];
 				continue;
