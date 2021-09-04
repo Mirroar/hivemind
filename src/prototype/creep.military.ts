@@ -3,11 +3,11 @@ ATTACK_POWER HEAL_POWER RANGED_ATTACK_POWER RANGED_HEAL_POWER */
 
 declare global {
 	interface Creep {
-		isDangerous,
-		getEffectiveHealth,
-		getDamageCapacity,
-		getHealCapacity,
-		getEffectiveDamage,
+		isDangerous: () => boolean,
+		getEffectiveHealth: () => number,
+		getDamageCapacity: (range: number) => number,
+		getHealCapacity: (range: number) => number,
+		getEffectiveDamage: (potentialDamage: number) => number,
 	}
 }
 
