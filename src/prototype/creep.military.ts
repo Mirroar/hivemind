@@ -13,6 +13,10 @@ declare global {
 
 import hivemind from 'hivemind';
 
+const stompingCreeps: {
+	[id: string]: boolean,
+} = {};
+
 /**
  * Determines if a creep is dangerous and should be attacked.
  *
@@ -26,6 +30,16 @@ Creep.prototype.isDangerous = function () {
 		if (part.type !== MOVE && part.type !== TOUGH) {
 			return true;
 		}
+	}
+
+	// Creeps that are about to stomp our construction sites are also considered
+	// dangerous.
+	if (stompingCreeps[this.id]) return true;
+
+	const site = this.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
+	if (site.pos.getRangeTo(this.pos) <= 5) {
+		stompingCreeps[this.id] = true;
+		return true;
 	}
 
 	return false;
