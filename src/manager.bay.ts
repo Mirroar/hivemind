@@ -8,6 +8,8 @@ declare global {
 	}
 }
 
+type AnyBayStructure = typeof bayStructures[number];
+
 import cache from 'cache';
 import utilities from 'utilities';
 
@@ -18,7 +20,7 @@ export default class Bay {
 	pos: RoomPosition;
 	name: string;
 	_hasHarvester: boolean;
-	extensions: AnyOwnedStructure[];
+	extensions: Structure<AnyBayStructure>[];
 	energy: number;
 	energyCapacity: number;
 
@@ -64,16 +66,14 @@ export default class Bay {
 		if (blocked) return;
 
 		for (const id of bayExtensions) {
-			const extension: StructureExtension = Game.getObjectById(id);
+			const extension = Game.getObjectById<Structure<AnyBayStructure>>(id);
 			if (!extension) continue;
 
 			this.extensions.push(extension);
 
-			if (extension.energyCapacity) {
-				if (extension.structureType === STRUCTURE_EXTENSION || extension.structureType === STRUCTURE_SPAWN) {
-					this.energy += extension.energy;
-					this.energyCapacity += extension.energyCapacity;
-				}
+			if (extension instanceof StructureExtension || extension instanceof StructureSpawn) {
+				this.energy += extension.energy;
+				this.energyCapacity += extension.energyCapacity;
 			}
 		}
 
