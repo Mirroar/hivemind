@@ -92,7 +92,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 		const memory: ScoutCreepMemory = {
 			role: 'scout',
 			origin: room.name,
-			disableNotifications: true
+			disableNotifications: true,
 		};
 
 		if (option.portalTarget) {

@@ -319,6 +319,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			target: option.targetPos || utilities.encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
 			operation: option.operation,
+			disableNotifications: true,
 			train: null,
 		};
 

@@ -74,6 +74,7 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 		return {
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,
+			disableNotifications: true,
 		};
 	}
 };

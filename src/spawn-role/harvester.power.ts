@@ -150,6 +150,7 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,
 			isHealer: option.isHealer,
+			disableNotifications: true,
 		};
 	}
 };
