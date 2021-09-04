@@ -3,27 +3,27 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
 
-import brawlerRole from 'role.brawler';
-import builderRole from 'role.builder';
-import exploitBuilderRole from 'role.builder.exploit';
-import remoteBuilderRole from 'role.builder.remote';
-import claimerRole from 'role.claimer';
-import dismantlerRole from 'role.dismantler';
-import gathererRole from 'role.gatherer';
-import giftRole from 'role.gift';
-import guardianRole from 'role.guardian';
-import harvesterRole from 'role.harvester';
-import exploitHarvesterRole from 'role.harvester.exploit';
-import poweHarvesterRole from 'role.harvester.power';
-import remoteHarvesterRole from 'role.harvester.remote';
-import haulerRole from 'role.hauler';
-import exploitHaulerRole from 'role.hauler.exploit';
-import powerHaulerRole from 'role.hauler.power';
-import helperRole from 'role.helper';
-import scoutRole from 'role.scout';
-import transporterRole from 'role.transporter';
-import unassignedRole from 'role.unassigned';
-import upgraderRole from 'role.upgrader';
+import brawlerRole from 'role/brawler';
+import builderRole from 'role/builder';
+import exploitBuilderRole from 'role/exploit/builder';
+import remoteBuilderRole from 'role/builder.remote';
+import claimerRole from 'role/claimer';
+import dismantlerRole from 'role/dismantler';
+import gathererRole from 'role/gatherer';
+import giftRole from 'role/gift';
+import guardianRole from 'role/guardian';
+import harvesterRole from 'role/harvester';
+import exploitHarvesterRole from 'role/exploit/harvester';
+import poweHarvesterRole from 'role/power/harvester';
+import remoteHarvesterRole from 'role/harvester.remote';
+import haulerRole from 'role/hauler';
+import exploitHaulerRole from 'role/exploit/hauler';
+import powerHaulerRole from 'role/power/hauler';
+import helperRole from 'role/helper';
+import scoutRole from 'role/scout';
+import transporterRole from 'role/transporter';
+import unassignedRole from 'role/unassigned';
+import upgraderRole from 'role/upgrader';
 
 // Normal creep roles.
 const creepRoles = {
@@ -51,7 +51,7 @@ const creepRoles = {
 };
 
 // Power creep roles.
-import OperatorRole from 'role.operator';
+import OperatorRole from 'role/power-creep/operator';
 
 export default class CreepsProcess extends Process {
 	creepManager: CreepManager;

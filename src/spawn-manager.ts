@@ -13,7 +13,7 @@ declare global {
 	}
 }
 
-import SpawnRole from 'spawn-role';
+import SpawnRole from 'spawn-role/spawn-role';
 import utilities from 'utilities';
 
 const roleNameMap = {
