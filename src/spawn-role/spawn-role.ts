@@ -1,5 +1,3 @@
-'use strict';
-
 /* global BODYPART_COST MAX_CREEP_SIZE TOUGH ATTACK RANGED_ATTACK HEAL */
 
 export default class SpawnRole {

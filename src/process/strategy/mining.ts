@@ -2,8 +2,8 @@
 
 import hivemind from 'hivemind';
 import Process from 'process/process';
-import RemoteMiningOperation from 'operation.remote-mining';
-import stats from 'stats';
+import RemoteMiningOperation from 'operation/remote-mining';
+import stats from 'utils/stats';
 
 export default class RemoteMiningProcess extends Process {
 	/**

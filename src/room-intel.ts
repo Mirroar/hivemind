@@ -14,8 +14,8 @@ declare global {
 
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import NavMesh from 'nav-mesh';
-import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'packrat';
+import NavMesh from 'utils/nav-mesh';
+import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 import utilities from 'utilities';
 
 const RoomIntel = function (roomName) {

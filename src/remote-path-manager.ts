@@ -1,8 +1,8 @@
 /* global PathFinder STRUCTURE_KEEPER_LAIR */
 
 import hivemind from 'hivemind';
-import cache from 'cache';
-import {packPosList, unpackPosList} from 'packrat';
+import cache from 'utils/cache';
+import {packPosList, unpackPosList} from 'utils/packrat';
 import utilities from 'utilities';
 
 export default class RemotePathManager {

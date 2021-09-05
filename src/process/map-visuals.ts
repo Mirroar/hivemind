@@ -1,6 +1,6 @@
 /* global RoomPosition */
 
-import cache from 'cache';
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';

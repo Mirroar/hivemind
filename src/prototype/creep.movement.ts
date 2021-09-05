@@ -54,7 +54,7 @@ declare global {
 }
 
 import hivemind from 'hivemind';
-import NavMesh from 'nav-mesh';
+import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
 
 // @todo For multi-room movement we could save which rooms we're travelling through, and recalculate (part of) the path when a CostMatrix changes.

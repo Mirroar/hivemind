@@ -3,9 +3,9 @@ SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
 import hivemind from 'hivemind';
-import cache from 'cache';
-import Operation from 'operation';
-import {packPosList, unpackPosList} from 'packrat';
+import cache from 'utils/cache';
+import Operation from 'operation/operation';
+import {packPosList, unpackPosList} from 'utils/packrat';
 import PathManager from 'remote-path-manager';
 import utilities from 'utilities';
 

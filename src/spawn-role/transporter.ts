@@ -1,5 +1,3 @@
-'use strict';
-
 /* global MOVE CARRY */
 
 import SpawnRole from 'spawn-role/spawn-role';

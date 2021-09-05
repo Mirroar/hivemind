@@ -61,11 +61,11 @@ import './manager.military';
 import './manager.source';
 /* eslint-enable import/no-unassigned-import */
 
-import cache from 'cache';
+import cache from 'utils/cache';
 
 // Allow profiling of code.
-import {profiler, useProfiler} from 'profiler';
-import stats from 'stats';
+import {profiler, useProfiler} from 'utils/profiler';
+import stats from 'utils/stats';
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 

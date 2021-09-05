@@ -4,10 +4,10 @@ OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import NavMesh from 'nav-mesh';
+import NavMesh from 'utils/nav-mesh';
 import Process from 'process/process';
 import Squad from 'manager.squad';
-import stats from 'stats';
+import stats from 'utils/stats';
 
 export default class ExpandProcess extends Process {
 	memory: {

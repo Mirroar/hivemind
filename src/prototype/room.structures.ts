@@ -13,7 +13,7 @@ declare global {
 	}
 }
 
-import cache from 'cache';
+import cache from 'utils/cache';
 import LinkNetwork from 'link-network';
 
 /**

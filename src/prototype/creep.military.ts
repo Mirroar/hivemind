@@ -37,7 +37,7 @@ Creep.prototype.isDangerous = function () {
 	if (stompingCreeps[this.id]) return true;
 
 	const site = this.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
-	if (site.pos.getRangeTo(this.pos) <= 5) {
+	if (site && site.pos.getRangeTo(this.pos) <= 5) {
 		stompingCreeps[this.id] = true;
 		return true;
 	}

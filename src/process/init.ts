@@ -5,9 +5,9 @@ import RoomPlanner from 'room-planner';
 import RoomManager from 'room-manager';
 import Squad from 'manager.squad';
 
-import Operation from 'operation';
-import MiningOperation from 'operation.remote-mining';
-import RoomOperation from 'operation.room';
+import Operation from 'operation/operation';
+import MiningOperation from 'operation/remote-mining';
+import RoomOperation from 'operation/room';
 
 declare global {
 	interface Game {

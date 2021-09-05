@@ -15,7 +15,7 @@ import ManageSpawnsProcess from 'process/rooms/owned/spawns';
 import Process from 'process/process';
 import RoomDefenseProcess from 'process/rooms/owned/defense';
 import RoomManagerProcess from 'process/rooms/owned/manager';
-import RoomOperation from 'operation.room';
+import RoomOperation from 'operation/room';
 import RoomSongsProcess from 'process/rooms/owned/songs';
 
 const gatherStats = true;

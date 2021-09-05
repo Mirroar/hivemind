@@ -1,5 +1,3 @@
-'use strict';
-
 /* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
 
 import SpawnRole from 'spawn-role/spawn-role';

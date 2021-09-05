@@ -8,7 +8,7 @@ declare global {
 
 import utilities from 'utilities';
 import SpawnRole from 'spawn-role/spawn-role';
-import RemoteMiningOperation from 'operation.remote-mining';
+import RemoteMiningOperation from 'operation/remote-mining';
 
 export default class HaulerSpawnRole extends SpawnRole {
 	/**

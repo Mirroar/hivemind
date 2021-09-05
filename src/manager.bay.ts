@@ -10,7 +10,7 @@ declare global {
 
 type AnyBayStructure = typeof bayStructures[number];
 
-import cache from 'cache';
+import cache from 'utils/cache';
 import utilities from 'utilities';
 
 const bayStructures = [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_LINK, STRUCTURE_CONTAINER];

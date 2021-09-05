@@ -8,7 +8,7 @@ declare global {
 }
 
 import hivemind from 'hivemind';
-import Operation from 'operation';
+import Operation from 'operation/operation';
 
 // @todo Evacuate room when walls are breached, or when spawns are gone, ...
 // @todo Destroy terminal and storage if not hope of recovery, then unclaim

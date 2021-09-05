@@ -19,7 +19,7 @@ declare global {
 	}
 }
 
-import cache from 'cache';
+import cache from 'utils/cache';
 
 /**
  * Collects available boosts in a room, optionally filtered by effect.

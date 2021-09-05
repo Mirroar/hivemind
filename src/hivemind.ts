@@ -3,12 +3,12 @@
 /* global RoomVisual PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT
 PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 
-import Logger from 'debug';
+import Logger from 'utils/debug';
 import Relations from 'relations';
 import RoomIntel from 'room-intel';
-import SegmentedMemory from 'segmented-memory';
+import SegmentedMemory from 'utils/segmented-memory';
 import SettingsManager from 'settings-manager';
-import stats from 'stats';
+import stats from 'utils/stats';
 import utilities from 'utilities';
 
 const PROCESS_PRIORITY_LOW = 1;

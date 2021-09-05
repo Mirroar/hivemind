@@ -2,9 +2,9 @@
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
 import hivemind from 'hivemind';
-import cache from 'cache';
-import NavMesh from 'nav-mesh';
-import {unpackCoordAsPos} from 'packrat';
+import cache from 'utils/cache';
+import NavMesh from 'utils/nav-mesh';
+import {unpackCoordAsPos} from 'utils/packrat';
 import SpawnRole from 'spawn-role/spawn-role';
 
 export default class PowerHarvesterSpawnRole extends SpawnRole {

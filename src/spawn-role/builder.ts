@@ -1,6 +1,6 @@
 /* global FIND_MY_CONSTRUCTION_SITES FIND_MY_STRUCTURES MOVE WORK CARRY */
 
-import cache from 'cache';
+import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 
 export default class BuilderSpawnRole extends SpawnRole {

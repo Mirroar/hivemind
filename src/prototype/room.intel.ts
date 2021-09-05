@@ -33,7 +33,7 @@ declare global {
 }
 
 import Bay from 'manager.bay';
-import cache from 'cache';
+import cache from 'utils/cache';
 import Exploit from 'manager.exploit';
 import RoomDefense from 'room-defense';
 import utilities from 'utilities';

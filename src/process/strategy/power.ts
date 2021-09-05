@@ -2,7 +2,7 @@
 CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN */
 
 import hivemind from 'hivemind';
-import NavMesh from 'nav-mesh';
+import NavMesh from 'utils/nav-mesh';
 import Process from 'process/process';
 
 export default class PowerMiningProcess extends Process {
