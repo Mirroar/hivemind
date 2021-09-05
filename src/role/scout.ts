@@ -16,10 +16,10 @@ declare global {
 
 	interface ScoutCreepHeapMemory extends CreepHeapMemory {
 		moveWithoutNavMesh?: boolean,
-		_roomHistory: string[],
-		_posHistory: string[],
-		_lastPos: string,
-		_stuckCount: number,
+		roomHistory: string[],
+		posHistory: string[],
+		lastPos: string,
+		stuckCount: number,
 	}
 }
 
@@ -185,11 +185,11 @@ export default class ScoutRole extends Role {
 	}
 
 	isOscillating(creep: ScoutCreep) {
-		if (!creep.heapMemory._roomHistory) creep.heapMemory._roomHistory = [];
-		const history = creep.heapMemory._roomHistory;
+		if (!creep.heapMemory.roomHistory) creep.heapMemory.roomHistory = [];
+		const history = creep.heapMemory.roomHistory;
 
 		if (history.length === 0 || history[history.length - 1] !== creep.pos.roomName) history.push(creep.pos.roomName);
-		if (history.length > 20) creep.heapMemory._roomHistory = history.slice(-10);
+		if (history.length > 20) creep.heapMemory.roomHistory = history.slice(-10);
 
 		if (
 			history.length >= 10 &&
@@ -202,7 +202,7 @@ export default class ScoutRole extends Role {
 			history[history.length - 7] === history[history.length - 9] &&
 			history[history.length - 8] === history[history.length - 10]
 		) {
-			delete creep.heapMemory._roomHistory;
+			delete creep.heapMemory.roomHistory;
 			return true;
 		}
 
@@ -210,14 +210,14 @@ export default class ScoutRole extends Role {
 	}
 
 	isTileOscillating(creep: ScoutCreep) {
-		if (!creep.heapMemory._posHistory) creep.heapMemory._posHistory = [];
-		const history = creep.heapMemory._posHistory;
+		if (!creep.heapMemory.posHistory) creep.heapMemory.posHistory = [];
+		const history = creep.heapMemory.posHistory;
 		const pos = utilities.encodePosition(creep.pos);
 
 		if (history.length === 0 || history[history.length - 1] !== pos) history.push(pos);
-		if (history.length > 30) creep.heapMemory._posHistory = history.slice(-20);
+		if (history.length > 30) creep.heapMemory.posHistory = history.slice(-20);
 		if (_.filter(history, v => v === pos).length >= 5) {
-			delete creep.heapMemory._posHistory;
+			delete creep.heapMemory.posHistory;
 			return true;
 		}
 
@@ -227,13 +227,13 @@ export default class ScoutRole extends Role {
 	isStuck(creep: ScoutCreep) {
 		const pos = utilities.encodePosition(creep.pos);
 
-		if (!creep.heapMemory._lastPos || creep.heapMemory._lastPos !== pos) {
-			creep.heapMemory._lastPos = pos;
-			creep.heapMemory._stuckCount = 1;
+		if (!creep.heapMemory.lastPos || creep.heapMemory.lastPos !== pos) {
+			creep.heapMemory.lastPos = pos;
+			creep.heapMemory.stuckCount = 1;
 			return false;
 		}
 
-		if (creep.heapMemory._stuckCount++ < 10) return false;
+		if (creep.heapMemory.stuckCount++ < 10) return false;
 
 		return true;
 	}
