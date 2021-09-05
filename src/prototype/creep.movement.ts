@@ -4,6 +4,7 @@ LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 declare global {
 	interface Creep {
 		moveToRange,
+		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void,
 		setCachedPath,
 		getCachedPath,
 		hasCachedPath,
@@ -29,6 +30,7 @@ declare global {
 
 	interface PowerCreep {
 		moveToRange,
+		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void,
 		setCachedPath,
 		getCachedPath,
 		hasCachedPath,
@@ -75,6 +77,22 @@ Creep.prototype.moveToRange = function (target, range, options?: any) {
 	if (!options) options = {};
 	options.range = range;
 	return this.goTo(target, options);
+};
+
+/**
+ * Ensures that the creep is in range before performing an operation.
+ */
+Creep.prototype.whenInRange = function (range, target, callback) {
+	if (target instanceof RoomObject) {
+		target = target.pos;
+	}
+
+	if (this.pos.getRangeTo(target) > range) {
+		this.moveToRange(target, range);
+		return;
+	}
+
+	callback();
 };
 
 /**
@@ -676,6 +694,7 @@ Creep.prototype.stopNavMeshMove = function () {
 };
 
 PowerCreep.prototype.moveToRange = Creep.prototype.moveToRange;
+PowerCreep.prototype.whenInRange = Creep.prototype.whenInRange;
 PowerCreep.prototype.setCachedPath = Creep.prototype.setCachedPath;
 PowerCreep.prototype.getCachedPath = Creep.prototype.getCachedPath;
 PowerCreep.prototype.hasCachedPath = Creep.prototype.hasCachedPath;
