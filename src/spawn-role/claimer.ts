@@ -30,7 +30,7 @@ export default class ClaimerSpawnRole extends SpawnRole {
 			// @todo Or in any room on the route, actually.
 			if (!operation || operation.isUnderAttack() || operation.needsDismantler()) continue;
 
-			const claimers = _.filter(Game.creepsByRole.claimer || {}, creep => creep.memory.mission === 'reserve' && creep.memory.target === utilities.encodePosition(pos));
+			const claimers = _.filter(Game.creepsByRole.claimer || {}, (creep: ClaimerCreep) => creep.memory.mission === 'reserve' && creep.memory.target === utilities.encodePosition(pos));
 			if (_.size(claimers) > 0) continue;
 
 			const roomMemory = Memory.rooms[pos.roomName];
@@ -82,8 +82,9 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room, option): ClaimerCreepMemory {
 		return {
+			role: 'claimer',
 			target: utilities.encodePosition(option.targetPos),
 			mission: 'reserve',
 			// The creep might not belong to a mining operation, but there's no harm

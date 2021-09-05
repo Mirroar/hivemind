@@ -8,7 +8,6 @@ declare global {
 
 	interface ScoutCreepMemory extends CreepMemory {
 		role: 'scout',
-		disableNotifications?: boolean,
 		scoutTarget?: string,
 		portalTarget?: string,
 		invalidScoutTargets?: string[],

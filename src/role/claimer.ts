@@ -1,5 +1,21 @@
 /* global OK */
 
+declare global {
+	interface ClaimerCreep extends Creep {
+		memory: ClaimerCreepMemory,
+		heapMemory: ClaimerCreepHeapMemory,
+	}
+
+	interface ClaimerCreepMemory extends CreepMemory {
+		role: 'claimer',
+		mission: 'claim' | 'reserve',
+		target: string,
+	}
+
+	interface ClaimerCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import Role from 'role/role';
@@ -19,7 +35,7 @@ export default class ClaimerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: ClaimerCreep) {
 		if (this.moveToTargetRoom(creep)) return;
 
 		if (creep.memory.mission === 'reserve') {
@@ -39,7 +55,7 @@ export default class ClaimerRole extends Role {
 	 * @return {boolean}
 	 *   True if the creep is still busy moving towards the target room.
 	 */
-	moveToTargetRoom(creep) {
+	moveToTargetRoom(creep: ClaimerCreep) {
 		const targetPosition = utilities.decodePosition(creep.memory.target);
 		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
@@ -63,38 +79,27 @@ export default class ClaimerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performClaim(creep) {
-		const targetPosition = utilities.decodePosition(creep.memory.target);
-
-		if (targetPosition.roomName !== creep.pos.roomName) {
-			creep.moveTo(targetPosition);
-			return;
-		}
-
+	performClaim(creep: ClaimerCreep) {
 		const target = creep.room.controller;
+		if (target.my) return;
 
-		if (target.owner && !target.my && creep.memory.body && creep.memory.body.claim >= 5) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveTo(target);
+		creep.whenInRange(1, target, () => {
+			if (target.owner || (target.reservation && target.reservation.username !== utilities.getUsername())) {
+				creep.attackController(target);
+				return;
 			}
-			else {
-				creep.claimController(target);
-			}
-		}
-		else if (!target.my) {
+
+			// @todo Use intershard info for determining number of rooms available.
 			const numRooms = _.size(_.filter(Game.rooms, room => room.isMine()));
 			const maxRooms = Game.gcl.level;
 
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveTo(target);
-			}
-			else if (numRooms < maxRooms) {
+			if (numRooms < maxRooms) {
 				creep.claimController(target);
 			}
 			else {
 				creep.reserveController(target);
 			}
-		}
+		});
 	}
 
 	/**
@@ -103,19 +108,10 @@ export default class ClaimerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performReserve(creep) {
-		const targetPosition = utilities.decodePosition(creep.memory.target);
-		if (targetPosition.roomName !== creep.pos.roomName) {
-			creep.moveToRange(targetPosition, 1);
-			return;
-		}
-
+	performReserve(creep: ClaimerCreep) {
 		const target = creep.room.controller;
 
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
+		creep.whenInRange(1, target, () => {
 			if (creep.room.controller.reservation && creep.room.controller.reservation.username !== utilities.getUsername()) {
 				creep.attackController(target);
 				return;
@@ -137,6 +133,6 @@ export default class ClaimerRole extends Role {
 			if (target.sign && target.sign.username) {
 				creep.signController(target, '');
 			}
-		}
+		});
 	}
 }

@@ -1,5 +1,8 @@
 declare global {
 	interface CreepMemory {
+		disableNotifications?: boolean,
+		operation?: string,
+
 		blockedPathCounter?: any,
 		body?: any,
 		building?: any,
@@ -14,7 +17,6 @@ declare global {
 		harvestPos?: any,
 		isHealer?: any,
 		isReturning?: any,
-		mission?: any,
 		noHarvestPos?: any,
 		order?: any,
 		origin?: any,
