@@ -1,5 +1,19 @@
 /* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
+declare global {
+	interface GuardianCreep extends Creep {
+		memory: GuardianCreepMemory,
+		heapMemory: GuardianCreepHeapMemory,
+	}
+
+	interface GuardianCreepMemory extends CreepMemory {
+		role: 'guardian',
+	}
+
+	interface GuardianCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
 import hivemind from 'hivemind';
 import Role from 'role/role';
 
@@ -20,17 +34,14 @@ export default class GuardianRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep: Creep) {
+	run(creep: GuardianCreep) {
 		const rampart = this.getBestRampartToCover(creep);
+		if (!rampart) return;
 
-		if (creep.pos.getRangeTo(rampart.pos) > 0) {
-			creep.goTo(rampart.pos);
-		}
-
-		this.attackTargetsInRange(creep);
+		creep.whenInRange(0, rampart, () => this.attackTargetsInRange(creep));
 	}
 
-	getBestRampartToCover(creep: Creep): StructureRampart {
+	getBestRampartToCover(creep: GuardianCreep): StructureRampart {
 		// @todo Make sure we can find a safe path to the rampart in question.
 		const targets = creep.room.find(FIND_HOSTILE_CREEPS, {
 			filter: filterEnemyCreeps,
@@ -57,13 +68,23 @@ export default class GuardianRole extends Role {
 		})));
 	}
 
-	attackTargetsInRange(creep: Creep) {
+	attackTargetsInRange(creep: GuardianCreep) {
 		// @todo Ask military manager for best target for joint attacks.
-		const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
-			filter: filterEnemyCreeps,
-		});
-		if (targets.length === 0) return;
+		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
+			const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
+				filter: filterEnemyCreeps,
+			});
+			if (targets.length === 0) return;
 
-		creep.attack(targets[0]);
+			creep.rangedAttack(targets[0]);
+		}
+		if (creep.getActiveBodyparts(ATTACK) > 0) {
+			const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
+				filter: filterEnemyCreeps,
+			});
+			if (targets.length === 0) return;
+
+			creep.attack(targets[0]);
+		}
 	}
 };

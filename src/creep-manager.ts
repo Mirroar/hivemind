@@ -2,6 +2,7 @@ declare global {
 	interface CreepMemory {
 		disableNotifications?: boolean,
 		operation?: string,
+		singleRoom?: string,
 
 		blockedPathCounter?: any,
 		body?: any,
