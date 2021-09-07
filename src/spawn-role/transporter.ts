@@ -63,7 +63,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 			maxTransporters = Math.max(maxTransporters, 3);
 		}
 
-		if (room.isClearingTerminal() && room.terminal && _.sum(room.terminal.store) > room.terminal.storeCapacity * 0.01) {
+		if (room.isClearingTerminal() && room.terminal && room.terminal.store.getUsedCapacity() > room.terminal.store.getCapacity() * 0.01) {
 			maxTransporters *= 1.5;
 		}
 

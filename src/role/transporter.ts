@@ -42,10 +42,10 @@ export default class TransporterRole extends Role {
 			}
 		}
 
-		if (_.sum(creep.carry) >= creep.carryCapacity * 0.9 && !creep.memory.delivering) {
+		if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9 && !creep.memory.delivering) {
 			this.setTransporterState(true);
 		}
-		else if (_.sum(creep.carry) <= creep.carryCapacity * 0.1 && creep.memory.delivering) {
+		else if (creep.store.getUsedCapacity() <= creep.store.getFreeCapacity() * 0.1 && creep.memory.delivering) {
 			this.setTransporterState(false);
 		}
 
@@ -214,7 +214,7 @@ export default class TransporterRole extends Role {
 		if (!creep.memory.deliverTarget) return false;
 
 		const resourceType = creep.memory.order && creep.memory.order.resourceType;
-		if ((creep.carry[resourceType] || 0) <= 0) return false;
+		if ((creep.store[resourceType] || 0) <= 0) return false;
 
 		if (typeof creep.memory.deliverTarget === 'string') {
 			return this.ensureValidDeliveryTargetObject(Game.getObjectById(creep.memory.deliverTarget), resourceType);
@@ -265,7 +265,7 @@ export default class TransporterRole extends Role {
 			};
 		}
 		else if (best.type === 'drop') {
-			creep.drop(best.resourceType, creep.carry[best.resourceType]);
+			creep.drop(best.resourceType, creep.store[best.resourceType]);
 		}
 		else {
 			creep.memory.deliverTarget = best.object.id;
@@ -290,7 +290,7 @@ export default class TransporterRole extends Role {
 
 		const terminal = creep.room.terminal;
 
-		if (creep.carry.energy > creep.carryCapacity * 0.1) {
+		if (creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1) {
 			this.addSpawnBuildingDeliveryOptions(options);
 			this.addContainerEnergyDeliveryOptions(options);
 			this.addTowerDeliveryOptions(options);
@@ -299,13 +299,13 @@ export default class TransporterRole extends Role {
 			this.addLinkDeliveryOptions(options);
 		}
 
-		for (const resourceType of _.keys(creep.carry)) {
+		for (const resourceType of _.keys(creep.store)) {
 			// If it's needed for transferring, store in terminal.
-			if (resourceType === creep.room.memory.fillTerminal && creep.carry[resourceType] > 0 && !creep.room.isClearingTerminal()) {
+			if (resourceType === creep.room.memory.fillTerminal && creep.store[resourceType] > 0 && !creep.room.isClearingTerminal()) {
 				if (terminal && ((terminal.store[resourceType] || 0) < (creep.room.memory.fillTerminalAmount || 10000)) && terminal.store.getFreeCapacity() > 0) {
 					const option = {
 						priority: 4,
-						weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 						type: 'structure',
 						object: terminal,
 						resourceType,
@@ -327,7 +327,7 @@ export default class TransporterRole extends Role {
 
 				options.push({
 					priority: 4,
-					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 					type: 'structure',
 					object: terminal,
 					resourceType,
@@ -335,15 +335,15 @@ export default class TransporterRole extends Role {
 			});
 
 			// The following only concerns resources other than energy.
-			if (resourceType === RESOURCE_ENERGY || creep.carry[resourceType] <= 0) continue;
+			if (resourceType === RESOURCE_ENERGY || creep.store[resourceType] <= 0) continue;
 
-			const storageTarget = creep.room.getBestStorageTarget(creep.carry[resourceType], resourceType);
+			const storageTarget = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
 
 			// If there is space left, store in storage.
-			if (storageTarget && _.sum(storageTarget.store) < storageTarget.storeCapacity) {
+			if (storageTarget && storageTarget.store.getUsedCapacity() < storageTarget.store.getCapacity()) {
 				options.push({
 					priority: 1,
-					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 					type: 'structure',
 					object: storageTarget,
 					resourceType,
@@ -385,11 +385,11 @@ export default class TransporterRole extends Role {
 		});
 
 		for (const target of targets) {
-			const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
+			const canDeliver = Math.min(creep.store[RESOURCE_ENERGY], target.energyCapacity - target.energy);
 
 			const option = {
 				priority: 5,
-				weight: canDeliver / creep.carryCapacity,
+				weight: canDeliver / creep.store.getCapacity(),
 				type: 'structure',
 				object: target,
 				resourceType: RESOURCE_ENERGY,
@@ -408,11 +408,11 @@ export default class TransporterRole extends Role {
 			if (target.energy >= target.energyCapacity) continue;
 			if (target.hasHarvester()) continue;
 
-			const canDeliver = Math.min(creep.carry.energy, target.energyCapacity - target.energy);
+			const canDeliver = Math.min(creep.store[RESOURCE_ENERGY], target.energyCapacity - target.energy);
 
 			const option = {
 				priority: 5,
-				weight: canDeliver / creep.carryCapacity,
+				weight: canDeliver / creep.store.getCapacity(),
 				type: 'bay',
 				object: target,
 				resourceType: RESOURCE_ENERGY,
@@ -435,7 +435,7 @@ export default class TransporterRole extends Role {
 		const room: Room = this.creep.room;
 		const targets = room.find<StructureContainer>(FIND_STRUCTURES, {
 			filter: structure => {
-				if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.energy >= structure.storeCapacity) return false;
+				if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.energy >= structure.store.getCapacity()) return false;
 
 				// Do deliver to controller containers when it is needed.
 				if (structure.id === structure.room.memory.controllerContainer) {
@@ -467,17 +467,17 @@ export default class TransporterRole extends Role {
 		for (const target of targets) {
 			const option = {
 				priority: 4,
-				weight: (target.storeCapacity - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
+				weight: (target.store.getCapacity() - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
 				type: 'structure',
 				object: target,
 				resourceType: RESOURCE_ENERGY,
 			};
 
 			let prioFactor = 1;
-			if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.5) {
+			if (target.store[RESOURCE_ENERGY] / target.store.getCapacity() > 0.5) {
 				prioFactor = 2;
 			}
-			else if (target.store[RESOURCE_ENERGY] / target.storeCapacity > 0.75) {
+			else if (target.store[RESOURCE_ENERGY] / target.store.getCapacity() > 0.75) {
 				prioFactor = 3;
 			}
 
@@ -569,7 +569,7 @@ export default class TransporterRole extends Role {
 	addStorageEnergyDeliveryOptions(options) {
 		const creep = this.creep;
 		// Put in storage if nowhere else needs it.
-		const storageTarget = creep.room.getBestStorageTarget(creep.carry.energy, RESOURCE_ENERGY);
+		const storageTarget = creep.room.getBestStorageTarget(creep.store[RESOURCE_ENERGY], RESOURCE_ENERGY);
 		if (storageTarget) {
 			options.push({
 				priority: 0,
@@ -645,7 +645,7 @@ export default class TransporterRole extends Role {
 			for (const target of targets) {
 				options.push({
 					priority: 2,
-					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 					type: 'structure',
 					object: target,
 					resourceType,
@@ -658,7 +658,7 @@ export default class TransporterRole extends Role {
 			if (creep.room.powerSpawn.power < creep.room.powerSpawn.powerCapacity * 0.1) {
 				options.push({
 					priority: 4,
-					weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 					type: 'structure',
 					object: creep.room.powerSpawn,
 					resourceType,
@@ -683,7 +683,7 @@ export default class TransporterRole extends Role {
 				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
 					options.push({
 						priority: 4,
-						weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 						type: 'structure',
 						object: lab,
 						resourceType,
@@ -696,7 +696,7 @@ export default class TransporterRole extends Role {
 				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.mineralAmount < lab.mineralCapacity * 0.8) {
 					options.push({
 						priority: 4,
-						weight: creep.carry[resourceType] / 100, // @todo Also factor in distance.
+						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
 						type: 'structure',
 						object: lab,
 						resourceType,
@@ -721,7 +721,7 @@ export default class TransporterRole extends Role {
 		if (!target) return false;
 		if (this.creep.memory.singleRoom && target.pos.roomName !== this.creep.memory.singleRoom) return false;
 
-		if (target.store && _.sum(target.store) < target.storeCapacity) return true;
+		if (target.store && target.store.getFreeCapacity() > 0) return true;
 		if (resourceType === RESOURCE_ENERGY && target.energyCapacity && target.energy < target.energyCapacity) return true;
 		if (resourceType === RESOURCE_GHODIUM && target.ghodiumCapacity && target.ghodium < target.ghodiumCapacity) return true;
 		if (resourceType === RESOURCE_POWER && target.powerCapacity && target.power < target.powerCapacity) return true;
@@ -1029,7 +1029,7 @@ export default class TransporterRole extends Role {
 		// Look for energy in Containers.
 		const targets = creep.room.find<StructureContainer>(FIND_STRUCTURES, {
 			filter: structure => {
-				return (structure.structureType === STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > creep.carryCapacity * 0.1;
+				return (structure.structureType === STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1;
 			},
 		});
 

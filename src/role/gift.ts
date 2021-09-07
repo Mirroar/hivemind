@@ -16,7 +16,7 @@ export default class GiftRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep) {
-		if (_.sum(creep.carry) >= creep.carryCapacity * 0.95) {
+		if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.95) {
 			// If we're (nearly) full, embark.
 			this.performGiftTransport(creep);
 			return;

@@ -21,10 +21,10 @@ export default class HaulerRole extends Role {
 	run(creep) {
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		if (creep.memory.delivering && creep.carry.energy === 0) {
+		if (creep.memory.delivering && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setHaulerState(creep, false);
 		}
-		else if (!creep.memory.delivering && _.sum(creep.carry) >= creep.carryCapacity * 0.9) {
+		else if (!creep.memory.delivering && creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9) {
 			this.setHaulerState(creep, true);
 		}
 
@@ -97,7 +97,7 @@ export default class HaulerRole extends Role {
 		}
 
 		// @todo If no storage is available, use default delivery method.
-		if (!target || creep.carry.energy > target.store.getFreeCapacity()) {
+		if (!target || creep.store[RESOURCE_ENERGY] > target.store.getFreeCapacity()) {
 			// Storage structure is full, drop energy instead.
 			const storageLocation = creep.room.getStorageLocation();
 			if (!storageLocation) {

@@ -48,10 +48,10 @@ export default class BuilderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep) {
-		if (creep.memory.repairing && creep.carry.energy === 0) {
+		if (creep.memory.repairing && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setBuilderState(creep, false);
 		}
-		else if (!creep.memory.repairing && _.sum(creep.carry) >= creep.carryCapacity * 0.9) {
+		else if (!creep.memory.repairing && creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9) {
 			this.setBuilderState(creep, true);
 		}
 
@@ -382,7 +382,7 @@ export default class BuilderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	repairNearby(creep) {
-		if (creep.carry.energy < creep.carryCapacity * 0.7 && creep.carry.energy > creep.carryCapacity * 0.3) return;
+		if (creep.store[RESOURCE_ENERGY] < creep.store.getCapacity() * 0.7 && creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.3) return;
 		if (utilities.throttle(creep.memory._tO)) return;
 
 		const workParts = creep.memory.body.work;

@@ -288,7 +288,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.fillWithEnergy) {
-			if (_.sum(creep.carry) < creep.carryCapacity) {
+			if (creep.store.getFreeCapacity() > 0) {
 				this.transporterRole.performGetEnergy(creep);
 				return;
 			}

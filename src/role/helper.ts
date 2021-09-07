@@ -17,10 +17,10 @@ export default class HelperRole extends Role {
 
 		const orders = creep.room.boostManager.getLabOrders();
 
-		if (creep.memory.delivering && _.sum(creep.carry) === 0) {
+		if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
 			this.setHelperState(creep, false);
 		}
-		else if (!creep.memory.delivering && _.sum(creep.carry) === creep.carryCapacity) {
+		else if (!creep.memory.delivering && creep.store.getFreeCapacity() === 0) {
 			this.setHelperState(creep, true);
 		}
 
@@ -88,7 +88,7 @@ export default class HelperRole extends Role {
 				if (creep.memory.delivering) {
 					// Put everything away.
 					let target = terminal;
-					if (storage && _.sum(storage.store) + _.sum(creep.carry) < storage.storeCapacity) {
+					if (storage && storage.store.getUsedCapacity() + creep.store.getUsedCapacity() < storage.store.getCapacity()) {
 						target = storage;
 					}
 
@@ -129,10 +129,10 @@ export default class HelperRole extends Role {
 		if (this.performHelperLabDeliver(creep, orders)) return;
 
 		// Nothing to do, store excess energy in labs.
-		if (creep.carry.energy > 0) {
+		if (creep.store[RESOURCE_ENERGY] > 0) {
 			const labs = creep.room.getBoostLabs();
 			for (const lab of labs) {
-				if (lab.energy + creep.carry.energy <= lab.energyCapacity) {
+				if (lab.energy + creep.store[RESOURCE_ENERGY] <= lab.energyCapacity) {
 					if (creep.pos.getRangeTo(lab) > 1) {
 						creep.moveToRange(lab, 1);
 					}
@@ -146,9 +146,9 @@ export default class HelperRole extends Role {
 		}
 
 		// Nothing to do, store excess energy in terminal.
-		if (creep.carry.energy > 0 && storage && terminal && !creep.room.isClearingTerminal()) {
+		if (creep.store[RESOURCE_ENERGY] > 0 && storage && terminal && !creep.room.isClearingTerminal()) {
 			if (terminal.store.energy < storage.store.energy * 0.05) {
-				if (_.sum(terminal.store) + creep.carry.energy <= terminal.storeCapacity) {
+				if (terminal.store.getUsedCapacity() + creep.store[RESOURCE_ENERGY] <= terminal.store.getCapacity()) {
 					if (creep.pos.getRangeTo(terminal) > 1) {
 						creep.moveToRange(terminal, 1);
 					}
@@ -163,7 +163,7 @@ export default class HelperRole extends Role {
 
 		// Store anything else in storage or terminal.
 		let target = terminal;
-		if (storage && (!creep.room.isClearingTerminal() || _.sum(storage.store) + _.sum(creep.carry) < storage.storeCapacity)) {
+		if (storage && (!creep.room.isClearingTerminal() || storage.store.getUsedCapacity() + creep.store.getUsedCapacity() < storage.store.getCapacity())) {
 			target = storage;
 		}
 
@@ -193,14 +193,14 @@ export default class HelperRole extends Role {
 
 			const resourceType = orders[id].resourceType;
 
-			if (creep.carry[resourceType] && creep.carry[resourceType] > 0) {
+			if (creep.store[resourceType] && creep.store[resourceType] > 0) {
 				const diff = orders[id].resourceAmount - (lab.mineralAmount || 0);
 				if (diff > 0) {
 					if (creep.pos.getRangeTo(lab) > 1) {
 						creep.moveToRange(lab, 1);
 					}
 					else {
-						const amount = Math.min(diff, creep.carry[resourceType]);
+						const amount = Math.min(diff, creep.store[resourceType]);
 
 						creep.transfer(lab, resourceType, amount);
 					}
@@ -209,14 +209,14 @@ export default class HelperRole extends Role {
 				}
 			}
 
-			if (creep.carry[RESOURCE_ENERGY] && creep.carry[RESOURCE_ENERGY] > 0) {
+			if (creep.store[RESOURCE_ENERGY] && creep.store[RESOURCE_ENERGY] > 0) {
 				const diff = orders[id].energyAmount - (lab.energy || 0);
 				if (diff > 0) {
 					if (creep.pos.getRangeTo(lab) > 1) {
 						creep.moveToRange(lab, 1);
 					}
 					else {
-						const amount = Math.min(diff, creep.carry[RESOURCE_ENERGY]);
+						const amount = Math.min(diff, creep.store[RESOURCE_ENERGY]);
 
 						creep.transfer(lab, RESOURCE_ENERGY, amount);
 					}
@@ -246,7 +246,7 @@ export default class HelperRole extends Role {
 		// Get energy to fill labs when needed.
 		const labs = creep.room.getBoostLabs();
 		for (const lab of labs) {
-			if (lab.energy + creep.carryCapacity > lab.energyCapacity) continue;
+			if (lab.energy + creep.store.getCapacity() > lab.energyCapacity) continue;
 
 			const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 
@@ -275,7 +275,7 @@ export default class HelperRole extends Role {
 		}
 
 		// If we got here, there's nothing left to gather. Deliver what we have stored.
-		if (_.sum(creep.carry) > 0) {
+		if (creep.store.getUsedCapacity() > 0) {
 			this.setHelperState(creep, true);
 		}
 
@@ -302,7 +302,7 @@ export default class HelperRole extends Role {
 
 			const resourceType = order.resourceType;
 
-			let diff = order.resourceAmount - (creep.carry[resourceType] || 0) - (lab.mineralAmount || 0);
+			let diff = order.resourceAmount - (creep.store[resourceType] || 0) - (lab.mineralAmount || 0);
 			if (diff > 0) {
 				const target = creep.room.getBestStorageSource(resourceType);
 				if (creep.pos.getRangeTo(target) > 1) {
@@ -322,7 +322,7 @@ export default class HelperRole extends Role {
 						return true;
 					}
 
-					let amount = Math.min(diff, creep.carryCapacity - _.sum(creep.carry));
+					let amount = Math.min(diff, creep.store.getFreeCapacity());
 					amount = Math.min(amount, target.store[resourceType]);
 					creep.withdraw(target, resourceType, amount);
 				}
@@ -330,7 +330,7 @@ export default class HelperRole extends Role {
 				return true;
 			}
 
-			diff = order.energyAmount - (creep.carry[RESOURCE_ENERGY] || 0) - (lab.energy || 0);
+			diff = order.energyAmount - (creep.store[RESOURCE_ENERGY] || 0) - (lab.energy || 0);
 			if (diff <= 0) continue;
 
 			const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
@@ -338,7 +338,7 @@ export default class HelperRole extends Role {
 				creep.moveToRange(target, 1);
 			}
 			else {
-				const amount = Math.min(diff, creep.carryCapacity - _.sum(creep.carry));
+				const amount = Math.min(diff, creep.store.getFreeCapacity());
 
 				creep.withdraw(target, RESOURCE_ENERGY, amount);
 			}

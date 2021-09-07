@@ -23,11 +23,11 @@ export default class UpgraderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep) {
-		if (creep.memory.upgrading && creep.carry.energy === 0) {
+		if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setUpgraderState(creep, false);
 		}
 
-		if (!creep.memory.upgrading && (creep.carry.energy === creep.carryCapacity || (creep.carry.energy > 0 && creep.room.memory.controllerContainer))) {
+		if (!creep.memory.upgrading && (creep.store[RESOURCE_ENERGY] === creep.store.getCapacity() || (creep.store[RESOURCE_ENERGY] > 0 && creep.room.memory.controllerContainer))) {
 			this.setUpgraderState(creep, true);
 		}
 
@@ -67,7 +67,7 @@ export default class UpgraderRole extends Role {
 
 		// Keep syphoning energy from link or controller to ideally never stop upgrading.
 		// @todo Do it when energy is less than 2 ticks of upgrading.
-		if (allowRefilling && _.sum(creep.carry) < creep.carryCapacity * 0.5) {
+		if (allowRefilling && creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.5) {
 			let withdrawn = false;
 			if (creep.room.memory.controllerLink) {
 				const controllerLink = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
@@ -143,7 +143,7 @@ export default class UpgraderRole extends Role {
 		// Otherwise, get energy from anywhere.
 		this.transporterRole.performGetEnergy(creep);
 
-		if (creep.carry.energy > 0) {
+		if (creep.store[RESOURCE_ENERGY] > 0) {
 			this.setUpgraderState(creep, true);
 		}
 	}

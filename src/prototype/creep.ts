@@ -71,9 +71,9 @@ Object.defineProperty(Creep.prototype, 'operation', {
  *   Error codes as in Creep.transfer().
  */
 Creep.prototype.transferAny = function (target) {
-	for (const resourceType in this.carry) {
+	for (const resourceType in this.store) {
 		if (target.structureType === STRUCTURE_LINK && resourceType !== RESOURCE_ENERGY) continue;
-		if (this.carry[resourceType] > 0) {
+		if (this.store[resourceType] > 0) {
 			return this.transfer(target, resourceType);
 		}
 	}
@@ -88,8 +88,8 @@ Creep.prototype.transferAny = function (target) {
  *   Error codes as in Creep.drop().
  */
 Creep.prototype.dropAny = function () {
-	for (const resourceType in this.carry) {
-		if (this.carry[resourceType] > 0) {
+	for (const resourceType in this.store) {
+		if (this.store[resourceType] > 0) {
 			return this.drop(resourceType);
 		}
 	}

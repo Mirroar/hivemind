@@ -28,7 +28,7 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 
 			// Time to spawn haulers!
 			const powerHaulers = _.filter(Game.creepsByRole['hauler.power'] || {}, creep => creep.memory.targetRoom === roomName);
-			const totalCapacity = _.reduce(powerHaulers, (total, creep) => total + creep.carryCapacity, 0);
+			const totalCapacity = _.reduce(powerHaulers, (total, creep) => total + creep.store.getCapacity(), 0);
 
 			if (totalCapacity < info.amount * 1.2) {
 				options.push({

@@ -20,10 +20,10 @@ export default class DismantlerRole extends Role {
 			creep.memory.targetRoom = creep.pos.roomName;
 		}
 
-		if (creep.memory.dismantling && creep.carryCapacity > 0 && _.sum(creep.carry) >= creep.carryCapacity) {
+		if (creep.memory.dismantling && creep.store.getCapacity() > 0 && creep.store.getFreeCapacity() === 0) {
 			this.setDismantlerState(creep, false);
 		}
-		else if (!creep.memory.dismantling && _.sum(creep.carry) === 0) {
+		else if (!creep.memory.dismantling && creep.store.getUsedCapacity() === 0) {
 			this.setDismantlerState(creep, true);
 		}
 

@@ -234,7 +234,7 @@ export default class OperatorRole extends Role {
 		if (!this.creep.powers[PWR_OPERATE_STORAGE]) return;
 		if (this.creep.powers[PWR_OPERATE_STORAGE].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_STORAGE].cooldown > 0) return;
-		if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_STORAGE].ops) return;
+		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_STORAGE].ops) return;
 
 		const storage: StructureStorage = this.creep.room.storage;
 		if (!storage) return;
@@ -265,7 +265,7 @@ export default class OperatorRole extends Role {
 		if (!this.creep.powers[PWR_OPERATE_SPAWN]) return;
 		if (this.creep.powers[PWR_OPERATE_SPAWN].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_SPAWN].cooldown > 0) return;
-		if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_SPAWN].ops) return;
+		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_SPAWN].ops) return;
 
 		// @todo Make sure we're not waiting on energy.
 
@@ -310,7 +310,7 @@ export default class OperatorRole extends Role {
 		if (!this.creep.powers[PWR_OPERATE_EXTENSION]) return;
 		if (this.creep.powers[PWR_OPERATE_EXTENSION].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_EXTENSION].cooldown > 0) return;
-		if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_EXTENSION].ops) return;
+		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_EXTENSION].ops) return;
 
 		// Don't operate extensions if they're almost full anyways.
 		if (this.creep.room.energyAvailable > this.creep.room.energyCapacityAvailable * 0.8) return;
@@ -351,7 +351,7 @@ export default class OperatorRole extends Role {
 		if (!this.creep.powers[PWR_OPERATE_TOWER]) return;
 		if (this.creep.powers[PWR_OPERATE_TOWER].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_TOWER].cooldown > 0) return;
-		if ((this.creep.carry[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_TOWER].ops) return;
+		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_TOWER].ops) return;
 		if (this.creep.room.defense.getEnemyStrength() === 0) return;
 
 		const towers: StructureTower[] = this.creep.room.find<StructureTower>(FIND_MY_STRUCTURES, {
@@ -381,7 +381,7 @@ export default class OperatorRole extends Role {
 	 *   A list of potential power creep orders.
 	 */
 	addDepositOpsOptions(options) {
-		if (!this.creep.carry[RESOURCE_OPS]) return;
+		if (!this.creep.store[RESOURCE_OPS]) return;
 		if (this.creep.store.getUsedCapacity() < this.creep.store.getCapacity() * 0.9) return;
 
 		const storage = this.creep.room.getBestStorageTarget(RESOURCE_OPS);
@@ -402,7 +402,7 @@ export default class OperatorRole extends Role {
 	 *   A list of potential power creep orders.
 	 */
 	addRetrieveOpsOptions(options) {
-		if ((this.creep.carry[RESOURCE_OPS] || 0) > this.creep.carryCapacity * 0.1) return;
+		if ((this.creep.store[RESOURCE_OPS] || 0) > this.creep.store.getCapacity() * 0.1) return;
 
 		const storage = this.creep.room.getBestStorageSource(RESOURCE_OPS);
 		if (!storage) return;

@@ -40,7 +40,7 @@ import utilities from 'utilities';
 Room.prototype.getStorageLimit = function () {
 	let total = 0;
 	if (this.storage) {
-		total += this.storage.storeCapacity;
+		total += this.storage.store.getCapacity();
 	}
 	else {
 		// Assume 10000 storage for dropping stuff on the ground.
@@ -48,7 +48,7 @@ Room.prototype.getStorageLimit = function () {
 	}
 
 	if (this.terminal) {
-		total += this.terminal.storeCapacity;
+		total += this.terminal.store.getCapacity();
 	}
 
 	return total;
@@ -64,11 +64,11 @@ Room.prototype.getFreeStorage = function () {
 	// Determines amount of free space in storage.
 	let limit = this.getStorageLimit();
 	if (this.storage) {
-		limit -= _.sum(this.storage.store);
+		limit -= this.storage.store.getUsedCapacity();
 	}
 
 	if (this.terminal) {
-		limit -= _.sum(this.terminal.store);
+		limit -= this.terminal.store.getUsedCapacity();
 	}
 
 	return limit;
@@ -371,20 +371,20 @@ Room.prototype.getResourceState = function () {
  */
 Room.prototype.getBestStorageTarget = function (amount, resourceType) {
 	if (this.storage && this.terminal) {
-		const storageFree = this.storage.storeCapacity - _.sum(this.storage.store);
-		const terminalFree = this.terminal.storeCapacity - _.sum(this.terminal.store);
-		if (this.isEvacuating() && terminalFree > this.terminal.storeCapacity * 0.2) {
+		const storageFree = this.storage.store.getFreeCapacity();
+		const terminalFree = this.terminal.store.getFreeCapacity();
+		if (this.isEvacuating() && terminalFree > this.terminal.store.getCapacity() * 0.2) {
 			// If we're evacuating, store everything in terminal to be sent away.
 			return this.terminal;
 		}
 
-		if (this.isClearingTerminal() && storageFree > this.storage.storeCapacity * 0.2) {
+		if (this.isClearingTerminal() && storageFree > this.storage.store.getCapacity() * 0.2) {
 			// If we're clearing out the terminal, put everything into storage.
 			return this.storage;
 		}
 
 		if (!resourceType) {
-			if (_.sum(this.storage.store) / this.storage.storeCapacity < _.sum(this.terminal.store) / this.terminal.storeCapacity) {
+			if (this.storage.store.getUsedCapacity() / this.storage.store.getCapacity() < this.terminal.store.getUsedCapacity() / this.terminal.store.getCapacity()) {
 				return this.storage;
 			}
 
@@ -430,7 +430,7 @@ Room.prototype.getBestStorageSource = function (resourceType) {
 		const specialSource = this.getBestCircumstancialStorageSource(resourceType);
 		if (specialSource) return specialSource;
 
-		if ((this.storage.store[resourceType] || 0) / this.storage.storeCapacity < (this.terminal.store[resourceType]) / this.terminal.storeCapacity) {
+		if ((this.storage.store[resourceType] || 0) / this.storage.store.getCapacity() < (this.terminal.store[resourceType]) / this.terminal.store.getCapacity()) {
 			if (this.memory.fillTerminal !== resourceType) {
 				return this.terminal;
 			}
@@ -474,7 +474,7 @@ Room.prototype.getBestCircumstancialStorageSource = function (resourceType) {
 	}
 
 	if (primarySource) {
-		const secondaryFull = _.sum(secondarySource.store) > secondarySource.storeCapacity * 0.8;
+		const secondaryFull = secondarySource.store.getUsedCapacity() > secondarySource.store.getCapacity() * 0.8;
 
 		if (primarySource.store[resourceType] && (!secondaryFull || !secondarySource.store[resourceType])) {
 			return primarySource;
