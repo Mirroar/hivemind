@@ -19,7 +19,7 @@ export default class MapVisualsProcess extends Process {
 	 * Creates map visuals for our empire.
 	 */
 	run() {
-		if (!enableMapVisuals) return;
+		if (!enableMapVisuals || !Game.map.visual) return;
 
 		let drawn = false;
 		const visuals = cache.inHeap('map-visuals', 10, () => {
