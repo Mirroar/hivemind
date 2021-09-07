@@ -433,15 +433,29 @@ export default class RoomPlanner {
 		const controllerPosition = roomIntel.getControllerPosition();
 
 		// Decide where room center should be by averaging exit positions.
-		let cx = 0;
-		let cy = 0;
-		let count = 0;
+		let cx = controllerPosition.x;
+		let cy = controllerPosition.y;
+		let count = 1;
 		for (const dir of _.keys(exitCenters)) {
 			for (const pos of exitCenters[dir]) {
 				count++;
 				cx += pos.x;
 				cy += pos.y;
 			}
+		}
+		// Also include source and mineral positions when determining room center.
+		const mineralInfo = roomIntel.getMineralPosition();
+		if (mineralInfo) {
+			count++;
+			cx += mineralInfo.x;
+			cy += mineralInfo.y;
+		}
+
+		const sourceInfo = roomIntel.getSourcePositions();
+		for (const source of sourceInfo) {
+			count++;
+			cx += source.x;
+			cy += source.y;
 		}
 
 		cx = Math.floor(cx / count);
