@@ -102,10 +102,7 @@ export default class RemoteBuilderRole extends Role {
 			filter: structure => structure.structureType === STRUCTURE_SPAWN,
 		});
 		if (spawns && spawns.length > 0 && spawns[0].energy < spawns[0].energyCapacity * 0.8) {
-			if (creep.transfer(spawns[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-				creep.moveToRange(spawns[0], 1);
-			}
-
+			creep.whenInRange(1, spawns[0], () => creep.transfer(spawns[0], RESOURCE_ENERGY));
 			return;
 		}
 
@@ -142,13 +139,7 @@ export default class RemoteBuilderRole extends Role {
 
 		const target = Game.getObjectById<ConstructionSite>(creep.memory.buildTarget);
 		if (target) {
-			if (creep.pos.getRangeTo(target) > 3) {
-				creep.moveToRange(target, 3);
-			}
-			else {
-				creep.build(target);
-			}
-
+			creep.whenInRange(3, target, () => creep.build(target));
 			return;
 		}
 
@@ -179,10 +170,7 @@ export default class RemoteBuilderRole extends Role {
 				delete this.creep.memory.repairTarget;
 			}
 
-			if (this.creep.repair(target) === ERR_NOT_IN_RANGE) {
-				this.creep.moveToRange(target, 3);
-			}
-
+			this.creep.whenInRange(3, target, () => this.creep.repair(target));
 			return true;
 		}
 
@@ -198,12 +186,7 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
-		if (this.creep.pos.getRangeTo(this.creep.room.controller) > 3) {
-			this.creep.moveToRange(this.creep.room.controller, 3);
-		}
-		else {
-			this.creep.upgradeController(this.creep.room.controller);
-		}
+		this.creep.whenInRange(3, this.creep.room.controller, () => this.creep.upgradeController(this.creep.room.controller));
 	}
 
 	/**
@@ -224,24 +207,12 @@ export default class RemoteBuilderRole extends Role {
 			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > creep.store.getCapacity() * 0.3 || creep.pos.getRangeTo(drop) <= 1),
 		});
 		if (dropped) {
-			if (creep.pos.getRangeTo(dropped) > 1) {
-				creep.moveToRange(dropped, 1);
-			}
-			else {
-				creep.pickup(dropped);
-			}
-
+			creep.whenInRange(1, dropped, () => creep.pickup(dropped));
 			return;
 		}
 
 		if (creep.room.storage && creep.room.storage.store[RESOURCE_ENERGY] > 5000) {
-			if (creep.pos.getRangeTo(creep.room.storage) > 1) {
-				creep.moveToRange(creep.room.storage, 1);
-			}
-			else {
-				creep.withdraw(creep.room.storage, RESOURCE_ENERGY);
-			}
-
+			creep.whenInRange(1, creep.room.storage, () => creep.withdraw(creep.room.storage, RESOURCE_ENERGY));
 			return;
 		}
 
@@ -251,13 +222,7 @@ export default class RemoteBuilderRole extends Role {
 				filter: structure => structure.structureType === STRUCTURE_CONTAINER && (structure.store.energy || 0) > 500,
 			});
 			if (container) {
-				if (creep.pos.getRangeTo(container) > 1) {
-					creep.moveToRange(container, 1);
-				}
-				else {
-					creep.withdraw(container, RESOURCE_ENERGY);
-				}
-
+				creep.whenInRange(1, container, () => creep.withdraw(container, RESOURCE_ENERGY));
 				return;
 			}
 

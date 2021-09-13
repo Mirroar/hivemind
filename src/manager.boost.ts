@@ -244,11 +244,13 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
 		const lab = Game.getObjectById<StructureLab>(id);
 		if (!lab) return null;
 
-		if (creep.pos.getRangeTo(lab) > 1) {
-			// Get close enough to lab.
-			creep.moveToRange(lab, 1);
-		}
-		else if (lab.mineralType === resourceType && lab.mineralAmount >= amount * LAB_BOOST_MINERAL && lab.energy >= amount * LAB_BOOST_ENERGY) {
+		creep.whenInRange(1, lab, () => {
+			if (lab.mineralType !== resourceType) return;
+			if (lab.mineralAmount < amount * LAB_BOOST_MINERAL) return;
+			if (lab.energy < amount * LAB_BOOST_ENERGY) return;
+
+			// @todo When waiting, give way to any other creeps so as to not block them.
+
 			// If there is enough energy and resources, boost!
 			if (lab.boostCreep(creep) === OK) {
 				// @todo Prevent trying to boost another creep with this lab on this turn.
@@ -256,7 +258,7 @@ BoostManager.prototype.overrideCreepLogic = function (creep) {
 				// Clear partial memory, to prevent trying to boost again.
 				delete boostMemory[resourceType];
 			}
-		}
+		});
 
 		hasMoved = true;
 		return false;
