@@ -9,6 +9,10 @@ declare global {
 		enhanceData,
 	}
 
+	interface PowerCreep {
+		heapMemory: CreepHeapMemory,
+	}
+
 	interface CreepHeapMemory {}
 
 	interface Game {
@@ -32,6 +36,24 @@ Object.defineProperty(Creep.prototype, 'heapMemory', {
 
 	/**
 	 * Gets semi-persistent memory for a creep.
+	 *
+	 * @return {Operation}
+	 *   The operation this creep belongs to.
+	 */
+	get() {
+		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {};
+
+		return creepHeapMemory[this.id];
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property powerCreep.heapMemory.
+Object.defineProperty(PowerCreep.prototype, 'heapMemory', {
+
+	/**
+	 * Gets semi-persistent memory for a power creep.
 	 *
 	 * @return {Operation}
 	 *   The operation this creep belongs to.
