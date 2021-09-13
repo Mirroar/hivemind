@@ -16,6 +16,11 @@ declare global {
 	}
 }
 
+interface ScoredTowerPosition {
+	pos: RoomPosition,
+	score: number,
+}
+
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import minCut from 'utils/mincut';
@@ -320,76 +325,6 @@ export default class RoomPlanner {
 		});
 
 		return modified;
-	};
-
-	/**
-	 * Find positions from where many exit / rampart tiles are in short range.
-	 *
-	 * @return {object}
-	 *   An object keyed by exit direction containing objects with the following
-	 *   keys:
-	 *   - count: 0 in preparation for storing actual tower number. @todo remove
-	 *   - tiles: A list of potential tower positions.
-	 */
-	findTowerPositions() {
-		const positions = {
-			N: {count: 0, tiles: []},
-			E: {count: 0, tiles: []},
-			S: {count: 0, tiles: []},
-			W: {count: 0, tiles: []},
-		};
-
-		const allDirectionsSafe = _.sum(this.memory.adjacentSafe) === 4;
-		for (let x = 1; x < 49; x++) {
-			for (let y = 1; y < 49; y++) {
-				if (this.buildingMatrix.get(x, y) !== 0 && this.buildingMatrix.get(x, y) !== 10) continue;
-				if (this.safetyMatrix.get(x, y) !== 1) continue;
-				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
-				let score = 0;
-
-				let tileDir;
-				if (x > y) {
-					// Northeast.
-					if (49 - x > y) tileDir = 'N';
-					else tileDir = 'E';
-				}
-				// Southwest.
-				else if (49 - x > y) tileDir = 'W';
-				else tileDir = 'S';
-
-				// No need to check in directions where there is no exit.
-				if (this.exitTiles[tileDir].length === 0) continue;
-
-				// Don't count exits toward "safe" rooms or dead ends.
-				if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[tileDir]) continue;
-
-				if (this.minCut) {
-					// Add score for ramparts in range.
-					for (const pos of this.getLocations('rampart')) {
-						score += 1 / pos.getRangeTo(x, y);
-					}
-				}
-				else {
-					// Add score for exit tiles in range.
-					for (const dir in this.exitTiles) {
-						// Don't score distance to exits toward "safe" rooms or dead ends.
-						// Unless all directions are safe.
-						if (!allDirectionsSafe && this.memory.adjacentSafe && this.memory.adjacentSafe[dir]) continue;
-
-						for (const pos of this.exitTiles[dir]) {
-							score += 1 / pos.getRangeTo(x, y);
-						}
-					}
-				}
-
-				positions[tileDir].tiles.push({
-					score,
-					pos: new RoomPosition(x, y, this.roomName),
-				});
-			}
-		}
-
-		return positions;
 	};
 
 	/**
@@ -1062,26 +997,19 @@ export default class RoomPlanner {
 	 * Places towers so exits are well covered.
 	 */
 	placeTowers() {
-		const positions = this.findTowerPositions();
 		const costMatrixBackup: {
 			[location: string]: number,
 		} = {};
+		const positions = this.findTowerPositions();
+		const ramparts = this.findRampartPositions();
 		while (this.canPlaceMore('tower')) {
 			const newTowers = [];
 
+			this.scoreRampartPositions(ramparts);
+			this.scoreTowerPositions(positions, ramparts);
 			while(newTowers.length < this.remainingStructureCount('tower')) {
-				let info = null;
-				let bestDir = null;
-				for (const dir of _.keys(positions)) {
-					for (const tile of positions[dir].tiles) {
-						if (!info || positions[bestDir].count > positions[dir].count || (info.score < tile.score && positions[bestDir].count === positions[dir].count)) {
-							info = tile;
-							bestDir = dir;
-						}
-					}
-				}
-
-				if (!info) break;
+				let info = _.max(positions, 'score');
+				if (!info || info.score < 0) break;
 
 				info.score = -1;
 
@@ -1094,12 +1022,19 @@ export default class RoomPlanner {
 				});
 				if (result.incomplete) continue;
 
-				positions[bestDir].count++;
-				const towerPosition = new RoomPosition(info.pos.x, info.pos.y, info.pos.roomName);
-				newTowers.push(towerPosition);
+				// Add tentative tower location.
+				newTowers.push(info.pos);
 				costMatrixBackup[utilities.encodePosition(info.pos)] = this.buildingMatrix.get(info.pos.x, info.pos.y);
-				this.placeFlag(towerPosition, 'tower_placeholder');
+				this.placeFlag(info.pos, 'tower_placeholder');
+
+				if (newTowers.length < this.remainingStructureCount('tower')) {
+					this.scoreRampartPositions(ramparts);
+					this.scoreTowerPositions(positions, ramparts);
+				}
 			}
+
+			// Abort if no towers can be placed.
+			if (newTowers.length === 0) break;
 
 			// Also create roads to all towers.
 			for (const pos of newTowers) {
@@ -1116,15 +1051,111 @@ export default class RoomPlanner {
 				this.placeFlag(pos, 'tower');
 				this.placeAccessRoad(pos);
 			}
-		}
 
-		// Restore building matrix values for subsequent operations.
-		for (const pos of this.getLocations('tower_placeholder')) {
-			if (this.isPlannedLocation(pos, 'tower')) continue;
+			// Restore building matrix values for subsequent operations.
+			for (const pos of this.getLocations('tower_placeholder')) {
+				if (this.isPlannedLocation(pos, 'tower')) continue;
 
-			this.buildingMatrix.set(pos.x, pos.y, costMatrixBackup[utilities.encodePosition(pos)]);
+				this.buildingMatrix.set(pos.x, pos.y, costMatrixBackup[utilities.encodePosition(pos)]);
+			}
+
+			// Remove tower_placeholder markers for correct scoring during next iteration.
+			delete this.memory.locations['tower_placeholder'];
 		}
 	};
+
+	/**
+	 * Finds all positions where we might place towers within rampart protection.
+	 *
+	 * @return {array}
+	 *   An array of objects with the following keys:
+	 *   - score: The tower score for this position.
+	 *   - pos: The position in question.
+	 */
+	findTowerPositions(): ScoredTowerPosition[] {
+		const positions: ScoredTowerPosition[] = [];
+
+		const allDirectionsSafe = _.sum(this.memory.adjacentSafe) === 4;
+		if (allDirectionsSafe) return positions;
+
+		for (let x = 1; x < 49; x++) {
+			for (let y = 1; y < 49; y++) {
+				if (this.buildingMatrix.get(x, y) !== 0 && this.buildingMatrix.get(x, y) !== 10) continue;
+				if (this.safetyMatrix.get(x, y) !== 1) continue;
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
+				positions.push({
+					score: 0,
+					pos: new RoomPosition(x, y, this.roomName),
+				});
+			}
+		}
+
+		return positions;
+	}
+
+	/**
+	 * Scores all available tower positions based on rampart tiles in range.
+	 *
+	 * Unprotected ramparts get higher priority than those already protected
+	 * by another tower.
+	 */
+	scoreTowerPositions(positions: ScoredTowerPosition[], rampartPositions: ScoredTowerPosition[]) {
+		for (const info of positions) {
+			// Skip positions already considered for tower or road placement.
+			if (this.buildingMatrix.get(info.pos.x, info.pos.y) !== 0 && this.buildingMatrix.get(info.pos.x, info.pos.y) !== 10) info.score = -1;
+			if (info.score < 0) continue;
+
+			let score = 0;
+
+			// Add score for ramparts in range.
+			for (const rampart of rampartPositions) {
+				const towerEfficiencyLoss = (Math.min(Math.max(rampart.pos.getRangeTo(info.pos.x, info.pos.y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE) - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE);
+				score += rampart.score * (1 - towerEfficiencyLoss);
+			}
+
+			info.score = score;
+		}
+	}
+
+	/**
+	 * Finds the position of all ramparts in the room.
+	 */
+	findRampartPositions(): ScoredTowerPosition[] {
+		const positions = [];
+
+		for (const pos of this.getLocations('rampart')) {
+			positions.push({
+				score: 1,
+				pos,
+			});
+		}
+
+		return positions;
+	}
+
+	/**
+	 * Calculates a weight for each rampart based on current protection level.
+	 *
+	 * The more towers in are in range of a rampart, the less important it is
+	 * to add more protection near it.
+	 */
+	scoreRampartPositions(positions: ScoredTowerPosition[]) {
+		for (const info of positions) {
+			let rampartScore = 1;
+
+			for (const pos of this.getLocations('tower')) {
+				const towerEfficiencyLoss = (Math.min(Math.max(pos.getRangeTo(info.pos.x, info.pos.y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE) - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE);
+				rampartScore *= 0.2 + 0.8 * towerEfficiencyLoss;
+			}
+			for (const pos of this.getLocations('tower_placeholder')) {
+				const towerEfficiencyLoss = (Math.min(Math.max(pos.getRangeTo(info.pos.x, info.pos.y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE) - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE);
+				rampartScore *= 0.2 + 0.8 * towerEfficiencyLoss;
+			}
+
+			info.score = rampartScore;
+		}
+	}
 
 	/**
 	 * Places walls around spawns so creeps don't get spawned on inaccessible tiles.
