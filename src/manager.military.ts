@@ -1,7 +1,7 @@
 /* global Creep Room FIND_CREEPS FIND_STRUCTURES BOOSTS ATTACK
 RANGED_ATTACK HEAL STRUCTURE_TOWER TOWER_POWER_HEAL TOWER_POWER_ATTACK
 ATTACK_POWER RANGED_ATTACK_POWER HEAL_POWER RANGED_HEAL_POWER
-CARRY CLAIM MOVE TOUGH WORK */
+CARRY CLAIM MOVE TOUGH WORK TOWER_ENERGY_COST */
 
 declare global {
 	interface Room {
@@ -191,6 +191,7 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
  */
 Room.prototype.assertMilitaryStructurePower = function (structure) {
 	if (structure.structureType !== STRUCTURE_TOWER) return;
+	if (structure.store[RESOURCE_ENERGY] < TOWER_ENERGY_COST) return;
 
 	let hostile;
 	let targets;
