@@ -836,9 +836,13 @@ export default class TransporterRole extends Role {
 		const creep = this.creep;
 		const options = this.getAvailableEnergySources();
 
-		// Clear out overfull terminal.
 		const terminal = creep.room.terminal;
 		const storage = creep.room.storage;
+
+		// Don't pick up anything that's not energy if there's no place to store.
+		if (!terminal && !storage) return options;
+
+		// Clear out overfull terminal.
 		if (terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || creep.room.isClearingTerminal()) && !creep.room.isEvacuating()) {
 			// Find resource with highest count and take that.
 			// @todo Unless it's supposed to be sent somewhere else.
