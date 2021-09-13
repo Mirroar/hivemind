@@ -218,7 +218,7 @@ class Graph {
 	/**
 	 * Calculates Level Graph and if theres a path from s to t
 	 */
-	checkIfPathExists(s, t) {
+	pathExistsBetween(s, t): boolean {
 		if (t >= this.v) return false;
 
 		// Reset old levels.
@@ -265,7 +265,7 @@ class Graph {
 					// Add Flow to current edge
 					edge.f += flowToSink;
 
-					// Substract from reverse Edge -> Residual Graph neg. Flow to use backward direction of checkIfPathExists/DFS
+					// Substract from reverse Edge -> Residual Graph neg. Flow to use backward direction of pathExistsBetween/DFS
 					this.edges[edge.v][edge.r].f -= flowToSink;
 					return flowToSink;
 				}
@@ -324,17 +324,17 @@ class Graph {
 	calculateMinCut(s, t) {
 		if (s === t) return -1;
 
-		let returnvalue = 0;
-		while (this.checkIfPathExists(s, t) === true) {
+		let totalFlow = 0;
+		while (this.pathExistsBetween(s, t)) {
 			const count = new Array(this.v + 1).fill(0);
 			let flow = 0;
 			do {
 				flow = this.accumulateFlow(s, infinity, t, count);
-				if (flow > 0) returnvalue += flow;
+				if (flow > 0) totalFlow += flow;
 			} while (flow);
 		}
 
-		return returnvalue;
+		return totalFlow;
 	}
 }
 
@@ -433,7 +433,7 @@ const minCutInterface = {
 			roomTerrain[tile.x][tile.y] = UNWALKABLE;
 		}
 
-		// Floodfill from exits: save exit tiles in array and do a checkIfPathExists-like search
+		// Floodfill from exits: save exit tiles in array and do a pathExistsBetween-like search
 		const openList = [];
 		const max = 49;
 		for (let y = 0; y < max; y++) {
