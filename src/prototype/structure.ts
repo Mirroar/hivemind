@@ -1,24 +1,51 @@
 /* global Structure StructureExtension StructureSpawn StructureTower
 STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF
 OBSTACLE_OBJECT_TYPES BODYPART_COST */
-interface Structure {
-	isWalkable,
-	isOperational,
+declare global {
+	interface Structure {
+		heapMemory: StructureHeapMemory,
+		isWalkable: () => boolean,
+		isOperational: () => boolean,
+	}
+
+	interface StructureExtension {
+		isBayExtension: () => boolean,
+	}
+
+	interface StructureSpawn {
+		isBaySpawn: () => boolean,
+		calculateCreepBodyCost,
+	}
+
+	interface StructureTower {
+		getPowerAtRange,
+	}
+
+	interface StructureHeapMemory {}
 }
 
-interface StructureExtension {
-	isBayExtension,
-}
+// @todo Periodically clear heap memory of deceased creeps.
+const structureHeapMemory: {
+	[id: string]: StructureHeapMemory,
+} = {};
 
-interface StructureSpawn {
-	isBaySpawn,
-	calculateCreepBodyCost,
-}
+// Define quick access property creep.heapMemory.
+Object.defineProperty(Structure.prototype, 'heapMemory', {
 
-interface StructureTower {
-	getPowerAtRange,
-}
+	/**
+	 * Gets semi-persistent memory for a structure.
+	 *
+	 * @return {object}
+	 *   The memory object.
+	 */
+	get() {
+		if (!structureHeapMemory[this.id]) structureHeapMemory[this.id] = {};
 
+		return structureHeapMemory[this.id];
+	},
+	enumerable: false,
+	configurable: true,
+});
 
 /**
  * Checks whether a structure can be moved onto.
@@ -106,3 +133,5 @@ StructureSpawn.prototype.calculateCreepBodyCost = function (bodyMemory) {
 
 	return cost;
 };
+
+export {};
