@@ -120,18 +120,15 @@ export default class HarvesterRole extends Role {
 			}
 		}
 
-		if (creep.pos.getRangeTo(targetPos) > targetRange) {
-			creep.moveToRange(targetPos, targetRange);
-			return;
-		}
+		creep.whenInRange(targetRange, targetPos, () => {
+			creep.harvest(source);
 
-		creep.harvest(source);
+			// If there's a harvester bay, transfer resources into it.
+			if (this.depositInBay(creep)) return;
 
-		// If there's a harvester bay, transfer resources into it.
-		if (this.depositInBay(creep)) return;
-
-		// If there's a link or container nearby, directly deposit resources.
-		this.depositResources(creep, source);
+			// If there's a link or container nearby, directly deposit resources.
+			this.depositResources(creep, source);
+		});
 	}
 
 	/**
@@ -198,13 +195,7 @@ export default class HarvesterRole extends Role {
 			});
 
 			if (sites.length > 0) {
-				if (creep.pos.getRangeTo(sites[0]) > 3) {
-					creep.moveToRange(sites[0], 3);
-				}
-				else {
-					creep.build(sites[0]);
-				}
-
+				creep.whenInRange(3, sites[0], () => creep.build(sites[0]));
 				return;
 			}
 		}
@@ -226,15 +217,14 @@ export default class HarvesterRole extends Role {
 
 		if (target) {
 			const distance = creep.pos.getRangeTo(target);
-			if (distance > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else if (target.structureType === STRUCTURE_CONTAINER && distance === 0) {
-				// Nothing to do, resources will drop into the container.
-			}
-			else {
-				creep.transferAny(target);
-			}
+			creep.whenInRange(1, target, () => {
+				if (target.structureType === STRUCTURE_CONTAINER && distance === 0) {
+					// Nothing to do, resources will drop into the container.
+				}
+				else {
+					creep.transferAny(target);
+				}
+			});
 		}
 	}
 

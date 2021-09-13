@@ -145,28 +145,16 @@ export default class TransporterRole extends Role {
 
 		if (typeof best === 'string') {
 			const target = Game.getObjectById<AnyOwnedStructure>(best);
-
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
+			creep.whenInRange(1, target, () => {
 				creep.transfer(target, creep.memory.order.resourceType);
 				delete creep.memory.deliverTarget;
-			}
-
+			});
 			return;
 		}
 
 		if (best.type === 'bay') {
 			const target = _.find(creep.room.bays, bay => bay.name === creep.memory.order.target);
-
-			if (creep.pos.getRangeTo(target.pos) > 0) {
-				creep.moveToRange(target);
-			}
-			else {
-				target.refillFrom(creep);
-			}
-
+			creep.whenInRange(0, target.pos, () => target.refillFrom(creep));
 			return;
 		}
 

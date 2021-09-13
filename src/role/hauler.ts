@@ -190,16 +190,13 @@ export default class HaulerRole extends Role {
 		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
 		const container = creep.operation.getContainer(creep.memory.source);
 		if (container) {
-			if (creep.pos.getRangeTo(container) > 1) {
-				creep.moveToRange(container, 1);
-			}
-			else {
+			creep.whenInRange(1, container, () => {
 				const willFillCreep = (container.store.energy || 0) >= creep.store.getFreeCapacity();
 				const relevantAmountReached = (container.store.energy || 0) >= creep.store.getCapacity() / 2;
 				if (!actionTaken && (relevantAmountReached || willFillCreep)) {
 					creep.withdraw(container, RESOURCE_ENERGY);
 				}
-			}
+			});
 
 			return;
 		}

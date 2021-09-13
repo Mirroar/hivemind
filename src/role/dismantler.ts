@@ -144,12 +144,7 @@ export default class DismantlerRole extends Role {
 		}
 
 		if (target) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
-				creep.dismantle(target);
-			}
+			creep.whenInRange(1, target, () => creep.dismantle(target));
 		}
 	}
 
