@@ -359,13 +359,13 @@ const utilities = {
 			);
 		}
 
-		if (matrix && !options.ignoreMilitary) {
+		if (matrix && Game.rooms[roomName] && Game.rooms[roomName].isMine()  && Game.rooms[roomName].defense.getEnemyStrength() > 0 && !options.ignoreMilitary) {
 			// Discourage unprotected areas when enemies are in the room.
 			cacheKey += ':inCombat';
 
 			matrix = cache.inHeap(
 				cacheKey,
-				100,
+				20,
 				() => {
 					return this.generateCombatCostMatrix(matrix, roomName);
 				}
@@ -414,8 +414,50 @@ const utilities = {
 		const newMatrix = matrix.clone();
 		const terrain = new Room.Terrain(roomName);
 
-		// @todo Start from unsafe exits, flood fill to ramparts. Or start from
-		// core to see what is safe.
+		// We flood fill from enemies and make all tiles they can reach more
+		// difficult to travel through.
+		const closedList: {[location: string]: boolean} = {};
+		const openList: RoomPosition[] = [];
+
+		for (const username in Game.rooms[roomName].enemyCreeps) {
+			if (hivemind.relations.isAlly(username)) continue;
+			for (const creep of Game.rooms[roomName].enemyCreeps[username]) {
+				const location = utilities.encodePosition(creep.pos);
+				closedList[location] = true;
+				openList.push(creep.pos);
+			}
+		}
+
+		let count = 0;
+		while (openList.length > 0) {
+			const pos = openList.pop();
+			count++;
+
+			// Increase cost matrix value for the given tile.
+			let value = matrix.get(pos.x, pos.y);
+			if (value === 0) {
+				value = 1;
+				if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP) value = 5;
+			}
+
+			newMatrix.set(pos.x, pos.y, value + 10);
+
+			// Add available adjacent tiles.
+			utilities.handleMapArea(pos.x, pos.y, (x, y,) => {
+				if (matrix.get(x, y) > 100) return;
+				if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+				const newPos = new RoomPosition(x, y, roomName);
+				const newLocation = utilities.encodePosition(newPos);
+				if (closedList[newLocation]) return;
+				if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+
+				closedList[newLocation] = true;
+				openList.push(newPos);
+			});
+		}
+
+		Game.notify('Combat cost matrix with ' + count + ' modified tiles generated for ' + roomName);
 
 		return newMatrix;
 	},
