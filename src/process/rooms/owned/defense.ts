@@ -78,12 +78,12 @@ export default class RoomDefenseProcess extends Process {
 
 					if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
 						availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
-							filter: s => s.structureType === STRUCTURE_RAMPART,
+							filter: s => s.structureType === STRUCTURE_RAMPART && this.room.roomPlanner.isPlannedLocation(s.pos, 'rampart'),
 						}));
 					}
 					else {
 						availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-							filter: s => s.structureType === STRUCTURE_RAMPART,
+							filter: s => s.structureType === STRUCTURE_RAMPART && this.room.roomPlanner.isPlannedLocation(s.pos, 'rampart'),
 						}));
 					}
 				}
