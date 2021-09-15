@@ -5,10 +5,11 @@ import SpawnRole from 'spawn-role/spawn-role';
 
 const RESPONSE_NONE = 0;
 const RESPONSE_ATTACKER = 1;
+const RESPONSE_RANGED_ATTACKER = 2;
 
 export default class RoomDefenseSpawnRole extends SpawnRole {
 	/**
-	 * Adds brawler spawn options for the given room.
+	 * Adds defense spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
@@ -43,7 +44,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	}
 
 	/**
-	 * Adds brawler spawn options for remote harvest rooms.
+	 * Adds guardian spawn options for rampart defense.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
@@ -58,7 +59,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 
 		if (responseType === RESPONSE_NONE) return;
 
-		// @todo Limit defense creeps to number of threats.
+		// @todo Limit defense creeps to number of threats and ramparts to cover.
 		if (_.size(room.creepsByRole.guardian) >= 5) return;
 
 		options.push({
@@ -101,7 +102,15 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	getDefenseCreepSize(room: Room) {
 		const enemyStrength = room.defense.getEnemyStrength();
 
-		if (enemyStrength >= 2) return RESPONSE_ATTACKER;
+		if (enemyStrength >= 2) {
+			// Spawn a mix of meelee and ranged defenders.
+			const totalGuardians = _.size(room.creepsByRole.guardian);
+			const rangedGuardians = _.size(_.filter(room.creepsByRole.guardian, (creep: GuardianCreep) => creep.getActiveBodyparts(RANGED_ATTACK) > 0));
+
+			if (rangedGuardians < totalGuardians / 2) return RESPONSE_RANGED_ATTACKER;
+
+			return RESPONSE_ATTACKER;
+		}
 
 		// @todo Decide if boosts should be used as well.
 
@@ -125,13 +134,16 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 
 		if (option.responseType) {
 			switch (option.responseType) {
+				case RESPONSE_RANGED_ATTACKER:
+					return this.getRangedCreepBody(room);
+
 				case RESPONSE_ATTACKER:
 				default:
 					return this.getAttackCreepBody(room);
 			}
 		}
 
-		return this.getBrawlerCreepBody(room);
+		return this.getAttackCreepBody(room);
 	}
 
 	getAttackCreepBody(room: Room) {
@@ -141,16 +153,16 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		);
 	}
 
-	getRepairCreepBody(room: Room) {
+	getRangedCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
+			{[MOVE]: 0.35, [RANGED_ATTACK]: 0.65},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
 
-	getBrawlerCreepBody(room: Room) {
+	getRepairCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
+			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
 		);
 	}
@@ -194,7 +206,12 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			return this.generateCreepBoosts(room, body, WORK, 'repair');
 		}
 		else if (option.creepRole === 'guardian') {
-			return this.generateCreepBoosts(room, body, ATTACK, 'attack');
+			if (body.indexOf(ATTACK) !== -1) {
+				return this.generateCreepBoosts(room, body, ATTACK, 'attack');
+			}
+			else {
+				return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack');
+			}
 		}
 
 		return null;
