@@ -69,14 +69,16 @@ export default class GuardianRole extends Role {
 	}
 
 	attackTargetsInRange(creep: GuardianCreep) {
-		// @todo Ask military manager for best target for joint attacks.
+		// Ask military manager for best target for joint attacks.
+		creep.room.assertMilitarySituation();
+
 		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
 			const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3, {
 				filter: filterEnemyCreeps,
 			});
 			if (targets.length === 0) return;
 
-			creep.rangedAttack(targets[0]);
+			creep.rangedAttack(_.max(targets, 'militaryPriority'));
 		}
 		if (creep.getActiveBodyparts(ATTACK) > 0) {
 			const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
@@ -84,7 +86,7 @@ export default class GuardianRole extends Role {
 			});
 			if (targets.length === 0) return;
 
-			creep.attack(targets[0]);
+			creep.attack(_.max(targets, 'militaryPriority'));
 		}
 	}
 };
