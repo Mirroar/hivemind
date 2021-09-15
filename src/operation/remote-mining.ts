@@ -25,7 +25,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Constructs a new RemoteMiningOperation instance.
 	 */
-	constructor(name) {
+	constructor(name: string) {
 		super(name);
 		this.memory.type = 'mining';
 		this.pathManager = new PathManager();
@@ -65,13 +65,13 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Gets the position of all sources in the room.
 	 */
-	getSourcePositions() {
+	getSourcePositions(): RoomPosition[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
 
 		const roomIntel = hivemind.roomIntel(this.roomName);
 		const sourceInfo = roomIntel.getSourcePositions();
 
-		const positions = [];
+		const positions: RoomPosition[] = [];
 		for (const source of sourceInfo) {
 			positions.push(new RoomPosition(source.x, source.y, this.roomName));
 		}
@@ -82,7 +82,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Gets the room responsible for spawning creeps assigned to the given source.
 	 */
-	getSourceRoom(sourceLocation) {
+	getSourceRoom(sourceLocation: string): string {
 		const locations = this.getMiningLocationsByRoom();
 
 		for (const roomName in locations) {
@@ -163,21 +163,35 @@ export default class RemoteMiningOperation extends Operation {
 
 	/**
 	 * Checks if the target room is under attack.
-	 *
-	 * @todo Check rooms en route as well.
 	 */
-	isUnderAttack() {
+	isUnderAttack(): boolean {
 		const roomMemory = Memory.rooms[this.roomName];
-		if (!roomMemory || !roomMemory.enemies) return false;
-		if (roomMemory.enemies.safe) return false;
+		if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) return true;
 
-		return true;
+		// Check rooms en route as well.
+		return cache.inHeap('rmPathSafety:' + this.name, 10, () => {
+			const paths = this.getPaths();
+			const checkedRooms = {};
+			for (const location in paths) {
+				const path = paths[location];
+				for (const pos of path.path || []) {
+					if (pos.roomName === this.roomName) continue;
+					if (checkedRooms[pos.roomName]) continue;
+
+					checkedRooms[pos.roomName] = true;
+					const roomMemory = Memory.rooms[pos.roomName];
+					if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) return true;
+				}
+			}
+
+			return false;
+		});
 	}
 
 	/**
 	 * Checks if we have an active reservation for the target room.
 	 */
-	hasReservation() {
+	hasReservation(): boolean {
 		const room = Game.rooms[this.roomName];
 		if (room) return room.controller.reservation && room.controller.reservation.username === utilities.getUsername() && room.controller.reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
 
@@ -190,12 +204,12 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Gets the container for the given source, if available.
 	 */
-	getContainer(sourceLocation) {
+	getContainer(sourceLocation: string): StructureContainer {
 		if (!this.hasContainer(sourceLocation)) return null;
 		if (!this.memory.status[sourceLocation]) return null;
 
 		// Will return null if we don't have visibility in the target room.
-		return Game.getObjectById(this.memory.status[sourceLocation].containerId);
+		return Game.getObjectById<StructureContainer>(this.memory.status[sourceLocation].containerId);
 	}
 
 	/**
@@ -204,7 +218,7 @@ export default class RemoteMiningOperation extends Operation {
 	 * @todo We might have to build another container if the container position
 	 * changes at some point.
 	 */
-	hasContainer(sourceLocation) {
+	hasContainer(sourceLocation: string): boolean {
 		return cache.inObject(this, 'hasContainer:' + sourceLocation, 0, () => {
 			if (!this.memory.status[sourceLocation]) return false;
 
@@ -239,9 +253,9 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Gets the position where the container for a source needs to be built.
 	 */
-	getContainerPosition(sourceLocation) {
+	getContainerPosition(sourceLocation: string): RoomPosition {
 		const paths = this.getPaths();
-		if (!paths[sourceLocation] || !paths[sourceLocation].accessible) return;
+		if (!paths[sourceLocation] || !paths[sourceLocation].accessible) return null;
 
 		return paths[sourceLocation].path[0];
 	}
@@ -249,7 +263,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Decides whether haulers need to be spawned for a location.
 	 */
-	shouldSpawnHaulers(sourceLocation) {
+	shouldSpawnHaulers(sourceLocation: string): boolean {
 		if (this.isUnderAttack()) return false;
 		if (!this.hasContainer(sourceLocation)) return false;
 		if (this.needsDismantler(sourceLocation)) return false;
@@ -260,7 +274,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Determines the ideal size of harvesters for a source.
 	 */
-	getHarvesterSize(sourceLocation) {
+	getHarvesterSize(sourceLocation: string): number {
 		// Make harvester slightly larger if container still needs to be built,
 		// since we will spend some ticks building and not harvesting.
 		const paths = this.getPaths();
@@ -272,7 +286,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Determines the ideal size of haulers for carrying the output of a source.
 	 */
-	getHaulerSize(sourceLocation) {
+	getHaulerSize(sourceLocation: string): number {
 		const paths = this.getPaths();
 
 		return paths[sourceLocation] && paths[sourceLocation].accessible ? paths[sourceLocation].requiredCarryParts : 0;
@@ -281,7 +295,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Determines how many haulers of the given size should be spawned.
 	 */
-	getHaulerCount() {
+	getHaulerCount(): number {
 		// @todo If a round trip is possible before container is full, use a single
 		// big hauler.
 		return this.hasReservation() ? 2 : 1;
@@ -305,7 +319,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Gets the positions on the remote path that are obstructed.
 	 */
-	getDismantlePositions(sourceLocation) {
+	getDismantlePositions(sourceLocation: string): RoomPosition[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
 
 		const cached = cache.inHeap('blockedTiles:' + sourceLocation, 100, () => {
