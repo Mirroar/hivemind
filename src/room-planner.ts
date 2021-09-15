@@ -1110,8 +1110,7 @@ export default class RoomPlanner {
 
 			// Add score for ramparts in range.
 			for (const rampart of rampartPositions) {
-				const towerEfficiencyLoss = (Math.min(Math.max(rampart.pos.getRangeTo(info.pos.x, info.pos.y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE) - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE);
-				score += rampart.score * (1 - towerEfficiencyLoss);
+				score += rampart.score * this.getTowerEffectScore(rampart.pos, info.pos.x, info.pos.y);
 			}
 
 			info.score = score;
@@ -1145,16 +1144,25 @@ export default class RoomPlanner {
 			let rampartScore = 1;
 
 			for (const pos of this.getLocations('tower')) {
-				const towerEfficiencyLoss = (Math.min(Math.max(pos.getRangeTo(info.pos.x, info.pos.y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE) - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE);
-				rampartScore *= 0.2 + 0.8 * towerEfficiencyLoss;
+				rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
 			}
 			for (const pos of this.getLocations('tower_placeholder')) {
-				const towerEfficiencyLoss = (Math.min(Math.max(pos.getRangeTo(info.pos.x, info.pos.y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE) - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE);
-				rampartScore *= 0.2 + 0.8 * towerEfficiencyLoss;
+				rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
 			}
 
 			info.score = rampartScore;
 		}
+	}
+
+	/**
+	 * Determines tower efficiency by range.
+	 *
+	 * @return {number}
+	 *   Between 0 for least efficient and 1 for highest efficiency.
+	 */
+	getTowerEffectScore(pos: RoomPosition, x: number, y: number): number {
+		const effectiveRange = Math.min(Math.max(pos.getRangeTo(x, y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE);
+		return 1 - ((effectiveRange - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE));
 	}
 
 	/**
