@@ -21,8 +21,9 @@ declare global {
 		moveToRoom,
 		calculateRoomPath,
 		isInRoom,
+		interRoomTravel: (targetPos: RoomPosition) => boolean,
 		moveUsingNavMesh,
-		getNavMeshMoveTarget,
+		getNavMeshMoveTarget: () => string | null,
 		stopNavMeshMove,
 		_blockingCreepMovement,
 		_hasMoveIntent,
@@ -47,8 +48,9 @@ declare global {
 		moveToRoom,
 		calculateRoomPath,
 		isInRoom,
+		interRoomTravel: (targetPos: RoomPosition) => boolean,
 		moveUsingNavMesh,
-		getNavMeshMoveTarget,
+		getNavMeshMoveTarget: () => string | null,
 		stopNavMeshMove,
 		_blockingCreepMovement,
 		_hasMoveIntent,
@@ -637,28 +639,57 @@ Creep.prototype.isInRoom = function () {
 	return this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47;
 };
 
-Creep.prototype.moveUsingNavMesh = function (targetPos, options) {
+Creep.prototype.interRoomTravel = function(targetPos: RoomPosition, allowDanger: boolean = false): boolean {
+	const isInTargetRoom = this.pos.roomName === targetPos.roomName;
+	if (!isInTargetRoom || (!this.isInRoom() && this.getNavMeshMoveTarget())) {
+		if (this.heapMemory.moveWithoutNavMesh) {
+			if (!this.moveToRoom(targetPos.roomName, allowDanger)) {
+				return false;
+			}
+
+			return true;
+		}
+		else {
+			if (this.moveUsingNavMesh(targetPos, {allowDanger}) !== OK) {
+				hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPos.roomName);
+
+				// Try moving to target room without using nav mesh.
+				this.heapMemory.moveWithoutNavMesh = true;
+			}
+
+			return true;
+		}
+
+	}
+
+	this.stopNavMeshMove();
+	return false;
+}
+
+Creep.prototype.moveUsingNavMesh = function (targetPos: RoomPosition, options) {
+	if (!hivemind.segmentMemory.isReady()) return OK;
+
 	if (!options) options = {};
 
 	const pos = utilities.encodePosition(targetPos);
-	if (!this.memory._nmpt || !this.memory._nmp || this.memory._nmpt !== pos) {
-		this.memory._nmpt = pos;
+	if (!this.heapMemory._nmpt || !this.heapMemory._nmp || this.heapMemory._nmpt !== pos) {
+		this.heapMemory._nmpt = pos;
 		const mesh = new NavMesh();
-		this.memory._nmp = mesh.findPath(this.pos, targetPos, options);
-		if (this.memory._nmp.path) {
-			this.memory._nmp.path = _.map(this.memory._nmp.path, utilities.encodePosition);
+		this.heapMemory._nmp = mesh.findPath(this.pos, targetPos, options);
+		if (this.heapMemory._nmp.path) {
+			this.heapMemory._nmp.path = _.map(this.heapMemory._nmp.path, utilities.encodePosition);
 		}
 
-		this.memory._nmpi = 0;
+		this.heapMemory._nmpi = 0;
 	}
 
-	if (!this.memory._nmp.path) {
+	if (!this.heapMemory._nmp.path) {
 		if (this.moveToRoom(targetPos.roomName)) return OK;
 
 		return ERR_NO_PATH;
 	}
 
-	const nextPos = utilities.decodePosition(this.memory._nmp.path[this.memory._nmpi]);
+	const nextPos = utilities.decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
 	if (this.pos.roomName !== nextPos.roomName || this.pos.getRangeTo(nextPos) > 1) {
 		const moveResult = this.moveToRange(nextPos, 1, options);
 		if (!moveResult) {
@@ -669,9 +700,9 @@ Creep.prototype.moveUsingNavMesh = function (targetPos, options) {
 	}
 
 	// If we reach a waypoint, increment path index.
-	if (this.pos.getRangeTo(nextPos) <= 1 && this.memory._nmpi < this.memory._nmp.path.length - 1) {
-		this.memory._nmpi++;
-		const nextPos = utilities.decodePosition(this.memory._nmp.path[this.memory._nmpi]);
+	if (this.pos.getRangeTo(nextPos) <= 1 && this.heapMemory._nmpi < this.heapMemory._nmp.path.length - 1) {
+		this.heapMemory._nmpi++;
+		const nextPos = utilities.decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
 		const moveResult = this.moveToRange(nextPos, 1, options);
 		if (!moveResult) {
 			// Couldn't get to next path target.
@@ -683,14 +714,15 @@ Creep.prototype.moveUsingNavMesh = function (targetPos, options) {
 	return OK;
 };
 
-Creep.prototype.getNavMeshMoveTarget = function () {
-	return this.memory._nmpt;
+Creep.prototype.getNavMeshMoveTarget = function (): string | null {
+	return this.heapMemory._nmpt;
 };
 
 Creep.prototype.stopNavMeshMove = function () {
-	delete this.memory._nmpt;
-	delete this.memory._nmp;
-	delete this.memory._nmpi;
+	delete this.heapMemory._nmpt;
+	delete this.heapMemory._nmp;
+	delete this.heapMemory._nmpi;
+	delete this.heapMemory.moveWithoutNavMesh
 };
 
 PowerCreep.prototype.moveToRange = Creep.prototype.moveToRange;

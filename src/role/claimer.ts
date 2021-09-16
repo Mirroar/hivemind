@@ -36,7 +36,9 @@ export default class ClaimerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep: ClaimerCreep) {
-		if (this.moveToTargetRoom(creep)) return;
+		const targetPosition = utilities.decodePosition(creep.memory.target);
+		if (creep.interRoomTravel(targetPosition)) return;
+		if (creep.pos.roomName !== targetPosition.roomName) return;
 
 		if (creep.memory.mission === 'reserve') {
 			this.performReserve(creep);
@@ -44,33 +46,6 @@ export default class ClaimerRole extends Role {
 		else if (creep.memory.mission === 'claim') {
 			this.performClaim(creep);
 		}
-	}
-
-	/**
-	 * Moves the creep to the target room for its order.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 *
-	 * @return {boolean}
-	 *   True if the creep is still busy moving towards the target room.
-	 */
-	moveToTargetRoom(creep: ClaimerCreep) {
-		const targetPosition = utilities.decodePosition(creep.memory.target);
-		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
-		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
-			if (creep.moveUsingNavMesh(targetPosition) !== OK) {
-				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
-				// @todo This is cross-room movement and should therefore only calculate a path once.
-				creep.moveToRange(targetPosition, 3);
-			}
-
-			return true;
-		}
-
-		creep.stopNavMeshMove();
-
-		return false;
 	}
 
 	/**

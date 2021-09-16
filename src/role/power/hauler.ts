@@ -31,17 +31,8 @@ export default class PowerHaulerRole extends Role {
 		if (!isInTargetRoom && this.pickupResources(creep, RESOURCE_POWER)) return;
 
 		// Get to target room.
-		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
-			if (creep.moveUsingNavMesh(targetPosition) !== OK) {
-				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
-				// @todo This is cross-room movement and should therefore only calculate a path once.
-				creep.moveToRange(targetPosition, 3);
-			}
-
-			return;
-		}
-
-		creep.stopNavMeshMove();
+		if (creep.interRoomTravel(targetPosition)) return;
+		if (creep.pos.roomName !== targetPosition.roomName) return;
 
 		const powerBanks = creep.room.find(FIND_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
@@ -96,17 +87,8 @@ export default class PowerHaulerRole extends Role {
 		// Pick up dropped power in rooms we pass.
 		if (!isInTargetRoom && creep.store.getFreeCapacity() > 0 && this.pickupResources(creep, RESOURCE_POWER)) return;
 
-		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
-			if (creep.moveUsingNavMesh(targetPosition) !== OK) {
-				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
-				// @todo This is cross-room movement and should therefore only calculate a path once.
-				creep.moveToRange(targetPosition, 3);
-			}
-
-			return;
-		}
-
-		creep.stopNavMeshMove();
+		if (creep.interRoomTravel(targetPosition)) return;
+		if (creep.pos.roomName !== targetPosition.roomName) return;
 
 		// Put resources in storage.
 		if (creep.store.getUsedCapacity() > 0) {

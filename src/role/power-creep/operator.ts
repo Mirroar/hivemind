@@ -57,30 +57,19 @@ export default class OperatorRole extends Role {
 	 *   True if the creep is in the process of moving to another room.
 	 */
 	moveToTargetRoom() {
-		const isInTargetRoom = this.creep.pos.roomName === this.creep.memory.newTargetRoom;
-
-		if (isInTargetRoom && (this.creep.isInRoom() || !this.creep.getNavMeshMoveTarget())) return false;
-
-		// @todo Use target room's power spawn position.
-		const targetPosition = new RoomPosition(25, 25, this.creep.memory.newTargetRoom);
-
-		// If there's a power spawn in the room, use it if necessary so we can
-		// survive long journeys.
+		// If there's a power spawn in the current room, use it if necessary so we
+		// can survive long journeys.
 		if (this.creep.ticksToLive < POWER_CREEP_LIFE_TIME * 0.8 && this.creep.room.powerSpawn) {
 			this.performRenew();
 
 			return true;
 		}
 
-		// @todo If we're in a room with a storage, clear out creep's store.
+		const targetPosition = new RoomPosition(25, 25, this.creep.memory.newTargetRoom);
+		if (this.creep.interRoomTravel(targetPosition)) return true;
+		if (this.creep.pos.roomName !== targetPosition.roomName) return true;
 
-		if (this.creep.moveUsingNavMesh(targetPosition) !== OK) {
-			hivemind.log('creeps').debug(this.creep.name, 'can\'t move from', this.creep.pos.roomName, 'to', targetPosition.roomName);
-			// @todo This is cross-room movement and should therefore only calculate a path once.
-			this.creep.moveToRange(targetPosition, 3);
-		}
-
-		return true;
+		return false;
 	}
 
 	/**

@@ -310,8 +310,6 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.target) {
-			const targetPosition = utilities.decodePosition(creep.memory.target);
-			const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 			let enemiesNearby = false;
 			if (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || creep.memory.body[HEAL]) {
 				// Check for enemies and interrupt move accordingly.
@@ -332,17 +330,8 @@ export default class BrawlerRole extends Role {
 				});
 			}
 
-			if (!enemiesNearby && (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget()))) {
-				if (creep.moveUsingNavMesh(targetPosition, {allowDanger}) !== OK) {
-					hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
-					// @todo This is cross-room movement and should therefore only calculate a path once.
-					creep.moveToRange(targetPosition, 3);
-				}
-
-				return;
-			}
-
-			creep.stopNavMeshMove();
+			const targetPosition = utilities.decodePosition(creep.memory.target);
+			if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return;
 
 			// @todo For some reason, using goTo instead of moveTo here results in
 			// a lot of "trying to follow non-existing path" errors moving across rooms.

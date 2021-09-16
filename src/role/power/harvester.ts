@@ -33,18 +33,8 @@ export default class PowerHarvesterRole extends Role {
 		if (creep._hasAttacked) return;
 
 		const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
-		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
-		if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
-			if (creep.moveUsingNavMesh(targetPosition) !== OK) {
-				hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
-				// @todo This is cross-room movement and should therefore only calculate a path once.
-				creep.moveToRange(targetPosition, 3);
-			}
-
-			return;
-		}
-
-		creep.stopNavMeshMove();
+		if (creep.interRoomTravel(targetPosition)) return;
+		if (creep.pos.roomName != targetPosition.roomName) return;
 
 		const powerBanks = creep.room.find(FIND_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_POWER_BANK,

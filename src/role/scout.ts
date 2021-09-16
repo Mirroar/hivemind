@@ -98,30 +98,7 @@ export default class ScoutRole extends Role {
 		}
 
 		const targetPosition = new RoomPosition(25, 25, creep.memory.scoutTarget);
-		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
-		if (creep.heapMemory.moveWithoutNavMesh) {
-			if (!isInTargetRoom || !creep.isInRoom()) {
-				if (!creep.moveToRoom(creep.memory.scoutTarget, true)) {
-					this.chooseScoutTarget(creep, true);
-				}
-
-				return;
-			}
-		}
-		else {
-			if (!isInTargetRoom || (!creep.isInRoom() && creep.getNavMeshMoveTarget())) {
-				if (creep.moveUsingNavMesh(targetPosition, {allowDanger: true}) !== OK) {
-					hivemind.log('creeps').debug(creep.name, 'can\'t move from', creep.pos.roomName, 'to', targetPosition.roomName);
-
-					// Try moving to target room without using nav mesh.
-					creep.heapMemory.moveWithoutNavMesh = true;
-				}
-
-				return;
-			}
-
-			creep.stopNavMeshMove();
-		}
+		if (creep.interRoomTravel(targetPosition)) return;
 
 		this.chooseScoutTarget(creep);
 	}
