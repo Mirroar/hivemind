@@ -57,7 +57,7 @@ export default class RoomPlanner {
 	 *   Name of the room this room planner is assigned to.
 	 */
 	constructor(roomName: string) {
-		this.roomPlannerVersion = 34;
+		this.roomPlannerVersion = 35;
 		this.roomName = roomName;
 		this.room = Game.rooms[roomName]; // Will not always be available.
 		if (hivemind.settings.get('enableMinCutRamparts')) {
@@ -368,6 +368,14 @@ export default class RoomPlanner {
 		const controllerPosition = roomIntel.getControllerPosition();
 
 		// Decide where room center should be by averaging exit positions.
+		// @todo Try multiple room centers:
+		// - Current version
+		// - Near controller
+		// - Between controller and a source
+		// - Near any corner or side
+		// @todo Then evaluate best result by:
+		// - Upkeep costs (roads, ramparts)
+		// - Path lengths (Bays, sources, controller)
 		let cx = controllerPosition.x;
 		let cy = controllerPosition.y;
 		let count = 1;
@@ -614,6 +622,7 @@ export default class RoomPlanner {
 
 		this.placeTowers();
 		this.placeSpawnWalls();
+		this.placeFlag(new RoomPosition(25, 25, this.roomName), 'planner_finished', this.buildingMatrix.get(25, 25));
 
 		hivemind.log('rooms', this.roomName).info('Finished room planning: ', utilities.renderCostMatrix(this.wallDistanceMatrix), utilities.renderCostMatrix(this.exitDistanceMatrix), utilities.renderCostMatrix(this.buildingMatrix));
 
@@ -1704,7 +1713,7 @@ export default class RoomPlanner {
 	 */
 	isPlanningFinished(): boolean {
 		if (!this.memory.locations) return false;
-		if (!this.memory.locations.observer && this.memory.planningTries <= 10) return false;
+		if (!this.memory.locations.planner_finished && this.memory.planningTries <= 10) return false;
 
 		return true;
 	};
