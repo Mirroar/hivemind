@@ -1009,7 +1009,7 @@ export default class RoomPlanner {
 			this.scoreTowerPositions(positions, ramparts);
 			while(newTowers.length < this.remainingStructureCount('tower')) {
 				let info = _.max(positions, 'score');
-				if (!info || info.score < 0) break;
+				if (!info || typeof info === 'number' || info.score < 0) break;
 
 				info.score = -1;
 
