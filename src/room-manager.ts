@@ -310,7 +310,6 @@ export default class RoomManager {
 	removeMisplacedSpawn(roomSpawns) {
 		for (const spawn of roomSpawns) {
 			if (this.roomPlanner.isPlannedLocation(spawn.pos, 'spawn')) continue;
-			if (spawn.spawning) continue;
 
 			// Only destroy spawn if there are enough resources and builders available.
 			const roomEnergy = this.room.storage ? this.room.storage.store.energy : 0;
@@ -321,6 +320,9 @@ export default class RoomManager {
 			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 3) {
 				this.memory.hasMisplacedSpawn = true;
 			}
+
+			// Don't check whether spawn can be moved right now if a creep is spawning.
+			if (spawn.spawning) continue;
 
 			let buildPower = 0;
 			for (const creep of _.values<Creep>(this.room.creepsByRole.builder)) {
