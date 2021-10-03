@@ -162,11 +162,12 @@ export default class ExpandProcess extends Process {
 		for (const failedAttempt of this.memory.failedExpansions || []) {
 			const distance = Game.map.getRoomLinearDistance(info.roomName, failedAttempt.roomName);
 			let multiplier = 1;
-			if (Game.time - failedAttempt.time > 1000000) continue;
-			if (Game.time - failedAttempt.time > 100000) multiplier = 1 - ((failedAttempt.time - 100000) / 900000);
+			const elapsedTicks = Game.time - failedAttempt.time;
+			if (elapsedTicks > 1000000) continue;
+			if (elapsedTicks > 100000) multiplier = 1 - ((elapsedTicks - 100000) / 900000);
 
 			if (distance === 0) score -= multiplier;
-			else if (distance < 3) score -= multiplier / (distance + 1);
+			else if (distance < 6) score -= multiplier / (distance + 1);
 		}
 
 		return score;
