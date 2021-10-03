@@ -428,10 +428,8 @@ const utilities = {
 			}
 		}
 
-		let count = 0;
 		while (openList.length > 0) {
 			const pos = openList.pop();
-			count++;
 
 			// Increase cost matrix value for the given tile.
 			let value = matrix.get(pos.x, pos.y);
@@ -456,8 +454,6 @@ const utilities = {
 				openList.push(newPos);
 			});
 		}
-
-		Game.notify('Combat cost matrix with ' + count + ' modified tiles generated for ' + roomName);
 
 		return newMatrix;
 	},

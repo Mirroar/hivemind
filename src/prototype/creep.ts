@@ -38,7 +38,7 @@ Object.defineProperty(Creep.prototype, 'heapMemory', {
 	 * Gets semi-persistent memory for a creep.
 	 *
 	 * @return {Operation}
-	 *   The operation this creep belongs to.
+	 *   The heap memory object for this creep.
 	 */
 	get() {
 		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {};

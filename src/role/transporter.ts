@@ -160,6 +160,7 @@ export default class TransporterRole extends Role {
 
 		if (best.x) {
 			// Dropoff location.
+			// @todo This needs cleaning up.
 			if (creep.pos.x === best.x && creep.pos.y === best.y) {
 				creep.drop(creep.memory.order.resourceType);
 			}
