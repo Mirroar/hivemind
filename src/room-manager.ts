@@ -16,7 +16,13 @@ declare global {
 	}
 
 	interface RoomMemory {
-		manager?: any,
+		manager: RoomManagerMemory,
+	}
+
+	interface RoomManagerMemory {
+		runNextTick: boolean,
+		hasMisplacedSpawn: boolean,
+		dismantle: {[structureId: string]: number},
 	}
 }
 
@@ -25,7 +31,7 @@ import hivemind from 'hivemind';
 export default class RoomManager {
 	room: Room;
 	roomPlanner;
-	memory;
+	memory: RoomManagerMemory;
 	roomConstructionSites: ConstructionSite[];
 	constructionSitesByType: {
 		[key: string]: ConstructionSite[],
@@ -45,18 +51,23 @@ export default class RoomManager {
 	constructor(room: Room) {
 		this.room = room;
 		this.roomPlanner = room.roomPlanner;
+		this.initializeMemory();
+	}
 
-		if (!Memory.rooms[room.name]) {
-			Memory.rooms[room.name] = {} as RoomMemory;
+	initializeMemory() {
+		if (!Memory.rooms[this.room.name]) {
+			Memory.rooms[this.room.name] = {} as RoomMemory;
 		}
 
-		if (!Memory.rooms[room.name].manager) {
-			Memory.rooms[room.name].manager = {
+		if (!Memory.rooms[this.room.name].manager) {
+			Memory.rooms[this.room.name].manager = {
 				dismantle: {},
+				runNextTick: false,
+				hasMisplacedSpawn: false,
 			};
 		}
 
-		this.memory = Memory.rooms[room.name].manager;
+		this.memory = Memory.rooms[this.room.name].manager;
 	}
 
 	/**
