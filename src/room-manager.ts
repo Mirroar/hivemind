@@ -97,6 +97,14 @@ export default class RoomManager {
 			}
 		}
 
+		// Remove all extensions blocking roads.
+		for (const extension of this.structuresByType[STRUCTURE_EXTENSION] || []) {
+			if (this.roomPlanner.isPlannedLocation(extension.pos, 'extension')) continue;
+			if (!this.roomPlanner.isPlannedLocation(extension.pos, 'road')) continue;
+
+			extension.destroy();
+		}
+
 		// Remove unwanted walls that might block initial buildings.
 		for (const wall of this.structuresByType[STRUCTURE_WALL] || []) {
 			if (
