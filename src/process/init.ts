@@ -1,3 +1,4 @@
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import BoostManager from 'manager.boost';
 import Process from 'process/process';
@@ -17,6 +18,7 @@ declare global {
 				[key: string]: Creep,
 			},
 		},
+		myRooms: Room[],
 	}
 }
 
@@ -57,6 +59,24 @@ export default class InitProcess extends Process {
 			const operation = new operationClasses[data.type](opName);
 			Game.operations[opName] = operation;
 			Game.operationsByType[data.type][opName] = operation;
+		});
+
+		// Define quick access property Game.myRooms.
+		Object.defineProperty(Game, 'myRooms', {
+
+			/**
+			 * Gets a filtered list of all owned rooms.
+			 *
+			 * @return {Room[]}
+			 *   An array of all rooms we own.
+			 */
+			get() {
+				return cache.inObject(this, 'myRooms', 0, () => {
+					return _.filter(this.rooms, (room: Room) => room.isMine());
+				})
+			},
+			enumerable: false,
+			configurable: true,
 		});
 
 		// Cache creeps per room and role.
