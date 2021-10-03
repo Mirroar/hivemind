@@ -178,6 +178,9 @@ export default class RoomManager {
 		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
 
 		// Build storage ASAP.
+		if (this.hasMisplacedStorage() && this.room.storage.store.getUsedCapacity() < 5000) {
+			this.removeUnplannedStructures('storage', STRUCTURE_STORAGE, 1);
+		}
 		this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
 
 		// Make sure extensions are built in the right place, remove otherwise.
@@ -192,6 +195,9 @@ export default class RoomManager {
 		this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
 
 		// Also build terminal when available.
+		if (this.hasMisplacedTerminal() && this.room.terminal.store.getUsedCapacity() < 5000) {
+			this.removeUnplannedStructures('terminal', STRUCTURE_TERMINAL, 1);
+		}
 		this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL);
 
 		// Make sure links are built in the right place, remove otherwise.
@@ -356,8 +362,34 @@ export default class RoomManager {
 	 * @return {boolean}
 	 *   True if a spawn needs to be moved.
 	 */
-	hasMisplacedSpawn() {
+	hasMisplacedSpawn(): boolean {
 		return this.memory.hasMisplacedSpawn;
+	}
+
+	/**
+	 * Checks if the room has a storage at the wrong location.
+	 *
+	 * @return {boolean}
+	 *   True if a storage needs to be moved.
+	 */
+	hasMisplacedStorage(): boolean {
+		if (!this.room.storage) return false;
+		if (this.roomPlanner.isPlannedLocation(this.room.storage.pos, 'storage')) return false;
+
+		return true;
+	}
+
+	/**
+	 * Checks if the room has a terminal at the wrong location.
+	 *
+	 * @return {boolean}
+	 *   True if a terminal needs to be moved.
+	 */
+	hasMisplacedTerminal(): boolean {
+		if (!this.room.terminal) return false;
+		if (this.roomPlanner.isPlannedLocation(this.room.terminal.pos, 'terminal')) return false;
+
+		return true;
 	}
 
 	/**
