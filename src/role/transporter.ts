@@ -307,21 +307,23 @@ export default class TransporterRole extends Role {
 			}
 
 			// If it's needed for trading, store in terminal.
-			const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
-			_.each(roomSellOrders, order => {
-				if (order.resourceType !== resourceType) return;
-				if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
-				if (creep.room.isClearingTerminal()) return;
-				if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
+			if (terminal) {
+				const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
+				_.each(roomSellOrders, order => {
+					if (order.resourceType !== resourceType) return;
+					if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
+					if (creep.room.isClearingTerminal()) return;
+					if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
 
-				options.push({
-					priority: 4,
-					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: terminal,
-					resourceType,
+					options.push({
+						priority: 4,
+						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
+						type: 'structure',
+						object: terminal,
+						resourceType,
+					});
 				});
-			});
+			}
 
 			// The following only concerns resources other than energy.
 			if (resourceType === RESOURCE_ENERGY || creep.store[resourceType] <= 0) continue;
