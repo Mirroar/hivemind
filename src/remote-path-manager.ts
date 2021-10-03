@@ -21,7 +21,7 @@ export default class RemotePathManager {
 			return unpackPosList(memory.path);
 		}
 
-		const availableSourceRooms = _.filter(Game.rooms, r => r.isMine() && Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name) <= hivemind.settings.get('maxRemoteMineRoomDistance'));
+		const availableSourceRooms = _.filter(Game.myRooms, r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name) <= hivemind.settings.get('maxRemoteMineRoomDistance'));
 		const sortedByDist = _.sortBy(_.values<Room>(availableSourceRooms), r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name));
 
 		let minPath;

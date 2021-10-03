@@ -145,11 +145,10 @@ export default class ReportProcess extends Process {
 	 */
 	getStoredPower() {
 		let amount = 0;
-		const rooms = _.filter(Game.rooms, r => r.isMine());
-		_.each(rooms, room => {
+		for (const room of Game.myRooms) {
 			amount += room.storage ? (room.storage.store[RESOURCE_POWER] || 0) : 0;
 			amount += room.terminal ? (room.terminal.store[RESOURCE_POWER] || 0) : 0;
-		});
+		}
 
 		return amount;
 	};

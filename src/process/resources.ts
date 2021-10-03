@@ -128,13 +128,9 @@ export default class ResourcesProcess extends Process {
 		const rooms = {};
 
 		// Collect room resource states.
-		for (const room of _.values<Room>(Game.rooms)) {
-			if (!room.isMine()) continue;
-
+		for (const room of Game.myRooms) {
 			const roomData = room.getResourceState();
-			if (roomData) {
-				rooms[room.name] = roomData;
-			}
+			rooms[room.name] = roomData;
 		}
 
 		return rooms;

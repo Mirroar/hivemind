@@ -33,7 +33,7 @@ export default class TradeProcess extends Process {
 		if (!hivemind.settings.get('enableTradeManagement')) return;
 
 		// Only trade if we have a terminal to trade with.
-		if (_.size(_.filter(Game.rooms, room => room.isMine() && room.terminal)) === 0) return;
+		if (_.size(_.filter(Game.myRooms, room => room.terminal)) === 0) return;
 
 		this.removeOldTrades();
 
@@ -147,9 +147,8 @@ export default class TradeProcess extends Process {
 			rooms: 0,
 		};
 
-		for (const room of _.values<Room>(Game.rooms)) {
+		for (const room of Game.myRooms) {
 			const roomData = room.getResourceState();
-			if (!roomData) continue;
 
 			total.rooms++;
 			for (const resourceType of _.keys(roomData.totalResources)) {

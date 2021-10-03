@@ -65,7 +65,7 @@ export default class ExpandProcess extends Process {
 		// We probably can't expect to expand earlier than 100 ticks into the game.
 		if (!stats.getStat('cpu_total', 1000)) return;
 
-		const ownedRooms = _.size(_.filter(Game.rooms, room => room.isMine()));
+		const ownedRooms = Game.myRooms.length;
 		const harvestRooms = Memory.strategy.remoteHarvesting ? Memory.strategy.remoteHarvesting.currentCount : 0;
 
 		// If we have many rooms with remote harvesting, be a bit more lenient
@@ -318,17 +318,17 @@ export default class ExpandProcess extends Process {
 		info.supportingRooms = [];
 
 		// @todo Start with closest rooms first.
-		_.each(Game.rooms, room => {
+		for (const room of Game.myRooms) {
 			// 5 Support squads max.
-			if (_.size(activeSquads) >= 5) return false;
+			if (_.size(activeSquads) >= 5) break;
 
-			if (!room.isMine() || room.controller.level < 4) return null;
-			if (room.name === info.spawnRoom || room.name === info.roomName) return null;
-			if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) return null;
-			if (room.getStoredEnergy() < 50000) return null;
+			if (room.controller.level < 4) continue;
+			if (room.name === info.spawnRoom || room.name === info.roomName) continue;
+			if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) continue;
+			if (room.getStoredEnergy() < 50000) continue;
 
 			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
-			if (!path || path.incomplete) return null;
+			if (!path || path.incomplete) continue;
 
 			const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
 			const supportSquad = new Squad(squadName);
@@ -343,8 +343,7 @@ export default class ExpandProcess extends Process {
 
 			info.supportingRooms.push(room.name);
 			activeSquads[squadName] = true;
-			return null;
-		});
+		};
 
 		// Remove support squads from older rooms.
 		// @todo This should no longer be necessary when the code in stopExpansion
@@ -501,19 +500,19 @@ export default class ExpandProcess extends Process {
 	findClosestSpawn(targetRoom) {
 		let bestRoom = null;
 		let bestLength = 0;
-		_.each(Game.rooms, room => {
-			if (!room.isMine() || room.controller.level < 5) return;
-			if (room.name === targetRoom) return;
-			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 10) return;
+		for (const room of Game.myRooms) {
+			if (room.controller.level < 5) continue;
+			if (room.name === targetRoom) continue;
+			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 10) continue;
 
 			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500});
-			if (!path || path.incomplete) return;
+			if (!path || path.incomplete) continue;
 
 			if (!bestRoom || bestLength > path.path.length) {
 				bestRoom = room;
 				bestLength = path.path.length;
 			}
-		});
+		}
 
 		return bestRoom && bestRoom.name;
 	}

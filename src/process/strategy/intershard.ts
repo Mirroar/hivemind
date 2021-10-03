@@ -32,13 +32,12 @@ export default class InterShardProcess extends Process {
 	updateShardInfo() {
 		if (!this.memory.info) this.memory.info = {};
 
-		const ownedRooms = _.filter(Game.rooms, room => room.isMine());
-		this.memory.info.ownedRooms = _.size(ownedRooms);
+		this.memory.info.ownedRooms = Game.myRooms.length;
 		this.memory.info.ownedCreeps = _.size(Game.creeps);
 
 		// Determine highest room level.
 		this.memory.info.maxRoomLevel = 0;
-		for (const room of ownedRooms) {
+		for (const room of Game.myRooms) {
 			if (room.controller.level > this.memory.info.maxRoomLevel) {
 				this.memory.info.maxRoomLevel = room.controller.level;
 			}

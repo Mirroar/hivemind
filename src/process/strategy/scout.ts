@@ -442,15 +442,13 @@ export default class ScoutProcess extends Process {
 		const openList = {};
 
 		// Starting point for scouting operations are owned rooms.
-		_.each(Game.rooms, room => {
-			if (!room.isMine()) return;
-
+		for (const room of Game.myRooms) {
 			openList[room.name] = {
 				range: 0,
 				origin: room.name,
 				safePath: true,
 			};
-		});
+		}
 
 		if (_.size(openList) === 0) {
 			// Add any room with a portal as a scout origin if we have no room in this shard.
@@ -477,11 +475,11 @@ export default class ScoutProcess extends Process {
 	 */
 	findObservers() {
 		this.observers = [];
-		_.each(Game.rooms, room => {
-			if (!room.isMine() || !room.observer) return;
+		for (const room of Game.myRooms) {
+			if (!room.observer) return;
 
 			this.observers.push(room.observer);
-		});
+		}
 	}
 
 	/**
@@ -564,12 +562,11 @@ export default class ScoutProcess extends Process {
 	generateMineralStatus() {
 		this.mineralCount = {};
 		const mineralCount = this.mineralCount;
-		_.each(Game.rooms, room => {
-			if (!room.isMine()) return;
+		for (const room of Game.myRooms) {
 			const roomIntel = hivemind.roomIntel(room.name);
 			const mineralType = roomIntel.getMineralType();
 
 			mineralCount[mineralType] = (mineralCount[mineralType] || 0) + 1;
-		});
+		}
 	}
 }

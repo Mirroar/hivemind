@@ -95,16 +95,15 @@ export default class PowerMiningProcess extends Process {
 
 			// Determine which rooms need to spawn creeps.
 			let potentialSpawns = [];
-			_.each(Game.rooms, room => {
-				if (!room.isMine()) return;
-				if (room.isFullOnPower()) return;
-				if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) return;
-				if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) return;
-				if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) return;
+			for (const room of Game.myRooms) {
+				if (room.isFullOnPower()) continue;
+				if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) continue;
+				if (CONTROLLER_STRUCTURES[STRUCTURE_POWER_SPAWN][room.controller.level] < 1) continue;
+				if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) continue;
 
 				// @todo Use actual position of power cache.
 				const roomRoute = mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, roomName));
-				if (roomRoute.incomplete || roomRoute.path.length > 10) return;
+				if (roomRoute.incomplete || roomRoute.path.length > 10) continue;
 
 				hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
 
@@ -112,7 +111,7 @@ export default class PowerMiningProcess extends Process {
 					room: room.name,
 					distance: roomRoute.path.length,
 				});
-			});
+			}
 
 			potentialSpawns = _.sortBy(potentialSpawns, 'distance');
 

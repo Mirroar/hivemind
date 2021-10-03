@@ -42,11 +42,9 @@ export default class RemoteMiningProcess extends Process {
 		memory.remoteHarvesting.rooms = [];
 
 		// Determine how much remote mining each room can handle.
-		_.each(Game.rooms, room => {
-			if (!room.isMine()) return;
-
+		for (const room of Game.myRooms) {
 			// Start remote mining as early as RCL 2, even in first room.
-			if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === room.name && room.controller.level < 2) return;
+			if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === room.name && room.controller.level < 2) continue;
 
 			let numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 			if (numSpawns === 0) {
@@ -57,7 +55,7 @@ export default class RemoteMiningProcess extends Process {
 					numSpawns = 1;
 				}
 				else {
-					return;
+					continue;
 				}
 			}
 
@@ -81,7 +79,7 @@ export default class RemoteMiningProcess extends Process {
 				current: 0,
 				max: Math.floor(spawnCapacity - roomNeeds),
 			};
-		});
+		}
 
 		// Create ordered list of best harvest rooms.
 		// @todo At this point we should carry duplicate for rooms that could have

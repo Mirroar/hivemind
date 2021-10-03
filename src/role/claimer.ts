@@ -65,7 +65,7 @@ export default class ClaimerRole extends Role {
 			}
 
 			// @todo Use intershard info for determining number of rooms available.
-			const numRooms = _.size(_.filter(Game.rooms, room => room.isMine()));
+			const numRooms = Game.myRooms.length;
 			const maxRooms = Game.gcl.level;
 
 			if (numRooms < maxRooms) {
