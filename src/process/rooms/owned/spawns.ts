@@ -21,6 +21,7 @@ import remoteHarvesrterSpawnRole from 'spawn-role/harvester.remote';
 import haulerSpawnRole from 'spawn-role/hauler';
 import powerHaulerSpawnRole from 'spawn-role/hauler.power';
 import helperSpawnRole from 'spawn-role/helper';
+import reclaimSpawnRole from 'spawn-role/reclaim';
 import roomDefenseSpawnRole from 'spawn-role/room-defense';
 import scoutSpawnRole from 'spawn-role/scout';
 import squadSpawnRole from 'spawn-role/squad';
@@ -42,6 +43,7 @@ const spawnClasses = {
 	'hauler': haulerSpawnRole,
 	'hauler.power': powerHaulerSpawnRole,
 	'helper': helperSpawnRole,
+	'reclaim': reclaimSpawnRole,
 	'room-defense': roomDefenseSpawnRole,
 	'scout': scoutSpawnRole,
 	'squad': squadSpawnRole,

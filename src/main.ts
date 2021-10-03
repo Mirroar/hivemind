@@ -48,6 +48,7 @@ import InterShardProcess from 'process/strategy/intershard';
 import ManagePowerCreepsProcess from 'process/power-creeps/manage';
 import MapVisualsProcess from 'process/map-visuals';
 import PowerMiningProcess from 'process/strategy/power';
+import ReclaimProcess from 'process/strategy/reclaim';
 import RemoteMiningProcess from 'process/strategy/mining';
 import ReportProcess from 'process/report';
 import ResourcesProcess from 'process/resources';
@@ -139,6 +140,11 @@ const main = {
 		if (shardHasEstablishedRooms) {
 			hivemind.runProcess('strategy.power_mining', PowerMiningProcess, {
 				interval: hivemind.settings.get('powerMiningCheckInterval'),
+			});
+
+			hivemind.runProcess('strategy.reclaim', ReclaimProcess, {
+				interval: 100,
+				priority: PROCESS_PRIORITY_LOW,
 			});
 		}
 
