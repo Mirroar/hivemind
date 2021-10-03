@@ -1,6 +1,24 @@
 /* global RoomPosition FIND_FLAGS LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
 STRUCTURE_RAMPART */
 
+declare global {
+	interface DismantlerCreep extends Creep {
+		memory: DismantlerCreepMemory,
+		heapMemory: DismantlerCreepHeapMemory,
+	}
+
+	interface DismantlerCreepMemory extends CreepMemory {
+		role: 'dismantler',
+		sourceRoom: string,
+		targetRoom: string,
+		source: string,
+	}
+
+	interface DismantlerCreepHeapMemory extends CreepHeapMemory {
+		finishedPositions: string[],
+	}
+}
+
 import Role from 'role/role';
 import utilities from 'utilities';
 
@@ -11,7 +29,7 @@ export default class DismantlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: DismantlerCreep) {
 		if (!creep.memory.sourceRoom) {
 			creep.memory.sourceRoom = creep.pos.roomName;
 		}
@@ -20,40 +38,23 @@ export default class DismantlerRole extends Role {
 			creep.memory.targetRoom = creep.pos.roomName;
 		}
 
-		if (creep.memory.dismantling && creep.store.getCapacity() > 0 && creep.store.getFreeCapacity() === 0) {
-			this.setDismantlerState(creep, false);
-		}
-		else if (!creep.memory.dismantling && creep.store.getUsedCapacity() === 0) {
-			this.setDismantlerState(creep, true);
-		}
-
-		if (creep.memory.dismantling) {
-			if (creep.operation && creep.operation.type === 'mining') {
-				this.performOperationDismantle(creep);
-				return;
-			}
-
-			this.performDismantle(creep);
+		if (creep.operation && creep.operation.type === 'mining') {
+			this.performOperationDismantle(creep);
 			return;
 		}
 
-		this.performDismantlerDeliver(creep);
+		this.performDismantle(creep);
+		return;
 	}
 
 	/**
-	 * Puts this creep into or out of dismantling mode.
+	 * Dismantles structures blocking an operation.
 	 *
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
-	 * @param {boolean} dismantling
-	 *   Whether this creep should be dismantling buildings.
 	 */
-	setDismantlerState(creep, dismantling) {
-		creep.memory.dismantling = dismantling;
-	}
-
-	performOperationDismantle(creep) {
-		if (!creep.memory.finishedPositions) creep.memory.finishedPositions = [];
+	performOperationDismantle(creep: DismantlerCreep) {
+		if (!creep.heapMemory.finishedPositions) creep.heapMemory.finishedPositions = [];
 		if (!creep.operation.needsDismantler(creep.memory.source)) {
 			// @todo Return home and suicide.
 			const targetPos = new RoomPosition(24, 24, creep.memory.sourceRoom);
@@ -66,7 +67,7 @@ export default class DismantlerRole extends Role {
 		const targetPositions = creep.operation.getDismantlePositions(creep.memory.source);
 		let target;
 		for (const pos of targetPositions) {
-			if (creep.memory.finishedPositions.indexOf(utilities.encodePosition(pos)) !== -1) continue;
+			if (creep.heapMemory.finishedPositions.indexOf(utilities.encodePosition(pos)) !== -1) continue;
 
 			if (pos.roomName === creep.pos.roomName) {
 				const structures = _.filter(
@@ -75,7 +76,7 @@ export default class DismantlerRole extends Role {
 				);
 
 				if (structures.length === 0) {
-					creep.memory.finishedPositions.push(utilities.encodePosition(pos));
+					creep.heapMemory.finishedPositions.push(utilities.encodePosition(pos));
 					continue;
 				}
 			}
@@ -86,7 +87,7 @@ export default class DismantlerRole extends Role {
 
 		if (!target) {
 			// Just to be sure, start again from the top.
-			delete creep.memory.finishedPositions;
+			delete creep.heapMemory.finishedPositions;
 			return;
 		}
 
@@ -110,81 +111,19 @@ export default class DismantlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performDismantle(creep) {
+	performDismantle(creep: DismantlerCreep) {
 		// First, get to target room.
-		if (creep.pos.roomName !== creep.memory.targetRoom) {
-			creep.moveToRoom(creep.memory.targetRoom);
-			return;
-		}
+		const targetPos = new RoomPosition(25, 25, creep.memory.targetRoom);
+		if (creep.interRoomTravel(targetPos)) return;
+		if (creep.pos.roomName !== creep.memory.targetRoom) return;
 
-		let target;
+		if (!creep.room.roomManager || !creep.room.roomManager.needsDismantling()) return;
 
-		// Look for dismantle flags.
-		const flags = creep.room.find(FIND_FLAGS, {
-			filter: flag => flag.name.startsWith('Dismantle:'),
-		});
-		for (const flag of flags) {
-			const structures = flag.pos.lookFor(LOOK_STRUCTURES);
+		const target = creep.room.roomManager.getDismantleTarget();
+		if (!target) return;
 
-			if (structures.length === 0) {
-				// Done dismantling.
-				flag.remove();
-				continue;
-			}
-
-			target = structures[0];
-			break;
-		}
-
-		if (!target && creep.room.roomManager && creep.room.roomManager.needsDismantling()) {
-			target = creep.room.roomManager.getDismantleTarget();
-			if (target) {
-				target.notifyWhenAttacked(false);
-			}
-		}
-
-		if (target) {
-			creep.whenInRange(1, target, () => creep.dismantle(target));
-		}
-	}
-
-	/**
-	 * Makes the creep deliver its stored energy.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 */
-	performDismantlerDeliver(creep) {
-		// First, get to delivery room.
-		if (creep.pos.roomName !== creep.memory.sourceRoom) {
-			creep.moveTo(new RoomPosition(25, 25, creep.memory.sourceRoom));
-			return;
-		}
-
-		// Deliver to storage if possible.
-		if (creep.room.storage) {
-			if (creep.pos.getRangeTo(creep.room.storage) > 1) {
-				creep.moveTo(creep.room.storage);
-			}
-			else {
-				creep.transferAny(creep.room.storage);
-			}
-
-			return;
-		}
-
-		const location = creep.room.getStorageLocation();
-		if (!location) {
-			creep.dropAny();
-			return;
-		}
-
-		const pos = new RoomPosition(location.x, location.y, creep.pos.roomName);
-		if (creep.pos.getRangeTo(pos) > 0) {
-			creep.moveTo(pos);
-		}
-		else {
-			creep.dropAny();
-		}
+		// @todo Only disable attack notification once to save on intents.
+		target.notifyWhenAttacked(false);
+		creep.whenInRange(1, target, () => creep.dismantle(target));
 	}
 }
