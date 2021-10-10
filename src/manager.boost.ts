@@ -3,7 +3,7 @@ LAB_BOOST_ENERGY OK */
 
 declare global {
 	interface Room {
-		boostManager?: any,
+		boostManager?: BoostManager,
 		getAvailableBoosts,
 		canSpawnBoostedCreeps,
 		getBoostLabs,
@@ -11,11 +11,33 @@ declare global {
 	}
 
 	interface CreepMemory {
-		needsBoosting?: any,
+		needsBoosting?: boolean,
 	}
 
 	interface RoomMemory {
-		boostManager?: any,
+		boostManager?: BoostManagerMemory,
+	}
+
+	type AvailableBoosts = {
+		[mineralType: string]: {
+			effect: number,
+			available: number,
+		},
+	}
+
+	type BoostLabMemory = {}
+
+	type BoostLabsMemory = {
+		[labId: string]: BoostLabMemory,
+	}
+
+	interface BoostManagerMemory {
+		creepsToBoost: {
+			[creepName: string]: {
+				[boostType: string]: number,
+			}
+		},
+		// labs: BoostLabsMemory,
 	}
 }
 
@@ -28,17 +50,18 @@ import cache from 'utils/cache';
  *   The effect name we want to use for boosting.
  *
  * @return {object}
- *   An object keyed by boost type (unless type was set) and then mineral type,
- *   containing information about the available boost effect and number of
- *   parts that can be boosted.
+ *   An object keyed by mineral type, containing information about the available
+ *   boost effect and number of parts that can be boosted.
  */
-Room.prototype.getAvailableBoosts = function (type) {
+Room.prototype.getAvailableBoosts = function (type: string): AvailableBoosts {
 	const availableBoosts = cache.inObject(
 		this,
 		'availableBoosts',
 		1,
 		() => {
-			const boosts = {};
+			const boosts: {
+				[boostType: string]: AvailableBoosts,
+			} = {};
 
 			const storage = this.storage || {store: {}};
 			const terminal = this.terminal || {store: {}};
@@ -60,7 +83,7 @@ Room.prototype.getAvailableBoosts = function (type) {
 
 						boosts[boostType][mineralType] = {
 							effect: boostValue,
-							available: Math.floor((storage.store[mineralType] || 0 + terminal.store[mineralType] || 0) / 10),
+							available: Math.floor((storage.store[mineralType] || 0 + terminal.store[mineralType] || 0) / LAB_BOOST_MINERAL),
 						};
 					});
 				}
@@ -70,11 +93,7 @@ Room.prototype.getAvailableBoosts = function (type) {
 		}
 	);
 
-	if (type) {
-		return availableBoosts[type];
-	}
-
-	return availableBoosts;
+	return availableBoosts[type];
 };
 
 /**
@@ -84,16 +103,11 @@ Room.prototype.getAvailableBoosts = function (type) {
  * @return {boolean}
  *   True if the room is able to boost creeps.
  */
-Room.prototype.canSpawnBoostedCreeps = function () {
+Room.prototype.canSpawnBoostedCreeps = function (): boolean {
 	if (this.isEvacuating()) return false;
 
 	const labs = this.getBoostLabs();
-
-	if (labs.length > 0) {
-		return true;
-	}
-
-	return false;
+	return labs.length > 0;
 };
 
 /**
@@ -102,12 +116,12 @@ Room.prototype.canSpawnBoostedCreeps = function () {
  * @return {Structure[]}
  *   An array of labs available for using boosts.
  */
-Room.prototype.getBoostLabs = function () {
+Room.prototype.getBoostLabs = function (): StructureLab[] {
 	// @todo Make room planner decide which are boost labs, or hijack
 	// reaction labs when necessary.
 	const labMemory = this.getBoostLabMemory();
 
-	const boostLabs = [];
+	const boostLabs: StructureLab[] = [];
 	_.each(labMemory, (data, id) => {
 		const lab = Game.getObjectById<StructureLab>(id);
 		if (lab && lab.isOperational()) {
@@ -121,15 +135,15 @@ Room.prototype.getBoostLabs = function () {
 	return boostLabs;
 };
 
-Room.prototype.getBoostLabMemory = function () {
+Room.prototype.getBoostLabMemory = function (): BoostLabsMemory {
 	return cache.inMemory(
 		'boostLabs:' + this.name,
 		1000,
 		previousCache => {
 			if (!this.boostManager) return {};
 
-			const labs = this.find(FIND_STRUCTURES, {
-				filter: structure => {
+			const labs: StructureLab[] = this.find(FIND_MY_STRUCTURES, {
+				filter: (structure: AnyOwnedStructure) => {
 					if (structure.structureType !== STRUCTURE_LAB) return false;
 					if (this.memory.labs && _.contains(this.memory.labs.reactor, structure.id)) return false;
 					if (this.memory.labs && structure.id === this.memory.labs.source1) return false;
@@ -157,203 +171,209 @@ Room.prototype.getBoostLabMemory = function () {
 
 /**
  * BoostManager is responsible for choosing an applying boosts to creeps.
- * @constructor
- *
- * @param {string} roomName
- *   Name of the room this BoostManager is assigned to.
  */
-const BoostManager = function (roomName) {
-	this.roomName = roomName;
-	this.room = Game.rooms[roomName];
+export default class BoostManager {
 
-	if (!Memory.rooms[roomName].boostManager) {
-		Memory.rooms[roomName].boostManager = {};
-	}
+	roomName: string;
+	room: Room;
+	memory: BoostManagerMemory;
 
-	this.memory = Memory.rooms[roomName].boostManager;
+	/**
+	 * Creates a new BoostManager instance.
+	 *
+	 * @param {string} roomName
+	 *   Name of the room this BoostManager is assigned to.
+	 */
+	constructor(roomName: string) {
+		this.roomName = roomName;
+		this.room = Game.rooms[roomName];
 
-	if (!this.memory.creepsToBoost || (typeof this.memory.creepsToBoost.length !== 'undefined')) {
-		this.memory.creepsToBoost = {};
-	}
-
-	if (this.memory.labs) {
-		// Clean up old lab data.
-		delete this.memory.labs;
-	}
-
-	// @todo Clean out this.memory.creepsToBoost of creeps that no longer exist.
-};
-
-/**
- * Prepares memory for boosting a new creep.
- *
- * @param {string} creepName
- *   Name of the creep to boost.
- * @param {string[]} boosts
- *   Array of resource types to use for boosting, indexed by body part.
- */
-BoostManager.prototype.markForBoosting = function (creepName, boosts) {
-	if (!boosts || !creepName) return;
-	const creepMemory = Memory.creeps[creepName];
-
-	if (!creepMemory) return;
-
-	creepMemory.needsBoosting = true;
-	const boostMemory = {};
-	this.memory.creepsToBoost[creepName] = boostMemory;
-
-	_.each(boosts, (resourceType, bodyPart) => {
-		const numParts = creepMemory.body[bodyPart] || 0;
-
-		boostMemory[resourceType] = numParts;
-	});
-};
-
-/**
- * Overrides a creep's logic while it's being boosted.
- *
- * @param {Creep} creep
- *   The creep to manage.
- *
- * @return {boolean}
- *   True if we're currently overriding the creep's logic.
- */
-BoostManager.prototype.overrideCreepLogic = function (creep) {
-	if (!creep.memory.needsBoosting) return false;
-
-	if (!this.memory.creepsToBoost[creep.name]) {
-		delete creep.memory.needsBoosting;
-		return false;
-	}
-
-	const boostMemory = this.memory.creepsToBoost[creep.name];
-	if (_.size(boostMemory) === 0) {
-		delete this.memory.creepsToBoost[creep.name];
-		delete creep.memory.needsBoosting;
-		return false;
-	}
-
-	const labMemory = this.room.getBoostLabMemory();
-	let hasMoved = false;
-	// Find lab to get boosted at.
-	_.each(labMemory, (data, id) => {
-		const resourceType = data.resourceType;
-		if (!boostMemory[resourceType]) return null;
-		const amount = boostMemory[resourceType];
-
-		const lab = Game.getObjectById<StructureLab>(id);
-		if (!lab) return null;
-
-		creep.whenInRange(1, lab, () => {
-			if (lab.mineralType !== resourceType) return;
-			if (lab.mineralAmount < amount * LAB_BOOST_MINERAL) return;
-			if (lab.energy < amount * LAB_BOOST_ENERGY) return;
-
-			// @todo When waiting, give way to any other creeps so as to not block them.
-
-			// If there is enough energy and resources, boost!
-			if (lab.boostCreep(creep) === OK) {
-				// @todo Prevent trying to boost another creep with this lab on this turn.
-				// Awesome, boost has been applied (in theory).
-				// Clear partial memory, to prevent trying to boost again.
-				delete boostMemory[resourceType];
-			}
-		});
-
-		hasMoved = true;
-		return false;
-	});
-
-	return hasMoved;
-};
-
-/**
- * Gets a list of labs and their designated resource types.
- *
- * @return {object}
- *   Boosting information, keyed by lab id.
- */
-BoostManager.prototype.getLabOrders = function () {
-	const labs: StructureLab[] = this.room.getBoostLabs();
-
-	if (_.size(this.memory.creepsToBoost) === 0) return {};
-
-	const queuedBoosts = {};
-	const toDelete = [];
-	_.each(this.memory.creepsToBoost, (boostMemory, creepName) => {
-		if (!Game.creeps[creepName]) {
-			toDelete.push(creepName);
-			return;
+		if (!Memory.rooms[roomName].boostManager) {
+			Memory.rooms[roomName].boostManager = {
+				creepsToBoost: {},
+			};
 		}
 
-		_.each(boostMemory, (amount, resourceType) => {
-			queuedBoosts[resourceType] = (queuedBoosts[resourceType] || 0) + amount;
-		});
-	});
+		this.memory = Memory.rooms[roomName].boostManager;
 
-	for (const creepName of toDelete) {
-		delete this.memory.creepsToBoost[creepName];
-	}
-
-	const labMemory = this.room.getBoostLabMemory();
-	for (const lab of labs) {
-		if (!labMemory[lab.id]) {
-			labMemory[lab.id] = {};
+		if (!this.memory.creepsToBoost || (typeof this.memory.creepsToBoost.length !== 'undefined')) {
+			this.memory.creepsToBoost = {};
 		}
 
-		if (!labMemory[lab.id].resourceType || !queuedBoosts[labMemory[lab.id].resourceType]) {
-			const unassigned = _.filter(_.keys(queuedBoosts), resourceType => {
-				return _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0;
+		// @todo Clean out this.memory.creepsToBoost of creeps that no longer exist.
+	}
+
+	/**
+	 * Prepares memory for boosting a new creep.
+	 *
+	 * @param {string} creepName
+	 *   Name of the creep to boost.
+	 * @param {object} boosts
+	 *   List of resource types to use for boosting, indexed by body part.
+	 */
+	markForBoosting(creepName: string, boosts: {[partType: string]: ResourceConstant}) {
+		if (!boosts || !creepName) return;
+		const creepMemory = Memory.creeps[creepName];
+
+		if (!creepMemory) return;
+
+		creepMemory.needsBoosting = true;
+		const boostMemory: {
+			[boostType: string]: number,
+		} = {};
+		this.memory.creepsToBoost[creepName] = boostMemory;
+
+		_.each(boosts, (resourceType: ResourceConstant, bodyPart: BodyPartConstant) => {
+			const numParts = creepMemory.body[bodyPart] || 0;
+
+			boostMemory[resourceType] = numParts;
+		});
+	}
+
+	/**
+	 * Overrides a creep's logic while it's being boosted.
+	 *
+	 * @param {Creep} creep
+	 *   The creep to manage.
+	 *
+	 * @return {boolean}
+	 *   True if we're currently overriding the creep's logic.
+	 */
+	overrideCreepLogic(creep: Creep): boolean {
+		if (!creep.memory.needsBoosting) return false;
+
+		if (!this.memory.creepsToBoost[creep.name]) {
+			delete creep.memory.needsBoosting;
+			return false;
+		}
+
+		const boostMemory = this.memory.creepsToBoost[creep.name];
+		if (_.size(boostMemory) === 0) {
+			delete this.memory.creepsToBoost[creep.name];
+			delete creep.memory.needsBoosting;
+			return false;
+		}
+
+		const labMemory = this.room.getBoostLabMemory();
+		let hasMoved = false;
+		// Find lab to get boosted at.
+		_.each(labMemory, (data, id) => {
+			const resourceType = data.resourceType;
+			if (!boostMemory[resourceType]) return null;
+			const amount = boostMemory[resourceType];
+
+			const lab = Game.getObjectById<StructureLab>(id);
+			if (!lab) return null;
+
+			creep.whenInRange(1, lab, () => {
+				if (lab.mineralType !== resourceType) return;
+				if (lab.mineralAmount < amount * LAB_BOOST_MINERAL) return;
+				if (lab.energy < amount * LAB_BOOST_ENERGY) return;
+
+				// @todo When waiting, give way to any other creeps so as to not block them.
+
+				// If there is enough energy and resources, boost!
+				if (lab.boostCreep(creep) === OK) {
+					// @todo Prevent trying to boost another creep with this lab on this turn.
+					// Awesome, boost has been applied (in theory).
+					// Clear partial memory, to prevent trying to boost again.
+					delete boostMemory[resourceType];
+				}
 			});
 
-			if (unassigned.length === 0) {
-				delete labMemory[lab.id].resourceType;
+			hasMoved = true;
+			return false;
+		});
+
+		return hasMoved;
+	}
+
+	/**
+	 * Gets a list of labs and their designated resource types.
+	 *
+	 * @return {object}
+	 *   Boosting information, keyed by lab id.
+	 */
+	getLabOrders() {
+		const labs: StructureLab[] = this.room.getBoostLabs();
+
+		if (_.size(this.memory.creepsToBoost) === 0) return {};
+
+		const queuedBoosts = {};
+		const toDelete = [];
+		_.each(this.memory.creepsToBoost, (boostMemory, creepName) => {
+			if (!Game.creeps[creepName]) {
+				toDelete.push(creepName);
+				return;
+			}
+
+			_.each(boostMemory, (amount, resourceType) => {
+				queuedBoosts[resourceType] = (queuedBoosts[resourceType] || 0) + amount;
+			});
+		});
+
+		for (const creepName of toDelete) {
+			delete this.memory.creepsToBoost[creepName];
+		}
+
+		const labMemory = this.room.getBoostLabMemory();
+		for (const lab of labs) {
+			if (!labMemory[lab.id]) {
+				labMemory[lab.id] = {};
+			}
+
+			if (!labMemory[lab.id].resourceType || !queuedBoosts[labMemory[lab.id].resourceType]) {
+				const unassigned = _.filter(_.keys(queuedBoosts), resourceType => {
+					return _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0;
+				});
+
+				if (unassigned.length === 0) {
+					delete labMemory[lab.id].resourceType;
+				}
+				else {
+					labMemory[lab.id].resourceType = unassigned[0];
+				}
+			}
+
+			if (labMemory[lab.id].resourceType) {
+				const resourceType = labMemory[lab.id].resourceType;
+				labMemory[lab.id].resourceAmount = queuedBoosts[resourceType] * LAB_BOOST_MINERAL;
+				labMemory[lab.id].energyAmount = queuedBoosts[resourceType] * LAB_BOOST_ENERGY;
 			}
 			else {
-				labMemory[lab.id].resourceType = unassigned[0];
+				delete labMemory[lab.id].resourceAmount;
+				delete labMemory[lab.id].energyAmount;
 			}
 		}
 
-		if (labMemory[lab.id].resourceType) {
-			const resourceType = labMemory[lab.id].resourceType;
-			labMemory[lab.id].resourceAmount = queuedBoosts[resourceType] * LAB_BOOST_MINERAL;
-			labMemory[lab.id].energyAmount = queuedBoosts[resourceType] * LAB_BOOST_ENERGY;
+		// Make sure to delete memory of any labs no longer used for boosting.
+		const unusedLabs = _.filter(_.keys(labMemory), id => {
+			return _.filter(labs, lab => lab.id === id).length === 0;
+		});
+		for (const id of unusedLabs) {
+			delete labMemory[id];
 		}
-		else {
-			delete labMemory[lab.id].resourceAmount;
-			delete labMemory[lab.id].energyAmount;
-		}
+
+		return labMemory;
 	}
 
-	// Make sure to delete memory of any labs no longer used for boosting.
-	const unusedLabs = _.filter(_.keys(labMemory), id => {
-		return _.filter(labs, lab => lab.id === id).length === 0;
-	});
-	for (const id of unusedLabs) {
-		delete labMemory[id];
-	}
+	/**
+	 * Decides whether helper creeps need to be spawned in this room.
+	 *
+	 * @return {boolean}
+	 *   True if the room needs a helper creep.
+	 */
+	needsSpawning() {
+		const maxHelpers = 1;
+		const numHelpers = (this.room.creepsByRole.helper || []).length;
 
-	return labMemory;
+		if (numHelpers < maxHelpers) {
+			// Make sure we actually need helpers.
+			if (_.size(this.memory.creepsToBoost) > 0) {
+				return true;
+			}
+		}
+
+		return false;
+	}
 };
-
-/**
- * Decides whether helper creeps need to be spawned in this room.
- *
- * @return {boolean}
- *   True if the room needs a helper creep.
- */
-BoostManager.prototype.needsSpawning = function () {
-	const maxHelpers = 1;
-	const numHelpers = (this.room.creepsByRole.helper || []).length;
-
-	if (numHelpers < maxHelpers) {
-		// Make sure we actually need helpers.
-		if (_.size(this.memory.creepsToBoost) > 0) {
-			return true;
-		}
-	}
-
-	return false;
-};
-
-export default BoostManager;
