@@ -846,7 +846,7 @@ export default class TransporterRole extends Role {
 		if (!terminal && !storage) return options;
 
 		// Clear out overfull terminal.
-		if (terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || creep.room.isClearingTerminal()) && !creep.room.isEvacuating()) {
+		if (terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || creep.room.isClearingTerminal()) && !creep.room.isClearingStorage()) {
 			// Find resource with highest count and take that.
 			// @todo Unless it's supposed to be sent somewhere else.
 			let max = null;
@@ -886,6 +886,7 @@ export default class TransporterRole extends Role {
 		this.addContainerResourceOptions(options);
 		this.addHighLevelResourceOptions(options);
 		this.addEvacuatingRoomResourceOptions(options);
+		this.addClearingStorageResourceOptions(options);
 		this.addLabResourceOptions(options);
 
 		return options;
@@ -1323,10 +1324,22 @@ export default class TransporterRole extends Role {
 			}
 		}
 
-		// Also take everything out of storage.
+		// @todo Destroy nuker once storage is empty so we can pick up contained resources.
+	}
+
+	/**
+	 * Adds options for emptying storage.
+	 *
+	 * @param {Array} options
+	 *   A list of potential resource sources.
+	 */
+	addClearingStorageResourceOptions(options) {
+		const room = this.creep.room;
+		if (!room.isClearingStorage()) return;
+
 		const storage = room.storage;
 		const terminal = room.terminal;
-		if (storage && terminal && terminal.store.getUsedCapacity() < terminal.store.getCapacity() * 0.8) {
+		if (storage && terminal && terminal.store.getUsedCapacity() < terminal.store.getCapacity() * 0.95) {
 			for (const resourceType in storage.store) {
 				if (storage.store[resourceType] <= 0) continue;
 
@@ -1341,8 +1354,6 @@ export default class TransporterRole extends Role {
 				break;
 			}
 		}
-
-		// @todo Destroy nuker once storage is empty so we can pick up contained resources.
 	}
 
 	/**
