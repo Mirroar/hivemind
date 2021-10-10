@@ -1,5 +1,13 @@
 import hivemind from 'hivemind';
 
+declare global {
+	type CacheEntry<T> = {
+		data: T,
+		maxAge: number,
+		created: number,
+	}
+}
+
 const heapCache = {};
 
 const cache = {
@@ -16,7 +24,7 @@ const cache = {
 	 * @return {Object}
 	 *   The requested cache object.
 	 */
-	inHeap(cacheKey, maxAge, generateCallback) {
+	inHeap<T>(cacheKey: string, maxAge: number, generateCallback?: (oldValue?: CacheEntry<T>) => T): T {
 		return cache.inObject(heapCache, cacheKey, maxAge, generateCallback);
 	},
 
@@ -33,7 +41,7 @@ const cache = {
 	 * @return {Object}
 	 *   The requested cache object.
 	 */
-	inMemory(cacheKey, maxAge, generateCallback) {
+	inMemory<T>(cacheKey: string, maxAge: number, generateCallback?: (oldValue?: CacheEntry<T>) => T): T {
 		return cache.inObject(Memory, cacheKey, maxAge, generateCallback);
 	},
 
@@ -52,7 +60,7 @@ const cache = {
 	 * @return {Object}
 	 *   The requested cache object.
 	 */
-	inObject(o, cacheKey, maxAge, generateCallback) {
+	inObject<T>(o: any, cacheKey: string, maxAge: number, generateCallback?: (oldValue?: CacheEntry<T>) => T): T {
 		if (!o._cache) o._cache = {};
 
 		if (!o._cache[cacheKey] || hivemind.hasIntervalPassed(maxAge, o._cache[cacheKey].created)) {
@@ -94,7 +102,7 @@ const cache = {
 	 * @param {string} key
 	 *   Cache key to remove data from.
 	 */
-	removeEntry(o, key) {
+	removeEntry(o: any, key: string) {
 		if (!o) o = heapCache;
 		if (!o._cache) return;
 
