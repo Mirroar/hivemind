@@ -1,17 +1,21 @@
 /* global Creep */
 
 interface Creep {
-	isPartOfTrain,
-	isTrainHead,
-	getTrainId,
-	isTrainFullySpawned,
-	getTrainParts,
-	isTrainJoined,
-	joinTrain,
+	isPartOfTrain: () => boolean,
+	isTrainHead: () => boolean,
+	getTrainId: () => Id<Creep>,
+	isTrainFullySpawned: () => boolean,
+	getTrainParts: () => Creep[],
+	isTrainJoined: () => boolean,
+	joinTrain: () => void,
 }
 
 interface CreepMemory {
-	train?: any,
+	train?: {
+		id: Id<Creep>,
+		partsToSpawn: {},
+		parts: Id<Creep>[],
+	},
 }
 
 /**
@@ -20,20 +24,20 @@ interface CreepMemory {
  * @return {boolean}
  *   True if the creep is part of a train.
  */
-Creep.prototype.isPartOfTrain = function () {
+Creep.prototype.isPartOfTrain = function (this: Creep): boolean {
 	return Boolean(this.memory.train);
 };
 
-Creep.prototype.isTrainHead = function () {
+Creep.prototype.isTrainHead = function (this: Creep): boolean {
 	// @todo What if the head dies?
 	return this.getTrainId() === this.id;
 };
 
-Creep.prototype.getTrainId = function () {
+Creep.prototype.getTrainId = function (this: Creep): Id<Creep> {
 	return this.memory.train.id || this.id;
 };
 
-Creep.prototype.isTrainFullySpawned = function () {
+Creep.prototype.isTrainFullySpawned = function (this: Creep): boolean {
 	const trainId = this.getTrainId();
 	const headSegment = Game.getObjectById<Creep>(trainId);
 	if (headSegment && _.size(headSegment.memory.train.partsToSpawn) > 0) return false;
@@ -41,12 +45,12 @@ Creep.prototype.isTrainFullySpawned = function () {
 	return true;
 };
 
-Creep.prototype.getTrainParts = function () {
+Creep.prototype.getTrainParts = function (this: Creep): Creep[] {
 	// @todo Guaruantee stable order of creeps.
 	const trainId = this.getTrainId();
-	let segments;
+	let segments: Creep[];
 	if (this.memory.train.parts) {
-		segments = _.filter(_.map(this.memory.train.parts, Game.getObjectById));
+		segments = _.filter(_.map<string, Creep>(this.memory.train.parts, Game.getObjectById));
 		if (segments.length < this.memory.train.parts.length) {
 			this.memory.train.parts = _.map(segments, 'id');
 		}
@@ -61,7 +65,7 @@ Creep.prototype.getTrainParts = function () {
 	return segments;
 };
 
-Creep.prototype.isTrainJoined = function () {
+Creep.prototype.isTrainJoined = function (this: Creep): boolean {
 	const segments = this.getTrainParts();
 
 	for (let i = 1; i < segments.length; i++) {
@@ -75,7 +79,7 @@ Creep.prototype.isTrainJoined = function () {
 	return true;
 };
 
-Creep.prototype.joinTrain = function () {
+Creep.prototype.joinTrain = function (this: Creep) {
 	const segments = this.getTrainParts();
 
 	let canMoveBack = true;

@@ -1,4 +1,8 @@
 declare global {
+	interface Creep {
+		operation?: Operation,
+	}
+
 	interface Memory {
 		operations: any,
 	}

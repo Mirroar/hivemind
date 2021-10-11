@@ -23,7 +23,7 @@ const stompingCreeps: {
  * @return {boolean}
  *   True if the creep can be considered dangerous in some way.
  */
-Creep.prototype.isDangerous = function () {
+Creep.prototype.isDangerous = function (this: Creep) {
 	if (hivemind.relations.isAlly(this.owner.username)) return false;
 
 	for (const part of this.body) {
@@ -45,7 +45,7 @@ Creep.prototype.isDangerous = function () {
 	return false;
 };
 
-Creep.prototype.getEffectiveHealth = function () {
+Creep.prototype.getEffectiveHealth = function (this: Creep) {
 	// @todo Cache for one tick?
 	let total = 0;
 
@@ -65,7 +65,7 @@ Creep.prototype.getEffectiveHealth = function () {
 	return total;
 };
 
-Creep.prototype.getDamageCapacity = function (range) {
+Creep.prototype.getDamageCapacity = function (this: Creep, range) {
 	// @todo Cache for one tick?
 	let total = 0;
 	if (range > 3) return total;
@@ -102,7 +102,7 @@ Creep.prototype.getDamageCapacity = function (range) {
 	return total;
 };
 
-Creep.prototype.getHealCapacity = function (range) {
+Creep.prototype.getHealCapacity = function (this:Creep, range) {
 	// @todo Cache for one tick?
 	let total = 0;
 	if (range > 3) return total;
@@ -125,7 +125,7 @@ Creep.prototype.getHealCapacity = function (range) {
 	return total;
 };
 
-Creep.prototype.getEffectiveDamage = function (potentialDamage) {
+Creep.prototype.getEffectiveDamage = function (this: Creep, potentialDamage) {
 	let total = 0;
 	let damageTaken = 0;
 
