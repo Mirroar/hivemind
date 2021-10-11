@@ -4,10 +4,10 @@ LAB_BOOST_ENERGY OK */
 declare global {
 	interface Room {
 		boostManager?: BoostManager,
-		getAvailableBoosts,
-		canSpawnBoostedCreeps,
-		getBoostLabs,
-		getBoostLabMemory,
+		getAvailableBoosts: (type: string) => AvailableBoosts,
+		canSpawnBoostedCreeps: () => boolean,
+		getBoostLabs: () => StructureLab[],
+		getBoostLabMemory: () => BoostLabsMemory,
 	}
 
 	interface CreepMemory {
@@ -25,7 +25,11 @@ declare global {
 		},
 	}
 
-	type BoostLabMemory = {}
+	type BoostLabMemory = {
+		resourceType?: string,
+		resourceAmount?: number,
+		energyAmount?: number,
+	}
 
 	type BoostLabsMemory = {
 		[labId: string]: BoostLabMemory,
@@ -53,7 +57,7 @@ import cache from 'utils/cache';
  *   An object keyed by mineral type, containing information about the available
  *   boost effect and number of parts that can be boosted.
  */
-Room.prototype.getAvailableBoosts = function (type: string): AvailableBoosts {
+Room.prototype.getAvailableBoosts = function (this: Room, type: string): AvailableBoosts {
 	const availableBoosts = cache.inObject(
 		this,
 		'availableBoosts',
@@ -103,7 +107,7 @@ Room.prototype.getAvailableBoosts = function (type: string): AvailableBoosts {
  * @return {boolean}
  *   True if the room is able to boost creeps.
  */
-Room.prototype.canSpawnBoostedCreeps = function (): boolean {
+Room.prototype.canSpawnBoostedCreeps = function (this: Room): boolean {
 	if (this.isEvacuating()) return false;
 
 	const labs = this.getBoostLabs();
@@ -116,7 +120,7 @@ Room.prototype.canSpawnBoostedCreeps = function (): boolean {
  * @return {Structure[]}
  *   An array of labs available for using boosts.
  */
-Room.prototype.getBoostLabs = function (): StructureLab[] {
+Room.prototype.getBoostLabs = function (this: Room): StructureLab[] {
 	// @todo Make room planner decide which are boost labs, or hijack
 	// reaction labs when necessary.
 	const labMemory = this.getBoostLabMemory();
@@ -135,7 +139,7 @@ Room.prototype.getBoostLabs = function (): StructureLab[] {
 	return boostLabs;
 };
 
-Room.prototype.getBoostLabMemory = function (): BoostLabsMemory {
+Room.prototype.getBoostLabMemory = function (this: Room): BoostLabsMemory {
 	return cache.inMemory(
 		'boostLabs:' + this.name,
 		1000,
@@ -294,13 +298,15 @@ export default class BoostManager {
 	 * @return {object}
 	 *   Boosting information, keyed by lab id.
 	 */
-	getLabOrders() {
-		const labs: StructureLab[] = this.room.getBoostLabs();
+	getLabOrders(): BoostLabsMemory {
+		const labs = this.room.getBoostLabs();
 
 		if (_.size(this.memory.creepsToBoost) === 0) return {};
 
-		const queuedBoosts = {};
-		const toDelete = [];
+		const queuedBoosts: {
+			[resourceType: string]: number,
+		} = {};
+		const toDelete: string[] = [];
 		_.each(this.memory.creepsToBoost, (boostMemory, creepName) => {
 			if (!Game.creeps[creepName]) {
 				toDelete.push(creepName);
@@ -363,7 +369,7 @@ export default class BoostManager {
 	 * @return {boolean}
 	 *   True if the room needs a helper creep.
 	 */
-	needsSpawning() {
+	needsSpawning(): boolean {
 		const maxHelpers = 1;
 		const numHelpers = (this.room.creepsByRole.helper || []).length;
 
