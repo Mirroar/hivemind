@@ -108,12 +108,18 @@ export default class RoomManager {
 			}
 		}
 
-		// Remove all extensions blocking roads.
+		// Remove all extensions and labs blocking roads (from redesigning rooms).
 		for (const extension of this.structuresByType[STRUCTURE_EXTENSION] || []) {
 			if (this.roomPlanner.isPlannedLocation(extension.pos, 'extension')) continue;
 			if (!this.roomPlanner.isPlannedLocation(extension.pos, 'road')) continue;
 
 			extension.destroy();
+		}
+		for (const lab of this.structuresByType[STRUCTURE_LAB] || []) {
+			if (this.roomPlanner.isPlannedLocation(lab.pos, 'lab')) continue;
+			if (!this.roomPlanner.isPlannedLocation(lab.pos, 'road')) continue;
+
+			lab.destroy();
 		}
 
 		// Remove unwanted walls that might block initial buildings.
