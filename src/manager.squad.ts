@@ -6,7 +6,9 @@ declare global {
 	}
 
 	interface Memory {
-		squads: any,
+		squads: {
+			[squadName: string]: SquadMemory,
+		},
 	}
 
 	interface Game {
@@ -14,14 +16,23 @@ declare global {
 			[key: string]: Squad,
 		},
 	}
+
+	type SquadMemory = {
+		composition: {
+			[unitType: string]: number,
+		},
+		fullySpawned: boolean,
+		spawnRoom?: string,
+		targetPos?: string,
+	}
 }
 
 export default class Squad {
 	units: {
-		[unitType: string]: Creep[];
+		[unitType: string]: Id<Creep>[];
 	};
 	name: string;
-	memory;
+	memory: SquadMemory;
 
 	/**
 	 * Squads are sets of creeps spawned in a single room.
@@ -30,7 +41,7 @@ export default class Squad {
 	 * @param {string}squadName
 	 *   Identifier of this squad for memory.
 	 */
-	constructor(squadName) {
+	constructor(squadName: string) {
 		this.name = squadName;
 		this.units = {};
 
@@ -57,7 +68,7 @@ export default class Squad {
 	 * @return {number}
 	 *   New amount of units of the specified type in the squad.
 	 */
-	addUnit(unitType) {
+	addUnit(unitType: string): number {
 		if (!this.memory.composition[unitType]) {
 			this.memory.composition[unitType] = 0;
 		}
@@ -76,9 +87,9 @@ export default class Squad {
 	 * @return {number}
 	 *   New amount of units of the specified type in the squad.
 	 */
-	removeUnit(unitType) {
+	removeUnit(unitType: string): number {
 		if (!this.memory.composition[unitType]) {
-			return;
+			return 0;
 		}
 
 		this.memory.composition[unitType]--;
@@ -86,7 +97,7 @@ export default class Squad {
 		return this.memory.composition[unitType];
 	}
 
-	getUnits() {
+	getUnits(): {[unitType: string]: Id<Creep>[]} {
 		return this.units;
 	}
 
@@ -98,7 +109,7 @@ export default class Squad {
 	 * @param {number} count
 	 *   Number of units of the chosen type that should be in this squad.
 	 */
-	setUnitCount(unitType, count) {
+	setUnitCount(unitType: string, count: number) {
 		this.memory.composition[unitType] = count;
 	}
 
@@ -126,6 +137,7 @@ export default class Squad {
 	 *   An array of objects containing squad orders.
 	 */
 	getOrders() {
+		// @todo This is really not used anymore.
 		// Check if there is a target for this squad.
 		const targetPos = this.getTarget();
 		if (!targetPos) return [];
@@ -143,7 +155,7 @@ export default class Squad {
 	 * @param {string} roomName
 	 *   Name of the room to spawn in.
 	 */
-	setSpawn(roomName) {
+	setSpawn(roomName: string) {
 		this.memory.spawnRoom = roomName;
 	}
 
@@ -153,7 +165,7 @@ export default class Squad {
 	 * @return {string}
 	 *   Name of the room the squad spawns in.
 	 */
-	getSpawn() {
+	getSpawn(): string {
 		return this.memory.spawnRoom;
 	}
 
@@ -163,7 +175,7 @@ export default class Squad {
 	 * @param {RoomPosition} targetPos
 	 *   Position the squad is supposed to move to.
 	 */
-	setTarget(targetPos) {
+	setTarget(targetPos: RoomPosition) {
 		if (targetPos) {
 			this.memory.targetPos = utilities.encodePosition(targetPos);
 		}
@@ -178,7 +190,7 @@ export default class Squad {
 	 * @return {RoomPosition}
 	 *   Position the squad is supposed to move to.
 	 */
-	getTarget = function () {
+	getTarget(): RoomPosition {
 		if (this.memory.targetPos) {
 			return utilities.decodePosition(this.memory.targetPos);
 		}
