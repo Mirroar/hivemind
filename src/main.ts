@@ -37,6 +37,12 @@ console.log('new global reset');
 import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
 import hivemind from 'hivemind';
 global.hivemind = hivemind;
+import RoomIntel from 'room-intel';
+import SegmentedMemory from 'utils/segmented-memory';
+import utilities from 'utilities';
+hivemind.setSegmentedMemory(new SegmentedMemory());
+hivemind.setRoomIntelClass(RoomIntel);
+hivemind.setUtilities(utilities);
 hivemind.logGlobalReset();
 
 // Load top-level processes.

@@ -5,11 +5,8 @@ PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 
 import Logger from 'utils/debug';
 import Relations from 'relations';
-import RoomIntel from 'room-intel';
-import SegmentedMemory from 'utils/segmented-memory';
 import SettingsManager from 'settings-manager';
 import stats from 'utils/stats';
-import utilities from 'utilities';
 
 const PROCESS_PRIORITY_LOW = 1;
 const PROCESS_PRIORITY_DEFAULT = 2;
@@ -68,12 +65,23 @@ const Hivemind = function () {
 	this.memory = Memory.hivemind;
 	this.relations = new Relations();
 	this.settings = new SettingsManager();
-	this.segmentMemory = new SegmentedMemory();
 	this.loggers = {};
 	this.intel = {};
 
 	// @todo Periodically clean old process memory.
 };
+
+Hivemind.prototype.setSegmentedMemory = function (memory) {
+	this.segmentMemory = memory;
+}
+
+Hivemind.prototype.setRoomIntelClass = function (constructorFunction) {
+	this.roomIntelConstructor = constructorFunction;
+}
+
+Hivemind.prototype.setUtilities = function (utilities) {
+	this.utilities = utilities;
+}
 
 /**
  * Check CPU stats for throttling processes this turn.
@@ -371,7 +379,7 @@ Hivemind.prototype.roomIntel = function (roomName) {
 	if (!this.segmentMemory.isReady()) throw new Error('Memory is not ready to generate room intel for room ' + roomName + '.');
 
 	if (!this.intel[roomName]) {
-		this.intel[roomName] = new RoomIntel(roomName);
+		this.intel[roomName] = new this.roomIntelConstructor(roomName);
 	}
 
 	return this.intel[roomName];
@@ -420,7 +428,7 @@ Hivemind.prototype.migrateData = function () {
 			if (['harvester.remote', 'hauler', 'claimer'].indexOf(memory.role) === -1) return;
 			if (!memory.source) return;
 
-			const pos = utilities.decodePosition(memory.source);
+			const pos = this.utilities.decodePosition(memory.source);
 			memory.operation = 'mine:' + pos.roomName;
 		});
 
