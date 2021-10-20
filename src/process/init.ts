@@ -2,8 +2,8 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import BoostManager from 'manager.boost';
 import Process from 'process/process';
-import RoomPlanner from 'room-planner';
-import RoomManager from 'room-manager';
+import RoomPlanner from 'room/room-planner';
+import RoomManager from 'room/room-manager';
 import Squad from 'manager.squad';
 
 import Operation from 'operation/operation';

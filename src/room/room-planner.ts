@@ -24,12 +24,17 @@ interface ScoredTowerPosition {
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import minCut from 'utils/mincut';
+import RoomPlan from 'room/room-plan';
 import utilities from 'utilities';
+import {getRoomPlanFor, setRoomPlanFor} from 'room/room-plan-management';
+
 
 const MAX_ROOM_LEVEL = 8;
 
 export default class RoomPlanner {
 
+	activeRoomPlan: RoomPlan;
+	inProgressRoomPlan: RoomPlan;
 	roomPlannerVersion: number;
 	roomName: string;
 	room: Room;
@@ -59,6 +64,7 @@ export default class RoomPlanner {
 	constructor(roomName: string) {
 		this.roomPlannerVersion = 35;
 		this.roomName = roomName;
+		this.activeRoomPlan = getRoomPlanFor(roomName);
 		this.room = Game.rooms[roomName]; // Will not always be available.
 		if (hivemind.settings.get('enableMinCutRamparts')) {
 			this.minCut = minCut;
@@ -71,53 +77,14 @@ export default class RoomPlanner {
 		}
 
 		this.memory = hivemind.segmentMemory.get(key);
+		if (this.memory.inProgressRoomPlan) this.inProgressRoomPlan = new RoomPlan(this.roomName, this.roomPlannerVersion, this.memory.inProgressRoomPlan);
 
-		if ((this.memory.drawDebug || 0) > 0) {
-			this.memory.drawDebug--;
-			this.drawDebug();
+		if (this.inProgressRoomPlan) {
+			this.inProgressRoomPlan.visualize();
 		}
-	};
-
-	/**
-	 * Draws a simple representation of the room layout using RoomVisuals.
-	 */
-	drawDebug() {
-		const debugSymbols = {
-			container: '⊔',
-			exit: '🚪',
-			extension: '⚬',
-			lab: '🔬',
-			link: '🔗',
-			nuker: '☢',
-			observer: '👁',
-			powerSpawn: '⚡',
-			road: '·',
-			spawn: '⭕',
-			storage: '⬓',
-			terminal: '⛋',
-			tower: '⚔',
-			wall: '▦',
-		};
-
-		const visual = new RoomVisual(this.roomName);
-
-		if (this.memory.locations) {
-			for (const locationType in this.memory.locations) {
-				if (!debugSymbols[locationType]) continue;
-
-				const positions = this.memory.locations[locationType];
-				for (const posName of _.keys(positions)) {
-					const pos = utilities.decodePosition(posName);
-
-					visual.text(debugSymbols[locationType], pos.x, pos.y + 0.2);
-				}
-			}
-
-			for (const posName of _.keys(this.memory.locations.rampart || [])) {
-				const pos = utilities.decodePosition(posName);
-
-				visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, {fill: '#0f0', opacity: 0.2});
-			}
+		if (this.activeRoomPlan && (this.memory.drawDebug || 0) > 0) {
+			this.memory.drawDebug--;
+			this.activeRoomPlan.visualize();
 		}
 	};
 
@@ -129,22 +96,39 @@ export default class RoomPlanner {
 		if (!hivemind.segmentMemory.isReady()) return;
 
 		// Recalculate room layout if using a new version.
-		if (!this.memory.plannerVersion || this.memory.plannerVersion !== this.roomPlannerVersion) {
-			delete this.memory.locations;
-			delete this.memory.planningTries;
-			this.memory.plannerVersion = this.roomPlannerVersion;
+		if (!this.activeRoomPlan || this.activeRoomPlan.getVersion() !== this.roomPlannerVersion) {
+			if (!this.inProgressRoomPlan) {
+				delete this.memory.planningTries;
+				this.inProgressRoomPlan = new RoomPlan(this.roomName, this.roomPlannerVersion);
+			}
 		}
 
 		// Sometimes room planning can't be finished successfully. Try a maximum of 10
 		// times in that case.
 		if (!this.memory.planningTries) this.memory.planningTries = 0;
+
 		if (!this.isPlanningFinished()) {
 			if (Game.cpu.getUsed() < Game.cpu.tickLimit / 2) {
 				this.placeFlags();
 				this.memory.planningTries++;
+
+				this.memory.inProgressRoomPlan = this.inProgressRoomPlan.serialize();
 			}
 
-			return;
+			if (!this.isPlanningFinished()) return;
+		}
+
+		if (this.inProgressRoomPlan) {
+			// Planning is finished, apply room plan.
+			this.activeRoomPlan = this.inProgressRoomPlan;
+			setRoomPlanFor(this.roomName, this.inProgressRoomPlan);
+			hivemind.log('rooms', this.roomName).info('Stored room plan for room ' + this.roomName);
+			delete this.inProgressRoomPlan;
+			delete this.memory.inProgressRoomPlan;
+
+			// Show result of planning for a few ticks.
+			// @todo Make configurable.
+			this.memory.drawDebug = 20;
 		}
 
 		if (this.memory.lastRun && !hivemind.hasIntervalPassed(100, this.memory.lastRun)) return;
@@ -169,11 +153,7 @@ export default class RoomPlanner {
 	 *   Value to set in the pathfinding costmatrix at this position (Default 255).
 	 */
 	placeFlag(pos: RoomPosition, locationType: string, pathFindingCost?: number) {
-		if (!this.memory.locations) this.memory.locations = {};
-		if (!this.memory.locations[locationType]) this.memory.locations[locationType] = {};
-
-		const posName = utilities.encodePosition(pos);
-		this.memory.locations[locationType][posName] = 1;
+		this.inProgressRoomPlan.addPosition(locationType, pos);
 
 		if (typeof pathFindingCost === 'undefined') {
 			pathFindingCost = 255;
@@ -346,7 +326,6 @@ export default class RoomPlanner {
 		const roomIntel = hivemind.roomIntel(this.roomName);
 
 		// Reset location memory, to be replaced with new flags.
-		this.memory.locations = {};
 		this.wallDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.wallDistanceMatrix);
 		this.exitDistanceMatrix = PathFinder.CostMatrix.deserialize(this.memory.exitDistanceMatrix);
 
@@ -414,7 +393,7 @@ export default class RoomPlanner {
 		this.placeFlag(roomCenter, 'center', null);
 
 		if (this.minCut) {
-			this.protectPosition(controllerPosition);
+			this.protectPosition(controllerPosition, 1);
 		}
 		else {
 			// Do another flood fill pass from interesting positions to remove walls that don't protect anything.
@@ -486,6 +465,7 @@ export default class RoomPlanner {
 		}
 
 		// Add road to controller.
+		// @todo Create road starting from room center, and only to range 3.
 		const controllerRoads = this.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
 		for (const pos of controllerRoads) {
 			this.placeFlag(pos, 'road.controller', null);
@@ -624,10 +604,10 @@ export default class RoomPlanner {
 		this.placeSpawnWalls();
 		this.placeFlag(new RoomPosition(25, 25, this.roomName), 'planner_finished', this.buildingMatrix.get(25, 25));
 
-		hivemind.log('rooms', this.roomName).info('Finished room planning: ', utilities.renderCostMatrix(this.wallDistanceMatrix), utilities.renderCostMatrix(this.exitDistanceMatrix), utilities.renderCostMatrix(this.buildingMatrix));
+		hivemind.log('rooms', this.roomName).info('Finished room planning: ', utilities.renderCostMatrix(this.buildingMatrix));
 
 		const end = Game.cpu.getUsed();
-		console.log('Planning for', this.roomName, 'took', end - start, 'CPU');
+		hivemind.log('rooms', this.roomName).info('Planning for', this.roomName, 'took', end - start, 'CPU');
 
 		// Reset harvest position info for harvesters in case they are not correctly
 		// assigned any more.
@@ -1062,14 +1042,14 @@ export default class RoomPlanner {
 			}
 
 			// Restore building matrix values for subsequent operations.
-			for (const pos of this.getLocations('tower_placeholder')) {
-				if (this.isPlannedLocation(pos, 'tower')) continue;
+			for (const pos of this.inProgressRoomPlan.getPositions('tower_placeholder')) {
+				if (this.inProgressRoomPlan.hasPosition('tower', pos)) continue;
 
 				this.buildingMatrix.set(pos.x, pos.y, costMatrixBackup[utilities.encodePosition(pos)]);
 			}
 
 			// Remove tower_placeholder markers for correct scoring during next iteration.
-			delete this.memory.locations['tower_placeholder'];
+			this.inProgressRoomPlan.removeAllPositions('tower_placeholder');
 		}
 	};
 
@@ -1132,7 +1112,7 @@ export default class RoomPlanner {
 	findRampartPositions(): ScoredTowerPosition[] {
 		const positions = [];
 
-		for (const pos of this.getLocations('rampart')) {
+		for (const pos of this.inProgressRoomPlan.getPositions('rampart')) {
 			positions.push({
 				score: 1,
 				pos,
@@ -1152,10 +1132,10 @@ export default class RoomPlanner {
 		for (const info of positions) {
 			let rampartScore = 1;
 
-			for (const pos of this.getLocations('tower')) {
+			for (const pos of this.inProgressRoomPlan.getPositions('tower')) {
 				rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
 			}
-			for (const pos of this.getLocations('tower_placeholder')) {
+			for (const pos of this.inProgressRoomPlan.getPositions('tower_placeholder')) {
 				rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
 			}
 
@@ -1178,9 +1158,7 @@ export default class RoomPlanner {
 	 * Places walls around spawns so creeps don't get spawned on inaccessible tiles.
 	 */
 	placeSpawnWalls() {
-		const positions = this.getLocations('spawn');
-
-		for (const pos of positions) {
+		for (const pos of this.inProgressRoomPlan.getPositions('spawn')) {
 			utilities.handleMapArea(pos.x, pos.y, (x, y) => {
 				if (this.isBuildableTile(x, y)) {
 					// Check if any adjacent tile has a road, which means creeps can leave from there.
@@ -1385,7 +1363,7 @@ export default class RoomPlanner {
 	 *   The number of structures of the given type that may still be placed.
 	 */
 	remainingStructureCount(structureType: StructureConstant): number {
-		return CONTROLLER_STRUCTURES[structureType][MAX_ROOM_LEVEL] - _.size(this.memory.locations[structureType] || []);
+		return CONTROLLER_STRUCTURES[structureType][MAX_ROOM_LEVEL] - _.size(this.inProgressRoomPlan.getPositions(structureType) || []);
 	}
 
 	/**
@@ -1499,7 +1477,7 @@ export default class RoomPlanner {
 	 *   Positions where walls are currently planned.
 	 */
 	pruneWalls(walls: RoomPosition[]) {
-		const roomCenter = this.getRoomCenter();
+		const roomCenter = _.first(this.inProgressRoomPlan.getPositions('center'));
 		this.safetyMatrix = new PathFinder.CostMatrix();
 
 		const openList = [];
@@ -1637,7 +1615,7 @@ export default class RoomPlanner {
 					'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.S ? 'safe' : 'not safe') + '\n' +
 					'W: ' + (this.memory.adjacentSafe.W ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.W ? 'safe' : 'not safe') + '\n'
 				);
-				delete this.memory.locations;
+				this.inProgressRoomPlan = new RoomPlan(this.roomName, this.roomPlannerVersion);
 				this.memory.adjacentSafe = newStatus.directions;
 				break;
 			}
@@ -1679,8 +1657,8 @@ export default class RoomPlanner {
 	 *   An Array of positions where the given location type is planned.
 	 */
 	getLocations(locationType: string): RoomPosition[] {
-		if (this.memory.locations && this.memory.locations[locationType]) {
-			return _.map(_.keys(this.memory.locations[locationType]), utilities.decodePosition);
+		if (this.activeRoomPlan) {
+			return this.activeRoomPlan.getPositions(locationType);
 		}
 
 		return [];
@@ -1698,11 +1676,9 @@ export default class RoomPlanner {
 	 *   True if the given location type is planned for the given position.
 	 */
 	isPlannedLocation(pos: RoomPosition, locationType: string): boolean {
-		if (!this.memory.locations) return false;
-		if (!this.memory.locations[locationType]) return false;
-		if (!this.memory.locations[locationType][utilities.encodePosition(pos)]) return false;
+		if (!this.activeRoomPlan) return false;
 
-		return true;
+		return this.activeRoomPlan.hasPosition(locationType, pos);
 	};
 
 	/**
@@ -1712,10 +1688,11 @@ export default class RoomPlanner {
 	 *   Whether all structures have been planned for this room.
 	 */
 	isPlanningFinished(): boolean {
-		if (!this.memory.locations) return false;
-		if (!this.memory.locations.planner_finished && this.memory.planningTries <= 10) return false;
+		if (!this.inProgressRoomPlan) return true;
+		if (this.inProgressRoomPlan.getPositions('planner_finished').length > 0) return true;
+		if (this.memory.planningTries > 10) return true;
 
-		return true;
+		return false;
 	};
 
 	/**
@@ -1725,15 +1702,13 @@ export default class RoomPlanner {
 	 *   The requested cost matrix.
 	 */
 	getNavigationMatrix(): CostMatrix {
-		return cache.inHeap(500, 'plannerCostMatrix:' + this.roomName, () => {
+		return cache.inHeap('plannerCostMatrix:' + this.roomName, 500, () => {
 			const matrix = new PathFinder.CostMatrix();
 
-			_.each(this.memory.locations, (locations, locationType) => {
-				if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) return;
+			for (const locationType of this.activeRoomPlan.getPositionTypes()) {
+				if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
 
-				_.each(locations, (_, location) => {
-					const pos = utilities.decodePosition(location);
-
+				for (const pos of this.activeRoomPlan.getPositions(locationType)) {
 					if (locationType === 'road') {
 						if (matrix.get(pos.x, pos.y) === 0) {
 							matrix.set(pos.x, pos.y, 1);
@@ -1742,8 +1717,8 @@ export default class RoomPlanner {
 					else {
 						matrix.set(pos.x, pos.y, 255);
 					}
-				});
-			});
+				}
+			}
 
 			return matrix;
 		});
