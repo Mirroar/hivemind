@@ -142,6 +142,12 @@ const main = {
 			hivemind.runProcess('strategy.remote_mining', RemoteMiningProcess, {
 				interval: 100,
 			});
+
+			hivemind.runProcess('cleanup', CleanupProcess, {
+				interval: 100,
+				priority: PROCESS_PRIORITY_LOW,
+				requireSegments: true,
+			});
 		}
 
 		if (shardHasEstablishedRooms) {
