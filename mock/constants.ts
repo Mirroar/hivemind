@@ -799,3 +799,5 @@ global.COLORS_ALL = [
 	COLOR_GREY,
 	COLOR_WHITE
 ];
+
+export default {}

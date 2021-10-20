@@ -1,5 +1,3 @@
-'use strict';
-
 /* global MOVE CARRY ATTACK RANGED_ATTACK HEAL TOUGH MAX_CREEP_SIZE */
 
 import test from 'ava';

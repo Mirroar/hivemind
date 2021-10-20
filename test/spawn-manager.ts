@@ -1,5 +1,3 @@
-'use strict';
-
 /* global OK MOVE CARRY */
 
 import test from 'ava';
@@ -12,7 +10,7 @@ const SpawnManager = require('../src/spawn-manager');
 const SpawnRole = require('../src/spawn-role');
 
 test('initialization', t => {
-	global.Memory = {};
+	global.Memory = {} as Memory;
 	const testRole = new SpawnRole();
 	testRole.getSpawnOptions = (room, options) => {
 		t.is(room.name, 'E1N1');
@@ -58,7 +56,7 @@ test('choosing a spawn', t => {
 });
 
 test('spawn conditions', t => {
-	global.Memory = {};
+	global.Memory = {} as Memory;
 	const testRole = new SpawnRole();
 	testRole.getCreepBody = function () {
 		return [MOVE, CARRY];

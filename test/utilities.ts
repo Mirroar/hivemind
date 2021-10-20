@@ -1,5 +1,3 @@
-'use strict';
-
 import test from 'ava';
 import _ from 'lodash';
 
@@ -13,7 +11,7 @@ global.RoomPosition = RoomPosition;
 const utilities = require('../src/utilities');
 
 test.beforeEach(() => {
-	global.Memory = {};
+	global.Memory = {} as Memory;
 });
 test.afterEach(() => {
 	delete global.Memory;
@@ -75,8 +73,8 @@ test('throttle', t => {
 	global.Game = {
 		cpu: {
 			bucket: 5000,
-		},
-	};
+		} as CPU,
+	} as Game;
 	t.true(utilities.throttle(0, 5000, 8000));
 	t.false(utilities.throttle(0, 3000, 5000));
 	delete global.Game;

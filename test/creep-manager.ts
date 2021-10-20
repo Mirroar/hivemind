@@ -1,7 +1,10 @@
-'use strict';
-
 import test from 'ava';
 import _ from 'lodash';
+
+interface globalThis {
+	_: any;
+	RoomPosition: any;
+}
 
 global._ = _;
 
@@ -13,7 +16,7 @@ global.RoomPosition = RoomPosition;
 
 const CreepManager = require('../src/creep-manager');
 
-const getMockCreep = function (role, options) {
+const getMockCreep = function (role: string, options?: any) {
 	const creep = {
 		memory: {
 			role: role || 'test',
@@ -28,16 +31,17 @@ const getMockCreep = function (role, options) {
 };
 
 test.beforeEach(() => {
+	let _timeUsed = 0;
+
 	global.Game = {
 		cpu: {
 			bucket: 8000,
-			_timeUsed: 0,
 			getUsed() {
-				return this._timeUsed;
+				return _timeUsed;
 			},
-		},
-	};
-	global.Memory = {};
+		} as CPU,
+	} as Game;
+	global.Memory = {} as Memory;
 	global.hivemind = new MockHivemind();
 });
 test.afterEach(() => {

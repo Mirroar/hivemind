@@ -9,10 +9,10 @@
  * @param {string} roomName
  *   Name of the room.
  */
-const RoomPosition = function (x, y, roomName) {
+const RoomPosition = function (this: RoomPosition, x: number, y: number, roomName: string) {
 	this.x = Number(x);
 	this.y = Number(y);
 	this.roomName = roomName;
 };
 
-module.exports = RoomPosition;
+export default RoomPosition;

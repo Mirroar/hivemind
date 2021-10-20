@@ -1,5 +1,3 @@
-'use strict';
-
 const MockHivemind = function () {};
 
 MockHivemind.prototype.log = function () {
@@ -10,4 +8,4 @@ MockHivemind.prototype.log = function () {
 	};
 };
 
-module.exports = MockHivemind;
+export default MockHivemind;
