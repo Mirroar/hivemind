@@ -391,6 +391,7 @@ export default class RoomManager {
 	 */
 	hasMisplacedStorage(): boolean {
 		if (!this.room.storage) return false;
+		if (!this.roomPlanner) return false;
 		if (this.roomPlanner.isPlannedLocation(this.room.storage.pos, 'storage')) return false;
 
 		return true;
@@ -404,6 +405,7 @@ export default class RoomManager {
 	 */
 	hasMisplacedTerminal(): boolean {
 		if (!this.room.terminal) return false;
+		if (!this.roomPlanner) return false;
 		if (this.roomPlanner.isPlannedLocation(this.room.terminal.pos, 'terminal')) return false;
 
 		return true;
