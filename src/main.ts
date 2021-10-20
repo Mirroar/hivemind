@@ -46,6 +46,7 @@ hivemind.setUtilities(utilities);
 hivemind.logGlobalReset();
 
 // Load top-level processes.
+import CleanupProcess from 'process/cleanup';
 import CreepsProcess from 'process/creeps';
 import ExpandProcess from 'process/strategy/expand';
 import InitProcess from 'process/init';
