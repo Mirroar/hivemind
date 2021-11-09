@@ -26,7 +26,19 @@ import { ErrorMapper } from 'utils/ErrorMapper';
 
 let ownUserName;
 
+function serializeCoords(x: number, y: number): number;
+function serializeCoords(x: number, y: number, roomName: string): [number, string];
+function serializeCoords(x: number, y: number, roomName?: string) {
+	const coords = x + (50 * y);
+
+	if (!roomName) return coords;
+
+	return [coords, roomName];
+};
+
 const utilities = {
+
+	serializeCoords,
 
 	/**
 	 * Dynamically determines the username of the current user.
@@ -566,14 +578,6 @@ const utilities = {
 		}
 
 		return null;
-	},
-
-	serializeCoords(x: number, y: number, roomName?: string) {
-		const coords = x + (50 * y);
-
-		if (!roomName) return coords;
-
-		return [coords, roomName];
 	},
 
 	deserializeCoords(coords) {
