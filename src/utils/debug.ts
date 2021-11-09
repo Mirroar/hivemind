@@ -1,6 +1,12 @@
 declare global {
 	interface Memory {
-		logger: any,
+		logger: {
+			channelSettings: {
+				[channel: string]: {
+					disabled?: boolean;
+				};
+			};
+		};
 	}
 }
 
@@ -40,134 +46,137 @@ const channels = {
 	},
 };
 
-/**
- * Loggers are used for simple, prettified output to the console.
- * @constructor
- *
- * @param {string} channel
- *   The name of the channel to get a logger for.
- * @param {string|null} roomName
- *   The name of the room to log this message for, or null if logging globally.
- */
-const Logger = function (channel, roomName) {
-	this.channel = channel;
-	this.channelName = ('          ' + this.channel).slice(-10);
-	this.color = channels.default.color;
-	this.roomName = roomName;
-	this.active = true;
+export default class Logger {
+	channel: string;
+	channelName: string;
+	color: string;
+	roomName: string;
+	active: boolean;
+	prefix: string;
 
-	if (channels[this.channel]) {
-		this.channelName = ('          ' + channels[this.channel].name).slice(-10);
-		if (channels[this.channel].color) {
-			this.color = channels[this.channel].color;
-		}
-	}
+	/**
+	 * Loggers are used for simple, prettified output to the console.
+	 * @constructor
+	 *
+	 * @param {string} channel
+	 *   The name of the channel to get a logger for.
+	 * @param {string|null} roomName
+	 *   The name of the room to log this message for, or null if logging globally.
+	 */
+	constructor(channel: string, roomName?: string) {
+		this.channel = channel;
+		this.channelName = ('          ' + this.channel).slice(-10);
+		this.color = channels.default.color;
+		this.roomName = roomName;
+		this.active = true;
 
-	this.prefix = this.getOutputPrefix();
-
-	if (!Memory.logger) {
-		Memory.logger = {};
-	}
-
-	if (!Memory.logger.channelSettings) {
-		Memory.logger.channelSettings = {};
-	}
-
-	if (Memory.logger.channelSettings[this.channel] && Memory.logger.channelSettings[this.channel].disabled) {
-		this.active = false;
-		// @todo allow overriding for single rooms.
-	}
-};
-
-/**
- * Decides whether this logger channel should be displayed.
- *
- * @param {boolean} enabled
- *   True to show this channel in the console.
- */
-Logger.prototype.setEnabled = function (enabled) {
-	if (!Memory.logger.channelSettings[this.channel]) {
-		Memory.logger.channelSettings[this.channel] = {};
-	}
-
-	Memory.logger.channelSettings[this.channel].disabled = !enabled;
-};
-
-/**
- * Enables displaying of this channel.
- */
-Logger.prototype.enable = function () {
-	this.setEnabled(true);
-};
-
-/**
- * Disables displaying of this channel.
- */
-Logger.prototype.disable = function () {
-	this.setEnabled(false);
-};
-
-/**
- * Determines prefix of lines logged through this channel.
- *
- * @return {string}
- *   Line prefix containing pretty channel name, colors and room name.
- */
-Logger.prototype.getOutputPrefix = function () {
-	let prefix = '[<font color="' + this.color + '">' + this.channelName + '</font>';
-	prefix += ']';
-	if (this.roomName) {
-		let roomColor = 'ffff80';
-		if (Game.rooms[this.roomName]) {
-			if (!Game.rooms[this.roomName].controller) {
-				roomColor = 'dddddd';
-			}
-			else if (Game.rooms[this.roomName].controller.my) {
-				roomColor = '80ff80';
-			}
-			else if (Game.rooms[this.roomName].controller.owner) {
-				roomColor = 'ff8080';
+		if (channels[this.channel]) {
+			this.channelName = ('          ' + channels[this.channel].name).slice(-10);
+			if (channels[this.channel].color) {
+				this.color = channels[this.channel].color;
 			}
 		}
 
-		prefix += '[<font color="#' + roomColor + '">' + this.roomName + '</font>]';
+		this.prefix = this.getOutputPrefix();
+
+		if (!Memory.logger) {
+			Memory.logger = {channelSettings: {}};
+		}
+
+		if (Memory.logger.channelSettings[this.channel] && Memory.logger.channelSettings[this.channel].disabled) {
+			this.active = false;
+			// @todo allow overriding for single rooms.
+		}
 	}
-	else {
-		prefix += '        ';
+
+	/**
+	 * Decides whether this logger channel should be displayed.
+	 *
+	 * @param {boolean} enabled
+	 *   True to show this channel in the console.
+	 */
+	setEnabled(enabled: boolean) {
+		if (!Memory.logger.channelSettings[this.channel]) {
+			Memory.logger.channelSettings[this.channel] = {};
+		}
+
+		Memory.logger.channelSettings[this.channel].disabled = !enabled;
 	}
 
-	return prefix;
-};
+	/**
+	 * Enables displaying of this channel.
+	 */
+	enable() {
+		this.setEnabled(true);
+	}
 
-/**
- * Logs a degub line.
- */
-Logger.prototype.debug = function (...args) {
-	if (!this.active) return;
+	/**
+	 * Disables displaying of this channel.
+	 */
+	disable() {
+		this.setEnabled(false);
+	}
 
-	const prefix = '<font color="#606060">' + this.prefix;
+	/**
+	 * Determines prefix of lines logged through this channel.
+	 *
+	 * @return {string}
+	 *   Line prefix containing pretty channel name, colors and room name.
+	 */
+	getOutputPrefix(): string {
+		let prefix = '[<font color="' + this.color + '">' + this.channelName + '</font>';
+		prefix += ']';
+		if (this.roomName) {
+			let roomColor = 'ffff80';
+			if (Game.rooms[this.roomName]) {
+				if (!Game.rooms[this.roomName].controller) {
+					roomColor = 'dddddd';
+				}
+				else if (Game.rooms[this.roomName].controller.my) {
+					roomColor = '80ff80';
+				}
+				else if (Game.rooms[this.roomName].controller.owner) {
+					roomColor = 'ff8080';
+				}
+			}
 
-	console.log(prefix, ...args, '</font>');
-};
+			prefix += '[<font color="#' + roomColor + '">' + this.roomName + '</font>]';
+		}
+		else {
+			prefix += '        ';
+		}
 
-/**
- * Logs a normal line.
- */
-Logger.prototype.info = function (...args) {
-	if (!this.active) return;
+		return prefix;
+	}
 
-	const prefix = this.prefix;
+	/**
+	 * Logs a degub line.
+	 */
+	debug(...args) {
+		if (!this.active) return;
 
-	console.log(prefix, ...args);
-};
+		const prefix = '<font color="#606060">' + this.prefix;
 
-/**
- * Logs an error.
- */
-Logger.prototype.error = function (...args) {
-	const prefix = '<font color="#ff8080">' + this.prefix;
+		console.log(prefix, ...args, '</font>');
+	}
 
-	console.log(prefix, ...args, '</font>');
-};
+	/**
+	 * Logs a normal line.
+	 */
+	info(...args) {
+		if (!this.active) return;
 
-export default Logger;
+		const prefix = this.prefix;
+
+		console.log(prefix, ...args);
+	}
+
+	/**
+	 * Logs an error.
+	 */
+	error(...args) {
+		const prefix = '<font color="#ff8080">' + this.prefix;
+
+		console.log(prefix, ...args, '</font>');
+	}
+}
