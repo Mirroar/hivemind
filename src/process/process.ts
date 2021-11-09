@@ -1,4 +1,6 @@
-export default class Process {
+import ProcessInterface from 'process/process-interface';
+
+export default class Process implements ProcessInterface {
 	id: string;
 	data: any;
 
@@ -21,7 +23,7 @@ export default class Process {
 	 * @return {boolean}
 	 *   Whether this process is allowed to run.
 	 */
-	shouldRun() {
+	shouldRun(): boolean {
 		return true;
 	}
 
