@@ -11,11 +11,12 @@ declare global {
 	}
 }
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
-import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 import utilities from 'utilities';
+import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
 export default class RoomIntel {
 	roomName: string;
@@ -648,82 +649,84 @@ export default class RoomIntel {
 	 *     whether that exit direction is considered safe.
 	 *   - safeRooms: An array of room names that are considered safe and nearby.
 	 */
-	calculateAdjacentRoomSafety(options: {safe?: string[], unsafe?: string[]}): {directions: {[dir: string]: boolean}; safeRooms: string[]} {
-		if (!this.memory.exits) {
-			return {
-				directions: {
-					N: false,
-					E: false,
-					S: false,
-					W: false,
-				},
-				safeRooms: [],
+	calculateAdjacentRoomSafety(options?: {safe?: string[], unsafe?: string[]}): {directions: {[dir: string]: boolean}; safeRooms: string[]} {
+		return cache.inHeap('adjacentSafety:' + this.roomName, 100, () => {
+			if (!this.memory.exits) {
+				return {
+					directions: {
+						N: false,
+						E: false,
+						S: false,
+						W: false,
+					},
+					safeRooms: [],
+				};
+			}
+
+			const dirMap = {
+				1: 'N',
+				3: 'E',
+				5: 'S',
+				7: 'W',
 			};
-		}
 
-		const dirMap = {
-			1: 'N',
-			3: 'E',
-			5: 'S',
-			7: 'W',
-		};
+			this.newStatus = {
+				N: true,
+				E: true,
+				S: true,
+				W: true,
+			};
 
-		this.newStatus = {
-			N: true,
-			E: true,
-			S: true,
-			W: true,
-		};
+			const openList = {};
+			const closedList = {};
+			this.joinedDirs = {};
+			this.otherSafeRooms = options ? (options.safe || []) : [];
+			this.otherUnsafeRooms = options ? (options.unsafe || []) : [];
+			// Add initial directions to open list.
+			for (const moveDir of _.keys(this.memory.exits)) {
+				const dir = dirMap[moveDir];
+				const roomName = this.memory.exits[moveDir];
 
-		const openList = {};
-		const closedList = {};
-		this.joinedDirs = {};
-		this.otherSafeRooms = options ? (options.safe || []) : [];
-		this.otherUnsafeRooms = options ? (options.unsafe || []) : [];
-		// Add initial directions to open list.
-		for (const moveDir of _.keys(this.memory.exits)) {
-			const dir = dirMap[moveDir];
-			const roomName = this.memory.exits[moveDir];
+				this.addAdjacentRoomToCheck(roomName, openList, {dir, range: 0});
+			}
 
-			this.addAdjacentRoomToCheck(roomName, openList, {dir, range: 0});
-		}
+			// Process adjacent rooms until range has been reached.
+			while (_.size(openList) > 0) {
+				let minRange = null;
+				for (const roomName in openList) {
+					if (!minRange || minRange.range > openList[roomName].range) {
+						minRange = openList[roomName];
+					}
+				}
 
-		// Process adjacent rooms until range has been reached.
-		while (_.size(openList) > 0) {
-			let minRange = null;
-			for (const roomName in openList) {
-				if (!minRange || minRange.range > openList[roomName].range) {
-					minRange = openList[roomName];
+				delete openList[minRange.room];
+				closedList[minRange.room] = minRange;
+
+				this.handleAdjacentRoom(minRange, openList, closedList);
+			}
+
+			// Unify status of directions which meet up somewhere.
+			for (const dir1 of _.keys(this.joinedDirs)) {
+				for (const dir2 of _.keys(this.joinedDirs[dir1])) {
+					this.newStatus[dir1] = this.newStatus[dir1] && this.newStatus[dir2];
+					this.newStatus[dir2] = this.newStatus[dir1] && this.newStatus[dir2];
 				}
 			}
 
-			delete openList[minRange.room];
-			closedList[minRange.room] = minRange;
-
-			this.handleAdjacentRoom(minRange, openList, closedList);
-		}
-
-		// Unify status of directions which meet up somewhere.
-		for (const dir1 of _.keys(this.joinedDirs)) {
-			for (const dir2 of _.keys(this.joinedDirs[dir1])) {
-				this.newStatus[dir1] = this.newStatus[dir1] && this.newStatus[dir2];
-				this.newStatus[dir2] = this.newStatus[dir1] && this.newStatus[dir2];
+			// Keep a list of rooms declared as safe in memory.
+			const safeRooms = [];
+			for (const roomName of _.keys(closedList)) {
+				const roomDir = closedList[roomName].origin;
+				if (this.newStatus[roomDir]) {
+					safeRooms.push(roomName);
+				}
 			}
-		}
 
-		// Keep a list of rooms declared as safe in memory.
-		const safeRooms = [];
-		for (const roomName of _.keys(closedList)) {
-			const roomDir = closedList[roomName].origin;
-			if (this.newStatus[roomDir]) {
-				safeRooms.push(roomName);
-			}
-		}
-
-		return {
-			directions: this.newStatus,
-			safeRooms,
-		};
+			return {
+				directions: this.newStatus,
+				safeRooms,
+			};
+		});
 	}
 
 	/**
