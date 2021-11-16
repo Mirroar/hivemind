@@ -1,6 +1,14 @@
 import defaultSettings from 'settings.default';
 import localSettings from 'settings.local';
 
+declare global {
+	interface KernelMemory {
+		settings?: {
+			[key: string]: any;
+		}
+	}
+}
+
 export default class SettingsManager {
 
 	values: {
