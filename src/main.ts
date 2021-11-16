@@ -41,8 +41,7 @@ import RoomIntel from 'room-intel';
 import SegmentedMemory from 'utils/segmented-memory';
 import utilities from 'utilities';
 hivemind.setSegmentedMemory(new SegmentedMemory());
-hivemind.setRoomIntelClass(RoomIntel);
-hivemind.setUtilities(utilities);
+hivemind.setRoomIntelFactory((roomName) => new RoomIntel(roomName));
 hivemind.logGlobalReset();
 
 // Load top-level processes.
