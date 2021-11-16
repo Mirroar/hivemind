@@ -6,7 +6,7 @@ import Bay from 'manager.bay';
 import BoostManager from 'manager.boost';
 import Exploit from 'manager.exploit';
 import Logger from 'utils/debug';
-import RoomPlanner from 'room-planner';
+import RoomPlanner from 'room/planner/room-planner';
 import Squad from 'manager.squad';
 import stats from 'utils/stats';
 import utilities from 'utilities';

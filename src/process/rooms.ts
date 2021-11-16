@@ -5,7 +5,7 @@ import Process from 'process/process';
 import RoomIntelProcess from 'process/rooms/intel';
 import RoomManager from 'room/room-manager';
 import RoomManagerProcess from 'process/rooms/owned/manager';
-import RoomPlanner from 'room/room-planner';
+import RoomPlanner from 'room/planner/room-planner';
 
 /**
  * Runs logic for all rooms we have visibility in.

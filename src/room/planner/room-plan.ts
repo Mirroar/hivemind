@@ -32,12 +32,10 @@ const structureSymbols = {
 
 export default class RoomPlan {
   roomName: string;
-  version: number;
   positionsByType: PositionCache;
 
-  constructor(roomName:string, version: number, input?: SerializedPlan) {
+  constructor(roomName:string, input?: SerializedPlan) {
     this.roomName = roomName;
-    this.version = version;
     this.positionsByType = {};
     if (input) this.unserialize(input);
   }
@@ -62,10 +60,6 @@ export default class RoomPlan {
 
       return cache;
     }, this);
-  }
-
-  getVersion(): number {
-    return this.version;
   }
 
   addPosition(type: string, pos: RoomPosition) {
