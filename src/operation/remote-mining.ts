@@ -2,6 +2,17 @@
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
+declare global {
+	interface RemoteMiningOperationMemory extends OperationMemory {
+		type: 'mining';
+		status: {
+			[sourceLocation: string]: {
+				containerId?: Id<StructureContainer>;
+			}
+		}
+	}
+}
+
 import hivemind from 'hivemind';
 import cache from 'utils/cache';
 import Operation from 'operation/operation';
@@ -20,6 +31,7 @@ import utilities from 'utilities';
  */
 export default class RemoteMiningOperation extends Operation {
 
+	memory: RemoteMiningOperationMemory;
 	pathManager: PathManager;
 
 	/**
@@ -48,7 +60,9 @@ export default class RemoteMiningOperation extends Operation {
 		if (!hivemind.segmentMemory.isReady()) return {};
 
 		return cache.inHeap('sourceRooms:' + this.name, 1000, () => {
-			const result = {};
+			const result: {
+				[roomName: string]: string[],
+			} = {};
 			const paths = this.getPaths();
 
 			_.each(paths, (info, sourceLocation) => {
@@ -105,11 +119,20 @@ export default class RemoteMiningOperation extends Operation {
 	 * Gets the remote paths associated with this operation.
 	 */
 	getPaths() {
-		return cache.inObject(this, 0, 'getPaths', () => {
+		return cache.inObject(this, 'getPaths', 0, () => {
 			if (!hivemind.segmentMemory.isReady()) return {};
 
 			const positions = this.getSourcePositions();
-			const result = {};
+			const result: {
+				[sourceLocation: string]: {
+					accessible: boolean;
+					path?: RoomPosition[];
+					sourceRoom?: string;
+					travelTime?: number;
+					requiredCarryParts?: number;
+					requiredWorkParts?: number;
+				}
+			} = {};
 			for (const sourcePos of positions) {
 				const sourceLocation = utilities.encodePosition(sourcePos);
 				if (!this.memory.status[sourceLocation]) this.memory.status[sourceLocation] = {};
@@ -239,7 +262,7 @@ export default class RemoteMiningOperation extends Operation {
 
 			const containerPosition = this.getContainerPosition(sourceLocation);
 			if (!containerPosition) return false;
-			const structures = _.filter(containerPosition.lookFor(LOOK_STRUCTURES), (struct: AnyStructure) => struct.structureType === STRUCTURE_CONTAINER);
+			const structures = _.filter(containerPosition.lookFor(LOOK_STRUCTURES), (struct: AnyStructure) => struct.structureType === STRUCTURE_CONTAINER) as StructureContainer[];
 
 			if (structures.length > 0) {
 				this.memory.status[sourceLocation].containerId = structures[0].id;

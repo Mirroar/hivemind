@@ -1,31 +1,49 @@
 declare global {
 	interface Creep {
-		operation?: Operation,
+		operation?: Operation;
 	}
 
 	interface Memory {
-		operations: any,
+		operations: {
+			[name: string]: OperationMemory;
+		};
 	}
 
 	interface CreepMemory {
-		operation?: string,
+		operation?: string;
 	}
 
 	interface Game {
 		operations: {
-			[key: string]: Operation,
-		},
+			[key: string]: Operation;
+		};
 		operationsByType: {
 			mining: {
-				[key: string]: RemoteMiningOperation,
-			},
+				[key: string]: RemoteMiningOperation;
+			};
 			room: {
-				[key: string]: RoomOperation,
-			},
+				[key: string]: RoomOperation;
+			};
 			[key: string]: {
-				[key: string]: Operation,
-			},
-		},
+				[key: string]: Operation;
+			};
+		};
+	}
+
+	interface OperationMemory {
+		type: string;
+		lastActive: number;
+		roomName?: string;
+		shouldTerminate?: boolean;
+		currentTick: number;
+		statTicks: number;
+		stats: {
+			[resourceType: string]: number,
+		}
+	}
+
+	interface DefaultOperationMemory extends OperationMemory {
+		type: 'default';
 	}
 }
 
@@ -35,11 +53,11 @@ import RoomOperation from 'operation/room';
 export default class Operation {
 	name: string;
 	roomName?: string;
-	memory: any;
+	memory: OperationMemory;
 
-	constructor(name) {
+	constructor(name: string) {
 		if (!Memory.operations) Memory.operations = {};
-		if (!Memory.operations[name]) Memory.operations[name] = {};
+		if (!Memory.operations[name]) Memory.operations[name] = {} as OperationMemory;
 
 		this.name = name;
 		this.memory = Memory.operations[name];
@@ -53,16 +71,16 @@ export default class Operation {
 		if (!this.memory.stats) this.memory.stats = {};
 	}
 
-	getType() {
+	getType(): string {
 		return this.memory.type || 'default';
 	}
 
-	setRoom(roomName) {
+	setRoom(roomName: string) {
 		this.memory.roomName = roomName;
 		this.roomName = roomName;
 	}
 
-	getRoom() {
+	getRoom(): string {
 		return this.roomName;
 	}
 
@@ -75,19 +93,19 @@ export default class Operation {
 		// This space intentionally left blank.
 	}
 
-	addCpuCost(amount) {
+	addCpuCost(amount: number) {
 		this.recordStatChange(amount, 'cpu');
 	}
 
-	addResourceCost(amount, resourceType) {
+	addResourceCost(amount: number, resourceType: string) {
 		this.recordStatChange(-amount, resourceType);
 	}
 
-	addResourceGain(amount, resourceType) {
+	addResourceGain(amount: number, resourceType: string) {
 		this.recordStatChange(amount, resourceType);
 	}
 
-	recordStatChange(amount, resourceType) {
+	recordStatChange(amount: number, resourceType: string) {
 		if (this.memory.currentTick !== Game.time) {
 			this.memory.currentTick = Game.time;
 			this.memory.statTicks = (this.memory.statTicks || 0) + 1;
@@ -97,4 +115,4 @@ export default class Operation {
 
 		this.memory.stats[resourceType] = (this.memory.stats[resourceType] || 0) + amount;
 	}
-};
+}
