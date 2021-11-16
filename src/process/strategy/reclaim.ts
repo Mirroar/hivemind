@@ -7,12 +7,15 @@ declare global {
 import hivemind from 'hivemind';
 import Process from 'process/process';
 
+let lastReclaimCleanup = Game.time;
+
 export default class ReclaimProcess extends Process {
   /**
    * Sends builders to destroyed rooms we still have control over.
    */
   run() {
     this.markReclaimableRooms();
+    this.cleanReclaimMemory();
   }
 
   /**
@@ -62,12 +65,25 @@ export default class ReclaimProcess extends Process {
       }
     }
   }
+
   hasJustFinishedReclaiming(room: Room): boolean {
     if (!room.memory.isReclaimableSince) return false;
     if (!room.roomManager) return false;
     if (!room.roomManager.checkWallIntegrity()) return false;
 
     return true;
+  }
+
+  cleanReclaimMemory() {
+    if (!hivemind.hasIntervalPassed(1000, lastReclaimCleanup)) return;
+    lastReclaimCleanup = Game.time;
+
+    for (const roomName in Memory.rooms || {}) {
+      if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
+      if (!Memory.rooms[roomName].isReclaimableSince) continue;
+
+      delete Memory.rooms[roomName].isReclaimableSince;
+    }
   }
 
 }
