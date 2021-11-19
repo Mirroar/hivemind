@@ -456,7 +456,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    */
   placeBays(): StepResult {
     this.startBuildingPlacement();
-    while (this.canPlaceMore('extension')) {
+    while (this.roomPlan.canPlaceMore('extension')) {
       const pos = this.findBayPosition();
       if (!pos) return 'failed';
 
@@ -527,7 +527,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    */
   placeLabs() {
     this.startBuildingPlacement();
-    while (this.canPlaceMore('lab')) {
+    while (this.roomPlan.canPlaceMore('lab')) {
       const nextPos = this.getNextAvailableBuildSpot();
       if (!nextPos) return 'failed';
 
@@ -1009,7 +1009,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    *   Whether an access road should be added for these structures.
    */
   placeAll(structureType: StructureConstant, addRoad: boolean) {
-    while (this.canPlaceMore(structureType)) {
+    while (this.roomPlan.canPlaceMore(structureType)) {
       const nextPos = this.getNextAvailableBuildSpot();
       if (!nextPos) break;
 

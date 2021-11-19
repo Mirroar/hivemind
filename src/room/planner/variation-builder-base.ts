@@ -18,8 +18,6 @@ export default class RoomVariationBuilderBase {
   finished: boolean;
   minCutBounds: MinCutRect[];
 
-  readonly MAX_ROOM_LEVEL = 8;
-
   setWallMatrix(wallMatrix: CostMatrix) {
     this.wallDistanceMatrix = wallMatrix;
   }
@@ -63,7 +61,7 @@ export default class RoomVariationBuilderBase {
   }
 
   placeBayStructures(bayPosition: RoomPosition, options: {spawn?: boolean; source?: boolean} = {}) {
-    if (this.canPlaceMore('spawn') && options.spawn) {
+    if (this.roomPlan.canPlaceMore('spawn') && options.spawn) {
       utilities.handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
         if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return true;
         if (!this.isBuildableTile(x, y)) return true;
@@ -87,7 +85,7 @@ export default class RoomVariationBuilderBase {
       });
     }
 
-    let linkPlaced = !this.canPlaceMore('link') || !options.source;
+    let linkPlaced = !this.roomPlan.canPlaceMore('link') || !options.source;
     utilities.handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
       if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
       if (!this.isBuildableTile(x, y)) return;
@@ -288,31 +286,5 @@ export default class RoomVariationBuilderBase {
 
     return true;
   };
-
-  /**
-   * Determines whether more of a certain structure could be placed.
-   *
-   * @param {string} structureType
-   *   The type of structure to check for.
-   *
-   * @return {boolean}
-   *   True if the current controller level allows more of this structure.
-   */
-  canPlaceMore(structureType: StructureConstant): boolean {
-    return this.remainingStructureCount(structureType) > 0;
-  };
-
-  /**
-   * Determines the number of structures of a type that could be placed.
-   *
-   * @param {string} structureType
-   *   The type of structure to check for.
-   *
-   * @return {number}
-   *   The number of structures of the given type that may still be placed.
-   */
-  remainingStructureCount(structureType: StructureConstant): number {
-    return CONTROLLER_STRUCTURES[structureType][this.MAX_ROOM_LEVEL] - _.size(this.roomPlan.getPositions(structureType) || []);
-  }
 
 }
