@@ -22,6 +22,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       harvestPosition: RoomPosition;
     };
   };
+  steps: (() => StepResult)[];
 
   openList: {
     [location: string]: {
@@ -48,10 +49,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   constructor(roomName: string, variation: string) {
     super(roomName, variation);
     hivemind.log('rooms', this.roomName).info('Started generating room plan for variation', variation);
-  }
 
-  buildStep(step: number): StepResult {
-    const steps: (() => StepResult)[] = [
+    this.steps = [
       this.prepareBuildingMatrix,
       this.gatherExitCoords,
       this.determineCorePosition,
@@ -68,12 +67,13 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       this.placeRamparts,
       this.placeTowers,
       this.placeSpawnWalls,
-
     ];
+  }
 
-    if (step < steps.length) {
-      hivemind.log('rooms', this.roomName).debug('Running step:', steps[step].name);
-      return steps[step].call(this);
+  buildStep(step: number): StepResult {
+    if (step < this.steps.length) {
+      hivemind.log('rooms', this.roomName).debug('Running step:', this.steps[step].name);
+      return this.steps[step].call(this);
     }
 
     return 'done';
