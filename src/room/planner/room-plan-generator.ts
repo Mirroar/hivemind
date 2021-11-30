@@ -53,10 +53,8 @@ export default class RoomPlanGenerator {
 
   initVariation() {
     this.currentVariation = this.variations[this.variationIndex++];
-    this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation);
     this.provideDistanceMatrixes();
-    this.variationBuilder.setWallMatrix(this.wallMatrix);
-    this.variationBuilder.setExitMatrix(this.exitMatrix);
+    this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, this.wallMatrix, this.exitMatrix);
   }
 
   generateVariation() {

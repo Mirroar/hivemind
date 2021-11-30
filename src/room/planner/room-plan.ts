@@ -31,10 +31,10 @@ const structureSymbols = {
 };
 
 export default class RoomPlan {
-  roomName: string;
-  positionsByType: PositionCache;
+  public readonly MAX_ROOM_LEVEL = 8;
 
-  readonly MAX_ROOM_LEVEL = 8;
+  public readonly roomName: string;
+  protected positionsByType: PositionCache;
 
   constructor(roomName:string, input?: SerializedPlan) {
     this.roomName = roomName;

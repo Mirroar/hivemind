@@ -17,41 +17,20 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   exitCenters: ExitCoords;
   roomCenter: RoomPosition;
   roomCenterEntrances: RoomPosition[];
-  sourceInfo: {
+  private sourceInfo: {
     [id: string]: {
       harvestPosition: RoomPosition;
     };
   };
-  steps: (() => StepResult)[];
+  private steps: (() => StepResult)[];
 
-  openList: {
-    [location: string]: {
-      range: number;
-      path: {
-        [location: string]: boolean;
-      };
-    };
-  };
-  closedList: {
-    [location: string]: boolean;
-  }
-  currentBuildSpot: {
-    pos: RoomPosition;
-    info: {
-      range: number;
-      path: {
-        [location: string]: boolean;
-      };
-    };
-  }
   safetyMatrix: CostMatrix;
 
-  constructor(roomName: string, variation: string) {
-    super(roomName, variation);
+  constructor(roomName: string, variation: string, wallMatrix: CostMatrix, exitMatrix: CostMatrix) {
+    super(roomName, variation, wallMatrix, exitMatrix);
     hivemind.log('rooms', this.roomName).info('Started generating room plan for variation', variation);
 
     this.steps = [
-      this.prepareBuildingMatrix,
       this.gatherExitCoords,
       this.determineCorePosition,
       this.determineHarvesterPositions,
@@ -79,52 +58,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     return 'done';
   }
 
-  /**
-   * Prepares building cost matrix.
-   *
-   * @param {RoomPosition[]} potentialWallPositions
-   *   List of potential wall positions for this room to add to.
-   * @param {RoomPosition[]} potentialCorePositions
-   *   List of potential room core positions to add to.
-   */
-  prepareBuildingMatrix(): StepResult {
-    this.buildingMatrix = new PathFinder.CostMatrix();
-
-    for (let x = 0; x < 50; x++) {
-      for (let y = 0; y < 50; y++) {
-        if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) {
-          this.buildingMatrix.set(x, y, 255);
-          continue;
-        }
-
-        // Treat border as unwalkable for in-room pathfinding.
-        if (x === 0 || y === 0 || x === 49 || y === 49) {
-          this.buildingMatrix.set(x, y, 255);
-          continue;
-        }
-
-        // Avoid pathfinding close to walls to keep space for dodging and building / wider roads.
-        const wallDistance = this.wallDistanceMatrix.get(x, y);
-        const exitDistance = this.exitDistanceMatrix.get(x, y);
-
-        if (wallDistance === 1) {
-          this.buildingMatrix.set(x, y, 10);
-        }
-
-        if (exitDistance <= 2) {
-          // Avoid tiles we can't build ramparts on.
-          this.buildingMatrix.set(x, y, 20);
-        }
-        else if (exitDistance <= 5) {
-          // Avoid area near exits and room walls to not get shot at.
-          this.buildingMatrix.set(x, y, 10);
-        }
-      }
-    }
-
-    return 'ok';
-  };
-
   gatherExitCoords(): StepResult {
     // Prepare exit points.
     this.exitCoords = this.getExitCoordsByDirection();
@@ -132,7 +65,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     for (const dir of _.keys(this.exitCoords)) {
       for (const pos of this.exitCenters[dir]) {
-        this.placeFlag(pos, 'exit', null);
+        this.placementManager.planLocation(pos, 'exit', null);
       }
     }
 
@@ -212,7 +145,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       new RoomPosition(roomCenter.x, roomCenter.y - 2, this.roomName),
     ];
 
-    this.placeFlag(roomCenter, 'center', null);
+    this.placementManager.planLocation(roomCenter, 'center', null);
 
     return 'ok';
   }
@@ -224,8 +157,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       for (let y = 0; y < 50; y++) {
         if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
 
-        const wallDistance = this.wallDistanceMatrix.get(x, y);
-        const exitDistance = this.exitDistanceMatrix.get(x, y);
+        const wallDistance = this.placementManager.getWallDistance(x, y);
+        const exitDistance = this.placementManager.getExitDistance(x, y);
 
         if (wallDistance >= 4 && wallDistance < 255 && exitDistance > 8) {
           potentialCorePositions.push(new RoomPosition(x, y, this.roomName));
@@ -280,7 +213,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     // Find closest position with distance from walls around there.
     const roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(potentialCorePositions);
     if (!roomCenter) {
-      hivemind.log('rooms', this.roomName).error('Could not find a suitable center position!', utilities.renderCostMatrix(this.wallDistanceMatrix), utilities.renderCostMatrix(this.exitDistanceMatrix), utilities.renderCostMatrix(this.buildingMatrix));
+      hivemind.log('rooms', this.roomName).error('Could not find a suitable center position!');
       return null;
     }
 
@@ -292,14 +225,14 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     const roomIntel = hivemind.roomIntel(this.roomName);
     for (const source of roomIntel.getSourcePositions()) {
       const harvestPosition = this.determineHarvestPositionForSource(source);
-      this.placeFlag(harvestPosition, 'harvester', null);
-      this.placeFlag(harvestPosition, 'bay_center', null);
+      this.placementManager.planLocation(harvestPosition, 'harvester', null);
+      this.placementManager.planLocation(harvestPosition, 'bay_center', null);
 
       // Discourage roads through spots around harvest position.
       utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
         if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
-        if (this.buildingMatrix.get(x, y) < 10 && this.buildingMatrix.get(x, y) !== 1) this.buildingMatrix.set(x, y, 10);
+        this.placementManager.discouragePosition(x, y);
       });
 
       this.storeHarvestPosition(source, harvestPosition);
@@ -307,10 +240,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     const mineral = roomIntel.getMineralPosition();
     const mineralPosition = new RoomPosition(mineral.x, mineral.y, this.roomName);
-    this.placeFlag(mineralPosition, 'extractor');
-    const mineralRoads = this.scanAndAddRoad(mineralPosition, this.roomCenterEntrances);
+    this.placementManager.planLocation(mineralPosition, 'extractor');
+    const mineralRoads = this.placementManager.scanAndAddRoad(mineralPosition, this.roomCenterEntrances);
     for (const pos of mineralRoads) {
-      this.placeFlag(pos, 'road.mineral', null);
+      this.placementManager.planLocation(pos, 'road.mineral', null);
     }
 
     this.placeContainer(mineralRoads, 'mineral');
@@ -332,7 +265,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       let numFreeTiles = 0;
       utilities.handleMapArea(x, y, (x2, y2) => {
         if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
-        if (this.buildingMatrix.get(x2, y2) >= 100) return;
+        if (!this.placementManager.isBuildableTile(x2, y2)) return;
 
         numFreeTiles++;
       });
@@ -347,7 +280,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   storeHarvestPosition(source: {id: string}, harvestPosition: RoomPosition) {
     // Make sure no other paths get led through harvester position.
-    this.buildingMatrix.set(harvestPosition.x, harvestPosition.y, 255);
+    this.placementManager.blockPosition(harvestPosition.x, harvestPosition.y);
 
     // Setup memory for quick access to harvest spots.
     this.sourceInfo[source.id] = {
@@ -358,10 +291,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   determineUpgraderPosition(): StepResult {
     const roomIntel = hivemind.roomIntel(this.roomName);
     const controllerPosition = roomIntel.getControllerPosition();
-    const controllerRoads = this.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
+    const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
 
     // Make sure no other paths get led through upgrader position.
-    this.buildingMatrix.set(controllerRoads[0].x, controllerRoads[0].y, 255);
+    this.placementManager.blockPosition(controllerRoads[0].x, controllerRoads[0].y);
 
     this.placeContainer(controllerRoads, 'controller');
 
@@ -375,9 +308,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     // Find paths from each exit towards the room center for making roads.
     for (const dir of _.keys(this.exitCenters)) {
       for (const pos of this.exitCenters[dir]) {
-        const exitRoads = this.scanAndAddRoad(pos, this.roomCenterEntrances);
+        const exitRoads = this.placementManager.scanAndAddRoad(pos, this.roomCenterEntrances);
         for (const pos of exitRoads) {
-          this.placeFlag(pos, 'road.exit', null);
+          this.placementManager.planLocation(pos, 'road.exit', null);
         }
       }
     }
@@ -386,9 +319,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     // @todo Create road starting from room center, and only to range 3.
     const roomIntel = hivemind.roomIntel(this.roomName);
     const controllerPosition = roomIntel.getControllerPosition();
-    const controllerRoads = this.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
+    const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
     for (const pos of controllerRoads) {
-      this.placeFlag(pos, 'road.controller', null);
+      this.placementManager.planLocation(pos, 'road.controller', null);
+      this.protectPosition(pos, 0);
     }
 
     return 'ok';
@@ -398,13 +332,14 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     const roomIntel = hivemind.roomIntel(this.roomName);
     for (const source of roomIntel.getSourcePositions()) {
       const harvestPosition = this.sourceInfo[source.id].harvestPosition;
-      const sourceRoads = this.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
+      const sourceRoads = this.placementManager.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
       for (const pos of sourceRoads) {
-        this.placeFlag(pos, 'road.source', null);
+        this.placementManager.planLocation(pos, 'road.source', null);
+        this.protectPosition(pos, 0);
       }
 
-      this.placeFlag(harvestPosition, 'container.source', null);
-      this.placeFlag(harvestPosition, 'container', null);
+      this.placementManager.planLocation(harvestPosition, 'container.source', null);
+      this.placementManager.planLocation(harvestPosition, 'container', null);
 
       this.placeBayStructures(harvestPosition, {spawn: true, source: true});
     }
@@ -417,19 +352,19 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    */
   placeRoomCore(): StepResult {
     // Fill center cross with roads.
-    this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'road', 1);
-    this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'road', 1);
-    this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'road', 1);
-    this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'road', 1);
-    this.placeFlag(new RoomPosition(this.roomCenter.x, this.roomCenter.y, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y, this.roomName), 'road', 1);
 
     // Mark center buildings for construction.
-    this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y + 1, this.roomName), 'storage');
-    this.placeFlag(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'terminal');
-    this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab');
-    this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab.boost');
-    this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link');
-    this.placeFlag(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link.storage');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y + 1, this.roomName), 'storage');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'terminal');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab.boost');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link.storage');
 
     return 'ok';
   };
@@ -438,15 +373,15 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    * Places parking spot for helper creep.
    */
   placeHelperParkingLot(): StepResult {
-    const nextPos = this.getNextAvailableBuildSpot();
+    const nextPos = this.placementManager.getNextAvailableBuildSpot();
     if (!nextPos) return 'failed';
 
-    this.placeFlag(nextPos, 'road', 255);
-    this.placeFlag(nextPos, 'helper_parking');
+    this.placementManager.planLocation(nextPos, 'road', 255);
+    this.placementManager.planLocation(nextPos, 'helper_parking');
 
-    this.placeAccessRoad(nextPos);
+    this.placementManager.placeAccessRoad(nextPos);
 
-    this.filterOpenList(utilities.encodePosition(nextPos));
+    this.placementManager.filterOpenList(utilities.encodePosition(nextPos));
 
     return 'ok';
   };
@@ -455,21 +390,21 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    * Places extension bays.
    */
   placeBays(): StepResult {
-    this.startBuildingPlacement();
+    this.placementManager.startBuildingPlacement(this.roomCenter, this.roomCenterEntrances);
     while (this.roomPlan.canPlaceMore('extension')) {
       const pos = this.findBayPosition();
       if (!pos) return 'failed';
 
-      this.placeAccessRoad(pos);
+      this.placementManager.placeAccessRoad(pos);
 
       // Make sure there is a road in the center of the bay.
-      this.placeFlag(pos, 'road', 1);
-      this.placeFlag(pos, 'bay_center', 1);
+      this.placementManager.planLocation(pos, 'road', 1);
+      this.placementManager.planLocation(pos, 'bay_center', 1);
 
       this.placeBayStructures(pos, {spawn: true});
 
       // Reinitialize pathfinding.
-      this.startBuildingPlacement();
+      this.placementManager.startBuildingPlacement();
     }
 
     return 'ok';
@@ -487,30 +422,30 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     let bestScore = 0;
 
     while (maxExtensions < 8) {
-      const nextPos = this.getNextAvailableBuildSpot();
+      const nextPos = this.placementManager.getNextAvailableBuildSpot();
       if (!nextPos) break;
 
       // Don't build too close to exits.
-      if (this.exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+      if (this.placementManager.getExitDistance(nextPos.x, nextPos.y) < 8) continue;
 
-      if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y)) continue;
 
       // @todo One tile is allowed to be a road.
       // @todo Use a lenient stamper.
       let tileCount = 0;
-      if (this.isBuildableTile(nextPos.x - 1, nextPos.y)) tileCount++;
-      if (this.isBuildableTile(nextPos.x + 1, nextPos.y)) tileCount++;
-      if (this.isBuildableTile(nextPos.x, nextPos.y - 1)) tileCount++;
-      if (this.isBuildableTile(nextPos.x, nextPos.y + 1)) tileCount++;
-      if (this.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) tileCount++;
-      if (this.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) tileCount++;
-      if (this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) tileCount++;
-      if (this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x, nextPos.y - 1)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x, nextPos.y + 1)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) tileCount++;
+      if (this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) tileCount++;
 
       if (tileCount <= maxExtensions) continue;
 
       maxExtensions = tileCount;
-      const score = tileCount / (this.getCurrentBuildSpotInfo().range + 10);
+      const score = tileCount / (this.placementManager.getCurrentBuildSpotInfo().range + 10);
       if (score > bestScore && tileCount >= 4) {
         bestPos = nextPos;
         bestScore = score;
@@ -526,67 +461,67 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    * Places labs in big compounds.
    */
   placeLabs() {
-    this.startBuildingPlacement();
+    this.placementManager.startBuildingPlacement();
     while (this.roomPlan.canPlaceMore('lab')) {
-      const nextPos = this.getNextAvailableBuildSpot();
+      const nextPos = this.placementManager.getNextAvailableBuildSpot();
       if (!nextPos) return 'failed';
 
       // Don't build too close to exits.
-      if (this.exitDistanceMatrix.get(nextPos.x, nextPos.y) < 8) continue;
+      if (this.placementManager.getExitDistance(nextPos.x, nextPos.y) < 8) continue;
 
       // @todo Dynamically generate lab layout for servers where 10 labs is not the max.
       // @todo Allow rotating this blueprint for better access.
       // @todo Use stamper.
-      if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
-      if (!this.isBuildableTile(nextPos.x - 1, nextPos.y)) continue;
-      if (!this.isBuildableTile(nextPos.x + 1, nextPos.y)) continue;
-      if (!this.isBuildableTile(nextPos.x, nextPos.y - 1)) continue;
-      if (!this.isBuildableTile(nextPos.x, nextPos.y + 1)) continue;
-      if (!this.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) continue;
-      if (!this.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) continue;
-      if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
-      if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
-      if (!this.isBuildableTile(nextPos.x - 1, nextPos.y + 2)) continue;
-      if (!this.isBuildableTile(nextPos.x, nextPos.y + 2)) continue;
-      if (!this.isBuildableTile(nextPos.x + 1, nextPos.y + 2)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y - 1)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y + 1)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y + 2)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y + 2)) continue;
+      if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y + 2)) continue;
 
       // Place center area.
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab');
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab.reaction');
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', 1);
+      this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab.reaction');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', 1);
 
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab');
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab.reaction');
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab');
-      this.placeFlag(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab.reaction');
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', 1);
+      this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab.reaction');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab.reaction');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', 1);
 
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab');
-      this.placeFlag(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab.reaction');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab');
+      this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab.reaction');
 
-      this.placeAccessRoad(nextPos);
+      this.placementManager.placeAccessRoad(nextPos);
 
       // Add top and bottom buildings.
       for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 2; dy += 3) {
-          if (this.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) {
-            this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab');
-            this.placeFlag(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab.reaction');
+          if (this.placementManager.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) {
+            this.placementManager.planLocation(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab');
+            this.placementManager.planLocation(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab.reaction');
           }
         }
       }
 
       // Reinitialize pathfinding.
-      this.startBuildingPlacement();
+      this.placementManager.startBuildingPlacement();
     }
 
     return 'ok';
   };
 
   placeHighLevelStructures(): StepResult {
-    this.placeAll('powerSpawn', true);
-    this.placeAll('nuker', true);
-    this.placeAll('observer', false);
+    this.placementManager.placeAll('powerSpawn', true);
+    this.placementManager.placeAll('nuker', true);
+    this.placementManager.placeAll('observer', false);
 
     return 'ok';
   }
@@ -597,6 +532,16 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     const safety = roomIntel.calculateAdjacentRoomSafety();
 
     this.protectPosition(roomIntel.getControllerPosition(), 1);
+
+    for (const locationType of this.roomPlan.getPositionTypes()) {
+      const baseType = locationType.split('.')[0];
+      if (!CONTROLLER_STRUCTURES[baseType] || ['extension', 'road', 'container', 'extractor'].includes(baseType)) continue;
+
+      // Protect area around essential structures.
+      for (const pos of this.roomPlan.getPositions(locationType)) {
+        this.protectPosition(pos);
+      }
+    }
 
     // Protect exits to safe rooms.
     const bounds: MinCutRect = {x1: 0, x2: 49, y1: 0, y2: 49};
@@ -620,7 +565,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     // Actually place ramparts.
     for (const i in potentialWallPositions) {
       if (potentialWallPositions[i].isRelevant) {
-        this.placeFlag(potentialWallPositions[i], 'rampart', null);
+        this.placementManager.planLocation(potentialWallPositions[i], 'rampart', null);
       }
     }
 
@@ -753,7 +698,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       if (x < 1 || x > 48 || y < 1 || y > 48) return;
 
       // Ignore walls.
-      if (this.wallDistanceMatrix.get(x, y) > 100) return;
+      if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
       const posName = utilities.encodePosition(new RoomPosition(x, y, this.roomName));
       if (openList[posName] || closedList[posName]) return;
@@ -977,11 +922,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   placeSpawnWalls(): StepResult {
     for (const pos of this.roomPlan.getPositions('spawn')) {
       utilities.handleMapArea(pos.x, pos.y, (x, y) => {
-        if (this.isBuildableTile(x, y)) {
+        if (this.placementManager.isBuildableTile(x, y)) {
           // Check if any adjacent tile has a road, which means creeps can leave from there.
           let hasRoad = false;
           utilities.handleMapArea(x, y, (ax, ay) => {
-            if (this.buildingMatrix.get(ax, ay) === 1) {
+            if (this.roomPlan.hasPosition('road', new RoomPosition(ax, ay, this.roomName)) && this.placementManager.isBuildableTile(ax, ay, true)) {
               hasRoad = true;
               return false;
             }
@@ -991,187 +936,14 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
           if (hasRoad) return;
 
           // Place a wall to prevent spawning in this direction.
-          this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall');
-          this.placeFlag(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
+          this.placementManager.planLocation(new RoomPosition(x, y, pos.roomName), 'wall');
+          this.placementManager.planLocation(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
         }
       });
     }
 
     return 'ok';
   };
-
-  /**
-   * Places all remaining structures of a given type.
-   *
-   * @param {string} structureType
-   *   The type of structure to plan.
-   * @param {boolean} addRoad
-   *   Whether an access road should be added for these structures.
-   */
-  placeAll(structureType: StructureConstant, addRoad: boolean) {
-    while (this.roomPlan.canPlaceMore(structureType)) {
-      const nextPos = this.getNextAvailableBuildSpot();
-      if (!nextPos) break;
-
-      this.placeFlag(new RoomPosition(nextPos.x, nextPos.y, this.roomName), structureType);
-      this.filterOpenList(utilities.encodePosition(nextPos));
-
-      if (addRoad) this.placeAccessRoad(nextPos);
-    }
-  }
-
-  /**
-   * Plans a road from the given position to the room's center.
-   *
-   * @param {RoomPosition} position
-   *   Source position from which to start the road.
-   */
-  placeAccessRoad(position: RoomPosition) {
-    // Plan road out of labs.
-    const accessRoads = this.scanAndAddRoad(position, this.roomCenterEntrances);
-    for (const pos of accessRoads) {
-      this.placeFlag(pos, 'road', 1);
-    }
-  }
-
-  /**
-   * Tries to create a road from a target point.
-   *
-   * @param {RoomPosition} from
-   *   Position from where to start road creation. The position itself will not
-   *   have a road built on it.
-   * @param {RoomPosition|RoomPosition[]} to
-   *   Position or positions to lead the road to.
-   *
-   * @return {RoomPosition[]}
-   *   Positions that make up the newly created road.
-   */
-  scanAndAddRoad(from: RoomPosition, to: RoomPosition | RoomPosition[]): RoomPosition[] {
-    const matrix = this.buildingMatrix;
-    const result = PathFinder.search(from, to, {
-      roomCallback: () => matrix,
-      maxRooms: 1,
-      plainCost: 2,
-      swampCost: 2, // Swamps are more expensive to build roads on, but once a road is on them, creeps travel at the same speed.
-      heuristicWeight: 0.9,
-    });
-
-    if (!result.path) return [];
-
-    const newRoads = [];
-    for (const pos of result.path) {
-      newRoads.push(pos);
-      this.placeFlag(pos, 'road', null);
-
-      // Since we're building a road on this tile anyway, prefer it for future pathfinding.
-      if (matrix.get(pos.x, pos.y) < 100) matrix.set(pos.x, pos.y, 1);
-    }
-
-    return newRoads;
-  }
-
-  /**
-   * Initializes pathfinding for finding building placement spots.
-   */
-  startBuildingPlacement() {
-    // Flood fill from the center to place buildings that need to be accessible.
-    this.openList = {};
-    this.closedList = {};
-    const startPath = {};
-    startPath[utilities.encodePosition(this.roomCenter)] = true;
-    this.openList[utilities.encodePosition(this.roomCenter)] = {
-      range: 0,
-      path: startPath,
-    };
-  }
-
-  /**
-   * Gets the next reasonable building placement location.
-   *
-   * @return {RoomPosition}
-   *   A buildable spot.
-   */
-  getNextAvailableBuildSpot(): RoomPosition {
-    while (_.size(this.openList) > 0) {
-      let minDist = null;
-      let nextPos = null;
-      let nextInfo = null;
-      _.each(this.openList, (info, posName) => {
-        const pos = utilities.decodePosition(posName);
-        if (!minDist || info.range < minDist) {
-          minDist = info.range;
-          nextPos = pos;
-          nextInfo = info;
-        }
-      });
-
-      if (!nextPos) break;
-
-      delete this.openList[utilities.encodePosition(nextPos)];
-      this.closedList[utilities.encodePosition(nextPos)] = true;
-
-      // Add unhandled adjacent tiles to open list.
-      utilities.handleMapArea(nextPos.x, nextPos.y, (x, y) => {
-        if (x === nextPos.x && y === nextPos.y) return;
-        if (!this.isBuildableTile(x, y, true)) return;
-
-        const pos = new RoomPosition(x, y, this.roomName);
-        const location = utilities.encodePosition(pos);
-        if (this.openList[location] || this.closedList[location]) return;
-
-        const newPath = {};
-        for (const oldPos of _.keys(nextInfo.path)) {
-          newPath[oldPos] = true;
-        }
-
-        newPath[location] = true;
-        this.openList[location] = {
-          range: minDist + 1,
-          path: newPath,
-        };
-      });
-
-      // Don't build to close to room center.
-      if (nextPos.getRangeTo(this.roomCenter) < 3) continue;
-
-      // Don't build on roads.
-      if (!this.isBuildableTile(nextPos.x, nextPos.y)) continue;
-
-      this.currentBuildSpot = {
-        pos: nextPos,
-        info: nextInfo,
-      };
-      return nextPos;
-    }
-
-    return null;
-  }
-
-  /**
-   * Removes all pathfinding options that use the given position.
-   *
-   * @param {string} targetPos
-   *   An encoded room position that should not be used in paths anymore.
-   */
-  filterOpenList(targetPos: string) {
-    for (const posName in this.openList) {
-      if (this.openList[posName].path[targetPos]) {
-        delete this.openList[posName];
-      }
-    }
-  }
-
-  /**
-   * Gets information about the most recently requested build spot.
-   *
-   * @return {object}
-   *   Info about the build spot, containing:
-   *   - range: Distance from room center.
-   *   - path: An object keyed by room positions that have been traversed.
-   */
-  getCurrentBuildSpotInfo() {
-    return this.currentBuildSpot.info;
-  }
 
   isFinished(): boolean {
     return this.finished;
