@@ -1,15 +1,11 @@
 import hivemind from 'hivemind';
 import minCut from 'utils/mincut';
+import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
 import utilities from 'utilities';
 
 type ExitCoords = {
   [dir: string]: RoomPosition[];
-}
-
-interface ScoredTowerPosition {
-  pos: RoomPosition,
-  score: number,
 }
 
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
@@ -738,182 +734,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
         this.safetyMatrix.set(ax, ay, 0);
       }
     }, 3);
-  };
+  }
 
-  /**
-   * Places towers so exits are well covered.
-   */
   placeTowers(): StepResult {
-    const costMatrixBackup: {
-      [location: string]: number,
-    } = {};
-    const positions = this.findTowerPositions();
-    const ramparts = this.findRampartPositions();
-    while (this.canPlaceMore('tower')) {
-      const newTowers = [];
-
-      this.scoreRampartPositions(ramparts);
-      this.scoreTowerPositions(positions, ramparts);
-      while(newTowers.length < this.remainingStructureCount('tower')) {
-        let info = _.max(positions, 'score');
-        if (!info || typeof info === 'number' || info.score < 0) break;
-
-        info.score = -1;
-
-        // Make sure it's possible to refill this tower.
-        const result = PathFinder.search(info.pos, this.roomCenterEntrances, {
-          roomCallback: () => this.buildingMatrix,
-          maxRooms: 1,
-          plainCost: 1,
-          swampCost: 1, // We don't care about cost, just about possibility.
-        });
-        if (result.incomplete) continue;
-
-        // Add tentative tower location.
-        newTowers.push(info.pos);
-        costMatrixBackup[utilities.encodePosition(info.pos)] = this.buildingMatrix.get(info.pos.x, info.pos.y);
-        this.placeFlag(info.pos, 'tower_placeholder');
-
-        if (newTowers.length < this.remainingStructureCount('tower')) {
-          this.scoreRampartPositions(ramparts);
-          this.scoreTowerPositions(positions, ramparts);
-        }
-      }
-
-      // Abort if no towers can be placed.
-      if (newTowers.length === 0) break;
-
-      // Also create roads to all towers.
-      for (const pos of newTowers) {
-        // Check if access is still possible.
-        const result = PathFinder.search(pos, this.roomCenterEntrances, {
-          roomCallback: () => this.buildingMatrix,
-          maxRooms: 1,
-          plainCost: 1,
-          swampCost: 1, // We don't care about cost, just about possibility.
-        });
-        // @todo Decrement counter for tower direction.
-        if (result.incomplete) continue;
-
-        this.placeFlag(pos, 'tower');
-        this.placeAccessRoad(pos);
-      }
-
-      // Restore building matrix values for subsequent operations.
-      for (const pos of this.roomPlan.getPositions('tower_placeholder')) {
-        if (this.roomPlan.hasPosition('tower', pos)) continue;
-
-        this.buildingMatrix.set(pos.x, pos.y, costMatrixBackup[utilities.encodePosition(pos)]);
-      }
-
-      // Remove tower_placeholder markers for correct scoring during next iteration.
-      this.roomPlan.removeAllPositions('tower_placeholder');
-    }
-
-    return 'ok';
-  };
-
-  /**
-   * Finds all positions where we might place towers within rampart protection.
-   *
-   * @return {array}
-   *   An array of objects with the following keys:
-   *   - score: The tower score for this position.
-   *   - pos: The position in question.
-   */
-  findTowerPositions(): ScoredTowerPosition[] {
-    const roomIntel = hivemind.roomIntel(this.roomName);
-    const safety = roomIntel.calculateAdjacentRoomSafety();
-    const positions: ScoredTowerPosition[] = [];
-
-    const allDirectionsSafe = _.sum(safety.directions) === 4;
-    if (allDirectionsSafe) return positions;
-
-    for (let x = 1; x < 49; x++) {
-      for (let y = 1; y < 49; y++) {
-        if (this.buildingMatrix.get(x, y) !== 0 && this.buildingMatrix.get(x, y) !== 10) continue;
-        if (this.safetyMatrix.get(x, y) !== 1) continue;
-        if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
-
-        positions.push({
-          score: 0,
-          pos: new RoomPosition(x, y, this.roomName),
-        });
-      }
-    }
-
-    return positions;
-  }
-
-  /**
-   * Scores all available tower positions based on rampart tiles in range.
-   *
-   * Unprotected ramparts get higher priority than those already protected
-   * by another tower.
-   */
-  scoreTowerPositions(positions: ScoredTowerPosition[], rampartPositions: ScoredTowerPosition[]) {
-    for (const info of positions) {
-      // Skip positions already considered for tower or road placement.
-      if (this.buildingMatrix.get(info.pos.x, info.pos.y) !== 0 && this.buildingMatrix.get(info.pos.x, info.pos.y) !== 10) info.score = -1;
-      if (info.score < 0) continue;
-
-      let score = 0;
-
-      // Add score for ramparts in range.
-      for (const rampart of rampartPositions) {
-        score += rampart.score * this.getTowerEffectScore(rampart.pos, info.pos.x, info.pos.y);
-      }
-
-      info.score = score;
-    }
-  }
-
-  /**
-   * Finds the position of all ramparts in the room.
-   */
-  findRampartPositions(): ScoredTowerPosition[] {
-    const positions = [];
-
-    for (const pos of this.roomPlan.getPositions('rampart')) {
-      positions.push({
-        score: 1,
-        pos,
-      });
-    }
-
-    return positions;
-  }
-
-  /**
-   * Calculates a weight for each rampart based on current protection level.
-   *
-   * The more towers in are in range of a rampart, the less important it is
-   * to add more protection near it.
-   */
-  scoreRampartPositions(positions: ScoredTowerPosition[]) {
-    for (const info of positions) {
-      let rampartScore = 1;
-
-      for (const pos of this.roomPlan.getPositions('tower')) {
-        rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
-      }
-      for (const pos of this.roomPlan.getPositions('tower_placeholder')) {
-        rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
-      }
-
-      info.score = rampartScore;
-    }
-  }
-
-  /**
-   * Determines tower efficiency by range.
-   *
-   * @return {number}
-   *   Between 0 for least efficient and 1 for highest efficiency.
-   */
-  getTowerEffectScore(pos: RoomPosition, x: number, y: number): number {
-    const effectiveRange = Math.min(Math.max(pos.getRangeTo(x, y) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE);
-    return 1 - ((effectiveRange - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE));
+    const step = new PlaceTowersStep(this.roomPlan, this.placementManager, this.safetyMatrix);
+    return step.run();
   }
 
   /**
