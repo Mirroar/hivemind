@@ -5,4 +5,4 @@ export default class RoomOperation extends Operation {
 		super(name);
 		this.memory.type = 'room';
 	}
-};
+}

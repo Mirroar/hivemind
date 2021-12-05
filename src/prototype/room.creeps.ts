@@ -4,8 +4,10 @@
 
 /* global Room */
 
-interface Room {
-  getCreepsWithOrder,
+declare global {
+	interface Room {
+		getCreepsWithOrder: (type: string, target) => Creep[];
+	}
 }
 
 /**
@@ -19,8 +21,8 @@ interface Room {
  * @return {Creep[]}
  *   An array of creeps that have a matching order.
  */
-Room.prototype.getCreepsWithOrder = function (type, target) {
-	return _.filter(this.creeps, (creep: Creep) => {
+Room.prototype.getCreepsWithOrder = function (this: Room, type: string, target): Creep[] {
+	return _.filter(this.creeps, creep => {
 		if (!creep.memory.order) return false;
 		if (creep.memory.order.type !== type) return false;
 		if (creep.memory.order.target !== target) return false;
@@ -28,3 +30,5 @@ Room.prototype.getCreepsWithOrder = function (type, target) {
 		return true;
 	});
 };
+
+export default {};

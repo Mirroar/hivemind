@@ -1,7 +1,7 @@
 /* global ConstructionSite OBSTACLE_OBJECT_TYPES */
 
 interface ConstructionSite {
-	isWalkable: () => boolean,
+	isWalkable: () => boolean;
 }
 
 /**

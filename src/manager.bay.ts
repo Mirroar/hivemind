@@ -45,7 +45,7 @@ export default class Bay {
 				const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
 					filter: structure => (bayStructures as string[]).indexOf(structure.structureType) > -1 && structure.isOperational(),
 				});
-				return _.map(extensions, 'id');
+				return _.map<AnyStructure, Id<AnyStructure>>(extensions, 'id');
 			}
 		);
 

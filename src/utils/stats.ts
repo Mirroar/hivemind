@@ -1,15 +1,11 @@
 declare global {
-	interface HistoryStatMemory {
-		[key: number]: {
-			currentValues: number[],
-			previousValues: number[],
-		},
-	}
+	type HistoryStatMemory = Record<number, {
+		currentValues: number[];
+		previousValues: number[];
+	}>;
 
 	interface Memory {
-		history: {
-			[key: string]: HistoryStatMemory,
-		}
+		history: Record<string, HistoryStatMemory>;
 	}
 }
 

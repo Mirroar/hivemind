@@ -5,30 +5,32 @@ STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 declare global {
 	interface Room {
 		creepsByRole: {
-			[key: string]: Creep[],
-		},
+			[roleName: string]: {
+				[creepName: string]: Creep;
+			};
+		};
 		enemyCreeps: {
-			[key: string]: Creep[],
-		},
-		defense: RoomDefense,
-		sources: Source[],
-		mineral: Mineral,
-		enhanceData,
-		scan,
-		updateControllerContainer,
-		updateControllerLink,
-		updateStorageLink,
-		needsScout,
-		isMine: (allowReserved?: boolean) => boolean,
-		nuker?: StructureNuker,
-		powerSpawn?: StructurePowerSpawn,
-		observer?: StructureObserver,
+			[key: string]: Creep[];
+		};
+		defense: RoomDefense;
+		sources: Source[];
+		mineral: Mineral;
+		enhanceData;
+		scan;
+		updateControllerContainer;
+		updateControllerLink;
+		updateStorageLink;
+		needsScout;
+		isMine: (allowReserved?: boolean) => boolean;
+		nuker?: StructureNuker;
+		powerSpawn?: StructurePowerSpawn;
+		observer?: StructureObserver;
 	}
 
 	interface RoomMemory {
-		controllerLink?: any,
-		controllerContainer?: any,
-		storageLink?: any,
+		controllerLink?: any;
+		controllerContainer?: any;
+		storageLink?: any;
 	}
 }
 
@@ -109,10 +111,10 @@ Object.defineProperty(Room.prototype, 'mineral', {
 	 * @return {Source[]}
 	 *   The room's mineral.
 	 */
-	get() {
+	get(): Mineral {
 		return cache.inObject(this, 'mineral', 1, () => {
 			const mineralIds = cache.inHeap('mineral:' + this.name, 10000, () => {
-				return _.map(this.find(FIND_MINERALS), 'id');
+				return _.map<Mineral, string>(this.find(FIND_MINERALS), 'id');
 			});
 
 			return mineralIds[0] && Game.getObjectById(mineralIds[0]);

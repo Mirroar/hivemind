@@ -2,8 +2,9 @@
 FIND_STRUCTURES STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
 FIND_MY_CONSTRUCTION_SITES */
 
-import utilities from 'utilities';
+import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
+import utilities from 'utilities';
 
 export default class RemoteHarvesterRole extends Role {
 	constructor() {
@@ -122,6 +123,7 @@ export default class RemoteHarvesterRole extends Role {
 		creep.harvest(source);
 
 		// Immediately deposit energy if a container is nearby.
+		if (!(creep.operation instanceof RemoteMiningOperation)) return;
 		if (!creep.operation.hasContainer(creep.memory.source)) {
 			// Check if there is a container or construction site nearby.
 			const containerPosition = creep.operation.getContainerPosition(creep.memory.source);

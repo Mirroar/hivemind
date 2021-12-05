@@ -3,8 +3,8 @@ STRUCTURE_RAMPART */
 
 declare global {
 	interface DismantlerCreep extends Creep {
-		memory: DismantlerCreepMemory,
-		heapMemory: DismantlerCreepHeapMemory,
+		memory: DismantlerCreepMemory;
+		heapMemory: DismantlerCreepHeapMemory;
 	}
 
 	interface DismantlerCreepMemory extends CreepMemory {
@@ -19,6 +19,7 @@ declare global {
 	}
 }
 
+import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import utilities from 'utilities';
 
@@ -38,11 +39,7 @@ export default class DismantlerRole extends Role {
 			creep.memory.targetRoom = creep.pos.roomName;
 		}
 
-		if (creep.operation && creep.operation.type === 'mining') {
-			this.performOperationDismantle(creep);
-			return;
-		}
-
+		this.performOperationDismantle(creep);
 		this.performDismantle(creep);
 		return;
 	}
@@ -54,6 +51,9 @@ export default class DismantlerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performOperationDismantle(creep: DismantlerCreep) {
+		if (!creep.operation) return;
+		if (!(creep.operation instanceof RemoteMiningOperation)) return;
+
 		if (!creep.heapMemory.finishedPositions) creep.heapMemory.finishedPositions = [];
 		if (!creep.operation.needsDismantler(creep.memory.source)) {
 			// @todo Return home and suicide.

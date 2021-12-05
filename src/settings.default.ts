@@ -25,7 +25,7 @@ PWR_OPERATE_STORAGE PWR_GENERATE_OPS */
  * hivemind.settings.set('visualizeNavMesh', true);
  * @endcode
  */
-export default {
+const settings = {
 	// Visualization:
 	// If true, lines representing connections in the bot's nav mesh will be drawn
 	// on the world map.
@@ -113,3 +113,5 @@ export default {
 	allowSellingPower: true,
 	allowSellingOps: true,
 };
+
+export default settings;

@@ -1,35 +1,37 @@
 declare global {
 	interface CreepMemory {
-		disableNotifications?: boolean,
-		operation?: string,
-		singleRoom?: string,
+		disableNotifications?: boolean;
+		operation?: string;
+		singleRoom?: string;
 
-		blockedPathCounter?: any,
-		body?: any,
-		building?: any,
-		buildTarget?: any,
-		currentLair?: any,
-		delivering?: any,
-		deliverTarget?: any,
-		exploitName?: any,
-		extraEnergyTarget?: any,
-		fixedMineral?: any,
-		fixedSource?: any,
-		harvestPos?: any,
-		isHealer?: any,
-		isReturning?: any,
-		noHarvestPos?: any,
-		order?: any,
-		origin?: any,
-		pickupResources?: any,
-		repairTarget?: any,
-		resourceTarget?: any,
-		sourceRoom?: any,
-		sourceTarget?: any,
-		squadUnitType?: any,
-		target?: any,
-		targetRoom?: any,
-		upgrading?: any,
+		blockedPathCounter?: any;
+		body?: {
+			[partType: string]: number;
+		};
+		building?: any;
+		buildTarget?: any;
+		currentLair?: any;
+		delivering?: any;
+		deliverTarget?: any;
+		exploitName?: any;
+		extraEnergyTarget?: any;
+		fixedMineral?: any;
+		fixedSource?: any;
+		harvestPos?: any;
+		isHealer?: any;
+		isReturning?: any;
+		noHarvestPos?: any;
+		order?: any;
+		origin?: any;
+		pickupResources?: any;
+		repairTarget?: any;
+		resourceTarget?: any;
+		sourceRoom?: any;
+		sourceTarget?: any;
+		squadUnitType?: any;
+		target?: any;
+		targetRoom?: any;
+		upgrading?: any;
 	}
 }
 

@@ -8,12 +8,12 @@ export default class Process implements ProcessInterface {
 	 * Processes are run and managed by the hivemind kernel.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
+	constructor(parameters, data) {
 		this.data = data;
 	}
 

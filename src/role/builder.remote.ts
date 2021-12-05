@@ -198,7 +198,7 @@ export default class RemoteBuilderRole extends Role {
 
 		// Move to source room if necessary.
 		const targetPosition = utilities.decodePosition(creep.memory.target);
-		if (targetPosition.roomName !== creep.pos.roomName) {
+		if (targetPosition && targetPosition.roomName !== creep.pos.roomName) {
 			creep.moveToRange(targetPosition, 5);
 			return;
 		}

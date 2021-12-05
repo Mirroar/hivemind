@@ -1,21 +1,20 @@
 import Process from 'process/process';
 
 export default class RoomManagerProcess extends Process {
-
 	room: Room;
 
 	/**
 	 * Manages structures in owned rooms.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**
@@ -24,4 +23,4 @@ export default class RoomManagerProcess extends Process {
 	run() {
 		this.room.roomManager.runLogic();
 	}
-};
+}

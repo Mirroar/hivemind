@@ -6,8 +6,9 @@ LOOK_CONSTRUCTION_SITES */
 // @todo Collect energy if it's lying on the path.
 
 import hivemind from 'hivemind';
-import utilities from 'utilities';
+import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
+import utilities from 'utilities';
 
 export default class HaulerRole extends Role {
 	actionTaken: boolean;
@@ -77,6 +78,8 @@ export default class HaulerRole extends Role {
 		}
 
 		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
+		if (!Game.rooms[sourceRoom]) return;
+
 		const target = Game.rooms[sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
 		const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
 
@@ -413,12 +416,13 @@ export default class HaulerRole extends Role {
 	 *   Whether the creep should stay on this spot for further repairs.
 	 */
 	ensureRemoteHarvestContainerIsBuilt(creep: Creep) {
+		if (!(creep.operation instanceof RemoteMiningOperation)) return false;
 		if ((creep.store.energy || 0) === 0) return false;
 
 		const workParts = creep.memory.body.work || 0;
 		if (workParts === 0) return false;
 
-		if (creep.operation.hasContainer()) {
+		if (creep.operation.hasContainer(creep.memory.source)) {
 			// Make sure container is in good condition.
 			const container = creep.operation.getContainer(creep.memory.source);
 			if (creep.pos.getRangeTo(container) > 3 || container.hits > container.hitsMax - (workParts * 100)) return false;

@@ -121,7 +121,7 @@ Creep.prototype.dropAny = function (this: Creep): ScreepsReturnCode {
 /**
  * Add additional data for each creep.
  */
-Creep.prototype.enhanceData = function () {
+Creep.prototype.enhanceData = function (this: Creep) {
 	if (!this.memory.role) {
 		this.memory.role = 'unassigned';
 	}
@@ -157,7 +157,7 @@ Creep.prototype.enhanceData = function () {
 		Game.exploitTemp[this.memory.exploitName].push(this.id);
 	}
 
-	// Store creeps that are part of an exploit operation in the correct object.
+	// Store creeps that are part of a squad in the correct object.
 	if (this.memory.squadName) {
 		const squad = Game.squads[this.memory.squadName];
 		if (!squad.units[this.memory.squadUnitType]) {

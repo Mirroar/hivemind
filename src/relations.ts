@@ -10,12 +10,12 @@ export default class Relations {
 	constructor() {
 		this.allies = [];
 
-		if (localRelations && localRelations.allies) {
+		if (localRelations?.allies) {
 			for (const ally of localRelations.allies) {
 				this.allies.push(ally);
 			}
 		}
-	};
+	}
 
 	/**
 	 * Checks if a user is considered our ally.
@@ -26,6 +26,6 @@ export default class Relations {
 	 * @return {boolean} true if the user is our ally.
 	 */
 	isAlly(username: string): boolean {
-		return this.allies.indexOf(username) !== -1;
-	};
+		return this.allies.includes(username);
+	}
 }

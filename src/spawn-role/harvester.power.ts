@@ -87,7 +87,7 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 	}
 
 	getTravelTime(sourceRoom: string, targetRoom: string) {
-		if (!hivemind.segmentMemory.isReady()) return;
+		if (!hivemind.segmentMemory.isReady()) return null;
 
 		return cache.inHeap('powerTravelTime:' + sourceRoom + ':' + targetRoom, 1000, () => {
 			const mesh = new NavMesh();
