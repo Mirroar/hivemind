@@ -151,7 +151,7 @@ export default class ScoutProcess extends Process {
 						Memory.rooms[info.observerRoom].observeTargets.push(roomName);
 					}
 				}
-				else {
+				else if (Memory.rooms[info.observerRoom]) {
 					delete Memory.rooms[info.observerRoom].observeTargets;
 				}
 			}

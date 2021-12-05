@@ -4,6 +4,9 @@ STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
 declare global {
 	interface Room {
+		creeps: {
+			[creepName: string]: Creep;
+		};
 		creepsByRole: {
 			[roleName: string]: {
 				[creepName: string]: Creep;

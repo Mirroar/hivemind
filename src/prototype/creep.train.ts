@@ -13,7 +13,7 @@ interface Creep {
 interface CreepMemory {
 	train?: {
 		id: Id<Creep>,
-		partsToSpawn: {},
+		partsToSpawn: number[],
 		parts: Id<Creep>[],
 	},
 }
