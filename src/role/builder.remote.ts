@@ -3,6 +3,21 @@ FIND_MY_STRUCTURES RESOURCE_ENERGY ERR_NOT_IN_RANGE STRUCTURE_RAMPART
 FIND_MY_CONSTRUCTION_SITES STRUCTURE_TOWER FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
 
+declare global {
+	interface RemoteBuilderCreep extends Creep {
+		memory: RemoteBuilderCreepMemory,
+		heapMemory: RemoteBuilderCreepHeapMemory,
+	}
+
+	interface RemoteBuilderCreepMemory extends CreepMemory {
+		role: 'builder.remote',
+		targetRoom?: string,
+	}
+
+	interface RemoteBuilderCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
@@ -12,7 +27,7 @@ import utilities from 'utilities';
 export default class RemoteBuilderRole extends Role {
 	transporterRole: TransporterRole;
 	navMesh: NavMesh;
-	creep: Creep;
+	creep: RemoteBuilderCreep;
 
 	constructor() {
 		super();
@@ -31,13 +46,20 @@ export default class RemoteBuilderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: RemoteBuilderCreep) {
 		this.creep = creep;
 
-		if (creep.memory.building && creep.store[RESOURCE_ENERGY] === 0) {
+		if (creep.memory.targetRoom) {
+			if (creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.targetRoom))) return;
+			if (creep.pos.roomName !== creep.memory.targetRoom) return;
+			creep.memory.singleRoom = creep.memory.targetRoom;
+			delete creep.memory.targetRoom;
+		}
+
+		if (creep.memory.building && creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
 			this.setBuilderState(false);
 		}
-		else if (!creep.memory.building && creep.store[RESOURCE_ENERGY] === creep.store.getCapacity()) {
+		else if (!creep.memory.building && creep.store.getFreeCapacity() === 0) {
 			this.setBuilderState(true);
 		}
 
@@ -47,7 +69,7 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		if (!creep.memory.extraEnergyTarget && creep.memory.sourceRoom) {
-			// Return to source room.
+			// Return to source room if needed.
 			if (creep.pos.roomName === creep.memory.sourceRoom) {
 				creep.memory.singleRoom = creep.memory.sourceRoom;
 				delete creep.memory.sourceRoom;
@@ -109,29 +131,9 @@ export default class RemoteBuilderRole extends Role {
 		if (this.saveExpiringRamparts()) return;
 
 		if (!creep.memory.buildTarget) {
-			// Build structures.
-			const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+			this.determineBuildTarget();
 
-			// Build spawns before building anything else.
-			const spawnSites = _.filter(targets, structure => structure.structureType === STRUCTURE_SPAWN);
-			if (spawnSites.length > 0) {
-				creep.memory.buildTarget = spawnSites[0].id;
-			}
-			else {
-				// Towers are also very important.
-				const towerSites = _.filter(targets, structure => structure.structureType === STRUCTURE_TOWER);
-				if (towerSites.length > 0) {
-					creep.memory.buildTarget = towerSites[0].id;
-				}
-				else {
-					const target = creep.pos.findClosestByPath(targets);
-					if (target) {
-						creep.memory.buildTarget = target.id;
-					}
-				}
-			}
-
-			if (!creep.memory.buildTarget) {
+			if (!creep.memory.buildTarget && !creep.memory.repairTarget) {
 				// Could not set a target for building. Start upgrading instead.
 				creep.memory.upgrading = true;
 			}
@@ -165,8 +167,9 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		if (this.creep.memory.repairTarget) {
+			const maxRampartHits = this.creep.room.controller.level < 6 ? 15000 : hivemind.settings.get('minWallIntegrity') * 1.1;
 			const target = Game.getObjectById<Structure>(this.creep.memory.repairTarget);
-			if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > 15000)) {
+			if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > maxRampartHits)) {
 				delete this.creep.memory.repairTarget;
 			}
 
@@ -175,6 +178,46 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		return false;
+	}
+
+	determineBuildTarget() {
+		// Build structures.
+		const targets = this.creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+
+		// Build spawns before building anything else.
+		const spawnSites = _.filter(targets, structure => structure.structureType === STRUCTURE_SPAWN);
+		if (spawnSites.length > 0) {
+			this.creep.memory.buildTarget = spawnSites[0].id;
+			return;
+		}
+
+		// Towers are also very important.
+		const towerSites = _.filter(targets, structure => structure.structureType === STRUCTURE_TOWER);
+		if (towerSites.length > 0) {
+			this.creep.memory.buildTarget = towerSites[0].id;
+			return;
+		}
+
+		// Build any of our other construction sites.
+		const target = this.creep.pos.findClosestByPath(targets);
+		if (target) {
+			this.creep.memory.buildTarget = target.id;
+			return;
+		}
+
+		if (this.creep.room.controller.level >= 6) {
+			// Make sure ramparts are of sufficient level.
+			const lowRamparts = this.creep.room.find(
+				FIND_MY_STRUCTURES, {
+					filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < hivemind.settings.get('minWallIntegrity')
+				}
+			);
+
+			if (lowRamparts.length > 0) {
+				this.creep.memory.repairTarget = _.min(lowRamparts, 'hits').id;
+				return;
+			}
+		}
 	}
 
 	/**
@@ -264,26 +307,32 @@ export default class RemoteBuilderRole extends Role {
 	/**
 	 * Automatically assigns sources of adjacent safe rooms as extra energy targets.
 	 */
-	setExtraEnergyTarget(creep) {
+	setExtraEnergyTarget(creep: RemoteBuilderCreep) {
 		if (!hivemind.segmentMemory.isReady()) return;
 
 		const mainIntel = hivemind.roomIntel(creep.pos.roomName);
-		const possibleSources = [];
+		const possibleSources: RoomPosition[] = [];
 		for (const roomName of _.values<string>(mainIntel.getExits())) {
 			const roomIntel = hivemind.roomIntel(roomName);
+			const roomMemory = Memory.rooms[roomName];
+			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) continue;
 			if (roomIntel.isClaimed()) continue;
-			// @todo Also don't allow source keeper rooms.
+			if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) continue;
 
 			for (const source of roomIntel.getSourcePositions()) {
 				const sourcePos = new RoomPosition(source.x, source.y, roomName);
 				// @todo limit search to distance 1.
-				const path = this.navMesh.findPath(creep.pos, sourcePos);
+				const path = this.navMesh.findPath(creep.pos, sourcePos, {maxPathLength: 100});
 				if (!path || path.incomplete) continue;
 
 				possibleSources.push(sourcePos);
 			}
 		}
 
+		this.chooseExtraEnergySource(creep, possibleSources);
+	}
+
+	chooseExtraEnergySource(creep: RemoteBuilderCreep, possibleSources: RoomPosition[]) {
 		const targetPos = _.sample(possibleSources);
 		if (targetPos) {
 			creep.memory.extraEnergyTarget = utilities.encodePosition(targetPos);
