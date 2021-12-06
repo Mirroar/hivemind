@@ -22,7 +22,8 @@ declare global {
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import { ErrorMapper } from 'utils/ErrorMapper';
+import {ErrorMapper} from 'utils/ErrorMapper';
+import {getRoomIntel} from 'intel-management';
 
 let ownUserName;
 
@@ -113,7 +114,7 @@ const utilities = {
 
 			roomCallback: roomName => {
 				// If a room is considered inaccessible, don't look for paths through it.
-				if (!(allowDanger || addOptions.allowDanger) && hivemind.segmentMemory.isReady() && hivemind.roomIntel(roomName).isOwned()) {
+				if (!(allowDanger || addOptions.allowDanger) && hivemind.segmentMemory.isReady() && getRoomIntel(roomName).isOwned()) {
 					if (!addOptions || !addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
 						return false;
 					}
@@ -271,7 +272,7 @@ const utilities = {
 		});
 
 		if (hivemind.segmentMemory.isReady()) {
-			const roomIntel = hivemind.roomIntel(roomName);
+			const roomIntel = getRoomIntel(roomName);
 			if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
 				// @todo If we're running a (successful) exploit in this room, tiles
 				// should not be marked inaccessible.
@@ -306,7 +307,7 @@ const utilities = {
 				if (!exits[dir]) continue;
 
 				const otherRoomName = exits[dir];
-				const otherRoomIntel = hivemind.roomIntel(otherRoomName);
+				const otherRoomIntel = getRoomIntel(otherRoomName);
 				if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
 
 				const matrix = utilities.getCostMatrix(otherRoomName);
@@ -355,7 +356,7 @@ const utilities = {
 			cacheKey,
 			500,
 			() => {
-				const roomIntel = hivemind.roomIntel(roomName);
+				const roomIntel = getRoomIntel(roomName);
 				return roomIntel.getCostMatrix();
 			}
 		) : new PathFinder.CostMatrix();

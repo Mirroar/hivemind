@@ -9,6 +9,7 @@ declare global {
 
 import hivemind from 'hivemind';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 export default class NavMesh {
 	memory: any;
@@ -378,7 +379,7 @@ export default class NavMesh {
 			}
 
 			if (hivemind.segmentMemory.isReady()) {
-				const roomIntel = hivemind.roomIntel(nextRoom);
+				const roomIntel = getRoomIntel(nextRoom);
 				if (roomIntel.isOwned()) {
 					if (!options.allowDanger) continue;
 

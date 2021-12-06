@@ -2,6 +2,7 @@
 
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
+import {getRoomIntel} from 'intel-management';
 
 export default class GathererSpawnRole extends SpawnRole {
 	/**
@@ -25,7 +26,7 @@ export default class GathererSpawnRole extends SpawnRole {
 			// pesky walls / ramparts.
 			if (Game.shard.name === 'shard0' || Game.shard.name === 'shard1') return;
 			if (numGatherers > 0) return;
-			if (!hivemind.segmentMemory.isReady() || hivemind.roomIntel(roomName).isOwned()) return;
+			if (!hivemind.segmentMemory.isReady() || getRoomIntel(roomName).isOwned()) return;
 
 			options.push({
 				priority: 2,

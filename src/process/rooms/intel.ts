@@ -2,6 +2,7 @@
 
 import hivemind from 'hivemind';
 import Process from 'process/process';
+import {getRoomIntel} from 'intel-management';
 
 export default class RoomIntelProcess extends Process {
 	room: Room;
@@ -23,7 +24,7 @@ export default class RoomIntelProcess extends Process {
 	 * Gathers intel in a room.
 	 */
 	run() {
-		hivemind.roomIntel(this.room.name).gatherIntel();
+		getRoomIntel(this.room.name).gatherIntel();
 		this.room.scan();
 
 		this.findHostiles();

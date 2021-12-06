@@ -22,6 +22,7 @@ import RoomPlan from 'room/planner/room-plan';
 import RoomPlanGenerator from 'room/planner/room-plan-generator';
 import utilities from 'utilities';
 import {getRoomPlanFor, setRoomPlanFor} from 'room/planner/room-plan-management';
+import {getRoomIntel} from 'intel-management';
 
 // The room plan process is recreated every tick, but room plan generators
 // are persistent in heap.
@@ -178,7 +179,7 @@ export default class RoomPlanner {
 			};
 		}
 
-		const newStatus = hivemind.roomIntel(this.roomName).calculateAdjacentRoomSafety();
+		const newStatus = getRoomIntel(this.roomName).calculateAdjacentRoomSafety();
 		this.memory.adjacentSafeRooms = newStatus.safeRooms;
 
 		// Check if status changed since last check.

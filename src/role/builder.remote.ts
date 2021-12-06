@@ -23,6 +23,7 @@ import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 export default class RemoteBuilderRole extends Role {
 	transporterRole: TransporterRole;
@@ -310,10 +311,10 @@ export default class RemoteBuilderRole extends Role {
 	setExtraEnergyTarget(creep: RemoteBuilderCreep) {
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		const mainIntel = hivemind.roomIntel(creep.pos.roomName);
+		const mainIntel = getRoomIntel(creep.pos.roomName);
 		const possibleSources: RoomPosition[] = [];
 		for (const roomName of _.values<string>(mainIntel.getExits())) {
-			const roomIntel = hivemind.roomIntel(roomName);
+			const roomIntel = getRoomIntel(roomName);
 			const roomMemory = Memory.rooms[roomName];
 			if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) continue;
 			if (roomIntel.isClaimed()) continue;

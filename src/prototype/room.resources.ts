@@ -28,8 +28,8 @@ declare global {
 	}
 }
 
-import hivemind from 'hivemind';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 /**
  * Determines maximum storage capacity within a room.
@@ -245,7 +245,7 @@ Room.prototype.getRemoteReservePositions = function () {
 		const roomName = operation.getClaimerSourceRoom();
 		if (this.name !== roomName) return;
 
-		const position = hivemind.roomIntel(operation.getRoom()).getControllerPosition();
+		const position = getRoomIntel(operation.getRoom()).getControllerPosition();
 		if (!position) return;
 
 		reservePositions.push(position);
@@ -254,7 +254,7 @@ Room.prototype.getRemoteReservePositions = function () {
 	// Add positions of nearby safe rooms.
 	const safeRooms = this.roomPlanner ? this.roomPlanner.getAdjacentSafeRooms() : [];
 	for (const roomName of safeRooms) {
-		const position = hivemind.roomIntel(roomName).getControllerPosition();
+		const position = getRoomIntel(roomName).getControllerPosition();
 		if (!position) continue;
 
 		reservePositions.push(position);

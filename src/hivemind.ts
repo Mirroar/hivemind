@@ -4,7 +4,6 @@ PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 import Logger from 'utils/debug';
 import ProcessInterface from 'process/process-interface';
 import Relations from 'relations';
-import RoomIntel from 'room-intel';
 import SegmentedMemory from 'utils/segmented-memory';
 import SettingsManager from 'settings-manager';
 import stats from 'utils/stats';
@@ -70,11 +69,7 @@ class Hivemind {
 	relations: Relations;
 	settings: SettingsManager;
 	loggers: {}
-	intel: {
-		[roomName: string]: RoomIntel;
-	}
 	segmentMemory: SegmentedMemory;
-	roomIntelConstructor: (roomName: string) => RoomIntel;
 	hasGlobalReset: boolean;
 	currentProcess: ProcessInterface;
 	emergencyBrakeProcessId: string;
@@ -97,17 +92,12 @@ class Hivemind {
 		this.relations = new Relations();
 		this.settings = new SettingsManager();
 		this.loggers = {};
-		this.intel = {};
 
 		// @todo Periodically clean old process memory.
 	}
 
 	setSegmentedMemory(memory: SegmentedMemory) {
 		this.segmentMemory = memory;
-	}
-
-	setRoomIntelFactory(constructorFunction: (roomName: string) => RoomIntel) {
-		this.roomIntelConstructor = constructorFunction;
 	}
 
 	/**
@@ -118,9 +108,6 @@ class Hivemind {
 		this.parentProcessId = 'root';
 		this.currentProcess = null;
 		this.emergencyBrakeProcessId = null;
-
-		// Clear possibly outdated intel objects from last tick.
-		this.intel = {};
 
 		// Refresh reference to memory object.
 		this.memory = Memory.hivemind;
@@ -390,25 +377,6 @@ class Hivemind {
 		if (!this.loggers[category][channel]) this.loggers[category][channel] = new Logger(channel, roomName);
 
 		return this.loggers[category][channel];
-	}
-
-	/**
-	 * Factory method for room intel objects.
-	 *
-	 * @param {string} roomName
-	 *   The room for which to get intel.
-	 *
-	 * @return {RoomIntel}
-	 *   The requested RoomIntel object.
-	 */
-	roomIntel(roomName: string): RoomIntel {
-		if (!this.segmentMemory.isReady()) throw new Error('Memory is not ready to generate room intel for room ' + roomName + '.');
-
-		if (!this.intel[roomName]) {
-			this.intel[roomName] = this.roomIntelConstructor(roomName);
-		}
-
-		return this.intel[roomName];
 	}
 
 	/**

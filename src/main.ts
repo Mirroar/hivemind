@@ -37,12 +37,11 @@ console.log('new global reset');
 import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
 import hivemind from 'hivemind';
 global.hivemind = hivemind;
-import RoomIntel from 'room-intel';
 import SegmentedMemory from 'utils/segmented-memory';
-import utilities from 'utilities';
 hivemind.setSegmentedMemory(new SegmentedMemory());
-hivemind.setRoomIntelFactory((roomName) => new RoomIntel(roomName));
 hivemind.logGlobalReset();
+
+import {getRoomIntel} from 'intel-management';
 
 // Load top-level processes.
 import CleanupProcess from 'process/cleanup';
@@ -273,7 +272,7 @@ const main = {
 		if (Game.time % 3738 === 2100 && hivemind.segmentMemory.isReady()) {
 			let count = 0;
 			_.each(Memory.rooms, (memory, roomName) => {
-				if (hivemind.roomIntel(roomName).getAge() > 100000) {
+				if (getRoomIntel(roomName).getAge() > 100000) {
 					delete Memory.rooms[roomName];
 					count++;
 				}

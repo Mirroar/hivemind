@@ -4,6 +4,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 // @todo Move constants to settings.
 const enableMapVisuals = true;
@@ -57,7 +58,7 @@ export default class MapVisualsProcess extends Process {
 		if (!drawIntelStatus) return;
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		const intel = hivemind.roomIntel(roomName);
+		const intel = getRoomIntel(roomName);
 		const age = intel.getAge();
 		const color = age < 200 ? '#00ff00' : age < 2000 ? '#ffff00' : age < 10000 ? '#ff8888' : '#888888';
 

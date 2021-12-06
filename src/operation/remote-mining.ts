@@ -13,12 +13,13 @@ declare global {
 	}
 }
 
-import hivemind from 'hivemind';
 import cache from 'utils/cache';
+import hivemind from 'hivemind';
 import Operation from 'operation/operation';
-import {packPosList, unpackPosList} from 'utils/packrat';
 import PathManager from 'remote-path-manager';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
+import {packPosList, unpackPosList} from 'utils/packrat';
 
 /**
  * This kind of operation handles all remote mining.
@@ -82,7 +83,7 @@ export default class RemoteMiningOperation extends Operation {
 	getSourcePositions(): RoomPosition[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
 
-		const roomIntel = hivemind.roomIntel(this.roomName);
+		const roomIntel = getRoomIntel(this.roomName);
 		const sourceInfo = roomIntel.getSourcePositions();
 
 		const positions: RoomPosition[] = [];
@@ -219,7 +220,7 @@ export default class RemoteMiningOperation extends Operation {
 		if (room) return room.controller.reservation && room.controller.reservation.username === utilities.getUsername() && room.controller.reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
 
 		if (!hivemind.segmentMemory.isReady()) return false;
-		const roomIntel = hivemind.roomIntel(this.roomName);
+		const roomIntel = getRoomIntel(this.roomName);
 		const reservation = roomIntel.getReservationStatus();
 		return reservation && reservation.username === utilities.getUsername() && reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
 	}

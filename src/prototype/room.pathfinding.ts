@@ -11,6 +11,7 @@ declare global {
 
 import hivemind from 'hivemind';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 Room.prototype.getCostMatrix = function () {
 	return utilities.getCostMatrix(this.name);
@@ -104,7 +105,7 @@ Room.prototype.calculateRoomPath = function (targetRoom: string, options) {
 		// Add unhandled adjacent rooms to open list.
 		let exits;
 		if (hivemind.segmentMemory.isReady()) {
-			exits = _.values(hivemind.roomIntel(nextRoom).getExits());
+			exits = _.values(getRoomIntel(nextRoom).getExits());
 		}
 		else {
 			exits = _.values(Game.map.describeExits(nextRoom));
@@ -114,7 +115,7 @@ Room.prototype.calculateRoomPath = function (targetRoom: string, options) {
 			if (openList[exit] || closedList[exit]) continue;
 
 			if (hivemind.segmentMemory.isReady()) {
-				const exitIntel = hivemind.roomIntel(exit);
+				const exitIntel = getRoomIntel(exit);
 				if (exitIntel.isOwned()) {
 					if (!allowDanger) continue;
 

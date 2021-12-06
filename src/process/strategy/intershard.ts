@@ -3,6 +3,7 @@ import interShard from 'intershard';
 import Process from 'process/process';
 import Squad from 'manager.squad';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 /**
  * Chooses rooms for expansion and sends creeps there.
@@ -193,7 +194,7 @@ export default class InterShardProcess extends Process {
 		if (!this.memory.info.rooms.bestExpansion) return;
 
 		const targetRoom = this.memory.info.rooms.bestExpansion.name;
-		const roomIntel = hivemind.roomIntel(targetRoom);
+		const roomIntel = getRoomIntel(targetRoom);
 
 		const expansionInfo = {
 			room: targetRoom,

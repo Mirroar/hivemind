@@ -1,9 +1,10 @@
 /* global PathFinder STRUCTURE_KEEPER_LAIR */
 
-import hivemind from 'hivemind';
 import cache from 'utils/cache';
-import {packPosList, unpackPosList} from 'utils/packrat';
+import hivemind from 'hivemind';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
+import {packPosList, unpackPosList} from 'utils/packrat';
 
 export default class RemotePathManager {
 	getPathFor(sourcePosition) {
@@ -41,7 +42,7 @@ export default class RemotePathManager {
 				maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
 				roomCallback: roomName => {
 					return cache.inHeap('remotePathManagerCostMatrix:' + roomName, 1000, () => {
-						const roomIntel = hivemind.roomIntel(roomName);
+						const roomIntel = getRoomIntel(roomName);
 
 						// Don't path through rooms owned by other players.
 						if (roomIntel.isOwned()) return false;

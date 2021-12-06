@@ -17,6 +17,7 @@ import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
+import {getRoomIntel} from 'intel-management';
 
 export default class RoomIntel {
 	roomName: string;
@@ -768,7 +769,7 @@ export default class RoomIntel {
 	 *   List of rooms that have been checked.
 	 */
 	handleAdjacentRoom(roomData, openList, closedList) {
-		const roomIntel = hivemind.roomIntel(roomData.room);
+		const roomIntel = getRoomIntel(roomData.room);
 		if (roomIntel.getAge() > 100000) {
 			// Room has no intel, declare it as unsafe.
 			this.newStatus[roomData.origin] = false;

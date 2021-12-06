@@ -3,6 +3,7 @@ import minCut from 'utils/mincut';
 import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 type ExitCoords = {
   [dir: string]: RoomPosition[];
@@ -166,7 +167,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   }
 
   chooseCorePosition(potentialCorePositions: RoomPosition[]) {
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     const controllerPosition = roomIntel.getControllerPosition();
 
     // Decide where room center should be by averaging exit positions.
@@ -218,7 +219,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   determineHarvesterPositions(): StepResult {
     this.sourceInfo = {};
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     for (const source of roomIntel.getSourcePositions()) {
       const harvestPosition = this.determineHarvestPositionForSource(source);
       this.placementManager.planLocation(harvestPosition, 'harvester', null);
@@ -285,7 +286,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   }
 
   determineUpgraderPosition(): StepResult {
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     const controllerPosition = roomIntel.getControllerPosition();
     const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
 
@@ -313,7 +314,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     // Add road to controller.
     // @todo Create road starting from room center, and only to range 3.
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     const controllerPosition = roomIntel.getControllerPosition();
     const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
     for (const pos of controllerRoads) {
@@ -325,7 +326,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   }
 
   placeHarvestBayStructures(): StepResult {
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     for (const source of roomIntel.getSourcePositions()) {
       const harvestPosition = this.sourceInfo[source.id].harvestPosition;
       const sourceRoads = this.placementManager.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
@@ -524,7 +525,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   placeRamparts(): StepResult {
     // Make sure the controller can't directly be reached by enemies.
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     const safety = roomIntel.calculateAdjacentRoomSafety();
 
     this.protectPosition(roomIntel.getControllerPosition(), 1);
@@ -575,7 +576,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    *   Positions where walls are currently planned.
    */
   pruneWalls(walls: RoomPosition[]) {
-    const roomIntel = hivemind.roomIntel(this.roomName);
+    const roomIntel = getRoomIntel(this.roomName);
     const safety = roomIntel.calculateAdjacentRoomSafety();
     const roomCenter = _.first(this.roomPlan.getPositions('center'));
     this.safetyMatrix = new PathFinder.CostMatrix();

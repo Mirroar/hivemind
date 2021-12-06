@@ -15,6 +15,7 @@ import interShard from 'intershard';
 import PathManager from 'remote-path-manager';
 import Process from 'process/process';
 import utilities from 'utilities';
+import {getRoomIntel} from 'intel-management';
 
 const preserveExpansionReasons = false;
 
@@ -90,7 +91,7 @@ export default class ScoutProcess extends Process {
 	 *   Name of the room for which to calculate priorities.
 	 */
 	calculateRoomPriorities(roomName) {
-		const roomIntel = hivemind.roomIntel(roomName);
+		const roomIntel = getRoomIntel(roomName);
 		const info = Memory.strategy.roomList[roomName];
 
 		info.roomName = roomName;
@@ -175,7 +176,7 @@ export default class ScoutProcess extends Process {
 
 		let income = -2000; // Flat cost for room reservation
 		let pathLength = 0;
-		const sourcePositions = hivemind.roomIntel(roomName).getSourcePositions();
+		const sourcePositions = getRoomIntel(roomName).getSourcePositions();
 		for (const pos of sourcePositions) {
 			const path = this.pathManager.getPathFor(new RoomPosition(pos.x, pos.y, roomName));
 			if (!path) continue;
@@ -222,7 +223,7 @@ export default class ScoutProcess extends Process {
 			return result;
 		}
 
-		const roomIntel = hivemind.roomIntel(roomName);
+		const roomIntel = getRoomIntel(roomName);
 
 		// More sources is better.
 		result.addScore(roomIntel.getSourcePositions().length, 'numSources');
@@ -259,7 +260,7 @@ export default class ScoutProcess extends Process {
 			const roomDistance = Game.map.getRoomLinearDistance(roomName, otherRoom.name);
 			if (roomDistance > 3) continue;
 
-			const otherRoomIntel = hivemind.roomIntel(otherRoom.name);
+			const otherRoomIntel = getRoomIntel(otherRoom.name);
 			const normalSafety = otherRoomIntel.calculateAdjacentRoomSafety();
 			const adjustedSafety = otherRoomIntel.calculateAdjacentRoomSafety(isMyRoom ? {unsafe: [roomName]} : {safe: [roomName]});
 
@@ -364,7 +365,7 @@ export default class ScoutProcess extends Process {
 	 *   Harvest score for this room.
 	 */
 	getHarvestRoomScore(roomName) {
-		const roomIntel = hivemind.roomIntel(roomName);
+		const roomIntel = getRoomIntel(roomName);
 
 		// We don't care about rooms without controllers.
 		// @todo Once automated, we might care for exploiting source keeper rooms.
@@ -518,11 +519,11 @@ export default class ScoutProcess extends Process {
 		const info = openList[roomName];
 		if (info.range >= (Memory.hivemind.maxScoutDistance || 7)) return;
 
-		const exits = hivemind.roomIntel(roomName).getExits();
+		const exits = getRoomIntel(roomName).getExits();
 		for (const exit of _.values<string>(exits)) {
 			if (openList[exit] || closedList[exit]) continue;
 
-			const roomIntel = hivemind.roomIntel(exit);
+			const roomIntel = getRoomIntel(exit);
 			const roomIsSafe = !roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader');
 
 			openList[exit] = {
@@ -563,7 +564,7 @@ export default class ScoutProcess extends Process {
 		this.mineralCount = {};
 		const mineralCount = this.mineralCount;
 		for (const room of Game.myRooms) {
-			const roomIntel = hivemind.roomIntel(room.name);
+			const roomIntel = getRoomIntel(room.name);
 			const mineralType = roomIntel.getMineralType();
 
 			mineralCount[mineralType] = (mineralCount[mineralType] || 0) + 1;

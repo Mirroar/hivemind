@@ -25,6 +25,7 @@ declare global {
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import Role from 'role/role';
+import {getRoomIntel} from 'intel-management';
 
 export default class ScoutRole extends Role {
 	/**
@@ -137,7 +138,7 @@ export default class ScoutRole extends Role {
 			if (info.scoutPriority <= 0) continue;
 			if (best && best.info.scoutPriority > info.scoutPriority) continue;
 
-			const roomIntel = hivemind.roomIntel(info.roomName);
+			const roomIntel = getRoomIntel(info.roomName);
 			const lastScout = roomIntel.getLastScoutAttempt();
 			if (best && lastScout > best.lastScout) continue;
 
@@ -151,7 +152,7 @@ export default class ScoutRole extends Role {
 
 		if (best) {
 			creep.memory.scoutTarget = best.info.roomName;
-			const roomIntel = hivemind.roomIntel(best.info.roomName);
+			const roomIntel = getRoomIntel(best.info.roomName);
 			roomIntel.registerScoutAttempt();
 		}
 

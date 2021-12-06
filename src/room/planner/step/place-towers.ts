@@ -1,7 +1,7 @@
-import hivemind from 'hivemind';
 import PlacementManager from 'room/planner/placement-manager';
 import RoomPlan from 'room/planner/room-plan';
 import {encodePosition} from 'utils/serialization';
+import {getRoomIntel} from 'intel-management';
 
 interface ScoredTowerPosition {
   pos: RoomPosition,
@@ -75,7 +75,7 @@ export default class placeTowersStep {
    *   - pos: The position in question.
    */
   findTowerPositions(): ScoredTowerPosition[] {
-    const roomIntel = hivemind.roomIntel(this.roomPlan.roomName);
+    const roomIntel = getRoomIntel(this.roomPlan.roomName);
     const safety = roomIntel.calculateAdjacentRoomSafety();
     const positions: ScoredTowerPosition[] = [];
 
