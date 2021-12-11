@@ -136,6 +136,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,
 			operation: 'room:' + room.name,
+			singleRoom: option.targetRoom === room.name ? room.name : null,
 		};
 	}
 

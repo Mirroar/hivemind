@@ -853,7 +853,7 @@ export default class TransporterRole extends Role {
 			let maxResourceType = null;
 			for (const resourceType in terminal.store) {
 				// Do not take out energy if there is enough in storage.
-				if (resourceType === RESOURCE_ENERGY && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
+				if (resourceType === RESOURCE_ENERGY && storage && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
 				if (resourceType === creep.room.memory.fillTerminal) continue;
 
 				if (!max || terminal.store[resourceType] > max) {
