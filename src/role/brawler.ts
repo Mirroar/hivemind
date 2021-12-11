@@ -1,4 +1,4 @@
-/* global PathFinder RoomPosition StructureController ATTACK
+/* global PathFinder RoomPosition StructureController ATTACK SYSTEM_USERNAME
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
 LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
@@ -318,7 +318,7 @@ export default class BrawlerRole extends Role {
 
 					_.each(hostiles, c => {
 						if (!c.isDangerous()) return null;
-						if (c.owner.username === 'Screeps' || c.owner.username === 'Invader') return null;
+						if (c.owner.username === SYSTEM_USERNAME || c.owner.username === 'Invader') return null;
 
 						enemiesNearby = true;
 						return false;
