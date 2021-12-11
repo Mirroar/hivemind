@@ -85,9 +85,10 @@ export default class ReportProcess extends Process {
 		this.generateCPUReport();
 		this.generateRemoteMiningReport();
 		this.generatePowerReport();
+		this.generateRoomOperationsReport();
+		this.generateMiningOperationsReport();
 
 		// @todo Report market transactions.
-		// @todo Generate report for CPU usage and bucket.
 	};
 
 	/**
@@ -187,6 +188,95 @@ export default class ReportProcess extends Process {
 
 		Game.notify(reportText);
 	};
+
+	/**
+	 * Generates report email for operations.
+	 */
+	generateMiningOperationsReport() {
+		if (_.size(Game.operationsByType.mining) === 0) return;
+
+		let reportText = this.generateHeading('Mining Energy Efficiency');
+		const operationScores = this.getMiningOperationScores();
+
+		reportText += '<pre>';
+		reportText += this.formatSignificantEntries(operationScores, (o, index) => (index + 1) + '. ' + o.name + ' - ' + o.score.toPrecision(3)).join("\n");
+		reportText += '</pre>';
+
+		Game.notify(reportText);
+	}
+
+	getMiningOperationScores(): {
+		name: string;
+		score: number;
+	}[] {
+		const operationScores: {
+			name: string;
+			score: number;
+		}[] = [];
+		for (const operationName in Game.operationsByType.mining) {
+			const operation = Game.operationsByType.mining[operationName];
+			if (operation.getAge() < 10000) continue;
+
+			const cpuUsage = operation.getStat('cpu');
+			const energyChange = operation.getStat(RESOURCE_ENERGY);
+			let score = energyChange / cpuUsage;
+
+			if (energyChange < 0) {
+				score = (energyChange / 10) - cpuUsage;
+			}
+
+			operationScores.push({
+				name: operation.getRoom(),
+				score,
+			});
+		}
+
+		return _.sortBy(operationScores, 'score');
+	}
+
+	generateRoomOperationsReport() {
+		let reportText = this.generateHeading('Room CPU usage / tick');
+		const operationScores = this.getRoomOperationScores();
+
+		reportText += '<pre>';
+		reportText += this.formatSignificantEntries(operationScores, (o, index) => (index + 1) + '. ' + o.name + ' - ' + o.score.toPrecision(3)).join("\n");
+		reportText += '</pre>';
+
+		Game.notify(reportText);
+	}
+
+	getRoomOperationScores(): {
+		name: string;
+		score: number;
+	}[] {
+		const operationScores: {
+			name: string;
+			score: number;
+		}[] = [];
+		for (const operationName in Game.operationsByType.room) {
+			const operation = Game.operationsByType.room[operationName];
+			const cpuUsage = operation.getStat('cpu');
+
+			operationScores.push({
+				name: operation.getRoom(),
+				score: cpuUsage,
+			});
+		}
+
+		return _.sortBy(operationScores, 'score');
+	}
+
+	formatSignificantEntries<T>(list: T[], formatter: (entry: T, index: number) => string): string[] {
+		const results: string[] = [];
+		for (let index = 0; index < list.length; index++) {
+			const entry = list[index];
+			if (index > 2 && index < list.length - 3 && index !== Math.floor(list.length / 2)) continue;
+
+			results.push(formatter(entry, index));
+		}
+
+		return results;
+	}
 
 	/**
 	 * Generates a formatted heading.

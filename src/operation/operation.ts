@@ -37,6 +37,7 @@ declare global {
 		shouldTerminate?: boolean;
 		currentTick: number;
 		statTicks: number;
+		age: number;
 		stats: {
 			[resourceType: string]: number,
 		}
@@ -51,15 +52,13 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import RoomOperation from 'operation/room';
 
 export default class Operation {
-	name: string;
-	roomName?: string;
-	memory: OperationMemory;
+	protected roomName?: string;
+	protected memory: OperationMemory;
 
-	constructor(name: string) {
+	constructor(readonly name: string) {
 		if (!Memory.operations) Memory.operations = {};
 		if (!Memory.operations[name]) Memory.operations[name] = {} as OperationMemory;
 
-		this.name = name;
 		this.memory = Memory.operations[name];
 		this.memory.type = 'default';
 		this.memory.lastActive = Game.time;
@@ -82,6 +81,14 @@ export default class Operation {
 
 	getRoom(): string {
 		return this.roomName;
+	}
+
+	getAge(): number {
+		return this.memory.age || 0;
+	}
+
+	getLastActiveTick(): number {
+		return this.memory.lastActive;
 	}
 
 	terminate() {
@@ -109,10 +116,25 @@ export default class Operation {
 		if (this.memory.currentTick !== Game.time) {
 			this.memory.currentTick = Game.time;
 			this.memory.statTicks = (this.memory.statTicks || 0) + 1;
+			this.memory.age = (this.memory.age || (this.memory.statTicks - 1)) + 1;
 
-			// @todo reset stats every n ticks.
+			this.squashStats();
 		}
 
 		this.memory.stats[resourceType] = (this.memory.stats[resourceType] || 0) + amount;
+	}
+
+	squashStats() {
+		if (this.memory.statTicks < 10000) return;
+		const squashFactor = 2;
+
+		this.memory.statTicks = Math.floor(this.memory.statTicks / squashFactor);
+		for (const resourceType in this.memory.stats) {
+			this.memory.stats[resourceType] /= squashFactor;
+		}
+	}
+
+	getStat(resourceType: string): number {
+		return (this.memory.stats[resourceType] || 0) / (this.memory.statTicks || 1);
 	}
 }

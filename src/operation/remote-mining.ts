@@ -32,8 +32,8 @@ import {packPosList, unpackPosList} from 'utils/packrat';
  */
 export default class RemoteMiningOperation extends Operation {
 
-	memory: RemoteMiningOperationMemory;
-	pathManager: PathManager;
+	protected memory: RemoteMiningOperationMemory;
+	protected pathManager: PathManager;
 
 	/**
 	 * Constructs a new RemoteMiningOperation instance.
