@@ -4,7 +4,7 @@ import {encodePosition, decodePosition} from 'utils/serialization';
 
 export default class PlacementManager {
   public readonly ROAD_POSITION = 1;
-  public readonly DISCOURAGED_POSITION = 10;
+  public readonly DISCOURAGED_POSITION = 5;
   public readonly IMPASSABLE_POSITION = 255;
   public readonly ROAD_THROUGH_WALL_COST = 30;
 

@@ -23,7 +23,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   safetyMatrix: CostMatrix;
 
-  constructor(roomName: string, variation: string, wallMatrix: CostMatrix, exitMatrix: CostMatrix) {
+  constructor(roomName: string, variation: string, protected variationInfo: {}, wallMatrix: CostMatrix, exitMatrix: CostMatrix) {
     super(roomName, variation, wallMatrix, exitMatrix);
     hivemind.log('rooms', this.roomName).info('Started generating room plan for variation', variation);
 
@@ -290,6 +290,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     const controllerPosition = roomIntel.getControllerPosition();
     const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
 
+    for (const pos of controllerRoads) {
+      this.placementManager.planLocation(pos, 'road.controller', null);
+      this.protectPosition(pos, 0);
+    }
+
     // Make sure no other paths get led through upgrader position.
     this.placementManager.blockPosition(controllerRoads[0].x, controllerRoads[0].y);
 
@@ -310,16 +315,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
           this.placementManager.planLocation(pos, 'road.exit', null);
         }
       }
-    }
-
-    // Add road to controller.
-    // @todo Create road starting from room center, and only to range 3.
-    const roomIntel = getRoomIntel(this.roomName);
-    const controllerPosition = roomIntel.getControllerPosition();
-    const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
-    for (const pos of controllerRoads) {
-      this.placementManager.planLocation(pos, 'road.controller', null);
-      this.protectPosition(pos, 0);
     }
 
     return 'ok';

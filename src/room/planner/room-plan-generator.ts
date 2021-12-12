@@ -1,6 +1,8 @@
 import RoomPlan from 'room/planner/room-plan';
 import RoomPlanMatrixGenerator from 'room/planner/matrix-generator';
+import RoomPlanScorer from 'room/planner/room-plan-scorer';
 import RoomVariationBuilder from 'room/planner/variation-builder';
+import VariationGenerator from 'room/planner/variation-generator';
 
 type HeapMemory = {
   plan: RoomPlan;
@@ -12,12 +14,13 @@ const generatorCache: {
 
 export default class RoomPlanGenerator {
   roomName: string;
-  variations: string[];
+  variationGenerator: VariationGenerator;
   variationIndex: number;
   currentVariation: string;
   wallMatrix: CostMatrix;
   exitMatrix: CostMatrix;
   variationBuilder: RoomVariationBuilder;
+  scorer: RoomPlanScorer;
   results: {
     [variation: string]: {
       plan: RoomPlan;
@@ -29,7 +32,8 @@ export default class RoomPlanGenerator {
     this.roomName = roomName;
     this.variationIndex = 0;
     this.results = {};
-    this.generateVariationList();
+    this.variationGenerator = new VariationGenerator(this.roomName);
+    this.scorer = new RoomPlanScorer(this.roomName);
   }
 
   generate() {
@@ -44,17 +48,14 @@ export default class RoomPlanGenerator {
   }
 
   isFinished(): boolean {
-    return !this.currentVariation && this.variationIndex > this.variations.length;
-  }
-
-  generateVariationList() {
-    this.variations = ['default'];
+    return !this.currentVariation && this.variationIndex > this.variationGenerator.getVariationAmount();
   }
 
   initVariation() {
-    this.currentVariation = this.variations[this.variationIndex++];
+    this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
     this.provideDistanceMatrixes();
-    this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, this.wallMatrix, this.exitMatrix);
+    const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
+    this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
   }
 
   generateVariation() {
@@ -81,16 +82,11 @@ export default class RoomPlanGenerator {
     const plan = this.variationBuilder.getRoomPlan();
     this.results[this.currentVariation] = {
       plan,
-      score: this.getRoomPlanScore(plan),
+      score: this.scorer.getScore(plan),
     };
 
     delete this.variationBuilder;
     delete this.currentVariation;
-  }
-
-  getRoomPlanScore(plan: RoomPlan) {
-    // @todo
-    return 0;
   }
 
   getRoomPlan(): RoomPlan {
