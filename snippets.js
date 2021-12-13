@@ -13,7 +13,7 @@ Memory.hivemind.showProcessDebug = 100;
 Game.rooms.E49S51.roomPlanner.memory.drawDebug = 100;
 
 // Re-run room planner for a room.
-Game.rooms.E49S51.roomPlanner.memory.plannerVersion = 0;
+Game.rooms.E49S51.roomPlanner.startRoomPlanGeneration();
 
 // Find out which processes use a lot of CPU
 JSON.stringify(_.sortBy(_.map(Memory.hivemind.process, (a, b) => {a.name = b; return a}), a => -a.cpu));

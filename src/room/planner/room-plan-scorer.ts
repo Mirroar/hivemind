@@ -9,6 +9,11 @@ export default class RoomPlanScorer {
     score += this.getPlannedBuildingsScore(plan);
     score += this.getRequiredMaintenanceScore(plan);
 
+    // @todo Score tower positions.
+    // @todo Score unprotected structures.
+    // @todo Score travel distances (extensions, sources, controller, ...).
+    // @todo Score susceptibility to nukes.
+
     return score;
   }
 

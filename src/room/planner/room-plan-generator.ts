@@ -32,7 +32,8 @@ export default class RoomPlanGenerator {
     this.roomName = roomName;
     this.variationIndex = 0;
     this.results = {};
-    this.variationGenerator = new VariationGenerator(this.roomName);
+    this.provideDistanceMatrixes();
+    this.variationGenerator = new VariationGenerator(this.roomName, this.wallMatrix, this.exitMatrix);
     this.scorer = new RoomPlanScorer(this.roomName);
   }
 
@@ -53,7 +54,6 @@ export default class RoomPlanGenerator {
 
   initVariation() {
     this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
-    this.provideDistanceMatrixes();
     const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
     this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
   }

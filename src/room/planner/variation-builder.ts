@@ -3,14 +3,10 @@ import minCut from 'utils/mincut';
 import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
 import utilities from 'utilities';
+import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'intel-management';
 
-type ExitCoords = {
-  [dir: string]: RoomPosition[];
-}
-
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
-  exitCoords: ExitCoords;
   exitCenters: ExitCoords;
   roomCenter: RoomPosition;
   roomCenterEntrances: RoomPosition[];
@@ -23,7 +19,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   safetyMatrix: CostMatrix;
 
-  constructor(roomName: string, variation: string, protected variationInfo: {}, wallMatrix: CostMatrix, exitMatrix: CostMatrix) {
+  constructor(roomName: string, variation: string, protected variationInfo: VariationInfo, wallMatrix: CostMatrix, exitMatrix: CostMatrix) {
     super(roomName, variation, wallMatrix, exitMatrix);
     hivemind.log('rooms', this.roomName).info('Started generating room plan for variation', variation);
 
@@ -57,10 +53,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   gatherExitCoords(): StepResult {
     // Prepare exit points.
-    this.exitCoords = this.getExitCoordsByDirection();
-    this.exitCenters = this.findExitCenters();
+    this.exitCenters = getExitCenters(this.roomName);
 
-    for (const dir of _.keys(this.exitCoords)) {
+    for (const dir in this.exitCenters) {
       for (const pos of this.exitCenters[dir]) {
         this.placementManager.planLocation(pos, 'exit', null);
       }
@@ -69,152 +64,22 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     return 'ok';
   }
 
-  getExitCoordsByDirection(): ExitCoords {
-    const exitCoords: ExitCoords = {
-      N: [],
-      S: [],
-      W: [],
-      E: [],
-    };
-
-    for (let i = 1; i < 49; i++) {
-      if (this.terrain.get(0, i) !== TERRAIN_MASK_WALL) exitCoords.W.push(new RoomPosition(0, i, this.roomName));
-      if (this.terrain.get(49, i) !== TERRAIN_MASK_WALL) exitCoords.E.push(new RoomPosition(49, i, this.roomName));
-      if (this.terrain.get(i, 0) !== TERRAIN_MASK_WALL) exitCoords.N.push(new RoomPosition(i, 0, this.roomName));
-      if (this.terrain.get(i, 49) !== TERRAIN_MASK_WALL) exitCoords.S.push(new RoomPosition(i, 49, this.roomName));
-    }
-
-    return exitCoords;
-  }
-
-  /**
-   * Finds center positions of all room exits.
-   *
-   * @return {object}
-   *   Array of RoomPosition objects, keyed by exit direction.
-   */
-  findExitCenters(): ExitCoords {
-    const exitCenters: ExitCoords = {};
-
-    for (const dir of _.keys(this.exitCoords)) {
-      exitCenters[dir] = [];
-
-      let startPos = null;
-      let prevPos = null;
-      for (const pos of this.exitCoords[dir]) {
-        if (!startPos) {
-          startPos = pos;
-        }
-
-        if (prevPos && pos.getRangeTo(prevPos) > 1) {
-          // New exit block started.
-          const middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
-          exitCenters[dir].push(middlePos);
-
-          startPos = pos;
-        }
-
-        prevPos = pos;
-      }
-
-      if (startPos) {
-        // Finish last wall run.
-        const middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), this.roomName);
-        exitCenters[dir].push(middlePos);
-      }
-    }
-
-    return exitCenters;
-  };
-
   determineCorePosition(): StepResult {
-    const potentialCorePositions = this.collectPotentialCorePositions();
-    const roomCenter = this.chooseCorePosition(potentialCorePositions);
-    if (!roomCenter) return 'failed';
+    if (!this.variationInfo.roomCenter) return 'failed';
 
-    this.roomCenter = roomCenter;
+    this.roomCenter = this.variationInfo.roomCenter;
 
     // Center is accessible via the 4 cardinal directions.
     this.roomCenterEntrances = [
-      new RoomPosition(roomCenter.x + 2, roomCenter.y, this.roomName),
-      new RoomPosition(roomCenter.x - 2, roomCenter.y, this.roomName),
-      new RoomPosition(roomCenter.x, roomCenter.y + 2, this.roomName),
-      new RoomPosition(roomCenter.x, roomCenter.y - 2, this.roomName),
+      new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y, this.roomName),
+      new RoomPosition(this.roomCenter.x - 2, this.roomCenter.y, this.roomName),
+      new RoomPosition(this.roomCenter.x, this.roomCenter.y + 2, this.roomName),
+      new RoomPosition(this.roomCenter.x, this.roomCenter.y - 2, this.roomName),
     ];
 
-    this.placementManager.planLocation(roomCenter, 'center', null);
+    this.placementManager.planLocation(this.roomCenter, 'center', null);
 
     return 'ok';
-  }
-
-  collectPotentialCorePositions(): RoomPosition[] {
-    const potentialCorePositions: RoomPosition[] = [];
-
-    for (let x = 0; x < 50; x++) {
-      for (let y = 0; y < 50; y++) {
-        if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
-
-        const wallDistance = this.placementManager.getWallDistance(x, y);
-        const exitDistance = this.placementManager.getExitDistance(x, y);
-
-        if (wallDistance >= 4 && wallDistance < 255 && exitDistance > 8) {
-          potentialCorePositions.push(new RoomPosition(x, y, this.roomName));
-        }
-      }
-    }
-
-    return potentialCorePositions;
-  }
-
-  chooseCorePosition(potentialCorePositions: RoomPosition[]) {
-    const roomIntel = getRoomIntel(this.roomName);
-    const controllerPosition = roomIntel.getControllerPosition();
-
-    // Decide where room center should be by averaging exit positions.
-    // @todo Try multiple room centers:
-    // - Current version
-    // - Near controller
-    // - Between controller and a source
-    // - Near any corner or side
-    // @todo Then evaluate best result by:
-    // - Upkeep costs (roads, ramparts)
-    // - Path lengths (Bays, sources, controller)
-    let cx = controllerPosition.x;
-    let cy = controllerPosition.y;
-    let count = 1;
-    for (const dir of _.keys(this.exitCenters)) {
-      for (const pos of this.exitCenters[dir]) {
-        count++;
-        cx += pos.x;
-        cy += pos.y;
-      }
-    }
-    // Also include source and mineral positions when determining room center.
-    const mineralInfo = roomIntel.getMineralPosition();
-    if (mineralInfo) {
-      count++;
-      cx += mineralInfo.x;
-      cy += mineralInfo.y;
-    }
-
-    const sourceInfo = roomIntel.getSourcePositions();
-    for (const source of sourceInfo) {
-      count++;
-      cx += source.x;
-      cy += source.y;
-    }
-
-    cx = Math.floor(cx / count);
-    cy = Math.floor(cy / count);
-
-    // Find closest position with distance from walls around there.
-    const roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(potentialCorePositions);
-    if (!roomCenter) {
-      hivemind.log('rooms', this.roomName).error('Could not find a suitable center position!');
-      return null;
-    }
-
-    return roomCenter;
   }
 
   determineHarvesterPositions(): StepResult {
