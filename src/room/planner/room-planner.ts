@@ -140,9 +140,15 @@ export default class RoomPlanner {
 	}
 
 	continueRoomPlanGeneration() {
-		if (Game.cpu.getUsed() >= Game.cpu.tickLimit / 2) return;
+		const cpuStart = Game.cpu.getUsed();
+		if (cpuStart >= Game.cpu.tickLimit / 2) return;
 
-		this.generator.generate();
+		const cpuUsage = stats.getStat('cpu_total', 1000) || stats.getStat('cpu_total', 10) || 0;
+		const cpuLimit = Math.min(Game.cpu.tickLimit / 2, Math.max(Game.cpu.limit - cpuUsage, Game.cpu.limit / 10));
+
+		while (!this.isPlanningFinished() && Game.cpu.getUsed() - cpuStart < cpuLimit) {
+			this.generator.generate();
+		}
 	}
 
 	applyGeneratedRoomPlan() {
