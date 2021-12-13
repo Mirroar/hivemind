@@ -5,6 +5,7 @@ import {getRoomIntel} from 'intel-management';
 declare global {
   type VariationInfo = {
     roomCenter?: RoomPosition;
+    sourcesWithSpawn?: Id<Source>[];
   }
 }
 
@@ -19,9 +20,9 @@ export default class VariationGenerator {
   generateVariations() {
     if (this.variations) return;
 
-    const variations = this.varyBy(null, variation => this.varyRoomCenter(variation));
+    this.variations = this.varyBy(null, variation => this.varyRoomCenter(variation));
+    this.variations = this.varyBy(this.variations, variation => this.varySourceSpawns(variation));
 
-    this.variations = variations;
     this.variationKeys = _.keys(this.variations);
   }
 
@@ -152,6 +153,35 @@ export default class VariationGenerator {
         roomCenter: bestOptions[subDivision].position,
       }
     }
+  }
+
+  varySourceSpawns(baseVariation: VariationInfo): {[key: string]: VariationInfo} {
+    const roomIntel = getRoomIntel(this.roomName);
+    const sources = roomIntel.getSourcePositions();
+
+    let currentVariations: {[key: string]: VariationInfo} = {
+      '': {...baseVariation, sourcesWithSpawn: []},
+    };
+
+    for (const source of sources) {
+      const modifiedVariations: {[key: string]: VariationInfo} = {};
+      for (const key in currentVariations) {
+        const withNewSource = [...currentVariations[key].sourcesWithSpawn];
+        withNewSource.push(source.id);
+
+        modifiedVariations[key + '-'] = {
+          ...currentVariations[key],
+        };
+        modifiedVariations[key + '+'] = {
+          ...currentVariations[key],
+          sourcesWithSpawn: withNewSource,
+        };
+      }
+
+      currentVariations = modifiedVariations;
+    }
+
+    return currentVariations;
   }
 
   getVariationList(): string[] {

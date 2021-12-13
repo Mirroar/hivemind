@@ -20,6 +20,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RoomPlan from 'room/planner/room-plan';
 import RoomPlanGenerator from 'room/planner/room-plan-generator';
+import stats from 'utils/stats';
 import utilities from 'utilities';
 import {getRoomPlanFor, setRoomPlanFor} from 'room/planner/room-plan-management';
 import {getRoomIntel} from 'intel-management';
@@ -144,7 +145,7 @@ export default class RoomPlanner {
 		if (cpuStart >= Game.cpu.tickLimit / 2) return;
 
 		const cpuUsage = stats.getStat('cpu_total', 1000) || stats.getStat('cpu_total', 10) || 0;
-		const cpuLimit = Math.min(Game.cpu.tickLimit / 2, Math.max(Game.cpu.limit - cpuUsage, Game.cpu.limit / 10));
+		const cpuLimit = Math.min(Game.cpu.tickLimit / 2, 0.8 * Math.max(Game.cpu.limit - cpuUsage, Game.cpu.limit / 10));
 
 		while (!this.isPlanningFinished() && Game.cpu.getUsed() - cpuStart < cpuLimit) {
 			this.generator.generate();

@@ -35,13 +35,8 @@ export default class RoomVariationBuilderBase {
   }
 
   buildNextStep() {
-    // @todo Provide a mechanism by which any step may abort the calculation.
-
-    const start = Game.cpu.getUsed();
     const stepResult = this.buildStep(this.currentStep++);
-    const end = Game.cpu.getUsed();
-    hivemind.log('rooms', this.roomName).info('Planning took', end - start, 'CPU');
-
+    // @todo Provide a mechanism by which any step may abort the calculation.
     // @todo Handle 'failed'.
 
     if (stepResult === 'done') {

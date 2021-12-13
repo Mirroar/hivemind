@@ -44,7 +44,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
   buildStep(step: number): StepResult {
     if (step < this.steps.length) {
-      hivemind.log('rooms', this.roomName).debug('Running step:', this.steps[step].name);
       return this.steps[step].call(this);
     }
 
@@ -188,17 +187,18 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   placeHarvestBayStructures(): StepResult {
     const roomIntel = getRoomIntel(this.roomName);
     for (const source of roomIntel.getSourcePositions()) {
+      const shouldAddSpawn = this.variationInfo.sourcesWithSpawn.includes(source.id);
       const harvestPosition = this.sourceInfo[source.id].harvestPosition;
       const sourceRoads = this.placementManager.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
       for (const pos of sourceRoads) {
         this.placementManager.planLocation(pos, 'road.source', null);
-        this.protectPosition(pos, 0);
+        if (shouldAddSpawn) this.protectPosition(pos, 0);
       }
 
       this.placementManager.planLocation(harvestPosition, 'container.source', null);
       this.placementManager.planLocation(harvestPosition, 'container', null);
 
-      this.placeBayStructures(harvestPosition, {spawn: true, source: true});
+      this.placeBayStructures(harvestPosition, {spawn: shouldAddSpawn, source: true});
     }
 
     return 'ok';
@@ -392,7 +392,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     for (const locationType of this.roomPlan.getPositionTypes()) {
       const baseType = locationType.split('.')[0];
-      if (!CONTROLLER_STRUCTURES[baseType] || ['extension', 'road', 'container', 'extractor'].includes(baseType)) continue;
+      if (!CONTROLLER_STRUCTURES[baseType] || ['extension', 'road', 'container', 'extractor', 'link'].includes(baseType)) continue;
 
       // Protect area around essential structures.
       for (const pos of this.roomPlan.getPositions(locationType)) {
