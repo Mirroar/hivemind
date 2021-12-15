@@ -172,7 +172,7 @@ export default class RemoteMiningProcess extends Process {
 
 		// Stop operations for rooms that are no longer selected.
 		_.each(Game.operationsByType.mining, op => {
-			if (memory.remoteHarvesting.rooms.indexOf(op.roomName) === -1) {
+			if (memory.remoteHarvesting.rooms.indexOf(op.getRoom()) === -1) {
 				op.terminate();
 			}
 		});
