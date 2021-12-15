@@ -88,7 +88,7 @@ export default class Operation {
 	}
 
 	getLastActiveTick(): number {
-		return this.memory.lastActive;
+		return Math.min(this.memory.lastActive || Game.time, this.memory.currentTick || Game.time);
 	}
 
 	terminate() {

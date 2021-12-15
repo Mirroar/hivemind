@@ -53,5 +53,14 @@ export default class RoomsProcess extends Process {
 				});
 			}
 		});
+
+		this.terminateRoomOperations();
+	}
+
+	terminateRoomOperations() {
+		// Stop operations for rooms that are no longer active.
+		_.each(Game.operationsByType.room, op => {
+			if (Game.time - op.getLastActiveTick() > 10000) op.terminate();
+		});
 	}
 }
