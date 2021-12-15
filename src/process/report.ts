@@ -235,6 +235,8 @@ export default class ReportProcess extends Process {
 	}
 
 	generateRoomOperationsReport() {
+		if (_.size(Game.operationsByType.room) === 0) return;
+
 		let reportText = this.generateHeading('Room CPU usage / tick');
 		const operationScores = this.getRoomOperationScores();
 
