@@ -67,6 +67,10 @@ export default class TransporterSpawnRole extends SpawnRole {
 			maxTransporters *= 1.5;
 		}
 
+		if (room.isClearingStorage() && room.storage && room.storage.store.getUsedCapacity() > room.storage.store.getCapacity() * 0.01) {
+			maxTransporters *= 1.5;
+		}
+
 		return maxTransporters;
 	}
 

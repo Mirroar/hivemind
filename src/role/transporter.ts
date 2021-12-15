@@ -871,7 +871,7 @@ export default class TransporterRole extends Role {
 			};
 
 			if (creep.room.isClearingTerminal()) {
-				option.priority = 3;
+				option.priority = 2;
 			}
 
 			options.push(option);
@@ -1267,7 +1267,7 @@ export default class TransporterRole extends Role {
 		// Take power if power spawn needs it.
 		if (room.powerSpawn && room.powerSpawn.power < room.powerSpawn.powerCapacity * 0.1) {
 			const target = room.getBestStorageSource(RESOURCE_POWER);
-			if (target && target.store.power > 0) {
+			if (target && target.store[RESOURCE_POWER] > 0) {
 				// @todo Limit amount since power spawn can only hold 100 power at a time.
 				// @todo Make sure only 1 creep does this at a time.
 				const option = {
@@ -1344,7 +1344,7 @@ export default class TransporterRole extends Role {
 				if (storage.store[resourceType] <= 0) continue;
 
 				options.push({
-					priority: 3,
+					priority: 2,
 					weight: 0,
 					type: 'structure',
 					object: storage,

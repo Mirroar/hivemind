@@ -383,6 +383,11 @@ Room.prototype.getBestStorageTarget = function (amount, resourceType) {
 			return this.storage;
 		}
 
+		if (this.isClearingStorage() && terminalFree > this.terminal.store.getCapacity() * 0.2) {
+			// If we're clearing out the storage, put everything into terminal.
+			return this.terminal;
+		}
+
 		if (!resourceType) {
 			if (this.storage.store.getUsedCapacity() / this.storage.store.getCapacity() < this.terminal.store.getUsedCapacity() / this.terminal.store.getCapacity()) {
 				return this.storage;

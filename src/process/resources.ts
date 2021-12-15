@@ -18,7 +18,7 @@ export default class ResourcesProcess extends Process {
 		while (best) {
 			const room = Game.rooms[best.source];
 			const terminal = room.terminal;
-			if (room.isEvacuating() && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+			if (this.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 				let amount = Math.min(terminal.store[best.resourceType], 50000);
 				if (best.resourceType === RESOURCE_ENERGY) {
 					amount -= Game.market.calcTransactionCost(amount, best.source, best.target);
@@ -31,7 +31,7 @@ export default class ResourcesProcess extends Process {
 				const result = terminal.send(best.resourceType, 5000, best.target, 'Resource equalizing');
 				hivemind.log('trade').info('sending', best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 			}
-			else if (room.isEvacuating() && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
+			else if (this.roomNeedsTerminalSpace(room) && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
 				const amount = terminal.store[best.resourceType];
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
@@ -62,11 +62,11 @@ export default class ResourcesProcess extends Process {
 			if (!roomState.canTrade) return;
 
 			// Do not try transferring from a room that is already preparing a transfer.
-			if (room.memory.fillTerminal && !roomState.isEvacuating) return;
+			if (room.memory.fillTerminal && !this.roomNeedsTerminalSpace(room)) return;
 
 			for (const resourceType of _.keys(roomState.state)) {
 				const resourceLevel = roomState.state[resourceType] || 'low';
-				if (!_.includes(['high', 'excessive'], resourceLevel) && !roomState.isEvacuating) continue;
+				if (!['high', 'excessive'].includes(resourceLevel) && !this.roomNeedsTerminalSpace(room)) continue;
 
 				// Make sure we have enough to send (while evacuating).
 				if (roomState.totalResources[resourceType] < 100) continue;
@@ -78,13 +78,13 @@ export default class ResourcesProcess extends Process {
 					const resourceLevel2 = roomState2.state[resourceType] || 'low';
 
 					if (!roomState2.canTrade) return;
-					if (roomState2.isEvacuating) return;
+					if (this.roomNeedsTerminalSpace(room2)) return;
 
 					const isLow = resourceLevel2 === 'low';
 					const isLowEnough = resourceLevel2 === 'medium';
 					const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
 
-					if (!roomState.isEvacuating && !shouldReceiveResources) return;
+					if (!this.roomNeedsTerminalSpace(room) && !shouldReceiveResources) return;
 
 					// Make sure target has space left.
 					if (room2.terminal.store.getFreeCapacity() < 5000) return;
@@ -100,7 +100,7 @@ export default class ResourcesProcess extends Process {
 						target: roomName2,
 					};
 
-					if (roomState.isEvacuating && resourceType !== RESOURCE_ENERGY) {
+					if (this.roomNeedsTerminalSpace(room) && resourceType !== RESOURCE_ENERGY) {
 						option.priority++;
 						if (room.terminal.store[resourceType] && room.terminal.store[resourceType] >= 5000) {
 							option.priority++;
@@ -135,4 +135,10 @@ export default class ResourcesProcess extends Process {
 
 		return rooms;
 	};
+
+	roomNeedsTerminalSpace(room: Room): boolean {
+		return room.isEvacuating() ||
+			(room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3) ||
+			(room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
+	}
 }

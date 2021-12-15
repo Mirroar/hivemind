@@ -130,9 +130,7 @@ Room.prototype.isClearingTerminal = function () {
 	if (!this.terminal) return false;
 
 	if (this.storage && this.roomManager && this.roomManager.hasMisplacedTerminal()) {
-		if (this.storage.store.getFreeCapacity() > this.terminal.store.getUsedCapacity()) {
-			return true;
-		}
+		return true;
 	}
 
 	return this.memory.isClearingTerminal;
@@ -147,9 +145,7 @@ Room.prototype.isClearingStorage = function () {
 
 	if (this.isEvacuating()) return true;
 	if (this.terminal && this.roomManager && this.roomManager.hasMisplacedStorage()) {
-		if (this.terminal.store.getFreeCapacity() > this.storage.store.getUsedCapacity()) {
-			return true;
-		}
+		return true;
 	}
 
 	return false;
