@@ -8,8 +8,8 @@ export default class RoomPlanScorer {
 
     score += this.getPlannedBuildingsScore(plan);
     score += this.getRequiredMaintenanceScore(plan);
+    score += this.getAverageTowerScore(plan);
 
-    // @todo Score tower positions.
     // @todo Score unprotected structures.
     // @todo Score travel distances (extensions, sources, controller, ...).
     // @todo Score susceptibility to nukes.
@@ -55,5 +55,32 @@ export default class RoomPlanScorer {
     }
 
     return score;
+  }
+
+  getAverageTowerScore(plan: RoomPlan): number {
+    const ramparts = plan.getPositions(STRUCTURE_RAMPART);
+    const towers = plan.getPositions(STRUCTURE_TOWER);
+
+    if (towers.length === 0 || ramparts.length === 0) return 0;
+
+    let total = 0;
+    for (const rampartPosition of ramparts) {
+      for (const towerPosition of towers) {
+        total += this.getTowerEffectScore(towerPosition, rampartPosition);
+      }
+    }
+
+    return 0.2 * total / ramparts.length;
+  }
+
+  /**
+   * Determines tower efficiency by range.
+   *
+   * @return {number}
+   *   Between 0 for least efficient and 1 for highest efficiency.
+   */
+  getTowerEffectScore(pos: RoomPosition, otherPos: RoomPosition): number {
+    const effectiveRange = Math.min(Math.max(pos.getRangeTo(otherPos) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE);
+    return 1 - ((effectiveRange - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE));
   }
 }
