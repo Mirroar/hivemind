@@ -15,6 +15,7 @@ import utilities from 'utilities';
 
 const RESPONSE_NONE = 0;
 const RESPONSE_MINI_BRAWLER = 1;
+const RESPONSE_MINI_BLINKY = 11;
 const RESPONSE_FULL_BRAWLER = 2;
 const RESPONSE_BLINKY = 3;
 const RESPONSE_ATTACK_HEAL_TRAIN = 4;
@@ -137,6 +138,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 		// For small attackers that should be defeated easily, use simple brawler.
 		if (enemyPower < (defaultAttack * ATTACK_POWER) + (defaultHeal * HEAL_POWER * 5)) {
+			if (isRangedEnemy) return RESPONSE_MINI_BLINKY;
+
 			return RESPONSE_MINI_BRAWLER;
 		}
 
@@ -236,9 +239,10 @@ export default class BrawlerSpawnRole extends SpawnRole {
 					return this.getBrawlerCreepBody(room, option.responseType === RESPONSE_MINI_BRAWLER ? 4 : null);
 
 				case RESPONSE_BLINKY:
+				case RESPONSE_MINI_BLINKY:
 				case RESPONSE_BLINKY_BLINKY_TRAIN:
 				case RESPONSE_BLINKY_HEAL_TRAIN:
-					return this.getBlinkyCreepBody(room);
+					return this.getBlinkyCreepBody(room, option.responseType === RESPONSE_MINI_BLINKY ? 6 : null);
 
 				case RESPONSE_RANGED_HEAL_TRAIN:
 				case RESPONSE_RANGED_BLINKY_TRAIN:
@@ -274,10 +278,11 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		);
 	}
 
-	getBlinkyCreepBody(room: Room): BodyPartConstant[] {
+	getBlinkyCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.35, [HEAL]: 0.15},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
+			maxAttackParts && {[RANGED_ATTACK]: maxAttackParts}
 		);
 	}
 
