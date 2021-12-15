@@ -294,7 +294,7 @@ export default class PlacementManager {
    */
   placeAccessRoad(to: RoomPosition) {
     // Plan road out of labs.
-    const accessRoads = this.scanAndAddRoad(to, this.originEntrances);
+    const accessRoads = this.findAccessRoad(to, this.originEntrances);
     for (const pos of accessRoads) {
       this.planLocation(pos, 'road', 1);
     }
@@ -312,7 +312,7 @@ export default class PlacementManager {
    * @return {RoomPosition[]}
    *   Positions that make up the newly created road.
    */
-  scanAndAddRoad(from: RoomPosition, to: RoomPosition | RoomPosition[]): RoomPosition[] {
+  findAccessRoad(from: RoomPosition, to: RoomPosition | RoomPosition[]): RoomPosition[] {
     const result = PathFinder.search(from, to, {
       roomCallback: () => this.buildingMatrix,
       maxRooms: 1,
@@ -326,7 +326,6 @@ export default class PlacementManager {
     const newRoads = [];
     for (const pos of result.path) {
       newRoads.push(pos);
-      this.planLocation(pos, 'road', 1);
     }
 
     return newRoads;

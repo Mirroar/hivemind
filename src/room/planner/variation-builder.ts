@@ -102,8 +102,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     const mineral = roomIntel.getMineralPosition();
     const mineralPosition = new RoomPosition(mineral.x, mineral.y, this.roomName);
     this.placementManager.planLocation(mineralPosition, 'extractor');
-    const mineralRoads = this.placementManager.scanAndAddRoad(mineralPosition, this.roomCenterEntrances);
+    const mineralRoads = this.placementManager.findAccessRoad(mineralPosition, this.roomCenterEntrances);
     for (const pos of mineralRoads) {
+      this.placementManager.planLocation(pos, 'road', 1);
       this.placementManager.planLocation(pos, 'road.mineral', null);
     }
 
@@ -152,9 +153,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   determineUpgraderPosition(): StepResult {
     const roomIntel = getRoomIntel(this.roomName);
     const controllerPosition = roomIntel.getControllerPosition();
-    const controllerRoads = this.placementManager.scanAndAddRoad(controllerPosition, this.roomCenterEntrances);
+    const controllerRoads = this.placementManager.findAccessRoad(controllerPosition, this.roomCenterEntrances);
+    this.protectPosition(controllerPosition, 1);
 
     for (const pos of controllerRoads) {
+      this.placementManager.planLocation(pos, 'road', 1);
       this.placementManager.planLocation(pos, 'road.controller', null);
       this.protectPosition(pos, 0);
     }
@@ -174,12 +177,17 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     // Find paths from each exit towards the room center for making roads.
     for (const dir of _.keys(this.exitCenters)) {
       for (const pos of this.exitCenters[dir]) {
-        const exitRoads = this.placementManager.scanAndAddRoad(pos, this.roomCenterEntrances);
+        const exitRoads = this.placementManager.findAccessRoad(pos, this.roomCenterEntrances);
         for (const pos of exitRoads) {
-          this.placementManager.planLocation(pos, 'road.exit', null);
+          // Mark exit road locations as roads without actually placing any.
+          // This ensures there is always an open path for reaching any exit.
+          this.placementManager.planLocation(pos, 'road.exit', 1);
         }
       }
     }
+
+    // Remove stored locations to save memory, they are not needed.
+    this.roomPlan.removeAllPositions('road.exit');
 
     return 'ok';
   }
@@ -189,8 +197,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     for (const source of roomIntel.getSourcePositions()) {
       const shouldAddSpawn = this.variationInfo.sourcesWithSpawn.includes(source.id);
       const harvestPosition = this.sourceInfo[source.id].harvestPosition;
-      const sourceRoads = this.placementManager.scanAndAddRoad(harvestPosition, this.roomCenterEntrances);
+      const sourceRoads = this.placementManager.findAccessRoad(harvestPosition, this.roomCenterEntrances);
       for (const pos of sourceRoads) {
+        this.placementManager.planLocation(pos, 'road', 1);
         this.placementManager.planLocation(pos, 'road.source', null);
         if (shouldAddSpawn) this.protectPosition(pos, 0);
       }
