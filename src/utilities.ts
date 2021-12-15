@@ -374,7 +374,7 @@ const utilities = {
 			);
 		}
 
-		if (matrix && Game.rooms[roomName] && Game.rooms[roomName].isMine()  && Game.rooms[roomName].defense.getEnemyStrength() > 0 && !options.ignoreMilitary) {
+		if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine()  && Game.rooms[roomName].defense.getEnemyStrength() > 0 && !options.ignoreMilitary) {
 			// Discourage unprotected areas when enemies are in the room.
 			cacheKey += ':inCombat';
 
