@@ -26,7 +26,9 @@ declare global {
 	}
 }
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
+import {serializeCoords} from 'utils/serialization';
 
 export default class RoomManager {
 	room: Room;
@@ -103,7 +105,7 @@ export default class RoomManager {
 	cleanRoom() {
 		// Remove all roads not part of current room plan.
 		for (const road of this.structuresByType[STRUCTURE_ROAD] || []) {
-			if (!this.roomPlanner.isPlannedLocation(road.pos, 'road')) {
+			if (!this.roomPlanner.isPlannedLocation(road.pos, 'road') && !this.getOperationRoadPositions()[serializeCoords(road.pos.x, road.pos.y)]) {
 				road.destroy();
 			}
 		}
@@ -139,6 +141,28 @@ export default class RoomManager {
 		for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
 			structure.destroy();
 		}
+	}
+
+	getOperationRoadPositions(): {[location: number]: RoomPosition} {
+		return cache.inHeap('opRoads:' + this.room.name, 100, () => {
+			const positions = {};
+
+			for (const operationName in Game.operationsByType.mining || []) {
+				const operation = Game.operationsByType.mining[operationName];
+
+				const locations = operation.getMiningLocationsByRoom();
+				if (!locations[this.room.name]) continue;
+
+				const paths = operation.getPaths();
+				for (const sourceLocation of locations[this.room.name]) {
+					for (const position of paths[sourceLocation].path) {
+						if (position.roomName === this.room.name) positions[serializeCoords(position.x, position.y)] = position;
+					}
+				}
+			}
+
+			return positions;
+		});
 	}
 
 	/**
@@ -181,6 +205,7 @@ export default class RoomManager {
 		if (this.room.controller.level === 0) {
 			// If we're waiting for a claim, busy ourselves by building roads.
 			this.buildPlannedStructures('road', STRUCTURE_ROAD);
+			this.buildOperationRoads();
 		}
 
 		if (this.room.controller.level < 2) return;
@@ -280,6 +305,15 @@ export default class RoomManager {
 		}
 
 		return canBuildMore;
+	}
+
+	buildOperationRoads() {
+		const positions = this.getOperationRoadPositions();
+		for (const pos of _.values(positions)) {
+			if (this.tryBuild(pos, STRUCTURE_ROAD)) continue;
+
+			break;
+		}
 	}
 
 	/**
