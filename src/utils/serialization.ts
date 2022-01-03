@@ -84,7 +84,7 @@ function serializeCoords(x: number, y: number, roomName?: string) {
   return [coords, roomName];
 };
 
-function deserializeCoords(coords) {
+function deserializeCoords(coords: string | number | [number, string]) {
   // Fallback for old string positions.
   if (typeof coords === 'string') {
     const pos = decodePosition(coords);
