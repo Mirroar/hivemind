@@ -24,22 +24,11 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import {ErrorMapper} from 'utils/ErrorMapper';
 import {getRoomIntel} from 'intel-management';
+import {serializeCoords, serializePosition, encodePosition} from 'utils/serialization';
 
 let ownUserName;
 
-function serializeCoords(x: number, y: number): number;
-function serializeCoords(x: number, y: number, roomName: string): [number, string];
-function serializeCoords(x: number, y: number, roomName?: string) {
-	const coords = x + (50 * y);
-
-	if (!roomName) return coords;
-
-	return [coords, roomName];
-};
-
 const utilities = {
-
-	serializeCoords,
 
 	/**
 	 * Dynamically determines the username of the current user.
@@ -213,14 +202,14 @@ const utilities = {
 			structures,
 			constructionSites,
 			structure => {
-				const location = utilities.serializeCoords(structure.pos.x, structure.pos.y);
+				const location = serializeCoords(structure.pos.x, structure.pos.y);
 				if (!_.contains(result.obstacles, location)) {
 					result.roads.push(location);
 				}
 			},
-			structure => result.obstacles.push(utilities.serializePosition(structure.pos, roomName)),
+			structure => result.obstacles.push(serializePosition(structure.pos, roomName)),
 			(x, y) => {
-				const location = utilities.serializeCoords(x, y);
+				const location = serializeCoords(x, y);
 				if (!_.contains(result.obstacles, location)) {
 					result.obstacles.push(location);
 				}
@@ -437,7 +426,7 @@ const utilities = {
 		for (const username in Game.rooms[roomName].enemyCreeps) {
 			if (hivemind.relations.isAlly(username)) continue;
 			for (const creep of Game.rooms[roomName].enemyCreeps[username]) {
-				const location = utilities.encodePosition(creep.pos);
+				const location = encodePosition(creep.pos);
 				closedList[location] = true;
 				openList.push(creep.pos);
 			}
@@ -461,7 +450,7 @@ const utilities = {
 				if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
 				const newPos = new RoomPosition(x, y, roomName);
-				const newLocation = utilities.encodePosition(newPos);
+				const newLocation = encodePosition(newPos);
 				if (closedList[newLocation]) return;
 				if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
 
@@ -545,170 +534,6 @@ const utilities = {
 	 */
 	getBodyParts(creep) {
 		return creep.memory.body;
-	},
-
-	/**
-	 * Serializes a position for storing it in memory.
-	 * @todo Move to RoomPosition.prototype.
-	 *
-	 * @param {RoomPosition} position
-	 *   The position to encode.
-	 *
-	 * @return {string}
-	 *   The encoded position.
-	 */
-	encodePosition(position: RoomPosition): string {
-		return position.roomName + '@' + position.x + 'x' + position.y;
-	},
-
-	/**
-	 * Creates a RoomPosition object from serialized data.
-	 * @todo Move to RoomPosition as static function.
-	 *
-	 * @param {string} position
-	 *   The encoded position.
-	 *
-	 * @return {RoomPosition}
-	 *   The original room position.
-	 */
-	decodePosition(position: string) {
-		if (!position) return null;
-
-		const parts = position.match(/^(.*)@(\d*)x(\d*)$/);
-
-		if (parts && parts.length > 0) {
-			return new RoomPosition(parseInt(parts[2]), parseInt(parts[3]), parts[1]);
-		}
-
-		return null;
-	},
-
-	deserializeCoords(coords) {
-		// Fallback for old string positions.
-		if (typeof coords === 'string') {
-			const pos = utilities.decodePosition(coords);
-			return {x: pos.x, y: pos.y};
-		}
-
-		// Numbers are positions without a room name.
-		if (typeof coords === 'number') {
-			const x = coords % 50;
-			const y = Math.floor(coords / 50);
-			return {x, y};
-		}
-
-		// Last alternative: Array of coords and room name.
-		const x = coords[0] % 50;
-		const y = Math.floor(coords[0] / 50);
-		return {x, y};
-	},
-
-	serializePosition(position, fixedRoom) {
-		return utilities.serializeCoords(position.x, position.y, position.roomName === fixedRoom ? null : position.roomName);
-	},
-
-	deserializePosition(coords, fixedRoom) {
-		// Fallback for old string positions.
-		if (typeof coords === 'string') return utilities.decodePosition(coords);
-
-		// Numbers are positions without a room name.
-		if (typeof coords === 'number') {
-			const x = coords % 50;
-			const y = Math.floor(coords / 50);
-			return new RoomPosition(x, y, fixedRoom);
-		}
-
-		// Last alternative: Array of coords and room name.
-		const x = coords[0] % 50;
-		const y = Math.floor(coords[0] / 50);
-		return new RoomPosition(x, y, coords[1]);
-	},
-
-	xOffsets: {
-		[TOP]: 0,
-		[TOP_RIGHT]: 1,
-		[RIGHT]: 1,
-		[BOTTOM_RIGHT]: 1,
-		[BOTTOM]: 0,
-		[BOTTOM_LEFT]: -1,
-		[LEFT]: -1,
-		[TOP_LEFT]: -1,
-	},
-
-	yOffsets: {
-		[TOP]: -1,
-		[TOP_RIGHT]: -1,
-		[RIGHT]: 0,
-		[BOTTOM_RIGHT]: 1,
-		[BOTTOM]: 1,
-		[BOTTOM_LEFT]: 1,
-		[LEFT]: 0,
-		[TOP_LEFT]: -1,
-	},
-
-	directions: {
-		[-1]: {
-			[-1]: TOP_LEFT,
-			0: TOP,
-			1: TOP_RIGHT,
-		},
-		0: {
-			[-1]: LEFT,
-			0: null,
-			1: RIGHT,
-		},
-		1: {
-			[-1]: BOTTOM_LEFT,
-			0: BOTTOM,
-			1: BOTTOM_RIGHT,
-		},
-	},
-
-	/**
-	 * Serializes an array of RoomPosition objects for storing in memory.
-	 *
-	 * @param {RoomPosition[]} path
-	 *   A list of positions to encode.
-	 *
-	 * @return {string[]}
-	 *   The encoded path.
-	 */
-	serializePositionPath(path: RoomPosition[]): Array<string | number> {
-		let previous: RoomPosition;
-		return _.map(path, pos => {
-			let result;
-			if (previous && previous.roomName === pos.roomName) {
-				const dx = pos.x - previous.x;
-				const dy = pos.y - previous.y;
-				result = utilities.directions[dy] && utilities.directions[dy][dx];
-			}
-
-			previous = pos;
-			return result || utilities.encodePosition(pos);
-		});
-	},
-
-	/**
-	 * Deserializes a serialized path into an array of RoomPosition objects.
-	 *
-	 * @param {string[]} path
-	 *   A list of positions to decode.
-	 *
-	 * @return {RoomPosition[]}
-	 *   The decoded path.
-	 */
-	deserializePositionPath(path: Array<string | number>): RoomPosition[] {
-		let pos;
-		return _.map(path, location => {
-			if (typeof location === 'string') {
-				pos = utilities.decodePosition(location);
-			}
-			else {
-				pos = new RoomPosition(pos.x + utilities.xOffsets[location], pos.y + utilities.yOffsets[location], pos.roomName);
-			}
-
-			return pos;
-		});
 	},
 
 	/**
