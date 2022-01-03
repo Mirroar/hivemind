@@ -1,7 +1,7 @@
 import localRelations from 'relations.local';
 
 export default class Relations {
-	allies: string[];
+	readonly allies: string[];
 
 	/**
 	 * Relations determine how we act towards other users.

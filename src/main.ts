@@ -44,6 +44,7 @@ hivemind.logGlobalReset();
 import {getRoomIntel} from 'intel-management';
 
 // Load top-level processes.
+import AlliesProcess from 'process/allies';
 import CleanupProcess from 'process/cleanup';
 import CreepsProcess from 'process/creeps';
 import ExpandProcess from 'process/strategy/expand';
@@ -184,6 +185,9 @@ const main = {
 			interval: 100,
 		});
 		hivemind.runProcess('map-visuals', MapVisualsProcess, {
+			priority: PROCESS_PRIORITY_ALWAYS,
+		});
+		hivemind.runProcess('allies', AlliesProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 

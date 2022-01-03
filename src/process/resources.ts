@@ -18,6 +18,8 @@ export default class ResourcesProcess extends Process {
 		while (best) {
 			const room = Game.rooms[best.source];
 			const terminal = room.terminal;
+			const maxAmount = room.getCurrentResourceAmount(best.resourceType);
+			const tradeVolume = Math.min(maxAmount * 0.9, 5000);
 			if (this.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 				let amount = Math.min(terminal.store[best.resourceType], 50000);
 				if (best.resourceType === RESOURCE_ENERGY) {
@@ -27,8 +29,8 @@ export default class ResourcesProcess extends Process {
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 			}
-			else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
-				const result = terminal.send(best.resourceType, 5000, best.target, 'Resource equalizing');
+			else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] > tradeVolume) {
+				const result = terminal.send(best.resourceType, tradeVolume, best.target, 'Resource equalizing');
 				hivemind.log('trade').info('sending', best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 			}
 			else if (this.roomNeedsTerminalSpace(room) && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
@@ -66,6 +68,49 @@ export default class ResourcesProcess extends Process {
 
 			for (const resourceType of _.keys(roomState.state)) {
 				const resourceLevel = roomState.state[resourceType] || 'low';
+
+				// Fullfill allies trade requests.
+				for (const roomName2 in Memory?.requests?.trade?.[resourceType] || {}) {
+					const info = Memory.requests.trade[resourceType][roomName2];
+					if (Game.time - info.lastSeen > 10) {
+						// Request was not recorded recently, skip it.
+						continue;
+					}
+
+					const tier = this.getResourceTier(resourceType);
+					const shouldReceiveResources =
+						roomState.state[resourceType] === 'excessive' && info.priority >= 0.05 ||
+						roomState.state[resourceType] === 'high' && (info.priority >= 0.5 || tier > 1) ||
+						roomState.state[resourceType] === 'medium' && (info.priority >= 0.5 && tier > 1) ||
+						roomState.state[resourceType] === 'low' && (info.priority >= 0.5 && tier > 4);
+					if (!shouldReceiveResources) continue;
+
+					// Make sure source room has enough energy to send resources.
+					const amount = Math.min(roomState.totalResources[resourceType], 5000);
+					if (amount < 100) continue;
+					if (room.terminal.store.energy < Game.market.calcTransactionCost(5000, roomName, roomName2)) continue;
+
+					const option = {
+						priority: 3,
+						weight: (roomState.totalResources[resourceType] / 100000) - Game.map.getRoomLinearDistance(roomName, roomName2),
+						resourceType,
+						source: roomName,
+						target: roomName2,
+					};
+
+					if (this.roomNeedsTerminalSpace(room) && resourceType !== RESOURCE_ENERGY) {
+						option.priority++;
+						if (room.terminal.store[resourceType] && room.terminal.store[resourceType] >= 5000) {
+							option.priority++;
+						}
+					}
+					else if (info.priority < 0.5) {
+						option.priority--;
+					}
+
+					options.push(option);
+				}
+
 				if (!['high', 'excessive'].includes(resourceLevel) && !this.roomNeedsTerminalSpace(room)) continue;
 
 				// Make sure we have enough to send (while evacuating).
@@ -116,6 +161,18 @@ export default class ResourcesProcess extends Process {
 		});
 
 		return options;
+	};
+
+	getResourceTier(resourceType) {
+		if (resourceType === RESOURCE_ENERGY) return 0;
+		if (resourceType === RESOURCE_POWER) return 10;
+
+		const tier = resourceType.length;
+		if (resourceType.indexOf('G') !== -1) {
+			return tier + 3;
+		}
+
+		return tier;
 	};
 
 	/**
