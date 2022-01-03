@@ -34,10 +34,10 @@ Object.defineProperty(Source.prototype, 'harvesters', {
 	 * @return {Creep[]}
 	 *   Harvesters for this source.
 	 */
-	get() {
+	get(this: Source) {
 		return cache.inObject(this, 'harvesters', 1, () => {
 			const harvesters = [];
-			for (const harvester of _.values<Creep>(this.room.creepsByRole.harvester) || []) {
+			for (const harvester of _.values<HarvesterCreep>(this.room.creepsByRole.harvester) || []) {
 				if (harvester.memory.fixedSource === this.id) {
 					harvesters.push(harvester);
 				}
@@ -58,11 +58,11 @@ Object.defineProperty(Mineral.prototype, 'harvesters', {
 	 * @return {Creep[]}
 	 *   Harvesters for this mineral.
 	 */
-	get() {
+	get(this: Mineral) {
 		return cache.inObject(this, 'harvesters', 1, () => {
 			const harvesters = [];
-			for (const harvester of _.values<Creep>(this.room.creepsByRole.harvester) || []) {
-				if (harvester.memory.fixedMineral === this.id) {
+			for (const harvester of _.values<HarvesterCreep>(this.room.creepsByRole.harvester) || []) {
+				if (harvester.memory.fixedMineralSource === this.id) {
 					harvesters.push(harvester);
 				}
 			}

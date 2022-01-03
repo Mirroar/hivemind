@@ -37,6 +37,9 @@ const settings = {
 	// The maximum path length from a source to a storage. Any more and the source
 	// will not be mined.
 	maxRemoteMinePathLength: 150,
+	// Filter rooms where remote mining is allowed to take place. This needs to be
+	// a function that is passed a room name and returns true for allowed rooms.
+	remoteMineRoomFilter: null,
 
 	// Power mining:
 	// Enable power mining in general.

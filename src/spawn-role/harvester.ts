@@ -11,7 +11,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room, options) {
 		// Stop harvesting if we can't really store any more energy.
 		if (room.isFullOnEnergy() && !this.isSmallHarvesterNeeded(room)) return;
 
@@ -29,16 +29,17 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addInitialHarvester(source, options) {
+	addInitialHarvester(source: Source, options) {
 		// @todo Spawn bigger harvesters in high level rooms with plenty of energy to save on CPU.
 		// @todo Spawn new harvester before previous harvester dies.
 
 		if (source.harvesters.length > 0) return;
 
 		const force = this.isSmallHarvesterNeeded(source.room);
+		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
 		options.push({
-			priority: (force ? 5 : 4),
-			weight: 1,
+			priority: (force ? 6 : 4),
+			weight: (50 - _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)))) / 50,
 			source: source.id,
 			preferClosestSpawn: source.pos,
 			size: this.getMaxWorkParts(source),
@@ -54,7 +55,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addAdditionalHarvesters(source, options) {
+	addAdditionalHarvesters(source: Source, options) {
 		// Starting from RCL 4, 1 harvester per source should always be enough.
 		if (source.room.controller.level > 3) return;
 
@@ -94,7 +95,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @return {boolean}
 	 *   True if a small harvester should be spawned.
 	 */
-	isSmallHarvesterNeeded(room) {
+	isSmallHarvesterNeeded(room: Room) {
 		// If there's another harvester, we're fine.
 		if (_.size(room.creepsByRole.harvester) > 0) return false;
 
@@ -118,11 +119,11 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   Number of needed work parts.
 	 */
-	getMaxWorkParts(source) {
+	getMaxWorkParts(source: Source) {
 		let numParts = source.energyCapacity / ENERGY_REGEN_TIME / 2;
 
 		_.each(source.effects, effect => {
-			if (effect.power === PWR_REGEN_SOURCE) {
+			if ('power' in effect && effect.power === PWR_REGEN_SOURCE) {
 				numParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
 			}
 		});
@@ -141,7 +142,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option) {
 		const source = Game.getObjectById<Source>(option.source);
 		const weights = {[MOVE]: 0.01, [WORK]: 0.79, [CARRY]: 0.2};
 		const hasSpawnAtSource = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {filter: s => s.structureType === STRUCTURE_SPAWN}).length > 0;
@@ -169,7 +170,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option) {
 		return {
 			singleRoom: room.name,
 			fixedSource: option.source,
