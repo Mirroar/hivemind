@@ -25,7 +25,7 @@ export default class ManagePowerCreepsProcess extends Process {
 		}
 	}
 
-	upgradePowerCreep(creep) {
+	upgradePowerCreep(creep: PowerCreep) {
 		for (const powerOption of hivemind.settings.get('powerPriorities')) {
 			// Check if this power could be upgraded.
 			const info = POWER_INFO[powerOption];
@@ -47,6 +47,17 @@ export default class ManagePowerCreepsProcess extends Process {
 	}
 
 	createNewPowerCreep() {
-		PowerCreep.create('Op' + _.size(_.filter(Game.powerCreeps, creep => creep.name.startsWith('Op'))), POWER_CLASS.OPERATOR);
+		PowerCreep.create(this.getOperatorName(), POWER_CLASS.OPERATOR);
+	}
+
+	getOperatorName(): string {
+		// Use operator name list from config.
+		const names: string[] = hivemind.settings.get('operatorNames');
+		for (const name of names || []) {
+			if (!Game.powerCreeps[name]) return name;
+		}
+
+		// Fallback to numbered names.
+		return 'Op' + _.size(_.filter(Game.powerCreeps, creep => creep.name.startsWith('Op')));
 	}
 };

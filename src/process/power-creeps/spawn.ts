@@ -30,7 +30,7 @@ export default class SpawnPowerCreepsProcess extends Process {
 	 * @param {PowerCreep} creep
 	 *   The power creep that needs to be assigned a room.
 	 */
-	assignPowerCreep(creep) {
+	assignPowerCreep(creep: PowerCreep) {
 		const roomsWithoutPC = _.filter(Game.myRooms, room => {
 			if (!room.powerSpawn) return false;
 
