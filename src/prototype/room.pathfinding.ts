@@ -3,9 +3,9 @@ STRUCTURE_KEEPER_LAIR */
 
 declare global {
 	interface Room {
-		getCostMatrix,
-		generateCostMatrix,
-		calculateRoomPath,
+		getCostMatrix: () => CostMatrix,
+		generateCostMatrix: (structures?: Record<string, Structure[]>, constructionSites?: Record<string, ConstructionSite[]>) => CostMatrix,
+		calculateRoomPath: (roomName: string, options?: {allowDanger?: boolean, maxPathLength?: number}) => string[] | null,
 	}
 }
 

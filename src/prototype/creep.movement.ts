@@ -3,58 +3,112 @@ LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
 declare global {
 	interface Creep {
-		moveToRange,
-		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void,
-		setCachedPath,
-		getCachedPath,
-		hasCachedPath,
-		clearCachedPath,
-		hasArrived,
-		followCachedPath,
-		getOntoCachedPath,
-		manageBlockingCreeps,
-		incrementCachedPathPosition,
-		moveAroundObstacles,
-		canMoveOnto,
-		goTo,
-		calculateGoToPath,
-		moveToRoom,
-		calculateRoomPath,
-		isInRoom,
-		interRoomTravel: (targetPos: RoomPosition) => boolean,
-		moveUsingNavMesh,
-		getNavMeshMoveTarget: () => string | null,
-		stopNavMeshMove,
-		_blockingCreepMovement,
-		_hasMoveIntent,
+		moveToRange: (target: RoomObject | RoomPosition, range: number, options?: GoToOptions) => boolean;
+		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void;
+		setCachedPath: (path: (string | number)[], reverse?: boolean, distance?: number) => void;
+		getCachedPath: () => RoomPosition[] | null;
+		hasCachedPath: () => boolean;
+		clearCachedPath: () => void;
+		hasArrived: () => boolean;
+		followCachedPath: () => void;
+		getOntoCachedPath: () => boolean;
+		manageBlockingCreeps: () => void;
+		incrementCachedPathPosition: () => void;
+		moveAroundObstacles: () => boolean;
+		canMoveOnto: (position: RoomPosition) => boolean;
+		goTo: (target: RoomObject | RoomPosition, options?: GoToOptions) => boolean;
+		calculateGoToPath: (target: RoomPosition, options?: GoToOptions) => boolean;
+		moveToRoom: (roomName: string, allowDanger?: boolean) => boolean;
+		calculateRoomPath: (roomName: string, allowDanger?: boolean) => string[] | null;
+		isInRoom: () => boolean;
+		interRoomTravel: (targetPos: RoomPosition) => boolean;
+		moveUsingNavMesh: (targetPos: RoomPosition, options?: GoToOptions) => OK | ERR_NO_PATH;
+		getNavMeshMoveTarget: () => string | null;
+		stopNavMeshMove: () => void;
+		_blockingCreepMovement: Creep | PowerCreep;
+		_hasMoveIntent: boolean;
 	}
 
 	interface PowerCreep {
-		moveToRange,
-		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void,
-		setCachedPath,
-		getCachedPath,
-		hasCachedPath,
-		clearCachedPath,
-		hasArrived,
-		followCachedPath,
-		getOntoCachedPath,
-		manageBlockingCreeps,
-		incrementCachedPathPosition,
-		moveAroundObstacles,
-		canMoveOnto,
-		goTo,
-		calculateGoToPath,
-		moveToRoom,
-		calculateRoomPath,
-		isInRoom,
-		interRoomTravel: (targetPos: RoomPosition) => boolean,
-		moveUsingNavMesh,
-		getNavMeshMoveTarget: () => string | null,
-		stopNavMeshMove,
-		_blockingCreepMovement,
-		_hasMoveIntent,
+		moveToRange: (target: RoomObject | RoomPosition, range: number, options?: GoToOptions) => boolean;
+		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void;
+		setCachedPath: (path: (string | number)[], reverse?: boolean, distance?: number) => void;
+		getCachedPath: () => RoomPosition[];
+		hasCachedPath: () => boolean;
+		clearCachedPath: () => void;
+		hasArrived: () => boolean;
+		followCachedPath: () => void;
+		getOntoCachedPath: () => boolean;
+		manageBlockingCreeps: () => void;
+		incrementCachedPathPosition: () => void;
+		moveAroundObstacles: () => boolean;
+		canMoveOnto: (position: RoomPosition) => boolean;
+		goTo: (target: RoomObject | RoomPosition, options?: GoToOptions) => boolean;
+		calculateGoToPath: (target: RoomPosition, options?: GoToOptions) => boolean;
+		moveToRoom: (roomName: string, allowDanger?: boolean) => boolean;
+		calculateRoomPath: (roomName: string, allowDanger?: boolean) => string[] | null;
+		isInRoom: () => boolean;
+		interRoomTravel: (targetPos: RoomPosition) => boolean;
+		moveUsingNavMesh: (targetPos: RoomPosition, options?: GoToOptions) => OK | ERR_NO_PATH;
+		getNavMeshMoveTarget: () => string | null;
+		stopNavMeshMove: () => void;
+		_blockingCreepMovement: Creep | PowerCreep;
+		_hasMoveIntent: boolean;
 	}
+
+	interface CreepMemory {
+		cachedPath: {
+			path: (string | number)[];
+			position: number;
+			arrived: boolean;
+			lastPositions: Record<number, string>;
+			forceGoTo?: number;
+		};
+	}
+
+	interface PowerCreepMemory {
+		cachedPath: {
+			path: (string | number)[];
+			position: number;
+			arrived: boolean;
+			lastPositions: Record<number, string>;
+			forceGoTo?: number;
+		};
+	}
+
+	interface CreepHeapMemory {
+		_decodedCachedPath: RoomPosition[];
+		_moveBlocked: boolean;
+		_mtrTarget: string;
+		_mtrNextRoom: string;
+		moveWithoutNavMesh: boolean;
+		_nmpt: string;
+		_nmp: {
+			path?: string[];
+			incomplete: boolean;
+		};
+		_nmpi: number;
+	}
+
+	interface PowerCreepHeapMemory {
+		_decodedCachedPath: RoomPosition[];
+		_moveBlocked: boolean;
+		_mtrTarget: string;
+		_mtrNextRoom: string;
+		moveWithoutNavMesh: boolean;
+		_nmpt: string;
+		_nmp: {
+			path?: string[];
+			incomplete: boolean;
+		};
+		_nmpi: number;
+	}
+}
+
+type GoToOptions = {
+	range?: number;
+	maxRooms?: number;
+	allowDanger?: boolean;
 }
 
 import hivemind from 'hivemind';
@@ -75,7 +129,7 @@ import utilities from 'utilities';
  * @return {boolean}
  *   Whether the movement succeeded.
  */
-Creep.prototype.moveToRange = function (target, range, options?: any) {
+Creep.prototype.moveToRange = function (this: Creep | PowerCreep, target, range, options) {
 	if (!options) options = {};
 	options.range = range;
 	return this.goTo(target, options);
@@ -84,7 +138,7 @@ Creep.prototype.moveToRange = function (target, range, options?: any) {
 /**
  * Ensures that the creep is in range before performing an operation.
  */
-Creep.prototype.whenInRange = function (range, target, callback) {
+Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target, callback) {
 	if (target instanceof RoomObject) {
 		target = target.pos;
 	}
@@ -107,7 +161,7 @@ Creep.prototype.whenInRange = function (range, target, callback) {
  * @param {number} distance
  *   How close to the end of the path the creep is supposed to travel.
  */
-Creep.prototype.setCachedPath = function (path, reverse, distance) {
+Creep.prototype.setCachedPath = function (this: Creep | PowerCreep, path, reverse, distance) {
 	path = _.clone(path);
 	if (reverse || distance) {
 		const originalPath = utilities.deserializePositionPath(path);
@@ -124,6 +178,7 @@ Creep.prototype.setCachedPath = function (path, reverse, distance) {
 		path = utilities.serializePositionPath(originalPath);
 	}
 
+	delete this.heapMemory._decodedCachedPath;
 	this.memory.cachedPath = {
 		path,
 		position: null,
@@ -138,14 +193,14 @@ Creep.prototype.setCachedPath = function (path, reverse, distance) {
  * @return {RoomPosition[]}
  *   The creep's cached path as a list of room positions.
  */
-Creep.prototype.getCachedPath = function () {
-	if (!this.memory.cachedPath) return;
+Creep.prototype.getCachedPath = function (this: Creep | PowerCreep) {
+	if (!this.hasCachedPath()) return null;
 
-	if (!this._decodedPath) {
-		this._decodedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
+	if (!this.heapMemory._decodedCachedPath) {
+		this.heapMemory._decodedCachedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
 	}
 
-	return this._decodedPath;
+	return this.heapMemory._decodedCachedPath;
 };
 
 /**
@@ -154,15 +209,16 @@ Creep.prototype.getCachedPath = function () {
  * @return {boolean}
  *   True if the creep has a cached path.
  */
-Creep.prototype.hasCachedPath = function () {
+Creep.prototype.hasCachedPath = function (this: Creep | PowerCreep) {
 	return typeof this.memory.cachedPath !== 'undefined';
 };
 
 /**
  * Clears a creep's stored path.
  */
-Creep.prototype.clearCachedPath = function () {
+Creep.prototype.clearCachedPath = function (this: Creep | PowerCreep) {
 	delete this.memory.cachedPath;
+	delete this.heapMemory._decodedCachedPath;
 };
 
 /**
@@ -171,17 +227,17 @@ Creep.prototype.clearCachedPath = function () {
  * @return {boolean}
  *   True if the creep has arrived.
  */
-Creep.prototype.hasArrived = function () {
-	return this.memory.cachedPath && this.memory.cachedPath.arrived;
+Creep.prototype.hasArrived = function (this: Creep | PowerCreep) {
+	return this.hasCachedPath() && this.memory.cachedPath.arrived;
 };
 
 /**
  * Makes a creep follow it's cached path until the end.
  * @todo Sometimes we get stuck on a cicle of "getonit" and "Skip: 1".
  */
-Creep.prototype.followCachedPath = function () {
+Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 	this._hasMoveIntent = true;
-	this.memory.moveBlocked = false;
+	this.heapMemory._moveBlocked = false;
 	if (!this.memory.cachedPath || !this.memory.cachedPath.path || _.size(this.memory.cachedPath.path) === 0) {
 		this.clearCachedPath();
 		hivemind.log('creeps', this.room.name).error(this.name, 'Trying to follow non-existing path');
@@ -243,16 +299,16 @@ Creep.prototype.followCachedPath = function () {
  *   True if we're currently trying to move onto the path, false if we
  *   reached it.
  */
-Creep.prototype.getOntoCachedPath = function () {
+Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 	const creep = this;
-	const target = this.pos.findClosestByRange(this._decodedPath, {
+	const target = this.pos.findClosestByRange(this.getCachedPath(), {
 		filter: pos => {
 			// Try to move to a position on the path that is in the current room.
 			if (pos.roomName !== this.room.name) return false;
 			// Don't move onto exit tiles when looking to find our path.
 			if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) return false;
 
-			// Only try to get to paths where no creep is positioned.
+			// Only try to get on positions not blocked by other creeps.
 			return creep.canMoveOnto(pos);
 		},
 	});
@@ -260,7 +316,7 @@ Creep.prototype.getOntoCachedPath = function () {
 	if (!target) {
 		// We're not in the correct room to move on this path. Kind of sucks, but try to get there using the default pathfinder anyway.
 		// @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
-		if (this.pos.roomName === this._decodedPath[0].roomName) {
+		if (this.pos.roomName === this.heapMemory._decodedCachedPath[0].roomName) {
 			this.say('Blocked');
 
 			// If a creep is blocking the next spot, tell it to move over if possible.
@@ -268,18 +324,19 @@ Creep.prototype.getOntoCachedPath = function () {
 		}
 		else {
 			this.say('Searching');
-			this.moveTo(this._decodedPath[0]);
+			this.moveTo(this.heapMemory._decodedCachedPath[0]);
 		}
 
-		this.memory.moveBlocked = true;
+		this.heapMemory._moveBlocked = true;
 		return true;
 	}
 
 	// Try to get to the closest part of the path.
 	if (this.pos.x === target.x && this.pos.y === target.y) {
 		// We've arrived on the path, time to get moving along it!
-		for (const i in this._decodedPath) {
-			if (this.pos.x === this._decodedPath[i].x && this.pos.y === this._decodedPath[i].y && this.pos.roomName === this._decodedPath[i].roomName) {
+		const path = this.getCachedPath()
+		for (let i = 0; i < path.length; i++) {
+			if (this.pos.x === path[i].x && this.pos.y === path[i].y && this.pos.roomName === path[i].roomName) {
 				this.memory.cachedPath.position = i;
 				break;
 			}
@@ -299,10 +356,11 @@ Creep.prototype.getOntoCachedPath = function () {
 	return false;
 };
 
-Creep.prototype.manageBlockingCreeps = function () {
+Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 	// @todo This needs some debugging and testing, ideally with room visuals.
+	const path = this.getCachedPath();
 	if (typeof this.memory.cachedPath.position === 'undefined') {
-		for (const pos of this._decodedPath) {
+		for (const pos of path) {
 			if (pos.getRangeTo(this.pos) > 1) continue;
 
 			const creep = pos.lookFor(LOOK_CREEPS)[0];
@@ -315,7 +373,7 @@ Creep.prototype.manageBlockingCreeps = function () {
 		return;
 	}
 
-	let pos = this._decodedPath[this.memory.cachedPath.position];
+	let pos = path[this.memory.cachedPath.position];
 	if (!pos || pos.roomName !== this.pos.roomName) return;
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on current target tile.
@@ -324,7 +382,7 @@ Creep.prototype.manageBlockingCreeps = function () {
 		return;
 	}
 
-	pos = this._decodedPath[this.memory.cachedPath.position + 1];
+	pos = path[this.memory.cachedPath.position + 1];
 	if (!pos || pos.roomName !== this.pos.roomName) return;
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on next target tile.
@@ -335,13 +393,11 @@ Creep.prototype.manageBlockingCreeps = function () {
 
 /**
  * Checks if movement last tick brought us on the next position of our path.
- *
- * @param {string[]} path
- *   An array of encoded room positions.
  */
-Creep.prototype.incrementCachedPathPosition = function () {
+Creep.prototype.incrementCachedPathPosition = function (this: Creep | PowerCreep) {
 	// Check if we've already moved onto the next position.
-	const next = this._decodedPath[this.memory.cachedPath.position + 1];
+	const path = this.getCachedPath();
+	const next = path[this.memory.cachedPath.position + 1];
 	if (!next) {
 		// Out of range, so we're probably at the end of the path.
 		this.memory.cachedPath.arrived = true;
@@ -355,7 +411,7 @@ Creep.prototype.incrementCachedPathPosition = function () {
 
 	if (next.roomName !== this.pos.roomName) {
 		// We just changed rooms.
-		const afterNext = this._decodedPath[this.memory.cachedPath.position + 2];
+		const afterNext = path[this.memory.cachedPath.position + 2];
 		if (afterNext && afterNext.roomName === this.pos.roomName && afterNext.getRangeTo(this.pos) <= 1) {
 			this.memory.cachedPath.position += 2;
 		}
@@ -372,7 +428,7 @@ Creep.prototype.incrementCachedPathPosition = function () {
  * @return {boolean}
  *   True if we're currently moving around an obstacle.
  */
-Creep.prototype.moveAroundObstacles = function () {
+Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
 	const REMEMBER_POSITION_COUNT = 5;
 
 	// Record recent positions the creep has been on.
@@ -382,7 +438,7 @@ Creep.prototype.moveAroundObstacles = function () {
 		this.memory.cachedPath.lastPositions = {};
 	}
 
-	if (!this.fatigue) {
+	if (!('fatigue' in this) || this.fatigue === 0) {
 		// If we're not fatigued, we're kind of stuck.
 		this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = utilities.encodePosition(this.pos);
 	}
@@ -415,8 +471,9 @@ Creep.prototype.moveAroundObstacles = function () {
 	// Try to find next free tile on the path.
 	let i = this.memory.cachedPath.position + 1;
 
-	while (i < this._decodedPath.length) {
-		const pos = this._decodedPath[i];
+	const path = this.getCachedPath();
+	while (i < path.length) {
+		const pos = path[i];
 		if (pos.roomName !== this.pos.roomName) {
 			// Skip past exit tile in next room.
 			i++;
@@ -428,7 +485,7 @@ Creep.prototype.moveAroundObstacles = function () {
 		i++;
 	}
 
-	if (i >= this._decodedPath.length) {
+	if (i >= path.length) {
 		// No free spots until end of path. Let normal pathfinder take over.
 		this.memory.cachedPath.arrived = true;
 		return true;
@@ -443,25 +500,25 @@ Creep.prototype.moveAroundObstacles = function () {
 /**
  * Checks if a creep could occupy the given position.
  *
- * @param {RoomPosition} pos
+ * @param {RoomPosition} position
  *   The position to check.
  *
  * @return {boolean}
  *   True if the creep could occupy this position.
  */
-Creep.prototype.canMoveOnto = function (pos) {
-	const creeps = pos.lookFor(LOOK_CREEPS);
+Creep.prototype.canMoveOnto = function (this: Creep | PowerCreep, position) {
+	const creeps = position.lookFor(LOOK_CREEPS);
 	if (creeps.length > 0 && creeps[0].id !== this.id) return false;
 
-	const powerCreeps = pos.lookFor(LOOK_POWER_CREEPS);
+	const powerCreeps = position.lookFor(LOOK_POWER_CREEPS);
 	if (powerCreeps.length > 0 && powerCreeps[0].id !== this.id) return false;
 
-	const structures = pos.lookFor(LOOK_STRUCTURES);
+	const structures = position.lookFor(LOOK_STRUCTURES);
 	for (const structure of structures) {
 		if (!structure.isWalkable()) return false;
 	}
 
-	const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+	const sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
 	for (const site of sites) {
 		if (!site.isWalkable()) return false;
 	}
@@ -482,7 +539,7 @@ Creep.prototype.canMoveOnto = function (pos) {
  * @return {boolean}
  *   True if movement is possible and ongoing.
  */
-Creep.prototype.goTo = function (target, options) {
+Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 	if (!target) return false;
 	if (!options) options = {};
 
@@ -494,7 +551,7 @@ Creep.prototype.goTo = function (target, options) {
 		};
 	}
 
-	if (target.pos) {
+	if (target instanceof RoomObject) {
 		target = target.pos;
 	}
 
@@ -518,7 +575,7 @@ Creep.prototype.goTo = function (target, options) {
 		// Debug creep movement.
 		new RoomVisual(this.pos.roomName).line(this.pos, target);
 
-		if (this.memory.moveBlocked) {
+		if (this.heapMemory._moveBlocked) {
 			// Seems like we can't move on the target space for some reason right now.
 			// This should be rare, so we use the default pathfinder to get us the rest of the way there.
 			if (this.pos.getRangeTo(target) > range) {
@@ -546,7 +603,7 @@ Creep.prototype.goTo = function (target, options) {
  * @return {boolean}
  *   True if a path was successfully generated.
  */
-Creep.prototype.calculateGoToPath = function (target, options) {
+Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, options) {
 	const targetPos = utilities.encodePosition(target);
 	this.memory.go.target = targetPos;
 
@@ -592,26 +649,26 @@ Creep.prototype.calculateGoToPath = function (target, options) {
  * @return {boolean}
  *   True if movement is possible and ongoing.
  */
-Creep.prototype.moveToRoom = function (roomName: string, allowDanger?: boolean) {
+Creep.prototype.moveToRoom = function (this: Creep | PowerCreep, roomName, allowDanger) {
 	// Make sure we recalculate path if target changes.
-	if (this.memory._mtrTarget !== roomName) {
-		delete this.memory.nextRoom;
-		this.memory._mtrTarget = roomName;
+	if (this.heapMemory._mtrTarget !== roomName) {
+		delete this.heapMemory._mtrNextRoom;
+		this.heapMemory._mtrTarget = roomName;
 	}
 
 	// Check which room to go to next.
-	if (!this.memory.nextRoom || (this.pos.roomName === this.memory.nextRoom && this.isInRoom())) {
+	if (!this.heapMemory._mtrNextRoom || (this.pos.roomName === this.heapMemory._mtrNextRoom && this.isInRoom())) {
 		const path = this.calculateRoomPath(roomName, allowDanger);
 		if (_.size(path) < 1) {
 			// There is no valid path.
 			return false;
 		}
 
-		this.memory.nextRoom = path[0];
+		this.heapMemory._mtrNextRoom = path[0];
 	}
 
 	// Move to next room.
-	const target = new RoomPosition(25, 25, this.memory.nextRoom);
+	const target = new RoomPosition(25, 25, this.heapMemory._mtrNextRoom);
 	if (this.pos.getRangeTo(target) > 15) {
 		return this.moveToRange(target, 15);
 	}
@@ -631,15 +688,15 @@ Creep.prototype.moveToRoom = function (roomName: string, allowDanger?: boolean) 
  *   An array of room names, not including the current room, or null if no path
  *   could be found.
  */
-Creep.prototype.calculateRoomPath = function (roomName: string, allowDanger?: boolean) {
+Creep.prototype.calculateRoomPath = function (this: Creep | PowerCreep, roomName, allowDanger) {
 	return this.room.calculateRoomPath(roomName, {allowDanger});
 };
 
-Creep.prototype.isInRoom = function () {
+Creep.prototype.isInRoom = function (this: Creep | PowerCreep) {
 	return this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47;
 };
 
-Creep.prototype.interRoomTravel = function(targetPos: RoomPosition, allowDanger: boolean = false): boolean {
+Creep.prototype.interRoomTravel = function(this: Creep | PowerCreep, targetPos, allowDanger = false) {
 	const isInTargetRoom = this.pos.roomName === targetPos.roomName;
 	if (!isInTargetRoom || (!this.isInRoom() && this.getNavMeshMoveTarget())) {
 		if (this.heapMemory.moveWithoutNavMesh) {
@@ -666,7 +723,7 @@ Creep.prototype.interRoomTravel = function(targetPos: RoomPosition, allowDanger:
 	return false;
 }
 
-Creep.prototype.moveUsingNavMesh = function (targetPos: RoomPosition, options) {
+Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos, options) {
 	if (!hivemind.segmentMemory.isReady()) return OK;
 
 	if (!options) options = {};
@@ -675,9 +732,10 @@ Creep.prototype.moveUsingNavMesh = function (targetPos: RoomPosition, options) {
 	if (!this.heapMemory._nmpt || !this.heapMemory._nmp || this.heapMemory._nmpt !== pos) {
 		this.heapMemory._nmpt = pos;
 		const mesh = new NavMesh();
-		this.heapMemory._nmp = mesh.findPath(this.pos, targetPos, options);
-		if (this.heapMemory._nmp.path) {
-			this.heapMemory._nmp.path = _.map(this.heapMemory._nmp.path, utilities.encodePosition);
+		const path = mesh.findPath(this.pos, targetPos, options);
+		this.heapMemory._nmp = {
+			incomplete: path.incomplete,
+			path: path.path ? _.map(path.path, utilities.encodePosition) : null,
 		}
 
 		this.heapMemory._nmpi = 0;
@@ -714,11 +772,11 @@ Creep.prototype.moveUsingNavMesh = function (targetPos: RoomPosition, options) {
 	return OK;
 };
 
-Creep.prototype.getNavMeshMoveTarget = function (): string | null {
+Creep.prototype.getNavMeshMoveTarget = function (this: Creep | PowerCreep) {
 	return this.heapMemory._nmpt;
 };
 
-Creep.prototype.stopNavMeshMove = function () {
+Creep.prototype.stopNavMeshMove = function (this: Creep | PowerCreep) {
 	delete this.heapMemory._nmpt;
 	delete this.heapMemory._nmp;
 	delete this.heapMemory._nmpi;
