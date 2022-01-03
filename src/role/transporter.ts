@@ -138,6 +138,7 @@ export default class TransporterRole extends Role {
 
 		if (!this.ensureValidDeliveryTarget()) {
 			delete creep.memory.deliverTarget;
+			delete creep.memory.order;
 			return;
 		}
 
@@ -426,7 +427,7 @@ export default class TransporterRole extends Role {
 		const room: Room = this.creep.room;
 		const targets = room.find<StructureContainer>(FIND_STRUCTURES, {
 			filter: structure => {
-				if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.energy >= structure.store.getCapacity()) return false;
+				if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.getFreeCapacity() === 0) return false;
 
 				// Do deliver to controller containers when it is needed.
 				if (structure.id === structure.room.memory.controllerContainer) {
@@ -465,11 +466,12 @@ export default class TransporterRole extends Role {
 			};
 
 			let prioFactor = 1;
-			if (target.store[RESOURCE_ENERGY] / target.store.getCapacity() > 0.5) {
-				prioFactor = 2;
-			}
-			else if (target.store[RESOURCE_ENERGY] / target.store.getCapacity() > 0.75) {
+			if (target.store.getUsedCapacity() / target.store.getCapacity() > 0.75) {
 				prioFactor = 3;
+				option.priority--;
+			}
+			else if (target.store.getUsedCapacity() / target.store.getCapacity() > 0.5) {
+				prioFactor = 2;
 			}
 
 			option.priority -= room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
