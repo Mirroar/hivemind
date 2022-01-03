@@ -1,7 +1,10 @@
 import hivemind from 'hivemind';
 
 export default class PlayerIntel {
-  protected memory: {};
+  protected memory: {
+    rooms: string[];
+    remotes: string[];
+  };
 
   constructor(readonly userName: string) {
     const key = 'u-intel:' + userName;
@@ -14,5 +17,17 @@ export default class PlayerIntel {
 
   isNpc(): boolean {
     return this.userName === SYSTEM_USERNAME || this.userName === 'Invader';
+  }
+
+  setPlayerRooms(rooms: string[]) {
+    this.memory.rooms = rooms;
+  }
+
+  getAllPlayerRooms(): string[] {
+    return this.memory.rooms;
+  }
+
+  getAllPlayerRemotes(): string[] {
+    return this.memory.remotes;
   }
 }

@@ -52,7 +52,19 @@ function getRoomIntel(roomName: string): RoomIntel {
   return intelCache.rooms[roomName];
 }
 
+function getRoomsWithIntel(): string[] {
+  const result: string[] = [];
+  if (!hivemind.segmentMemory.isReady()) return result;
+
+  hivemind.segmentMemory.each('intel:', (key) => {
+    result.push(key.substr(6));
+  });
+
+  return result;
+}
+
 export {
   getPlayerIntel,
   getRoomIntel,
+  getRoomsWithIntel,
 }

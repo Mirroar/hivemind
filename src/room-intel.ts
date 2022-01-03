@@ -19,65 +19,67 @@ import utilities from 'utilities';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 import {getRoomIntel} from 'intel-management';
 
-export default class RoomIntel {
-	roomName: string;
-	memory: {
-		lastScan: number;
-		exits: {
-			[direction: string]: string;
-		};
-		rcl: number;
-		ticksToDowngrade: number;
-		ticksToNeutral: number;
-		hasController: boolean;
-		owner: string;
-		reservation: {
-			username: string;
-			ticksToEnd: number;
-		};
-		sources: {
-			x: number;
-			y: number;
-			id: Id<Source>;
-		}[];
-		mineralInfo: {
-			x: number;
-			y: number;
-			id: Id<Mineral>;
-			type: MineralConstant;
-		};
-		power: {
-			amount: number;
-			hits: number;
-			decays: number;
-			freeTiles: number;
-			pos: string;
-		};
-		structures: {
-			[T in StructureConstant]?: {
-				[id: string]: {
-					x: number;
-					y: number;
-					hits: number;
-					hitsMax: number;
-				};
+export interface RoomIntelMemory {
+	lastScan: number;
+	exits: {
+		[direction: string]: string;
+	};
+	rcl: number;
+	ticksToDowngrade: number;
+	ticksToNeutral: number;
+	hasController: boolean;
+	owner: string;
+	reservation: {
+		username: string;
+		ticksToEnd: number;
+	};
+	sources: {
+		x: number;
+		y: number;
+		id: Id<Source>;
+	}[];
+	mineralInfo: {
+		x: number;
+		y: number;
+		id: Id<Mineral>;
+		type: MineralConstant;
+	};
+	power: {
+		amount: number;
+		hits: number;
+		decays: number;
+		freeTiles: number;
+		pos: string;
+	};
+	structures: {
+		[T in StructureConstant]?: {
+			[id: string]: {
+				x: number;
+				y: number;
+				hits: number;
+				hitsMax: number;
 			};
 		};
-		terrain: {
-			exit: number;
-			wall: number;
-			swamp: number;
-			plain: number;
-		};
-		invaderInfo: {
-			level: number;
-			active: boolean;
-			activates: number;
-			collapses: number;
-		};
-		costPositions: [string, string];
-		lastScout: number;
 	};
+	terrain: {
+		exit: number;
+		wall: number;
+		swamp: number;
+		plain: number;
+	};
+	invaderInfo: {
+		level: number;
+		active: boolean;
+		activates: number;
+		collapses: number;
+	};
+	costPositions: [string, string];
+	lastScout: number;
+}
+
+export default class RoomIntel {
+	roomName: string;
+	memory: RoomIntelMemory;
 	newStatus: {
 		[direction: string]: boolean;
 	};
@@ -444,7 +446,7 @@ export default class RoomIntel {
 	 *   Number of ticks since intel was last gathered in this room.
 	 */
 	getAge(): number {
-		return Game.time - (this.memory.lastScan || -10000);
+		return Game.time - (this.memory.lastScan || -100000);
 	}
 
 	/**
@@ -492,6 +494,10 @@ export default class RoomIntel {
 		if (this.memory.owner !== utilities.getUsername()) return true;
 
 		return false;
+	}
+
+	getOwner(): string {
+		return this.memory.owner;
 	}
 
 	/**
@@ -741,21 +747,26 @@ export default class RoomIntel {
 	 *   Information about the room this operation is base on.
 	 */
 	addAdjacentRoomToCheck(roomName: string, openList, base) {
-		if (this.otherUnsafeRooms.indexOf(roomName) === -1) {
-			if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) {
-				// This is one of our own rooms, and as such is possibly safe.
-				if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return;
-				if (roomName === this.roomName) return;
-			}
-
-			if (this.otherSafeRooms.indexOf(roomName) > -1) return;
-		}
+		if (!this.isPotentiallyUnsafeRoom(roomName)) return;
 
 		openList[roomName] = {
 			range: base.range + 1,
 			origin: base.dir,
 			room: roomName,
 		};
+	}
+
+	isPotentiallyUnsafeRoom(roomName: string): boolean {
+		if (this.otherUnsafeRooms.includes(roomName)) return true;
+		if (this.otherSafeRooms.includes(roomName)) return false;
+
+		if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) {
+			// This is one of our own rooms, and as such is possibly safe.
+			if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return false;
+			if (roomName === this.roomName) return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -786,7 +797,7 @@ export default class RoomIntel {
 				break;
 			}
 
-			const found = openList[roomName] || closedList[roomName] || false;
+			const found = openList[roomName] || closedList[roomName];
 			if (found) {
 				if (found.origin !== roomData.origin) {
 					// Two different exit directions are joined here.
