@@ -36,7 +36,7 @@ export default class ReportProcess extends Process {
 				gpl: Game.gpl,
 				power: [],
 				storedPower: this.getStoredPower(),
-				remoteHarvestCount: Memory.strategy.remoteHarvesting.currentCount,
+				remoteHarvestCount: Memory.strategy?.remoteHarvesting?.currentCount || 0,
 				cpu: {},
 			},
 		};

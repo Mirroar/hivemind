@@ -41,23 +41,9 @@ export default class ManageLinksProcess extends Process {
 	 */
 	run() {
 		// Determine "requesting" links from link network.
-		const highLinks = [];
-		const lowLinks = [];
+		const highLinks = this.room.linkNetwork.overfullLinks;
+		const lowLinks = this.room.linkNetwork.underfullLinks;
 		const MIN_ENERGY_TRANSFER = LINK_CAPACITY / 4;
-
-		for (const info of this.room.linkNetwork.overfullLinks) {
-			highLinks.push({
-				link: info.link,
-				delta: info.delta,
-			});
-		}
-
-		for (const info of this.room.linkNetwork.underfullLinks) {
-			lowLinks.push({
-				link: info.link,
-				delta: info.delta,
-			});
-		}
 
 		// Stop if there is no link needing action.
 		if (highLinks.length === 0 && lowLinks.length === 0) return;

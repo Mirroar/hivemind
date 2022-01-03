@@ -43,6 +43,11 @@ export default class ManageLabsProcess extends Process {
 			room: this.room,
 		});
 
+		this.runReactions();
+	}
+
+	runReactions() {
+		const memory = this.room.memory;
 		if (!memory.currentReaction) return;
 
 		const source1 = Game.getObjectById<StructureLab>(memory.labs.source1);

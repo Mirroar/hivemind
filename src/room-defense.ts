@@ -111,7 +111,7 @@ export default class RoomDefense {
 			for (const creep of creeps) {
 				this.recordCreepStatus(creep);
 
-				if (!this.isWhitelisted(username) || !this.isUnarmedCreep(creep)) {
+				if (!this.isWhitelisted(username) || (!this.isUnarmedCreep(creep) && !hivemind.relations.isAlly(username))) {
 					// Deny unwanted creeps.
 					forbidden.push(creep);
 					continue;

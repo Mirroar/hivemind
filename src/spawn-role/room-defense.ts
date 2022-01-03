@@ -206,7 +206,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			return this.generateCreepBoosts(room, body, WORK, 'repair');
 		}
 		else if (option.creepRole === 'guardian') {
-			if (body.indexOf(ATTACK) !== -1) {
+			if (body.includes(ATTACK)) {
 				return this.generateCreepBoosts(room, body, ATTACK, 'attack');
 			}
 			else {

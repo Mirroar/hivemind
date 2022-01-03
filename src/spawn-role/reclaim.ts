@@ -27,6 +27,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 		this.spawnOptions = options;
 		this.room = room;
 		for (const targetRoom of Game.myRooms) {
+			if (room.name === targetRoom.name) continue;
 			this.addSpawnOptionsFor(targetRoom);
 		}
 	}

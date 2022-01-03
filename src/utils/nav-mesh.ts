@@ -381,7 +381,7 @@ export default class NavMesh {
 			if (hivemind.segmentMemory.isReady()) {
 				const roomIntel = getRoomIntel(nextRoom);
 				if (roomIntel.isOwned()) {
-					if (!options.allowDanger) continue;
+					if (!options.allowDanger && !hivemind.relations.isAlly(roomIntel.getOwner())) continue;
 
 					costMultiplier *= 5;
 				}

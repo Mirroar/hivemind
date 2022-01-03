@@ -405,7 +405,7 @@ export default class BrawlerRole extends Role {
 			// @todo Only flee from melee creeps.
 			// @todo Adjust cost matrix to disincentivize tiles around hostiles.
 			// @todo Include friendly creeps in obstacle list to prevent blocking.
-			const result = PathFinder.search(creep.pos, {pos: target.pos, range: 3}, {
+			const result = PathFinder.search(creep.pos, {pos: target.pos, range: 2}, {
 				roomCallback: roomName => utilities.getCostMatrix(roomName),
 				flee: true,
 				maxRooms: 1,

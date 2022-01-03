@@ -46,6 +46,9 @@ export default class GiftRole extends Role {
 
 		creep.withdraw(storage, creep.memory.targetResource);
 		delete creep.memory.targetResource;
+
+		// Do not send notifications when attacked - we mean to suicide.
+		creep.notifyWhenAttacked(false);
 	}
 
 	/**
@@ -73,9 +76,6 @@ export default class GiftRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performGiftTransport(creep) {
-		// Do not send notifications when attacked - we mean to suicide.
-		creep.notifyWhenAttacked(false);
-
 		// @todo Move to a nearby owned room with enough space left.
 		// @todo Move to a known enemy room and suicide.
 		this.scoutRole.run(creep);

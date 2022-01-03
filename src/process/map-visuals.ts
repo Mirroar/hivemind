@@ -34,7 +34,7 @@ export default class MapVisualsProcess extends Process {
 				this.drawRoomStatus(roomName);
 			});
 
-			_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy.roomList[roomName]), (mem, roomName) => {
+			_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy?.roomList[roomName]), (mem, roomName) => {
 				if (typeof roomName !== 'string') return;
 				this.drawIntelStatus(roomName);
 			});

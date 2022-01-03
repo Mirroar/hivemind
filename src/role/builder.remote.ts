@@ -248,7 +248,7 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		const dropped = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
-			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > creep.store.getCapacity() * 0.3 || creep.pos.getRangeTo(drop) <= 1),
+			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > creep.store.getCapacity() * 0.3 || (creep.pos.getRangeTo(drop) <= 1 && drop.amount > 20)),
 		});
 		if (dropped) {
 			creep.whenInRange(1, dropped, () => creep.pickup(dropped));
