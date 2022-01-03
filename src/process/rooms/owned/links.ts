@@ -4,6 +4,8 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 
 export default class ManageLinksProcess extends Process {
+	readonly MIN_ENERGY_TRANSFER = LINK_CAPACITY / 4;
+
 	room: Room;
 
 	/**
@@ -43,57 +45,64 @@ export default class ManageLinksProcess extends Process {
 		// Determine "requesting" links from link network.
 		const highLinks = this.room.linkNetwork.overfullLinks;
 		const lowLinks = this.room.linkNetwork.underfullLinks;
-		const MIN_ENERGY_TRANSFER = LINK_CAPACITY / 4;
 
 		// Stop if there is no link needing action.
 		if (highLinks.length === 0 && lowLinks.length === 0) return;
 
-		let fromLink;
-		let toLink;
-		if (highLinks.length > 0) {
-			const sorted = _.sortBy(_.filter(highLinks, link => link.link.cooldown <= 0), link => -link.delta);
-			fromLink = sorted[0];
-		}
+		const fromLink = this.getBestSourceLink(highLinks);
+		const toLink = this.getBestDesinationLink(lowLinks);
 
-		if (lowLinks.length > 0) {
-			const sorted = _.sortBy(lowLinks, link => -link.delta);
-			toLink = sorted[0];
-		}
-
-		if (this.room.linkNetwork.neutralLinks.length > 0) {
-			// Use neutral links if necessary.
-			if (!fromLink || fromLink.delta < MIN_ENERGY_TRANSFER) {
-				const sorted = _.sortBy(_.filter(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.cooldown <= 0), link => -link.energy);
-				if (sorted.length > 0) {
-					fromLink = {
-						link: sorted[0],
-						delta: sorted[0].energy,
-					};
-				}
-			}
-
-			if (!toLink || toLink.delta < MIN_ENERGY_TRANSFER) {
-				const sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.energy);
-				if (sorted.length > 0) {
-					toLink = {
-						link: sorted[0],
-						delta: sorted[0].energyCapacity - sorted[0].energy,
-					};
-				}
-			}
-		}
-
-		if (!fromLink || !toLink || fromLink.cooldown > 0) return;
+		if (!fromLink || !toLink) return;
 		if (fromLink.link.id === toLink.link.id) return;
 
 		// Calculate maximum possible transfer amount, taking into account 3% cost on arrival.
 		// @todo For some reason, using 1 + LINK_LOSS_RATIO as target amount results in ERR_FULL.
 		const amount = Math.floor(Math.min(fromLink.delta, toLink.delta));
-		if (amount < MIN_ENERGY_TRANSFER) return;
+		if (amount < this.MIN_ENERGY_TRANSFER) return;
 
 		const result = fromLink.link.transferEnergy(toLink.link, amount);
 		if (result !== 0) {
 			hivemind.log('default', this.room.name).debug('link transfer of', amount, 'energy failed:', result);
 		}
+	}
+
+	getBestSourceLink(highLinks: {link: StructureLink, delta: number}[]) {
+		const sorted = _.sortBy(_.filter(highLinks, link => link.link.cooldown <= 0), link => -link.delta);
+
+		if (sorted[0] && sorted[0].delta >= this.MIN_ENERGY_TRANSFER) return sorted[0];
+
+		return this.getNeutralHighEnergyLink() || sorted[0];
+	}
+
+	getBestDesinationLink(lowLinks: {link: StructureLink, delta: number}[]) {
+		const sorted = _.sortBy(lowLinks, link => -link.delta);
+
+		if (sorted[0] && sorted[0].delta >= this.MIN_ENERGY_TRANSFER) return sorted[0];
+
+		return this.getNeutralLowEnergyLink() || sorted[0];
+	}
+
+	getNeutralHighEnergyLink(): {link: StructureLink, delta: number} {
+		const sorted = _.sortBy(_.filter(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.cooldown <= 0), link => -link.energy);
+		if (sorted.length > 0) {
+			return {
+				link: sorted[0],
+				delta: sorted[0].energy,
+			};
+		}
+
+		return null;
+	}
+
+	getNeutralLowEnergyLink(): {link: StructureLink, delta: number} {
+		const sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.energy);
+		if (sorted.length > 0) {
+			return {
+				link: sorted[0],
+				delta: sorted[0].energyCapacity - sorted[0].energy,
+			};
+		}
+
+		return null;
 	}
 }
