@@ -425,22 +425,24 @@ export default class HaulerRole extends Role {
 		if (creep.operation.hasContainer(creep.memory.source)) {
 			// Make sure container is in good condition.
 			const container = creep.operation.getContainer(creep.memory.source);
-			if (creep.pos.getRangeTo(container) > 3 || container.hits > container.hitsMax - (workParts * 100)) return false;
+			if (container) {
+				if (creep.pos.getRangeTo(container) > 3 || container.hits > container.hitsMax - (workParts * 100)) return false;
 
-			// Many repairs to do, so stay here for next tick.
-			if (this.actionTaken) return true;
+				// Many repairs to do, so stay here for next tick.
+				if (this.actionTaken) return true;
 
-			if (creep.repair(container) === OK) {
-				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
-				this.actionTaken = true;
+				if (creep.repair(container) === OK) {
+					creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
+					this.actionTaken = true;
+				}
+
+				// If structure is especially damaged, stay here to keep repairing.
+				if (container.hits < container.hitsMax - (workParts * 2 * 100)) {
+					return true;
+				}
+
+				return false;
 			}
-
-			// If structure is especially damaged, stay here to keep repairing.
-			if (container.hits < container.hitsMax - (workParts * 2 * 100)) {
-				return true;
-			}
-
-			return false;
 		}
 
 		// Check if there is a container or construction site nearby.
