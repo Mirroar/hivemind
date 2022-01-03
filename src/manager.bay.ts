@@ -6,9 +6,10 @@ declare global {
 	interface Room {
 		bays: Bay[],
 	}
-}
 
-type AnyBayStructure = typeof bayStructures[number];
+	type BayStructureConstant = typeof bayStructures[number];
+	type AnyBayStructure = ConcreteStructure<BayStructureConstant>;
+}
 
 import cache from 'utils/cache';
 import utilities from 'utilities';
@@ -20,7 +21,7 @@ export default class Bay {
 	pos: RoomPosition;
 	name: string;
 	_hasHarvester: boolean;
-	extensions: Structure<AnyBayStructure>[];
+	extensions: AnyBayStructure[];
 	energy: number;
 	energyCapacity: number;
 
@@ -66,7 +67,7 @@ export default class Bay {
 		if (blocked) return;
 
 		for (const id of bayExtensions) {
-			const extension = Game.getObjectById<Structure<AnyBayStructure>>(id);
+			const extension = Game.getObjectById<AnyBayStructure>(id);
 			if (!extension) continue;
 
 			this.extensions.push(extension);
