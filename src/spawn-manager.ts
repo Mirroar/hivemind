@@ -31,6 +31,7 @@ const roleNameMap = {
 	'harvester.minerals': 'HM',
 	'harvester.remote': 'HR',
 	'harvester.power': 'HP',
+	mule: 'M',
 	scout: 'S',
 	transporter: 'T',
 	'hauler.exploit': 'TE',

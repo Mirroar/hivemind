@@ -20,6 +20,7 @@ import haulerRole from 'role/hauler';
 import exploitHaulerRole from 'role/exploit/hauler';
 import powerHaulerRole from 'role/power/hauler';
 import helperRole from 'role/helper';
+import muleRole from 'role/mule';
 import scoutRole from 'role/scout';
 import transporterRole from 'role/transporter';
 import unassignedRole from 'role/unassigned';
@@ -44,6 +45,7 @@ const creepRoles = {
 	'hauler.exploit': exploitHaulerRole,
 	'hauler.power': powerHaulerRole,
 	'helper': helperRole,
+	'mule': muleRole,
 	'scout': scoutRole,
 	'transporter': transporterRole,
 	'unassigned': unassignedRole,
