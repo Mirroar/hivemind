@@ -205,7 +205,6 @@ export default class RoomManager {
 		if (this.room.controller.level === 0) {
 			// If we're waiting for a claim, busy ourselves by building roads.
 			this.buildPlannedStructures('road', STRUCTURE_ROAD);
-			this.buildOperationRoads();
 		}
 
 		if (this.room.controller.level < 2) return;
@@ -276,6 +275,7 @@ export default class RoomManager {
 
 		// At level 4, we can build all remaining roads.
 		this.buildPlannedStructures('road', STRUCTURE_ROAD);
+		this.buildOperationRoads();
 
 		// Further constructions should only happen in safe rooms.
 		if (this.room.isEvacuating()) return;
@@ -501,7 +501,7 @@ export default class RoomManager {
 		if (hivemind.settings.get('constructLabs')) {
 			// Make sure labs are built in the right place, remove otherwise.
 			this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
-			if (CONTROLLER_STRUCTURES[this.room.controller.level] === 3) {
+			if (CONTROLLER_STRUCTURES[STRUCTURE_LAB][this.room.controller.level] === 3) {
 				// Build reaction labs first if we only have enough to start reactions.
 				this.buildPlannedStructures('lab.reaction', STRUCTURE_LAB);
 			}

@@ -38,7 +38,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       // @todo Protect positions for mincut
       this.placeRamparts,
       this.placeTowers,
-      this.placeSpawnWalls,
     ];
   }
 
@@ -87,6 +86,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     for (const source of roomIntel.getSourcePositions()) {
       const harvestPosition = this.determineHarvestPositionForSource(source);
       this.placementManager.planLocation(harvestPosition, 'harvester', null);
+      this.placementManager.planLocation(harvestPosition, 'harvester.' + source.id, null);
       this.placementManager.planLocation(harvestPosition, 'bay_center', null);
 
       // Discourage roads through spots around harvest position.
@@ -610,35 +610,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     const step = new PlaceTowersStep(this.roomPlan, this.placementManager, this.safetyMatrix);
     return step.run();
   }
-
-  /**
-   * Places walls around spawns so creeps don't get spawned on inaccessible tiles.
-   */
-  placeSpawnWalls(): StepResult {
-    for (const pos of this.roomPlan.getPositions('spawn')) {
-      utilities.handleMapArea(pos.x, pos.y, (x, y) => {
-        if (this.placementManager.isBuildableTile(x, y)) {
-          // Check if any adjacent tile has a road, which means creeps can leave from there.
-          let hasRoad = false;
-          utilities.handleMapArea(x, y, (ax, ay) => {
-            if (this.roomPlan.hasPosition('road', new RoomPosition(ax, ay, this.roomName)) && this.placementManager.isBuildableTile(ax, ay, true)) {
-              hasRoad = true;
-              return false;
-            }
-
-            return true;
-          });
-          if (hasRoad) return;
-
-          // Place a wall to prevent spawning in this direction.
-          this.placementManager.planLocation(new RoomPosition(x, y, pos.roomName), 'wall');
-          this.placementManager.planLocation(new RoomPosition(x, y, pos.roomName), 'wall.blocker');
-        }
-      });
-    }
-
-    return 'ok';
-  };
 
   isFinished(): boolean {
     return this.finished;

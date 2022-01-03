@@ -24,7 +24,7 @@ export default class RoomPlanGenerator {
   results: {
     [variation: string]: {
       plan: RoomPlan;
-      score: number;
+      score: {[key: string]: number};
     }
   };
 
@@ -91,11 +91,41 @@ export default class RoomPlanGenerator {
 
   getRoomPlan(): RoomPlan {
     // @todo Get room plan with highest score.
-    const best = _.max(this.results, 'score');
+    const best = _.max(this.results, 'score.total');
 
     if (best) return best.plan;
 
     return null;
+  }
+
+  outputScores() {
+    let output = '<table border="1"><tr><th>Variation</th><th>Total Score</th>';
+    let finishedHeader = false;
+    const keys = ['total'];
+
+    for (const variation in this.results) {
+      const score = this.results[variation].score;
+      if (!finishedHeader) {
+        for (const key in score) {
+          if (!keys.includes(key)) {
+            keys.push(key);
+            output += '<th>' + key + '</th>';
+          }
+        }
+
+        finishedHeader = true;
+        output += '</tr>';
+      }
+
+      output += '<tr><td>' + variation + '</td>';
+      for (const key of keys) {
+        output += '<td>' + score[key].toPrecision(3) + '</td>';
+      }
+      output += '</tr>';
+    }
+
+    output += '</table>';
+    console.log(output);
   }
 
   visualize() {

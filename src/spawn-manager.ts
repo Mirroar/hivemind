@@ -169,8 +169,12 @@ export default class SpawnManager {
 		// Actually try to spawn this creep.
 		// @todo Use extensions grouped by bay to make refilling easier.
 		const creepName = this.generateCreepName(memory.role);
+		const directions = spawn.getSpawnDirections();
+		const energyStructures = room.getEnergyStructures();
 		const result = spawn.spawnCreep(body, creepName, {
 			memory,
+			directions,
+			energyStructures,
 		});
 
 		if (result !== OK) return false;

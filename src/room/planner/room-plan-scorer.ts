@@ -1,18 +1,21 @@
 import RoomPlan from 'room/planner/room-plan';
+import {getRoomIntel} from 'intel-management';
 
 export default class RoomPlanScorer {
   constructor (protected readonly roomName: string) {}
 
-  getScore(plan: RoomPlan): number {
-    let score = 0;
+  getScore(plan: RoomPlan): {[key: string]: number} {
+    let score: {[key: string]: number} = {};
 
-    score += this.getPlannedBuildingsScore(plan);
-    score += this.getRequiredMaintenanceScore(plan);
-    score += this.getAverageTowerScore(plan);
+    score.structures = this.getPlannedBuildingsScore(plan);
+    score.maintenance = this.getRequiredMaintenanceScore(plan);
+    score.towers = this.getAverageTowerScore(plan);
+    score.distance = this.getTravelDistancesScore(plan);
 
     // @todo Score unprotected structures.
-    // @todo Score travel distances (extensions, sources, controller, ...).
     // @todo Score susceptibility to nukes.
+
+    score.total = _.sum(score);
 
     return score;
   }
@@ -82,5 +85,58 @@ export default class RoomPlanScorer {
   getTowerEffectScore(pos: RoomPosition, otherPos: RoomPosition): number {
     const effectiveRange = Math.min(Math.max(pos.getRangeTo(otherPos) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE);
     return 1 - ((effectiveRange - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE));
+  }
+
+  getTravelDistancesScore(plan: RoomPlan): number {
+    const matrix = plan.createNavigationMatrix();
+    const roomIntel = getRoomIntel(this.roomName);
+
+    let total = 0;
+
+    // Travel time from spawn to harvest positions.
+    const spawnGoals = _.map(
+      plan.getPositions(STRUCTURE_SPAWN),
+      spawnPosition => {return {pos: spawnPosition, range: 1};}
+    );
+    total -= 0.003 * _.sum(_.map(
+      plan.getPositions('harvester'),
+      harvestPosition => this.getPathLength(harvestPosition, spawnGoals, matrix)
+    ));
+
+    // Travel time from spawn to upgrader position.
+    // @todo Use position from room planner once we switch to range 3 from
+    // controller.
+    total -= 0.002 * this.getPathLength(roomIntel.getControllerPosition(), spawnGoals, matrix);
+
+    // Travel time from spawn to extractor.
+    const mineralInfo = roomIntel.getMineralPosition();
+    const mineralPosition = new RoomPosition(mineralInfo.x, mineralInfo.y, this.roomName);
+    total -= 0.001 * this.getPathLength(mineralPosition, spawnGoals, matrix);
+
+    // @todo Refill travel time from storage to bays.
+    const roomCenter = _.sample(plan.getPositions('center')) || _.sample(plan.getPositions(STRUCTURE_STORAGE));
+
+    // @todo Refill travel time from storage to spawns / extensions not in a bay.
+
+    // Refill travel time from storage to towers.
+    total -= 0.001 * _.sum(_.map(
+      plan.getPositions('tower'),
+      towerPosition => this.getPathLength(towerPosition, roomCenter, matrix)
+    ));
+
+    return total;
+  }
+
+  getPathLength(from: RoomPosition, to: RoomPosition | {pos: RoomPosition, range: number} | {pos: RoomPosition, range: number}[], matrix: CostMatrix): number {
+    const result = PathFinder.search(from, to, {
+      roomCallback: () => matrix,
+      plainCost: 2,
+      swampCost: 10,
+      maxRooms: 1,
+    });
+
+    if (result.incomplete) return 1000;
+
+    return result.path.length;
   }
 }

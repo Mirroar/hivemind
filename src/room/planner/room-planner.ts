@@ -1,5 +1,5 @@
 /* global PathFinder Room RoomPosition RoomVisual OBSTACLE_OBJECT_TYPES
-CONTROLLER_STRUCTURES TERRAIN_MASK_WALL FIND_SOURCES FIND_MINERALS */
+CONTROLLER_STRUCTURES FIND_SOURCES FIND_MINERALS */
 
 declare global {
 	interface Room {
@@ -41,13 +41,13 @@ function setGenerator(roomName, generator: RoomPlanGenerator) {
 
 export default class RoomPlanner {
 
-	activeRoomPlan: RoomPlan;
-	activeRoomPlanVersion: number;
-	generator: RoomPlanGenerator;
-	roomPlannerVersion: number;
-	roomName: string;
-	room: Room;
-	memory: {
+	protected activeRoomPlan: RoomPlan;
+	protected activeRoomPlanVersion: number;
+	protected generator: RoomPlanGenerator;
+	protected roomPlannerVersion: number;
+	readonly roomName: string;
+	protected room: Room;
+	protected memory: {
 		drawDebug: number;
 		lastRun: number;
 		adjacentSafe: {
@@ -55,18 +55,6 @@ export default class RoomPlanner {
 		};
 		adjacentSafeRooms: string[];
 	};
-	buildingMatrix: CostMatrix;
-	terrain: RoomTerrain;
-	safetyMatrix: CostMatrix;
-	exitTiles;
-	wallDistanceMatrix: CostMatrix;
-	exitDistanceMatrix: CostMatrix;
-	roads: RoomPosition[];
-	roomCenter: RoomPosition;
-	roomCenterEntrances: RoomPosition[];
-	openList;
-	closedList;
-	currentBuildSpot;
 
 	/**
 	 * Creates a room layout and makes sure the room is built accordingly.
@@ -79,8 +67,8 @@ export default class RoomPlanner {
 		this.roomPlannerVersion = 35;
 		this.roomName = roomName;
 		const activeInfo = getRoomPlanFor(roomName);
-		this.activeRoomPlan = activeInfo.plan;
-		this.activeRoomPlanVersion = activeInfo.version;
+		this.activeRoomPlan = activeInfo && activeInfo.plan;
+		this.activeRoomPlanVersion = activeInfo ? activeInfo.version : 0;
 		this.room = Game.rooms[roomName]; // Will not always be available.
 
 		const key = 'planner:' + roomName;
@@ -153,6 +141,7 @@ export default class RoomPlanner {
 	}
 
 	applyGeneratedRoomPlan() {
+		this.generator.outputScores();
 		this.activeRoomPlan = this.generator.getRoomPlan();
 		setRoomPlanFor(this.roomName, this.activeRoomPlan, this.roomPlannerVersion);
 		hivemind.log('rooms', this.roomName).info('Stored room plan for room ' + this.roomName);
@@ -162,7 +151,7 @@ export default class RoomPlanner {
 		// Reset harvest position info for harvesters in case they are not correctly
 		// assigned any more.
 		if (this.room) {
-			_.each(this.room.creepsByRole.harvester, creep => {
+			_.each(this.room.creepsByRole.harvester, (creep: HarvesterCreep) => {
 				delete creep.memory.harvestPos;
 				delete creep.memory.noHarvestPos;
 			});
@@ -290,24 +279,7 @@ export default class RoomPlanner {
 	 */
 	getNavigationMatrix(): CostMatrix {
 		return cache.inHeap('plannerCostMatrix:' + this.roomName, 500, () => {
-			const matrix = new PathFinder.CostMatrix();
-
-			for (const locationType of this.activeRoomPlan.getPositionTypes()) {
-				if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
-
-				for (const pos of this.activeRoomPlan.getPositions(locationType)) {
-					if (locationType === 'road') {
-						if (matrix.get(pos.x, pos.y) === 0) {
-							matrix.set(pos.x, pos.y, 1);
-						}
-					}
-					else {
-						matrix.set(pos.x, pos.y, 255);
-					}
-				}
-			}
-
-			return matrix;
+			return this.activeRoomPlan.createNavigationMatrix();
 		});
 	};
 }

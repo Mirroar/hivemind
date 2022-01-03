@@ -1,24 +1,28 @@
+import cache from 'utils/cache';
+import utilities from 'utilities';
+
 /* global Structure StructureExtension StructureSpawn StructureTower
 STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF
 OBSTACLE_OBJECT_TYPES BODYPART_COST */
 declare global {
 	interface Structure {
-		heapMemory: StructureHeapMemory,
-		isWalkable: () => boolean,
-		isOperational: () => boolean,
+		heapMemory: StructureHeapMemory;
+		isWalkable: () => boolean;
+		isOperational: () => boolean;
 	}
 
 	interface StructureExtension {
-		isBayExtension: () => boolean,
+		isBayExtension: () => boolean;
 	}
 
 	interface StructureSpawn {
-		isBaySpawn: () => boolean,
-		calculateCreepBodyCost,
+		isBaySpawn: () => boolean;
+		calculateCreepBodyCost;
+		getSpawnDirections: () => DirectionConstant[];
 	}
 
 	interface StructureTower {
-		getPowerAtRange,
+		getPowerAtRange;
 	}
 
 	interface StructureHeapMemory {}
@@ -99,6 +103,24 @@ StructureExtension.prototype.isBayExtension = function () {
 
 StructureSpawn.prototype.isBaySpawn = StructureExtension.prototype.isBayExtension;
 
+StructureSpawn.prototype.getSpawnDirections = function (this: StructureSpawn): DirectionConstant[] {
+	if (!this.room.roomPlanner) return null;
+
+	return cache.inHeap('spawnDir:' + this.name, 100, () => {
+		const directions = [];
+
+		utilities.handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+			const position = new RoomPosition(x, y, this.pos.roomName);
+			if (!this.room.roomPlanner.isPlannedLocation(position, STRUCTURE_ROAD)) return;
+			if (this.room.roomPlanner.isPlannedLocation(position, 'bay_center')) return;
+
+			directions.push(this.pos.getDirectionTo(position));
+		});
+
+		return directions;
+	});
+}
+
 /**
  * Calculates relative tower power at a certain range.
  *
@@ -108,7 +130,7 @@ StructureSpawn.prototype.isBaySpawn = StructureExtension.prototype.isBayExtensio
  * @return {number}
  *   Relative power between 0 and 1.
  */
-StructureTower.prototype.getPowerAtRange = function (range) {
+StructureTower.prototype.getPowerAtRange = function (this: StructureTower, range: number) {
 	if (range < TOWER_OPTIMAL_RANGE) range = TOWER_OPTIMAL_RANGE;
 	if (range > TOWER_FALLOFF_RANGE) range = TOWER_FALLOFF_RANGE;
 

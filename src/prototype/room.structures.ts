@@ -3,17 +3,19 @@ FIND_STRUCTURES */
 
 declare global {
 	interface Room {
-		addStructureReference,
-		generateLinkNetwork,
-		isClearingTerminal,
-		isClearingStorage,
-		isEvacuating,
-		linkNetwork: LinkNetwork,
-		setClearingTerminal,
-		setEvacuating,
+		addStructureReference;
+		generateLinkNetwork;
+		isClearingTerminal;
+		isClearingStorage;
+		isEvacuating;
+		linkNetwork: LinkNetwork;
+		setClearingTerminal;
+		setEvacuating;
+		getEnergyStructures: () => (StructureSpawn | StructureExtension)[];
 	}
 }
 
+import Bay from 'manager.bay';
 import cache from 'utils/cache';
 import LinkNetwork from 'link-network';
 
@@ -150,3 +152,33 @@ Room.prototype.isClearingStorage = function () {
 
 	return false;
 };
+
+Room.prototype.getEnergyStructures = function (this: Room): (StructureSpawn | StructureExtension)[] {
+	if (!this.roomPlanner) return undefined;
+
+	return cache.inHeap('energyStructures:' + this.name, 100, () => {
+		const structures: (StructureSpawn | StructureExtension)[] = [];
+
+		for (const bay of getBaysByPriority(this)) {
+			for (const structure of bay.extensions) {
+				if (structure.structureType !== STRUCTURE_SPAWN && structure.structureType !== STRUCTURE_EXTENSION) continue;
+
+				structures.push(structure);
+			}
+		}
+
+		return structures;
+	});
+}
+
+function getBaysByPriority(room: Room): Bay[] {
+	const center = room.roomPlanner.getRoomCenter();
+	return _.sortBy(room.bays, bay => {
+		// @todo Prefer partially filled bays.
+
+		const distance = center.getRangeTo(bay.pos);
+		if (_.min(_.map(room.find(FIND_SOURCES), source => source.pos.getRangeTo(bay.pos))) <= 1) return distance / 50;
+
+		return 1 + distance / 50;
+	});
+}

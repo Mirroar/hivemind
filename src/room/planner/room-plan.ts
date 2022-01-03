@@ -142,4 +142,30 @@ export default class RoomPlan {
     }
   }
 
+  /**
+   * Gets a cost matrix representing this room when it's fully built.
+   *
+   * @return {PathFinder.CostMatrix}
+   *   The requested cost matrix.
+   */
+  createNavigationMatrix(): CostMatrix {
+    const matrix = new PathFinder.CostMatrix();
+
+    for (const locationType of this.getPositionTypes()) {
+      if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
+
+      for (const pos of this.getPositions(locationType)) {
+        if (locationType === 'road') {
+          if (matrix.get(pos.x, pos.y) === 0) {
+            matrix.set(pos.x, pos.y, 1);
+          }
+        }
+        else {
+          matrix.set(pos.x, pos.y, 255);
+        }
+      }
+    }
+
+    return matrix;
+  };
 }
