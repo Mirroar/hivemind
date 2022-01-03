@@ -25,7 +25,7 @@ export default class RemoteMiningProcess extends Process {
 		if (!Memory.strategy.remoteHarvesting) {
 			// Try starting with 2.
 			Memory.strategy.remoteHarvesting = {
-				currentCount: 2,
+				currentCount: 20,
 				lastCheck: Game.time,
 				rooms: [],
 			};
@@ -106,6 +106,10 @@ export default class RemoteMiningProcess extends Process {
 			sourceRooms[info.origin].current++;
 
 			if (availableHarvestRoomCount < memory.remoteHarvesting.currentCount) {
+				// Disregard rooms the user doesn't want harvested.
+				const roomFilter = hivemind.settings.get('remoteMineRoomFilter');
+				if (roomFilter && !roomFilter(info.roomName)) continue;
+
 				// Harvest from this room.
 				memory.remoteHarvesting.rooms.push(info.roomName);
 			}
@@ -131,6 +135,13 @@ export default class RemoteMiningProcess extends Process {
 		if (!memory.remoteHarvesting.lastCheck || !hivemind.hasIntervalPassed(1000, memory.remoteHarvesting.lastCheck)) return;
 
 		memory.remoteHarvesting.lastCheck = Game.time;
+
+		if (Game.myRooms.length < 3) {
+			// Early game, make sure to remote mine as much as possible for a
+			// quick start.
+			memory.remoteHarvesting.currentCount = 20;
+			return;
+		}
 
 		// Reduce count if we are over the available maximum.
 		if (memory.remoteHarvesting.currentCount > availableHarvestRoomCount) {
