@@ -27,6 +27,7 @@ declare global {
 import { ErrorMapper } from "utils/ErrorMapper";
 
 import './prototype/construction-site';
+import './prototype/cost-matrix';
 import './prototype/creep';
 import './prototype/room';
 import './prototype/structure';
