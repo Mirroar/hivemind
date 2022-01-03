@@ -22,9 +22,10 @@ export default class SegmentedMemory {
 	data;
 	loadedSegments;
 	totalLength: number;
-	savedKeys;
+	savedKeys: Record<string, boolean>;
 	currentSegment: number;
 	startSegment: number;
+	numSavedSegments: number;
 
 	constructor() {
 		this._isReady = false;
@@ -47,6 +48,7 @@ export default class SegmentedMemory {
 		}
 
 		this.memory = Memory.segmented;
+		this.numSavedSegments = 0;
 
 		if (!this.isReady()) {
 			this.reloadData();
@@ -123,6 +125,7 @@ export default class SegmentedMemory {
 
 			if (stringified.length + partLength > maxSegmentLength) {
 				RawMemory.segments[this.currentSegment] = stringified;
+				this.numSavedSegments++;
 				this.totalLength += stringified.length;
 				this.currentSegment++;
 				stringified = '';
@@ -144,6 +147,7 @@ export default class SegmentedMemory {
 		if (allSaved) {
 			// Save remainder of data.
 			RawMemory.segments[this.currentSegment] = stringified;
+			this.numSavedSegments++;
 			this.totalLength += stringified.length;
 
 			// Register complete save.
@@ -190,9 +194,19 @@ export default class SegmentedMemory {
 		return typeof this.data[key] !== 'undefined';
 	}
 
+	each<T>(prefix: string, callback: (key: string, value?: T) => void) {
+		for (const key in this.data) {
+			if (key.startsWith(prefix)) callback(key, this.data[key]);
+		}
+	}
+
 	forceSave() {
 		if (!this.isReady()) throw new Error('Segmented Memory is not ready yet.');
 
 		this.memory.lastFullSave = Game.time - 100;
+	}
+
+	getSavedSegmentsThisTick() {
+		return this.numSavedSegments || 0;
 	}
 };
