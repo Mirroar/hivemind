@@ -15,12 +15,8 @@ declare global {
 		deliverTarget?: any;
 		exploitName?: any;
 		extraEnergyTarget?: any;
-		fixedMineral?: any;
-		fixedSource?: any;
-		harvestPos?: any;
 		isHealer?: any;
 		isReturning?: any;
-		noHarvestPos?: any;
 		order?: any;
 		origin?: any;
 		pickupResources?: any;

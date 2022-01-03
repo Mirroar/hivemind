@@ -9,6 +9,26 @@ STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES LOOK_RESOURCES LOOK_STRUCTURES */
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
+import {serializeCoords} from 'utils/serialization';
+
+declare global {
+	interface HarvesterCreep extends Creep {
+		memory: HarvesterCreepMemory;
+		heapMemory: HarvesterCreepHeapMemory;
+	}
+
+	interface HarvesterCreepMemory extends CreepMemory {
+		role: 'harvester';
+		harvesting: boolean;
+		fixedSource: Id<Source>;
+		fixedMineralSource: Id<Mineral>;
+		harvestPos: number;
+		noHarvestPos: boolean;
+	}
+
+	interface HarvesterCreepHeapMemory extends CreepHeapMemory {
+	}
+}
 
 export default class HarvesterRole extends Role {
 	transporterRole: TransporterRole;
@@ -26,10 +46,10 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Makes a creep behave like a harvester.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: HarvesterCreep) {
 		this.transporterRole.creep = creep;
 
 		const carryAmount = creep.store.getUsedCapacity();
@@ -55,19 +75,23 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Determines where a harvester's fixed position should be.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
-	 * @param {Source} source
+	 * @param {Source | Mineral} source
 	 *   The source this harvester is assigned to.
 	 */
-	determineHarvestPosition(creep, source) {
+	determineHarvestPosition(creep: HarvesterCreep, source: Source | Mineral) {
 		if (creep.memory.harvestPos || creep.memory.noHarvestPos) return;
 		if (!creep.room.roomPlanner) return;
 
-		const sourceMemory = creep.room.roomPlanner.memory.sources;
-		if (sourceMemory && sourceMemory[source.id]) {
-			creep.memory.harvestPos = sourceMemory[source.id].harvestPos;
-		}
+		// Get harvest position from room planner.
+		const harvestPos = _.sample(creep.room.roomPlanner.getLocations('harvester.' + source.id));
+		if (harvestPos) creep.memory.harvestPos = serializeCoords(harvestPos.x, harvestPos.y);
+
+		// Fall back to adjacent bay for older room plans.
+		// @todo Remove when room planner version gets incremented.
+		const bay = _.sample(_.filter(creep.room.bays, bay => bay.pos.getRangeTo(source.pos) <= 1));
+		if (bay) creep.memory.harvestPos = serializeCoords(bay.pos.x, bay.pos.y);
 
 		if (!creep.memory.harvestPos) {
 			creep.memory.noHarvestPos = true;
@@ -77,12 +101,12 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Puts this creep into or out of harvesting mode.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 * @param {boolean} harvesting
 	 *   Whether this creep should be harvesting.
 	 */
-	setHarvesterState(creep, harvesting) {
+	setHarvesterState(creep: HarvesterCreep, harvesting: boolean) {
 		creep.memory.harvesting = harvesting;
 		delete creep.memory.resourceTarget;
 		delete creep.memory.deliverTarget;
@@ -91,11 +115,11 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Makes the creep gather resources in the current room.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 */
-	performHarvest(creep) {
-		let source;
+	performHarvest(creep: HarvesterCreep) {
+		let source: Source | Mineral;
 		if (creep.memory.fixedSource) {
 			source = Game.getObjectById(creep.memory.fixedSource);
 			// @todo Just in case, handle source not existing anymore.
@@ -134,13 +158,13 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Deposits energy in a harvester's bay.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 *
 	 * @return {boolean}
 	 *   True if the harvester is in a bay.
 	 */
-	depositInBay(creep: Creep) {
+	depositInBay(creep: HarvesterCreep) {
 		if (!creep.memory.harvestPos) return false;
 		const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
 		const bay = _.find(creep.room.bays, bay => bay.name === utilities.encodePosition(harvestPosition));
@@ -157,10 +181,10 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Makes a harvester pickup energy from the ground or a close container.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 */
-	pickupEnergy(creep: Creep) {
+	pickupEnergy(creep: HarvesterCreep) {
 		const resources = creep.pos.lookFor(LOOK_RESOURCES);
 		const energy = _.find(resources, r => r.resourceType === RESOURCE_ENERGY);
 		if (energy) {
@@ -178,12 +202,12 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Makes a harvester deposit resources in nearby structures.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 * @param {Source} source
 	 *   The source this harvester is assigned to.
 	 */
-	depositResources(creep, source) {
+	depositResources(creep: HarvesterCreep, source: Source | Mineral) {
 		if (creep.store.getFreeCapacity() > creep.store.getCapacity() * 0.5) return;
 
 		const targetContainer = source.getNearbyContainer();
@@ -201,7 +225,7 @@ export default class HarvesterRole extends Role {
 		}
 
 		let target = source.getNearbyContainer();
-		if (creep.store.energy > 0) {
+		if (source instanceof Source && creep.store.energy > 0) {
 			const link = source.getNearbyLink();
 			if (link && link.energy < link.energyCapacity) {
 				target = link;
@@ -231,10 +255,10 @@ export default class HarvesterRole extends Role {
 	/**
 	 * Dumps resources a harvester creep has gathered.
 	 *
-	 * @param {Creep} creep
+	 * @param {HarvesterCreep} creep
 	 *   The creep to run logic for.
 	 */
-	performHarvesterDeliver(creep) {
+	performHarvesterDeliver(creep: HarvesterCreep) {
 		if (!creep.memory.fixedSource) return;
 
 		if (_.size(creep.room.creepsByRole.transporter) === 0) {
