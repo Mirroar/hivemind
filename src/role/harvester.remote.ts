@@ -4,7 +4,7 @@ FIND_MY_CONSTRUCTION_SITES */
 
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
-import utilities from 'utilities';
+import {decodePosition, serializePositionPath} from 'utils/serialization';
 
 export default class RemoteHarvesterRole extends Role {
 	constructor() {
@@ -42,12 +42,12 @@ export default class RemoteHarvesterRole extends Role {
 	 *   Whether the creep is in the process of moving.
 	 */
 	travelToSource(creep) {
-		const sourcePosition = utilities.decodePosition(creep.memory.source);
+		const sourcePosition = decodePosition(creep.memory.source);
 
 		if (creep.pos.roomName !== creep.operation.getRoom() && !creep.hasCachedPath()) {
 			const paths = creep.operation.getPaths();
 			if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return false;
-			creep.setCachedPath(utilities.serializePositionPath(paths[creep.memory.source].path), true, 1);
+			creep.setCachedPath(serializePositionPath(paths[creep.memory.source].path), true, 1);
 		}
 
 		if (creep.hasCachedPath()) {
@@ -105,7 +105,7 @@ export default class RemoteHarvesterRole extends Role {
 			}
 		}
 
-		const sourcePosition = utilities.decodePosition(creep.memory.source);
+		const sourcePosition = decodePosition(creep.memory.source);
 		const sources = creep.room.find(FIND_SOURCES, {
 			filter: source => source.pos.x === sourcePosition.x && source.pos.y === sourcePosition.y,
 		});

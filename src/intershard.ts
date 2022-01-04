@@ -6,7 +6,7 @@ declare global {
 	}
 }
 
-import utilities from 'utilities';
+import {encodePosition} from 'utils/serialization';
 
 const interShard = {
 
@@ -74,7 +74,7 @@ const interShard = {
 
 		if (!memory.portals) memory.portals = {};
 		if (!memory.portals[targetShard]) memory.portals[targetShard] = {};
-		const pos = utilities.encodePosition(portal.pos);
+		const pos = encodePosition(portal.pos);
 		if (!memory.portals[targetShard][pos]) {
 			memory.portals[targetShard][pos] = {};
 		}

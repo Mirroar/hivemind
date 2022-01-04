@@ -14,7 +14,7 @@ import hivemind from 'hivemind';
 import interShard from 'intershard';
 import PathManager from 'remote-path-manager';
 import Process from 'process/process';
-import utilities from 'utilities';
+import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 
 const preserveExpansionReasons = false;
@@ -456,7 +456,7 @@ export default class ScoutProcess extends Process {
 			const memory = interShard.getLocalMemory();
 			_.each(memory.portals, portals => {
 				_.each(portals, (portalInfo, portalPosition) => {
-					const pos = utilities.decodePosition(portalPosition);
+					const pos = decodePosition(portalPosition);
 					if (!pos) return;
 
 					openList[pos.roomName] = {

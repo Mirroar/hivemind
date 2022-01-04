@@ -171,8 +171,8 @@ export default class PlacementManager {
     this.openList = {};
     this.closedList = {};
     const startPath = {};
-    startPath[utilities.encodePosition(this.origin)] = true;
-    this.openList[utilities.encodePosition(this.origin)] = {
+    startPath[encodePosition(this.origin)] = true;
+    this.openList[encodePosition(this.origin)] = {
       range: 0,
       path: startPath,
     };
@@ -280,7 +280,7 @@ export default class PlacementManager {
       if (!nextPos) break;
 
       this.planLocation(new RoomPosition(nextPos.x, nextPos.y, this.roomPlan.roomName), structureType);
-      this.filterOpenList(utilities.encodePosition(nextPos));
+      this.filterOpenList(encodePosition(nextPos));
 
       if (addRoad) this.placeAccessRoad(nextPos);
     }

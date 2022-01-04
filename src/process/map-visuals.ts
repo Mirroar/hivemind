@@ -3,7 +3,7 @@
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Process from 'process/process';
-import utilities from 'utilities';
+import {deserializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 
 // @todo Move constants to settings.
@@ -117,7 +117,7 @@ export default class MapVisualsProcess extends Process {
 			if (!navInfo.regions) {
 				// Single region, all exits are connected.
 				for (const exit of navInfo.exits) {
-					Game.map.visual.line(new RoomPosition(25, 25, roomName), utilities.deserializePosition(exit.center, roomName));
+					Game.map.visual.line(new RoomPosition(25, 25, roomName), deserializePosition(exit.center, roomName));
 				}
 
 				return;
@@ -128,7 +128,7 @@ export default class MapVisualsProcess extends Process {
 				for (const exit of navInfo.exits) {
 					if (region.exits.indexOf(exit.id) === -1) continue;
 
-					Game.map.visual.line(utilities.deserializePosition(region.center, roomName), utilities.deserializePosition(exit.center, roomName));
+					Game.map.visual.line(deserializePosition(region.center, roomName), deserializePosition(exit.center, roomName));
 				}
 			}
 		});

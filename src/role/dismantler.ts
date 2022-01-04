@@ -22,7 +22,7 @@ declare global {
 
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
-import utilities from 'utilities';
+import {encodePosition} from 'utils/serialization';
 
 export default class DismantlerRole extends Role {
 	/**
@@ -69,7 +69,7 @@ export default class DismantlerRole extends Role {
 		const targetPositions = creep.operation.getDismantlePositions(creep.memory.source);
 		let target;
 		for (const pos of targetPositions) {
-			if (creep.heapMemory.finishedPositions.indexOf(utilities.encodePosition(pos)) !== -1) continue;
+			if (creep.heapMemory.finishedPositions.indexOf(encodePosition(pos)) !== -1) continue;
 
 			if (pos.roomName === creep.pos.roomName) {
 				const structures = _.filter(
@@ -78,7 +78,7 @@ export default class DismantlerRole extends Role {
 				);
 
 				if (structures.length === 0) {
-					creep.heapMemory.finishedPositions.push(utilities.encodePosition(pos));
+					creep.heapMemory.finishedPositions.push(encodePosition(pos));
 					continue;
 				}
 			}

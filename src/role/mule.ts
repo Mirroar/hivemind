@@ -92,14 +92,14 @@ export default class MuleRole extends Role {
     if (!creep.memory.pathIndex) creep.memory.pathIndex = 0;
 
     const nextRoom = creep.memory.roomPath[creep.memory.pathIndex];
-    if (!nextRoom) return false;
+    if (!nextRoom) return;
 
     if (creep.pos.roomName === nextRoom && creep.isInRoom()) creep.memory.pathIndex++;
 
     // Move to next room.
     const target = new RoomPosition(25, 25, nextRoom);
     if (creep.pos.getRangeTo(target) > 15) {
-      return creep.moveToRange(target, 15);
+      creep.moveToRange(target, 15);
     }
   }
 

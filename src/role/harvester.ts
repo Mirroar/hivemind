@@ -8,8 +8,7 @@ STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES LOOK_RESOURCES LOOK_STRUCTURES */
 
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
-import utilities from 'utilities';
-import {serializeCoords} from 'utils/serialization';
+import {encodePosition, serializeCoords, deserializePosition} from 'utils/serialization';
 
 declare global {
 	interface HarvesterCreep extends Creep {
@@ -137,7 +136,7 @@ export default class HarvesterRole extends Role {
 
 		// If available, move onto a harvest position.
 		if (creep.memory.harvestPos) {
-			const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
+			const harvestPosition = deserializePosition(creep.memory.harvestPos, creep.room.name);
 			if (harvestPosition.lookFor(LOOK_CREEPS).length === 0) {
 				targetPos = harvestPosition;
 				targetRange = 0;
@@ -166,8 +165,8 @@ export default class HarvesterRole extends Role {
 	 */
 	depositInBay(creep: HarvesterCreep) {
 		if (!creep.memory.harvestPos) return false;
-		const harvestPosition = utilities.deserializePosition(creep.memory.harvestPos, creep.room.name);
-		const bay = _.find(creep.room.bays, bay => bay.name === utilities.encodePosition(harvestPosition));
+		const harvestPosition = deserializePosition(creep.memory.harvestPos, creep.room.name);
+		const bay = _.find(creep.room.bays, bay => bay.name === encodePosition(harvestPosition));
 
 		if (!bay) return false;
 		if (creep.pos.x !== bay.pos.x || creep.pos.y !== bay.pos.y) return false;

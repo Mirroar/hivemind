@@ -10,6 +10,7 @@ declare global {
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import {getRoomIntel} from 'intel-management';
+import {serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
 
 export default class NavMesh {
 	memory: any;
@@ -50,7 +51,7 @@ export default class NavMesh {
 			const centerY = exit.vertical ? exit.center : exit.offset;
 			exitMem.push({
 				id: exit.id,
-				center: utilities.serializeCoords(centerX, centerY),
+				center: serializeCoords(centerX, centerY),
 			});
 		}
 
@@ -60,7 +61,7 @@ export default class NavMesh {
 			const centerY = Math.floor(region.center / 50);
 			regionMem.push({
 				exits: region.exits,
-				center: utilities.serializeCoords(centerX, centerY),
+				center: serializeCoords(centerX, centerY),
 			});
 		}
 
@@ -312,7 +313,7 @@ export default class NavMesh {
 				// Check if we can reach region center.
 				const result = PathFinder.search(
 					startPos,
-					utilities.deserializePosition(region.center, startRoom),
+					deserializePosition(region.center, startRoom),
 					{
 						roomCallback: () => costMatrix,
 						maxRooms: 1,
@@ -427,7 +428,7 @@ export default class NavMesh {
 				};
 
 				if (nextRoom === endRoom) {
-					item.pos = utilities.serializePosition(endPos, nextRoom);
+					item.pos = serializePosition(endPos, nextRoom);
 					item.heuristic = 0;
 					item.pathLength = current.pathLength + roomMemory.paths[correspondingExit][0];
 				}
@@ -527,10 +528,10 @@ export default class NavMesh {
 	}
 
 	pluckRoomPath(current) {
-		const path = [utilities.deserializePosition(current.pos, current.roomName)];
+		const path = [deserializePosition(current.pos, current.roomName)];
 		while (current.parent) {
 			current = current.parent;
-			path.push(utilities.deserializePosition(current.pos, current.roomName));
+			path.push(deserializePosition(current.pos, current.roomName));
 		}
 
 		return path.reverse();

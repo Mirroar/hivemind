@@ -8,6 +8,7 @@ FIND_TOMBSTONES FIND_RUINS */
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import Role from 'role/role';
+import {encodePosition} from 'utils/serialization';
 
 export default class TransporterRole extends Role {
 	creep: Creep;
@@ -241,7 +242,7 @@ export default class TransporterRole extends Role {
 
 			creep.memory.order = {
 				type: 'deliver',
-				target: utilities.encodePosition(best.object),
+				target: encodePosition(best.object),
 				resourceType: best.resourceType,
 			};
 		}

@@ -8,7 +8,7 @@ LOOK_CONSTRUCTION_SITES */
 import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
-import utilities from 'utilities';
+import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 
 export default class HaulerRole extends Role {
 	actionTaken: boolean;
@@ -62,7 +62,7 @@ export default class HaulerRole extends Role {
 		const paths = creep.operation.getPaths();
 		if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return;
 
-		creep.setCachedPath(utilities.serializePositionPath(paths[creep.memory.source].path), !delivering, 1);
+		creep.setCachedPath(serializePositionPath(paths[creep.memory.source].path), !delivering, 1);
 	}
 
 	/**
@@ -117,7 +117,7 @@ export default class HaulerRole extends Role {
 					return;
 				}
 
-				const pos = utilities.encodePosition(creep.pos);
+				const pos = encodePosition(creep.pos);
 				if (creep.memory.lastWaitPosition === pos) {
 					creep.memory.lastWaitCount = (creep.memory.lastWaitCount || 0) + 1;
 					if (creep.memory.lastWaitCount > 10 && creep.drop(RESOURCE_ENERGY) === OK) {
@@ -156,7 +156,7 @@ export default class HaulerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performGetHaulerEnergy(creep) {
-		const sourcePosition = utilities.decodePosition(creep.memory.source);
+		const sourcePosition = decodePosition(creep.memory.source);
 
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();

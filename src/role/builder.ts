@@ -5,6 +5,7 @@ import hivemind from 'hivemind';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
+import {throttle} from 'utils/throttle';
 
 // @todo Calculate from constants.
 const wallHealth = {
@@ -383,7 +384,7 @@ export default class BuilderRole extends Role {
 	 */
 	repairNearby(creep) {
 		if (creep.store[RESOURCE_ENERGY] < creep.store.getCapacity() * 0.7 && creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.3) return;
-		if (utilities.throttle(creep.memory._tO)) return;
+		if (throttle(creep.memory._tO)) return;
 
 		const workParts = creep.memory.body.work;
 		if (!workParts) return;

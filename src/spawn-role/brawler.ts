@@ -11,7 +11,7 @@ declare global {
 
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
-import utilities from 'utilities';
+import {encodePosition, decodePosition} from 'utils/serialization';
 
 const RESPONSE_NONE = 0;
 const RESPONSE_MINI_BRAWLER = 1;
@@ -66,7 +66,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
 			// in a different way.
-			const targetPos = utilities.encodePosition(new RoomPosition(25, 25, pos.roomName));
+			const targetPos = encodePosition(new RoomPosition(25, 25, pos.roomName));
 			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -1000) < 1000) continue;
 
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.operation === 'mine:' + pos.roomName);
@@ -81,7 +81,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 				priority: 3,
 				weight: 1,
 				targetPos,
-				pathTarget: utilities.encodePosition(pos),
+				pathTarget: encodePosition(pos),
 				responseType,
 				operation: operation.name,
 			});
@@ -100,7 +100,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (!roomMemory || !roomMemory.enemies) return;
 			if (roomMemory.enemies.safe) return;
 
-			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.target && utilities.decodePosition(creep.memory.target).roomName === roomName);
+			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.target && decodePosition(creep.memory.target).roomName === roomName);
 			if (_.size(brawlers) > 0) return;
 
 			// We don't care about melee attacks, plenty of attack creeps in the
@@ -117,7 +117,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			options.push({
 				priority: 4,
 				weight: 1,
-				targetPos: utilities.encodePosition(new RoomPosition(24, 24, roomName)),
+				targetPos: encodePosition(new RoomPosition(24, 24, roomName)),
 				responseType,
 			});
 		});
@@ -321,7 +321,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 */
 	getCreepMemory(room: Room, option) {
 		const memory = {
-			target: option.targetPos || utilities.encodePosition(room.controller.pos),
+			target: option.targetPos || encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
 			operation: option.operation,
 			disableNotifications: true,

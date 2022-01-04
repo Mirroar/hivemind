@@ -23,8 +23,8 @@ declare global {
 }
 
 import hivemind from 'hivemind';
-import utilities from 'utilities';
 import Role from 'role/role';
+import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 
 export default class ScoutRole extends Role {
@@ -56,7 +56,7 @@ export default class ScoutRole extends Role {
 	 */
 	performScout(creep: ScoutCreep) {
 		if (creep.memory.portalTarget) {
-			const portalPosition = utilities.decodePosition(creep.memory.portalTarget);
+			const portalPosition = decodePosition(creep.memory.portalTarget);
 			if (creep.pos.roomName === portalPosition.roomName) {
 				if (creep.pos.getRangeTo(portalPosition) > 1) {
 					creep.moveToRange(portalPosition, 1);
@@ -189,7 +189,7 @@ export default class ScoutRole extends Role {
 	isTileOscillating(creep: ScoutCreep) {
 		if (!creep.heapMemory.posHistory) creep.heapMemory.posHistory = [];
 		const history = creep.heapMemory.posHistory;
-		const pos = utilities.encodePosition(creep.pos);
+		const pos = encodePosition(creep.pos);
 
 		if (history.length === 0 || history[history.length - 1] !== pos) history.push(pos);
 		if (history.length > 30) creep.heapMemory.posHistory = history.slice(-20);
@@ -202,7 +202,7 @@ export default class ScoutRole extends Role {
 	}
 
 	isStuck(creep: ScoutCreep) {
-		const pos = utilities.encodePosition(creep.pos);
+		const pos = encodePosition(creep.pos);
 
 		if (!creep.heapMemory.lastPos || creep.heapMemory.lastPos !== pos) {
 			creep.heapMemory.lastPos = pos;

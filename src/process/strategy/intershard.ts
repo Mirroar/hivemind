@@ -2,7 +2,7 @@ import hivemind from 'hivemind';
 import interShard from 'intershard';
 import Process from 'process/process';
 import Squad from 'manager.squad';
-import utilities from 'utilities';
+import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 
 /**
@@ -257,7 +257,7 @@ export default class InterShardProcess extends Process {
 			_.each(portals, (portalInfo, portalPosition) => {
 				if (portalInfo.dest !== roomName) return;
 
-				const pos = utilities.decodePosition(portalPosition);
+				const pos = decodePosition(portalPosition);
 				const roomInfo = Memory.strategy.roomList[pos.roomName];
 				if (bestPortal && bestPortal.range <= roomInfo.range) return;
 

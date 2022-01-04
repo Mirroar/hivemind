@@ -3,6 +3,7 @@
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import utilities from 'utilities';
+import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
@@ -10,7 +11,7 @@ export default class RemotePathManager {
 	getPathFor(sourcePosition) {
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		const key = 'remotePath:' + utilities.encodePosition(sourcePosition);
+		const key = 'remotePath:' + encodePosition(sourcePosition);
 		if (!hivemind.segmentMemory.has(key)) {
 			hivemind.segmentMemory.set(key, {});
 		}

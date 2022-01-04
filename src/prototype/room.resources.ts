@@ -5,7 +5,7 @@ declare global {
 	interface Room {
 		getStorageLimit,
 		getFreeStorage,
-		getCurrentResourceAmount,
+		getCurrentResourceAmount: (resourceType: string) => number,
 		getStoredEnergy,
 		getCurrentMineralAmount,
 		isFullOnEnergy,
@@ -28,7 +28,7 @@ declare global {
 	}
 }
 
-import utilities from 'utilities';
+import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 
 /**
@@ -83,7 +83,7 @@ Room.prototype.getFreeStorage = function () {
  * @return {number}
  *   Amount of this resource in storage or terminal.
  */
-Room.prototype.getCurrentResourceAmount = function (resourceType) {
+Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: string): number {
 	let total = 0;
 	if (this.storage && this.storage.store[resourceType]) {
 		total += this.storage.store[resourceType];
@@ -226,7 +226,7 @@ Room.prototype.getRemoteHarvestSourcePositions = function () {
 		const locations = operation.getMiningLocationsByRoom();
 
 		_.each(locations[this.name], location => {
-			harvestPositions.push(utilities.decodePosition(location));
+			harvestPositions.push(decodePosition(location));
 		});
 	});
 

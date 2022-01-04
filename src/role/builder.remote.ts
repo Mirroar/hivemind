@@ -22,7 +22,7 @@ import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
-import utilities from 'utilities';
+import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 
 export default class RemoteBuilderRole extends Role {
@@ -241,7 +241,7 @@ export default class RemoteBuilderRole extends Role {
 		const creep = this.creep;
 
 		// Move to source room if necessary.
-		const targetPosition = utilities.decodePosition(creep.memory.target);
+		const targetPosition = decodePosition(creep.memory.target);
 		if (targetPosition && targetPosition.roomName !== creep.pos.roomName) {
 			creep.moveToRange(targetPosition, 5);
 			return;
@@ -336,7 +336,7 @@ export default class RemoteBuilderRole extends Role {
 	chooseExtraEnergySource(creep: RemoteBuilderCreep, possibleSources: RoomPosition[]) {
 		const targetPos = _.sample(possibleSources);
 		if (targetPos) {
-			creep.memory.extraEnergyTarget = utilities.encodePosition(targetPos);
+			creep.memory.extraEnergyTarget = encodePosition(targetPos);
 			creep.memory.sourceRoom = creep.pos.roomName;
 			delete creep.memory.singleRoom;
 		}
@@ -351,7 +351,7 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
-		const pos = utilities.decodePosition(this.creep.memory.extraEnergyTarget);
+		const pos = decodePosition(this.creep.memory.extraEnergyTarget);
 		if (this.creep.pos.getRangeTo(pos) > 1) {
 			if (!this.creep.moveToRange(pos, 1)) {
 				delete this.creep.memory.extraEnergyTarget;

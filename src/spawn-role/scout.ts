@@ -2,8 +2,8 @@
 
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import utilities from 'utilities';
 import SpawnRole from 'spawn-role/spawn-role';
+import {decodePosition} from 'utils/serialization';
 
 export default class ScoutSpawnRole extends SpawnRole {
 	/**
@@ -48,7 +48,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 				if (info.scouted && Game.time - info.scouted < 2000) return;
 
 				// Only spawn scout if we're repsonsible for the portal room.
-				const pos = utilities.decodePosition(portalPos);
+				const pos = decodePosition(portalPos);
 				if (!Memory.strategy || !Memory.strategy.roomList[pos.roomName]) return;
 				if (Memory.strategy.roomList[pos.roomName].origin !== room.name) return;
 

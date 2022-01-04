@@ -11,7 +11,7 @@ type PositionCache = {
 };
 
 import {packCoordList, unpackCoordListAsPosList} from 'utils/packrat';
-import utilities from 'utilities';
+import {serializeCoords} from 'utils/serialization';
 
 const structureSymbols = {
   container: '⊔',
@@ -56,7 +56,7 @@ export default class RoomPlan {
       } = {};
 
       for (const pos of positions) {
-        const coord = utilities.serializeCoords(pos.x, pos.y);
+        const coord = serializeCoords(pos.x, pos.y);
         cache[coord] = pos;
       }
 
@@ -67,11 +67,11 @@ export default class RoomPlan {
   addPosition(type: string, pos: RoomPosition) {
     if (!this.positionsByType[type]) this.positionsByType[type] = {};
 
-    this.positionsByType[type][utilities.serializeCoords(pos.x, pos.y)] = pos;
+    this.positionsByType[type][serializeCoords(pos.x, pos.y)] = pos;
   }
 
   removePosition(type: string, pos: RoomPosition) {
-    delete this.positionsByType[type][utilities.serializeCoords(pos.x, pos.y)];
+    delete this.positionsByType[type][serializeCoords(pos.x, pos.y)];
   }
 
   removeAllPositions(type?: string) {
@@ -86,7 +86,7 @@ export default class RoomPlan {
   hasPosition(type: string, pos: RoomPosition): boolean {
     if (!this.positionsByType[type]) return false;
 
-    return Boolean(this.positionsByType[type][utilities.serializeCoords(pos.x, pos.y)]);
+    return Boolean(this.positionsByType[type][serializeCoords(pos.x, pos.y)]);
   }
 
   getPositions(type: string): RoomPosition[] {

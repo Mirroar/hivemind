@@ -19,6 +19,7 @@ declare global {
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import Role from 'role/role';
+import {decodePosition} from 'utils/serialization';
 
 export default class ClaimerRole extends Role {
 	constructor() {
@@ -36,7 +37,7 @@ export default class ClaimerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep: ClaimerCreep) {
-		const targetPosition = utilities.decodePosition(creep.memory.target);
+		const targetPosition = decodePosition(creep.memory.target);
 		if (creep.interRoomTravel(targetPosition)) return;
 		if (creep.pos.roomName !== targetPosition.roomName) return;
 

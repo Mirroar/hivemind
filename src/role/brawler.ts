@@ -9,6 +9,7 @@ import PathManager from 'remote-path-manager';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
+import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
@@ -60,9 +61,9 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.pathTarget) {
 			// Reuse remote harvesting path.
 			const pathManager = new PathManager();
-			const path = pathManager.getPathFor(utilities.decodePosition(creep.memory.pathTarget));
+			const path = pathManager.getPathFor(decodePosition(creep.memory.pathTarget));
 			if (path) {
-				creep.setCachedPath(utilities.serializePositionPath(path), true);
+				creep.setCachedPath(serializePositionPath(path), true);
 			}
 		}
 	}
@@ -109,7 +110,7 @@ export default class BrawlerRole extends Role {
 
 		if (!creep.memory.target) return options;
 
-		const targetPosition = utilities.decodePosition(creep.memory.target);
+		const targetPosition = decodePosition(creep.memory.target);
 		if (!targetPosition) {
 			delete creep.memory.target;
 			return options;
@@ -164,7 +165,7 @@ export default class BrawlerRole extends Role {
 	 */
 	addMilitaryAttackOptions(creep: Creep, options) {
 		const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
-		const targetPosition = utilities.decodePosition(creep.memory.target);
+		const targetPosition = decodePosition(creep.memory.target);
 
 		if (enemies && enemies.length > 0) {
 			for (const enemy of enemies) {
@@ -207,7 +208,7 @@ export default class BrawlerRole extends Role {
 
 		for (const structure of structures) {
 			const option = {
-				priority: utilities.encodePosition(structure.pos) === creep.memory.target ? 5 : 2,
+				priority: encodePosition(structure.pos) === creep.memory.target ? 5 : 2,
 				weight: 0,
 				type: 'hostilestructure',
 				object: structure,
@@ -330,7 +331,7 @@ export default class BrawlerRole extends Role {
 				});
 			}
 
-			const targetPosition = utilities.decodePosition(creep.memory.target);
+			const targetPosition = decodePosition(creep.memory.target);
 			if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return;
 
 			// @todo For some reason, using goTo instead of moveTo here results in
@@ -356,7 +357,7 @@ export default class BrawlerRole extends Role {
 					this.militaryRoomReached(creep);
 				}
 				else {
-					creep.memory.target = utilities.encodePosition(targetPos);
+					creep.memory.target = encodePosition(targetPos);
 				}
 
 				return;
@@ -591,7 +592,7 @@ export default class BrawlerRole extends Role {
 		if (best === creep.memory.patrolPoint) {
 			// We're at the correct control point. Move to intercept potentially spawning source keepers.
 			if (exploit.memory.lairs[best].sourcePath) {
-				creep.moveTo(utilities.decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
+				creep.moveTo(decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
 			}
 			else {
 				creep.moveToRange(lair, 1);
@@ -663,7 +664,7 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.squadUnitType === 'builder' && creep.room.controller) {
 			// Rebrand as remote builder to work in this room from now on.
 			creep.memory.role = 'builder.remote';
-			creep.memory.target = utilities.encodePosition(creep.pos);
+			creep.memory.target = encodePosition(creep.pos);
 			creep.memory.singleRoom = creep.pos.roomName;
 		}
 	}

@@ -12,7 +12,7 @@ declare global {
 }
 
 import cache from 'utils/cache';
-import utilities from 'utilities';
+import {encodePosition} from 'utils/serialization';
 
 const bayStructures = [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_LINK, STRUCTURE_CONTAINER];
 
@@ -36,7 +36,7 @@ export default class Bay {
 	 */
 	constructor(pos, hasHarvester) {
 		this.pos = pos;
-		this.name = utilities.encodePosition(pos);
+		this.name = encodePosition(pos);
 		this._hasHarvester = hasHarvester;
 
 		const bayExtensions = cache.inHeap(

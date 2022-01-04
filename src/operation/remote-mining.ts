@@ -18,6 +18,7 @@ import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import PathManager from 'remote-path-manager';
 import utilities from 'utilities';
+import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
@@ -135,7 +136,7 @@ export default class RemoteMiningOperation extends Operation {
 				}
 			} = {};
 			for (const sourcePos of positions) {
-				const sourceLocation = utilities.encodePosition(sourcePos);
+				const sourceLocation = encodePosition(sourcePos);
 				if (!this.memory.status[sourceLocation]) this.memory.status[sourceLocation] = {};
 
 				// This has a short caching time since the path manager will do most of
@@ -334,7 +335,7 @@ export default class RemoteMiningOperation extends Operation {
 
 		let result = false;
 		for (const pos of this.getSourcePositions()) {
-			result = result || this.needsDismantler(utilities.encodePosition(pos));
+			result = result || this.needsDismantler(encodePosition(pos));
 		}
 
 		return result;

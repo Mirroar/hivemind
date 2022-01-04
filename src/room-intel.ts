@@ -16,8 +16,9 @@ import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
-import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
+import {deserializeCoords} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
+import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
 export interface RoomIntelMemory {
 	lastScan: number;
@@ -425,8 +426,8 @@ export default class RoomIntel {
 	generateCostMatrix(structures, constructionSites) {
 		const obstaclePositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
 		this.memory.costPositions = [
-			packCoordList(_.map(obstaclePositions.obstacles, utilities.deserializeCoords)),
-			packCoordList(_.map(obstaclePositions.roads, utilities.deserializeCoords)),
+			packCoordList(_.map(obstaclePositions.obstacles, deserializeCoords)),
+			packCoordList(_.map(obstaclePositions.roads, deserializeCoords)),
 		];
 	}
 

@@ -32,7 +32,7 @@ declare global {
 }
 
 import hivemind from 'hivemind';
-import utilities from 'utilities';
+import {getThrottleOffset, throttle} from 'utils/throttle';
 
 export default class CreepManager {
 	roles;
@@ -101,8 +101,8 @@ export default class CreepManager {
 		// transition back to their previous room.
 		if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) return false;
 
-		if (!creep.memory._tO) creep.memory._tO = utilities.getThrottleOffset();
-		return utilities.throttle(creep.memory._tO, role.stopAt, role.throttleAt);
+		if (!creep.memory._tO) creep.memory._tO = getThrottleOffset();
+		return throttle(creep.memory._tO, role.stopAt, role.throttleAt);
 	}
 
 	/**

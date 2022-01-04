@@ -6,9 +6,9 @@ declare global {
 	}
 }
 
-import utilities from 'utilities';
 import SpawnRole from 'spawn-role/spawn-role';
 import RemoteMiningOperation from 'operation/remote-mining';
+import {encodePosition, decodePosition} from 'utils/serialization';
 
 export default class HaulerSpawnRole extends SpawnRole {
 	/**
@@ -22,7 +22,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 	getSpawnOptions(room, options) {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
-			const targetPos = utilities.encodePosition(pos);
+			const targetPos = encodePosition(pos);
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
@@ -130,9 +130,9 @@ export default class HaulerSpawnRole extends SpawnRole {
 	getCreepMemory(room, option) {
 		return {
 			// @todo Get rid of storage position
-			storage: utilities.encodePosition(room.storage ? room.storage.pos : room.controller.pos),
+			storage: encodePosition(room.storage ? room.storage.pos : room.controller.pos),
 			source: option.targetPos,
-			operation: 'mine:' + utilities.decodePosition(option.targetPos).roomName,
+			operation: 'mine:' + decodePosition(option.targetPos).roomName,
 		};
 	}
 
@@ -149,7 +149,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 *   The name of the new creep.
 	 */
 	onSpawn(room, option, body) {
-		const operationName = 'mine:' + utilities.decodePosition(option.targetPos).roomName;
+		const operationName = 'mine:' + decodePosition(option.targetPos).roomName;
 		const operation = Game.operations[operationName];
 		if (!operation) return;
 

@@ -3,6 +3,7 @@ import minCut from 'utils/mincut';
 import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
 import utilities from 'utilities';
+import {encodePosition, decodePosition} from 'utils/serialization';
 import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'intel-management';
 
@@ -247,7 +248,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     this.placementManager.placeAccessRoad(nextPos);
 
-    this.placementManager.filterOpenList(utilities.encodePosition(nextPos));
+    this.placementManager.filterOpenList(encodePosition(nextPos));
 
     return 'ok';
   };
@@ -451,15 +452,15 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     this.safetyMatrix = new PathFinder.CostMatrix();
 
     const openList = [];
-    openList.push(utilities.encodePosition(roomCenter));
+    openList.push(encodePosition(roomCenter));
     // @todo Include sources, minerals, controller.
-    openList.push(utilities.encodePosition(roomIntel.getControllerPosition()));
+    openList.push(encodePosition(roomIntel.getControllerPosition()));
     for (const source of roomIntel.getSourcePositions()) {
-      openList.push(utilities.encodePosition(new RoomPosition(source.x, source.y, this.roomName)));
+      openList.push(encodePosition(new RoomPosition(source.x, source.y, this.roomName)));
     }
 
     const mineral = roomIntel.getMineralPosition();
-    openList.push(utilities.encodePosition(new RoomPosition(mineral.x, mineral.y, this.roomName)));
+    openList.push(encodePosition(new RoomPosition(mineral.x, mineral.y, this.roomName)));
 
     this.pruneWallFromTiles(walls, openList);
 
@@ -470,19 +471,19 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     for (let i = 0; i < 50; i++) {
       if (this.terrain.get(0, i) !== TERRAIN_MASK_WALL && !safety.directions.W) {
-        exits.push(utilities.encodePosition(new RoomPosition(0, i, this.roomName)));
+        exits.push(encodePosition(new RoomPosition(0, i, this.roomName)));
       }
 
       if (this.terrain.get(49, i) !== TERRAIN_MASK_WALL && !safety.directions.E) {
-        exits.push(utilities.encodePosition(new RoomPosition(49, i, this.roomName)));
+        exits.push(encodePosition(new RoomPosition(49, i, this.roomName)));
       }
 
       if (this.terrain.get(i, 0) !== TERRAIN_MASK_WALL && !safety.directions.N) {
-        exits.push(utilities.encodePosition(new RoomPosition(i, 0, this.roomName)));
+        exits.push(encodePosition(new RoomPosition(i, 0, this.roomName)));
       }
 
       if (this.terrain.get(i, 49) !== TERRAIN_MASK_WALL && !safety.directions.S) {
-        exits.push(utilities.encodePosition(new RoomPosition(i, 49, this.roomName)));
+        exits.push(encodePosition(new RoomPosition(i, 49, this.roomName)));
       }
     }
 
@@ -532,13 +533,13 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
     // Flood fill, marking all walls we touch as relevant.
     while (_.size(openList) > 0) {
-      const nextPos = utilities.decodePosition(_.first(_.keys(openList)));
+      const nextPos = decodePosition(_.first(_.keys(openList)));
 
       // Record which tiles are safe or unsafe.
       this.safetyMatrix.set(nextPos.x, nextPos.y, safetyValue);
 
-      delete openList[utilities.encodePosition(nextPos)];
-      closedList[utilities.encodePosition(nextPos)] = true;
+      delete openList[encodePosition(nextPos)];
+      closedList[encodePosition(nextPos)] = true;
 
       this.checkForAdjacentWallsToPrune(nextPos, walls, openList, closedList);
     }
@@ -566,7 +567,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       // Ignore walls.
       if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
-      const posName = utilities.encodePosition(new RoomPosition(x, y, this.roomName));
+      const posName = encodePosition(new RoomPosition(x, y, this.roomName));
       if (openList[posName] || closedList[posName]) return;
 
       // If there's a rampart to be built there, mark it and move on.

@@ -57,7 +57,7 @@ declare global {
 	}
 
 	interface CreepMemory {
-		cachedPath: {
+		cachedPath?: {
 			path: (string | number)[];
 			position: number;
 			arrived: boolean;
@@ -67,7 +67,7 @@ declare global {
 	}
 
 	interface PowerCreepMemory {
-		cachedPath: {
+		cachedPath?: {
 			path: (string | number)[];
 			position: number;
 			arrived: boolean;
@@ -77,31 +77,31 @@ declare global {
 	}
 
 	interface CreepHeapMemory {
-		_decodedCachedPath: RoomPosition[];
-		_moveBlocked: boolean;
-		_mtrTarget: string;
-		_mtrNextRoom: string;
-		moveWithoutNavMesh: boolean;
-		_nmpt: string;
-		_nmp: {
+		_decodedCachedPath?: RoomPosition[];
+		_moveBlocked?: boolean;
+		_mtrTarget?: string;
+		_mtrNextRoom?: string;
+		moveWithoutNavMesh?: boolean;
+		_nmpt?: string;
+		_nmp?: {
 			path?: string[];
 			incomplete: boolean;
 		};
-		_nmpi: number;
+		_nmpi?: number;
 	}
 
 	interface PowerCreepHeapMemory {
-		_decodedCachedPath: RoomPosition[];
-		_moveBlocked: boolean;
-		_mtrTarget: string;
-		_mtrNextRoom: string;
-		moveWithoutNavMesh: boolean;
-		_nmpt: string;
-		_nmp: {
+		_decodedCachedPath?: RoomPosition[];
+		_moveBlocked?: boolean;
+		_mtrTarget?: string;
+		_mtrNextRoom?: string;
+		moveWithoutNavMesh?: boolean;
+		_nmpt?: string;
+		_nmp?: {
 			path?: string[];
 			incomplete: boolean;
 		};
-		_nmpi: number;
+		_nmpi?: number;
 	}
 }
 
@@ -114,6 +114,7 @@ type GoToOptions = {
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
+import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
 
 // @todo For multi-room movement we could save which rooms we're travelling through, and recalculate (part of) the path when a CostMatrix changes.
 // That info should probably live in global memory, we don't want that serialized...
@@ -164,7 +165,7 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 Creep.prototype.setCachedPath = function (this: Creep | PowerCreep, path, reverse, distance) {
 	path = _.clone(path);
 	if (reverse || distance) {
-		const originalPath = utilities.deserializePositionPath(path);
+		const originalPath = deserializePositionPath(path);
 		if (reverse) {
 			originalPath.reverse();
 		}
@@ -175,7 +176,7 @@ Creep.prototype.setCachedPath = function (this: Creep | PowerCreep, path, revers
 			}
 		}
 
-		path = utilities.serializePositionPath(originalPath);
+		path = serializePositionPath(originalPath);
 	}
 
 	delete this.heapMemory._decodedCachedPath;
@@ -197,7 +198,7 @@ Creep.prototype.getCachedPath = function (this: Creep | PowerCreep) {
 	if (!this.hasCachedPath()) return null;
 
 	if (!this.heapMemory._decodedCachedPath) {
-		this.heapMemory._decodedCachedPath = utilities.deserializePositionPath(this.memory.cachedPath.path);
+		this.heapMemory._decodedCachedPath = deserializePositionPath(this.memory.cachedPath.path);
 	}
 
 	return this.heapMemory._decodedCachedPath;
@@ -440,7 +441,7 @@ Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
 
 	if (!('fatigue' in this) || this.fatigue === 0) {
 		// If we're not fatigued, we're kind of stuck.
-		this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = utilities.encodePosition(this.pos);
+		this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = encodePosition(this.pos);
 	}
 
 	// Go around obstacles if necessary.
@@ -556,7 +557,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 	}
 
 	const range = options.range || 0;
-	const targetPos = utilities.encodePosition(target);
+	const targetPos = encodePosition(target);
 	if (!this.memory.go.target || this.memory.go.target !== targetPos || !this.hasCachedPath()) {
 		if (!this.calculateGoToPath(target, options)) {
 			hivemind.log('creeps', this.room.name).error('No path from', this.pos, 'to', target, 'found!');
@@ -604,7 +605,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
  *   True if a path was successfully generated.
  */
 Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, options) {
-	const targetPos = utilities.encodePosition(target);
+	const targetPos = encodePosition(target);
 	this.memory.go.target = targetPos;
 
 	const pfOptions: any = {};
@@ -629,7 +630,7 @@ Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, 
 	}, false, pfOptions);
 
 	if (result && result.path) {
-		this.setCachedPath(utilities.serializePositionPath(result.path));
+		this.setCachedPath(serializePositionPath(result.path));
 	}
 	else {
 		return false;
@@ -728,14 +729,14 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 
 	if (!options) options = {};
 
-	const pos = utilities.encodePosition(targetPos);
+	const pos = encodePosition(targetPos);
 	if (!this.heapMemory._nmpt || !this.heapMemory._nmp || this.heapMemory._nmpt !== pos) {
 		this.heapMemory._nmpt = pos;
 		const mesh = new NavMesh();
 		const path = mesh.findPath(this.pos, targetPos, options);
 		this.heapMemory._nmp = {
 			incomplete: path.incomplete,
-			path: path.path ? _.map(path.path, utilities.encodePosition) : null,
+			path: path.path ? _.map(path.path, encodePosition) : null,
 		}
 
 		this.heapMemory._nmpi = 0;
@@ -747,7 +748,7 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 		return ERR_NO_PATH;
 	}
 
-	const nextPos = utilities.decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
+	const nextPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
 	if (this.pos.roomName !== nextPos.roomName || this.pos.getRangeTo(nextPos) > 1) {
 		const moveResult = this.moveToRange(nextPos, 1, options);
 		if (!moveResult) {
@@ -760,7 +761,7 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 	// If we reach a waypoint, increment path index.
 	if (this.pos.getRangeTo(nextPos) <= 1 && this.heapMemory._nmpi < this.heapMemory._nmp.path.length - 1) {
 		this.heapMemory._nmpi++;
-		const nextPos = utilities.decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
+		const nextPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
 		const moveResult = this.moveToRange(nextPos, 1, options);
 		if (!moveResult) {
 			// Couldn't get to next path target.

@@ -1,4 +1,4 @@
-import utilities from 'utilities';
+import {encodePosition, decodePosition} from 'utils/serialization';
 
 declare global {
 	interface CreepMemory {
@@ -145,7 +145,7 @@ export default class Squad {
 		return [{
 			priority: 5,
 			weight: 0,
-			target: utilities.encodePosition(targetPos),
+			target: encodePosition(targetPos),
 		}];
 	}
 
@@ -177,7 +177,7 @@ export default class Squad {
 	 */
 	setTarget(targetPos: RoomPosition) {
 		if (targetPos) {
-			this.memory.targetPos = utilities.encodePosition(targetPos);
+			this.memory.targetPos = encodePosition(targetPos);
 		}
 		else {
 			delete this.memory.targetPos;
@@ -192,7 +192,7 @@ export default class Squad {
 	 */
 	getTarget(): RoomPosition {
 		if (this.memory.targetPos) {
-			return utilities.decodePosition(this.memory.targetPos);
+			return decodePosition(this.memory.targetPos);
 		}
 
 		return null;
