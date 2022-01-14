@@ -15,13 +15,14 @@ import cache from 'utils/cache';
 import {encodePosition} from 'utils/serialization';
 
 const bayStructures = [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_LINK, STRUCTURE_CONTAINER];
+const problematicStructures = [STRUCTURE_STORAGE, STRUCTURE_TERMINAL, STRUCTURE_FACTORY, STRUCTURE_LAB, STRUCTURE_NUKER, STRUCTURE_POWER_SPAWN];
 
 export default class Bay {
 
-	pos: RoomPosition;
-	name: string;
+	readonly pos: RoomPosition;
+	readonly name: string;
 	_hasHarvester: boolean;
-	extensions: AnyBayStructure[];
+	readonly extensions: AnyBayStructure[];
 	energy: number;
 	energyCapacity: number;
 
@@ -34,37 +35,26 @@ export default class Bay {
 	 * @param {boolean} hasHarvester
 	 *   Whether a harvester is in this bay to fill it.
 	 */
-	constructor(pos, hasHarvester) {
+	constructor(pos: RoomPosition, hasHarvester: boolean) {
 		this.pos = pos;
 		this.name = encodePosition(pos);
 		this._hasHarvester = hasHarvester;
+		this.extensions = [];
+		this.energy = 0;
+		this.energyCapacity = 0;
 
 		const bayExtensions = cache.inHeap(
-			'bay' + this.name,
-			100,
+			'bay-extensions:' + this.name,
+			250,
 			() => {
 				const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-					filter: structure => (bayStructures as string[]).indexOf(structure.structureType) > -1 && structure.isOperational(),
+					filter: structure => (bayStructures as string[]).includes(structure.structureType) && structure.isOperational(),
 				});
 				return _.map<AnyStructure, Id<AnyStructure>>(extensions, 'id');
 			}
 		);
 
-		// Do not add extensions to bay if center is blocked by a structure.
-		const posStructures = this.pos.lookFor(LOOK_STRUCTURES);
-		let blocked = false;
-		for (const structure of posStructures) {
-			if ((OBSTACLE_OBJECT_TYPES as string[]).indexOf(structure.structureType) !== -1) {
-				blocked = true;
-				break;
-			}
-		}
-
-		this.extensions = [];
-		this.energy = 0;
-		this.energyCapacity = 0;
-
-		if (blocked) return;
+		if (this.isBlocked()) return;
 
 		for (const id of bayExtensions) {
 			const extension = Game.getObjectById<AnyBayStructure>(id);
@@ -91,6 +81,24 @@ export default class Bay {
 		}
 	}
 
+	isBlocked(): boolean {
+		return cache.inHeap('bay-blocked:' + this.name, 100, () => {
+			// Do not add extensions to bay if center is blocked by a structure.
+			const posStructures = this.pos.lookFor(LOOK_STRUCTURES);
+			for (const structure of posStructures) {
+				if ((OBSTACLE_OBJECT_TYPES as string[]).indexOf(structure.structureType) !== -1) {
+					return true;
+				}
+			}
+
+			// Do not add extensions to bay if another important structure is in the bay.
+			const importantStructures = this.pos.findInRange(FIND_STRUCTURES, 1, {
+				filter: structure => (problematicStructures as string[]).includes(structure.structureType) && structure.isOperational(),
+			});
+			return importantStructures.length > 0;
+		});
+	}
+
 	/**
 	 * Checks if an extension is part of this bay.
 	 *
@@ -100,7 +108,7 @@ export default class Bay {
 	 * @return {boolean}
 	 *   True if this extension is registered with this bay.
 	 */
-	hasExtension(extension) {
+	hasExtension(extension: AnyBayStructure): boolean {
 		for (const ourExtension of this.extensions) {
 			if (ourExtension.id === extension.id) return true;
 		}
@@ -114,7 +122,7 @@ export default class Bay {
 	 * @return {boolean}
 	 *   True if a harvester is in this bay.
 	 */
-	hasHarvester() {
+	hasHarvester(): boolean {
 		return this._hasHarvester;
 	}
 
@@ -124,7 +132,7 @@ export default class Bay {
 	 * @return {boolean}
 	 *   True if more energy is neeeded.
 	 */
-	needsRefill() {
+	needsRefill(): boolean {
 		return this.energy < this.energyCapacity;
 	}
 
@@ -134,7 +142,7 @@ export default class Bay {
 	 * @param {Creep} creep
 	 *   A creep with carry parts and energy in store.
 	 */
-	refillFrom(creep) {
+	refillFrom(creep: Creep) {
 		const needsRefill = _.filter(this.extensions, (e: AnyStoreStructure) => {
 			if (e.store) return e.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
 

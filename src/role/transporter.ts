@@ -93,6 +93,7 @@ export default class TransporterRole extends Role {
 			// @todo Number of extensions is not really the correct measure, number of
 			// walkable tiles around center is.
 			if (creep.pos.x !== bay.pos.x || creep.pos.y !== bay.pos.y) continue;
+			if (bay.isBlocked()) continue;
 
 			const best = creep.memory.deliverTarget;
 
