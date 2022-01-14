@@ -8,6 +8,7 @@ export default class PlayerIntelProcess extends Process {
     for (const userName in playerRooms) {
       const playerIntel = getPlayerIntel(userName);
       playerIntel.setPlayerRooms(playerRooms[userName].owned);
+      playerIntel.setPlayerRemotes(playerRooms[userName].remotes);
     }
   }
 
@@ -27,6 +28,15 @@ export default class PlayerIntelProcess extends Process {
         if (!result[userName]) result[userName] = {owned: [], remotes: []};
 
         result[userName].owned.push(roomName);
+      }
+      else if (roomIntel.isClaimed()) {
+        const userName = roomIntel.getReservationStatus().username;
+        if (!result[userName]) result[userName] = {owned: [], remotes: []};
+
+        result[userName].remotes.push(roomName);
+      }
+      else {
+        // @todo Try and detect harvester creeps.
       }
     }
 
