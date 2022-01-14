@@ -151,6 +151,7 @@ export default class ExpandProcess extends Process {
 			if (!bestSpawn) continue;
 
 			bestTarget = {...info, spawnRoom: bestSpawn};
+			modifiedBestExpansionScore = modifiedExpansionScore;
 			this.memory.inProgress.bestTarget = bestTarget;
 		}
 
@@ -603,3 +604,4 @@ export default class ExpandProcess extends Process {
 		);
 	}
 }
+global['ExpandProcess'] = ExpandProcess;
