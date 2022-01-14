@@ -1,16 +1,8 @@
 /* global RawMemory */
 
 declare global {
-	interface RoomMemory {
-		bays?: any,
-		sources?: any,
-		minerals?: any,
-		structureCache?: any,
-		remoteHarvesting?: any,
-	}
-
 	interface RawMemory {
-		_parsed,
+		_parsed: boolean,
 	}
 
 	namespace NodeJS {
@@ -21,6 +13,16 @@ declare global {
 	}
 
 	const _: typeof _;
+}
+
+interface DeprecatedRoomMemory extends RoomMemory {
+	bays: unknown;
+	minerals: unknown;
+	remoteHarvesting: unknown;
+	roomPlan: unknown;
+	sources: unknown;
+	spawns: unknown;
+	structureCache: unknown;
 }
 
 // Make sure game object prototypes are enhanced.
@@ -43,6 +45,9 @@ hivemind.setSegmentedMemory(new SegmentedMemory());
 hivemind.logGlobalReset();
 
 import {getRoomIntel} from 'intel-management';
+import {PlayerIntelMemory} from 'player-intel';
+import {RoomIntelMemory} from 'room-intel';
+import {RoomPlannerMemory} from 'room/planner/room-planner';
 
 // Load top-level processes.
 import AlliesProcess from 'process/allies';
@@ -294,9 +299,6 @@ const main = {
 			}
 		}
 
-		// @todo Periodically clean old room intel from segment memory.
-		// @todo Periodically clean old room planner from segment memory.
-
 		// Periodically clean old squad memory.
 		if (Game.time % 548 === 3) {
 			_.each(Memory.squads, (memory, squadName) => {
@@ -321,14 +323,51 @@ const main = {
 
 		// Periodically clean memory that is no longer needed.
 		if (Game.time % 1234 === 56) {
-			_.each(Memory.rooms, roomMemory => {
+			_.each(Memory.rooms, (roomMemory: DeprecatedRoomMemory) => {
 				delete roomMemory.bays;
-				delete roomMemory.sources;
 				delete roomMemory.minerals;
-				delete roomMemory.structureCache;
 				delete roomMemory.remoteHarvesting;
+				delete roomMemory.roomPlan;
+				delete roomMemory.sources;
+				delete roomMemory.spawns;
+				delete roomMemory.structureCache;
 			});
 		}
+
+		if (Game.time % 3625 == 0 && hivemind.segmentMemory.isReady()) {
+			this.cleanupSegmentMemory();
+		}
+	},
+
+	cleanupSegmentMemory() {
+		// Clean old entries from remote path manager from segment memory.
+		hivemind.segmentMemory.each<RemotePathMemory>('remotePath:', (key, memory) => {
+			if (Game.time - (memory.generated || 0) > 10000) hivemind.segmentMemory.delete(key);
+		});
+
+		// Periodically clean old room intel from segment memory.
+		hivemind.segmentMemory.each<RoomIntelMemory>('intel:', (key, memory) => {
+			if (Game.time - (memory.lastScan || 0) > 100000) hivemind.segmentMemory.delete(key);
+		});
+
+		// Periodically clean old player intel from segment memory.
+		hivemind.segmentMemory.each<PlayerIntelMemory>('u-intel:', (key, memory) => {
+			if (Game.time - (memory.lastSeen || 0) > 100000) hivemind.segmentMemory.delete(key);
+		});
+
+		// Periodically clean old room planner from segment memory.
+		hivemind.segmentMemory.each<RoomPlannerMemory>('planner:', (key, memory) => {
+			const roomName = key.substr(8);
+			const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
+			if (!isMyRoom || Game.time - (memory.lastRun || 0) > 10000) hivemind.segmentMemory.delete(key);
+		});
+
+		// Periodically clean old room plans from segment memory.
+		hivemind.segmentMemory.each('room-plan:', key => {
+			const roomName = key.substr(10);
+			const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
+			if (!isMyRoom) hivemind.segmentMemory.delete(key);
+		});
 	},
 
 	/**
