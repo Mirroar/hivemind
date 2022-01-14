@@ -1,6 +1,26 @@
 /* global RoomPosition CREEP_SPAWN_TIME MAX_CREEP_SIZE ATTACK_POWER
 CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN */
 
+declare global {
+	interface StrategyMemory {
+		power?: {
+			rooms: {
+				[key: string]: {
+					decays: number;
+					isActive?: boolean;
+					amount: number;
+					hits: number;
+					freeTiles: number;
+					maxAttackers?: number;
+					neededDps?: number;
+					dps?: number;
+					spawnRooms?: Record<string, {room: string, distance: number}>;
+				};
+			};
+		};
+	}
+}
+
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Process from 'process/process';
@@ -23,7 +43,7 @@ export default class PowerMiningProcess extends Process {
 		}
 
 		if (!Memory.strategy.power) {
-			Memory.strategy.power = {};
+			Memory.strategy.power = {rooms: {}};
 		}
 	}
 
@@ -94,7 +114,7 @@ export default class PowerMiningProcess extends Process {
 			}
 
 			// Determine which rooms need to spawn creeps.
-			let potentialSpawns = [];
+			let potentialSpawns: {room: string, distance: number}[] = [];
 			for (const room of Game.myRooms) {
 				if (room.isFullOnPower()) continue;
 				if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) continue;
@@ -119,7 +139,7 @@ export default class PowerMiningProcess extends Process {
 			let maxAttackers = 0;
 			let travelTime = 0;
 			let failed = true;
-			const neededRooms = {};
+			const neededRooms: Record<string, {room: string, distance: number}> = {};
 			let finalDps = 0;
 			for (const spawnInfo of potentialSpawns) {
 				maxAttackers += 2;

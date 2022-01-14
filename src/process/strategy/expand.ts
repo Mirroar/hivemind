@@ -2,6 +2,37 @@
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
+interface ExpansionTarget extends RoomListEntry {
+	spawnRoom: string;
+}
+
+type ExpandProcessMemory = {
+	started?: number,
+	claimed?: number,
+	currentTarget,
+	inProgress: {
+		rooms: {
+			[roomName: string]: boolean,
+		},
+		bestTarget: ExpansionTarget,
+	},
+	pathBlocked: number,
+	evacuatingRoom: {
+		name: string,
+		cooldown: number,
+	},
+	failedExpansions: {
+		roomName: string,
+		time: number,
+	}[],
+};
+
+declare global {
+	interface StrategyMemory {
+		expand?: ExpandProcessMemory;
+	}
+}
+
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
@@ -10,26 +41,7 @@ import Squad from 'manager.squad';
 import stats from 'utils/stats';
 
 export default class ExpandProcess extends Process {
-	memory: {
-		started?: number,
-		claimed?: number,
-		currentTarget,
-		inProgress: {
-			rooms: {
-				[roomName: string]: boolean,
-			},
-			bestTarget, // @todo RoomListItem
-		},
-		pathBlocked: number,
-		evacuatingRoom: {
-			name: string,
-			cooldown: number,
-		},
-		failedExpansions: {
-			roomName: string,
-			time: number,
-		}[],
-	};
+	memory: ExpandProcessMemory;
 	navMesh: NavMesh;
 
 	/**
@@ -49,7 +61,7 @@ export default class ExpandProcess extends Process {
 		}
 
 		if (!Memory.strategy.expand) {
-			Memory.strategy.expand = {};
+			Memory.strategy.expand = {} as ExpandProcessMemory;
 		}
 
 		this.memory = Memory.strategy.expand;
@@ -117,7 +129,7 @@ export default class ExpandProcess extends Process {
 			};
 		}
 
-		for (const info of _.values<any>(Memory.strategy.roomList)) {
+		for (const info of _.values<RoomListEntry>(Memory.strategy.roomList)) {
 			if (Game.cpu.getUsed() - startTime >= hivemind.settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than 30 cpu trying to find a target each tick.
 				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
@@ -138,9 +150,7 @@ export default class ExpandProcess extends Process {
 			const bestSpawn = this.findClosestSpawn(info.roomName);
 			if (!bestSpawn) continue;
 
-			info.spawnRoom = bestSpawn;
-
-			bestTarget = info;
+			bestTarget = {...info, spawnRoom: bestSpawn};
 			this.memory.inProgress.bestTarget = bestTarget;
 		}
 
@@ -156,7 +166,7 @@ export default class ExpandProcess extends Process {
 	 * This takes into account failed expansion attempts in close proximity to
 	 * the target room.
 	 */
-	getModifiedExpansionScore(info): number {
+	getModifiedExpansionScore(info: RoomListEntry): number {
 		let score = info.expansionScore || 0;
 
 		for (const failedAttempt of this.memory.failedExpansions || []) {

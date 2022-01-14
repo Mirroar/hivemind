@@ -8,6 +8,32 @@ declare global {
 	interface RoomMemory {
 		observeTargets?: any,
 	}
+
+	interface Memory {
+		strategy: StrategyMemory;
+	}
+
+	interface StrategyMemory {
+		roomList?: Record<string, RoomListEntry>;
+		roomListProgress?: string[]; // @todo Move to heap.
+		_expansionScoreCache?: {
+			[roomName: string]: [number, number] | [number, number, Record<string, number>];
+		};
+	}
+
+	interface RoomListEntry {
+		roomName: string;
+		scoutPriority: number;
+		expansionScore: number;
+		harvestPriority: number;
+		harvestActive?: boolean;
+		range: number;
+		expansionReasons?: unknown;
+		observer?: Id<StructureObserver>;
+		observerRoom?: string;
+		safePath?: boolean;
+		origin: string;
+	}
 }
 
 import hivemind from 'hivemind';
@@ -39,7 +65,11 @@ export default class ScoutProcess extends Process {
 		this.pathManager = new PathManager();
 
 		if (!Memory.strategy) {
-			Memory.strategy = {};
+			Memory.strategy = {
+				roomList: {},
+				roomListProgress: [],
+				_expansionScoreCache: {},
+			};
 		}
 	}
 
@@ -99,13 +129,21 @@ export default class ScoutProcess extends Process {
 		info.expansionScore = 0;
 		info.harvestPriority = 0;
 
+		// Clean up old memory artifacts.
+		delete info.harvestActive;
+
 		const timeSinceLastScan = roomIntel.getAge();
 
 		if (info.range === 0 && roomIntel.isClaimable()) {
 			// Add expansion score for later reference.
 			const expansionInfo = this.calculateExpansionScore(roomName);
 			info.expansionScore = expansionInfo.score;
-			info.expansionReasons = expansionInfo.reasons;
+			if (preserveExpansionReasons) {
+				info.expansionReasons = expansionInfo.reasons;
+			}
+			else {
+				delete info.expansionReasons;
+			}
 		}
 
 		if (info.range > 0 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
@@ -318,16 +356,16 @@ export default class ScoutProcess extends Process {
 	 * @param {object} result
 	 *   The result of the expansion score calculation.
 	 */
-	setExpansionScoreCache(roomName, result) {
+	setExpansionScoreCache(roomName: string, result: {score: number, reasons: Record<string, number>}) {
 		if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
 
 		// Preserve expansion score reasons if needed.
-		const cacheValue = [result.score, Game.time];
 		if (preserveExpansionReasons) {
-			cacheValue.push(result.reasons);
+			Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
 		}
-
-		Memory.strategy._expansionScoreCache[roomName] = cacheValue;
+		else {
+			Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time];
+		}
 	}
 
 	/**
@@ -412,21 +450,34 @@ export default class ScoutProcess extends Process {
 			closedList[nextRoom] = true;
 
 			// Add current room as a candidate for scouting.
-			if (!roomList[nextRoom] || roomList[nextRoom].range > info.range) {
+			if (!roomList[nextRoom] || roomList[nextRoom].range > info.range || !Game.rooms[roomList[nextRoom].origin] || !Game.rooms[roomList[nextRoom].origin].isMine()) {
 				const observer = this.getClosestObserver(nextRoom);
 
 				roomList[nextRoom] = {
+					roomName: nextRoom,
 					range: info.range,
 					origin: info.origin,
-					observer: observer && observer.id,
-					observerRoom: observer && observer.pos.roomName,
 					safePath: info.safePath,
+					harvestPriority: 0,
+					expansionScore: 0,
+					scoutPriority: 0,
 				};
+
+				if (observer) {
+					roomList[nextRoom].observer = observer.id;
+					roomList[nextRoom].observerRoom = observer.pos.roomName;
+				}
 			}
 			else if (!updated) {
 				const observer = this.getClosestObserver(nextRoom);
-				roomList[nextRoom].observer = observer && observer.id;
-				roomList[nextRoom].observerRoom = observer && observer.pos.roomName;
+				if (observer) {
+					roomList[nextRoom].observer = observer.id;
+					roomList[nextRoom].observerRoom = observer.pos.roomName;
+				}
+				else {
+					delete roomList[nextRoom].observer;
+					delete roomList[nextRoom].observerRoom;
+				}
 			}
 		}
 
@@ -529,8 +580,8 @@ export default class ScoutProcess extends Process {
 			openList[exit] = {
 				range: info.range + 1,
 				origin: info.origin,
-				safePath: info.safePath && roomIsSafe,
 			};
+			if (info.safePath && roomIsSafe) openList[exit].safePath = true;
 		}
 	}
 

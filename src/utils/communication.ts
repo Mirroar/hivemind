@@ -113,6 +113,7 @@ var simpleAllies = {
   // Call after making all your requests
   endOfTick() {
     if (hivemind.segmentMemory.getSavedSegmentsThisTick() >= 10) return;
+
     RawMemory.segments[swcSegmentId] = JSON.stringify(requestArray);
     RawMemory.setPublicSegments([swcSegmentId]);
   },

@@ -287,7 +287,7 @@ export default class RoomIntel {
 		// Also store room in strategy memory for easy access.
 		if (Memory.strategy) {
 			if (!Memory.strategy.power) {
-				Memory.strategy.power = {};
+				Memory.strategy.power = {rooms: {}};
 			}
 
 			if (!Memory.strategy.power.rooms) {

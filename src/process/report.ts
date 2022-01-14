@@ -1,5 +1,22 @@
 /* global RESOURCE_POWER */
 
+declare global {
+	interface StrategyMemory {
+		reports?: {
+			nextReportTime: number;
+			data: {
+				time: number;
+				gcl: GlobalControlLevel;
+				gpl: GlobalPowerLevel;
+				power
+				storedPower
+				remoteHarvestCount: number;
+				cpu
+			}
+		};
+	}
+}
+
 import Process from 'process/process';
 
 export default class ReportProcess extends Process {

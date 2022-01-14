@@ -23,7 +23,6 @@ declare global {
 
 	interface Memory {
 		hivemind: KernelMemory,
-		strategy: any,
 	}
 
 	interface KernelMemory {

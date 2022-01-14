@@ -1,5 +1,15 @@
 /* global PWR_OPERATE_SPAWN POWER_INFO */
 
+declare global {
+	interface StrategyMemory {
+		remoteHarvesting?: {
+			currentCount: number;
+			lastCheck: number;
+			rooms: string[];
+		};
+	}
+}
+
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import RemoteMiningOperation from 'operation/remote-mining';
