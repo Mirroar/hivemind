@@ -1046,14 +1046,27 @@ export default class TransporterRole extends Role {
 				resourceType: RESOURCE_ENERGY,
 			};
 
-			for (const sourceData of _.values<any>(target.room.memory.sources)) {
-				if (sourceData.targetContainer !== target.id) continue;
+			for (const source of target.room.sources) {
+				if (source.getNearbyContainer()?.id !== target.id) continue;
 
 				option.priority++;
 				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity()) {
 					// This container is filling up, prioritize emptying it when we aren't
 					// busy filling extensions.
 					if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
+				}
+
+				break;
+			}
+
+			for (const bay of target.room.bays) {
+				if (bay.pos.getRangeTo(target.pos) > 0) continue;
+				if (!target.room.roomPlanner) continue;
+				if (!target.room.roomPlanner.isPlannedLocation(target.pos, 'harvester')) continue;
+
+				if (target.store.getUsedCapacity() < target.store.getCapacity() / 3) {
+					// Do not empty containers in harvester bays for quicker extension refills.
+					option.priority = -1;
 				}
 
 				break;
