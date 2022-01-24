@@ -2,13 +2,15 @@
 
 declare global {
 	interface Memory {
-		roomStats,
+		roomStats: {
+			[roomName: string]: Record<string, number>;
+		};
 	}
 }
 
-import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 import hivemind from 'hivemind';
 import InactiveStructuresProcess from 'process/rooms/owned/inactive-structures';
+import ManageFactoryProcess from 'process/rooms/owned/factory';
 import ManageLabsProcess from 'process/rooms/owned/labs';
 import ManageLinksProcess from 'process/rooms/owned/links';
 import ManageSpawnsProcess from 'process/rooms/owned/spawns';
@@ -17,8 +19,7 @@ import RoomDefenseProcess from 'process/rooms/owned/defense';
 import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomOperation from 'operation/room';
 import RoomSongsProcess from 'process/rooms/owned/songs';
-
-const gatherStats = true;
+import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 
 export default class OwnedRoomProcess extends Process {
 	room: Room;
@@ -108,6 +109,12 @@ export default class OwnedRoomProcess extends Process {
 			}
 		});
 
+		hivemind.runSubProcess('rooms_factory', () => {
+			hivemind.runProcess(this.room.name + '_factory', ManageFactoryProcess, {
+				room: this.room,
+			});
+		});
+
 		hivemind.runSubProcess('rooms_observers', () => {
 			// Use observers if requested.
 			if (this.room.observer && this.room.memory.observeTargets && this.room.memory.observeTargets.length > 0) {
@@ -125,17 +132,17 @@ export default class OwnedRoomProcess extends Process {
 			});
 		});
 
-		if (gatherStats) {
-			hivemind.runSubProcess('rooms_stats', () => {
-				this.gatherStats();
-			});
-		}
+		hivemind.runSubProcess('rooms_stats', () => {
+			this.gatherStats();
+		});
 
 		const totalTime = Game.cpu.getUsed() - startTime;
 		operation.addCpuCost(totalTime);
 	}
 
 	gatherStats() {
+		if (!hivemind.settings.get('recordRoomStats')) return;
+
 		const roomName = this.room.name;
 
 		if (!Memory.roomStats) Memory.roomStats = {};

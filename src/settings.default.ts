@@ -108,6 +108,7 @@ const settings = {
 	minEnergyToUpgradeAtRCL8: 50000,
 	rampartWhitelistedUsers: [],
 	maxVisitorsPerUser: 0,
+	recordRoomStats: true,
 
 	// Trade:
 	enableTradeManagement: true,
