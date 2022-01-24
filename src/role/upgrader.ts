@@ -100,12 +100,9 @@ export default class UpgraderRole extends Role {
 		if (creep.room.memory.controllerLink) {
 			const target = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
 			if (target && target.energy > 50) {
-				if (creep.pos.getRangeTo(target) > 1) {
-					creep.moveToRange(target, 1);
-				}
-				else {
+				creep.whenInRange(1, target, () => {
 					creep.withdraw(target, RESOURCE_ENERGY);
-				}
+				});
 
 				return;
 			}
@@ -114,37 +111,46 @@ export default class UpgraderRole extends Role {
 		if (creep.room.memory.controllerContainer) {
 			const target = Game.getObjectById<StructureContainer>(creep.room.memory.controllerContainer);
 			if (target && target.store.energy > 50) {
-				if (creep.pos.getRangeTo(target) > 1) {
-					creep.moveToRange(target, 1);
-				}
-				else {
+				creep.whenInRange(1, target, () => {
 					creep.withdraw(target, RESOURCE_ENERGY);
-				}
+				})
 
 				return;
 			}
+		}
+
+		// Check the ground for nearby energy to pick up.
+		const droppedResources = creep.room.controller.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
+			filter: resource => resource.resourceType === RESOURCE_ENERGY
+		})
+		if (droppedResources.length > 0) {
+			creep.whenInRange(1, droppedResources[0], () => {
+				creep.pickup(droppedResources[0]);
+			});
+
+			return;
 		}
 
 		// Could also try to get energy from another nearby container.
 		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
 			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id !== creep.room.memory.controllerContainer,
 		});
-		if (otherContainers && otherContainers.length > 0) {
-			if (creep.pos.getRangeTo(otherContainers[0]) > 1) {
-				creep.moveToRange(otherContainers[0], 1);
-			}
-			else {
+		if (otherContainers.length > 0) {
+			creep.whenInRange(1, otherContainers[0], () => {
 				creep.withdraw(otherContainers[0], RESOURCE_ENERGY);
-			}
+			});
 
 			return;
 		}
 
-		// Otherwise, get energy from anywhere.
-		this.transporterRole.performGetEnergy(creep);
-
+		// Can't pick up anything. Continue upgrading if possible.
 		if (creep.store[RESOURCE_ENERGY] > 0) {
 			this.setUpgraderState(creep, true);
+		}
+
+		// If all else fails and we can't excpect resupply, look for energy ourselves.
+		if (!creep.room.memory.controllerLink && !creep.room.memory.controllerContainer) {
+			this.transporterRole.performGetEnergy(creep);
 		}
 	}
 

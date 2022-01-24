@@ -44,9 +44,12 @@ export default class UpgraderSpawnRole extends SpawnRole {
 				return 1;
 			}
 
-			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5) {
+			// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
+			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.1) {
 				hivemind.log('creeps', room.name).info('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
-				// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
+				return 1;
+			}
+			else if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getStoredEnergy() > 5000) {
 				return 1;
 			}
 		}
@@ -89,8 +92,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		// Spawn upgraders depending on stored energy.
 		if (availableEnergy < 10000) return 0;
-		if (availableEnergy < 100000) return 1;
-		if (availableEnergy < 300000) return 2;
+		if (availableEnergy < 50000) return 1;
+		if (availableEnergy < 100000) return 2;
 		// @todo Have maximum depend on number of work parts.
 		// @todo Make sure enough energy is brought by.
 		return 3;
