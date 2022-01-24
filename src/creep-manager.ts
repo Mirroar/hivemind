@@ -101,6 +101,9 @@ export default class CreepManager {
 		// transition back to their previous room.
 		if (creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49) return false;
 
+		// If we're really low on CPU for this tick, throttle mercilessly!
+		if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.85) return true;
+
 		if (!creep.memory._tO) creep.memory._tO = getThrottleOffset();
 		return throttle(creep.memory._tO, role.stopAt, role.throttleAt);
 	}
@@ -138,6 +141,10 @@ export default class CreepManager {
 		}
 
 		const totalTime = Game.cpu.getUsed() - startTime;
+		if (totalTime >= 5) {
+			hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick!');
+		}
+
 		this.recordCreepCpuStats(roleId, totalTime);
 		if (creep.memory.operation && Game.operations[creep.memory.operation]) {
 			Game.operations[creep.memory.operation].addCpuCost(totalTime);
