@@ -104,18 +104,25 @@ StructureExtension.prototype.isBayExtension = function () {
 StructureSpawn.prototype.isBaySpawn = StructureExtension.prototype.isBayExtension;
 
 StructureSpawn.prototype.getSpawnDirections = function (this: StructureSpawn): DirectionConstant[] {
-	if (!this.room.roomPlanner) return null;
+	if (!this.room.roomPlanner) return undefined;
 
-	return cache.inHeap('spawnDir:' + this.name, 100, () => {
+	return cache.inHeap('spawnDir:' + this.name, 2500, () => {
 		const directions = [];
+		const terrain = this.room.getTerrain();
 
 		utilities.handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+			if (x === this.pos.x && y === this.pos.y) return;
+
 			const position = new RoomPosition(x, y, this.pos.roomName);
+			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 			if (!this.room.roomPlanner.isPlannedLocation(position, STRUCTURE_ROAD)) return;
 			if (this.room.roomPlanner.isPlannedLocation(position, 'bay_center')) return;
+			if (_.filter(this.pos.lookFor(LOOK_STRUCTURES), s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType)).length > 0) return;
 
 			directions.push(this.pos.getDirectionTo(position));
 		});
+
+		if (directions.length === 0) return undefined;
 
 		return directions;
 	});
