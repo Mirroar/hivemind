@@ -1,9 +1,24 @@
 declare global {
-	interface RoomMemory {
-		spawns,
+	interface StructureSpawn {
+		heapMemory: SpawnHeapMemory;
+	}
+
+	interface SpawnHeapMemory extends StructureHeapMemory {
+		ticks: number;
+		spawning: number;
+		waiting: number;
+		options: number;
+		history: HistorySegment[];
 	}
 }
 
+type HistorySegment = {
+	ticks: number;
+	spawning: number;
+	waiting: number;
+}
+
+import hivemind from 'hivemind';
 import Process from 'process/process';
 import SpawnManager from 'spawn-manager';
 
@@ -52,8 +67,8 @@ const spawnClasses = {
 	'transporter': transporterSpawnRole,
 	'upgrader': upgraderSpawnRole,
 };
-const historyChunkLength = 100;
-const maxHistoryChunks = 20;
+const historyChunkLength = 200;
+const maxHistoryChunks = 10;
 
 export default class ManageSpawnsProcess extends Process {
 	room: Room;
@@ -91,40 +106,42 @@ export default class ManageSpawnsProcess extends Process {
 	/**
 	 * Collects stats for each spawn in memory.
 	 */
-	collectSpawnStats(spawns) {
-		if (!this.room.memory.spawns) this.room.memory.spawns = {};
-		const memory = this.room.memory.spawns;
-
+	collectSpawnStats(spawns: StructureSpawn[]) {
 		for (const spawn of spawns) {
-			if (!memory[spawn.id]) {
-				memory[spawn.id] = {
-					ticks: 0,
-					spawning: 0,
-					waiting: 0,
-					history: [],
-					options: 0,
-				};
+			if (!spawn.heapMemory.history) {
+				spawn.heapMemory.ticks = 0;
+				spawn.heapMemory.spawning = 0;
+				spawn.heapMemory.waiting = 0;
+				spawn.heapMemory.history = [];
+				spawn.heapMemory.options = 0;
 			}
 
-			const spawnMemory = memory[spawn.id];
-			spawnMemory.ticks++;
-			if (spawn.spawning) spawnMemory.spawning++;
-			if (spawn.waiting) spawnMemory.waiting++;
-			spawnMemory.options = spawn.numSpawnOptions;
+			spawn.heapMemory.ticks++;
+			if (spawn.spawning) spawn.heapMemory.spawning++;
+			if (spawn.waiting) spawn.heapMemory.waiting++;
+			spawn.heapMemory.options = spawn.numSpawnOptions;
 
-			if (spawnMemory.ticks >= historyChunkLength) {
+			if (spawn.heapMemory.ticks >= historyChunkLength) {
 				// Save current history as new chunk.
-				spawnMemory.history.push({
-					ticks: spawnMemory.ticks,
-					spawning: spawnMemory.spawning,
-					waiting: spawnMemory.waiting,
+				spawn.heapMemory.history.push({
+					ticks: spawn.heapMemory.ticks,
+					spawning: spawn.heapMemory.spawning,
+					waiting: spawn.heapMemory.waiting,
 				});
-				spawnMemory.history = spawnMemory.history.slice(-maxHistoryChunks);
+				spawn.heapMemory.history = spawn.heapMemory.history.slice(-maxHistoryChunks);
+
+				// Also record to room stats if enabled.
+				if (hivemind.settings.get('recordRoomStats') && Memory.roomStats[spawn.room.name]) {
+					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnSpawning'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnSpawning'] || 0) + spawn.heapMemory.spawning;
+					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnWaiting'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnWaiting'] || 0) + spawn.heapMemory.waiting;
+					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnIdle'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnIdle'] || 0) + spawn.heapMemory.ticks - spawn.heapMemory.waiting - spawn.heapMemory.spawning;
+					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnTotalTicks'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnTotalTicks'] || 0) + spawn.heapMemory.ticks;
+				}
 
 				// Reset current history values.
-				spawnMemory.ticks = 0;
-				spawnMemory.spawning = 0;
-				spawnMemory.waiting = 0;
+				spawn.heapMemory.ticks = 0;
+				spawn.heapMemory.spawning = 0;
+				spawn.heapMemory.waiting = 0;
 			}
 		}
 	}
@@ -135,14 +152,13 @@ export default class ManageSpawnsProcess extends Process {
 	 * @param {StructureSpawn[]} spawns
 	 *   An array containing the room's spawns.
 	 */
-	visualizeSpawning(spawns) {
+	visualizeSpawning(spawns: StructureSpawn[]) {
 		if (!this.room.visual) return;
-		if (!this.room.memory.spawns) return;
 
 		for (const spawn of spawns) {
 			// Show spawn usage stats.
-			const memory = this.room.memory.spawns[spawn.id] || {ticks: 1, spawning: 0, waiting: 0, history: []};
-			const totalTicks = memory.ticks + (memory.history.length * historyChunkLength);
+			const memory = spawn.heapMemory || {ticks: 1, spawning: 0, waiting: 0, history: []};
+			const totalTicks = memory.ticks + _.sum(memory.history, h => h.ticks);
 			const spawningTicks = _.reduce(memory.history, (total, h: any) => total + h.spawning, memory.spawning);
 			const waitingTicks = _.reduce(memory.history, (total, h: any) => total + h.waiting, memory.waiting);
 			this.room.visual.rect(spawn.pos.x - 0.5, spawn.pos.y, 1, 0.3, {fill: '#888888', opacity: 0.5});
