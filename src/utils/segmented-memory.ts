@@ -25,7 +25,7 @@ export default class SegmentedMemory {
 	savedKeys: Record<string, boolean>;
 	currentSegment: number;
 	startSegment: number;
-	numSavedSegments: number;
+	savedSegments: number[];
 
 	constructor() {
 		this._isReady = false;
@@ -48,7 +48,11 @@ export default class SegmentedMemory {
 		}
 
 		this.memory = Memory.segmented;
-		this.numSavedSegments = 0;
+		this.savedSegments = [];
+		// Currently requested (and thus visible) segments are always saved.
+		for (let i = 0; i < 100; i++) {
+			if (typeof RawMemory.segments[i] === 'string') this.savedSegments.push(i);
+		}
 
 		if (!this.isReady()) {
 			this.reloadData();
@@ -124,13 +128,10 @@ export default class SegmentedMemory {
 			const partLength = part.length + key.length + 4;
 
 			if (stringified.length + partLength > maxSegmentLength) {
-				RawMemory.segments[this.currentSegment] = stringified;
-				this.numSavedSegments++;
-				this.totalLength += stringified.length;
-				this.currentSegment++;
+				this.saveToCurrentSegment(stringified);
 				stringified = '';
 
-				if (typeof RawMemory.segments[this.currentSegment] === 'undefined') {
+				if (typeof RawMemory.segments[this.currentSegment] === 'undefined' && this.savedSegments.length >= maxActiveSegments) {
 					// Can't save more data this tick.
 					RawMemory.setActiveSegments(_.range(this.currentSegment, this.currentSegment + maxActiveSegments - 1));
 					allSaved = false;
@@ -146,24 +147,31 @@ export default class SegmentedMemory {
 
 		if (allSaved) {
 			// Save remainder of data.
-			RawMemory.segments[this.currentSegment] = stringified;
-			this.numSavedSegments++;
-			this.totalLength += stringified.length;
-
-			// Register complete save.
-			this.memory.startSegment = this.startSegment;
-			this.memory.endSegment = this.currentSegment;
-			this.memory.lastFullSave = Game.time;
-
-			// Inform the user.
-			hivemind.log('memory').debug('Saved', (this.totalLength / 1000).toPrecision(3) + 'kB of data to', this.currentSegment - this.startSegment + 1, 'segments.');
-
-			// Clean up.
-			delete this.savedKeys;
-			delete this.currentSegment;
-			delete this.startSegment;
-			delete this.totalLength;
+			this.saveToCurrentSegment(stringified);
+			this.registerSaveCompletion();
 		}
+	}
+
+	saveToCurrentSegment(data: string) {
+		RawMemory.segments[this.currentSegment] = data;
+		if (!this.savedSegments.includes(this.currentSegment)) this.savedSegments.push(this.currentSegment);
+		this.totalLength += data.length;
+		this.currentSegment++;
+	}
+
+	registerSaveCompletion() {
+		this.memory.startSegment = this.startSegment;
+		this.memory.endSegment = this.currentSegment - 1;
+		this.memory.lastFullSave = Game.time;
+
+		// Inform the user.
+		hivemind.log('memory').debug('Saved', (this.totalLength / 1000).toPrecision(3) + 'kB of data to', this.currentSegment - this.startSegment, 'segments.');
+
+		// Clean up.
+		delete this.savedKeys;
+		delete this.currentSegment;
+		delete this.startSegment;
+		delete this.totalLength;
 	}
 
 	isReady() {
@@ -207,6 +215,6 @@ export default class SegmentedMemory {
 	}
 
 	getSavedSegmentsThisTick() {
-		return this.numSavedSegments || 0;
+		return this.savedSegments?.length || 0;
 	}
 };
