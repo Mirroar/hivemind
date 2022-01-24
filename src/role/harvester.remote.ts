@@ -6,6 +6,22 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition, serializePositionPath} from 'utils/serialization';
 
+declare global {
+	interface RemoteHarvesterCreep extends Creep {
+		memory: RemoteHarvesterCreepMemory;
+		heapMemory: RemoteHarvesterCreepHeapMemory;
+		operation: RemoteMiningOperation;
+	}
+
+	interface RemoteHarvesterCreepMemory extends CreepMemory {
+		role: 'harvester.remote';
+		source: string;
+	}
+
+	interface RemoteHarvesterCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
 export default class RemoteHarvesterRole extends Role {
 	constructor() {
 		super();
@@ -22,7 +38,7 @@ export default class RemoteHarvesterRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: RemoteHarvesterCreep) {
 		if (!creep.operation) {
 			// @todo Operation has probably ended. Return home and suicide?
 			return;
@@ -41,7 +57,7 @@ export default class RemoteHarvesterRole extends Role {
 	 * @returns {boolean}
 	 *   Whether the creep is in the process of moving.
 	 */
-	travelToSource(creep) {
+	travelToSource(creep: RemoteHarvesterCreep) {
 		const sourcePosition = decodePosition(creep.memory.source);
 
 		if (creep.pos.roomName !== creep.operation.getRoom() && !creep.hasCachedPath()) {
@@ -55,7 +71,7 @@ export default class RemoteHarvesterRole extends Role {
 				creep.clearCachedPath();
 			}
 			else {
-				if (!this.removeObstacles(creep)) creep.followCachedPath();
+				creep.followCachedPath();
 				return true;
 			}
 		}
@@ -74,7 +90,7 @@ export default class RemoteHarvesterRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performRemoteHarvest(creep: Creep) {
+	performRemoteHarvest(creep: RemoteHarvesterCreep) {
 		if (creep.pos.roomName !== creep.operation.getRoom()) return;
 
 		// Check if a container nearby is in need of repairs, since we can handle
@@ -150,45 +166,5 @@ export default class RemoteHarvesterRole extends Role {
 				creep.transfer(container, RESOURCE_ENERGY);
 			}
 		}
-	}
-
-	/**
-	 * Tries to remove obstacles on the calculated path.
-	 * @todo Test this better.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 *
-	 * @return {boolean}
-	 *   Whether the creep is busy dismantling an obstacle.
-	 */
-	removeObstacles(creep) {
-		const workParts = creep.memory.body.work;
-
-		if (workParts < 1) return false;
-
-		if (!creep.memory.cachedPath) return false;
-
-		const pos = creep.memory.cachedPath.position;
-		const i = pos + 1;
-		const path = creep.getCachedPath();
-
-		if (i >= path.length) return false;
-
-		const position = path[i];
-		if (!position || position.roomName !== creep.pos.roomName) return false;
-
-		// Check for obstacles on the next position to destroy.
-		const structures = position.lookFor(LOOK_STRUCTURES);
-		if (structures.length === 0) return false;
-
-		for (const structure of structures) {
-			if (structure.structureType !== STRUCTURE_ROAD && structure.structureType !== STRUCTURE_CONTAINER && !structure.my) {
-				creep.dismantle(structure);
-				return true;
-			}
-		}
-
-		return false;
 	}
 }
