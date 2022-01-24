@@ -2,6 +2,13 @@
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
+import Bay from 'manager.bay';
+import cache from 'utils/cache';
+import Exploit from 'manager.exploit';
+import FactoryManager from 'factory-manager';
+import RoomDefense from 'room-defense';
+import utilities from 'utilities';
+
 declare global {
 	interface Room {
 		creeps: {
@@ -15,6 +22,7 @@ declare global {
 		enemyCreeps: {
 			[key: string]: Creep[];
 		};
+		exploits: Record<string, Exploit>;
 		defense: RoomDefense;
 		sources: Source[];
 		mineral: Mineral;
@@ -28,6 +36,8 @@ declare global {
 		nuker?: StructureNuker;
 		powerSpawn?: StructurePowerSpawn;
 		observer?: StructureObserver;
+		factory?: StructureFactory;
+		factoryManager: FactoryManager;
 	}
 
 	interface RoomMemory {
@@ -36,12 +46,6 @@ declare global {
 		storageLink?: any;
 	}
 }
-
-import Bay from 'manager.bay';
-import cache from 'utils/cache';
-import Exploit from 'manager.exploit';
-import RoomDefense from 'room-defense';
-import utilities from 'utilities';
 
 // Define quick access property room.enemyCreeps.
 Object.defineProperty(Room.prototype, 'enemyCreeps', {
@@ -130,10 +134,18 @@ Object.defineProperty(Room.prototype, 'mineral', {
 /**
  * Adds some additional data to room objects.
  */
-Room.prototype.enhanceData = function () {
+Room.prototype.enhanceData = function (this: Room) {
 	this.addStructureReference(STRUCTURE_NUKER);
 	this.addStructureReference(STRUCTURE_OBSERVER);
 	this.addStructureReference(STRUCTURE_POWER_SPAWN);
+	this.addStructureReference(STRUCTURE_FACTORY);
+
+	if (this.factory) {
+		if (this.factory.isOperational()) {
+			this.factoryManager = new FactoryManager(this.name);
+		}
+		else delete this.factory;
+	}
 
 	if (this.terminal && !this.terminal.isOperational()) {
 		delete this.terminal;
