@@ -154,7 +154,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 
 		return this.generateCreepBodyFromWeights(
 			weights,
-			Math.max(option.force ? 200 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
+			Math.max(option.force ? 200 : room.energyCapacityAvailable, room.energyAvailable),
 			option.size && {[WORK]: option.size}
 		);
 	}

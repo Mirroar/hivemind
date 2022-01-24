@@ -223,7 +223,7 @@ export default class HarvesterRole extends Role {
 			}
 		}
 
-		let target = source.getNearbyContainer();
+		let target: StructureContainer | StructureLink = source.getNearbyContainer();
 		if (source instanceof Source && creep.store.energy > 0) {
 			const link = source.getNearbyLink();
 			if (link && link.energy < link.energyCapacity) {
@@ -231,7 +231,7 @@ export default class HarvesterRole extends Role {
 			}
 			else {
 				// Check for other nearby links.
-				const links = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
+				const links: StructureLink[] = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
 				if (links.length > 0) {
 					target = links[0];
 				}

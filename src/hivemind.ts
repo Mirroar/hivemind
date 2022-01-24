@@ -213,7 +213,7 @@ class Hivemind {
 		if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.85) {
 			if (!this.emergencyBrakeProcessId) {
 				this.emergencyBrakeProcessId = id;
-				this.log('cpu').error('Shutting down all other processes before running', id, '-', Game.cpu.getUsed(), '/', Game.cpu.tickLimit, 'cpu used!');
+				this.log('cpu').error('Shutting down all other processes before running', id, '-', Game.cpu.getUsed().toPrecision(3), '/', Game.cpu.tickLimit.toPrecision(3), 'cpu used!');
 			}
 
 			return true;
@@ -414,18 +414,6 @@ class Hivemind {
 
 			this.segmentMemory.forceSave();
 			this.memory.roomPlannerMigrated = true;
-		}
-
-		if (!this.memory.remoteMinersMigrated) {
-			_.each(Memory.creeps, memory => {
-				if (['harvester.remote', 'hauler', 'claimer'].indexOf(memory.role) === -1) return;
-				if (!memory.source) return;
-
-				const pos = decodePosition(memory.source);
-				memory.operation = 'mine:' + pos.roomName;
-			});
-
-			this.memory.remoteMinersMigrated = true;
 		}
 
 		return false;

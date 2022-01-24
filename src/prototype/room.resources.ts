@@ -3,33 +3,60 @@ RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
 declare global {
 	interface Room {
-		getStorageLimit,
-		getFreeStorage,
-		getCurrentResourceAmount: (resourceType: string) => number,
-		getStoredEnergy,
-		getCurrentMineralAmount,
-		isFullOnEnergy,
-		isFullOnPower,
-		isFullOnMinerals,
-		isFullOn,
-		getStorageLocation,
-		prepareForTrading,
-		stopTradePreparation,
-		getRemoteHarvestSourcePositions,
-		getRemoteReservePositions,
-		getResourceState,
-		getBestStorageTarget,
-		getBestStorageSource,
-		getBestCircumstancialStorageSource,
+		sourceDispatcher: ResourceSourceDispatcher;
+		destinationDispatcher: ResourceDestinationDispatcher;
+		getStorageLimit: () => number;
+		getFreeStorage;
+		getCurrentResourceAmount: (resourceType: string) => number;
+		getStoredEnergy: () => number;
+		getCurrentMineralAmount;
+		isFullOnEnergy: () => boolean;
+		isFullOnPower: () => boolean;
+		isFullOnMinerals: () => boolean;
+		isFullOn;
+		getStorageLocation;
+		prepareForTrading;
+		stopTradePreparation;
+		getRemoteHarvestSourcePositions;
+		getRemoteReservePositions;
+		getResourceState;
+		getBestStorageTarget: (amount: number, resourceType: string) => AnyStoreStructure;
+		getBestStorageSource: (resourceType: string) => AnyStoreStructure;
+		getBestCircumstancialStorageSource;
 	}
 
 	interface RoomMemory {
-		fillTerminalAmount,
+		fillTerminalAmount;
 	}
 }
 
+import cache from 'utils/cache';
+import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
+import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
+
+// Define quick access property room.sourceDispatcher.
+Object.defineProperty(Room.prototype, 'sourceDispatcher', {
+	get(this: Room) {
+		return cache.inObject(this, 'sourceDispatcher', 1, () => {
+			return new ResourceSourceDispatcher(this);
+		})
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.destinationDispatcher.
+Object.defineProperty(Room.prototype, 'destinationDispatcher', {
+	get(this: Room) {
+		return cache.inObject(this, 'destinationDispatcher', 1, () => {
+			return new ResourceDestinationDispatcher(this);
+		})
+	},
+	enumerable: false,
+	configurable: true,
+});
 
 /**
  * Determines maximum storage capacity within a room.
@@ -37,7 +64,7 @@ import {getRoomIntel} from 'intel-management';
  * @return {number}
  *   The total storage limit.
  */
-Room.prototype.getStorageLimit = function () {
+Room.prototype.getStorageLimit = function (this: Room) {
 	let total = 0;
 	if (this.storage) {
 		total += this.storage.store.getCapacity();
@@ -93,6 +120,10 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
 		total += this.terminal.store[resourceType];
 	}
 
+	if (this.factory && this.factory.store[resourceType]) {
+		total += this.factory.store[resourceType];
+	}
+
 	return total;
 };
 
@@ -102,19 +133,37 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
  * @return {number}
  *   Amount of energy this room has available.
  */
-Room.prototype.getStoredEnergy = function () {
-	// @todo Add caching, make sure it's fresh every tick.
-	let total = this.getCurrentResourceAmount(RESOURCE_ENERGY);
+Room.prototype.getStoredEnergy = function (this: Room) {
+	return cache.inObject(this, 'storedEnergy', 1, () => {
+		let total = this.getCurrentResourceAmount(RESOURCE_ENERGY);
 
-	const storageLocation = this.getStorageLocation();
-	if (!storageLocation) return total;
-	const storagePosition = new RoomPosition(storageLocation.x, storageLocation.y, this.name);
-	const resources = _.filter(storagePosition.lookFor(LOOK_RESOURCES), resource => resource.resourceType === RESOURCE_ENERGY);
-	if (resources.length > 0) {
-		total += resources[0].amount;
-	}
+		// Add energy on storage location (pre storage).
+		const storageLocation = this.getStorageLocation();
+		if (!storageLocation) return total;
+		const storagePosition = new RoomPosition(storageLocation.x, storageLocation.y, this.name);
+		const resources = _.filter(storagePosition.lookFor(LOOK_RESOURCES), resource => resource.resourceType === RESOURCE_ENERGY);
+		if (resources.length > 0) {
+			total += resources[0].amount;
+		}
 
-	return total;
+		// Add dropped resources and containers on harvest spots.
+		const harvestPositions = this.roomPlanner && this.roomPlanner.getLocations('harvester');
+		for (const position of harvestPositions || []) {
+			for (const resource of position.lookFor(LOOK_RESOURCES)) {
+				if (resource.resourceType !== RESOURCE_ENERGY) continue;
+
+				total += resource.amount;
+			}
+
+			for (const structure of position.lookFor(LOOK_STRUCTURES)) {
+				if (structure.structureType !== STRUCTURE_CONTAINER) continue;
+
+				total += (structure as StructureContainer).store.getUsedCapacity(RESOURCE_ENERGY);
+			}
+		}
+
+		return total;
+	});
 };
 
 /**
@@ -325,13 +374,13 @@ Room.prototype.getResourceState = function () {
 
 	_.each(roomData.totalResources, (amount, resourceType) => {
 		if (resourceType === RESOURCE_ENERGY) {
-			if (amount >= 350000) {
+			if (amount >= 200000) {
 				roomData.state[resourceType] = 'excessive';
 			}
-			else if (amount >= 200000) {
+			else if (amount >= 50000) {
 				roomData.state[resourceType] = 'high';
 			}
-			else if (amount >= 100000) {
+			else if (amount >= 20000) {
 				roomData.state[resourceType] = 'medium';
 			}
 			else {

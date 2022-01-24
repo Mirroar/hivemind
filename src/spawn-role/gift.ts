@@ -11,14 +11,15 @@ export default class GiftSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
-		// @todo This is unlikely to happen exaclty when a spawn is idle.
+	getSpawnOptions(room: Room, options) {
+		// @todo This is unlikely to happen exactly when a spawn is idle.
 		if (Game.time % 123 !== 67) return;
+		if (room.getStoredEnergy() < 10000) return;
 		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return;
 
 		options.push({
-			priority: 4,
-			weight: 0,
+			priority: 3,
+			weight: 0.5,
 		});
 	}
 
@@ -54,4 +55,4 @@ export default class GiftSpawnRole extends SpawnRole {
 	getCreepMemory(room) {
 		return {origin: room.name};
 	}
-};
+}

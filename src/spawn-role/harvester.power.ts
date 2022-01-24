@@ -98,7 +98,7 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 			if (!info) return null;
 
 			const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
-			const targetPos = info.pos ? unpackCoordAsPos(info.pos, targetRoom) : new RoomPosition(25, 25, targetRoom);
+			const targetPos = new RoomPosition(25, 25, targetRoom);
 			const result = mesh.findPath(sourcePos, targetPos);
 			if (result.incomplete) return null;
 

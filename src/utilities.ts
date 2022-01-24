@@ -23,7 +23,7 @@ const utilities = {
 	 * @return {string}
 	 *   The determined user name.
 	 */
-	getUsername() {
+	getUsername(): string {
 		if (ownUserName) return ownUserName;
 
 		if (_.size(Game.spawns) === 0) {
@@ -46,7 +46,7 @@ const utilities = {
 	 * @return {mixed}
 	 *   Whatever the original fuction returns.
 	 */
-	bubbleWrap(callback) {
+	bubbleWrap<T>(callback: () => T): T {
 		try {
 			return callback();
 		}
@@ -477,7 +477,7 @@ const utilities = {
 	 * @return {object}
 	 *   The object with the highest priority and weight (within that priority).
 	 */
-	getBestOption(options) {
+	getBestOption<T extends {priority: number; weight: number}>(options: T[]): T {
 		let best = null;
 
 		for (const option of options) {
@@ -500,7 +500,7 @@ const utilities = {
 	 * @return {number}
 	 *   Energy cost for this creep.
 	 */
-	getBodyCost(creep) {
+	getBodyCost(creep: Creep): number {
 		let cost = 0;
 		for (const part of creep.body) {
 			cost += BODYPART_COST[part.type];

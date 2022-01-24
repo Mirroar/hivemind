@@ -34,7 +34,7 @@ export default class MapVisualsProcess extends Process {
 				this.drawRoomStatus(roomName);
 			});
 
-			_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy?.roomList[roomName]), (mem, roomName) => {
+			_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy?.roomList?.[roomName]), (mem, roomName) => {
 				if (typeof roomName !== 'string') return;
 				this.drawIntelStatus(roomName);
 			});
@@ -74,7 +74,7 @@ export default class MapVisualsProcess extends Process {
 	drawRoomStatus(roomName) {
 		const info = Memory.strategy.roomList[roomName];
 
-		if (drawMiningStatus && (Memory.strategy.remoteHarvesting.rooms || []).indexOf(roomName) !== -1) {
+		if (drawMiningStatus && (Memory.strategy.remoteHarvesting?.rooms || []).includes(roomName)) {
 			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
 		}
 

@@ -18,14 +18,18 @@ export default class GathererSpawnRole extends SpawnRole {
 		if (room.getStoredEnergy() < 5000) return;
 
 		_.each(room.memory.abandonedResources, (resources, roomName) => {
-			const numGatherers = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.targetRoom === roomName && creep.memory.origin === room.name).length;
+			// @todo Estimate resource value.
+			const totalAmount = _.sum(_.map(room.memory.abandonedResources, (m: Record<string, number>) => _.sum(m)));
+			if (totalAmount < 5000) return;
+
+			const gathererCount = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.targetRoom === roomName && creep.memory.origin === room.name).length;
 			// @todo Allow more gatherers at low priority if a lot of resources need
 			// gathering.
 			// @todo Make sure gatherers can reach their targets.
 			// @todo Currently disabled on shard0 until we automaticall remove
 			// pesky walls / ramparts.
 			if (Game.shard.name === 'shard0' || Game.shard.name === 'shard1') return;
-			if (numGatherers > 0) return;
+			if (gathererCount > 0) return;
 			if (!hivemind.segmentMemory.isReady() || getRoomIntel(roomName).isOwned()) return;
 
 			options.push({

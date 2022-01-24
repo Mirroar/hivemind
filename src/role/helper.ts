@@ -48,9 +48,9 @@ export default class HelperRole extends Role {
 		const targetPos = _.sample(creep.room.roomPlanner.getLocations('helper_parking'));
 		if (!targetPos) return;
 
-		if (creep.pos.getRangeTo(targetPos) > 0) {
-			creep.goTo(targetPos);
-		}
+		creep.whenInRange(1, targetPos, () => {
+			// Wait around helpfully!
+		});
 	}
 
 	/**

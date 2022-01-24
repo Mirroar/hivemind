@@ -1,25 +1,27 @@
 /* global OK */
 
+import hivemind from 'hivemind';
+import RemoteMiningOperation from 'operation/remote-mining';
+import Role from 'role/role';
+import utilities from 'utilities';
+import {decodePosition} from 'utils/serialization';
+
 declare global {
 	interface ClaimerCreep extends Creep {
-		memory: ClaimerCreepMemory,
-		heapMemory: ClaimerCreepHeapMemory,
+		memory: ClaimerCreepMemory;
+		heapMemory: ClaimerCreepHeapMemory;
+		operation?: RemoteMiningOperation;
 	}
 
 	interface ClaimerCreepMemory extends CreepMemory {
-		role: 'claimer',
-		mission: 'claim' | 'reserve',
-		target: string,
+		role: 'claimer';
+		mission: 'claim' | 'reserve';
+		target: string;
 	}
 
 	interface ClaimerCreepHeapMemory extends CreepHeapMemory {
 	}
 }
-
-import hivemind from 'hivemind';
-import utilities from 'utilities';
-import Role from 'role/role';
-import {decodePosition} from 'utils/serialization';
 
 export default class ClaimerRole extends Role {
 	constructor() {

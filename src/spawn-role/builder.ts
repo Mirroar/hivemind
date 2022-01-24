@@ -12,7 +12,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room, options) {
 		const maxWorkParts = this.getNeededWorkParts(room);
 
 		let numWorkParts = 0;
@@ -21,11 +21,12 @@ export default class BuilderSpawnRole extends SpawnRole {
 		});
 
 		const availableEnergy = room.getStoredEnergy();
-		const needToBuildRamparts = room.terminal && this.getLowestRampartValue(room) < 3000000 && availableEnergy > 10000;
+		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3000000 && availableEnergy > 10000;
+		const needsInitialBuildings = room.controller.level < 5 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
 		if (numWorkParts < maxWorkParts) {
 			options.push({
-				priority: needToBuildRamparts ? 5 : 3,
+				priority: (needsStrongerRamparts || needsInitialBuildings) ? 5 : 3,
 				weight: 0.5,
 				size: room.isEvacuating() ? 3 : null,
 			});

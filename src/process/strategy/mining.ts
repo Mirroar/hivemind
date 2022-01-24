@@ -69,7 +69,7 @@ export default class RemoteMiningProcess extends Process {
 				}
 			}
 
-			let spawnCapacity = numSpawns * 5;
+			let spawnCapacity = numSpawns * 6;
 			const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 3);
 
 			// Increase spawn capacity if there's a power creep that can help.

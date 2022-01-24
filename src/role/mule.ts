@@ -206,7 +206,7 @@ export default class MuleRole extends Role {
     const resourceType = this.tradeRoute.getResourceType();
     const amount = creep.store[resourceType] || 0;
 
-    const target = creep.room.getBestStorageTarget(resourceType);
+    const target = creep.room.getBestStorageTarget(amount, resourceType);
     if (!target) return;
 
     if (creep.pos.getRangeTo(target) > 1) {

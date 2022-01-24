@@ -73,6 +73,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (_.size(brawlers) > 0) continue;
 
 			const roomMemory = Memory.rooms[pos.roomName];
+			if (!roomMemory || !roomMemory.enemies) continue;
+
 			const responseType = this.getDefenseCreepSize(room, roomMemory.enemies);
 
 			if (responseType === RESPONSE_NONE) continue;

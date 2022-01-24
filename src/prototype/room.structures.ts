@@ -3,15 +3,20 @@ FIND_STRUCTURES */
 
 declare global {
 	interface Room {
-		addStructureReference;
-		generateLinkNetwork;
-		isClearingTerminal;
-		isClearingStorage;
-		isEvacuating;
+		addStructureReference: (structureType: StructureConstant) => void;
+		generateLinkNetwork: () => void;
+		isClearingTerminal: () => boolean;
+		isClearingStorage: () => boolean;
+		isEvacuating: () => boolean;
 		linkNetwork: LinkNetwork;
-		setClearingTerminal;
-		setEvacuating;
+		setClearingTerminal: (clear: boolean) => void;
+		setEvacuating: (evacuate: boolean) => void;
 		getEnergyStructures: () => (StructureSpawn | StructureExtension)[];
+	}
+
+	interface RoomMemory {
+		isEvacuating?: boolean;
+		isClearingTerminal?: boolean;
 	}
 }
 
@@ -20,9 +25,9 @@ import cache from 'utils/cache';
 import LinkNetwork from 'link-network';
 
 /**
- * Moves creep within a certain range of a target.
+ * Creates and populates a room's link network.
  */
-Room.prototype.generateLinkNetwork = function () {
+Room.prototype.generateLinkNetwork = function (this: Room) {
 	const links = this.find(FIND_MY_STRUCTURES, {
 		filter: s => s.structureType === STRUCTURE_LINK && s.isOperational(),
 	});
@@ -68,12 +73,12 @@ Room.prototype.generateLinkNetwork = function () {
  * @param {string} structureType
  *   Type of structure for which to create a reference.
  */
-Room.prototype.addStructureReference = function (structureType) {
+Room.prototype.addStructureReference = function (this: Room, structureType: StructureConstant) {
 	if (!this.controller) return;
 
 	const cacheKey = this.name + ':' + structureType + ':id';
 	const structureId = cache.inHeap(cacheKey, 250, () => {
-		if (CONTROLLER_STRUCTURES[structureType][this.controller.level] === 0) return;
+		if (CONTROLLER_STRUCTURES[structureType][this.controller.level] === 0) return null;
 
 		// @todo Cache filtered find requests in room.
 		const structures = this.find(FIND_STRUCTURES, {filter: {structureType}});
@@ -81,6 +86,8 @@ Room.prototype.addStructureReference = function (structureType) {
 		if (structures.length > 0) {
 			return structures[0].id;
 		}
+
+		return null;
 	});
 
 	if (!structureId) return;
@@ -98,7 +105,7 @@ Room.prototype.addStructureReference = function (structureType) {
  * @param {boolean} evacuate
  *   Whether to evacuate this room or not.
  */
-Room.prototype.setEvacuating = function (evacuate) {
+Room.prototype.setEvacuating = function (this: Room, evacuate: boolean) {
 	this.memory.isEvacuating = evacuate;
 };
 
@@ -108,7 +115,7 @@ Room.prototype.setEvacuating = function (evacuate) {
 * @return {boolean}
 *   Whether this room should be evacuated.
 */
-Room.prototype.isEvacuating = function () {
+Room.prototype.isEvacuating = function (this: Room) {
 	return this.memory.isEvacuating;
 };
 
@@ -118,7 +125,7 @@ Room.prototype.isEvacuating = function () {
 * @param {boolean} clear
 *   Whether to clear this room's terminal.
 */
-Room.prototype.setClearingTerminal = function (clear) {
+Room.prototype.setClearingTerminal = function (this: Room, clear: boolean) {
 	this.memory.isClearingTerminal = clear;
 };
 
@@ -128,7 +135,7 @@ Room.prototype.setClearingTerminal = function (clear) {
 * @return {boolean}
 *   Whether this room's terminal is being cleared.
 */
-Room.prototype.isClearingTerminal = function () {
+Room.prototype.isClearingTerminal = function (this: Room) {
 	if (!this.terminal) return false;
 
 	if (this.storage && this.roomManager && this.roomManager.hasMisplacedTerminal()) {
@@ -141,7 +148,7 @@ Room.prototype.isClearingTerminal = function () {
 /**
  * Checks if a room's storage should be emptied.
  */
-Room.prototype.isClearingStorage = function () {
+Room.prototype.isClearingStorage = function (this: Room) {
 	if (!this.storage) return false;
 	if (this.isClearingTerminal()) return false;
 
@@ -156,19 +163,25 @@ Room.prototype.isClearingStorage = function () {
 Room.prototype.getEnergyStructures = function (this: Room): (StructureSpawn | StructureExtension)[] {
 	if (!this.roomPlanner) return undefined;
 
-	return cache.inHeap('energyStructures:' + this.name, 100, () => {
-		const structures: (StructureSpawn | StructureExtension)[] = [];
+	const ids = cache.inHeap('energyStructures:' + this.name, 100, () => {
+		const structures: (Id<StructureSpawn | StructureExtension>)[] = [];
 
 		for (const bay of getBaysByPriority(this)) {
 			for (const structure of bay.extensions) {
 				if (structure.structureType !== STRUCTURE_SPAWN && structure.structureType !== STRUCTURE_EXTENSION) continue;
 
-				structures.push(structure);
+				structures.push(structure.id);
 			}
+		}
+
+		for (const structure of getUnmappedEnergyStructures(this, structures)) {
+			structures.push(structure.id);
 		}
 
 		return structures;
 	});
+
+	return _.map<Id<StructureSpawn | StructureExtension>, StructureSpawn | StructureExtension>(ids, Game.getObjectById);
 }
 
 function getBaysByPriority(room: Room): Bay[] {
@@ -181,4 +194,14 @@ function getBaysByPriority(room: Room): Bay[] {
 
 		return 1 + distance / 50;
 	});
+}
+
+function getUnmappedEnergyStructures(room: Room, map: Id<Structure>[]): (StructureSpawn | StructureExtension)[] {
+	const center = room.roomPlanner.getRoomCenter();
+	return _.sortBy(
+		room.find(FIND_MY_STRUCTURES, {
+			filter: s => ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION] as string[]).includes(s.structureType) && !map.includes(s.id)
+		}),
+		s => s.pos.getRangeTo(center)
+	);
 }

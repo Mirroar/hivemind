@@ -32,7 +32,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 			}
 			else {
 				option.force = true;
-				option.priority = 6;
+				option.priority = room.storage ? 6 : 5;
 				option.weight = 1;
 			}
 

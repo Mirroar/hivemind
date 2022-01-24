@@ -265,11 +265,9 @@ export default class OperatorRole extends Role {
 			if (ticksRemaining > 50) return false;
 
 			// Make sure the spawn actually needs support with spawning.
-			if (!this.creep.room.memory.spawns) return false;
-
-			const memory = this.creep.room.memory.spawns[spawn.id];
-			const historyChunkLength = 100;
-			const totalTicks = memory.ticks + (memory.history.length * historyChunkLength);
+			const memory = spawn.heapMemory;
+			const historyChunkLength = 200;
+			const totalTicks = memory.ticks + ((memory.history?.length || 0) * historyChunkLength);
 			const spawningTicks = _.reduce(memory.history, (total, h: any) => total + h.spawning, memory.spawning);
 
 			if ((memory.options || 0) < 2 && spawningTicks / totalTicks < 0.8) return false;
@@ -308,8 +306,7 @@ export default class OperatorRole extends Role {
 			if (spawn.structureType !== STRUCTURE_SPAWN) return false;
 
 			// Make sure the spawn actually needs support with spawning.
-			if (!this.creep.room.memory.spawns) return false;
-			if ((this.creep.room.memory.spawns[spawn.id].options || 0) < 2) return false;
+			if ((spawn.heapMemory.options || 0) < 2) return false;
 
 			// Don't support if there is still time for transporters to handle refilling.
 			if (spawn.spawning && spawn.spawning.remainingTime > 5) return false;
@@ -373,7 +370,7 @@ export default class OperatorRole extends Role {
 		if (!this.creep.store[RESOURCE_OPS]) return;
 		if (this.creep.store.getUsedCapacity() < this.creep.store.getCapacity() * 0.9) return;
 
-		const storage = this.creep.room.getBestStorageTarget(RESOURCE_OPS);
+		const storage = this.creep.room.getBestStorageTarget(this.creep.store[RESOURCE_OPS], RESOURCE_OPS);
 		if (!storage) return;
 
 		options.push({
@@ -452,9 +449,9 @@ export default class OperatorRole extends Role {
 		const targetPos = _.sample(this.creep.room.roomPlanner.getLocations('helper_parking'));
 		if (!targetPos) return;
 
-		if (this.creep.pos.getRangeTo(targetPos) > 0) {
-			this.creep.goTo(targetPos);
-		}
+		this.creep.whenInRange(1, targetPos, () => {
+			// Wait around menacingly!
+		});
 	}
 
 	/**

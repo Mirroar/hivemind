@@ -148,7 +148,7 @@ export default class ScoutProcess extends Process {
 
 		if (info.range > 0 && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 			if (timeSinceLastScan > hivemind.settings.get('roomScoutInterval')) {
-				info.scoutPriority = 1.1 - (info.range / 10);
+				info.scoutPriority = 1;
 			}
 
 			if (roomIntel.memory.lastScan > 0 && roomIntel.isClaimable() && (!roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader'))) {
