@@ -2,6 +2,7 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
+import {getRoomIntel} from 'intel-management';
 
 export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	/**
@@ -29,7 +30,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 
 			const harvesters = _.filter(
 				Game.creepsByRole['harvester.remote'] || {},
-				creep => {
+				(creep: RemoteHarvesterCreep) => {
 					// @todo Instead of filtering for every room, this could be grouped once per tick.
 					if (creep.memory.source !== targetPos) return false;
 
@@ -40,10 +41,17 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 				}
 			);
 
-			// @todo Allow spawning multiple harvesters if more work parts are needed,
+			// Allow spawning multiple harvesters if more work parts are needed,
 			// but no more than available spaces around the source.
+			const roomIntel = getRoomIntel(pos.roomName);
+			let freeSpots = 1;
+			for (const source of roomIntel.getSourcePositions()) {
+				if (source.x === pos.x && source.y === pos.y) freeSpots = source.free || 1;
+			}
 
-			if (_.size(harvesters) > 0) continue;
+			if (harvesters.length >= freeSpots) continue;
+			const workParts = _.sum(harvesters, creep => creep.getActiveBodyparts(WORK));
+			if (workParts >= operation.getHarvesterSize(targetPos)) continue;
 
 			options.push({
 				priority: 3,
@@ -72,12 +80,12 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 		// @todo Also use high number of work parts if road still needs to be built.
 		// @todo Use calculated max size like normal harvesters when established.
 		// Use less move parts if a road has already been established.
-		const bodyWeights = option.isEstablished ? {[MOVE]: 0.35, [WORK]: 0.55, [CARRY]: 0.1} : {[MOVE]: 0.5, [WORK]: 0.5, [CARRY]: 0.1};
+		const bodyWeights = option.isEstablished ? {[MOVE]: 0.35, [WORK]: 0.65} : {[MOVE]: 0.5, [WORK]: 0.5, [CARRY]: 0.1};
 
 		return this.generateCreepBodyFromWeights(
 			bodyWeights,
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[WORK]: option.size}
+			{[WORK]: option.size},
 		);
 	}
 
@@ -118,4 +126,4 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 
 		operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
 	}
-};
+}

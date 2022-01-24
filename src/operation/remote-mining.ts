@@ -229,7 +229,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Gets the container for the given source, if available.
 	 */
-	getContainer(sourceLocation: string): StructureContainer {
+	getContainer(sourceLocation: string): StructureContainer | null {
 		if (!this.hasContainer(sourceLocation)) return null;
 		if (!this.memory.status[sourceLocation]) return null;
 
@@ -377,5 +377,30 @@ export default class RemoteMiningOperation extends Operation {
 		});
 
 		return unpackPosList(cached);
+	}
+
+	needsBuilder(sourceLocation: string): boolean {
+		if (!hivemind.segmentMemory.isReady()) return false;
+		if (!this.hasContainer(sourceLocation)) return true;
+
+		const container = this.getContainer(sourceLocation);
+		if (container && container.hits < container.hitsMax / 3) return true;
+
+		return cache.inHeap('needsBuilder:' + sourceLocation, 100, () => {
+			const paths = this.getPaths();
+			if (!paths[sourceLocation] || !paths[sourceLocation].accessible) return false;
+
+			const path = paths[sourceLocation].path;
+			// Check path from storage to source.
+			for (let i = path.length - 1; i >= 0; i--) {
+				const pos = path[i];
+				if (!Game.rooms[pos.roomName] || Game.rooms[pos.roomName].isMine()) continue;
+
+				const road = _.sample(_.filter(pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_ROAD));
+				if (!road || road.hits < road.hitsMax / 5) return true;
+			}
+
+			return false;
+		});
 	}
 };

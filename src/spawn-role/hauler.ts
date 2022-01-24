@@ -1,11 +1,5 @@
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
 
-declare global {
-	interface CreepMemory {
-		source?: any,
-	}
-}
-
 import SpawnRole from 'spawn-role/spawn-role';
 import RemoteMiningOperation from 'operation/remote-mining';
 import {encodePosition, decodePosition} from 'utils/serialization';
@@ -19,7 +13,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room, options) {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const targetPos = encodePosition(pos);
@@ -53,7 +47,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 
 			const haulers = _.filter(
 				Game.creepsByRole.hauler || {},
-				creep => {
+				(creep: HaulerCreep) => {
 					// @todo Instead of filtering for every room, this could be grouped once per tick.
 					if (creep.memory.source !== targetPos) return false;
 
@@ -64,13 +58,14 @@ export default class HaulerSpawnRole extends SpawnRole {
 				}
 			);
 
-			if (_.size(haulers) >= maxHaulers) continue;
+			if (haulers.length >= maxHaulers) continue;
 
 			options.push({
 				priority: 3,
 				weight: 0.8,
 				targetPos,
 				size: adjustedCarryParts,
+				builder: operation.needsBuilder(targetPos) && _.filter(haulers, c => c.getActiveBodyparts(WORK) > 0).length === 0,
 			});
 		}
 	}
@@ -86,9 +81,9 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option) {
 		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && room.storage ? this.getBodyWeights() : this.getNoRoadsBodyWeight(),
+			room.controller.level > 3 && room.storage ? (option.builder ? this.getBuilderBodyWeights() : this.getBodyWeights()) : this.getNoRoadsBodyWeights(),
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 			{[CARRY]: option.size}
 		);
@@ -101,9 +96,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 *   An object containing body part weights, keyed by type.
 	 */
 	getBodyWeights() {
-		// @todo Always spawn without work parts. Spawn a dedicated builder
-		// when roads need to be built, or at least one road is at < 25% hits.
-		return {[MOVE]: 0.35, [WORK]: 0.05, [CARRY]: 0.6};
+		return {[MOVE]: 0.35, [CARRY]: 0.65};
 	}
 
 	/**
@@ -112,8 +105,18 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 * @return {object}
 	 *   An object containing body part weights, keyed by type.
 	 */
-	getNoRoadsBodyWeight() {
+	getNoRoadsBodyWeights() {
 		return {[MOVE]: 0.5, [CARRY]: 0.5};
+	}
+
+	/**
+	 * Determine body weights for haulers when no roads are being built.
+	 *
+	 * @return {object}
+	 *   An object containing body part weights, keyed by type.
+	 */
+	getBuilderBodyWeights() {
+		return {[MOVE]: 0.35, [CARRY]: 0.5, [WORK]: 0.15};
 	}
 
 	/**
@@ -127,12 +130,12 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option): HaulerCreepMemory {
 		return {
-			// @todo Get rid of storage position
-			storage: encodePosition(room.storage ? room.storage.pos : room.controller.pos),
+			role: 'hauler',
 			source: option.targetPos,
 			operation: 'mine:' + decodePosition(option.targetPos).roomName,
+			delivering: false,
 		};
 	}
 
@@ -148,7 +151,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room, option, body) {
+	onSpawn(room: Room, option, body: BodyPartConstant[]) {
 		const operationName = 'mine:' + decodePosition(option.targetPos).roomName;
 		const operation = Game.operations[operationName];
 		if (!operation) return;
