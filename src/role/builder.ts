@@ -1,6 +1,12 @@
 /* global FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN
 STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER */
 
+declare global {
+	interface CreepMemory {
+		repairing?: boolean;
+	}
+}
+
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
@@ -48,23 +54,34 @@ export default class BuilderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
-		if (creep.memory.repairing && creep.store[RESOURCE_ENERGY] === 0) {
+	run(creep: Creep) {
+		if ((creep.memory.repairing || creep.memory.upgrading) && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setBuilderState(creep, false);
 		}
-		else if (!creep.memory.repairing && creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9) {
+		else if (!creep.memory.repairing && !creep.memory.upgrading && creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9) {
 			this.setBuilderState(creep, true);
 		}
 
+		if (creep.memory.upgrading) {
+			this.performUpgrade(creep);
+			return;
+		}
 		if (creep.memory.repairing) {
-			this.performRepair(creep);
+			if (!this.performRepair(creep) && creep.room.controller?.level < 8) {
+				creep.memory.upgrading = true;
+				delete creep.memory.repairing;
+				this.performUpgrade(creep);
+			}
 			return;
 		}
 
 		if (creep.memory.sourceTarget && !creep.memory.order) {
 			delete creep.memory.sourceTarget;
 		}
-		this.transporterRole.performGetEnergy(creep);
+
+		if (!creep.room.storage || creep.room.getStoredEnergy() > 2500) {
+			this.transporterRole.performGetEnergy(creep);
+		}
 	}
 
 	/**
@@ -77,8 +94,15 @@ export default class BuilderRole extends Role {
 	 */
 	setBuilderState(creep, repairing) {
 		creep.memory.repairing = repairing;
+		delete creep.memory.upgrading;
 		delete creep.memory.sourceTarget;
 		delete creep.memory.order;
+	}
+
+	performUpgrade(creep: Creep) {
+		creep.whenInRange(3, creep.room.controller, () => {
+			creep.upgradeController(creep.room.controller);
+		});
 	}
 
 	/**
@@ -146,7 +170,7 @@ export default class BuilderRole extends Role {
 		delete creep.memory.order;
 
 		const best = utilities.getBestOption(this.getAvailableBuilderTargets(creep));
-		if (!best) return;
+		if (!best || best.priority <= 0) return;
 
 		creep.memory.order = {
 			type: best.type,
@@ -207,8 +231,15 @@ export default class BuilderRole extends Role {
 				}
 
 				// Roads are not that important, repair only when low.
-				if (target.structureType === STRUCTURE_ROAD && target.hits > 1000) {
-					option.priority--;
+				if (target.structureType === STRUCTURE_ROAD) {
+					if (creep.room.roomPlanner && !creep.room.roomPlanner.isPlannedLocation(target.pos, 'road')) {
+						// Let old roads decay naturally.
+						continue;
+					}
+
+					if (target.hits > target.hitsMax / 3) {
+						option.priority = 0;
+					}
 				}
 
 				// Slightly adjust weight so that closer structures get prioritized. Not for walls or Ramparts, though, we want those to be equally strong all arond.
@@ -260,7 +291,7 @@ export default class BuilderRole extends Role {
 		}
 		else if (target.hits >= maxHealth * 0.9 && target.hits < target.hitsMax) {
 			// This has really low priority.
-			option.priority = 0;
+			option.priority = creep.room.controller.level < 8 ? -1 : 0;
 			maxHealth = target.hitsMax;
 		}
 
@@ -389,14 +420,29 @@ export default class BuilderRole extends Role {
 		const workParts = creep.memory.body.work;
 		if (!workParts) return;
 
-		const needsRepair = creep.room.find(FIND_STRUCTURES);
-		for (const structure of needsRepair) {
-			if (creep.pos.getRangeTo(structure) > 3) continue;
-			if (structure.needsDismantling()) continue;
+		const needsRepair = creep.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => {
+			if (structure.needsDismantling()) return false;
 
+			if (structure.structureType === STRUCTURE_ROAD) {
+				const isPlannedRoad = creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(structure.pos, STRUCTURE_ROAD);
+				const isOperationRoad = creep.room.roomManager && creep.room.roomManager.isOperationRoadPosition(structure.pos);
+
+				if (!isPlannedRoad && !isOperationRoad) return false;
+			}
+
+			return true;
+		}});
+
+		for (const structure of needsRepair) {
 			let maxHealth = structure.hitsMax;
 			if (structure.structureType === STRUCTURE_RAMPART || structure.structureType === STRUCTURE_WALL) {
+				if (!creep.room.roomPlanner) continue;
+				if (!creep.room.roomPlanner.isPlannedLocation(structure.pos, structure.structureType)) continue;
+
 				maxHealth = wallHealth[structure.room.controller.level];
+				if (creep.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.blocker')) {
+					maxHealth = 10000;
+				}
 			}
 
 			if (structure.hits <= maxHealth - (workParts * 100)) {
