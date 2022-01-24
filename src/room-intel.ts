@@ -38,6 +38,7 @@ export interface RoomIntelMemory {
 		x: number;
 		y: number;
 		id: Id<Source>;
+		free: number;
 	}[];
 	mineralInfo: {
 		x: number;
@@ -52,6 +53,14 @@ export interface RoomIntelMemory {
 		freeTiles: number;
 		pos: string;
 	};
+	deposit?: {
+		x: number;
+		y: number;
+		id: Id<Deposit>;
+		type: DepositConstant;
+		decays: number;
+		cooldown: number;
+	}
 	structures: {
 		[T in StructureConstant]?: {
 			[id: string]: {
@@ -198,6 +207,7 @@ export default class RoomIntel {
 					x: source.pos.x,
 					y: source.pos.y,
 					id: source.id,
+					free: source.getNumHarvestSpots(),
 				};
 			}
 		);
@@ -209,6 +219,18 @@ export default class RoomIntel {
 			id: room.mineral.id,
 			type: room.mineral.mineralType,
 		};
+
+		const deposits = room.find(FIND_DEPOSITS);
+		if (deposits.length > 0) {
+			this.memory.deposit = {
+				x: deposits[0].pos.x,
+				y: deposits[0].pos.y,
+				id: deposits[0].id,
+				type: deposits[0].depositType,
+				decays: Game.time + deposits[0].ticksToDecay,
+				cooldown: deposits[0].lastCooldown || 0,
+			};
+		}
 	}
 
 	/**
@@ -517,7 +539,7 @@ export default class RoomIntel {
 	 * @return {object[]}
 	 *   An Array of ob objects containing id, x and y position of the source.
 	 */
-	getSourcePositions(): {x: number, y: number, id: Id<Source>}[] {
+	getSourcePositions(): {x: number, y: number, id: Id<Source>, free: number}[] {
 		return this.memory.sources || [];
 	}
 
@@ -539,6 +561,10 @@ export default class RoomIntel {
 	 */
 	getMineralPosition(): {x: number, y: number, id: Id<Mineral>, type: MineralConstant} {
 		return this.memory.mineralInfo;
+	}
+
+	getDepositInfo() {
+		return this.memory.deposit;
 	}
 
 	/**
