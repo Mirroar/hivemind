@@ -69,17 +69,13 @@ Room.prototype.getAvailableBoosts = function (this: Room, type: string): Availab
 
 			const storage = this.storage || {store: {}};
 			const terminal = this.terminal || {store: {}};
-			const resourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
+			const availableResourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
 
 			_.each(BOOSTS, mineralBoosts => {
 				for (const mineralType in mineralBoosts) {
-					// Only boost using the best boosts. We'll make sure we have what we need through trading.
-					if (mineralType.indexOf('X') === -1) continue;
+					if (!availableResourceTypes.includes(mineralType)) continue;
 
 					const boostValues = mineralBoosts[mineralType];
-
-					if (_.indexOf(resourceTypes, mineralType) === -1) continue;
-
 					_.each(boostValues, (boostValue, boostType) => {
 						if (!boosts[boostType]) {
 							boosts[boostType] = {};
