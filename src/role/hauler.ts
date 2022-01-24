@@ -10,6 +10,26 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 
+declare global {
+	interface HaulerCreep extends Creep {
+		memory: HaulerCreepMemory;
+		heapMemory: HaulerCreepHeapMemory;
+		operation: RemoteMiningOperation;
+	}
+
+	interface HaulerCreepMemory extends CreepMemory {
+		role: 'hauler';
+		delivering: boolean;
+		source: string;
+	}
+
+	interface HaulerCreepHeapMemory extends CreepHeapMemory {
+		lastWaitPosition: string;
+		lastWaitCount: number;
+		energyPickupTarget: string;
+	}
+}
+
 export default class HaulerRole extends Role {
 	actionTaken: boolean;
 
@@ -19,7 +39,7 @@ export default class HaulerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: HaulerCreep) {
 		if (!hivemind.segmentMemory.isReady()) return;
 
 		if (creep.memory.delivering && creep.store[RESOURCE_ENERGY] === 0) {
@@ -32,11 +52,8 @@ export default class HaulerRole extends Role {
 		if (creep.memory.delivering) {
 			// Repair / build roads on the way home.
 
-			if (creep.operation) {
-				const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
-				if (creep.pos.roomName !== sourceRoom && Game.cpu.bucket > 3000) {
-					this.performBuildRoad(creep);
-				}
+			if (creep.operation && Game.cpu.bucket > 3000) {
+				if (this.performBuildRoad(creep)) return;
 			}
 
 			this.performHaulerDeliver(creep);
@@ -54,7 +71,7 @@ export default class HaulerRole extends Role {
 	 * @param {boolean} delivering
 	 *   Whether this creep should be delivering it's carried resources.
 	 */
-	setHaulerState(creep, delivering) {
+	setHaulerState(creep: HaulerCreep, delivering: boolean) {
 		creep.memory.delivering = delivering;
 
 		if (!creep.operation) return;
@@ -71,7 +88,7 @@ export default class HaulerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performHaulerDeliver(creep) {
+	performHaulerDeliver(creep: HaulerCreep) {
 		if (!creep.operation) {
 			// @todo Operation has probably ended. Return home and suicide?
 			return;
@@ -82,6 +99,7 @@ export default class HaulerRole extends Role {
 
 		const target = Game.rooms[sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
 		const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
+		if (!targetPosition) return;
 
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
@@ -99,54 +117,66 @@ export default class HaulerRole extends Role {
 			return;
 		}
 
+		this.storeResources(creep, target);
+	}
+
+	storeResources(creep: HaulerCreep, target: AnyStoreStructure) {
 		// @todo If no storage is available, use default delivery method.
-		if (!target || creep.store[RESOURCE_ENERGY] > target.store.getFreeCapacity()) {
-			// Storage structure is full, drop energy instead.
-			const storageLocation = creep.room.getStorageLocation();
-			if (!storageLocation) {
-				// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-				if (creep.drop(RESOURCE_ENERGY) === OK) creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
-				return;
-			}
+		if (!target || creep.store[RESOURCE_ENERGY] > target.store.getFreeCapacity(RESOURCE_ENERGY)) {
+			this.dropResources(creep);
+			return;
+		}
 
-			if (creep.pos.x !== storageLocation.x || creep.pos.y !== storageLocation.y) {
-				const result = creep.moveTo(storageLocation.x, storageLocation.y);
-				if (result === ERR_NO_PATH && creep.drop(RESOURCE_ENERGY) === OK) {
-					// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-					creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
-					return;
-				}
-
-				const pos = encodePosition(creep.pos);
-				if (creep.memory.lastWaitPosition === pos) {
-					creep.memory.lastWaitCount = (creep.memory.lastWaitCount || 0) + 1;
-					if (creep.memory.lastWaitCount > 10 && creep.drop(RESOURCE_ENERGY) === OK) {
-						// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-						creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
-						delete creep.memory.lastWaitCount;
-						return;
-					}
-				}
-				else {
-					delete creep.memory.lastWaitCount;
-					creep.memory.lastWaitPosition = pos;
-				}
+		creep.whenInRange(1, target, () => {
+			if (creep.transfer(target, RESOURCE_ENERGY) === OK) {
+				creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
 			}
-			else if (creep.drop(RESOURCE_ENERGY) === OK) {
-				// Dropoff spot reached, drop energy.
+		});
+	}
+
+	dropResources(creep: HaulerCreep) {
+		const storageLocation = creep.room.getStorageLocation();
+		if (!storageLocation) {
+			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+			if (creep.drop(RESOURCE_ENERGY) === OK) creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			return;
+		}
+
+		if (creep.pos.x !== storageLocation.x || creep.pos.y !== storageLocation.y) {
+			const result = creep.moveTo(storageLocation.x, storageLocation.y);
+			if (result === ERR_NO_PATH && creep.drop(RESOURCE_ENERGY) === OK) {
 				// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
 				creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
 				return;
 			}
+
+			if (this.dropResourcesAfterWaiting(creep)) return;
+		}
+		else if (creep.drop(RESOURCE_ENERGY) === OK) {
+			// Dropoff spot reached, drop energy.
+			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+			creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			return;
+		}
+	}
+
+	dropResourcesAfterWaiting(creep: HaulerCreep): boolean {
+		const pos = encodePosition(creep.pos);
+		if (creep.heapMemory.lastWaitPosition === pos) {
+			creep.heapMemory.lastWaitCount = (creep.heapMemory.lastWaitCount || 0) + 1;
+			if (creep.heapMemory.lastWaitCount > 10 && creep.drop(RESOURCE_ENERGY) === OK) {
+				// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
+				creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+				delete creep.heapMemory.lastWaitCount;
+				return true;
+			}
+		}
+		else {
+			delete creep.heapMemory.lastWaitCount;
+			creep.heapMemory.lastWaitPosition = pos;
 		}
 
-		const result = creep.transfer(target, RESOURCE_ENERGY);
-		if (result === OK) {
-			creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
-		}
-		else if (result === ERR_NOT_IN_RANGE) {
-			creep.moveTo(target);
-		}
+		return false;
 	}
 
 	/**
@@ -155,7 +185,7 @@ export default class HaulerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performGetHaulerEnergy(creep) {
+	performGetHaulerEnergy(creep: HaulerCreep) {
 		const sourcePosition = decodePosition(creep.memory.source);
 
 		if (creep.hasCachedPath()) {
@@ -224,20 +254,20 @@ export default class HaulerRole extends Role {
 	 * @return {boolean}
 	 *   True if a pickup was made this tick.
 	 */
-	pickupNearbyEnergy(creep) {
+	pickupNearbyEnergy(creep: HaulerCreep) {
 		// @todo Allow hauler to pick up other resources as well, but respect that
 		// when delivering.
 		// Check if energy is on the ground nearby and pick that up.
 		let resource;
-		if (creep.memory.energyPickupTarget) {
-			resource = Game.getObjectById(creep.memory.energyPickupTarget);
+		if (creep.heapMemory.energyPickupTarget) {
+			resource = Game.getObjectById(creep.heapMemory.energyPickupTarget);
 
 			if (!resource) {
-				delete creep.memory.energyPickupTarget;
+				delete creep.heapMemory.energyPickupTarget;
 			}
 			else if (resource.pos.roomName !== creep.pos.roomName) {
 				resource = null;
-				delete creep.memory.energyPickupTarget;
+				delete creep.heapMemory.energyPickupTarget;
 			}
 		}
 
@@ -248,7 +278,7 @@ export default class HaulerRole extends Role {
 			});
 			if (resources.length > 0) {
 				resource = resources[0];
-				creep.memory.energyPickupTarget = resource.id;
+				creep.heapMemory.energyPickupTarget = resource.id;
 			}
 		}
 
@@ -274,11 +304,11 @@ export default class HaulerRole extends Role {
 	 * @return {boolean}
 	 *   Whether or not an action for building this road has been taken.
 	 */
-	performBuildRoad(creep) {
-		const workParts = creep.memory.body.work || 0;
+	performBuildRoad(creep: HaulerCreep) {
+		const workParts = creep.getActiveBodyparts(WORK);
 		if (workParts === 0) return false;
 
-		if ((creep.store.energy || 0) === 0) return false;
+		if ((creep.store[RESOURCE_ENERGY] || 0) === 0) return false;
 
 		if (!creep.operation) return false;
 
@@ -292,46 +322,13 @@ export default class HaulerRole extends Role {
 			if (this.buildRoadOnCachedPath(creep)) return true;
 		}
 		else {
-			// Repair structures in passing.
-			const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-				filter: structure => (structure.structureType === STRUCTURE_ROAD || structure.structureType === STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - (workParts * 100),
-			});
-			if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-				if (creep.repair(needsRepair) === OK) {
-					creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
-					this.actionTaken = true;
-				}
-
-				// If structure is especially damaged, stay here to keep repairing.
-				if (needsRepair.hits < needsRepair.hitsMax - (workParts * 2 * 100)) {
-					return true;
-				}
-			}
+			if (this.repairNearby(creep)) return true;
 		}
 
 		// Check source container and repair that, too.
 		if (this.ensureRemoteHarvestContainerIsBuilt(creep)) return true;
 
-		const needsBuilding = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
-			filter: site => site.structureType === STRUCTURE_CONTAINER || site.structureType === STRUCTURE_ROAD,
-		});
-		if (needsBuilding && creep.pos.getRangeTo(needsBuilding) <= 3) {
-			if (this.actionTaken) {
-				// Try again next time.
-				return true;
-			}
-
-			if (creep.build(needsBuilding) === OK) {
-				const buildCost = Math.min(creep.store.energy || 0, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
-				creep.operation.addResourceCost(buildCost, RESOURCE_ENERGY);
-				this.actionTaken = true;
-			}
-
-			// Stay here if more building is needed.
-			if (needsBuilding.progressTotal - needsBuilding.progress > workParts * 10) {
-				return true;
-			}
-		}
+		if (this.buildNearby(creep)) return true;
 
 		return false;
 	}
@@ -345,17 +342,11 @@ export default class HaulerRole extends Role {
 	 * @return {boolean}
 	 *   Whether the creep should stay on this spot for further repairs.
 	 */
-	buildRoadOnCachedPath(creep) {
-		// Don't try to build roads in owned rooms.
-		// If it's another player's, we can't build anyway. If if it's our own,
-		// the room planner should handle everything.
-		if (creep.room.controller && creep.room.controller.owner) return false;
+	buildRoadOnCachedPath(creep: HaulerCreep) {
+		// Don't try to build roads in rooms owned by other players.
+		if (creep.room.controller && creep.room.controller.owner && !creep.room.isMine()) return false;
 
-		if ((creep.store.energy || 0) === 0) return false;
-
-		const workParts = creep.memory.body.work || 0;
-		if (workParts === 0) return false;
-
+		const workParts = creep.getActiveBodyparts(WORK);
 		const pos = creep.memory.cachedPath.position;
 		const path = creep.getCachedPath();
 
@@ -373,17 +364,17 @@ export default class HaulerRole extends Role {
 
 				tileHasRoad = true;
 
-				if (structure.hits < structure.hitsMax - (workParts * 100)) {
+				if (structure.hits < structure.hitsMax - (workParts * REPAIR_POWER)) {
 					// Many repairs to do, so stay here for next tick.
 					if (this.actionTaken) return true;
 
 					if (creep.repair(structure) === OK) {
-						creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
+						creep.operation.addResourceCost(workParts * REPAIR_COST * REPAIR_POWER, RESOURCE_ENERGY);
 						this.actionTaken = true;
 					}
 
 					// If structure is especially damaged, stay here to keep repairing.
-					if (structure.hits < structure.hitsMax - (workParts * 2 * 100)) {
+					if (structure.hits < structure.hitsMax - (workParts * 2 * REPAIR_POWER)) {
 						return true;
 					}
 
@@ -391,6 +382,10 @@ export default class HaulerRole extends Role {
 				}
 			}
 
+			// In our owned rooms, the room manager will place construction sites.
+			if (creep.room.isMine()) continue;
+
+			// Create construction site in remote rooms.
 			if (!tileHasRoad && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.7) {
 				const sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
 				const numSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
@@ -406,6 +401,26 @@ export default class HaulerRole extends Role {
 		return false;
 	}
 
+	repairNearby(creep: HaulerCreep): boolean {
+		const workParts = creep.getActiveBodyparts(WORK);
+		const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+			filter: structure => (structure.structureType === STRUCTURE_ROAD || structure.structureType === STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - (workParts * 100),
+		});
+		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
+			if (creep.repair(needsRepair) === OK) {
+				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
+				this.actionTaken = true;
+			}
+
+			// If structure is especially damaged, stay here to keep repairing.
+			if (needsRepair.hits < needsRepair.hitsMax - (workParts * 2 * 100)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/**
 	 * Repairs or constructs a container near the source we're mining.
 	 *
@@ -415,7 +430,7 @@ export default class HaulerRole extends Role {
 	 * @return {boolean}
 	 *   Whether the creep should stay on this spot for further repairs.
 	 */
-	ensureRemoteHarvestContainerIsBuilt(creep: Creep) {
+	ensureRemoteHarvestContainerIsBuilt(creep: HaulerCreep) {
 		if (!(creep.operation instanceof RemoteMiningOperation)) return false;
 		if ((creep.store.energy || 0) === 0) return false;
 
@@ -453,6 +468,32 @@ export default class HaulerRole extends Role {
 		if (sites.length === 0) {
 			// Place a container construction site for this source.
 			containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
+		}
+
+		return false;
+	}
+
+	buildNearby(creep: HaulerCreep): boolean {
+		const workParts = creep.getActiveBodyparts(WORK);
+		const needsBuilding = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
+			filter: site => site.structureType === STRUCTURE_CONTAINER || site.structureType === STRUCTURE_ROAD,
+		});
+		if (needsBuilding && creep.pos.getRangeTo(needsBuilding) <= 3) {
+			if (this.actionTaken) {
+				// Try again next time.
+				return true;
+			}
+
+			if (creep.build(needsBuilding) === OK) {
+				const buildCost = Math.min(creep.store.energy || 0, workParts * 5, needsBuilding.progressTotal - needsBuilding.progress);
+				creep.operation.addResourceCost(buildCost, RESOURCE_ENERGY);
+				this.actionTaken = true;
+			}
+
+			// Stay here if more building is needed.
+			if (needsBuilding.progressTotal - needsBuilding.progress > workParts * 10) {
+				return true;
+			}
 		}
 
 		return false;
