@@ -8,7 +8,7 @@ FIND_MY_CONSTRUCTION_SITES */
 
 declare global {
 	interface Structure {
-		needsDismantling,
+		needsDismantling: () => boolean,
 	}
 
 	interface Room {
@@ -103,14 +103,7 @@ export default class RoomManager {
 	 * Removes structures that might prevent the room's construction.
 	 */
 	cleanRoom() {
-		// Remove all roads not part of current room plan.
-		for (const road of this.structuresByType[STRUCTURE_ROAD] || []) {
-			if (!this.roomPlanner.isPlannedLocation(road.pos, 'road') && !this.getOperationRoadPositions()[serializeCoords(road.pos.x, road.pos.y)]) {
-				road.destroy();
-			}
-		}
-
-		// Remove all extensions and labs blocking roads (from redesigning rooms).
+		// Remove all extensions and labs blocking roads or bays (from redesigning rooms).
 		for (const extension of this.structuresByType[STRUCTURE_EXTENSION] || []) {
 			if (this.roomPlanner.isPlannedLocation(extension.pos, 'extension')) continue;
 			if (!this.roomPlanner.isPlannedLocation(extension.pos, 'road')) continue;
@@ -119,7 +112,23 @@ export default class RoomManager {
 		}
 		for (const lab of this.structuresByType[STRUCTURE_LAB] || []) {
 			if (this.roomPlanner.isPlannedLocation(lab.pos, 'lab')) continue;
-			if (!this.roomPlanner.isPlannedLocation(lab.pos, 'road')) continue;
+			if (
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'road') &&
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'spawn') &&
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'link') &&
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'extension')
+			) continue;
+
+			lab.destroy();
+		}
+		for (const lab of this.structuresByType[STRUCTURE_LINK] || []) {
+			if (this.roomPlanner.isPlannedLocation(lab.pos, 'link')) continue;
+			if (
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'road') &&
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'spawn') &&
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'link') &&
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'extension')
+			) continue;
 
 			lab.destroy();
 		}
@@ -138,6 +147,8 @@ export default class RoomManager {
 		}
 
 		// Remove hostile structures.
+		// @todo Might keep storage / terminal / factory alive to withdraw from
+		// before reaching rcl 4.
 		for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
 			structure.destroy();
 		}
@@ -165,6 +176,13 @@ export default class RoomManager {
 		});
 	}
 
+	isOperationRoadPosition(position: RoomPosition): boolean {
+		const positions = this.getOperationRoadPositions();
+		if (positions[serializeCoords(position.x, position.y)]) return true;
+
+		return false;
+	}
+
 	/**
 	 * Makes sure structures are built and removed as intended.
 	 */
@@ -172,13 +190,7 @@ export default class RoomManager {
 		if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === this.room.name && this.room.controller.level < 4) {
 			// In our first room, getting more extensions is pretty important for
 			// spawning bigger creeps asap.
-			if (this.room.controller.level >= 3) {
-				// We can now build extensions near energy sources, since harvesters are now
-				// big enough that one will be able to harvest all available energy.
-				this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
-			}
-
-			this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
+			this.manageExtensions();
 		}
 
 		// Make sure all current spawns have been built.
@@ -191,32 +203,40 @@ export default class RoomManager {
 			if (this.removeMisplacedSpawn(roomSpawns)) return;
 		}
 		else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
+			for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]; i++) {
+				this.buildPlannedStructures('spawn.' + i, STRUCTURE_SPAWN);
+			}
 			this.buildPlannedStructures('spawn', STRUCTURE_SPAWN);
 		}
 
 		this.buildPlannedStructures('wall.blocker', STRUCTURE_WALL);
 
-		// Build road to sources asap to make getting energy easier.
-		this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
-
-		// Build road to controller for easier upgrading.
-		this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
-
 		if (this.room.controller.level === 0) {
+			// Build road to sources asap to make getting energy easier.
+			this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
+
+			// Build road to controller for easier upgrading.
+			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
+
 			// If we're waiting for a claim, busy ourselves by building roads.
 			this.buildPlannedStructures('road', STRUCTURE_ROAD);
 		}
 
 		if (this.room.controller.level < 2) return;
 
+		// Make sure towers are built in the right place, remove otherwise.
+		this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
+		for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]; i++) {
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
+		}
+		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
+
+		this.manageExtensions();
+
 		// At level 2, we can start building containers at sources and controller.
 		this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
 		this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
 		this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER);
-
-		// Make sure towers are built in the right place, remove otherwise.
-		this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
-		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
 
 		// Build storage ASAP.
 		if (this.hasMisplacedStorage() && this.room.storage.store.getUsedCapacity() < 5000) {
@@ -224,30 +244,21 @@ export default class RoomManager {
 		}
 		this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
 
-		// Make sure extensions are built in the right place, remove otherwise.
-		this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
-		if (this.room.controller.level >= 3) {
-			// We can now build extensions near energy sources, since harvesters are now
-			// big enough that one will be able to harvest all available energy.
-			this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
-		}
-
-		this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
-		this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
-
 		// Also build terminal when available.
 		if (this.hasMisplacedTerminal() && this.room.terminal.store.getUsedCapacity() < 5000) {
 			this.removeUnplannedStructures('terminal', STRUCTURE_TERMINAL, 1);
 		}
 		this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL);
 
-		// Make sure links are built in the right place, remove otherwise.
-		this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
-		this.buildPlannedStructures('link.controller', STRUCTURE_LINK);
-		// @todo Build link to farthest locations first.
-		this.buildPlannedStructures('link.source', STRUCTURE_LINK);
-		this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
-		this.buildPlannedStructures('link', STRUCTURE_LINK);
+		if (this.room.storage) {
+			// Build road to sources asap to make getting energy easier.
+			this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
+
+			// Build road to controller for easier upgrading.
+			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
+		}
+
+		this.manageLinks();
 
 		// Build extractor and related container if available.
 		if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
@@ -261,27 +272,64 @@ export default class RoomManager {
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 
 		// Slate all unmanaged walls and ramparts for deconstruction.
+		this.memory.dismantle = {};
 		const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
 			filter: structure => {
 				if (structure.structureType === STRUCTURE_WALL && !this.roomPlanner.isPlannedLocation(structure.pos, 'wall')) return true;
-				if (structure.structureType === STRUCTURE_RAMPART && !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart')) return true;
+				if (hivemind.settings.get('dismantleUnwantedDefenses') && structure.structureType === STRUCTURE_RAMPART && !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart')) return true;
 
 				return false;
 			},
 		});
 		for (const structure of unwantedDefenses) {
-			this.memory.dismantle[structure.id] = 1;
+			if (hivemind.settings.get('dismantleUnwantedDefenses')) {
+				this.memory.dismantle[structure.id] = 1;
+			}
+			else {
+				structure.destroy();
+			}
 		}
 
 		// At level 4, we can build all remaining roads.
-		this.buildPlannedStructures('road', STRUCTURE_ROAD);
-		this.buildOperationRoads();
+		if (this.room.storage) {
+			this.buildPlannedStructures('road', STRUCTURE_ROAD);
+			this.buildOperationRoads();
+		}
 
 		// Further constructions should only happen in safe rooms.
 		if (this.room.isEvacuating()) return;
 		if (!this.checkWallIntegrity()) return;
 
 		this.buildEndgameStructures();
+	}
+
+	manageExtensions() {
+		// Make sure extensions are built in the right place, remove otherwise.
+		this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
+		if (this.room.controller.level >= 3) {
+			// We can now build extensions near energy sources, since harvesters are now
+			// big enough that one will be able to harvest all available energy.
+			this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
+		}
+
+		// Otherwise, build extensions one bay at a time.
+		for (let i = 0; i < 10; i++) {
+			this.buildPlannedStructures('extension.bay.' + i, STRUCTURE_EXTENSION);
+		}
+
+		// Then, all extensions we might have missed.
+		this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
+		this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
+	}
+
+	manageLinks() {
+		// Make sure links are built in the right place, remove otherwise.
+		this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
+		this.buildPlannedStructures('link.controller', STRUCTURE_LINK);
+		// @todo Build link to farthest locations first.
+		this.buildPlannedStructures('link.source', STRUCTURE_LINK);
+		this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
+		this.buildPlannedStructures('link', STRUCTURE_LINK);
 	}
 
 	/**
@@ -348,7 +396,9 @@ export default class RoomManager {
 
 		const canCreateMoreSites = this.newStructures + this.roomConstructionSites.length < 5;
 		if (canCreateMoreSites && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
-			if (pos.createConstructionSite(structureType) === OK) {
+			const isBlocked = OBSTACLE_OBJECT_TYPES.includes(structureType)
+				&& (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS) > 0);
+			if (!isBlocked && pos.createConstructionSite(structureType) === OK) {
 				this.newStructures++;
 				// Structure is being built, continue.
 				return true;
@@ -474,6 +524,12 @@ export default class RoomManager {
 				else break;
 			}
 		}
+
+		for (const site of sites) {
+			if (!this.roomPlanner.isPlannedLocation(site.pos, locationType)) {
+				site.remove();
+			}
+		}
 	}
 
 	/**
@@ -530,6 +586,12 @@ export default class RoomManager {
 			// Make sure all current observers have been built.
 			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
 			this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
+		}
+
+		if (hivemind.settings.get('constructFactories')) {
+			// Make sure all current factories have been built.
+			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('factory', STRUCTURE_FACTORY, 1);
+			this.buildPlannedStructures('factory', STRUCTURE_FACTORY);
 		}
 	}
 

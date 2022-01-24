@@ -17,6 +17,7 @@ const structureSymbols = {
   container: '⊔',
   exit: '🚪',
   extension: '⚬',
+  factory: '⚙',
   lab: '🔬',
   link: '🔗',
   nuker: '☢',

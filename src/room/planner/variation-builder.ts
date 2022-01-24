@@ -219,19 +219,23 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    */
   placeRoomCore(): StepResult {
     // Fill center cross with roads.
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'road', 1);
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'road', 1);
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'road', 1);
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'road', 1);
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 2, this.roomCenter.y, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 2, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 2, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y + 1, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'road', 1);
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'road', 1);
 
     // Mark center buildings for construction.
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y + 1, this.roomName), 'storage');
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y - 1, this.roomName), 'terminal');
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab');
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y + 1, this.roomName), 'lab.boost');
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link');
-    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y - 1, this.roomName), 'link.storage');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'storage');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'terminal');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'factory');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y - 1, this.roomName), 'lab');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y - 1, this.roomName), 'lab.boost');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'link');
+    this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'link.storage');
 
     return 'ok';
   };
@@ -240,6 +244,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    * Places parking spot for helper creep.
    */
   placeHelperParkingLot(): StepResult {
+    this.placementManager.startBuildingPlacement(this.roomCenter, this.roomCenterEntrances);
     const nextPos = this.placementManager.getNextAvailableBuildSpot();
     if (!nextPos) return 'failed';
 
@@ -257,7 +262,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    * Places extension bays.
    */
   placeBays(): StepResult {
-    this.placementManager.startBuildingPlacement(this.roomCenter, this.roomCenterEntrances);
+    let count = 0;
     while (this.roomPlan.canPlaceMore('extension')) {
       const pos = this.findBayPosition();
       if (!pos) return 'failed';
@@ -268,7 +273,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       this.placementManager.planLocation(pos, 'road', 1);
       this.placementManager.planLocation(pos, 'bay_center', 1);
 
-      this.placeBayStructures(pos, {spawn: true});
+      this.placeBayStructures(pos, {spawn: true, id: count++});
 
       // Reinitialize pathfinding.
       this.placementManager.startBuildingPlacement();
@@ -287,6 +292,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     let maxExtensions = 0;
     let bestPos = null;
     let bestScore = 0;
+
+    this.placementManager.startBuildingPlacement(this.roomCenter, this.roomCenterEntrances);
 
     while (maxExtensions < 8) {
       const nextPos = this.placementManager.getNextAvailableBuildSpot();

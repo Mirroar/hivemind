@@ -19,6 +19,9 @@ export default class placeTowersStep {
    * Places towers so exits are well covered.
    */
   run(): StepResult {
+    // @todo Make sure tower access roads are always behind ramparts!
+    let towerCount = 0;
+
     const positions = this.findTowerPositions();
     const ramparts = this.findRampartPositions();
     // const buildingMatrix = this.placementManager.getBuildingMatrix();
@@ -57,6 +60,7 @@ export default class placeTowersStep {
 
         this.placementManager.commitTemporaryLocation(pos, 'tower');
         this.placementManager.placeAccessRoad(pos);
+        this.placementManager.planLocation(pos, 'tower.' + (towerCount++));
       }
 
       // Restore building matrix values for subsequent operations.

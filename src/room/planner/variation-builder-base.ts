@@ -49,7 +49,7 @@ export default class RoomVariationBuilderBase {
     return 'done';
   }
 
-  placeBayStructures(bayPosition: RoomPosition, options: {spawn?: boolean; source?: boolean} = {}) {
+  placeBayStructures(bayPosition: RoomPosition, options: {spawn?: boolean; source?: boolean; id?: number} = {}) {
     if (this.roomPlan.canPlaceMore('spawn') && options.spawn) {
       utilities.handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
         if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return true;
@@ -63,6 +63,7 @@ export default class RoomVariationBuilderBase {
           if (x2 == bayPosition.x && y2 == bayPosition.y) return true;
           if (!this.roomPlan.hasPosition('road', new RoomPosition(x2, y2, this.roomName))) return true;
 
+          this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'spawn.' + this.roomPlan.getPositions('spawn').length);
           this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'spawn');
           spawnPlaced = true;
           return false;
@@ -86,6 +87,9 @@ export default class RoomVariationBuilderBase {
           this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'extension.harvester');
         }
         else {
+          if (typeof options.id !== 'undefined') {
+            this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'extension.bay.' + options.id);
+        }
           this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'extension.bay');
         }
       }

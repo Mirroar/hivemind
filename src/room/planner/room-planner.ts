@@ -39,6 +39,15 @@ function setGenerator(roomName, generator: RoomPlanGenerator) {
 	generatorCache[roomName] = generator;
 }
 
+export interface RoomPlannerMemory {
+	drawDebug: number;
+	lastRun: number;
+	adjacentSafe: {
+		[direction: string]: boolean;
+	};
+	adjacentSafeRooms: string[];
+}
+
 export default class RoomPlanner {
 
 	protected activeRoomPlan: RoomPlan;
@@ -46,15 +55,7 @@ export default class RoomPlanner {
 	protected generator: RoomPlanGenerator;
 	protected roomPlannerVersion: number;
 	readonly roomName: string;
-	protected room: Room;
-	protected memory: {
-		drawDebug: number;
-		lastRun: number;
-		adjacentSafe: {
-			[direction: string]: boolean;
-		};
-		adjacentSafeRooms: string[];
-	};
+	protected memory: RoomPlannerMemory;
 
 	/**
 	 * Creates a room layout and makes sure the room is built accordingly.
@@ -69,7 +70,6 @@ export default class RoomPlanner {
 		const activeInfo = getRoomPlanFor(roomName);
 		this.activeRoomPlan = activeInfo && activeInfo.plan;
 		this.activeRoomPlanVersion = activeInfo ? activeInfo.version : 0;
-		this.room = Game.rooms[roomName]; // Will not always be available.
 
 		const key = 'planner:' + roomName;
 		if (!hivemind.segmentMemory.has(key)) {
@@ -82,7 +82,7 @@ export default class RoomPlanner {
 		if (this.generator) {
 			this.generator.visualize();
 		}
-		if (this.activeRoomPlan && (this.memory.drawDebug || 0) > 0) {
+		if (this.activeRoomPlan && (hivemind.settings.get('visualizeRoomPlan') || (this.memory.drawDebug || 0) > 0)) {
 			this.memory.drawDebug--;
 			this.activeRoomPlan.visualize();
 		}
@@ -150,8 +150,8 @@ export default class RoomPlanner {
 
 		// Reset harvest position info for harvesters in case they are not correctly
 		// assigned any more.
-		if (this.room) {
-			_.each(this.room.creepsByRole.harvester, (creep: HarvesterCreep) => {
+		if (Game.rooms[this.roomName]) {
+			_.each(Game.rooms[this.roomName].creepsByRole.harvester, (creep: HarvesterCreep) => {
 				delete creep.memory.harvestPos;
 				delete creep.memory.noHarvestPos;
 			});
@@ -184,7 +184,7 @@ export default class RoomPlanner {
 				// Status has changed, recalculate building positioning.
 				hivemind.log('room plan', this.roomName).debug('changed adjacent room status!');
 				Game.notify(
-					'🛡 Exit safety has changed for room ' + this.room.name + '!\n\n' +
+					'🛡 Exit safety has changed for room ' + this.roomName + '!\n\n' +
 					'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.N ? 'safe' : 'not safe') + '\n' +
 					'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.E ? 'safe' : 'not safe') + '\n' +
 					'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.S ? 'safe' : 'not safe') + '\n' +
@@ -278,6 +278,8 @@ export default class RoomPlanner {
 	 *   The requested cost matrix.
 	 */
 	getNavigationMatrix(): CostMatrix {
+		if (!this.activeRoomPlan) return new PathFinder.CostMatrix();
+
 		return cache.inHeap('plannerCostMatrix:' + this.roomName, 500, () => {
 			return this.activeRoomPlan.createNavigationMatrix();
 		});

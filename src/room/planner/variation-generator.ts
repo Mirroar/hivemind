@@ -66,7 +66,7 @@ export default class VariationGenerator {
         const wallDistance = this.wallDistanceMatrix.get(x, y);
         const exitDistance = this.exitDistanceMatrix.get(x, y);
 
-        if (wallDistance >= 4 && wallDistance < 255 && exitDistance > 8) {
+        if (wallDistance >= 3 && wallDistance < 255 && exitDistance > 8) {
           potentialCorePositions.push(new RoomPosition(x, y, this.roomName));
         }
       }

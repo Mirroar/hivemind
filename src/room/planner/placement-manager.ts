@@ -62,22 +62,12 @@ export default class PlacementManager {
           continue;
         }
 
-        // Avoid pathfinding close to walls to keep space for dodging and building / wider roads.
         const wallDistance = this.wallDistanceMatrix.get(x, y);
         const exitDistance = this.exitDistanceMatrix.get(x, y);
-
-        if (wallDistance === 1) {
-          this.buildingMatrix.set(x, y, this.DISCOURAGED_POSITION);
-        }
 
         if (exitDistance <= 2) {
           // Avoid tiles we can't build ramparts on.
           this.buildingMatrix.set(x, y, this.DISCOURAGED_POSITION * 2);
-        }
-        else if (exitDistance <= 5) {
-          // Avoid area near exits and room walls to not get shot at.
-          // @todo Determine this after placing ramparts.
-          this.buildingMatrix.set(x, y, this.DISCOURAGED_POSITION);
         }
       }
     }

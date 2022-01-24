@@ -96,6 +96,7 @@ const settings = {
 	// Room planning:
 	enableMinCutRamparts: false,
 	minCutRampartDistance: 4,
+	visualizeRoomPlan: false,
 
 	// Room management:
 	// Number of hits for walls / ramparts needed for more expensive structures
@@ -105,9 +106,11 @@ const settings = {
 	constructNukers: true,
 	constructPowerSpawns: true,
 	constructObservers: true,
+	constructFactories: true,
 	minEnergyToUpgradeAtRCL8: 50000,
 	rampartWhitelistedUsers: [],
 	maxVisitorsPerUser: 0,
+	dismantleUnwantedRamparts: true,
 	recordRoomStats: true,
 
 	// Trade:
