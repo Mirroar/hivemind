@@ -2,14 +2,18 @@
 
 declare global {
 	interface StructureSpawn {
-		waiting: boolean,
-		numSpawnOptions: number,
+		waiting: boolean;
+		numSpawnOptions: number;
+	}
+
+	interface SpawnHeapMemory extends StructureHeapMemory {
+		blocked?: number;
 	}
 
 	interface Memory {
 		creepCounter: {
-			[key: string]: number,
-		}
+			[key: string]: number;
+		};
 	}
 }
 
@@ -39,6 +43,8 @@ const roleNameMap = {
 	hauler: 'TR',
 	upgrader: 'U',
 };
+
+const allDirections = [TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT, LEFT, TOP_LEFT];
 
 export default class SpawnManager {
 
@@ -103,6 +109,7 @@ export default class SpawnManager {
 	 *   The room's spawns.
 	 */
 	manageSpawns(room: Room, spawns: StructureSpawn[]) {
+		this.makeWayForSpawns(spawns);
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
 
@@ -231,5 +238,34 @@ export default class SpawnManager {
 
 			return true;
 		});
+	}
+
+	makeWayForSpawns(spawns: StructureSpawn[]) {
+		for (const spawn of spawns) {
+			if (!spawn.spawning || spawn.spawning.remainingTime > 0) {
+				delete spawn.heapMemory.blocked;
+				continue;
+			}
+
+			spawn.heapMemory.blocked = (spawn.heapMemory.blocked || 0) + 1;
+			if (spawn.heapMemory.blocked >= 5) {
+				spawn.spawning.setDirections([TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT, LEFT, TOP_LEFT]);
+				continue;
+			}
+
+			let allBlocked = true;
+			const closeCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1);
+			for (const dir of spawn.spawning.directions || allDirections) {
+				if (_.filter(closeCreeps, c => spawn.pos.getDirectionTo(c.pos) === dir).length > 0) continue;
+
+				allBlocked = false;
+			}
+
+			if (!allBlocked) continue;
+
+			for (const creep of closeCreeps) {
+				creep.move(_.sample(allDirections));
+			}
+		}
 	}
 };
