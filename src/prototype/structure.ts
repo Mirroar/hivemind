@@ -25,6 +25,10 @@ declare global {
 		getPowerAtRange;
 	}
 
+	interface StructureFactory {
+		getEffectiveLevel: () => number;
+	}
+
 	interface StructureHeapMemory {}
 }
 
@@ -112,12 +116,12 @@ StructureSpawn.prototype.getSpawnDirections = function (this: StructureSpawn): D
 
 		utilities.handleMapArea(this.pos.x, this.pos.y, (x, y) => {
 			if (x === this.pos.x && y === this.pos.y) return;
+			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
 			const position = new RoomPosition(x, y, this.pos.roomName);
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 			if (!this.room.roomPlanner.isPlannedLocation(position, STRUCTURE_ROAD)) return;
 			if (this.room.roomPlanner.isPlannedLocation(position, 'bay_center')) return;
-			if (_.filter(this.pos.lookFor(LOOK_STRUCTURES), s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType)).length > 0) return;
+			if (_.filter(position.lookFor(LOOK_STRUCTURES), s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType)).length > 0) return;
 
 			directions.push(this.pos.getDirectionTo(position));
 		});
@@ -161,6 +165,24 @@ StructureSpawn.prototype.calculateCreepBodyCost = function (bodyMemory) {
 	});
 
 	return cost;
+};
+
+/**
+ * Calculates the level this factory should be considered to have.
+ *
+ * Even if the level is still 0, if a power creep with PWR_OPERATE_FACTORY
+ * exists in the room, that power's level is returned.
+ */
+StructureFactory.prototype.getEffectiveLevel = function (this: StructureFactory): number {
+	return cache.inObject(this.heapMemory, 'effectiveLevel', 500, () => {
+		for (const name in this.room.powerCreeps) {
+			const powerCreep = this.room.powerCreeps[name];
+
+			if (powerCreep.powers[PWR_OPERATE_FACTORY]) return powerCreep.powers[PWR_OPERATE_FACTORY].level;
+		}
+
+		return 0;
+	});
 };
 
 export {};

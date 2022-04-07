@@ -213,6 +213,28 @@ export default class RemoteMiningOperation extends Operation {
 		});
 	}
 
+	getRoomsOnPath(sourceLocation?: string): string[] {
+		return cache.inHeap('rmPath:' + this.name, 1000, () => {
+			const paths = this.getPaths();
+			const result: string[] = [];
+			const checkedRooms = {};
+			for (const location in paths) {
+				if (sourceLocation && location !== sourceLocation) continue;
+
+				const path = paths[location];
+				for (const pos of path.path || []) {
+					if (pos.roomName === this.roomName) continue;
+					if (checkedRooms[pos.roomName]) continue;
+
+					checkedRooms[pos.roomName] = true;
+					result.push(pos.roomName);
+				}
+			}
+
+			return result;
+		});
+	}
+
 	/**
 	 * Checks if we have an active reservation for the target room.
 	 */
@@ -402,5 +424,9 @@ export default class RemoteMiningOperation extends Operation {
 
 			return false;
 		});
+	}
+
+	isProfitable(): boolean {
+		return (this.getStat(RESOURCE_ENERGY) || 0) > 0;
 	}
 };

@@ -120,6 +120,12 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
+		// Recovering rooms need some RCL for defense.
+		if (creep.room.isMine() && creep.room.memory.isReclaimableSince && creep.room.controller.level < 4) {
+			creep.memory.upgrading = true;
+			return;
+		}
+
 		// Help by filling spawn with energy.
 		const spawns = creep.room.find<StructureSpawn>(FIND_MY_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_SPAWN,
@@ -129,12 +135,18 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
-		if (this.saveExpiringRamparts()) return;
+		if (this.supplyTowers()) return;
+
+		if (this.saveExpiringRamparts(10000)) return;
 
 		if (!creep.memory.buildTarget) {
 			this.determineBuildTarget();
 
 			if (!creep.memory.buildTarget && !creep.memory.repairTarget) {
+				if (this.creep.room.memory.isReclaimableSince) {
+					if (this.saveExpiringRamparts(hivemind.settings.get('minWallIntegrity'))) return;
+				}
+
 				// Could not set a target for building. Start upgrading instead.
 				creep.memory.upgrading = true;
 			}
@@ -150,17 +162,29 @@ export default class RemoteBuilderRole extends Role {
 		delete creep.memory.buildTarget;
 	}
 
+	supplyTowers() {
+		const towers = this.creep.room.find<StructureTower>(FIND_MY_STRUCTURES, {
+			filter: structure => structure.structureType === STRUCTURE_TOWER,
+		});
+		if (towers && towers.length > 0 && towers[0].store.getFreeCapacity(RESOURCE_ENERGY) > towers[0].store.getCapacity(RESOURCE_ENERGY) * 0.5) {
+			this.creep.whenInRange(1, towers[0], () => this.creep.transfer(towers[0], RESOURCE_ENERGY));
+			return true;
+		}
+
+		return false;
+	}
+
 	/**
 	 * Repairs ramparts that are low on hits, so they don't decay.
 	 *
 	 * @return {boolean}
 	 *   True if we're trying to repair ramparts.
 	 */
-	saveExpiringRamparts() {
+	saveExpiringRamparts(minHits: number) {
 		if (!this.creep.memory.repairTarget) {
 			// Make sure ramparts don't break.
 			const targets = this.creep.room.find(FIND_MY_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < 10000,
+				filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < minHits,
 			});
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;

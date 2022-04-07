@@ -28,6 +28,7 @@ export default class ManageFactoryProcess extends Process {
 		const jobs = this.room.factoryManager.getJobs();
 		for (const product in jobs) {
 			if (!this.room.factoryManager.hasAllComponents(product)) continue;
+			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) continue;
 
 			if (this.room.factory.produce(product as CommodityConstant) === OK) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
 		}

@@ -179,4 +179,17 @@ export default class Logger {
 
 		console.log(prefix, ...args, '</font>');
 	}
+
+	/**
+	 * Logs a normal line and sends an email notification.
+	 */
+	notify(...args) {
+		if (!this.active) return;
+
+		const prefix = this.prefix;
+
+		console.log(prefix, ...args);
+		Game.notify(prefix + ' ' + args.join(' '));
+	}
+
 }

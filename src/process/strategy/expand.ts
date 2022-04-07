@@ -205,8 +205,7 @@ export default class ExpandProcess extends Process {
 		squad.setUnitCount('builder', 2);
 		this.memory.started = Game.time;
 
-		hivemind.log('strategy').info('🏴 Started expanding to ' + roomInfo.roomName);
-		Game.notify('🏴 Started expanding to ' + roomInfo.roomName);
+		hivemind.log('strategy').notify('🏴 Started expanding to ' + roomInfo.roomName);
 	}
 
 	/**
@@ -295,8 +294,7 @@ export default class ExpandProcess extends Process {
 			time: Game.time,
 		});
 
-		hivemind.log('strategy').info('💀 Expanding to ' + roomName + ' has failed. A new target will be chosen soon.');
-		Game.notify('💀 Expanding to ' + roomName + ' has failed. A new target will be chosen soon.');
+		hivemind.log('strategy').notify('💀 Expanding to ' + roomName + ' has failed. A new target will be chosen soon.');
 	}
 
 	/**
@@ -557,7 +555,7 @@ export default class ExpandProcess extends Process {
 			name: roomName,
 			cooldown: null,
 		};
-		Game.notify('💀 Evacuating ' + roomName + ' to free up CPU cycles for expanding. Possible Target: ' + shardMemory.info.rooms.bestExpansion.name);
+		hivemind.log('strategy').notify('💀 Evacuating ' + roomName + ' to free up CPU cycles for expanding. Possible Target: ' + shardMemory.info.rooms.bestExpansion.name);
 	}
 
 	/**

@@ -1,3 +1,4 @@
+import hivemind from 'hivemind';
 import Process from 'process/process';
 
 export default class SpawnPowerCreepsProcess extends Process {
@@ -17,7 +18,7 @@ export default class SpawnPowerCreepsProcess extends Process {
 			const room = Game.rooms[creep.memory.singleRoom];
 			if (!room || !room.powerSpawn) return;
 
-			Game.notify('⟳ Respawned power creep ' + creep.name + ' in ' + room.name);
+			hivemind.log('creeps', room.name).notify('⟳ Respawned power creep ' + creep.name + ' in ' + room.name);
 			creep.spawn(room.powerSpawn);
 		});
 	}
@@ -34,17 +35,7 @@ export default class SpawnPowerCreepsProcess extends Process {
 		const roomsWithoutPC = _.filter(Game.myRooms, room => {
 			if (!room.powerSpawn) return false;
 
-			const powerCreepsInRoom = _.filter(Game.powerCreeps, creep => {
-				if (creep.memory.singleRoom && creep.memory.singleRoom === room.name) return true;
-
-				if (!creep.shard) return false;
-				if (creep.shard !== Game.shard.name) return false;
-				if (creep.pos.roomName !== room.name) return false;
-
-				return true;
-			});
-
-			if (_.size(powerCreepsInRoom) > 0) return false;
+			if (_.size(room.powerCreeps) > 0) return false;
 
 			return true;
 		});

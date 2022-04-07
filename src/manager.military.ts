@@ -11,7 +11,7 @@ declare global {
 		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void,
 		getMilitaryAssertion,
 		assertTargetPriorities,
-		getTowerTarget,
+		getTowerTarget: () => AnyCreep | null,
 		drawMilitarySituation,
 	}
 

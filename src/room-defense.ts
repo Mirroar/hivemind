@@ -177,6 +177,8 @@ export default class RoomDefense {
 		const operation = Game.operations[opName] || new Operation(opName);
 
 		operation.recordStatChange(amount, resourceType);
+
+		hivemind.log('trade', this.roomName).notify('Trade with', username, ':', amount, resourceType);
 	}
 
 	isThief(creep) {

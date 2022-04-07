@@ -5,22 +5,24 @@ import utilities from 'utilities';
 
 import brawlerRole from 'role/brawler';
 import builderRole from 'role/builder';
-import exploitBuilderRole from 'role/exploit/builder';
-import remoteBuilderRole from 'role/builder.remote';
+import caravanTraderRole from 'role/caravan-trader';
 import claimerRole from 'role/claimer';
+import depositHarvesterRole from 'role/harvester.deposit';
 import dismantlerRole from 'role/dismantler';
+import exploitBuilderRole from 'role/exploit/builder';
+import exploitHarvesterRole from 'role/exploit/harvester';
+import exploitHaulerRole from 'role/exploit/hauler';
 import gathererRole from 'role/gatherer';
 import giftRole from 'role/gift';
 import guardianRole from 'role/guardian';
 import harvesterRole from 'role/harvester';
-import exploitHarvesterRole from 'role/exploit/harvester';
-import poweHarvesterRole from 'role/power/harvester';
-import remoteHarvesterRole from 'role/harvester.remote';
 import haulerRole from 'role/hauler';
-import exploitHaulerRole from 'role/exploit/hauler';
-import powerHaulerRole from 'role/power/hauler';
 import helperRole from 'role/helper';
 import muleRole from 'role/mule';
+import poweHarvesterRole from 'role/power/harvester';
+import powerHaulerRole from 'role/power/hauler';
+import remoteBuilderRole from 'role/builder.remote';
+import remoteHarvesterRole from 'role/harvester.remote';
 import scoutRole from 'role/scout';
 import transporterRole from 'role/transporter';
 import unassignedRole from 'role/unassigned';
@@ -32,12 +34,14 @@ const creepRoles = {
 	'builder': builderRole,
 	'builder.exploit': exploitBuilderRole,
 	'builder.remote': remoteBuilderRole,
+	'caravan-trader': caravanTraderRole,
 	'claimer': claimerRole,
 	'dismantler': dismantlerRole,
 	'gatherer': gathererRole,
 	'gift': giftRole,
 	'guardian': guardianRole,
 	'harvester': harvesterRole,
+	'harvester.deposit': depositHarvesterRole,
 	'harvester.exploit': exploitHarvesterRole,
 	'harvester.power': poweHarvesterRole,
 	'harvester.remote': remoteHarvesterRole,

@@ -24,20 +24,22 @@ import SpawnManager from 'spawn-manager';
 
 import brawlerSpawnRole from 'spawn-role/brawler';
 import builderSpawnRole from 'spawn-role/builder';
+import caravanTraderSpawnRole from 'spawn-role/caravan-trader';
 import claimerSpawnRole from 'spawn-role/claimer';
+import depositHarvesterSpawnRole from 'spawn-role/harvester.deposit';
 import dismantlerSpawnRole from 'spawn-role/dismantler';
 import exploitSpawnRole from 'spawn-role/exploit';
 import gathererSpawnRole from 'spawn-role/gatherer';
 import giftSpawnRole from 'spawn-role/gift';
 import harvesterSpawnRole from 'spawn-role/harvester';
-import mineralHarvesterSpawnRole from 'spawn-role/harvester.minerals';
-import powerHarvesterSpawnRole from 'spawn-role/harvester.power';
-import remoteHarvesrterSpawnRole from 'spawn-role/harvester.remote';
 import haulerSpawnRole from 'spawn-role/hauler';
-import powerHaulerSpawnRole from 'spawn-role/hauler.power';
 import helperSpawnRole from 'spawn-role/helper';
+import mineralHarvesterSpawnRole from 'spawn-role/harvester.minerals';
 import muleSpawnRole from 'spawn-role/mule';
+import powerHarvesterSpawnRole from 'spawn-role/harvester.power';
+import powerHaulerSpawnRole from 'spawn-role/hauler.power';
 import reclaimSpawnRole from 'spawn-role/reclaim';
+import remoteHarvesterSpawnRole from 'spawn-role/harvester.remote';
 import roomDefenseSpawnRole from 'spawn-role/room-defense';
 import scoutSpawnRole from 'spawn-role/scout';
 import squadSpawnRole from 'spawn-role/squad';
@@ -47,15 +49,17 @@ import upgraderSpawnRole from 'spawn-role/upgrader';
 const spawnClasses = {
 	'brawler': brawlerSpawnRole,
 	'builder': builderSpawnRole,
+	'caravan-trader': caravanTraderSpawnRole,
 	'claimer': claimerSpawnRole,
 	'dismantler': dismantlerSpawnRole,
 	'exploit': exploitSpawnRole,
 	'gatherer': gathererSpawnRole,
 	'gift': giftSpawnRole,
 	'harvester': harvesterSpawnRole,
+	'harvester.deposit': depositHarvesterSpawnRole,
 	'harvester.minerals': mineralHarvesterSpawnRole,
 	'harvester.power': powerHarvesterSpawnRole,
-	'harvester.remote': remoteHarvesrterSpawnRole,
+	'harvester.remote': remoteHarvesterSpawnRole,
 	'hauler': haulerSpawnRole,
 	'hauler.power': powerHaulerSpawnRole,
 	'helper': helperSpawnRole,

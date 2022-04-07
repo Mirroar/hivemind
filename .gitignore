@@ -3,5 +3,6 @@ dist
 
 node_modules
 gruntfile.js
+screeps.json
 .nyc_output
 .tscache

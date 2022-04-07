@@ -172,11 +172,11 @@ export default class PowerMiningProcess extends Process {
 			if (room.isFullOnPower()) continue;
 			if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) continue;
 			if (room.controller.level < hivemind.settings.get('minRclForPowerMining')) continue;
-			if (Game.map.getRoomLinearDistance(roomName, room.name) > 5) continue;
+			if (Game.map.getRoomLinearDistance(roomName, room.name) > hivemind.settings.get('maxRangeForPowerMining')) continue;
 
 			// @todo Use actual position of power cache.
 			const roomRoute = this.mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, roomName));
-			if (roomRoute.incomplete || roomRoute.path.length > 10) continue;
+			if (roomRoute.incomplete || roomRoute.path.length > 2 * hivemind.settings.get('maxRangeForPowerMining')) continue;
 
 			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
 

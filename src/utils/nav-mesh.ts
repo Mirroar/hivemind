@@ -7,10 +7,11 @@ declare global {
 	}
 }
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import {getRoomIntel} from 'intel-management';
-import {serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
+import {encodePosition, serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
 
 export default class NavMesh {
 	memory: any;
@@ -290,7 +291,16 @@ export default class NavMesh {
 		return paths;
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: any): {path?: RoomPosition[], incomplete: boolean} {
+	estimateTravelTime(startPos: RoomPosition, endPos: RoomPosition): number {
+		return cache.inHeap('travelTime:' + encodePosition(startPos) + ':' + encodePosition(endPos), 1000, () => {
+			const result = this.findPath(startPos, endPos);
+			if (result.incomplete) return null;
+
+			return result.length;
+		});
+	}
+
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: any): {path?: RoomPosition[], length?: number, incomplete: boolean} {
 		if (!options) options = {};
 
 		const startRoom = startPos.roomName;
@@ -331,12 +341,14 @@ export default class NavMesh {
 		}
 
 		for (const exit of availableExits) {
+			const segmentLength = roomMemory.paths[exit.id] ? roomMemory.paths[exit.id][0] : 50;
 			const entry = {
 				exitId: exit.id,
 				pos: exit.center,
 				roomName: startRoom,
 				parent: null,
-				pathLength: roomMemory.paths[exit.id] ? roomMemory.paths[exit.id][0] : 50,
+				pathLength: segmentLength,
+				totalSteps: segmentLength,
 				heuristic: (Game.map.getRoomLinearDistance(startRoom, endRoom) - 1) * 50,
 			};
 			openList.push(entry);
@@ -354,9 +366,12 @@ export default class NavMesh {
 				// @todo There might be shorter paths to the actual endPosition.
 				// @todo Check if we came out in the correct region.
 
+				//console.log(JSON.stringify(current));
+
 				// Alright, we arrived! Get final path.
 				return {
 					path: this.pluckRoomPath(current),
+					length: current.totalSteps,
 					incomplete: false,
 				};
 			}
@@ -418,12 +433,14 @@ export default class NavMesh {
 				const noPath2 = !roomMemory.paths[correspondingExit] || !roomMemory.paths[correspondingExit][exit.id];
 				if (noPath1 && noPath2) continue;
 
+				const segmentLength = (roomMemory.paths[exit.id] && roomMemory.paths[exit.id][correspondingExit]) || roomMemory.paths[correspondingExit][exit.id];
 				const item = {
 					exitId: exit.id,
 					pos: exit.center,
 					roomName: nextRoom,
 					parent: current,
-					pathLength: current.pathLength + (costMultiplier * ((roomMemory.paths[exit.id] && roomMemory.paths[exit.id][correspondingExit]) || roomMemory.paths[correspondingExit][exit.id])),
+					pathLength: current.pathLength + (costMultiplier * segmentLength),
+					totalSteps: current.totalSteps + segmentLength,
 					heuristic: (Game.map.getRoomLinearDistance(current.roomName, endRoom) - 1) * 50,
 				};
 
@@ -431,6 +448,7 @@ export default class NavMesh {
 					item.pos = serializePosition(endPos, nextRoom);
 					item.heuristic = 0;
 					item.pathLength = current.pathLength + roomMemory.paths[correspondingExit][0];
+					item.totalSteps = current.totalSteps + roomMemory.paths[correspondingExit][0];
 				}
 
 				openList.push(item);

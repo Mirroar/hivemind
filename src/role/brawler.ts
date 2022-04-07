@@ -9,7 +9,7 @@ import PathManager from 'remote-path-manager';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
-import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
+import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
 
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
@@ -351,7 +351,7 @@ export default class BrawlerRole extends Role {
 			const squad = Game.squads[creep.memory.squadName];
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
-				creep.moveTo(targetPos);
+				creep.goTo(targetPos);
 
 				if (creep.pos.roomName === targetPos.roomName) {
 					this.militaryRoomReached(creep);
@@ -554,7 +554,7 @@ export default class BrawlerRole extends Role {
 			}
 		}
 
-		if (creep.memory.patrolPoint) return;
+		if (!creep.memory.patrolPoint) return;
 
 		creep.memory.target = creep.memory.patrolPoint;
 		const lair = Game.getObjectById(creep.memory.patrolPoint);
@@ -581,6 +581,8 @@ export default class BrawlerRole extends Role {
 				}
 			}
 
+			console.log('time to ' + id2 + ': ' + time);
+
 			if (!best || time < bestTime) {
 				best = id2;
 				bestTime = time;
@@ -592,7 +594,7 @@ export default class BrawlerRole extends Role {
 		if (best === creep.memory.patrolPoint) {
 			// We're at the correct control point. Move to intercept potentially spawning source keepers.
 			if (exploit.memory.lairs[best].sourcePath) {
-				creep.moveTo(decodePosition(exploit.memory.lairs[best].sourcePath.path[1]));
+				creep.moveTo(deserializePositionPath(exploit.memory.lairs[best].sourcePath.path)[1]);
 			}
 			else {
 				creep.moveToRange(lair, 1);

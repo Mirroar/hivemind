@@ -27,6 +27,7 @@ declare global {
 		lastWaitPosition: string;
 		lastWaitCount: number;
 		energyPickupTarget: string;
+		deliveryTarget: Id<AnyStoreStructure>;
 	}
 }
 
@@ -41,6 +42,10 @@ export default class HaulerRole extends Role {
 	 */
 	run(creep: HaulerCreep) {
 		if (!hivemind.segmentMemory.isReady()) return;
+
+		if (creep.heapMemory.suicideSpawn) {
+			this.performRecycle(creep);
+		}
 
 		if (creep.memory.delivering && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setHaulerState(creep, false);
@@ -73,13 +78,22 @@ export default class HaulerRole extends Role {
 	 */
 	setHaulerState(creep: HaulerCreep, delivering: boolean) {
 		creep.memory.delivering = delivering;
+		delete creep.heapMemory.deliveryTarget;
 
 		if (!creep.operation) return;
 
 		const paths = creep.operation.getPaths();
 		if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return;
 
-		creep.setCachedPath(serializePositionPath(paths[creep.memory.source].path), !delivering, 1);
+		const path = paths[creep.memory.source].path;
+		// Suicide haulers if they can't make another round trip. Saves us CPU and
+		// returns some energy from spawning.
+		// @todo Go to a spawn to recycle if possible.
+		if (!delivering && creep.ticksToLive < path.length * 2 && creep.pos.roomName === creep.memory.origin) {
+			this.performRecycle(creep);
+		}
+
+		creep.setCachedPath(serializePositionPath(path), !delivering, 1);
 	}
 
 	/**
@@ -94,10 +108,30 @@ export default class HaulerRole extends Role {
 			return;
 		}
 
+		// Refill at container if we emptied ourselves too much repairing it.
+		const container = creep.operation.getContainer(creep.memory.source);
+		if (container && container.pos.roomName === creep.pos.roomName && creep.pos.getRangeTo(container) < 4) {
+			if (
+				creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.9 &&
+				container.store.getUsedCapacity() > container.store.getCapacity() * 0.1
+			) {
+				// If we're close to source container, make sure we fill up before
+				// returnung home.
+				this.setHaulerState(creep, false);
+			}
+		}
+
 		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
 		if (!Game.rooms[sourceRoom]) return;
 
-		const target = Game.rooms[sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
+		if (!creep.heapMemory.deliveryTarget) {
+			const target = Game.rooms[sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
+			if (target) {
+				creep.heapMemory.deliveryTarget = target.id;
+			}
+		}
+
+		const target = Game.getObjectById(creep.heapMemory.deliveryTarget);
 		const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
 		if (!targetPosition) return;
 

@@ -70,7 +70,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
-		const availableEnergy = room.getStoredEnergy();
+		let availableEnergy = room.getStoredEnergy();
 		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {
 			// Do not spawn upgraders when builders and spawns will need most of
 			// our energy.
@@ -91,8 +91,10 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		}
 
 		// Spawn upgraders depending on stored energy.
-		if (availableEnergy < 10000) return 0;
-		if (availableEnergy < 50000) return 1;
+		// RCL 7 rooms need to keep a bit more energy in reserve for doing other
+		// things like power or deposit harvesting, sending squads, ...
+		if (availableEnergy < (room.controller.level === 7 ? 25000 : 10000)) return 0;
+		if (availableEnergy < (room.controller.level === 7 ? 75000 : 50000)) return 1;
 		if (availableEnergy < 100000) return 2;
 		// @todo Have maximum depend on number of work parts.
 		// @todo Make sure enough energy is brought by.

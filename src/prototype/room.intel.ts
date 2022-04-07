@@ -14,6 +14,9 @@ declare global {
 		creeps: {
 			[creepName: string]: Creep;
 		};
+		powerCreeps: {
+			[creepName: string]: PowerCreep;
+		}
 		creepsByRole: {
 			[roleName: string]: {
 				[creepName: string]: Creep;
@@ -62,6 +65,29 @@ Object.defineProperty(Room.prototype, 'enemyCreeps', {
 		}
 
 		return this._enemyCreeps;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.enemyCreeps.
+Object.defineProperty(Room.prototype, 'powerCreeps', {
+
+	/**
+	 * Gets all power creeps in a room, keyed by name.
+	 *
+	 * @return {Object}
+	 *   All power creeps in this room.
+	 */
+	get(this: Room) {
+		return cache.inObject(this, 'powerCreeps', 1, () => {
+			const powerCreeps = {};
+			for (const powerCreep of this.find(FIND_MY_POWER_CREEPS)) {
+				powerCreeps[powerCreep.name] = powerCreep;
+			}
+
+			return powerCreeps;
+		});
 	},
 	enumerable: false,
 	configurable: true,
@@ -181,14 +207,10 @@ Room.prototype.enhanceData = function (this: Room) {
 	if (this.controller && this.controller.level >= 7) {
 		const flags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + this.name + ':'));
 		for (const flag of flags) {
-			try {
+			utilities.bubbleWrap(() => {
 				this.exploits[flag.pos.roomName] = new Exploit(this, flag.name);
 				Game.exploits[flag.pos.roomName] = this.exploits[flag.pos.roomName];
-			}
-			catch (error) {
-				console.log('Error when initializing Exploits:', error);
-				console.log(error.stack);
-			}
+			});
 		}
 	}
 };

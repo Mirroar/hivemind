@@ -26,6 +26,11 @@ PWR_OPERATE_STORAGE PWR_GENERATE_OPS */
  * @endcode
  */
 const settings = {
+	// Relations:
+	// If true, any player that is not declared to be your ally will be treated
+	// as an enemy, rather than neutral, and actively harrassed.
+	treatNonAlliesAsEnemies: false,
+
 	// Visualization:
 	// If true, lines representing connections in the bot's nav mesh will be drawn
 	// on the world map.
@@ -44,6 +49,8 @@ const settings = {
 	// Power mining:
 	// Enable power mining in general.
 	enablePowerMining: true,
+	minRclForPowerMining: 8,
+	maxRangeForPowerMining: 5,
 	powerMiningCheckInterval: 100,
 	// Filter rooms where power mining is allowed to take place. This needs to be
 	// a function that is passed a room name and returns true for allowed rooms.
@@ -54,7 +61,16 @@ const settings = {
 	minEnergyForPowerHarvesting: 75000,
 	minEnergyForPowerProcessing: 100000,
 
+	// Commodities:
+	enableDepositMining: true,
+	maxRangeForDepositMining: 5,
+	maxDepositCooldown: 100,
+	depositMineRoomFilter: null,
+	minEnergyForDepositMining: 20000,
+	minRclForDepositMining: 8,
+
 	// Power creeps:
+	powerCreepUpgradeCheckInterval: 1000,
 	powerPriorities: [
 		PWR_OPERATE_FACTORY,
 		PWR_REGEN_SOURCE,
@@ -69,7 +85,9 @@ const settings = {
 		PWR_OPERATE_OBSERVER,
 		PWR_OPERATE_TERMINAL,
 	],
+	automaticallyUpgradePowerCreeps: true,
 	operatorEachRoom: false,
+	prioritizeFactoryLevels: false,
 	operatorNames: ['Jekyll', 'Hyde', 'Banner', 'Robotnik', 'Strange', 'Venkman', 'Dolittle', 'Zhivago', 'Crane', 'McCoy', 'VanHelsing', 'Frankenstein', 'Scully', 'Connors', 'Lecter'],
 
 	// Scouting:
@@ -119,6 +137,9 @@ const settings = {
 	allowBuyingPixels: false,
 	allowSellingPower: true,
 	allowSellingOps: true,
+
+	// Seasons:
+	season4EnableCaravanDelivery: false,
 };
 
 export default settings;

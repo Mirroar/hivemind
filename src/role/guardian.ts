@@ -2,12 +2,12 @@
 
 declare global {
 	interface GuardianCreep extends Creep {
-		memory: GuardianCreepMemory,
-		heapMemory: GuardianCreepHeapMemory,
+		memory: GuardianCreepMemory;
+		heapMemory: GuardianCreepHeapMemory;
 	}
 
 	interface GuardianCreepMemory extends CreepMemory {
-		role: 'guardian',
+		role: 'guardian';
 	}
 
 	interface GuardianCreepHeapMemory extends CreepHeapMemory {
@@ -78,7 +78,16 @@ export default class GuardianRole extends Role {
 			});
 			if (targets.length === 0) return;
 
-			creep.rangedAttack(_.max(targets, 'militaryPriority'));
+			let target = _.max(targets, 'militaryPriority');
+			if (!target || (typeof target === 'number')) {
+				if (targets.length > 2 || _.find(targets, c => c.pos.getRangeTo(creep) === 1)) {
+					creep.rangedMassAttack();
+				}
+				else {
+					target = _.sample(targets);
+				}
+			}
+			creep.rangedAttack(target);
 		}
 		if (creep.getActiveBodyparts(ATTACK) > 0) {
 			const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
@@ -86,7 +95,9 @@ export default class GuardianRole extends Role {
 			});
 			if (targets.length === 0) return;
 
-			creep.attack(_.max(targets, 'militaryPriority'));
+			let target = _.max(targets, 'militaryPriority');
+			if (!target || (typeof target === 'number')) target = _.sample(targets);
+			creep.attack(target);
 		}
 	}
 };

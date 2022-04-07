@@ -14,7 +14,7 @@ declare global {
 		isFullOnPower: () => boolean;
 		isFullOnMinerals: () => boolean;
 		isFullOn;
-		getStorageLocation;
+		getStorageLocation: () => RoomPosition;
 		prepareForTrading;
 		stopTradePreparation;
 		getRemoteHarvestSourcePositions;
@@ -23,6 +23,8 @@ declare global {
 		getBestStorageTarget: (amount: number, resourceType: string) => AnyStoreStructure;
 		getBestStorageSource: (resourceType: string) => AnyStoreStructure;
 		getBestCircumstancialStorageSource;
+		determineResourceLevel;
+		getResourceLevelCutoffs;
 	}
 
 	interface RoomMemory {
@@ -236,9 +238,11 @@ Room.prototype.isFullOn = function (resourceType) {
  * @return {RoomPosition}
  *   Returns the room's storage location.
  */
-Room.prototype.getStorageLocation = function () {
-	if (!this.controller) return;
+Room.prototype.getStorageLocation = function (this: Room) {
+	if (!this.controller) return null;
 	if (this.roomPlanner) return this.roomPlanner.getRoomCenter();
+
+	return this.storage ? this.storage.pos : null;
 };
 
 /**
@@ -249,8 +253,8 @@ Room.prototype.getStorageLocation = function () {
  * @param {number} amount
  *   Amount of resources to store.
  */
-Room.prototype.prepareForTrading = function (resourceType, amount) {
-	if (!amount) amount = 10000;
+Room.prototype.prepareForTrading = function (this: Room, resourceType: ResourceConstant, amount: number) {
+	if (!amount) amount = Math.min(10000, this.getCurrentResourceAmount(resourceType));
 	this.memory.fillTerminal = resourceType;
 	this.memory.fillTerminalAmount = Math.min(amount, 50000);
 };
@@ -322,90 +326,140 @@ Room.prototype.getRemoteReservePositions = function () {
  *     `excessive` keyed by resource type.
  *   - canTrade: Whether the room can perform trades.
  */
-Room.prototype.getResourceState = function () {
+Room.prototype.getResourceState = function (this: Room) {
 	if (!this.isMine()) return {};
 
 	const storage = this.storage;
 	const terminal = this.terminal;
 
-	const roomData = {
-		totalResources: {},
-		state: {},
-		canTrade: false,
-		addResource(resourceType, amount) {
-			this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
-		},
-		isEvacuating: false,
-		mineralType: null,
-	};
-	if (storage && terminal) {
-		roomData.canTrade = true;
-	}
+	return cache.inObject(this, 'resourceState', 1, () => {
+		const roomData = {
+			totalResources: {},
+			state: {},
+			canTrade: false,
+			addResource(resourceType, amount) {
+				this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
+			},
+			isEvacuating: false,
+			mineralType: null,
+		};
+		if (storage && terminal) {
+			roomData.canTrade = true;
+		}
 
-	// @todo Remove in favor of function.
-	roomData.isEvacuating = this.isEvacuating();
+		// @todo Remove in favor of function.
+		roomData.isEvacuating = this.isEvacuating();
 
-	if (storage && !roomData.isEvacuating) {
-		_.each(storage.store, (amount, resourceType) => {
-			roomData.addResource(resourceType, amount);
-		});
-	}
+		if (storage && !roomData.isEvacuating) {
+			_.each(storage.store, (amount, resourceType) => {
+				roomData.addResource(resourceType, amount);
+			});
+		}
 
-	if (terminal) {
-		_.each(terminal.store, (amount, resourceType) => {
-			roomData.addResource(resourceType, amount);
-		});
-	}
+		if (terminal) {
+			_.each(terminal.store, (amount, resourceType) => {
+				roomData.addResource(resourceType, amount);
+			});
+		}
 
-	if (this.mineral && !roomData.isEvacuating) {
-		roomData.mineralType = this.mineral.mineralType;
-	}
+		if (this.factory) {
+			_.each(this.factory.store, (amount, resourceType) => {
+				roomData.addResource(resourceType, amount);
+			});
+		}
 
-	// Add resources in labs as well.
-	if (this.memory.labs && !roomData.isEvacuating) {
-		const labs = this.find(FIND_STRUCTURES, s => s.structureType === STRUCTURE_LAB);
+		if (this.mineral && !roomData.isEvacuating) {
+			roomData.mineralType = this.mineral.mineralType;
+		}
 
-		for (const lab of labs) {
-			if (lab.mineralType && lab.mineralAmount > 0) {
-				roomData.addResource(lab.mineralType, lab.mineralAmount);
+		// Add resources in labs as well.
+		if (this.memory.labs && !roomData.isEvacuating) {
+			const labs = this.find<StructureLab>(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB});
+
+			for (const lab of labs) {
+				if (lab.mineralType && lab.mineralAmount > 0) {
+					roomData.addResource(lab.mineralType, lab.mineralAmount);
+				}
 			}
 		}
-	}
 
-	_.each(roomData.totalResources, (amount, resourceType) => {
-		if (resourceType === RESOURCE_ENERGY) {
-			if (amount >= 200000) {
-				roomData.state[resourceType] = 'excessive';
-			}
-			else if (amount >= 50000) {
-				roomData.state[resourceType] = 'high';
-			}
-			else if (amount >= 20000) {
-				roomData.state[resourceType] = 'medium';
-			}
-			else {
-				roomData.state[resourceType] = 'low';
-			}
-
-			return;
+		for (const resourceType of RESOURCES_ALL) {
+			roomData.state[resourceType] = this.determineResourceLevel(roomData.totalResources[resourceType] || 0, resourceType);
 		}
 
-		if (amount >= 220000) {
-			roomData.state[resourceType] = 'excessive';
-		}
-		else if (amount >= 30000) {
-			roomData.state[resourceType] = 'high';
-		}
-		else if (amount >= 10000) {
-			roomData.state[resourceType] = 'medium';
-		}
-		else {
-			roomData.state[resourceType] = 'low';
-		}
+		return roomData;
 	});
-
-	return roomData;
 };
+
+type ResourceLevel = 'low' | 'medium' | 'high' | 'excessive';
+type ResourceLevelCuttoffs = [number, number, number];
+
+Room.prototype.determineResourceLevel = function (this: Room, amount: number, resourceType: ResourceConstant): ResourceLevel {
+	const cutoffs = this.getResourceLevelCutoffs(resourceType);
+	if (amount >= cutoffs[0]) return 'excessive';
+	if (amount >= cutoffs[1]) return 'high';
+	if (amount >= cutoffs[2]) return 'medium';
+	return 'low';
+}
+
+Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
+	if (resourceType === RESOURCE_ENERGY) {
+		// Defending rooms need energy to defend.
+		if (this.defense.getEnemyStrength() > 0) return [1000000, 100000, 50000];
+		return [200000, 50000, 20000];
+	}
+
+	if (resourceType === RESOURCE_POWER) {
+		// Only rooms with power spawns need power.
+		if (!this.powerSpawn) return [1, 1, 0];
+		return [50000, 30000, 10000];
+	}
+
+	if (resourceType === RESOURCE_OPS) {
+		// Only rooms with power creeps need ops.
+		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 1, 0];
+		return [10000, 5000, 1000];
+	}
+
+	// @todo If the room has a factory, consolidate normal resources and bars.
+
+	// Basic commodities need a factory.
+	if (([RESOURCE_SILICON, RESOURCE_METAL, RESOURCE_BIOMASS, RESOURCE_MIST] as string[]).includes(resourceType)) {
+		if (!this.factory) return [1, 1, 0];
+		return [30000, 10000, 2000];
+	}
+
+	// @todo For commodities, ignore anything we don't need for recipes of the
+	// current factory level.
+	if (
+		([
+			RESOURCE_COMPOSITE, RESOURCE_CRYSTAL, RESOURCE_LIQUID,
+			RESOURCE_WIRE, RESOURCE_SWITCH, RESOURCE_TRANSISTOR, RESOURCE_MICROCHIP, RESOURCE_CIRCUIT, RESOURCE_DEVICE,
+			RESOURCE_CELL, RESOURCE_PHLEGM, RESOURCE_TISSUE, RESOURCE_MUSCLE, RESOURCE_ORGANOID, RESOURCE_ORGANISM,
+			RESOURCE_ALLOY, RESOURCE_TUBE, RESOURCE_FIXTURES, RESOURCE_FRAME, RESOURCE_HYDRAULICS, RESOURCE_MACHINE,
+			RESOURCE_CONDENSATE, RESOURCE_CONCENTRATE, RESOURCE_EXTRACT, RESOURCE_SPIRIT, RESOURCE_EMANATION, RESOURCE_ESSENCE,
+		] as string[]).includes(resourceType)
+	) {
+		if (!this.factory) return [1, 1, 0];
+		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 1, 0];
+		return [10000, 5000, 500];
+	}
+
+	// @todo For boosts, try to have a minimum amount for all types. Later, make
+	// dependent on room military state and so on.
+
+	return [50000, 30000, 10000];
+}
+
+function isCommodityNeededAtFactoryLevel(factoryLevel: number, resourceType: ResourceConstant): boolean {
+	for (const productType in COMMODITIES) {
+		const recipe = COMMODITIES[productType];
+		if (recipe.level && recipe.level !== factoryLevel) continue;
+		if (recipe.components[resourceType]) return true;
+	}
+
+	return false;
+}
 
 /**
  * Determines the best place to store resources.

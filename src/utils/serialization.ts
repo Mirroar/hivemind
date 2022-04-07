@@ -104,11 +104,11 @@ function deserializeCoords(coords: string | number | [number, string]) {
   return {x, y};
 }
 
-function serializePosition(position, fixedRoom) {
+function serializePosition(position: RoomPosition, fixedRoom?: string) {
   return serializeCoords(position.x, position.y, position.roomName === fixedRoom ? null : position.roomName);
 }
 
-function deserializePosition(coords, fixedRoom) {
+function deserializePosition(coords: string | number | [number, string], fixedRoom?: string) {
   // Fallback for old string positions.
   if (typeof coords === 'string') return decodePosition(coords);
 

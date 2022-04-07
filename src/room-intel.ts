@@ -4,13 +4,6 @@ TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY STRUCTURE_PORTAL
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
-declare global {
-	interface RoomMemory {
-		enemies?: any,
-		abandonedResources?: any,
-	}
-}
-
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
@@ -20,11 +13,27 @@ import {deserializeCoords} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
+interface DepositInfo {
+	x: number;
+	y: number;
+	id: Id<Deposit>;
+	type: DepositConstant;
+	decays: number;
+	cooldown: number;
+	freeTiles: number;
+}
+
+declare global {
+	interface RoomMemory {
+		abandonedResources?: Record<string, {
+			[resourceType: string]: number;
+		}>;
+	}
+}
+
 export interface RoomIntelMemory {
 	lastScan: number;
-	exits: {
-		[direction: string]: string;
-	};
+	exits: Partial<Record<ExitKey, string>>;
 	rcl: number;
 	ticksToDowngrade: number;
 	ticksToNeutral: number;
@@ -53,14 +62,7 @@ export interface RoomIntelMemory {
 		freeTiles: number;
 		pos: string;
 	};
-	deposit?: {
-		x: number;
-		y: number;
-		id: Id<Deposit>;
-		type: DepositConstant;
-		decays: number;
-		cooldown: number;
-	}
+	deposits?: DepositInfo[];
 	structures: {
 		[T in StructureConstant]?: {
 			[id: string]: {
@@ -140,6 +142,7 @@ export default class RoomIntel {
 			[T in StructureConstant]?: Structure<T>[];
 		} = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
 		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
+		this.getherDepositIntel();
 		this.gatherPortalIntel(structures[STRUCTURE_PORTAL] as StructurePortal[]);
 		this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 		this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
@@ -219,18 +222,6 @@ export default class RoomIntel {
 			id: room.mineral.id,
 			type: room.mineral.mineralType,
 		};
-
-		const deposits = room.find(FIND_DEPOSITS);
-		if (deposits.length > 0) {
-			this.memory.deposit = {
-				x: deposits[0].pos.x,
-				y: deposits[0].pos.y,
-				id: deposits[0].id,
-				type: deposits[0].depositType,
-				decays: Game.time + deposits[0].ticksToDecay,
-				cooldown: deposits[0].lastCooldown || 0,
-			};
-		}
 	}
 
 	/**
@@ -320,6 +311,59 @@ export default class RoomIntel {
 				Memory.strategy.power.rooms[this.roomName] = this.memory.power;
 
 				// @todo Update info when gathering is active.
+			}
+		}
+	}
+
+	getherDepositIntel() {
+		delete this.memory.deposits;
+
+		const room = Game.rooms[this.roomName];
+		const deposits = room.find(FIND_DEPOSITS);
+		const maxCooldown = hivemind.settings.get('maxDepositCooldown');
+		if (deposits.length === 0) return;
+
+		const terrain = new Room.Terrain(this.roomName);
+		this.memory.deposits = [];
+		for (const deposit of deposits) {
+			if (!deposit || deposit.lastCooldown > maxCooldown) return;
+
+			// For now, send a notification!
+			hivemind.log('intel', this.roomName).info('Deposit containing', deposit.depositType, 'found!');
+
+			// Find out how many access points there are around this power bank.
+			let numFreeTiles = 0;
+			utilities.handleMapArea(deposit.pos.x, deposit.pos.y, (x, y) => {
+				if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+					numFreeTiles++;
+				}
+			});
+
+			this.memory.deposits.push({
+				x: deposit.pos.x,
+				y: deposit.pos.y,
+				id: deposit.id,
+				type: deposit.depositType,
+				decays: Game.time + deposit.ticksToDecay,
+				cooldown: deposit.lastCooldown || 0,
+				freeTiles: numFreeTiles,
+			});
+
+			// Also store room in strategy memory for easy access.
+			if (Memory.strategy) {
+				if (!Memory.strategy.deposits) {
+					Memory.strategy.deposits = {rooms: {}};
+				}
+
+				if (!Memory.strategy.deposits.rooms) {
+					Memory.strategy.deposits.rooms = {};
+				}
+
+				if (!Memory.strategy.deposits.rooms[this.roomName] || !Memory.strategy.deposits.rooms[this.roomName].isActive) {
+					Memory.strategy.deposits.rooms[this.roomName] = {scouted: true};
+
+					// @todo Update info when gathering is active.
+				}
 			}
 		}
 	}
@@ -563,8 +607,8 @@ export default class RoomIntel {
 		return this.memory.mineralInfo;
 	}
 
-	getDepositInfo() {
-		return this.memory.deposit;
+	getDepositInfo(): DepositInfo[] {
+		return this.memory.deposits;
 	}
 
 	/**
@@ -582,9 +626,8 @@ export default class RoomIntel {
 			};
 		}
 
+		const matrix = new PathFinder.CostMatrix();
 		if (obstaclePositions) {
-			const matrix = new PathFinder.CostMatrix();
-
 			for (const pos of obstaclePositions.obstacles) {
 				matrix.set(pos.x, pos.y, 0xFF);
 			}
@@ -594,11 +637,34 @@ export default class RoomIntel {
 					matrix.set(pos.x, pos.y, 1);
 				}
 			}
-
-			return matrix;
 		}
 
-		return new PathFinder.CostMatrix();
+		const lairs = this.getStructures(STRUCTURE_KEEPER_LAIR);
+		if (lairs && _.size(lairs) > 0) {
+			const terrain = new Room.Terrain(this.roomName);
+			_.each(lairs, lair => {
+				utilities.handleMapArea(lair.x, lair.y, (x, y) => {
+					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
+				}, 3);
+			});
+
+			// Add area around sources as obstacles.
+			_.each(this.getSourcePositions(), sourceInfo => {
+				utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
+				}, 4);
+			});
+
+			// Add area around mineral as obstacles.
+			const mineralInfo = this.getMineralPosition();
+			if (mineralInfo) {
+				utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
+				}, 4);
+			}
+		}
+
+		return matrix;
 	}
 
 	/**
@@ -619,7 +685,7 @@ export default class RoomIntel {
 	 * @return {object}
 	 *   Exits as returned by Game.map.getExits().
 	 */
-	getExits = function () {
+	getExits = function (): Partial<Record<ExitKey, string>> {
 		return this.memory.exits || {};
 	}
 

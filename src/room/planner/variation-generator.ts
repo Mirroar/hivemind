@@ -118,8 +118,8 @@ export default class VariationGenerator {
     cy = Math.floor(cy / count);
 
     // Find closest position with distance from walls around there.
-    const roomCenter = (new RoomPosition(cx, cy, this.roomName)).findClosestByRange(potentialCorePositions);
-    if (!roomCenter) {
+    const roomCenter = _.min(potentialCorePositions, p => p.getRangeTo(cx, cy));
+    if (!roomCenter || (typeof roomCenter === 'number')) {
       hivemind.log('rooms', this.roomName).error('Could not find a suitable center position!');
       return null;
     }

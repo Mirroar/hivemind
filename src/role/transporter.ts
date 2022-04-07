@@ -91,8 +91,6 @@ export default class TransporterRole extends Role {
 		const creep = this.creep;
 		// If the creep is in a bay, but not delivering to that bay (any more), make it move out of the bay forcibly.
 		for (const bay of creep.room.bays) {
-			// @todo Number of extensions is not really the correct measure, number of
-			// walkable tiles around center is.
 			if (creep.pos.x !== bay.pos.x || creep.pos.y !== bay.pos.y) continue;
 			if (bay.isBlocked()) continue;
 
@@ -560,7 +558,8 @@ export default class TransporterRole extends Role {
 				resourceType: RESOURCE_ENERGY,
 			};
 
-			if (target.structureType === STRUCTURE_POWER_SPAWN) {
+			if (target instanceof StructurePowerSpawn) {
+				if (target.store.getFreeCapacity(RESOURCE_ENERGY) < target.store.getCapacity(RESOURCE_ENERGY) * 0.2) continue;
 				option.priority += 2;
 			}
 
@@ -843,6 +842,9 @@ export default class TransporterRole extends Role {
 				target: best.object.id,
 				resourceType: best.resourceType,
 			};
+		}
+		else if (best && best.type && best.target && best.resourceType) {
+			creep.memory.order = best;
 		}
 		else {
 			delete creep.memory.order;

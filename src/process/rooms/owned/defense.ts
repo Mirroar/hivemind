@@ -41,11 +41,12 @@ export default class RoomDefenseProcess extends Process {
 		if (towers.length === 0) return;
 
 		const hostileCreeps = this.room.find(FIND_HOSTILE_CREEPS);
+		const enemyStrength = this.room.defense.getEnemyStrength();
 		for (const tower of towers) {
 			// Attack enemies.
 			if (hostileCreeps.length > 0) {
 				// Use new military manager if possible.
-				const target = this.room.getTowerTarget(tower);
+				const target = this.room.getTowerTarget();
 				if (target) {
 					this.room.visual.line(tower.pos.x, tower.pos.y, target.pos.x, target.pos.y, {color: 'red'});
 
@@ -63,14 +64,14 @@ export default class RoomDefenseProcess extends Process {
 			// Heal friendlies.
 			// @todo Don't check this for every tower in the room.
 			const damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
-				filter: creep => creep.hits < creep.hitsMax,
+				filter: creep => creep.hits < creep.hitsMax && (creep.getActiveBodyparts(ATTACK) > 0 || creep.getActiveBodyparts(RANGED_ATTACK) > 0 || enemyStrength === 0),
 			});
 			if (damaged) {
 				tower.heal(damaged);
 			}
 
 			// Repair ramparts during a strong attack.
-			if (this.room.defense.getEnemyStrength() > 1 && tower.store.getUsedCapacity(RESOURCE_ENERGY) > tower.store.getCapacity(RESOURCE_ENERGY) / 2) {
+			if (enemyStrength > 1 && tower.store.getUsedCapacity(RESOURCE_ENERGY) > tower.store.getCapacity(RESOURCE_ENERGY) / 2) {
 				let availableRamparts = [];
 				for (const creep of hostileCreeps) {
 					if (!creep.isDangerous()) continue;

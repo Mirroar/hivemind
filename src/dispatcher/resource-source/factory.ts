@@ -13,7 +13,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
   }
 
   getHighestPriority() {
-    return 2;
+    return 3;
   }
 
   getTasks(context: ResourceSourceContext) {
@@ -50,8 +50,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
   }
 
   addEmptyFactoryTasks(options: FactorySourceTask[], context: ResourceSourceContext) {
-    const neededResources = this.room.factoryManager.getRequestedComponents();
-    if (!neededResources) return;
+    const neededResources = this.room.factoryManager.getRequestedComponents() || {};
 
     for (const resourceType in this.room.factory.store) {
       if (context.resourceType && resourceType !== context.resourceType) continue;
@@ -59,12 +58,10 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 
       // @todo Create only one task, but allow picking up multiple resource types when resolving.
       const structure = this.room.factory;
-      if (!structure) continue;
-
       options.push({
         type: this.getType(),
-        priority: this.room.factory.store.getUsedCapacity(resourceType as ResourceConstant) > 1000 ? 3 : 2,
-        weight: neededResources[resourceType] / 1000,
+        priority: structure.store.getUsedCapacity(resourceType as ResourceConstant) > 1000 ? 3 : 2,
+        weight: 0,
         resourceType,
         target: structure.id,
         amount: structure.store[resourceType] || 0,

@@ -1,9 +1,10 @@
-import cache from 'utils/cache';
-import hivemind from 'hivemind';
 import BoostManager from 'manager.boost';
+import cache from 'utils/cache';
+import Exploit from 'manager.exploit';
+import hivemind from 'hivemind';
 import Process from 'process/process';
-import RoomPlanner from 'room/planner/room-planner';
 import RoomManager from 'room/room-manager';
+import RoomPlanner from 'room/planner/room-planner';
 import Squad from 'manager.squad';
 
 import Operation from 'operation/operation';
@@ -12,7 +13,7 @@ import RoomOperation from 'operation/room';
 
 declare global {
 	interface Game {
-		exploits,
+		exploits: Record<string, Exploit>,
 		creepsByRole: {
 			[key: string]: {
 				[key: string]: Creep,

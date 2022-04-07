@@ -26,7 +26,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 
 		if (numWorkParts < maxWorkParts) {
 			options.push({
-				priority: (needsStrongerRamparts || needsInitialBuildings) ? 5 : 3,
+				priority: (needsStrongerRamparts || needsInitialBuildings) ? 4 : 3,
 				weight: 0.5,
 				size: room.isEvacuating() ? 3 : null,
 			});
@@ -43,15 +43,25 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   The number of work parts needed.
 	 */
 	getNeededWorkParts(room) {
+		const numConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
+
 		if (room.isEvacuating()) {
+			if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
+				return 0;
+			}
+
 			// Just spawn a small builder for keeping roads intact.
 			return 1;
 		}
 
-		if (room.controller.level <= 3 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+		if (room.controller.level <= 3 && numConstructionSites === 0) {
 			// There isn't really much to repair before RCL 4, so don't spawn
 			// new builders when there's nothing to build.
 			return 1;
+		}
+
+		if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
+			return 0;
 		}
 
 		let maxWorkParts = 5;
@@ -88,7 +98,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		if (room.controller.level > 3) {
 			// Spawn more builders depending on total size of current construction sites.
 			// @todo Use hitpoints of construction sites vs number of work parts as a guide.
-			maxWorkParts += room.find(FIND_MY_CONSTRUCTION_SITES).length / 2;
+			maxWorkParts += numConstructionSites / 2;
 		}
 
 		return maxWorkParts;
@@ -142,7 +152,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room) {
+	getCreepMemory(room): BuilderCreepMemory {
 		return {
 			singleRoom: room.name,
 			operation: 'room:' + room.name,

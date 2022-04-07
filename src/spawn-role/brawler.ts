@@ -9,7 +9,9 @@ declare global {
 	}
 }
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
+import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 
@@ -30,6 +32,8 @@ const SEGMENT_HEAL = 1;
 const SEGMENT_BLINKY = 2;
 
 export default class BrawlerSpawnRole extends SpawnRole {
+	navMesh: NavMesh;
+
 	/**
 	 * Adds brawler spawn options for the given room.
 	 *
@@ -42,6 +46,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		this.getRemoteDefenseSpawnOptions(room, options);
 		this.getPowerHarvestDefenseSpawnOptions(room, options);
 		this.getTrainPartSpawnOptions(room, options);
+		this.getReclaimSpawnOptions(room, options);
 	}
 
 	/**
@@ -52,8 +57,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getRemoteDefenseSpawnOptions(room, options) {
-		const harvestPositions = room.getRemoteHarvestSourcePositions();
+	getRemoteDefenseSpawnOptions(room: Room, options) {
+		const harvestPositions: RoomPosition[] = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
@@ -62,6 +67,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			// Only spawn if there are enemies.
 			if (!operation || !operation.isUnderAttack()) continue;
+			if (operation.needsDismantler() || !operation.isProfitable()) continue;
 
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
@@ -72,10 +78,28 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.operation === 'mine:' + pos.roomName);
 			if (_.size(brawlers) > 0) continue;
 
-			const roomMemory = Memory.rooms[pos.roomName];
-			if (!roomMemory || !roomMemory.enemies) continue;
+			const totalEnemyData: {
+				parts: Record<string, number>;
+				damage: number;
+				heal: number;
+			} = {
+				parts: {},
+				damage: 0,
+				heal: 0,
+			}
 
-			const responseType = this.getDefenseCreepSize(room, roomMemory.enemies);
+			for (const roomName of operation.getRoomsOnPath()) {
+				const roomMemory = Memory.rooms[pos.roomName];
+				if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
+
+				totalEnemyData.damage += roomMemory.enemies.damage;
+				totalEnemyData.heal += roomMemory.enemies.heal;
+				for (const part in roomMemory.enemies.parts || {}) {
+					totalEnemyData.parts[part] = (totalEnemyData.parts[part] || 0) + roomMemory.enemies.parts[part];
+				}
+			}
+
+			const responseType = this.getDefenseCreepSize(room, totalEnemyData);
 
 			if (responseType === RESPONSE_NONE) continue;
 
@@ -220,6 +244,37 @@ export default class BrawlerSpawnRole extends SpawnRole {
 				segmentType,
 			});
 		}
+	}
+
+	getReclaimSpawnOptions(room: Room, options) {
+		for (const targetRoom of Game.myRooms) {
+			if (room.name === targetRoom.name) continue;
+			if (!this.canReclaimRoom(targetRoom, room)) continue;
+
+			options.push({
+				priority: 4,
+				weight: 1,
+				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
+				responseType: RESPONSE_BLINKY,
+			});
+		}
+	}
+
+	canReclaimRoom(targetRoom: Room, room: Room): boolean {
+		if (!targetRoom.memory.isReclaimableSince) return false;
+		if (Game.time - targetRoom.memory.isReclaimableSince < 2000) return false;
+		if (!targetRoom.roomPlanner) return false;
+
+		const remoteDefense = _.filter(Game.creepsByRole['brawler'], (creep: Creep) => creep.memory.target === encodePosition(targetRoom.roomPlanner.getRoomCenter())).length;
+		if (remoteDefense > 3) return false;
+
+		const route = cache.inHeap('reclaimPath:' + targetRoom.name + '.' +  room.name, 100, () => {
+			if (!this.navMesh) this.navMesh = new NavMesh();
+			return this.navMesh.findPath(room.roomPlanner.getRoomCenter(), targetRoom.roomPlanner.getRoomCenter(), {maxPathLength: 700});
+		});
+		if (route.incomplete) return false;
+
+		return true;
 	}
 
 	/**

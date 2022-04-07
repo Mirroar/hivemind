@@ -4,6 +4,18 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import {getRoomIntel} from 'intel-management';
 
+declare global {
+	interface RoomMemory {
+		enemies: {
+			parts: Record<string, number>;
+			lastSeen: number;
+			safe: boolean;
+			damage: number;
+			heal: number;
+		};
+	}
+}
+
 export default class RoomIntelProcess extends Process {
 	room: Room;
 

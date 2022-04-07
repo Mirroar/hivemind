@@ -99,6 +99,7 @@ export default class OperatorRole extends Role {
 		this.addRegenMineralOptions(options);
 		this.addOperateStorageOptions(options);
 		this.addOperateSpawnOptions(options);
+		this.addOperateFactoryOptions(options);
 		this.addOperateExtensionOptions(options);
 		this.addOperateTowerOptions(options);
 		this.addDepositOpsOptions(options);
@@ -229,8 +230,6 @@ export default class OperatorRole extends Role {
 		if (!storage) return;
 		if (storage.store.getUsedCapacity() < STORAGE_CAPACITY * 0.9) return;
 
-		if (!storage) return;
-
 		const activeEffect = _.first(_.filter(storage.effects, effect => effect.effect === PWR_OPERATE_STORAGE));
 		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 		if (ticksRemaining > POWER_INFO[PWR_OPERATE_STORAGE].duration / 5) return;
@@ -284,6 +283,39 @@ export default class OperatorRole extends Role {
 			target: spawn.id,
 			priority: 4,
 			weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_OPERATE_SPAWN].duration),
+		});
+	}
+
+	/**
+	 * Adds options for operating a storage, increasing its size.
+	 *
+	 * @param {Array} options
+	 *   A list of potential power creep orders.
+	 */
+	addOperateFactoryOptions(options) {
+		if (!this.creep.powers[PWR_OPERATE_FACTORY]) return;
+		const powerLevel = this.creep.powers[PWR_OPERATE_FACTORY].level;
+		if (powerLevel < 1) return;
+		if (this.creep.powers[PWR_OPERATE_FACTORY].cooldown > 0) return;
+		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_FACTORY].ops) return;
+
+		const factory = this.creep.room.factory;
+		if (!factory) return;
+		if (!this.creep.room.factoryManager) return;
+
+		const tasks = this.creep.room.factoryManager.getJobs();
+		if (_.filter(tasks, t => t.level === powerLevel).length === 0) return;
+
+		const activeEffect = _.first(_.filter(factory.effects, effect => effect.effect === PWR_OPERATE_FACTORY));
+		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
+		if (ticksRemaining > POWER_INFO[PWR_OPERATE_FACTORY].duration / 5) return;
+
+		options.push({
+			type: 'usePower',
+			power: PWR_OPERATE_FACTORY,
+			target: factory.id,
+			priority: 4,
+			weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_OPERATE_FACTORY].duration),
 		});
 	}
 

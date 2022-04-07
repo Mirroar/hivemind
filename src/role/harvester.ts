@@ -126,6 +126,10 @@ export default class HarvesterRole extends Role {
 		else if (creep.memory.fixedMineralSource) {
 			source = Game.getObjectById(creep.memory.fixedMineralSource);
 			// @todo Just in case, handle source not existing anymore, or missing extractor.
+			if (source.mineralAmount === 0) {
+				// Return home and suicide.
+				this.performRecycle(creep);
+			}
 		}
 
 		this.determineHarvestPosition(creep, source);

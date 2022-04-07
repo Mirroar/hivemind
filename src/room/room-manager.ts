@@ -28,11 +28,12 @@ declare global {
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
+import RoomPlanner from 'room/planner/room-planner';
 import {serializeCoords} from 'utils/serialization';
 
 export default class RoomManager {
 	room: Room;
-	roomPlanner;
+	roomPlanner: RoomPlanner;
 	memory: RoomManagerMemory;
 	roomConstructionSites: ConstructionSite[];
 	constructionSitesByType: {
@@ -87,6 +88,7 @@ export default class RoomManager {
 	 */
 	runLogic() {
 		if (!this.roomPlanner || !this.roomPlanner.isPlanningFinished()) return;
+		if (this.room.defense.getEnemyStrength() > 0) return;
 
 		delete this.memory.runNextTick;
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
@@ -95,8 +97,41 @@ export default class RoomManager {
 		this.structuresByType = _.groupBy(this.roomStructures, 'structureType');
 		this.newStructures = 0;
 
+		if (this.isRoomRecovering()) {
+			this.buildRoomDefenseFirst();
+
+			if (!this.structuresByType[STRUCTURE_SPAWN] || this.structuresByType[STRUCTURE_SPAWN].length === 0) return;
+		}
+
 		this.cleanRoom();
 		this.manageStructures();
+	}
+
+	isRoomRecovering(): boolean {
+		if (this.room.memory.isReclaimableSince) return true;
+
+		if (this.structuresByType[STRUCTURE_SPAWN] && this.structuresByType[STRUCTURE_SPAWN].length > 0) return false;
+		if (this.room.controller.level < 3) return false;
+
+		return true;
+	}
+
+	buildRoomDefenseFirst() {
+		for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]; i++) {
+			// Build ramparts at tower spots.
+			const position = this.roomPlanner.getLocations('tower.' + i)[0];
+			if (position) this.tryBuild(position, STRUCTURE_RAMPART);
+
+			// Build towers.
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER)
+		}
+		// Build normal ramparts.
+		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
+
+		// Build spawn.
+		if (this.checkWallIntegrity(10000)) {
+			this.buildPlannedStructures('spawn.0', STRUCTURE_SPAWN)
+		}
 	}
 
 	/**
@@ -193,6 +228,14 @@ export default class RoomManager {
 			this.manageExtensions();
 		}
 
+		// Make sure towers are built in the right place, remove otherwise.
+		this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
+		const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level];
+		for (let i = 0; i < maxTowers; i++) {
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
+		}
+		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
+
 		// Make sure all current spawns have been built.
 		const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
 		const roomSpawnSites = this.constructionSitesByType[STRUCTURE_SPAWN] || [];
@@ -224,14 +267,10 @@ export default class RoomManager {
 
 		if (this.room.controller.level < 2) return;
 
-		// Make sure towers are built in the right place, remove otherwise.
-		this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
-		for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]; i++) {
-			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
+		// Make sure enough extensions for reasonably sized creeps are built.
+		if (this.room.energyCapacityAvailable < MAX_CREEP_SIZE * (BODYPART_COST[WORK] + BODYPART_COST[MOVE]) / 2) {
+			this.manageExtensions();
 		}
-		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
-
-		this.manageExtensions();
 
 		// At level 2, we can start building containers at sources and controller.
 		this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
@@ -296,6 +335,9 @@ export default class RoomManager {
 			this.buildOperationRoads();
 		}
 
+		// Build any missing extensions.
+		this.manageExtensions();
+
 		// Further constructions should only happen in safe rooms.
 		if (this.room.isEvacuating()) return;
 		if (!this.checkWallIntegrity()) return;
@@ -327,6 +369,11 @@ export default class RoomManager {
 		this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
 		this.buildPlannedStructures('link.controller', STRUCTURE_LINK);
 		// @todo Build link to farthest locations first.
+		const farthestLinks = _.sortBy(this.roomPlanner.getLocations('link.source'), p => -p.getRangeTo(this.room.controller.pos));
+		for (const pos of farthestLinks) {
+			this.tryBuild(pos, STRUCTURE_LINK);
+		}
+
 		this.buildPlannedStructures('link.source', STRUCTURE_LINK);
 		this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
 		this.buildPlannedStructures('link', STRUCTURE_LINK);
@@ -538,11 +585,13 @@ export default class RoomManager {
 	 * @return {boolean}
 	 *   True if walls are considered complete.
 	 */
-	checkWallIntegrity() {
+	checkWallIntegrity(minHits?: number) {
+		if (!minHits) minHits = hivemind.settings.get('minWallIntegrity');
+
 		for (const pos of this.roomPlanner.getLocations('rampart')) {
 			// Check if there's a rampart here already.
-			const structures: AnyStructure[] = pos.lookFor(LOOK_STRUCTURES);
-			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= hivemind.settings.get('minWallIntegrity')).length === 0) {
+			const structures = pos.lookFor(LOOK_STRUCTURES);
+			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= minHits).length === 0) {
 				return false;
 			}
 		}
@@ -590,7 +639,16 @@ export default class RoomManager {
 
 		if (hivemind.settings.get('constructFactories')) {
 			// Make sure all current factories have been built.
-			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('factory', STRUCTURE_FACTORY, 1);
+			if (_.size(this.roomConstructionSites) === 0) {
+				this.removeUnplannedStructures('factory', STRUCTURE_FACTORY, 1);
+				if (
+					this.room.factory && (this.room.factory.level || 0) > 0 &&
+					this.room.factoryManager && this.room.factoryManager.getFactoryLevel() > 0 &&
+					this.room.factory.level !== this.room.factoryManager.getFactoryLevel()
+				) {
+					this.room.factory.destroy();
+				}
+			}
 			this.buildPlannedStructures('factory', STRUCTURE_FACTORY);
 		}
 	}

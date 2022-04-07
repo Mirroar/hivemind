@@ -38,7 +38,7 @@ JSON.stringify(_.map(Game.creeps.T_ju.getAvailableEnergySources(), option => {op
 _.each(Game.creepsByRole, (g, n) => console.log(_.size(g), n));
 
 // Force expansion to a certain room.
-p = new ExpandProcess({}, {}); r = Memory.strategy.roomList.E19N24; r.spawnRoom = 'E16N22'; p.startExpansion(r)
+p = new ExpandProcess({}, {}); r = Memory.strategy.roomList.E19N24; r.spawnRoom = 'E16N22'; p.startExpansion(r);
 
 // Send a squad to operate in a room.
 import Squad from 'manager.squad'; const s = new Squad('squadName'); s.setSpawn('W25S18'); s.setTarget(new RoomPosition(24, 24, 'W28S19')); a.addUnit('ranger');

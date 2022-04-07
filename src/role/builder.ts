@@ -1,9 +1,34 @@
 /* global FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN
 STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER */
 
+interface RepairOrder {
+	type: 'repair';
+	target: Id<Structure>;
+	maxHealth: number;
+}
+
+interface BuildOrder {
+	type: 'build';
+	target: Id<ConstructionSite>;
+}
+
 declare global {
-	interface CreepMemory {
+	interface BuilderCreep extends Creep {
+		role: 'builder';
+		memory: BuilderCreepMemory;
+		heapMemory: BuilderCreepHeapMemory;
+	}
+
+	interface BuilderCreepMemory extends CreepMemory {
 		repairing?: boolean;
+		order?: RepairOrder | BuildOrder;
+	}
+
+	interface BuilderCreepHeapMemory extends CreepHeapMemory {
+	}
+
+	interface RoomMemory {
+		noBuilderNeeded?: number;
 	}
 }
 
@@ -54,7 +79,12 @@ export default class BuilderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep: Creep) {
+	run(creep: BuilderCreep) {
+		if (creep.heapMemory.suicideSpawn) {
+			this.performRecycle(creep);
+			return;
+		}
+
 		if ((creep.memory.repairing || creep.memory.upgrading) && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setBuilderState(creep, false);
 		}
@@ -66,6 +96,8 @@ export default class BuilderRole extends Role {
 			this.performUpgrade(creep);
 			return;
 		}
+
+		delete creep.room.memory.noBuilderNeeded;
 		if (creep.memory.repairing) {
 			if (!this.performRepair(creep) && creep.room.controller?.level < 8) {
 				creep.memory.upgrading = true;
@@ -92,14 +124,21 @@ export default class BuilderRole extends Role {
 	 * @param {boolean} repairing
 	 *   Whether to start building / repairing or not.
 	 */
-	setBuilderState(creep, repairing) {
+	setBuilderState(creep: BuilderCreep, repairing: boolean) {
 		creep.memory.repairing = repairing;
 		delete creep.memory.upgrading;
 		delete creep.memory.sourceTarget;
 		delete creep.memory.order;
 	}
 
-	performUpgrade(creep: Creep) {
+	performUpgrade(creep: BuilderCreep) {
+		if (creep.room.storage && creep.room.getStoredEnergy() < 25000) {
+			// Prevent draining energy stores by recicling.
+			creep.room.memory.noBuilderNeeded = Game.time;
+			this.performRecycle(creep);
+			return;
+		}
+
 		creep.whenInRange(3, creep.room.controller, () => {
 			creep.upgradeController(creep.room.controller);
 		});
@@ -114,7 +153,7 @@ export default class BuilderRole extends Role {
 	 * @return {boolean}
 	 *   True if an action was performed.
 	 */
-	performRepair(creep) {
+	performRepair(creep: BuilderCreep) {
 		if (!creep.memory.order || !creep.memory.order.target) {
 			this.calculateBuilderTarget(creep);
 		}
@@ -123,13 +162,14 @@ export default class BuilderRole extends Role {
 			return false;
 		}
 
-		const target = Game.getObjectById<Structure>(creep.memory.order.target);
+		const target = Game.getObjectById(creep.memory.order.target);
 		if (!target) {
 			this.calculateBuilderTarget(creep);
 			return true;
 		}
 
 		if (creep.memory.order.type === 'repair') {
+			const target = Game.getObjectById(creep.memory.order.target);
 			let maxHealth = target.hitsMax;
 			if (creep.memory.order.maxHealth) {
 				maxHealth = creep.memory.order.maxHealth;
@@ -150,6 +190,7 @@ export default class BuilderRole extends Role {
 		}
 
 		if (creep.memory.order.type === 'build') {
+			const target = Game.getObjectById(creep.memory.order.target);
 			this.buildTarget(creep, target);
 			return true;
 		}
@@ -166,7 +207,7 @@ export default class BuilderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	calculateBuilderTarget(creep) {
+	calculateBuilderTarget(creep: BuilderCreep) {
 		delete creep.memory.order;
 
 		const best = utilities.getBestOption(this.getAvailableBuilderTargets(creep));
@@ -188,7 +229,7 @@ export default class BuilderRole extends Role {
 	 * @return {Array}
 	 *   An array of repair or build option objects.
 	 */
-	getAvailableBuilderTargets(creep) {
+	getAvailableBuilderTargets(creep: BuilderCreep) {
 		const options = [];
 
 		this.addRepairOptions(creep, options);
@@ -205,7 +246,7 @@ export default class BuilderRole extends Role {
 	 * @param {Array} options
 	 *   An array of repair or build option objects to add to.
 	 */
-	addRepairOptions(creep, options) {
+	addRepairOptions(creep: BuilderCreep, options) {
 		const targets = creep.room.find(FIND_STRUCTURES, {
 			filter: structure => structure.hits < structure.hitsMax && !structure.needsDismantling(),
 		});
@@ -274,11 +315,17 @@ export default class BuilderRole extends Role {
 	 * @param {Structure} target
 	 *   The defensive structure in question.
 	 */
-	modifyRepairDefensesOption(creep: Creep, option, target) {
+	modifyRepairDefensesOption(creep: BuilderCreep, option, target: StructureWall | StructureRampart) {
 		option.priority--;
 		if (target.structureType === STRUCTURE_WALL) {
 			option.priority--;
 			if (creep.room.roomPlanner && !creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall')) {
+				option.priority = -1;
+				return;
+			}
+		}
+		else if (target.structureType === STRUCTURE_RAMPART) {
+			if (creep.room.roomPlanner && !creep.room.roomPlanner.isPlannedLocation(target.pos, 'rampart')) {
 				option.priority = -1;
 				return;
 			}
@@ -331,7 +378,7 @@ export default class BuilderRole extends Role {
 	 * @param {Array} options
 	 *   An array of repair or build option objects to add to.
 	 */
-	addBuildOptions(creep, options) {
+	addBuildOptions(creep: BuilderCreep, options) {
 		const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
 		for (const target of targets) {
 			const option = {
@@ -358,7 +405,7 @@ export default class BuilderRole extends Role {
 				option.priority = 5;
 			}
 
-			if ([STRUCTURE_LAB, STRUCTURE_NUKER].indexOf(target.structureType) !== -1) {
+			if (([STRUCTURE_LAB, STRUCTURE_NUKER, STRUCTURE_FACTORY] as string[]).includes(target.structureType)) {
 				// Expensive structures should only be built with excess energy.
 				option.priority--;
 			}
@@ -375,7 +422,7 @@ export default class BuilderRole extends Role {
 	 * @param {Structure} target
 	 *   The structure to repair.
 	 */
-	repairTarget(creep, target) {
+	repairTarget(creep: BuilderCreep, target: Structure) {
 		if (creep.pos.getRangeTo(target) > 3) {
 			creep.moveToRange(target, 3);
 
@@ -395,7 +442,7 @@ export default class BuilderRole extends Role {
 	 * @param {ConstructionSite} target
 	 *   The construction site to build.
 	 */
-	buildTarget(creep, target) {
+	buildTarget(creep: BuilderCreep, target: ConstructionSite) {
 		if (creep.pos.getRangeTo(target) > 3) {
 			creep.moveToRange(target, 3);
 
@@ -413,7 +460,7 @@ export default class BuilderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	repairNearby(creep) {
+	repairNearby(creep: BuilderCreep) {
 		if (creep.store[RESOURCE_ENERGY] < creep.store.getCapacity() * 0.7 && creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.3) return;
 		if (throttle(creep.memory._tO)) return;
 

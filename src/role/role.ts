@@ -7,6 +7,10 @@ declare global {
 		go?: any,
 	}
 
+	interface CreepHeapMemory {
+		suicideSpawn: Id<StructureSpawn>;
+	}
+
 	interface PowerCreepMemory {
 		role: string,
 		singleRoom?: string,
@@ -81,5 +85,32 @@ export default class Role {
 		}
 
 		return false;
+	}
+
+	performRecycle(creep: Creep) {
+		// Return home and suicide.
+		if (!creep.heapMemory.suicideSpawn) {
+			const spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS);
+			creep.heapMemory.suicideSpawn = spawn?.id;
+
+			if (!spawn) {
+				creep.suicide();
+				return;
+			}
+		}
+
+		if (creep.heapMemory.suicideSpawn) {
+			const spawn = Game.getObjectById(creep.heapMemory.suicideSpawn);
+			if (spawn) {
+				creep.whenInRange(1, spawn, () => {
+					spawn.recycleCreep(creep);
+				});
+			}
+			else {
+				delete creep.heapMemory.suicideSpawn;
+			}
+
+			return;
+		}
 	}
 };

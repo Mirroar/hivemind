@@ -4,30 +4,34 @@ declare global {
 		operation?: string;
 		singleRoom?: string;
 
-		blockedPathCounter?: any;
+		blockedPathCounter?: number;
 		body?: {
 			[partType: string]: number;
 		};
-		building?: any;
+		building?: boolean;
 		buildTarget?: any;
 		currentLair?: any;
-		delivering?: any;
+		delivering?: boolean;
 		deliverTarget?: any;
 		exploitName?: any;
 		extraEnergyTarget?: any;
-		isHealer?: any;
-		isReturning?: any;
+		isHealer?: boolean;
+		isReturning?: boolean;
 		order?: any;
 		origin?: any;
 		pickupResources?: any;
 		repairTarget?: any;
 		resourceTarget?: any;
-		sourceRoom?: any;
+		sourceRoom?: string;
 		sourceTarget?: any;
-		squadUnitType?: any;
+		squadUnitType?: string;
 		target?: any;
-		targetRoom?: any;
-		upgrading?: any;
+		targetRoom?: string;
+		upgrading?: boolean;
+
+		// Internal throttle offset.
+		// @todo Move to heap, this doesn't need persistence.
+		_tO?: number;
 	}
 }
 
@@ -94,7 +98,7 @@ export default class CreepManager {
 	 * @return {boolean}
 	 *   True if the creep's logic should not be executed this tick.
 	 */
-	throttleCreep = function (creep) {
+	throttleCreep = function (creep: Creep) {
 		const role = this.roles[creep.memory.role];
 
 		// Do not throttle creeps at room borders, so they don't accidentaly

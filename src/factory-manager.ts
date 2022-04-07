@@ -78,7 +78,7 @@ export default class FactoryManager {
   }
 
   getJobs(): Record<string, Recipe> {
-    return cache.inHeap('factoryJobs:' + this.roomName, 500, () => {
+    return cache.inHeap('factoryJobs:' + this.roomName, 50, () => {
       const result: Record<string, Recipe> = {};
       for (const resourceType in COMMODITIES) {
         const recipe: Recipe = COMMODITIES[resourceType];
@@ -93,19 +93,61 @@ export default class FactoryManager {
   getFactoryLevel(): number {
     if (!this.room.factory) return 0;
 
-    return this.room.factory.level || 0;
+    return this.room.factory.getEffectiveLevel();
   }
 
   isRecipeAvailable(resourceType: string, recipe: Recipe): boolean {
     if (recipe.level && recipe.level !== this.getFactoryLevel()) return false;
 
-    if (resourceType === RESOURCE_BATTERY) return this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 150000 && this.room.getStoredEnergy() > 10000;
-    if (uncompressRecipes[resourceType]) return this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 30000 && this.room.getStoredEnergy() > 10000;
-    if (compressRecipes[resourceType]) return this.room.getCurrentResourceAmount(resourceType) < 5000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 100 && this.room.getStoredEnergy() > 10000;
+    if (resourceType === RESOURCE_BATTERY) {
+      return (this.room.getCurrentResourceAmount(resourceType) < 500 && this.room.getStoredEnergy() > 15000) ||
+        this.room.getStoredEnergy() > 150000;
+    }
+
+    if (uncompressRecipes[resourceType]) {
+      return (this.room.getCurrentResourceAmount(resourceType) < 500 && this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 5000 && this.room.getStoredEnergy() > 5000) ||
+        (this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 30000 && this.room.getStoredEnergy() > 10000);
+    }
+
+    if (compressRecipes[resourceType]) {
+      return (this.room.getCurrentResourceAmount(resourceType) < 2000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 100 && this.room.getStoredEnergy() > 10000) ||
+        (this.room.getCurrentResourceAmount(resourceType) < 10000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 1000 && this.room.getStoredEnergy() > 10000);
+    }
 
     // @todo For level-based recipes, use empire-wide resource capabilities and request via terminal.
+    return this.mayCreateCommodities(resourceType, recipe);
+  }
 
-    return false;
+  mayCreateCommodities(product: string, recipe: Recipe): boolean {
+    const createdAmount = this.room.getCurrentResourceAmount(product) / recipe.amount;
+
+    if (this.isMadeOnlyFromBasicResources(recipe)) {
+      for (const resourceType in recipe.components) {
+        const resourceAmount = this.room.getCurrentResourceAmount(resourceType);
+        if (resourceAmount === 0) return false;
+        if (resourceAmount < recipe.components[resourceType] * createdAmount * 5) return false;
+      }
+
+      return true;
+    }
+
+    return this.hasRequiredResources(recipe);
+  }
+
+  isMadeOnlyFromBasicResources(recipe: Recipe): boolean {
+    for (const resourceType in recipe.components) {
+      if (!compressRecipes[resourceType] && !uncompressRecipes[resourceType]) return false;
+    }
+
+    return true;
+  }
+
+  hasRequiredResources(recipe: Recipe): boolean {
+    for (const resourceType in recipe.components) {
+      if (this.room.getCurrentResourceAmount(resourceType) < recipe.components[resourceType]) return false;
+    }
+
+    return true;
   }
 
 }

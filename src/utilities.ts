@@ -82,7 +82,7 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger?: boolean, addOptions?: any) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger: boolean = false, addOptions: {allowDanger?: boolean, whiteListRooms?: string[], singleRoom?: string} = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
@@ -91,7 +91,7 @@ const utilities = {
 			roomCallback: roomName => {
 				// If a room is considered inaccessible, don't look for paths through it.
 				if (!(allowDanger || addOptions.allowDanger) && hivemind.segmentMemory.isReady() && getRoomIntel(roomName).isOwned()) {
-					if (!addOptions || !addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
+					if (!addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
 						return false;
 					}
 				}
@@ -99,7 +99,7 @@ const utilities = {
 				const options = {
 					singleRoom: false,
 				};
-				if (addOptions && addOptions.singleRoom && addOptions.singleRoom === roomName) {
+				if (addOptions.singleRoom && addOptions.singleRoom === roomName) {
 					options.singleRoom = true;
 				}
 
@@ -122,11 +122,9 @@ const utilities = {
 			},
 		};
 
-		if (addOptions) {
-			_.each(addOptions, (value, key) => {
-				options[key] = value;
-			});
-		}
+		_.each(addOptions, (value, key) => {
+			options[key] = value;
+		});
 
 		return PathFinder.search(startPosition, endPosition, options);
 	},
@@ -248,10 +246,11 @@ const utilities = {
 		});
 
 		if (hivemind.segmentMemory.isReady()) {
+			// If we're running a (successful) exploit in this room, tiles
+			// should not be marked inaccessible.
 			const roomIntel = getRoomIntel(roomName);
-			if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
-				// @todo If we're running a (successful) exploit in this room, tiles
-				// should not be marked inaccessible.
+			// @todo Make sure Game.exploits is set at this point and use that instead.
+			if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0 && !Memory.exploits[roomName]) {
 				// Add area around keeper lairs as obstacles.
 				_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
 					utilities.handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
@@ -576,3 +575,4 @@ const utilities = {
 };
 
 export default utilities;
+global['utilities'] = utilities;

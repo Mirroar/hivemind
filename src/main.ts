@@ -53,6 +53,7 @@ import {RoomPlannerMemory} from 'room/planner/room-planner';
 import AlliesProcess from 'process/allies';
 import CleanupProcess from 'process/cleanup';
 import CreepsProcess from 'process/creeps';
+import DepositMiningProcess from 'process/strategy/deposits';
 import ExpandProcess from 'process/strategy/expand';
 import InitProcess from 'process/init';
 import interShard from 'intershard';
@@ -166,6 +167,10 @@ const main = {
 				interval: hivemind.settings.get('powerMiningCheckInterval'),
 			});
 
+			hivemind.runProcess('strategy.deposit_mining', DepositMiningProcess, {
+				interval: 100,
+			});
+
 			hivemind.runProcess('strategy.reclaim', ReclaimProcess, {
 				interval: 100,
 				priority: PROCESS_PRIORITY_LOW,
@@ -179,11 +184,11 @@ const main = {
 
 		if (shardHasEstablishedRooms) {
 			hivemind.runProcess('empire.trade', TradeProcess, {
-				interval: 50,
+				interval: 100,
 				priority: PROCESS_PRIORITY_LOW,
 			});
 			hivemind.runProcess('empire.resources', ResourcesProcess, {
-				interval: 50,
+				interval: 20,
 			});
 		}
 
@@ -191,7 +196,7 @@ const main = {
 			interval: 100,
 		});
 		hivemind.runProcess('empire.power_creeps.manage', ManagePowerCreepsProcess, {
-			interval: 100,
+			interval: hivemind.settings.get('powerCreepUpgradeCheckInterval'),
 		});
 		hivemind.runProcess('empire.power_creeps.spawn', SpawnPowerCreepsProcess, {
 			interval: 100,

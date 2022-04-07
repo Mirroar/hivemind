@@ -69,8 +69,10 @@ export default class RemoteMiningProcess extends Process {
 				}
 			}
 
-			let spawnCapacity = numSpawns * 6;
-			const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 3);
+			// @todo Actually calculate spawn usage for each.
+			let spawnCapacity = numSpawns * 5;
+			const exploitFlags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + room.name + ':'));
+			const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 4) + (room.controller.level >= 7 ? exploitFlags.length * 3 : 0);
 
 			// Increase spawn capacity if there's a power creep that can help.
 			const powerCreep = _.filter(Game.powerCreeps, creep => {

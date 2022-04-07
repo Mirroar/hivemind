@@ -87,23 +87,17 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 	}
 
 	getTravelTime(sourceRoom: string, targetRoom: string) {
+		const info = Memory.strategy.power.rooms[targetRoom];
+		if (!info) return null;
 		if (!hivemind.segmentMemory.isReady()) return null;
+		if (!Game.rooms[sourceRoom]) return null;
+		if (!Game.rooms[sourceRoom].isMine()) return null;
 
-		return cache.inHeap('powerTravelTime:' + sourceRoom + ':' + targetRoom, 1000, () => {
-			const mesh = new NavMesh();
-			if (!Game.rooms[sourceRoom]) return null;
-			if (!Game.rooms[sourceRoom].isMine()) return null;
+		const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
+		const targetPos = new RoomPosition(25, 25, targetRoom);
 
-			const info = Memory.strategy.power.rooms[targetRoom];
-			if (!info) return null;
-
-			const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
-			const targetPos = new RoomPosition(25, 25, targetRoom);
-			const result = mesh.findPath(sourcePos, targetPos);
-			if (result.incomplete) return null;
-
-			return result.path.length;
-		});
+		const mesh = new NavMesh();
+		return mesh.estimateTravelTime(sourcePos, targetPos);
 	}
 
 	/**
