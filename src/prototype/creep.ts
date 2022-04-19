@@ -27,7 +27,7 @@ import 'prototype/creep.train';
 
 // @todo Periodically clear heap memory of deceased creeps.
 const creepHeapMemory: {
-	[id: string]: CreepHeapMemory,
+	[id: string]: CreepHeapMemory | PowerCreepHeapMemory,
 } = {};
 
 // Define quick access property creep.heapMemory.
@@ -40,7 +40,7 @@ Object.defineProperty(Creep.prototype, 'heapMemory', {
 	 *   The heap memory object for this creep.
 	 */
 	get() {
-		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {};
+		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {} as CreepHeapMemory;
 
 		return creepHeapMemory[this.id];
 	},
@@ -58,7 +58,7 @@ Object.defineProperty(PowerCreep.prototype, 'heapMemory', {
 	 *   The operation this creep belongs to.
 	 */
 	get() {
-		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {};
+		if (!creepHeapMemory[this.id]) creepHeapMemory[this.id] = {} as PowerCreepHeapMemory;
 
 		return creepHeapMemory[this.id];
 	},
