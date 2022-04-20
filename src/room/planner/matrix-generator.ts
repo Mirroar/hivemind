@@ -1,4 +1,4 @@
-import utilities from 'utilities';
+import {handleMapArea} from 'utils/cost-matrix';
 
 export default class RoomPlanMatrixGenerator {
   terrain: RoomTerrain;
@@ -53,7 +53,7 @@ export default class RoomPlanMatrixGenerator {
    *   y position of the tile in question.
    */
   markWallAdjacentTiles(matrix: CostMatrix, x: number, y: number) {
-    utilities.handleMapArea(x, y, (ax, ay) => {
+    handleMapArea(x, y, (ax, ay) => {
       if (this.terrain.get(ax, ay) === TERRAIN_MASK_WALL) {
         matrix.set(x, y, 1);
         return false;
@@ -105,7 +105,7 @@ export default class RoomPlanMatrixGenerator {
     if (matrix.get(x, y) !== 0) return false;
 
     let modified = false;
-    utilities.handleMapArea(x, y, (ax, ay) => {
+    handleMapArea(x, y, (ax, ay) => {
       if (matrix.get(ax, ay) === distance) {
         matrix.set(x, y, distance + 1);
         modified = true;

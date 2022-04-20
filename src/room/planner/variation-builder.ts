@@ -2,10 +2,10 @@ import hivemind from 'hivemind';
 import minCut from 'utils/mincut';
 import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
-import utilities from 'utilities';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'intel-management';
+import {handleMapArea} from 'utils/cost-matrix';
 
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   exitCenters: ExitCoords;
@@ -91,7 +91,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
       this.placementManager.planLocation(harvestPosition, 'bay_center', null);
 
       // Discourage roads through spots around harvest position.
-      utilities.handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
+      handleMapArea(harvestPosition.x, harvestPosition.y, (x, y) => {
         if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
         this.placementManager.discouragePosition(x, y);
@@ -122,11 +122,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
     // sides. For example by checking if theres more than 1 group of
     // unconnected free tiles.
     let bestPos;
-    utilities.handleMapArea(source.x, source.y, (x, y) => {
+    handleMapArea(source.x, source.y, (x, y) => {
       if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
       let numFreeTiles = 0;
-      utilities.handleMapArea(x, y, (x2, y2) => {
+      handleMapArea(x, y, (x2, y2) => {
         if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
         if (!this.placementManager.isBuildableTile(x2, y2)) return;
 
@@ -567,7 +567,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    */
   checkForAdjacentWallsToPrune(targetPos: RoomPosition, walls: RoomPosition[], openList, closedList) {
     // Add unhandled adjacent tiles to open list.
-    utilities.handleMapArea(targetPos.x, targetPos.y, (x, y) => {
+    handleMapArea(targetPos.x, targetPos.y, (x, y) => {
       if (x === targetPos.x && y === targetPos.y) return;
       if (x < 1 || x > 48 || y < 1 || y > 48) return;
 
@@ -606,7 +606,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
    *   y position of the a tile that is unsafe.
    */
   markTilesInRangeOfUnsafeTile(x: number, y: number) {
-    utilities.handleMapArea(x, y, (ax, ay) => {
+    handleMapArea(x, y, (ax, ay) => {
       if (this.safetyMatrix.get(ax, ay) === 1) {
         // Safe tile in range of an unsafe tile, mark as neutral.
         this.safetyMatrix.set(ax, ay, 0);

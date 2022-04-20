@@ -9,8 +9,9 @@ import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
-import {deserializeCoords} from 'utils/serialization';
+import {deserializeCoords, serializeCoords, serializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
+import {handleMapArea, markBuildings} from 'utils/cost-matrix';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
 interface DepositInfo {
@@ -283,7 +284,7 @@ export default class RoomIntel {
 		// Find out how many access points there are around this power bank.
 		const terrain = new Room.Terrain(this.roomName);
 		let numFreeTiles = 0;
-		utilities.handleMapArea(powerBank.pos.x, powerBank.pos.y, (x, y) => {
+		handleMapArea(powerBank.pos.x, powerBank.pos.y, (x, y) => {
 			if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
 				numFreeTiles++;
 			}
@@ -333,7 +334,7 @@ export default class RoomIntel {
 
 			// Find out how many access points there are around this power bank.
 			let numFreeTiles = 0;
-			utilities.handleMapArea(deposit.pos.x, deposit.pos.y, (x, y) => {
+			handleMapArea(deposit.pos.x, deposit.pos.y, (x, y) => {
 				if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
 					numFreeTiles++;
 				}
@@ -490,11 +491,54 @@ export default class RoomIntel {
 	 *   An object containing Arrays of construction sites, keyed by structure type.
 	 */
 	generateCostMatrix(structures, constructionSites) {
-		const obstaclePositions = utilities.generateObstacleList(this.roomName, structures, constructionSites);
+		const obstaclePositions = this.generateObstacleList(this.roomName, structures, constructionSites);
 		this.memory.costPositions = [
 			packCoordList(_.map(obstaclePositions.obstacles, deserializeCoords)),
 			packCoordList(_.map(obstaclePositions.roads, deserializeCoords)),
 		];
+	}
+
+	/**
+	 * Generates an obstacle list as an alternative to cost matrixes.
+	 *
+	 * @param {string} roomName
+	 *   Name of the room to generate an obstacle list for.
+	 * @param {object} structures
+	 *   Arrays of structures to navigate around, keyed by structure type.
+	 * @param {object} constructionSites
+	 *   Arrays of construction sites to navigate around, keyed by structure type.
+	 *
+	 * @return {object}
+	 *   An object containing encoded room positions in the following keys:
+	 *   - obstacles: Any positions a creep cannot move through.
+	 *   - roads: Any positions where a creep travels with road speed.
+	 */
+	generateObstacleList(roomName, structures, constructionSites) {
+		const result = {
+			obstacles: [],
+			roads: [],
+		};
+
+		markBuildings(
+			roomName,
+			structures,
+			constructionSites,
+			structure => {
+				const location = serializeCoords(structure.pos.x, structure.pos.y);
+				if (!_.contains(result.obstacles, location)) {
+					result.roads.push(location);
+				}
+			},
+			structure => result.obstacles.push(serializePosition(structure.pos, roomName)),
+			(x, y) => {
+				const location = serializeCoords(x, y);
+				if (!_.contains(result.obstacles, location)) {
+					result.obstacles.push(location);
+				}
+			}
+		);
+
+		return result;
 	}
 
 	/**
@@ -643,14 +687,14 @@ export default class RoomIntel {
 		if (lairs && _.size(lairs) > 0) {
 			const terrain = new Room.Terrain(this.roomName);
 			_.each(lairs, lair => {
-				utilities.handleMapArea(lair.x, lair.y, (x, y) => {
+				handleMapArea(lair.x, lair.y, (x, y) => {
 					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
 				}, 3);
 			});
 
 			// Add area around sources as obstacles.
 			_.each(this.getSourcePositions(), sourceInfo => {
-				utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+				handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
 					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
 				}, 4);
 			});
@@ -658,7 +702,7 @@ export default class RoomIntel {
 			// Add area around mineral as obstacles.
 			const mineralInfo = this.getMineralPosition();
 			if (mineralInfo) {
-				utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+				handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
 					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
 				}, 4);
 			}

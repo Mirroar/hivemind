@@ -11,10 +11,11 @@ declare global {
 
 import hivemind from 'hivemind';
 import utilities from 'utilities';
+import {getCostMatrix, markBuildings} from 'utils/cost-matrix';
 import {getRoomIntel} from 'intel-management';
 
 Room.prototype.getCostMatrix = function () {
-	return utilities.getCostMatrix(this.name);
+	return getCostMatrix(this.name);
 };
 
 /**
@@ -37,8 +38,40 @@ Room.prototype.generateCostMatrix = function (structures, constructionSites) {
 		constructionSites = _.groupBy(this.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 	}
 
-	return utilities.generateCostMatrix(this.name, structures, constructionSites);
+	return createRoomCostMatrix(this.name, structures, constructionSites);
 };
+
+/**
+ * Generates a new CostMatrix for pathfinding.
+ *
+ * @param {string} roomName
+ *   Name of the room to generate a cost matrix for.
+ * @param {object} structures
+ *   Arrays of structures to navigate around, keyed by structure type.
+ * @param {object} constructionSites
+ *   Arrays of construction sites to navigate around, keyed by structure type.
+ *
+ * @return {PathFinder.CostMatrix}
+ *   A cost matrix representing the given obstacles.
+ */
+function createRoomCostMatrix(roomName, structures, constructionSites) {
+	const costs = new PathFinder.CostMatrix();
+
+	markBuildings(
+		roomName,
+		structures,
+		constructionSites,
+		structure => {
+			if (costs.get(structure.pos.x, structure.pos.y) === 0) {
+				costs.set(structure.pos.x, structure.pos.y, 1);
+			}
+		},
+		structure => costs.set(structure.pos.x, structure.pos.y, 0xFF),
+		(x, y) => costs.set(x, y, 0xFF),
+	);
+
+	return costs;
+}
 
 /**
  * Calculates a list of room names for traveling to a target room.

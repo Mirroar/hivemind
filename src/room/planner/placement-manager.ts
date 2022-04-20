@@ -1,6 +1,6 @@
 import RoomPlan from 'room/planner/room-plan';
-import utilities from 'utilities';
 import {encodePosition, decodePosition} from 'utils/serialization';
+import {handleMapArea} from 'utils/cost-matrix';
 
 export default class PlacementManager {
   public readonly ROAD_POSITION = 1;
@@ -194,7 +194,7 @@ export default class PlacementManager {
       this.closedList[encodePosition(nextPos)] = true;
 
       // Add unhandled adjacent tiles to open list.
-      utilities.handleMapArea(nextPos.x, nextPos.y, (x, y) => {
+      handleMapArea(nextPos.x, nextPos.y, (x, y) => {
         if (x === nextPos.x && y === nextPos.y) return;
         if (!this.isBuildableTile(x, y, true)) return;
 

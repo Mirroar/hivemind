@@ -25,8 +25,8 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
-import utilities from 'utilities';
 import {deserializePosition} from 'utils/serialization';
+import {getCostMatrix} from 'utils/cost-matrix';
 
 export default class DepositHarvesterRole extends Role {
 	constructor() {
@@ -94,7 +94,7 @@ export default class DepositHarvesterRole extends Role {
 			for (const waypoint of path.path) {
 				const subPath = PathFinder.search(prevWaypoint, waypoint, {
 					maxRooms: 3,
-					roomCallback: roomName => utilities.getCostMatrix(roomName),
+					roomCallback: roomName => getCostMatrix(roomName),
 				});
 
 				if (subPath.incomplete) total += 75

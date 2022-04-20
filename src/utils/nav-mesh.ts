@@ -9,7 +9,7 @@ declare global {
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import utilities from 'utilities';
+import {getCostMatrix, handleMapArea} from 'utils/cost-matrix';
 import {getRoomIntel} from 'intel-management';
 import {encodePosition, serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
 
@@ -41,7 +41,7 @@ export default class NavMesh {
 		if (this.memory.rooms[roomName] && this.memory.rooms[roomName].paths && !hivemind.hasIntervalPassed(10000, this.memory.rooms[roomName].gen)) return;
 
 		this.terrain = new Room.Terrain(roomName);
-		this.costMatrix = utilities.getCostMatrix(roomName).clone();
+		this.costMatrix = getCostMatrix(roomName).clone();
 		const exits = this.getExitInfo();
 		const regions = this.getRegions(exits);
 		const paths = this.getConnectingPaths(exits, regions, roomName);
@@ -149,7 +149,7 @@ export default class NavMesh {
 			while (openList.length > 0) {
 				const currentPos = openList.pop();
 
-				utilities.handleMapArea(currentPos % 50, Math.floor(currentPos / 50), (x, y) => {
+				handleMapArea(currentPos % 50, Math.floor(currentPos / 50), (x, y) => {
 					if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
 					const matrixValue = this.costMatrix.get(x, y);
@@ -238,7 +238,7 @@ export default class NavMesh {
 
 	getConnectingPaths(exits, regions, roomName) {
 		const paths = {};
-		const costMatrix = utilities.getCostMatrix(roomName);
+		const costMatrix = getCostMatrix(roomName);
 
 		for (const region of regions) {
 			const centerXR = region.center % 50;
@@ -318,7 +318,7 @@ export default class NavMesh {
 
 		const roomMemory = this.memory.rooms[startRoom];
 		if (roomMemory.regions) {
-			const costMatrix = utilities.getCostMatrix(startRoom);
+			const costMatrix = getCostMatrix(startRoom);
 			for (const region of roomMemory.regions) {
 				// Check if we can reach region center.
 				const result = PathFinder.search(

@@ -10,6 +10,7 @@ import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
+import {getCostMatrix} from 'utils/cost-matrix';
 
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
@@ -407,7 +408,7 @@ export default class BrawlerRole extends Role {
 			// @todo Adjust cost matrix to disincentivize tiles around hostiles.
 			// @todo Include friendly creeps in obstacle list to prevent blocking.
 			const result = PathFinder.search(creep.pos, {pos: target.pos, range: 2}, {
-				roomCallback: roomName => utilities.getCostMatrix(roomName),
+				roomCallback: roomName => getCostMatrix(roomName),
 				flee: true,
 				maxRooms: 1,
 			});

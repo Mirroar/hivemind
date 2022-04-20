@@ -1,7 +1,7 @@
 import hivemind from 'hivemind';
 import PlacementManager from 'room/planner/placement-manager';
 import RoomPlan from 'room/planner/room-plan';
-import utilities from 'utilities';
+import {handleMapArea} from 'utils/cost-matrix';
 
 declare global {
   type StepResult = 'ok' | 'failed' | 'done';
@@ -51,7 +51,7 @@ export default class RoomVariationBuilderBase {
 
   placeBayStructures(bayPosition: RoomPosition, options: {spawn?: boolean; source?: boolean; id?: number} = {}) {
     if (this.roomPlan.canPlaceMore('spawn') && options.spawn) {
-      utilities.handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
+      handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
         if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return true;
         if (!this.placementManager.isBuildableTile(x, y)) return true;
         if (x === bayPosition.x && y === bayPosition.y) return true;
@@ -59,7 +59,7 @@ export default class RoomVariationBuilderBase {
         // Only place spawn where a road tile is adjacent, so creeps can
         // actually exit when a harvester is on its spot.
         let spawnPlaced = false;
-        utilities.handleMapArea(x, y, (x2, y2) => {
+        handleMapArea(x, y, (x2, y2) => {
           if (x2 == bayPosition.x && y2 == bayPosition.y) return true;
           if (!this.roomPlan.hasPosition('road', new RoomPosition(x2, y2, this.roomName))) return true;
 
@@ -76,7 +76,7 @@ export default class RoomVariationBuilderBase {
     }
 
     let linkPlaced = !this.roomPlan.canPlaceMore('link') || !options.source;
-    utilities.handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
+    handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
       if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
       if (!this.placementManager.isBuildableTile(x, y)) return;
       if (x === bayPosition.x && y === bayPosition.y) return;
@@ -186,7 +186,7 @@ export default class RoomVariationBuilderBase {
 
     let targetPosition: RoomPosition;
     for (const pos of _.slice(sourceRoads, 0, 3)) {
-      utilities.handleMapArea(pos.x, pos.y, (x, y) => {
+      handleMapArea(pos.x, pos.y, (x, y) => {
         if (this.placementManager.isBuildableTile(x, y, true)) {
           targetPosition = new RoomPosition(x, y, pos.roomName);
           return false;

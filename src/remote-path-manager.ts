@@ -2,9 +2,9 @@
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'intel-management';
+import {handleMapArea} from 'utils/cost-matrix';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
 declare global {
@@ -68,7 +68,7 @@ export default class RemotePathManager {
 					if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
 						// Disallow areas around source keeper sources.
 						_.each(roomIntel.getSourcePositions(), sourceInfo => {
-							utilities.handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+							handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
 								matrix.set(x, y, 255);
 							}, 4);
 						});
@@ -76,7 +76,7 @@ export default class RemotePathManager {
 						// Disallow areas around source keeper minerals.
 						const mineralInfo = roomIntel.getMineralPosition();
 						if (mineralInfo) {
-							utilities.handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+							handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
 								matrix.set(x, y, 255);
 							}, 4);
 						}

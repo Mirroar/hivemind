@@ -9,6 +9,7 @@ import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
+import {handleMapArea} from 'utils/cost-matrix';
 
 export default class TransporterRole extends Role {
 	creep: Creep;
@@ -103,7 +104,7 @@ export default class TransporterRole extends Role {
 			const terrain = new Room.Terrain(creep.pos.roomName);
 			// @todo Bay's available tiles should by handled and cached by the bay itself.
 			const availableTiles = [];
-			utilities.handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
+			handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
 				if (x === creep.pos.x && y === creep.pos.y) return;
 				if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 

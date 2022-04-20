@@ -19,6 +19,7 @@ import Operation from 'operation/operation';
 import PathManager from 'remote-path-manager';
 import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
+import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'intel-management';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
@@ -383,7 +384,7 @@ export default class RemoteMiningOperation extends Operation {
 				if (pos.roomName !== roomName) {
 					// Load cost matrix for the current room.
 					roomName = pos.roomName;
-					matrix = utilities.getCostMatrix(roomName);
+					matrix = getCostMatrix(roomName);
 				}
 
 				// Don't try to dismantle things in our own rooms.

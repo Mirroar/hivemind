@@ -1,5 +1,5 @@
 import cache from 'utils/cache';
-import utilities from 'utilities';
+import {handleMapArea} from 'utils/cost-matrix';
 
 /* global Structure StructureExtension StructureSpawn StructureTower
 STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF
@@ -114,7 +114,7 @@ StructureSpawn.prototype.getSpawnDirections = function (this: StructureSpawn): D
 		const directions = [];
 		const terrain = this.room.getTerrain();
 
-		utilities.handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+		handleMapArea(this.pos.x, this.pos.y, (x, y) => {
 			if (x === this.pos.x && y === this.pos.y) return;
 			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
