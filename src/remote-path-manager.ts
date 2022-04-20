@@ -4,7 +4,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
-import {handleMapArea} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
 declare global {

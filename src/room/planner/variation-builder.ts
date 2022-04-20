@@ -5,7 +5,7 @@ import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'room-intel';
-import {handleMapArea} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
   exitCenters: ExitCoords;

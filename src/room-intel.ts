@@ -10,7 +10,8 @@ import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import {deserializeCoords, serializeCoords, serializePosition} from 'utils/serialization';
 import {getUsername} from 'utils/account';
-import {handleMapArea, markBuildings} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
+import {markBuildings} from 'utils/cost-matrix';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
 interface DepositInfo {

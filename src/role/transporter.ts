@@ -9,7 +9,7 @@ import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
-import {handleMapArea} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 export default class TransporterRole extends Role {
 	creep: Creep;

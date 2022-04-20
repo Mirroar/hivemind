@@ -1,6 +1,6 @@
 import RoomPlan from 'room/planner/room-plan';
 import {encodePosition, decodePosition} from 'utils/serialization';
-import {handleMapArea} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 export default class PlacementManager {
   public readonly ROAD_POSITION = 1;

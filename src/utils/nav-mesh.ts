@@ -9,9 +9,10 @@ declare global {
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import {getCostMatrix, handleMapArea} from 'utils/cost-matrix';
-import {getRoomIntel} from 'room-intel';
 import {encodePosition, serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
+import {getCostMatrix} from 'utils/cost-matrix';
+import {getRoomIntel} from 'room-intel';
+import {handleMapArea} from 'utils/map';
 
 export default class NavMesh {
 	memory: any;

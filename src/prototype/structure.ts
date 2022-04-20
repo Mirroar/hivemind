@@ -1,5 +1,5 @@
 import cache from 'utils/cache';
-import {handleMapArea} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 /* global Structure StructureExtension StructureSpawn StructureTower
 STRUCTURE_RAMPART TOWER_OPTIMAL_RANGE TOWER_FALLOFF_RANGE TOWER_FALLOFF

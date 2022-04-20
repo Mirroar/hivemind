@@ -1,4 +1,4 @@
-import {handleMapArea} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 export default class RoomPlanMatrixGenerator {
   terrain: RoomTerrain;
