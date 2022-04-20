@@ -12,7 +12,7 @@ declare global {
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import {getCostMatrix, markBuildings} from 'utils/cost-matrix';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 Room.prototype.getCostMatrix = function () {
 	return getCostMatrix(this.name);

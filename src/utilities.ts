@@ -11,7 +11,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import {ErrorMapper} from 'utils/ErrorMapper';
 import {getCostMatrix} from 'utils/cost-matrix';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 let ownUserName;
 

@@ -1,7 +1,7 @@
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import {encodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 /**
  * Runs code for all given obstacles and roads.

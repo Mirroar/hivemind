@@ -4,7 +4,7 @@ import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getExitCenters} from 'utils/room-info';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/cost-matrix';
 
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {

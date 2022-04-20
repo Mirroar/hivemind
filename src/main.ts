@@ -26,7 +26,7 @@ interface DeprecatedRoomMemory extends RoomMemory {
 }
 
 // Make sure game object prototypes are enhanced.
-import { ErrorMapper } from "utils/ErrorMapper";
+import {ErrorMapper} from "utils/ErrorMapper";
 
 import './prototype/construction-site';
 import './prototype/cost-matrix';
@@ -44,7 +44,7 @@ import SegmentedMemory from 'utils/segmented-memory';
 hivemind.setSegmentedMemory(new SegmentedMemory());
 hivemind.logGlobalReset();
 
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 import {PlayerIntelMemory} from 'player-intel';
 import {RoomIntelMemory} from 'room-intel';
 import {RoomPlannerMemory} from 'room/planner/room-planner';

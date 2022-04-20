@@ -27,7 +27,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import {encodePosition, decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 const accessibilityCache = {};
 

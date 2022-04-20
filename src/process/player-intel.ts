@@ -1,5 +1,6 @@
 import Process from 'process/process';
-import {getPlayerIntel, getRoomIntel, getRoomsWithIntel} from 'intel-management';
+import {getPlayerIntel} from 'player-intel';
+import {getRoomIntel, getRoomsWithIntel} from 'room-intel';
 
 export default class PlayerIntelProcess extends Process {
   run() {

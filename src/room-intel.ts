@@ -10,7 +10,6 @@ import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
 import {deserializeCoords, serializeCoords, serializePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
 import {handleMapArea, markBuildings} from 'utils/cost-matrix';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
@@ -969,4 +968,43 @@ export default class RoomIntel {
 	getLastScoutAttempt(): number {
 		return this.memory.lastScout || 0;
 	}
+}
+
+const intelCache: {
+  [roomName: string]: RoomIntel;
+} = {};
+
+/**
+ * Factory method for room intel objects.
+ *
+ * @param {string} roomName
+ *   The room for which to get intel.
+ *
+ * @return {RoomIntel}
+ *   The requested RoomIntel object.
+ */
+function getRoomIntel(roomName: string): RoomIntel {
+  if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate room intel for room ' + roomName + '.');
+
+  if (!intelCache[roomName]) {
+    intelCache[roomName] = new RoomIntel(roomName);
+  }
+
+  return intelCache[roomName];
+}
+
+function getRoomsWithIntel(): string[] {
+  const result: string[] = [];
+  if (!hivemind.segmentMemory.isReady()) return result;
+
+  hivemind.segmentMemory.each('intel:', (key) => {
+    result.push(key.substr(6));
+  });
+
+  return result;
+}
+
+export {
+  getRoomIntel,
+  getRoomsWithIntel,
 }

@@ -23,7 +23,7 @@ import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import {encodePosition, decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 export default class RemoteBuilderRole extends Role {
 	transporterRole: TransporterRole;

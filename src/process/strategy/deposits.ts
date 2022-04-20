@@ -21,7 +21,7 @@ declare global {
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Process from 'process/process';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 export default class DepositMiningProcess extends Process {
 	mesh: NavMesh;

@@ -2,7 +2,7 @@
 
 import hivemind from 'hivemind';
 import Process from 'process/process';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 declare global {
 	interface RoomMemory {

@@ -5,7 +5,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 import {unpackCoordAsPos} from 'utils/packrat';
 import {encodePosition, decodePosition} from 'utils/serialization';
 

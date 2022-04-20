@@ -1,5 +1,5 @@
 import Process from 'process/process';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 import {isCrossroads} from 'utils/room-name';
 
 declare global {

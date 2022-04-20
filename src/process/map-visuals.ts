@@ -4,7 +4,7 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import {deserializePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 // @todo Move constants to settings.
 const enableMapVisuals = true;

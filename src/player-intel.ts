@@ -42,3 +42,30 @@ export default class PlayerIntel {
     return this.memory.remotes;
   }
 }
+
+const intelCache: {
+  [userName: string]: PlayerIntel;
+} = {};
+
+/**
+ * Factory method for player intel objects.
+ *
+ * @param {string} userName
+ *   The user for whom to get intel.
+ *
+ * @return {PlayerIntel}
+ *   The requested PlayerIntel object.
+ */
+function getPlayerIntel(userName: string): PlayerIntel {
+  if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate player intel for user ' + userName + '.');
+
+  if (!intelCache[userName]) {
+    intelCache[userName] = new PlayerIntel(userName);
+  }
+
+  return intelCache[userName];
+}
+
+export {
+  getPlayerIntel,
+}

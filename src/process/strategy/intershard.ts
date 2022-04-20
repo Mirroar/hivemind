@@ -3,7 +3,7 @@ import interShard from 'intershard';
 import Process from 'process/process';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 /**
  * Chooses rooms for expansion and sends creeps there.

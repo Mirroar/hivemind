@@ -1,6 +1,6 @@
 import hivemind from 'hivemind';
 import {getExitCenters} from 'utils/room-info';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 declare global {
   type VariationInfo = {

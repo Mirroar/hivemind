@@ -41,7 +41,7 @@ import interShard from 'intershard';
 import PathManager from 'remote-path-manager';
 import Process from 'process/process';
 import {decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 const preserveExpansionReasons = false;
 

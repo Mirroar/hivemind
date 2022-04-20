@@ -2,7 +2,7 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	/**

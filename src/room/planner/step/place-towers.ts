@@ -1,7 +1,7 @@
 import PlacementManager from 'room/planner/placement-manager';
 import RoomPlan from 'room/planner/room-plan';
 import {encodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 interface ScoredTowerPosition {
   pos: RoomPosition,

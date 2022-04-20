@@ -36,7 +36,7 @@ import cache from 'utils/cache';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 // Define quick access property room.sourceDispatcher.
 Object.defineProperty(Room.prototype, 'sourceDispatcher', {

@@ -6,7 +6,7 @@ import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 import {isCrossroads} from 'utils/room-name';
 import {unpackCoordAsPos} from 'utils/packrat';
 

@@ -20,7 +20,7 @@ import PathManager from 'remote-path-manager';
 import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
 /**

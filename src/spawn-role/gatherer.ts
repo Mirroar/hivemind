@@ -2,7 +2,7 @@
 
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 export default class GathererSpawnRole extends SpawnRole {
 	/**

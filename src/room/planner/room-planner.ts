@@ -23,7 +23,7 @@ import RoomPlanGenerator from 'room/planner/room-plan-generator';
 import stats from 'utils/stats';
 import utilities from 'utilities';
 import {getRoomPlanFor, setRoomPlanFor} from 'room/planner/room-plan-management';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 // The room plan process is recreated every tick, but room plan generators
 // are persistent in heap.

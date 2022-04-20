@@ -1,5 +1,5 @@
 import RoomPlan from 'room/planner/room-plan';
-import {getRoomIntel} from 'intel-management';
+import {getRoomIntel} from 'room-intel';
 
 export default class RoomPlanScorer {
   constructor (protected readonly roomName: string) {}
