@@ -8,8 +8,8 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
-import utilities from 'utilities';
 import {deserializeCoords, serializeCoords, serializePosition} from 'utils/serialization';
+import {getUsername} from 'utils/account';
 import {handleMapArea, markBuildings} from 'utils/cost-matrix';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
@@ -581,7 +581,7 @@ export default class RoomIntel {
 	 */
 	isClaimed(): boolean {
 		if (this.isOwned()) return true;
-		if (this.memory.reservation && this.memory.reservation.username && this.memory.reservation.username !== utilities.getUsername()) return true;
+		if (this.memory.reservation && this.memory.reservation.username && this.memory.reservation.username !== getUsername()) return true;
 
 		return false;
 	}
@@ -601,7 +601,7 @@ export default class RoomIntel {
 	 */
 	isOwned(): boolean {
 		if (!this.memory.owner) return false;
-		if (this.memory.owner !== utilities.getUsername()) return true;
+		if (this.memory.owner !== getUsername()) return true;
 
 		return false;
 	}

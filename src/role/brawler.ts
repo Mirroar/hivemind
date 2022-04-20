@@ -11,6 +11,7 @@ import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
+import {getUsername} from 'utils/account';
 
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
@@ -750,7 +751,7 @@ export default class BrawlerRole extends Role {
 				const squad = Game.squads[creep.memory.squadName];
 				const targetPos = squad && squad.getTarget();
 				if (targetPos && targetPos.getRangeTo(target) === 0) {
-					if (target.reservation && target.reservation.username !== utilities.getUsername()) {
+					if (target.reservation && target.reservation.username !== getUsername()) {
 						creep.attackController(target);
 						return true;
 					}

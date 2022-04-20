@@ -8,6 +8,7 @@ import Exploit from 'manager.exploit';
 import FactoryManager from 'factory-manager';
 import RoomDefense from 'room-defense';
 import utilities from 'utilities';
+import {getUsername} from 'utils/account';
 
 declare global {
 	interface Room {
@@ -326,7 +327,7 @@ Room.prototype.isMine = function (allowReserved?: boolean) {
 
 	if (!allowReserved) return false;
 	if (!this.controller.reservation) return false;
-	if (this.controller.reservation.username === utilities.getUsername()) return true;
+	if (this.controller.reservation.username === getUsername()) return true;
 
 	return false;
 };

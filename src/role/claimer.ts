@@ -3,8 +3,8 @@
 import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
-import utilities from 'utilities';
 import {decodePosition} from 'utils/serialization';
+import {getUsername} from 'utils/account';
 
 declare global {
 	interface ClaimerCreep extends Creep {
@@ -62,7 +62,7 @@ export default class ClaimerRole extends Role {
 		if (target.my) return;
 
 		creep.whenInRange(1, target, () => {
-			if (target.owner || (target.reservation && target.reservation.username !== utilities.getUsername())) {
+			if (target.owner || (target.reservation && target.reservation.username !== getUsername())) {
 				creep.attackController(target);
 				return;
 			}
@@ -90,7 +90,7 @@ export default class ClaimerRole extends Role {
 		const target = creep.room.controller;
 
 		creep.whenInRange(1, target, () => {
-			if (creep.room.controller.reservation && creep.room.controller.reservation.username !== utilities.getUsername()) {
+			if (creep.room.controller.reservation && creep.room.controller.reservation.username !== getUsername()) {
 				creep.attackController(target);
 				return;
 			}
@@ -98,7 +98,7 @@ export default class ClaimerRole extends Role {
 			const result = creep.reserveController(target);
 			if (result === OK) {
 				let reservation = 0;
-				if (creep.room.controller.reservation && creep.room.controller.reservation.username === utilities.getUsername()) {
+				if (creep.room.controller.reservation && creep.room.controller.reservation.username === getUsername()) {
 					reservation = creep.room.controller.reservation.ticksToEnd;
 				}
 

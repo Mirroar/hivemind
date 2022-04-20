@@ -17,10 +17,10 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import PathManager from 'remote-path-manager';
-import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
+import {getUsername} from 'utils/account';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
 /**
@@ -241,12 +241,12 @@ export default class RemoteMiningOperation extends Operation {
 	 */
 	hasReservation(): boolean {
 		const room = Game.rooms[this.roomName];
-		if (room) return room.controller.reservation && room.controller.reservation.username === utilities.getUsername() && room.controller.reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
+		if (room) return room.controller.reservation && room.controller.reservation.username === getUsername() && room.controller.reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
 
 		if (!hivemind.segmentMemory.isReady()) return false;
 		const roomIntel = getRoomIntel(this.roomName);
 		const reservation = roomIntel.getReservationStatus();
-		return reservation && reservation.username === utilities.getUsername() && reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
+		return reservation && reservation.username === getUsername() && reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
 	}
 
 	/**
