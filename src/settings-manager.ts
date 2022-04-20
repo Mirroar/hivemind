@@ -9,7 +9,7 @@ declare global {
 	}
 }
 
-export default class SettingsManager {
+class SettingsManager {
 
 	values: {
 		[key: string]: any,
@@ -87,4 +87,11 @@ export default class SettingsManager {
 
 		delete Memory.hivemind.settings[key];
 	}
+};
+
+const settings = new SettingsManager();
+
+export default settings;
+export {
+	SettingsManager
 };

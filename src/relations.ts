@@ -1,5 +1,5 @@
 import localRelations from 'relations.local';
-import hivemind from 'hivemind';
+import settings from 'settings-manager';
 
 export default class Relations {
 	readonly allies: string[];
@@ -46,7 +46,7 @@ export default class Relations {
 	 * @return {boolean} true if the user is our enemy.
 	 */
 	isEnemy(username: string): boolean {
-		if (hivemind.settings.get('treatNonAlliesAsEnemies')) return !this.isAlly(username);
+		if (settings.get('treatNonAlliesAsEnemies')) return !this.isAlly(username);
 
 		return this.enemies.includes(username);
 	}

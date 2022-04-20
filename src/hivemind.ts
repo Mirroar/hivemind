@@ -5,7 +5,8 @@ import Logger from 'utils/debug';
 import ProcessInterface from 'process/process-interface';
 import Relations from 'relations';
 import SegmentedMemory from 'utils/segmented-memory';
-import SettingsManager from 'settings-manager';
+import settings from 'settings-manager';
+import {SettingsManager} from 'settings-manager';
 import stats from 'utils/stats';
 import {decodePosition} from 'utils/serialization';
 
@@ -66,6 +67,8 @@ const priorityEffects = {
 class Hivemind {
 	memory: KernelMemory;
 	relations: Relations;
+	// @todo hivemind.settings should be removed. Any module needing access to
+	// settings can import them directly.
 	settings: SettingsManager;
 	loggers: {}
 	segmentMemory: SegmentedMemory;
@@ -89,7 +92,7 @@ class Hivemind {
 
 		this.memory = Memory.hivemind;
 		this.relations = new Relations();
-		this.settings = new SettingsManager();
+		this.settings = settings;
 		this.loggers = {};
 
 		// @todo Periodically clean old process memory.
