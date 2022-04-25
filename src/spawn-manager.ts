@@ -1,5 +1,8 @@
 /* global BODYPART_COST OK */
 
+import SpawnRole from 'spawn-role/spawn-role';
+import utilities from 'utilities';
+
 declare global {
 	interface StructureSpawn {
 		waiting: boolean;
@@ -11,14 +14,9 @@ declare global {
 	}
 
 	interface Memory {
-		creepCounter: {
-			[key: string]: number;
-		};
+		creepCounter: Record<string, number>;
 	}
 }
-
-import SpawnRole from 'spawn-role/spawn-role';
-import utilities from 'utilities';
 
 const roleNameMap = {
 	builder: 'B',
@@ -49,10 +47,7 @@ const roleNameMap = {
 const allDirections = [TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT, LEFT, TOP_LEFT];
 
 export default class SpawnManager {
-
-	roles: {
-		[key: string]: SpawnRole,
-	};
+	roles: Record<string, SpawnRole>;
 
 	/**
 	 * Creates a new SpawnManager instance.
@@ -123,7 +118,7 @@ export default class SpawnManager {
 		if (option.preferClosestSpawn) {
 			spawn = _.min(spawns, spawn => spawn.pos.getRangeTo(option.preferClosestSpawn));
 			// Only spawn once preferred spawn is ready.
-			if (availableSpawns.indexOf(spawn) === -1) return;
+			if (!availableSpawns.includes(spawn)) return;
 		}
 
 		if (!this.trySpawnCreep(room, spawn, option)) {
@@ -258,7 +253,7 @@ export default class SpawnManager {
 			let allBlocked = true;
 			const closeCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1);
 			for (const dir of spawn.spawning.directions || allDirections) {
-				if (_.filter(closeCreeps, c => spawn.pos.getDirectionTo(c.pos) === dir).length > 0) continue;
+				if (_.some(closeCreeps, c => spawn.pos.getDirectionTo(c.pos) === dir)) continue;
 
 				allBlocked = false;
 			}
@@ -270,4 +265,4 @@ export default class SpawnManager {
 			}
 		}
 	}
-};
+}

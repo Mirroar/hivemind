@@ -1,13 +1,12 @@
 import HighwayRoomProcess from 'process/rooms/highway';
-import hivemind from 'hivemind';
 import OwnedRoomProcess from 'process/rooms/owned';
 import Process from 'process/process';
 import RoomIntelProcess from 'process/rooms/intel';
-import RoomManager from 'room/room-manager';
 import RoomManagerProcess from 'process/rooms/owned/manager';
+import RoomManager from 'room/room-manager';
+import hivemind, {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 import RoomPlanner from 'room/planner/room-planner';
 import {isHighway} from 'utils/room-name';
-import {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 
 declare global {
 	interface Memory {
@@ -58,7 +57,7 @@ export default class RoomsProcess extends Process {
 	terminateRoomOperations() {
 		// Stop operations for rooms that are no longer active.
 		_.each(Game.operationsByType.room, op => {
-			if (Game.time - op.getLastActiveTick() > 10000) op.terminate();
+			if (Game.time - op.getLastActiveTick() > 10_000) op.terminate();
 		});
 	}
 

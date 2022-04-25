@@ -1,6 +1,11 @@
 /* global RoomPosition CREEP_SPAWN_TIME MAX_CREEP_SIZE ATTACK_POWER
 CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN */
 
+import Process from 'process/process';
+import hivemind from 'hivemind';
+import NavMesh from 'utils/nav-mesh';
+import {getRoomIntel} from 'room-intel';
+
 declare global {
 	interface StrategyMemory {
 		deposits?: {
@@ -18,11 +23,6 @@ declare global {
 	}
 }
 
-import hivemind from 'hivemind';
-import NavMesh from 'utils/nav-mesh';
-import Process from 'process/process';
-import {getRoomIntel} from 'room-intel';
-
 export default class DepositMiningProcess extends Process {
 	mesh: NavMesh;
 
@@ -35,8 +35,8 @@ export default class DepositMiningProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
+	constructor(parameters, data) {
+		super(parameters, data);
 
 		if (!Memory.strategy) {
 			Memory.strategy = {};
@@ -98,30 +98,30 @@ export default class DepositMiningProcess extends Process {
 		});
 	}
 
-	getPotentialSpawns(targetRoom: string): {room: string, distance: number}[] {
-			let potentialSpawns: {room: string, distance: number}[] = [];
-			for (const room of Game.myRooms) {
-				// @todo Allow spawning in rooms full of minerals, as long as there's
-				// another room to deliver to in range.
-				if (room.isFullOnMinerals()) continue;
-				if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) continue;
-				if (room.controller.level < hivemind.settings.get('minRclForDepositMining')) continue;
-				if (Game.map.getRoomLinearDistance(targetRoom, room.name) > hivemind.settings.get('maxRangeForDepositMining')) continue;
+	getPotentialSpawns(targetRoom: string): Array<{room: string; distance: number}> {
+		let potentialSpawns: Array<{room: string; distance: number}> = [];
+		for (const room of Game.myRooms) {
+			// @todo Allow spawning in rooms full of minerals, as long as there's
+			// another room to deliver to in range.
+			if (room.isFullOnMinerals()) continue;
+			if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) continue;
+			if (room.controller.level < hivemind.settings.get('minRclForDepositMining')) continue;
+			if (Game.map.getRoomLinearDistance(targetRoom, room.name) > hivemind.settings.get('maxRangeForDepositMining')) continue;
 
-				// @todo Use actual position of power cache.
-				const roomRoute = this.mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom));
-				if (roomRoute.incomplete || roomRoute.path.length > 3 * hivemind.settings.get('maxRangeForDepositMining')) continue;
+			// @todo Use actual position of power cache.
+			const roomRoute = this.mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom));
+			if (roomRoute.incomplete || roomRoute.path.length > 3 * hivemind.settings.get('maxRangeForDepositMining')) continue;
 
-				hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
+			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
 
-				potentialSpawns.push({
-					room: room.name,
-					distance: roomRoute.path.length,
-				});
-			}
+			potentialSpawns.push({
+				room: room.name,
+				distance: roomRoute.path.length,
+			});
+		}
 
-			potentialSpawns = _.sortBy(potentialSpawns, 'distance');
+		potentialSpawns = _.sortBy(potentialSpawns, 'distance');
 
-			return potentialSpawns;
+		return potentialSpawns;
 	}
 }

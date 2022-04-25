@@ -8,7 +8,6 @@ declare global {
 	}
 }
 
-import hivemind from 'hivemind';
 import InactiveStructuresProcess from 'process/rooms/owned/inactive-structures';
 import ManageFactoryProcess from 'process/rooms/owned/factory';
 import ManageLabsProcess from 'process/rooms/owned/labs';
@@ -17,9 +16,9 @@ import ManageSpawnsProcess from 'process/rooms/owned/spawns';
 import Process from 'process/process';
 import RoomDefenseProcess from 'process/rooms/owned/defense';
 import RoomManagerProcess from 'process/rooms/owned/manager';
-import RoomOperation from 'operation/room';
 import RoomSongsProcess from 'process/rooms/owned/songs';
-import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import RoomOperation from 'operation/room';
+import hivemind, {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 
 export default class OwnedRoomProcess extends Process {
 	room: Room;
@@ -33,9 +32,9 @@ export default class OwnedRoomProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**
@@ -156,10 +155,8 @@ export default class OwnedRoomProcess extends Process {
 		const key = 'rcl' + this.room.controller.level;
 		if (!memory[key]) memory[key] = Game.time - memory.claimed;
 
-		if (!memory.tower) {
-			if (this.room.find(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length > 0) {
-				memory.tower = Game.time - memory.claimed;
-			}
+		if (!memory.tower && this.room.find(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length > 0) {
+			memory.tower = Game.time - memory.claimed;
 		}
 
 		if (!memory.storage && this.room.storage) {

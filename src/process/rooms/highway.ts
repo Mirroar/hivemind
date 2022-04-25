@@ -32,9 +32,9 @@ export default class OwnedRoomProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**
@@ -56,7 +56,7 @@ export default class OwnedRoomProcess extends Process {
 	getCaravanId(creep: Creep): string {
 		if (!creep.name.includes('_', creep.name.length - 2)) return null;
 
-		return creep.name.substr(0, creep.name.length - 2);
+		return creep.name.slice(0, Math.max(0, creep.name.length - 2));
 	}
 
 	registerCaravan(id: string) {
@@ -83,7 +83,7 @@ export default class OwnedRoomProcess extends Process {
 			expires: rooms[rooms.length - 1].time + 50,
 			rooms,
 			contents: this.getStoreContents(creeps),
-		}
+		};
 	}
 
 	detectDirection(creeps: Creep[]): TOP | BOTTOM | LEFT | RIGHT {
@@ -108,8 +108,8 @@ export default class OwnedRoomProcess extends Process {
 		return null;
 	}
 
-	getTraversedRooms(direction: TOP | BOTTOM | LEFT | RIGHT, creeps: Creep[], firstSeen: number): {name: string; time: number}[] {
-		const rooms: {name: string; time: number}[] = [];
+	getTraversedRooms(direction: TOP | BOTTOM | LEFT | RIGHT, creeps: Creep[], firstSeen: number): Array<{name: string; time: number}> {
+		const rooms: Array<{name: string; time: number}> = [];
 
 		rooms.push({
 			name: this.room.name,
@@ -122,7 +122,7 @@ export default class OwnedRoomProcess extends Process {
 		let roomName = this.room.name;
 		while (!isCrossroads(roomName) || (roomName === this.room.name && skipFirstCrossroads)) {
 			const roomIntel = getRoomIntel(roomName);
-			const exits = roomIntel.getAge() < 10000 ? roomIntel.getExits() : Game.map.describeExits(roomName);
+			const exits = roomIntel.getAge() < 10_000 ? roomIntel.getExits() : Game.map.describeExits(roomName);
 
 			roomName = exits[direction];
 			rooms.push({

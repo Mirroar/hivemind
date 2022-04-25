@@ -113,7 +113,7 @@ export default class UpgraderRole extends Role {
 			if (target && target.store.energy > 50) {
 				creep.whenInRange(1, target, () => {
 					creep.withdraw(target, RESOURCE_ENERGY);
-				})
+				});
 
 				return;
 			}
@@ -121,8 +121,8 @@ export default class UpgraderRole extends Role {
 
 		// Check the ground for nearby energy to pick up.
 		const droppedResources = creep.room.controller.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-			filter: resource => resource.resourceType === RESOURCE_ENERGY
-		})
+			filter: resource => resource.resourceType === RESOURCE_ENERGY,
+		});
 		if (droppedResources.length > 0) {
 			creep.whenInRange(1, droppedResources[0], () => {
 				creep.pickup(droppedResources[0]);

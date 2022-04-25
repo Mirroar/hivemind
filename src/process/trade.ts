@@ -2,21 +2,21 @@
 ORDER_BUY ORDER_SELL PIXEL STORAGE_CAPACITY INTERSHARD_RESOURCES
 REACTION_TIME */
 
-declare global {
-	interface RoomMemory {
-		fillTerminal?: any,
-	}
-}
-
+import Process from 'process/process';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import Process from 'process/process';
 import utilities from 'utilities';
+
+declare global {
+	interface RoomMemory {
+		fillTerminal?: any;
+	}
+}
 
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
 // Amount of credits to keep in reserve for creating orders.
-const creditReserve = 10000;
+const creditReserve = 10_000;
 // Lookup for lab reaction recipes.
 const recipes = utilities.getReactionRecipes();
 
@@ -43,8 +43,8 @@ export default class TradeProcess extends Process {
 		const total = resources.total;
 		const maxStorage = total.rooms * STORAGE_CAPACITY / 20;
 		const highStorage = total.rooms * STORAGE_CAPACITY / 50;
-		const lowStorage = total.rooms * Math.min(STORAGE_CAPACITY / 100, 20000);
-		const minStorage = total.rooms * Math.min(STORAGE_CAPACITY / 200, 10000);
+		const lowStorage = total.rooms * Math.min(STORAGE_CAPACITY / 100, 20_000);
+		const minStorage = total.rooms * Math.min(STORAGE_CAPACITY / 200, 10_000);
 
 		for (const resourceType of RESOURCES_ALL) {
 			const tier = this.getResourceTier(resourceType);
@@ -129,7 +129,7 @@ export default class TradeProcess extends Process {
 				this.trySellResources(RESOURCE_OPS, resources.rooms);
 			}
 		}
-	};
+	}
 
 	/**
 	 * Determines the amount of available resources in each room.
@@ -163,7 +163,7 @@ export default class TradeProcess extends Process {
 			rooms,
 			total,
 		};
-	};
+	}
 
 	/**
 	 * Tries to find a reasonable buy order for instantly getting rid of some resources.
@@ -222,7 +222,7 @@ export default class TradeProcess extends Process {
 		if (result !== OK) {
 			hivemind.log('trade', roomName).info('Transaction failed:', result);
 		}
-	};
+	}
 
 	/**
 	 * Tries to find a reasonable sell order for instantly acquiring some resources.
@@ -233,7 +233,7 @@ export default class TradeProcess extends Process {
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
 	instaBuyResources(resourceType, rooms?: any) {
-		const isIntershardResource = INTERSHARD_RESOURCES.indexOf(resourceType) !== -1;
+		const isIntershardResource = INTERSHARD_RESOURCES.includes(resourceType);
 
 		// Find room with lowest amount of this resource.
 		const roomName = isIntershardResource ? null : this.getLowestResourceState(resourceType, rooms);
@@ -276,7 +276,7 @@ export default class TradeProcess extends Process {
 		if (result !== OK) {
 			hivemind.log('trade', roomName).info('Transaction failed:', result);
 		}
-	};
+	}
 
 	/**
 	 * Creates a buy order at a reasonable price.
@@ -289,9 +289,9 @@ export default class TradeProcess extends Process {
 	 *   If set, only check agains orders from rooms given by `rooms` parameter.
 	 */
 	tryBuyResources(resourceType, rooms?: any, ignoreOtherRooms?: boolean) {
-		const isIntershardResource = INTERSHARD_RESOURCES.indexOf(resourceType) !== -1;
+		const isIntershardResource = INTERSHARD_RESOURCES.includes(resourceType);
 
-		if (_.filter(Game.market.orders, order => {
+		if (_.some(Game.market.orders, order => {
 			if (order.type === ORDER_BUY && order.resourceType === resourceType) {
 				if (ignoreOtherRooms && !rooms[order.roomName]) {
 					return false;
@@ -301,7 +301,7 @@ export default class TradeProcess extends Process {
 			}
 
 			return false;
-		}).length > 0) {
+		})) {
 			return;
 		}
 
@@ -349,7 +349,7 @@ export default class TradeProcess extends Process {
 		if (result !== OK) {
 			hivemind.log('trade', roomName).error('Could not create buy order:', result);
 		}
-	};
+	}
 
 	/**
 	 * Creates a sell order at a reasonable price.
@@ -360,7 +360,7 @@ export default class TradeProcess extends Process {
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
 	trySellResources(resourceType, rooms) {
-		if (_.filter(Game.market.orders, order => order.type === ORDER_SELL && order.resourceType === resourceType).length > 0) {
+		if (_.some(Game.market.orders, order => order.type === ORDER_SELL && order.resourceType === resourceType)) {
 			return;
 		}
 
@@ -406,7 +406,7 @@ export default class TradeProcess extends Process {
 			totalAmount: amount,
 			roomName,
 		});
-	};
+	}
 
 	/**
 	 * Finds the room in a list that has the lowest amount of a resource.
@@ -432,7 +432,7 @@ export default class TradeProcess extends Process {
 		});
 
 		return bestRoom;
-	};
+	}
 
 	/**
 	 * Finds the room in a list that has the highest amount of a resource.
@@ -457,7 +457,7 @@ export default class TradeProcess extends Process {
 		});
 
 		return bestRoom;
-	};
+	}
 
 	/**
 	 * Finds best buy order of another player to sell a certain resource.
@@ -478,7 +478,7 @@ export default class TradeProcess extends Process {
 		let bestOrder;
 		_.each(orders, order => {
 			if (order.amount < 100) return;
-			const transactionCost = INTERSHARD_RESOURCES.indexOf(resourceType) === -1 ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
+			const transactionCost = !INTERSHARD_RESOURCES.includes(resourceType) ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
 			const credits = 1000 * order.price;
 			const score = credits - (0.3 * transactionCost);
 
@@ -489,7 +489,7 @@ export default class TradeProcess extends Process {
 		});
 
 		return bestOrder;
-	};
+	}
 
 	/**
 	 * Finds best sell order of another player to buy a certain resource.
@@ -510,7 +510,7 @@ export default class TradeProcess extends Process {
 		let bestOrder;
 		_.each(orders, order => {
 			if (order.amount < 100) return;
-			const transactionCost = INTERSHARD_RESOURCES.indexOf(resourceType) === -1 ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
+			const transactionCost = !INTERSHARD_RESOURCES.includes(resourceType) ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
 			const credits = 1000 * order.price;
 			const score = credits + (0.3 * transactionCost);
 
@@ -521,7 +521,7 @@ export default class TradeProcess extends Process {
 		});
 
 		return bestOrder;
-	};
+	}
 
 	/**
 	 * Removes outdated orders from the market.
@@ -530,13 +530,13 @@ export default class TradeProcess extends Process {
 		_.each(Game.market.orders, order => {
 			const age = Game.time - order.created;
 
-			if (age > 100000 || order.remainingAmount === 0) {
+			if (age > 100_000 || order.remainingAmount === 0) {
 				// Nobody seems to be buying or selling this order, cancel it.
 				hivemind.log('trade', order.roomName).debug('Cancelling old trade', order.type + 'ing', order.remainingAmount, order.resourceType, 'for', order.price, 'each after', age, 'ticks.');
 				Game.market.cancelOrder(order.id);
 			}
 		});
-	};
+	}
 
 	/**
 	 * Assigns a "tier" to a resource, giving it a base value.
@@ -552,12 +552,12 @@ export default class TradeProcess extends Process {
 		if (resourceType === RESOURCE_POWER) return 10;
 
 		const tier = resourceType.length;
-		if (resourceType.indexOf('G') !== -1) {
+		if (resourceType.includes('G')) {
 			return tier + 3;
 		}
 
 		return tier;
-	};
+	}
 
 	/**
 	 * Decides how much resource should be traded at once.
@@ -575,13 +575,13 @@ export default class TradeProcess extends Process {
 		const history = this.getPriceData(resourceType);
 		if (!history) return 0;
 
-		if (history.average < 10 && history.total > 10000) return 10000;
+		if (history.average < 10 && history.total > 10_000) return 10_000;
 		if (history.average < 100 && history.total > 1000) return 1000;
 		if (history.average < 1000 && history.total > 100) return 100;
-		if (history.average < 10000 && history.total > 10) return 10;
+		if (history.average < 10_000 && history.total > 10) return 10;
 
 		return 1;
-	};
+	}
 
 	/**
 	 * Analyzes market history to decide on resource price.
@@ -628,7 +628,7 @@ export default class TradeProcess extends Process {
 				stdDev: totalDev / count,
 			};
 		});
-	};
+	}
 
 	/**
 	 * Calculates estimated worth of lab reaction compounds.
@@ -655,5 +655,5 @@ export default class TradeProcess extends Process {
 			// Add 0.1% to price for each tick needed to produce this reagent.
 			return reagentWorth * (1 + (0.001 * (REACTION_TIME[resourceType] || 0)));
 		});
-	};
+	}
 }

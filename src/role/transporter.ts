@@ -112,11 +112,11 @@ export default class TransporterRole extends Role {
 
 				// Check if there's a structure here already.
 				const structures = pos.lookFor(LOOK_STRUCTURES);
-				if (_.filter(structures, structure => _.contains(OBSTACLE_OBJECT_TYPES, structure.structureType)).length > 0) return;
+				if (_.some(structures, structure => _.contains(OBSTACLE_OBJECT_TYPES, structure.structureType))) return;
 
 				// Check if there's a construction site here already.
 				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-				if (_.filter(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType)).length > 0) return;
+				if (_.some(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType))) return;
 
 				// Move out of the way.
 				availableTiles.push(pos);
@@ -158,7 +158,9 @@ export default class TransporterRole extends Role {
 
 		if (best.type === 'bay') {
 			const target = _.find(creep.room.bays, bay => bay.name === creep.memory.order.target);
-			creep.whenInRange(0, target.pos, () => target.refillFrom(creep));
+			creep.whenInRange(0, target.pos, () => {
+				target.refillFrom(creep);
+			});
 			return;
 		}
 
@@ -307,7 +309,7 @@ export default class TransporterRole extends Role {
 		for (const resourceType of _.keys(creep.store)) {
 			// If it's needed for transferring, store in terminal.
 			if (resourceType === creep.room.memory.fillTerminal && creep.store[resourceType] > 0 && !creep.room.isClearingTerminal()) {
-				if (terminal && ((terminal.store[resourceType] || 0) < (creep.room.memory.fillTerminalAmount || 10000)) && terminal.store.getFreeCapacity() > 0) {
+				if (terminal && ((terminal.store[resourceType] || 0) < (creep.room.memory.fillTerminalAmount || 10_000)) && terminal.store.getFreeCapacity() > 0) {
 					const option = {
 						priority: 4,
 						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
@@ -505,9 +507,7 @@ export default class TransporterRole extends Role {
 	addTowerDeliveryOptions(options) {
 		const room = this.creep.room;
 		const targets = room.find<StructureTower>(FIND_STRUCTURES, {
-			filter: structure => {
-				return (structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity * 0.8;
-			},
+			filter: structure => (structure.structureType === STRUCTURE_TOWER) && structure.energy < structure.energyCapacity * 0.8,
 		});
 
 		for (const target of targets) {
@@ -545,9 +545,7 @@ export default class TransporterRole extends Role {
 		if (room.getCurrentResourceAmount(RESOURCE_ENERGY) < hivemind.settings.get('minEnergyForPowerProcessing')) return;
 
 		const targets = room.find<StructureNuker | StructurePowerSpawn>(FIND_STRUCTURES, {
-			filter: structure => {
-				return (structure.structureType === STRUCTURE_NUKER || structure.structureType === STRUCTURE_POWER_SPAWN) && structure.energy < structure.energyCapacity;
-			},
+			filter: structure => (structure.structureType === STRUCTURE_NUKER || structure.structureType === STRUCTURE_POWER_SPAWN) && structure.energy < structure.energyCapacity,
 		});
 
 		for (const target of targets) {
@@ -647,9 +645,7 @@ export default class TransporterRole extends Role {
 		// Put ghodium in nukers.
 		if (resourceType === RESOURCE_GHODIUM && !creep.room.isEvacuating()) {
 			const targets = creep.room.find(FIND_STRUCTURES, {
-				filter: structure => {
-					return (structure.structureType === STRUCTURE_NUKER) && structure.ghodium < structure.ghodiumCapacity;
-				},
+				filter: structure => (structure.structureType === STRUCTURE_NUKER) && structure.ghodium < structure.ghodiumCapacity,
 			});
 
 			for (const target of targets) {
@@ -749,7 +745,9 @@ export default class TransporterRole extends Role {
 	performGetResources(calculateSourceCallback?: () => void) {
 		const creep = this.creep;
 		if (!calculateSourceCallback) {
-			calculateSourceCallback = () => this.calculateSource();
+			calculateSourceCallback = () => {
+				this.calculateSource();
+			};
 		}
 
 		if (!this.ensureValidResourceSource(calculateSourceCallback)) {
@@ -778,7 +776,7 @@ export default class TransporterRole extends Role {
 					creep.store.getFreeCapacity() > target.amount
 				) {
 					const containers = _.filter(target.pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_CONTAINER) as StructureContainer[];
-					if (containers.length && (containers[0].store.getUsedCapacity(target.resourceType) || 0) > 0) {
+					if (containers.length > 0 && (containers[0].store.getUsedCapacity(target.resourceType) || 0) > 0) {
 						// We have picked up energy dropped on the ground probably due to a full
 						// container. Pick up resources from the container next.
 						creep.memory.order = {
@@ -1052,9 +1050,7 @@ export default class TransporterRole extends Role {
 
 		// Look for energy in Containers.
 		const targets = creep.room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => {
-				return (structure.structureType === STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1;
-			},
+			filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1,
 		});
 
 		// Prefer containers used as harvester dropoff.
@@ -1155,7 +1151,7 @@ export default class TransporterRole extends Role {
 		if (creep.room.memory.fillTerminal) {
 			const resourceType = creep.room.memory.fillTerminal;
 			if (storage.store[resourceType]) {
-				if (terminal.store.getFreeCapacity() > 10000) {
+				if (terminal.store.getFreeCapacity() > 10_000) {
 					options.push({
 						priority: 4,
 						weight: 0,
@@ -1524,7 +1520,9 @@ export default class TransporterRole extends Role {
 	 */
 	performGetEnergy(creep) {
 		this.creep = creep;
-		this.performGetResources(() => this.calculateEnergySource());
+		this.performGetResources(() => {
+			this.calculateEnergySource();
+		});
 	}
 
 	/**

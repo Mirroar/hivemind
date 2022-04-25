@@ -1,11 +1,16 @@
 /* global Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
+import hivemind from 'hivemind';
+import NavMesh from 'utils/nav-mesh';
+import utilities from 'utilities';
+import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
+
 declare global {
 	interface Creep {
 		moveToRange: (target: RoomObject | RoomPosition, range: number, options?: GoToOptions) => boolean;
 		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void;
-		setCachedPath: (path: (string | number)[], reverse?: boolean, distance?: number) => void;
+		setCachedPath: (path: Array<string | number>, reverse?: boolean, distance?: number) => void;
 		getCachedPath: () => RoomPosition[] | null;
 		hasCachedPath: () => boolean;
 		clearCachedPath: () => void;
@@ -32,7 +37,7 @@ declare global {
 	interface PowerCreep {
 		moveToRange: (target: RoomObject | RoomPosition, range: number, options?: GoToOptions) => boolean;
 		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void;
-		setCachedPath: (path: (string | number)[], reverse?: boolean, distance?: number) => void;
+		setCachedPath: (path: Array<string | number>, reverse?: boolean, distance?: number) => void;
 		getCachedPath: () => RoomPosition[];
 		hasCachedPath: () => boolean;
 		clearCachedPath: () => void;
@@ -58,7 +63,7 @@ declare global {
 
 	interface CreepMemory {
 		cachedPath?: {
-			path: (string | number)[];
+			path: Array<string | number>;
 			position: number;
 			arrived: boolean;
 			lastPositions: Record<number, string>;
@@ -68,7 +73,7 @@ declare global {
 
 	interface PowerCreepMemory {
 		cachedPath?: {
-			path: (string | number)[];
+			path: Array<string | number>;
 			position: number;
 			arrived: boolean;
 			lastPositions: Record<number, string>;
@@ -109,12 +114,7 @@ type GoToOptions = {
 	range?: number;
 	maxRooms?: number;
 	allowDanger?: boolean;
-}
-
-import hivemind from 'hivemind';
-import NavMesh from 'utils/nav-mesh';
-import utilities from 'utilities';
-import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
+};
 
 // @todo For multi-room movement we could save which rooms we're travelling through, and recalculate (part of) the path when a CostMatrix changes.
 // That info should probably live in global memory, we don't want that serialized...
@@ -335,9 +335,9 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 	// Try to get to the closest part of the path.
 	if (this.pos.x === target.x && this.pos.y === target.y) {
 		// We've arrived on the path, time to get moving along it!
-		const path = this.getCachedPath()
-		for (let i = 0; i < path.length; i++) {
-			if (this.pos.x === path[i].x && this.pos.y === path[i].y && this.pos.roomName === path[i].roomName) {
+		const path = this.getCachedPath();
+		for (const [i, element] of path.entries()) {
+			if (this.pos.x === element.x && this.pos.y === element.y && this.pos.roomName === element.roomName) {
 				this.memory.cachedPath.position = i;
 				break;
 			}
@@ -697,7 +697,7 @@ Creep.prototype.isInRoom = function (this: Creep | PowerCreep) {
 	return this.pos.x > 2 && this.pos.x < 47 && this.pos.y > 2 && this.pos.y < 47;
 };
 
-Creep.prototype.interRoomTravel = function(this: Creep | PowerCreep, targetPos, allowDanger = false) {
+Creep.prototype.interRoomTravel = function (this: Creep | PowerCreep, targetPos, allowDanger = false) {
 	const isInTargetRoom = this.pos.roomName === targetPos.roomName;
 	if (!isInTargetRoom || (!this.isInRoom() && this.getNavMeshMoveTarget())) {
 		if (this.heapMemory.moveWithoutNavMesh) {
@@ -707,22 +707,20 @@ Creep.prototype.interRoomTravel = function(this: Creep | PowerCreep, targetPos, 
 
 			return true;
 		}
-		else {
-			if (this.moveUsingNavMesh(targetPos, {allowDanger}) !== OK) {
-				hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPos.roomName);
 
-				// Try moving to target room without using nav mesh.
-				this.heapMemory.moveWithoutNavMesh = true;
-			}
+		if (this.moveUsingNavMesh(targetPos, {allowDanger}) !== OK) {
+			hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPos.roomName);
 
-			return true;
+			// Try moving to target room without using nav mesh.
+			this.heapMemory.moveWithoutNavMesh = true;
 		}
 
+		return true;
 	}
 
 	this.stopNavMeshMove();
 	return false;
-}
+};
 
 Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos, options) {
 	if (!hivemind.segmentMemory.isReady()) return OK;
@@ -737,7 +735,7 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 		this.heapMemory._nmp = {
 			incomplete: path.incomplete,
 			path: path.path ? _.map(path.path, encodePosition) : null,
-		}
+		};
 
 		this.heapMemory._nmpi = 0;
 	}
@@ -781,7 +779,7 @@ Creep.prototype.stopNavMeshMove = function (this: Creep | PowerCreep) {
 	delete this.heapMemory._nmpt;
 	delete this.heapMemory._nmp;
 	delete this.heapMemory._nmpi;
-	delete this.heapMemory.moveWithoutNavMesh
+	delete this.heapMemory.moveWithoutNavMesh;
 };
 
 PowerCreep.prototype.moveToRange = Creep.prototype.moveToRange;

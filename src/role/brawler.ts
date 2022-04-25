@@ -740,10 +740,8 @@ export default class BrawlerRole extends Role {
 	 */
 	attackMilitaryTarget(creep, target) {
 		if (target instanceof StructureController) {
-			if (target.owner) {
-				if (creep.attackController(target) === OK) {
-					return true;
-				}
+			if (target.owner && creep.attackController(target) === OK) {
+				return true;
 			}
 
 			// If attack flag is directly on controller, claim it, otherwise just reserve.
@@ -801,27 +799,21 @@ export default class BrawlerRole extends Role {
 		const nearbyDamaged = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
 			filter: creep => creep.hits < creep.hitsMax,
 		});
-		if (_.size(nearbyDamaged) > 0) {
-			if (creep.heal(_.max(nearbyDamaged, creep => creep.hitsMax - creep.hits)) === OK) {
-				return true;
-			}
+		if (_.size(nearbyDamaged) > 0 && creep.heal(_.max(nearbyDamaged, creep => creep.hitsMax - creep.hits)) === OK) {
+			return true;
 		}
 
 		// Heal self.
-		if (creep.hits < creep.hitsMax) {
-			if (creep.heal(creep) === OK) {
-				return true;
-			}
+		if (creep.hits < creep.hitsMax && creep.heal(creep) === OK) {
+			return true;
 		}
 
 		// See if damaged creeps are in range, heal those.
 		const rangedDamaged = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
 			filter: creep => creep.hits < creep.hitsMax,
 		});
-		if (_.size(rangedDamaged) > 0) {
-			if (creep.rangedHeal(rangedDamaged[0]) === OK) {
-				return true;
-			}
+		if (_.size(rangedDamaged) > 0 && creep.rangedHeal(rangedDamaged[0]) === OK) {
+			return true;
 		}
 
 		return false;

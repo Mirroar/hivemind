@@ -3,6 +3,12 @@ POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
 FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
 POWER_BANK_HIT_BACK */
 
+import cache from 'utils/cache';
+import hivemind from 'hivemind';
+import NavMesh from 'utils/nav-mesh';
+import Role from 'role/role';
+import {isCrossroads} from 'utils/room-name';
+
 declare global {
 	interface CaravanTraderCreep extends Creep {
 		memory: CaravanTraderCreepMemory;
@@ -22,12 +28,6 @@ declare global {
 		targetRoom?: string;
 	}
 }
-
-import cache from 'utils/cache';
-import hivemind from 'hivemind';
-import NavMesh from 'utils/nav-mesh';
-import Role from 'role/role';
-import {isCrossroads} from 'utils/room-name';
 
 export default class CaravanTraderRole extends Role {
 	constructor() {

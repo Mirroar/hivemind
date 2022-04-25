@@ -1,8 +1,8 @@
+import Process from 'process/process';
 import BoostManager from 'manager.boost';
 import cache from 'utils/cache';
 import Exploit from 'manager.exploit';
 import hivemind from 'hivemind';
-import Process from 'process/process';
 import RoomManager from 'room/room-manager';
 import RoomPlanner from 'room/planner/room-planner';
 import Squad from 'manager.squad';
@@ -13,13 +13,13 @@ import RoomOperation from 'operation/room';
 
 declare global {
 	interface Game {
-		exploits: Record<string, Exploit>,
 		creepsByRole: {
 			[key: string]: {
 				[key: string]: Creep,
 			},
 		},
-		myRooms: Room[],
+		exploits: Record<string, Exploit>;
+		myRooms: Room[];
 	}
 }
 
@@ -72,9 +72,7 @@ export default class InitProcess extends Process {
 			 *   An array of all rooms we own.
 			 */
 			get() {
-				return cache.inObject(this, 'myRooms', 0, () => {
-					return _.filter(this.rooms, (room: Room) => room.isMine());
-				})
+				return cache.inObject(this, 'myRooms', 0, () => _.filter(this.rooms, (room: Room) => room.isMine()));
 			},
 			enumerable: false,
 			configurable: true,

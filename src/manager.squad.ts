@@ -2,19 +2,15 @@ import {encodePosition, decodePosition} from 'utils/serialization';
 
 declare global {
 	interface CreepMemory {
-		squadName?: string,
+		squadName?: string;
 	}
 
 	interface Memory {
-		squads: {
-			[squadName: string]: SquadMemory,
-		},
+		squads: Record<string, SquadMemory>;
 	}
 
 	interface Game {
-		squads: {
-			[key: string]: Squad,
-		},
+		squads: Record<string, Squad>;
 	}
 
 	type SquadMemory = {

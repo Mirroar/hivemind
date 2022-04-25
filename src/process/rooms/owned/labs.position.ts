@@ -1,13 +1,13 @@
 /* global FIND_STRUCTURES STRUCTURE_LAB */
 
+import Process from 'process/process';
+
 declare global {
 	interface RoomMemory {
-		canPerformReactions,
-		labs,
+		canPerformReactions;
+		labs;
 	}
 }
-
-import Process from 'process/process';
 
 export default class ReactionsProcess extends Process {
 	room: Room;
@@ -21,9 +21,9 @@ export default class ReactionsProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**

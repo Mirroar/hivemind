@@ -1,21 +1,6 @@
 /* global PathFinder Room RoomPosition RoomVisual OBSTACLE_OBJECT_TYPES
 CONTROLLER_STRUCTURES FIND_SOURCES FIND_MINERALS */
 
-declare global {
-	interface Room {
-		roomPlanner: RoomPlanner,
-	}
-
-	interface RoomMemory {
-		roomPlanner?: any,
-	}
-
-	interface RoomPosition {
-		isIrrelevant?: boolean,
-		isRelevant?: boolean,
-	}
-}
-
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RoomPlan from 'room/planner/room-plan';
@@ -25,11 +10,24 @@ import utilities from 'utilities';
 import {getRoomPlanFor, setRoomPlanFor} from 'room/planner/room-plan-management';
 import {getRoomIntel} from 'room-intel';
 
+declare global {
+	interface Room {
+		roomPlanner: RoomPlanner;
+	}
+
+	interface RoomMemory {
+		roomPlanner?: any;
+	}
+
+	interface RoomPosition {
+		isIrrelevant?: boolean;
+		isRelevant?: boolean;
+	}
+}
+
 // The room plan process is recreated every tick, but room plan generators
 // are persistent in heap.
-const generatorCache: {
-	[roomName: string]: RoomPlanGenerator;
-} = {};
+const generatorCache: Record<string, RoomPlanGenerator> = {};
 
 function getGenerator(roomName: string): RoomPlanGenerator {
 	return generatorCache[roomName];
@@ -49,7 +47,6 @@ export interface RoomPlannerMemory {
 }
 
 export default class RoomPlanner {
-
 	protected activeRoomPlan: RoomPlan;
 	protected activeRoomPlanVersion: number;
 	protected generator: RoomPlanGenerator;
@@ -82,11 +79,12 @@ export default class RoomPlanner {
 		if (this.generator) {
 			this.generator.visualize();
 		}
+
 		if (this.activeRoomPlan && (hivemind.settings.get('visualizeRoomPlan') || (this.memory.drawDebug || 0) > 0)) {
 			this.memory.drawDebug--;
 			this.activeRoomPlan.visualize();
 		}
-	};
+	}
 
 	/**
 	 * Allows this room planner to give commands in controlled rooms.
@@ -103,7 +101,7 @@ export default class RoomPlanner {
 		// @todo Move this check into initializeRoomPlanGenerationIfNecessary, but
 		// cache result for 100 ticks. Then we can eliminate `lastRun`.
 		this.checkAdjacentRooms();
-	};
+	}
 
 	manageRoomPlanGeneration() {
 		// Recalculate room layout if using a new version.
@@ -197,7 +195,7 @@ export default class RoomPlanner {
 				break;
 			}
 		}
-	};
+	}
 
 	/**
 	 * Gets list of safe neighboring rooms.
@@ -207,7 +205,7 @@ export default class RoomPlanner {
 	 */
 	getAdjacentSafeRooms(): string[] {
 		return this.memory.adjacentSafeRooms || [];
-	};
+	}
 
 	/**
 	 * Gets the room's center position.
@@ -222,7 +220,7 @@ export default class RoomPlanner {
 
 		// Fallback value if for some reason there is no assigned center position.
 		return new RoomPosition(25, 25, this.roomName);
-	};
+	}
 
 	/**
 	 * Returns all positions planned for a certain type.
@@ -239,7 +237,7 @@ export default class RoomPlanner {
 		}
 
 		return [];
-	};
+	}
 
 	/**
 	 * Checks whether a certain position is planned for building something.
@@ -256,7 +254,7 @@ export default class RoomPlanner {
 		if (!this.activeRoomPlan) return false;
 
 		return this.activeRoomPlan.hasPosition(locationType, pos);
-	};
+	}
 
 	/**
 	 * Checks whether planning for this room is finished.
@@ -269,7 +267,7 @@ export default class RoomPlanner {
 		if (this.generator.isFinished()) return true;
 
 		return false;
-	};
+	}
 
 	/**
 	 * Gets a cost matrix representing this room when it's fully built.
@@ -280,8 +278,6 @@ export default class RoomPlanner {
 	getNavigationMatrix(): CostMatrix {
 		if (!this.activeRoomPlan) return new PathFinder.CostMatrix();
 
-		return cache.inHeap('plannerCostMatrix:' + this.roomName, 500, () => {
-			return this.activeRoomPlan.createNavigationMatrix();
-		});
-	};
+		return cache.inHeap('plannerCostMatrix:' + this.roomName, 500, () => this.activeRoomPlan.createNavigationMatrix());
+	}
 }

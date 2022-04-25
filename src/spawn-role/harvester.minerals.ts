@@ -52,7 +52,7 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	getCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.6, [CARRY]: 0.05},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -91,4 +91,4 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	getCreepBoosts(room, option, body) {
 		return this.generateCreepBoosts(room, body, WORK, 'harvest');
 	}
-};
+}

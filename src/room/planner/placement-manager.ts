@@ -48,32 +48,32 @@ export default class PlacementManager {
   /**
    * Prepares building cost matrix.
    */
-  prepareBuildingMatrix() {
-    for (let x = 0; x < 50; x++) {
-      for (let y = 0; y < 50; y++) {
-        if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) {
-          this.buildingMatrix.set(x, y, this.ROAD_THROUGH_WALL_COST);
-          continue;
-        }
+	prepareBuildingMatrix() {
+		for (let x = 0; x < 50; x++) {
+			for (let y = 0; y < 50; y++) {
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) {
+					this.buildingMatrix.set(x, y, this.ROAD_THROUGH_WALL_COST);
+					continue;
+				}
 
-        // Treat border as unwalkable for in-room pathfinding.
-        if (x === 0 || y === 0 || x === 49 || y === 49) {
-          this.buildingMatrix.set(x, y, this.IMPASSABLE_POSITION);
-          continue;
-        }
+				// Treat border as unwalkable for in-room pathfinding.
+				if (x === 0 || y === 0 || x === 49 || y === 49) {
+					this.buildingMatrix.set(x, y, this.IMPASSABLE_POSITION);
+					continue;
+				}
 
-        const wallDistance = this.wallDistanceMatrix.get(x, y);
-        const exitDistance = this.exitDistanceMatrix.get(x, y);
+				const wallDistance = this.wallDistanceMatrix.get(x, y);
+				const exitDistance = this.exitDistanceMatrix.get(x, y);
 
-        if (exitDistance <= 2) {
-          // Avoid tiles we can't build ramparts on.
-          this.buildingMatrix.set(x, y, this.DISCOURAGED_POSITION * 2);
-        }
-      }
-    }
-  };
+				if (exitDistance <= 2) {
+					// Avoid tiles we can't build ramparts on.
+					this.buildingMatrix.set(x, y, this.DISCOURAGED_POSITION * 2);
+				}
+			}
+		}
+	}
 
-  /**
+	/**
    * Plans a room planner location of a certain type.
    *
    * @param {RoomPosition} pos

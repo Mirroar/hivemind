@@ -18,7 +18,7 @@ export default class SquadSpawnRole extends SpawnRole {
 			const spawnUnitType = this.needsSpawning(squad);
 			if (!spawnUnitType) return;
 
-			const roomHasReserves = room.getStoredEnergy() > 10000;
+			const roomHasReserves = room.getStoredEnergy() > 10_000;
 			options.push({
 				priority: roomHasReserves ? 4 : 2,
 				weight: 1.1,
@@ -75,21 +75,21 @@ export default class SquadSpawnRole extends SpawnRole {
 	getRangerCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getHealerCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [HEAL]: 0.48},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getClaimerCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [TOUGH]: 0.18, [CLAIM]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -100,14 +100,14 @@ export default class SquadSpawnRole extends SpawnRole {
 	getBuilderCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getAttackerCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -118,7 +118,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	getBrawlerCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -165,4 +165,4 @@ export default class SquadSpawnRole extends SpawnRole {
 
 		return null;
 	}
-};
+}

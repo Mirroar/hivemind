@@ -109,7 +109,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	getCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.65},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -156,4 +156,4 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	getCreepBoosts(room, option, body) {
 		return this.generateCreepBoosts(room, body, WORK, 'dismantle');
 	}
-};
+}

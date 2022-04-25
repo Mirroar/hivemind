@@ -18,6 +18,7 @@ export default class Relations {
 				this.allies.push(ally);
 			}
 		}
+
 		if (localRelations?.enemies) {
 			for (const enemy of localRelations.enemies) {
 				this.enemies.push(enemy);

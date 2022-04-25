@@ -44,12 +44,12 @@ export interface RoomIntelMemory {
 		username: string;
 		ticksToEnd: number;
 	};
-	sources: {
+	sources: Array<{
 		x: number;
 		y: number;
 		id: Id<Source>;
 		free: number;
-	}[];
+	}>;
 	mineralInfo: {
 		x: number;
 		y: number;
@@ -140,7 +140,7 @@ export default class RoomIntel {
 		this.gatherTerrainIntel();
 
 		const structures: {
-			[T in StructureConstant]?: Structure<T>[];
+			[T in StructureConstant]?: Array<Structure<T>>;
 		} = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
 		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
 		this.getherDepositIntel();
@@ -206,14 +206,12 @@ export default class RoomIntel {
 		// Check sources.
 		this.memory.sources = _.map(
 			room.find(FIND_SOURCES),
-			source => {
-				return {
-					x: source.pos.x,
-					y: source.pos.y,
-					id: source.id,
-					free: source.getNumHarvestSpots(),
-				};
-			}
+			source => ({
+				x: source.pos.x,
+				y: source.pos.y,
+				id: source.id,
+				free: source.getNumHarvestSpots(),
+			}),
 		);
 
 		// Check minerals.
@@ -535,7 +533,7 @@ export default class RoomIntel {
 				if (!_.contains(result.obstacles, location)) {
 					result.obstacles.push(location);
 				}
-			}
+			},
 		);
 
 		return result;
@@ -544,7 +542,7 @@ export default class RoomIntel {
 	/**
 	 * Gets coordinates of all known roads in the room.
 	 */
-	getRoadCoords(): {x: number, y: number}[] {
+	getRoadCoords(): Array<{x: number; y: number}> {
 		if (!this.memory.costPositions) return [];
 
 		return unpackCoordList(this.memory.costPositions[1]);
@@ -557,7 +555,7 @@ export default class RoomIntel {
 	 *   Number of ticks since intel was last gathered in this room.
 	 */
 	getAge(): number {
-		return Game.time - (this.memory.lastScan || -100000);
+		return Game.time - (this.memory.lastScan || -100_000);
 	}
 
 	/**
@@ -627,7 +625,7 @@ export default class RoomIntel {
 	 * @return {object[]}
 	 *   An Array of ob objects containing id, x and y position of the source.
 	 */
-	getSourcePositions(): {x: number, y: number, id: Id<Source>, free: number}[] {
+	getSourcePositions(): Array<{x: number; y: number; id: Id<Source>; free: number}> {
 		return this.memory.sources || [];
 	}
 
@@ -647,7 +645,7 @@ export default class RoomIntel {
 	 * @return {object}
 	 *   An Object containing id, type, x and y position of the mineral deposit.
 	 */
-	getMineralPosition(): {x: number, y: number, id: Id<Mineral>, type: MineralConstant} {
+	getMineralPosition(): {x: number; y: number; id: Id<Mineral>; type: MineralConstant} {
 		return this.memory.mineralInfo;
 	}
 
@@ -731,7 +729,7 @@ export default class RoomIntel {
 	 */
 	getExits = function (): Partial<Record<ExitKey, string>> {
 		return this.memory.exits || {};
-	}
+	};
 
 	/**
 	 * Returns position of the Controller structure in this room.
@@ -742,7 +740,7 @@ export default class RoomIntel {
 	getControllerPosition(): RoomPosition {
 		if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return null;
 
-		const controller: {x: number, y: number} = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
+		const controller: {x: number; y: number} = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
 		return new RoomPosition(controller.x, controller.y, this.roomName);
 	}
 
@@ -774,7 +772,7 @@ export default class RoomIntel {
 		if (!this.memory.terrain) return 0;
 
 		return this.memory.terrain[type] || 0;
-	};
+	}
 
 	/**
 	 * Returns which exits of a room are considered safe.
@@ -918,7 +916,7 @@ export default class RoomIntel {
 	 */
 	handleAdjacentRoom(roomData, openList, closedList) {
 		const roomIntel = getRoomIntel(roomData.room);
-		if (roomIntel.getAge() > 100000) {
+		if (roomIntel.getAge() > 100_000) {
 			// Room has no intel, declare it as unsafe.
 			this.newStatus[roomData.origin] = false;
 			return;
@@ -971,9 +969,7 @@ export default class RoomIntel {
 	}
 }
 
-const intelCache: {
-  [roomName: string]: RoomIntel;
-} = {};
+const intelCache: Record<string, RoomIntel> = {};
 
 /**
  * Factory method for room intel objects.
@@ -985,27 +981,27 @@ const intelCache: {
  *   The requested RoomIntel object.
  */
 function getRoomIntel(roomName: string): RoomIntel {
-  if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate room intel for room ' + roomName + '.');
+	if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate room intel for room ' + roomName + '.');
 
-  if (!intelCache[roomName]) {
-    intelCache[roomName] = new RoomIntel(roomName);
-  }
+	if (!intelCache[roomName]) {
+		intelCache[roomName] = new RoomIntel(roomName);
+	}
 
-  return intelCache[roomName];
+	return intelCache[roomName];
 }
 
 function getRoomsWithIntel(): string[] {
-  const result: string[] = [];
-  if (!hivemind.segmentMemory.isReady()) return result;
+	const result: string[] = [];
+	if (!hivemind.segmentMemory.isReady()) return result;
 
-  hivemind.segmentMemory.each('intel:', (key) => {
-    result.push(key.substr(6));
-  });
+	hivemind.segmentMemory.each('intel:', key => {
+		result.push(key.slice(6));
+	});
 
-  return result;
+	return result;
 }
 
 export {
-  getRoomIntel,
-  getRoomsWithIntel,
-}
+	getRoomIntel,
+	getRoomsWithIntel,
+};

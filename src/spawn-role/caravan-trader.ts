@@ -40,7 +40,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 					return true;
 				});
 
-				if (activeTraders.length < 1) {
+				if (activeTraders.length === 0) {
 					options.push({
 						priority: 4,
 						weight: 0,
@@ -52,7 +52,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 		});
 	}
 
-	isARoomInRange(room: Room, targetRooms: {name: string, time: number}[]): boolean {
+	isARoomInRange(room: Room, targetRooms: Array<{name: string; time: number}>): boolean {
 		if (!hivemind.segmentMemory.isReady()) return false;
 
 		const mesh = new NavMesh();
@@ -87,7 +87,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [CARRY]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: Math.ceil(Math.min(1000, availableResources) / CARRY_CAPACITY)}
+			{[CARRY]: Math.ceil(Math.min(1000, availableResources) / CARRY_CAPACITY)},
 		);
 	}
 
@@ -115,4 +115,4 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 	onSpawn(room: Room, option, body: BodyPartConstant[], name: string) {
 		hivemind.log('creeps', room.name).notify('Spawned new caravan trader ' + name + ' in ' + room.name + ' to deliver ' + option.resourceType + '.');
 	}
-};
+}

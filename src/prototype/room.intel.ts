@@ -125,9 +125,7 @@ Object.defineProperty(Room.prototype, 'sources', {
 	 */
 	get() {
 		return cache.inObject(this, 'sources', 1, () => {
-			const sourceIds = cache.inHeap('sources:' + this.name, 10000, () => {
-				return _.map(this.find(FIND_SOURCES), 'id');
-			});
+			const sourceIds = cache.inHeap('sources:' + this.name, 10_000, () => _.map(this.find(FIND_SOURCES), 'id'));
 
 			return _.map(sourceIds, Game.getObjectById);
 		});
@@ -147,9 +145,7 @@ Object.defineProperty(Room.prototype, 'mineral', {
 	 */
 	get(): Mineral {
 		return cache.inObject(this, 'mineral', 1, () => {
-			const mineralIds = cache.inHeap('mineral:' + this.name, 10000, () => {
-				return _.map<Mineral, string>(this.find(FIND_MINERALS), 'id');
-			});
+			const mineralIds = cache.inHeap('mineral:' + this.name, 10_000, () => _.map<Mineral, string>(this.find(FIND_MINERALS), 'id'));
 
 			return mineralIds[0] && Game.getObjectById(mineralIds[0]);
 		});

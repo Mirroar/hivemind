@@ -1,12 +1,13 @@
+import RemoteMiningOperation from 'operation/remote-mining';
+import RoomOperation from 'operation/room';
+
 declare global {
 	interface Creep {
 		operation?: Operation;
 	}
 
 	interface Memory {
-		operations: {
-			[name: string]: OperationMemory;
-		};
+		operations: Record<string, OperationMemory>;
 	}
 
 	interface CreepMemory {
@@ -14,19 +15,11 @@ declare global {
 	}
 
 	interface Game {
-		operations: {
-			[key: string]: Operation;
-		};
+		operations: Record<string, Operation>;
 		operationsByType: {
-			mining: {
-				[key: string]: RemoteMiningOperation;
-			};
-			room: {
-				[key: string]: RoomOperation;
-			};
-			[key: string]: {
-				[key: string]: Operation;
-			};
+			mining: Record<string, RemoteMiningOperation>;
+			room: Record<string, RoomOperation>;
+			[key: string]: Record<string, Operation>;
 		};
 	}
 
@@ -47,9 +40,6 @@ declare global {
 		type: 'default';
 	}
 }
-
-import RemoteMiningOperation from 'operation/remote-mining';
-import RoomOperation from 'operation/room';
 
 export default class Operation {
 	protected roomName?: string;
@@ -125,7 +115,7 @@ export default class Operation {
 	}
 
 	squashStats() {
-		if (this.memory.statTicks < 10000) return;
+		if (this.memory.statTicks < 10_000) return;
 		const squashFactor = 2;
 
 		this.memory.statTicks = Math.floor(this.memory.statTicks / squashFactor);

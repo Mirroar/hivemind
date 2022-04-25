@@ -4,9 +4,9 @@ import {getRoomIntel} from 'room-intel';
 
 declare global {
   type VariationInfo = {
-    roomCenter?: RoomPosition;
-    sourcesWithSpawn?: Id<Source>[];
-  }
+  	roomCenter?: RoomPosition;
+  	sourcesWithSpawn?: Array<Id<Source>>;
+  };
 }
 
 export default class VariationGenerator {

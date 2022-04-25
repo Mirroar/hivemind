@@ -1,21 +1,21 @@
 /* global Creep */
 
 interface Creep {
-	isPartOfTrain: () => boolean,
-	isTrainHead: () => boolean,
-	getTrainId: () => Id<Creep>,
-	isTrainFullySpawned: () => boolean,
-	getTrainParts: () => Creep[],
-	isTrainJoined: () => boolean,
-	joinTrain: () => void,
+	isPartOfTrain: () => boolean;
+	isTrainHead: () => boolean;
+	getTrainId: () => Id<Creep>;
+	isTrainFullySpawned: () => boolean;
+	getTrainParts: () => Creep[];
+	isTrainJoined: () => boolean;
+	joinTrain: () => void;
 }
 
 interface CreepMemory {
 	train?: {
-		id: Id<Creep>,
-		partsToSpawn: number[],
-		parts: Id<Creep>[],
-	},
+		id: Id<Creep>;
+		partsToSpawn: number[];
+		parts: Array<Id<Creep>>;
+	};
 }
 
 /**

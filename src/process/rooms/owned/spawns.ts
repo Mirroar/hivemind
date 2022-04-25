@@ -1,25 +1,5 @@
-declare global {
-	interface StructureSpawn {
-		heapMemory: SpawnHeapMemory;
-	}
-
-	interface SpawnHeapMemory extends StructureHeapMemory {
-		ticks: number;
-		spawning: number;
-		waiting: number;
-		options: number;
-		history: HistorySegment[];
-	}
-}
-
-type HistorySegment = {
-	ticks: number;
-	spawning: number;
-	waiting: number;
-}
-
-import hivemind from 'hivemind';
 import Process from 'process/process';
+import hivemind from 'hivemind';
 import SpawnManager from 'spawn-manager';
 
 import brawlerSpawnRole from 'spawn-role/brawler';
@@ -45,6 +25,26 @@ import scoutSpawnRole from 'spawn-role/scout';
 import squadSpawnRole from 'spawn-role/squad';
 import transporterSpawnRole from 'spawn-role/transporter';
 import upgraderSpawnRole from 'spawn-role/upgrader';
+
+declare global {
+	interface StructureSpawn {
+		heapMemory: SpawnHeapMemory;
+	}
+
+	interface SpawnHeapMemory extends StructureHeapMemory {
+		ticks: number;
+		spawning: number;
+		waiting: number;
+		options: number;
+		history: HistorySegment[];
+	}
+}
+
+type HistorySegment = {
+	ticks: number;
+	spawning: number;
+	waiting: number;
+};
 
 const spawnClasses = {
 	'brawler': brawlerSpawnRole,
@@ -87,9 +87,9 @@ export default class ManageSpawnsProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 
 		this.spawnManager = new SpawnManager();
 		for (const roleName in spawnClasses) {

@@ -2,9 +2,9 @@
 
 declare global {
 	interface CreepMemory {
-		role?: string,
-		singleRoom?: string,
-		go?: any,
+		role?: string;
+		singleRoom?: string;
+		go?: any;
 	}
 
 	interface CreepHeapMemory {
@@ -12,14 +12,13 @@ declare global {
 	}
 
 	interface PowerCreepMemory {
-		role: string,
-		singleRoom?: string,
-		go?: any,
+		role: string;
+		singleRoom?: string;
+		go?: any;
 	}
 }
 
 export default class Role {
-
 	throttleAt: number;
 	stopAt: number;
 
@@ -109,8 +108,6 @@ export default class Role {
 			else {
 				delete creep.heapMemory.suicideSpawn;
 			}
-
-			return;
 		}
 	}
-};
+}

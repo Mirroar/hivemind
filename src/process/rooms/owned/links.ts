@@ -1,7 +1,7 @@
 /* global LINK_CAPACITY */
 
-import hivemind from 'hivemind';
 import Process from 'process/process';
+import hivemind from 'hivemind';
 
 export default class ManageLinksProcess extends Process {
 	readonly MIN_ENERGY_TRANSFER = LINK_CAPACITY / 4;
@@ -17,9 +17,9 @@ export default class ManageLinksProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**
@@ -66,7 +66,7 @@ export default class ManageLinksProcess extends Process {
 		}
 	}
 
-	getBestSourceLink(highLinks: {link: StructureLink, delta: number}[]) {
+	getBestSourceLink(highLinks: Array<{link: StructureLink; delta: number}>) {
 		const sorted = _.sortBy(_.filter(highLinks, link => link.link.cooldown <= 0), link => -link.delta);
 
 		if (sorted[0] && sorted[0].delta >= this.MIN_ENERGY_TRANSFER) return sorted[0];
@@ -74,7 +74,7 @@ export default class ManageLinksProcess extends Process {
 		return this.getNeutralHighEnergyLink() || sorted[0];
 	}
 
-	getBestDesinationLink(lowLinks: {link: StructureLink, delta: number}[]) {
+	getBestDesinationLink(lowLinks: Array<{link: StructureLink; delta: number}>) {
 		const sorted = _.sortBy(lowLinks, link => -link.delta);
 
 		if (sorted[0] && sorted[0].delta >= this.MIN_ENERGY_TRANSFER) return sorted[0];
@@ -82,7 +82,7 @@ export default class ManageLinksProcess extends Process {
 		return this.getNeutralLowEnergyLink() || sorted[0];
 	}
 
-	getNeutralHighEnergyLink(): {link: StructureLink, delta: number} {
+	getNeutralHighEnergyLink(): {link: StructureLink; delta: number} {
 		const sorted = _.sortBy(_.filter(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.cooldown <= 0), link => -link.energy);
 		if (sorted.length > 0) {
 			return {
@@ -94,7 +94,7 @@ export default class ManageLinksProcess extends Process {
 		return null;
 	}
 
-	getNeutralLowEnergyLink(): {link: StructureLink, delta: number} {
+	getNeutralLowEnergyLink(): {link: StructureLink; delta: number} {
 		const sorted = _.sortBy(this.room.linkNetwork.neutralLinks, (link: StructureLink) => link.energy);
 		if (sorted.length > 0) {
 			return {

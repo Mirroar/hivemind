@@ -38,7 +38,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 					if (creep.ticksToLive > travelTime || creep.ticksToLive > 500) return true;
 
 					return false;
-				}
+				},
 			);
 
 			// Allow spawning multiple harvesters if more work parts are needed,

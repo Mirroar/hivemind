@@ -3,20 +3,20 @@ PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
 FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
 PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
-declare global {
-	interface PowerCreep {
-		_powerUsed,
-	}
-
-	interface PowerCreepMemory {
-		newTargetRoom: string,
-		order,
-	}
-}
-
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import Role from 'role/role';
+
+declare global {
+	interface PowerCreep {
+		_powerUsed;
+	}
+
+	interface PowerCreepMemory {
+		newTargetRoom: string;
+		order;
+	}
+}
 
 export default class OperatorRole extends Role {
 	creep: PowerCreep;
@@ -272,7 +272,7 @@ export default class OperatorRole extends Role {
 			if ((memory.options || 0) < 2 && spawningTicks / totalTicks < 0.8) return false;
 
 			return true;
-		}) as StructureSpawn;
+		});
 		if (!spawn) return;
 
 		const activeEffect = _.first(_.filter(spawn.effects, effect => effect.effect === PWR_OPERATE_SPAWN));
@@ -344,7 +344,7 @@ export default class OperatorRole extends Role {
 			if (spawn.spawning && spawn.spawning.remainingTime > 5) return false;
 
 			return true;
-		}) as StructureSpawn;
+		});
 		if (!spawn) return;
 
 		const storage = this.creep.room.getBestStorageSource(RESOURCE_ENERGY);

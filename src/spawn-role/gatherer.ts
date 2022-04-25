@@ -85,4 +85,4 @@ export default class GathererSpawnRole extends SpawnRole {
 			targetRoom: option.targetRoom,
 		};
 	}
-};
+}

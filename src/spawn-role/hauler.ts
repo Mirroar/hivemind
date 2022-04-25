@@ -36,7 +36,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 			const maximumBody = this.generateCreepBodyFromWeights(
 				this.getBodyWeights(),
 				room.energyCapacityAvailable,
-				{[CARRY]: requiredCarryParts}
+				{[CARRY]: requiredCarryParts},
 			);
 			const carryPartsPerHauler = _.countBy(maximumBody)[CARRY];
 
@@ -55,7 +55,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 					if (creep.ticksToLive > travelTime || creep.ticksToLive > 500) return true;
 
 					return false;
-				}
+				},
 			);
 
 			if (haulers.length >= maxHaulers) continue;
@@ -85,7 +85,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			room.controller.level > 3 && room.storage ? (option.builder ? this.getBuilderBodyWeights() : this.getBodyWeights()) : this.getNoRoadsBodyWeights(),
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: option.size}
+			{[CARRY]: option.size},
 		);
 	}
 
@@ -158,4 +158,4 @@ export default class HaulerSpawnRole extends SpawnRole {
 
 		operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
 	}
-};
+}

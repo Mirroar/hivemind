@@ -3,6 +3,13 @@ POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
 FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
 POWER_BANK_HIT_BACK */
 
+import cache from 'utils/cache';
+import hivemind from 'hivemind';
+import NavMesh from 'utils/nav-mesh';
+import Role from 'role/role';
+import {deserializePosition} from 'utils/serialization';
+import {getCostMatrix} from 'utils/cost-matrix';
+
 declare global {
 	interface DepositHarvesterCreep extends Creep {
 		memory: DepositHarvesterCreepMemory;
@@ -20,13 +27,6 @@ declare global {
 		returnTravelTime?: number;
 	}
 }
-
-import cache from 'utils/cache';
-import hivemind from 'hivemind';
-import NavMesh from 'utils/nav-mesh';
-import Role from 'role/role';
-import {deserializePosition} from 'utils/serialization';
-import {getCostMatrix} from 'utils/cost-matrix';
 
 export default class DepositHarvesterRole extends Role {
 	constructor() {
@@ -80,7 +80,7 @@ export default class DepositHarvesterRole extends Role {
 	getReturnTravelTime(creep: DepositHarvesterCreep): number {
 		if (creep.heapMemory.returnTravelTime) return creep.heapMemory.returnTravelTime;
 
-		creep.heapMemory.returnTravelTime = cache.inHeap('returnTravel:' + creep.memory.targetPos + ':' + creep.memory.origin, 10000, () => {
+		creep.heapMemory.returnTravelTime = cache.inHeap('returnTravel:' + creep.memory.targetPos + ':' + creep.memory.origin, 10_000, () => {
 			const mesh = new NavMesh();
 			const targetPosition = deserializePosition(creep.memory.targetPos);
 			const path = mesh.findPath(targetPosition, new RoomPosition(25, 25, creep.memory.origin));
@@ -89,16 +89,15 @@ export default class DepositHarvesterRole extends Role {
 				return creep.heapMemory.returnTravelTime || 0;
 			}
 
-			let prevWaypoint = targetPosition;
+			const previousWaypoint = targetPosition;
 			let total = 0;
 			for (const waypoint of path.path) {
-				const subPath = PathFinder.search(prevWaypoint, waypoint, {
+				const subPath = PathFinder.search(previousWaypoint, waypoint, {
 					maxRooms: 3,
 					roomCallback: roomName => getCostMatrix(roomName),
 				});
 
-				if (subPath.incomplete) total += 75
-				else total += subPath.path.length;
+				total += subPath.incomplete ? 75 : subPath.path.length;
 			}
 
 			return total;

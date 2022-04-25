@@ -81,7 +81,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addEmergencyRepairSpawnOptions(room: Room, options) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
-		if (room.getStoredEnergy() < 10000) return;
+		if (room.getStoredEnergy() < 10_000) return;
 
 		// @todo Send energy to rooms under attack for assistance.
 
@@ -149,21 +149,21 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	getAttackCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [ATTACK]: 0.65},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getRangedCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [RANGED_ATTACK]: 0.65},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getRepairCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -234,4 +234,4 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			hivemind.log('creeps', room.name).info('Spawning new guardian', name, 'to defend', room.name);
 		}
 	}
-};
+}

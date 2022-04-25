@@ -3,27 +3,27 @@ FIND_MY_STRUCTURES RESOURCE_ENERGY ERR_NOT_IN_RANGE STRUCTURE_RAMPART
 FIND_MY_CONSTRUCTION_SITES STRUCTURE_TOWER FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
 
-declare global {
-	interface RemoteBuilderCreep extends Creep {
-		memory: RemoteBuilderCreepMemory,
-		heapMemory: RemoteBuilderCreepHeapMemory,
-	}
-
-	interface RemoteBuilderCreepMemory extends CreepMemory {
-		role: 'builder.remote',
-		targetRoom?: string,
-	}
-
-	interface RemoteBuilderCreepHeapMemory extends CreepHeapMemory {
-	}
-}
-
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
+
+declare global {
+	interface RemoteBuilderCreep extends Creep {
+		memory: RemoteBuilderCreepMemory;
+		heapMemory: RemoteBuilderCreepHeapMemory;
+	}
+
+	interface RemoteBuilderCreepMemory extends CreepMemory {
+		role: 'builder.remote';
+		targetRoom?: string;
+	}
+
+	interface RemoteBuilderCreepHeapMemory extends CreepHeapMemory {
+	}
+}
 
 export default class RemoteBuilderRole extends Role {
 	transporterRole: TransporterRole;
@@ -137,7 +137,7 @@ export default class RemoteBuilderRole extends Role {
 
 		if (this.supplyTowers()) return;
 
-		if (this.saveExpiringRamparts(10000)) return;
+		if (this.saveExpiringRamparts(10_000)) return;
 
 		if (!creep.memory.buildTarget) {
 			this.determineBuildTarget();
@@ -192,7 +192,7 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		if (this.creep.memory.repairTarget) {
-			const maxRampartHits = this.creep.room.controller.level < 6 ? 15000 : hivemind.settings.get('minWallIntegrity') * 1.1;
+			const maxRampartHits = this.creep.room.controller.level < 6 ? 15_000 : hivemind.settings.get('minWallIntegrity') * 1.1;
 			const target = Game.getObjectById<Structure>(this.creep.memory.repairTarget);
 			if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > maxRampartHits)) {
 				delete this.creep.memory.repairTarget;
@@ -234,13 +234,12 @@ export default class RemoteBuilderRole extends Role {
 			// Make sure ramparts are of sufficient level.
 			const lowRamparts = this.creep.room.find(
 				FIND_MY_STRUCTURES, {
-					filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < hivemind.settings.get('minWallIntegrity')
-				}
+					filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < hivemind.settings.get('minWallIntegrity'),
+				},
 			);
 
 			if (lowRamparts.length > 0) {
 				this.creep.memory.repairTarget = _.min(lowRamparts, 'hits').id;
-				return;
 			}
 		}
 	}

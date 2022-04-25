@@ -9,14 +9,14 @@
 
 declare global {
 	interface MinCutRect {
-		x1: number,
-		y1: number,
-		x2: number,
-		y2: number,
-		protectTopExits?: boolean,
-		protectBottomExits?: boolean,
-		protectLeftExits?: boolean,
-		protectRightExits?: boolean,
+		x1: number;
+		y1: number;
+		x2: number;
+		y2: number;
+		protectTopExits?: boolean;
+		protectBottomExits?: boolean;
+		protectLeftExits?: boolean;
+		protectRightExits?: boolean;
 	}
 }
 
@@ -56,7 +56,7 @@ const roomCorners = [
  */
 function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 49}) {
 	// Create two dimensional array of room tiles.
-	const roomArray = new Array(50).fill(0).map(() => new Array(50).fill(UNWALKABLE));
+	const roomArray = Array.from({length: 50}).fill(0).map(() => Array.from({length: 50}).fill(UNWALKABLE)) as number[][];
 
 	const terrain = Game.map.getRoomTerrain(roomName);
 	for (let x = bounds.x1; x <= bounds.x2; x++) {
@@ -164,7 +164,7 @@ function floodFillUnprotectedExit(roomArray, corner) {
 		if (roomArray[coords[0]][coords[1]] === PROTECTED) queue.push(coords);
 	}
 
-	while (queue.length) {
+	while (queue.length > 0) {
 		const coords = queue.splice(0, 1)[0];
 		if (roomArray[coords[0]][coords[1]] === PROTECTED) {
 			roomArray[coords[0]][coords[1]] = TO_EXIT;
@@ -231,7 +231,7 @@ class Graph {
 
 		let u = 0;
 		let edge = null;
-		while (queue.length) {
+		while (queue.length > 0) {
 			u = queue.splice(0, 1)[0];
 			for (let i = 0; i < this.edges[u].length; i++) {
 				edge = this.edges[u][i];
@@ -288,7 +288,7 @@ class Graph {
 
 		const queue = [];
 		queue.push(s);
-		while (queue.length) {
+		while (queue.length > 0) {
 			const u = queue.splice(0, 1)[0];
 			for (let i = 0; i < this.edges[u].length; i++) {
 				const edge = this.edges[u][i];
@@ -308,10 +308,10 @@ class Graph {
 		}
 
 		const minCut = [];
-		for (let i = 0; i < edgesInCut.length; i++) {
-			if (this.level[edgesInCut[i].v] === -1) {
+		for (const edge of edgesInCut) {
+			if (this.level[edge.v] === -1) {
 				// Only edges which are blocking and lead to from s unreachable vertices are in the min cut.
-				minCut.push(edgesInCut[i].u);
+				minCut.push(edge.u);
 			}
 		}
 
@@ -345,14 +345,13 @@ const minCutInterface = {
 		const roomTerrain = generateRoomTerrainArray(roomName, bounds);
 
 		// For all Rectangles, set edges as source (to protect area) and area as unused
-		let r = null;
 		// Check bounds
 		if (bounds.x1 >= bounds.x2 || bounds.y1 >= bounds.y2 || bounds.x1 < 0 || bounds.y1 < 0 || bounds.x2 > 49 || bounds.y2 > 49) {
-			return console.log('ERROR: Invalid bounds:', JSON.stringify(bounds));
+			console.log('ERROR: Invalid bounds:', JSON.stringify(bounds));
+			return null;
 		}
 
-		for (let j = 0; j < rect.length; j++) {
-			r = rect[j];
+		for (const [j, r] of rect.entries()) {
 			// Test sizes of rectangles
 			if (r.x1 > r.x2 || r.y1 > r.y2) {
 				console.log('ERROR: Rectangle nr.', j, JSON.stringify(r), 'is invalid.');
@@ -493,9 +492,9 @@ const minCutInterface = {
 		if (count > 0) {
 			const cutEdges = graph.markReachableVertices(source);
 			// Get Positions from Edge
-			for (let i = 0; i < cutEdges.length; i++) {
-				const x = cutEdges[i] % 50;
-				const y = Math.floor(cutEdges[i] / 50);
+			for (const cutEdge of cutEdges) {
+				const x = cutEdge % 50;
+				const y = Math.floor(cutEdge / 50);
 				positions.push({x, y});
 			}
 		}

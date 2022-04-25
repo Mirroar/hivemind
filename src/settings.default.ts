@@ -58,15 +58,15 @@ const settings = {
 	powerBankMinAmount: POWER_BANK_CAPACITY_MAX / 4,
 	powerMineCreepPriority: 3,
 	powerHaulerMoveRatio: 0.35,
-	minEnergyForPowerHarvesting: 75000,
-	minEnergyForPowerProcessing: 100000,
+	minEnergyForPowerHarvesting: 75_000,
+	minEnergyForPowerProcessing: 100_000,
 
 	// Commodities:
 	enableDepositMining: true,
 	maxRangeForDepositMining: 5,
 	maxDepositCooldown: 100,
 	depositMineRoomFilter: null,
-	minEnergyForDepositMining: 20000,
+	minEnergyForDepositMining: 20_000,
 	minRclForDepositMining: 8,
 
 	// Power creeps:
@@ -103,7 +103,7 @@ const settings = {
 
 	// Expansion:
 	// Number of ticks we may cache expansion scores.
-	expansionScoreCacheDuration: 20000,
+	expansionScoreCacheDuration: 20_000,
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
@@ -119,13 +119,13 @@ const settings = {
 	// Room management:
 	// Number of hits for walls / ramparts needed for more expensive structures
 	// to be built.
-	minWallIntegrity: 500000,
+	minWallIntegrity: 500_000,
 	constructLabs: true,
 	constructNukers: true,
 	constructPowerSpawns: true,
 	constructObservers: true,
 	constructFactories: true,
-	minEnergyToUpgradeAtRCL8: 50000,
+	minEnergyToUpgradeAtRCL8: 50_000,
 	rampartWhitelistedUsers: [],
 	maxVisitorsPerUser: 0,
 	dismantleUnwantedRamparts: true,

@@ -3,20 +3,22 @@ RANGED_ATTACK HEAL STRUCTURE_TOWER TOWER_POWER_HEAL TOWER_POWER_ATTACK
 ATTACK_POWER RANGED_ATTACK_POWER HEAL_POWER RANGED_HEAL_POWER
 CARRY CLAIM MOVE TOUGH WORK TOWER_ENERGY_COST */
 
+import hivemind from 'hivemind';
+
 declare global {
 	interface Room {
-		assertMilitarySituation,
-		assertMilitaryCreepPower,
-		assertMilitaryStructurePower,
-		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void,
-		getMilitaryAssertion,
-		assertTargetPriorities,
-		getTowerTarget: () => AnyCreep | null,
-		drawMilitarySituation,
+		assertMilitarySituation;
+		assertMilitaryCreepPower;
+		assertMilitaryStructurePower;
+		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void;
+		getMilitaryAssertion;
+		assertTargetPriorities;
+		getTowerTarget: () => AnyCreep | null;
+		drawMilitarySituation;
 	}
 
 	interface Creep {
-		getMilitaryValue,
+		getMilitaryValue;
 	}
 }
 
@@ -42,8 +44,6 @@ interface SitRep {
 		}
 	},
 }
-
-import hivemind from 'hivemind';
 
 /**
  * Scans the room for military targets, grades them, etc.
@@ -282,7 +282,7 @@ Room.prototype.assertTargetPriorities = function () {
 		if (effectiveDamage > potentialHealing) {
 			// @todo Reduce priority (even stop targeting) when close to exit, to prevent tower drain by fleeing.
 			creep.militaryPriority = creep.getMilitaryValue() * (effectiveDamage - potentialHealing) * (creep.hitsMax / creep.hits) * creep.ticksToLive / CREEP_LIFE_TIME;
-			visual.text(creep.militaryPriority.toPrecision(2), creep.pos.x + 1, creep.pos.y + 0.2, {font: 0.5, color: 'yellow'})
+			visual.text(creep.militaryPriority.toPrecision(2), creep.pos.x + 1, creep.pos.y + 0.2, {font: 0.5, color: 'yellow'});
 		}
 	}
 };
@@ -316,7 +316,7 @@ Room.prototype.drawMilitarySituation = function () {
 	const visual = this.visual;
 	_.each(this.sitRep.damage, (colData, x: number) => {
 		_.each(colData, (data, y: number) => {
-			visual.text(data, x * 1, 1 * y - 0.1, {
+			visual.text(data, Number(x), Number(y) - 0.1, {
 				color: 'red',
 				font: 0.5,
 			});
@@ -325,7 +325,7 @@ Room.prototype.drawMilitarySituation = function () {
 
 	_.each(this.sitRep.healing, (colData, x: number) => {
 		_.each(colData, (data, y: number) => {
-			visual.text(data, x * 1, (1 * y) + 0.4, {
+			visual.text(data, Number(x), (Number(y)) + 0.4, {
 				color: 'green',
 				font: 0.5,
 			});
@@ -334,7 +334,7 @@ Room.prototype.drawMilitarySituation = function () {
 
 	_.each(this.sitRep.myDamage, (colData, x: number) => {
 		_.each(colData, (data, y: number) => {
-			visual.text(data, x * 1, 1 * y - 0.1, {
+			visual.text(data, Number(x), Number(y) - 0.1, {
 				color: 'red',
 				font: 0.5,
 			});
@@ -343,7 +343,7 @@ Room.prototype.drawMilitarySituation = function () {
 
 	_.each(this.sitRep.myHealing, (colData, x: number) => {
 		_.each(colData, (data, y: number) => {
-			visual.text(data, x * 1, (1 * y) + 0.4, {
+			visual.text(data, Number(x), (Number(y)) + 0.4, {
 				color: 'green',
 				font: 0.5,
 			});

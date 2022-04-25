@@ -4,13 +4,13 @@ import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 
 export default class ReclaimSpawnRole extends SpawnRole {
-
 	navMesh?: NavMesh;
-	spawnOptions: {
-		priority: number,
-		weight: number,
-		targetRoom: string,
-	}[];
+	spawnOptions: Array<{
+		priority: number;
+		weight: number;
+		targetRoom: string;
+	}>;
+
 	room: Room;
 
 	/**
@@ -49,7 +49,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 		const remoteBuilderCount = _.filter(Game.creepsByRole['builder.remote'], (creep: RemoteBuilderCreep) => creep.memory.targetRoom === targetRoom.name || creep.memory.singleRoom === targetRoom.name).length;
 		if (remoteBuilderCount > 5) return false;
 
-		const route = cache.inHeap('reclaimPath:' + targetRoom.name + '.' +  this.room.name, 100, () => {
+		const route = cache.inHeap('reclaimPath:' + targetRoom.name + '.' + this.room.name, 100, () => {
 			if (!this.navMesh) this.navMesh = new NavMesh();
 			return this.navMesh.findPath(this.room.roomPlanner.getRoomCenter(), targetRoom.roomPlanner.getRoomCenter(), {maxPathLength: 700});
 		});
@@ -72,7 +72,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	getCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -93,4 +93,4 @@ export default class ReclaimSpawnRole extends SpawnRole {
 			targetRoom: option.targetRoom,
 		};
 	}
-};
+}

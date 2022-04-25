@@ -2,29 +2,34 @@
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
 OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
 
+import Process from 'process/process';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import NavMesh from 'utils/nav-mesh';
+import Squad from 'manager.squad';
+import stats from 'utils/stats';
+
 interface ExpansionTarget extends RoomListEntry {
 	spawnRoom: string;
 }
 
 type ExpandProcessMemory = {
-	started?: number,
-	claimed?: number,
-	currentTarget,
+	started?: number;
+	claimed?: number;
+	currentTarget;
 	inProgress: {
-		rooms: {
-			[roomName: string]: boolean,
-		},
-		bestTarget: ExpansionTarget,
-	},
-	pathBlocked: number,
+		rooms: Record<string, boolean>;
+		bestTarget: ExpansionTarget;
+	};
+	pathBlocked: number;
 	evacuatingRoom: {
-		name: string,
-		cooldown: number,
-	},
-	failedExpansions: {
-		roomName: string,
-		time: number,
-	}[],
+		name: string;
+		cooldown: number;
+	};
+	failedExpansions: Array<{
+		roomName: string;
+		time: number;
+	}>;
 };
 
 declare global {
@@ -32,13 +37,6 @@ declare global {
 		expand?: ExpandProcessMemory;
 	}
 }
-
-import hivemind from 'hivemind';
-import interShard from 'intershard';
-import NavMesh from 'utils/nav-mesh';
-import Process from 'process/process';
-import Squad from 'manager.squad';
-import stats from 'utils/stats';
 
 export default class ExpandProcess extends Process {
 	memory: ExpandProcessMemory;
@@ -53,8 +51,8 @@ export default class ExpandProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
+	constructor(parameters, data) {
+		super(parameters, data);
 
 		if (!Memory.strategy) {
 			Memory.strategy = {};
@@ -87,7 +85,7 @@ export default class ExpandProcess extends Process {
 
 		const hasFreeControlLevels = ownedRooms < Game.gcl.level;
 		const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
-		const longTermCpuUsage = stats.getStat('cpu_total', 10000) ? stats.getStat('cpu_total', 10000) / Game.cpu.limit : shortTermCpuUsage;
+		const longTermCpuUsage = stats.getStat('cpu_total', 10_000) ? stats.getStat('cpu_total', 10_000) / Game.cpu.limit : shortTermCpuUsage;
 
 		const canExpand = hasFreeControlLevels &&
 			shortTermCpuUsage < cpuLimit &&
@@ -174,8 +172,8 @@ export default class ExpandProcess extends Process {
 			const distance = Game.map.getRoomLinearDistance(info.roomName, failedAttempt.roomName);
 			let multiplier = 1;
 			const elapsedTicks = Game.time - failedAttempt.time;
-			if (elapsedTicks > 1000000) continue;
-			if (elapsedTicks > 100000) multiplier = 1 - ((elapsedTicks - 100000) / 900000);
+			if (elapsedTicks > 1_000_000) continue;
+			if (elapsedTicks > 100_000) multiplier = 1 - ((elapsedTicks - 100_000) / 900_000);
 
 			if (distance === 0) score -= multiplier;
 			else if (distance < 6) score -= multiplier / (distance + 1);
@@ -335,7 +333,7 @@ export default class ExpandProcess extends Process {
 			if (room.controller.level < 4) continue;
 			if (room.name === info.spawnRoom || room.name === info.roomName) continue;
 			if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) continue;
-			if (room.getStoredEnergy() < 50000) continue;
+			if (room.getStoredEnergy() < 50_000) continue;
 
 			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
 			if (!path || path.incomplete) continue;
@@ -353,7 +351,7 @@ export default class ExpandProcess extends Process {
 
 			info.supportingRooms.push(room.name);
 			activeSquads[squadName] = true;
-		};
+		}
 
 		// Remove support squads from older rooms.
 		// @todo This should no longer be necessary when the code in stopExpansion
@@ -405,7 +403,7 @@ export default class ExpandProcess extends Process {
 		}
 
 		const structures = room.find(FIND_STRUCTURES, {
-			filter: s => (OBSTACLE_OBJECT_TYPES as string[]).indexOf(s.structureType) > -1 || (s.structureType === STRUCTURE_RAMPART && !s.my),
+			filter: s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType) || (s.structureType === STRUCTURE_RAMPART && !s.my),
 		});
 		for (const structure of structures) {
 			matrix.set(structure.pos.x, structure.pos.y, 255);
@@ -587,18 +585,18 @@ export default class ExpandProcess extends Process {
 
 		// Destroy nuker for some extra resources.
 		// Make sure terminal is somewhat empty beforehand.
-		if (room.terminal && room.terminal.store.getUsedCapacity() > 100000) return;
+		if (room.terminal && room.terminal.store.getUsedCapacity() > 100_000) return;
 		if (room.nuker) room.nuker.destroy();
 
 		// Terminal needs to be mostly empty and contain mostly energy.
-		if (room.terminal && room.terminal.store.getUsedCapacity() > 10000) return;
+		if (room.terminal && room.terminal.store.getUsedCapacity() > 10_000) return;
 		if (room.terminal && room.terminal.store.getUsedCapacity() > 0 && room.terminal.store.energy / room.terminal.store.getUsedCapacity() < 0.8) return;
 
 		// Alright, this is it, flipping the switch!
 		room.controller.unclaim();
 		_.each(
 			_.filter(room.find(FIND_MY_CREEPS), creep => creep.memory.singleRoom === room.name),
-			creep => creep.suicide()
+			creep => creep.suicide(),
 		);
 	}
 }

@@ -1,9 +1,9 @@
 /* global PowerCreep POWER_CREEP_MAX_LEVEL POWER_CLASS POWER_INFO
 PWR_OPERATE_FACTORY */
 
+import Process from 'process/process';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import Process from 'process/process';
 
 const powerNames = {
 	[PWR_DISRUPT_SOURCE]: 'PWR_DISRUPT_SOURCE',
@@ -114,9 +114,7 @@ export default class ManagePowerCreepsProcess extends Process {
 	}
 
 	getFactoryLevelDistribution(): Record<number, number> {
-		return cache.inObject(this, 'facLevelDist', 1, () => {
-			return _.countBy(Game.powerCreeps, c => (c.powers[PWR_OPERATE_FACTORY] || {}).level || 0);
-		});
+		return cache.inObject(this, 'facLevelDist', 1, () => _.countBy(Game.powerCreeps, c => (c.powers[PWR_OPERATE_FACTORY] || {}).level || 0));
 	}
 
 	createNewPowerCreep() {
@@ -135,4 +133,4 @@ export default class ManagePowerCreepsProcess extends Process {
 		// Fallback to numbered names.
 		return 'Op' + _.size(_.filter(Game.powerCreeps, creep => creep.name.startsWith('Op')));
 	}
-};
+}

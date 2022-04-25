@@ -11,7 +11,7 @@ declare global {
 	type RemotePathMemory = {
 		generated: number;
 		path: string;
-	}
+	};
 }
 
 export default class RemotePathManager {
@@ -47,7 +47,7 @@ export default class RemotePathManager {
 			const result = PathFinder.search(sourcePosition, {pos: storagePos, range: 1}, {
 				plainCost: 2,
 				swampCost: 10,
-				maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
+				maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
 				roomCallback: roomName => cache.inHeap('remotePathManagerCostMatrix:' + roomName, 1000, () => {
 					const roomIntel = getRoomIntel(roomName);
 

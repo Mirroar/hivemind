@@ -29,7 +29,7 @@ function getCostMatrix(roomName, options?: any): CostMatrix {
 		() => {
 			const roomIntel = getRoomIntel(roomName);
 			return roomIntel.getCostMatrix();
-		}
+		},
 	) : new PathFinder.CostMatrix();
 
 	if (matrix && options.singleRoom && hivemind.segmentMemory.isReady()) {
@@ -39,22 +39,18 @@ function getCostMatrix(roomName, options?: any): CostMatrix {
 		matrix = cache.inHeap(
 			cacheKey,
 			500,
-			() => {
-				return generateSingleRoomCostMatrix(matrix, roomName);
-			}
+			() => generateSingleRoomCostMatrix(matrix, roomName),
 		);
 	}
 
-	if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine()  && Game.rooms[roomName].defense.getEnemyStrength() > 0 && !options.ignoreMilitary) {
+	if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine() && Game.rooms[roomName].defense.getEnemyStrength() > 0 && !options.ignoreMilitary) {
 		// Discourage unprotected areas when enemies are in the room.
 		cacheKey += ':inCombat';
 
 		matrix = cache.inHeap(
 			cacheKey,
 			20,
-			() => {
-				return generateCombatCostMatrix(matrix, roomName);
-			}
+			() => generateCombatCostMatrix(matrix, roomName),
 		);
 	}
 
@@ -127,7 +123,7 @@ function generateCombatCostMatrix(matrix, roomName) {
 		newMatrix.set(pos.x, pos.y, value + 10);
 
 		// Add available adjacent tiles.
-		handleMapArea(pos.x, pos.y, (x, y,) => {
+		handleMapArea(pos.x, pos.y, (x, y) => {
 			if (matrix.get(x, y) > 100) return;
 			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
@@ -249,6 +245,6 @@ function markBuildings(roomName, structures, constructionSites, roadCallback, bl
 }
 
 export {
-  getCostMatrix,
-  markBuildings,
-}
+	getCostMatrix,
+	markBuildings,
+};

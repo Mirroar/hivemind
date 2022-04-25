@@ -1,19 +1,17 @@
 /* global RoomPosition MOVE ATTACK HEAL RANGED_ATTACK ATTACK_POWER
 RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
-declare global {
-	interface RoomMemory {
-		recentBrawler?: {
-			[key: string]: number,
-		}
-	}
-}
-
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
+
+declare global {
+	interface RoomMemory {
+		recentBrawler?: Record<string, number>;
+	}
+}
 
 const RESPONSE_NONE = 0;
 const RESPONSE_MINI_BRAWLER = 1;
@@ -86,7 +84,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 				parts: {},
 				damage: 0,
 				heal: 0,
-			}
+			};
 
 			for (const roomName of operation.getRoomsOnPath()) {
 				const roomMemory = Memory.rooms[pos.roomName];
@@ -265,10 +263,10 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		if (Game.time - targetRoom.memory.isReclaimableSince < 2000) return false;
 		if (!targetRoom.roomPlanner) return false;
 
-		const remoteDefense = _.filter(Game.creepsByRole['brawler'], (creep: Creep) => creep.memory.target === encodePosition(targetRoom.roomPlanner.getRoomCenter())).length;
+		const remoteDefense = _.filter(Game.creepsByRole.brawler, (creep: Creep) => creep.memory.target === encodePosition(targetRoom.roomPlanner.getRoomCenter())).length;
 		if (remoteDefense > 3) return false;
 
-		const route = cache.inHeap('reclaimPath:' + targetRoom.name + '.' +  room.name, 100, () => {
+		const route = cache.inHeap('reclaimPath:' + targetRoom.name + '.' + room.name, 100, () => {
 			if (!this.navMesh) this.navMesh = new NavMesh();
 			return this.navMesh.findPath(room.roomPlanner.getRoomCenter(), targetRoom.roomPlanner.getRoomCenter(), {maxPathLength: 700});
 		});
@@ -331,7 +329,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxAttackParts && {[ATTACK]: maxAttackParts}
+			maxAttackParts && {[ATTACK]: maxAttackParts},
 		);
 	}
 
@@ -339,7 +337,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.35, [HEAL]: 0.15},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxAttackParts && {[RANGED_ATTACK]: maxAttackParts}
+			maxAttackParts && {[RANGED_ATTACK]: maxAttackParts},
 		);
 	}
 
@@ -347,21 +345,21 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxAttackParts && {[ATTACK]: maxAttackParts}
+			maxAttackParts && {[ATTACK]: maxAttackParts},
 		);
 	}
 
 	getRangedCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getHealCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [HEAL]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -453,4 +451,4 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 		hivemind.log('creeps', room.name).info('Spawning new brawler', name, 'to defend', position);
 	}
-};
+}

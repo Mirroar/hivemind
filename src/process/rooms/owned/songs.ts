@@ -1,10 +1,10 @@
+import Process from 'process/process';
+
 declare global {
 	interface RoomMemory {
-		roleplay,
+		roleplay;
 	}
 }
-
-import Process from 'process/process';
 
 /* eslint-disable array-element-newline */
 const songs = {
@@ -53,9 +53,9 @@ export default class RoomSongsProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 
 		// Initialize memory.
 		if (!this.room.memory.roleplay) this.room.memory.roleplay = {};
@@ -84,5 +84,5 @@ export default class RoomSongsProcess extends Process {
 
 		const creep = creeps[Math.floor(Math.random() * creeps.length)];
 		creep.say(song.lines[this.memory.currentBeat], true);
-	}
+	};
 }

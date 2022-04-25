@@ -1,20 +1,19 @@
 /* global STRUCTURE_RAMPART ATTACK HEAL CLAIM MOVE TOUGH CARRY
 FIND_STRUCTURES LOOK_STRUCTURES */
 
-declare global {
-	interface RoomMemory {
-		defense?: any,
-	}
-}
-
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
+
+declare global {
+	interface RoomMemory {
+		defense?: any;
+	}
+}
 
 // @todo Evacuate room when walls are breached, or when spawns are gone, ...
 // @todo Destroy terminal and storage if not hope of recovery, then unclaim
 
 export default class RoomDefense {
-
 	roomName: string;
 	room: Room;
 	memory;
@@ -38,7 +37,7 @@ export default class RoomDefense {
 		if (!this.room.roomPlanner) return true;
 
 		const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
-		const requiredHits = 25000 * this.room.controller.level * this.room.controller.level;
+		const requiredHits = 25_000 * this.room.controller.level * this.room.controller.level;
 
 		for (const pos of rampartPositions) {
 			// Check if there's a rampart here already.
@@ -106,7 +105,7 @@ export default class RoomDefense {
 		const allowed = [];
 		const forbidden = [];
 		_.each(this.room.enemyCreeps, (creeps, username) => {
-			const numInRoom = _.size(_.filter(creeps, creep => this.isInRoom(creep)));
+			const numberInRoom = _.size(_.filter(creeps, creep => this.isInRoom(creep)));
 
 			for (const creep of creeps) {
 				this.recordCreepStatus(creep);
@@ -117,7 +116,7 @@ export default class RoomDefense {
 					continue;
 				}
 
-				if (numInRoom >= hivemind.settings.get('maxVisitorsPerUser') && !this.isInRoom(creep)) {
+				if (numberInRoom >= hivemind.settings.get('maxVisitorsPerUser') && !this.isInRoom(creep)) {
 					// Extra creeps outside are denied entry.
 					forbidden.push(creep);
 					continue;

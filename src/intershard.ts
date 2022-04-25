@@ -1,12 +1,12 @@
 /* global InterShardMemory */
 
+import {encodePosition} from 'utils/serialization';
+
 declare global {
 	interface Memory {
-		interShardReplacement: any,
+		interShardReplacement: any;
 	}
 }
-
-import {encodePosition} from 'utils/serialization';
 
 const interShard = {
 

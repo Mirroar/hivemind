@@ -1,6 +1,8 @@
 /* global Source Mineral StructureKeeperLair LOOK_TERRAIN
 FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_LINK STRUCTURE_KEEPER_LAIR */
 
+import cache from 'utils/cache';
+
 declare global {
 	interface Source {
 		harvesters: HarvesterCreep[];
@@ -23,8 +25,6 @@ declare global {
 		isDangerous: () => boolean;
 	}
 }
-
-import cache from 'utils/cache';
 
 // Define quick access property source.harvesters.
 Object.defineProperty(Source.prototype, 'harvesters', {
@@ -199,7 +199,7 @@ Source.prototype.getNearbyLink = function (this: Source) {
  *   The lair protecting this source.
  */
 const getNearbyLair = function (this: Source | Mineral) {
-	const lairId = cache.inHeap('lair:' + this.id, 150000, () => {
+	const lairId = cache.inHeap('lair:' + this.id, 150_000, () => {
 		// @todo Could use old data and just check if object still exits.
 		// Check if there is a lair nearby.
 		const structures = this.pos.findInRange(FIND_STRUCTURES, 10, {

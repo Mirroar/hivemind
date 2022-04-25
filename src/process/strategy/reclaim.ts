@@ -1,24 +1,24 @@
-declare global {
-  interface RoomMemory {
-    isReclaimableSince: number,
-  }
-}
-
-import hivemind from 'hivemind';
 import Process from 'process/process';
+import hivemind from 'hivemind';
+
+declare global {
+	interface RoomMemory {
+		isReclaimableSince: number;
+	}
+}
 
 let lastReclaimCleanup = Game.time;
 
 export default class ReclaimProcess extends Process {
-  /**
+	/**
    * Sends builders to destroyed rooms we still have control over.
    */
-  run() {
-    this.markReclaimableRooms();
-    this.cleanReclaimMemory();
-  }
+	run() {
+		this.markReclaimableRooms();
+		this.cleanReclaimMemory();
+	}
 
-  /**
+	/**
    * Keeps a record of reclaimable rooms.
    */
   markReclaimableRooms() {

@@ -2,10 +2,10 @@ import hivemind from 'hivemind';
 
 declare global {
 	type CacheEntry<T> = {
-		data: T,
-		maxAge: number,
-		created: number,
-	}
+		data: T;
+		maxAge: number;
+		created: number;
+	};
 }
 
 const heapCache = {};

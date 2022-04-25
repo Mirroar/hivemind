@@ -22,5 +22,5 @@ function getUsername(): string {
 }
 
 export {
-  getUsername,
-}
+	getUsername,
+};

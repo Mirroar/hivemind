@@ -1,7 +1,7 @@
 /* global RESOURCE_ENERGY */
 
-import hivemind from 'hivemind';
 import Process from 'process/process';
+import hivemind from 'hivemind';
 import utilities from 'utilities';
 
 /**
@@ -21,7 +21,7 @@ export default class ResourcesProcess extends Process {
 			const maxAmount = room.getCurrentResourceAmount(best.resourceType);
 			const tradeVolume = Math.ceil(Math.min(maxAmount * 0.9, 5000));
 			if (this.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
-				let amount = Math.min(terminal.store[best.resourceType], 50000);
+				let amount = Math.min(terminal.store[best.resourceType], 50_000);
 				if (best.resourceType === RESOURCE_ENERGY) {
 					amount -= Game.market.calcTransactionCost(amount, best.source, best.target);
 				}
@@ -75,7 +75,7 @@ export default class ResourcesProcess extends Process {
 
 				// Make sure we have enough to send (while evacuating).
 				if (this.roomNeedsTerminalSpace(room) && (roomState.totalResources[resourceType] || 0) < 100) continue;
-				if (resourceType === RESOURCE_ENERGY && (roomState.totalResources[resourceType] || 0) < 10000) continue;
+				if (resourceType === RESOURCE_ENERGY && (roomState.totalResources[resourceType] || 0) < 10_000) continue;
 
 				// Look for other rooms that are low on this resource.
 				_.each(rooms, (roomState2: any, roomName2: string) => {
@@ -99,7 +99,7 @@ export default class ResourcesProcess extends Process {
 
 					const option = {
 						priority: 3,
-						weight: (((roomState.totalResources[resourceType] || 0) - (roomState2.totalResources[resourceType] || 0)) / 100000) - Game.map.getRoomLinearDistance(roomName, roomName2),
+						weight: (((roomState.totalResources[resourceType] || 0) - (roomState2.totalResources[resourceType] || 0)) / 100_000) - Game.map.getRoomLinearDistance(roomName, roomName2),
 						resourceType,
 						source: roomName,
 						target: roomName2,
@@ -147,7 +147,7 @@ export default class ResourcesProcess extends Process {
 
 			const option = {
 				priority: 3,
-				weight: (roomState.totalResources[resourceType] / 100000) - Game.map.getRoomLinearDistance(room.name, roomName2),
+				weight: (roomState.totalResources[resourceType] / 100_000) - Game.map.getRoomLinearDistance(room.name, roomName2),
 				resourceType,
 				source: room.name,
 				target: roomName2,
@@ -172,7 +172,7 @@ export default class ResourcesProcess extends Process {
 		if (resourceType === RESOURCE_POWER) return 10;
 
 		const tier = resourceType.length;
-		if (resourceType.indexOf('G') !== -1) {
+		if (resourceType.includes('G')) {
 			return tier + 3;
 		}
 
@@ -198,8 +198,8 @@ export default class ResourcesProcess extends Process {
 	}
 
 	roomNeedsTerminalSpace(room: Room): boolean {
-		return room.isEvacuating() ||
-			(room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3) ||
-			(room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
+		return room.isEvacuating()
+			|| (room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3)
+			|| (room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
 	}
 }

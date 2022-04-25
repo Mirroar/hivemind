@@ -1,6 +1,10 @@
 /* global RoomPosition FIND_FLAGS LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
 STRUCTURE_RAMPART */
 
+import RemoteMiningOperation from 'operation/remote-mining';
+import Role from 'role/role';
+import {encodePosition} from 'utils/serialization';
+
 declare global {
 	interface DismantlerCreep extends Creep {
 		memory: DismantlerCreepMemory;
@@ -16,13 +20,9 @@ declare global {
 
 	interface DismantlerCreepHeapMemory extends CreepHeapMemory {
 		finishedPositions: string[];
-		disabledNotifications: Id<Structure>[];
+		disabledNotifications: Array<Id<Structure>>;
 	}
 }
-
-import RemoteMiningOperation from 'operation/remote-mining';
-import Role from 'role/role';
-import {encodePosition} from 'utils/serialization';
 
 export default class DismantlerRole extends Role {
 	/**
@@ -43,7 +43,6 @@ export default class DismantlerRole extends Role {
 		if (!creep.heapMemory.disabledNotifications) creep.heapMemory.disabledNotifications = [];
 
 		if (!this.performOperationDismantle(creep)) this.performDismantle(creep);
-		return;
 	}
 
 	/**
@@ -69,12 +68,12 @@ export default class DismantlerRole extends Role {
 		const targetPositions = creep.operation.getDismantlePositions(creep.memory.source);
 		let target;
 		for (const pos of targetPositions) {
-			if (creep.heapMemory.finishedPositions.indexOf(encodePosition(pos)) !== -1) continue;
+			if (creep.heapMemory.finishedPositions.includes(encodePosition(pos))) continue;
 
 			if (pos.roomName === creep.pos.roomName) {
 				const structures = _.filter(
 					pos.lookFor(LOOK_STRUCTURES),
-					(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
+					(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType) || (s.structureType === STRUCTURE_RAMPART && !s.my),
 				);
 
 				if (structures.length === 0) {
@@ -99,17 +98,17 @@ export default class DismantlerRole extends Role {
 			return true;
 		}
 
-		const structures = _.filter(
+		const structure = _.find(
 			target.lookFor(LOOK_STRUCTURES),
-			(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).indexOf(s.structureType) !== -1 || (s.structureType === STRUCTURE_RAMPART && !s.my)
+			(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType) || (s.structureType === STRUCTURE_RAMPART && !s.my),
 		);
 
-		if (!creep.heapMemory.disabledNotifications.includes(structures[0].id)) {
-			creep.heapMemory.disabledNotifications.push(structures[0].id);
-			structures[0].notifyWhenAttacked(false);
+		if (!creep.heapMemory.disabledNotifications.includes(structure.id)) {
+			creep.heapMemory.disabledNotifications.push(structure.id);
+			structure.notifyWhenAttacked(false);
 		}
 
-		creep.dismantle(structures[0]);
+		creep.dismantle(structure);
 		return true;
 	}
 

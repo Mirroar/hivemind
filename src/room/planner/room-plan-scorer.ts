@@ -2,23 +2,23 @@ import RoomPlan from 'room/planner/room-plan';
 import {getRoomIntel} from 'room-intel';
 
 export default class RoomPlanScorer {
-  constructor (protected readonly roomName: string) {}
+	constructor(protected readonly roomName: string) {}
 
-  getScore(plan: RoomPlan): {[key: string]: number} {
-    let score: {[key: string]: number} = {};
+	getScore(plan: RoomPlan): Record<string, number> {
+		const score: Record<string, number> = {};
 
-    score.structures = this.getPlannedBuildingsScore(plan);
-    score.maintenance = this.getRequiredMaintenanceScore(plan);
-    score.towers = this.getAverageTowerScore(plan);
-    score.distance = this.getTravelDistancesScore(plan);
+		score.structures = this.getPlannedBuildingsScore(plan);
+		score.maintenance = this.getRequiredMaintenanceScore(plan);
+		score.towers = this.getAverageTowerScore(plan);
+		score.distance = this.getTravelDistancesScore(plan);
 
-    // @todo Score unprotected structures.
-    // @todo Score susceptibility to nukes.
+		// @todo Score unprotected structures.
+		// @todo Score susceptibility to nukes.
 
-    score.total = _.sum(score);
+		score.total = _.sum(score);
 
-    return score;
-  }
+		return score;
+	}
 
   getPlannedBuildingsScore(plan: RoomPlan): number {
     let score = 0;

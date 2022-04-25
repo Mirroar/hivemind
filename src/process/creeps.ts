@@ -1,6 +1,6 @@
+import Process from 'process/process';
 import CreepManager from 'creep-manager';
 import hivemind from 'hivemind';
-import Process from 'process/process';
 import utilities from 'utilities';
 
 import brawlerRole from 'role/brawler';
@@ -27,6 +27,9 @@ import scoutRole from 'role/scout';
 import transporterRole from 'role/transporter';
 import unassignedRole from 'role/unassigned';
 import upgraderRole from 'role/upgrader';
+
+// Power creep roles.
+import OperatorRole from 'role/power-creep/operator';
 
 // Normal creep roles.
 const creepRoles = {
@@ -56,9 +59,6 @@ const creepRoles = {
 	'upgrader': upgraderRole,
 };
 
-// Power creep roles.
-import OperatorRole from 'role/power-creep/operator';
-
 export default class CreepsProcess extends Process {
 	creepManager: CreepManager;
 	powerCreepManager: CreepManager;
@@ -72,8 +72,8 @@ export default class CreepsProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
+	constructor(parameters, data) {
+		super(parameters, data);
 
 		this.creepManager = new CreepManager();
 		for (const roleName in creepRoles) {

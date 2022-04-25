@@ -1,21 +1,19 @@
 /* global Creep ATTACK RANGED_ATTACK HEAL MOVE TOUGH BOOSTS
 ATTACK_POWER HEAL_POWER RANGED_ATTACK_POWER RANGED_HEAL_POWER */
 
+import hivemind from 'hivemind';
+
 declare global {
 	interface Creep {
-		isDangerous: () => boolean,
-		getEffectiveHealth: () => number,
-		getDamageCapacity: (range: number) => number,
-		getHealCapacity: (range: number) => number,
-		getEffectiveDamage: (potentialDamage: number) => number,
+		isDangerous: () => boolean;
+		getEffectiveHealth: () => number;
+		getDamageCapacity: (range: number) => number;
+		getHealCapacity: (range: number) => number;
+		getEffectiveDamage: (potentialDamage: number) => number;
 	}
 }
 
-import hivemind from 'hivemind';
-
-const stompingCreeps: {
-	[id: string]: boolean,
-} = {};
+const stompingCreeps: Record<string, boolean> = {};
 
 /**
  * Determines if a creep is dangerous and should be attacked.
@@ -102,7 +100,7 @@ Creep.prototype.getDamageCapacity = function (this: Creep, range) {
 	return total;
 };
 
-Creep.prototype.getHealCapacity = function (this:Creep, range) {
+Creep.prototype.getHealCapacity = function (this: Creep, range) {
 	// @todo Cache for one tick?
 	let total = 0;
 	if (range > 3) return total;

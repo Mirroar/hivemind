@@ -1,7 +1,7 @@
 type LinkAndDelta = {
-	link: StructureLink,
-	delta: number,
-}
+	link: StructureLink;
+	delta: number;
+};
 
 export default class LinkNetwork {
 	links: StructureLink[];
@@ -26,7 +26,7 @@ export default class LinkNetwork {
 		this.energy = 0;
 		this.minEnergy = 0;
 		this.maxEnergy = 0;
-	};
+	}
 
 	/**
 	 * Adds a link with specified desired energy level to the network.

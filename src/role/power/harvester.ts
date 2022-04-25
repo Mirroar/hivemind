@@ -3,14 +3,14 @@ POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
 FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
 POWER_BANK_HIT_BACK */
 
-declare global {
-	interface Creep {
-		_hasAttacked: boolean,
-	}
-}
-
 import hivemind from 'hivemind';
 import Role from 'role/role';
+
+declare global {
+	interface Creep {
+		_hasAttacked: boolean;
+	}
+}
 
 export default class PowerHarvesterRole extends Role {
 	constructor() {

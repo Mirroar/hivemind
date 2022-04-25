@@ -1,13 +1,13 @@
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
-declare global {
-	interface RoomMemory {
-		lastClaim?: any,
-	}
-}
-
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
+
+declare global {
+	interface RoomMemory {
+		lastClaim?: any;
+	}
+}
 
 export default class ClaimerSpawnRole extends SpawnRole {
 	/**
@@ -112,4 +112,4 @@ export default class ClaimerSpawnRole extends SpawnRole {
 
 		operation.addResourceCost(this.calculateBodyCost(body), RESOURCE_ENERGY);
 	}
-};
+}

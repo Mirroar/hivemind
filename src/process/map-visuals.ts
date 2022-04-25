@@ -1,8 +1,8 @@
 /* global RoomPosition */
 
+import Process from 'process/process';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import Process from 'process/process';
 import {deserializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
@@ -60,7 +60,7 @@ export default class MapVisualsProcess extends Process {
 
 		const intel = getRoomIntel(roomName);
 		const age = intel.getAge();
-		const color = age < 200 ? '#00ff00' : age < 2000 ? '#ffff00' : age < 10000 ? '#ff8888' : '#888888';
+		const color = age < 200 ? '#00ff00' : (age < 2000 ? '#ffff00' : age < 10_000 ? '#ff8888' : '#888888');
 
 		Game.map.visual.text('•', new RoomPosition(3, 3, roomName), {color, fontSize: 10});
 	}
@@ -126,11 +126,11 @@ export default class MapVisualsProcess extends Process {
 			// Multiple regions, all exits are connected.
 			for (const region of navInfo.regions) {
 				for (const exit of navInfo.exits) {
-					if (region.exits.indexOf(exit.id) === -1) continue;
+					if (!region.exits.includes(exit.id)) continue;
 
 					Game.map.visual.line(deserializePosition(region.center, roomName), deserializePosition(exit.center, roomName));
 				}
 			}
 		});
 	}
-};
+}

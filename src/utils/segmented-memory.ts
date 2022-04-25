@@ -1,22 +1,21 @@
 /* global RawMemory */
 
+import hivemind from 'hivemind';
+
 declare global {
 	interface Memory {
 		segmented: {
-			lastFullSave: number,
-			startSegment: number,
-			endSegment: number,
-		}
+			lastFullSave: number;
+			startSegment: number;
+			endSegment: number;
+		};
 	}
 }
-
-import hivemind from 'hivemind';
 
 const maxActiveSegments = 10;
 const maxSegmentLength = 100 * 1000;
 
 export default class SegmentedMemory {
-
 	_isReady: boolean;
 	memory;
 	data;
@@ -88,7 +87,7 @@ export default class SegmentedMemory {
 					this.data[key] = value;
 				});
 			}
-			catch (error) {
+			catch {
 				hivemind.log('memory').error('Failed to load segmented memory from segment ' + i);
 			}
 
@@ -217,4 +216,4 @@ export default class SegmentedMemory {
 	getSavedSegmentsThisTick() {
 		return this.savedSegments?.length || 0;
 	}
-};
+}

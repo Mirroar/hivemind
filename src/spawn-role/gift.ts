@@ -14,7 +14,7 @@ export default class GiftSpawnRole extends SpawnRole {
 	getSpawnOptions(room: Room, options) {
 		// @todo This is unlikely to happen exactly when a spawn is idle.
 		if (Game.time % 123 !== 67) return;
-		if (room.getStoredEnergy() < 10000) return;
+		if (room.getStoredEnergy() < 10_000) return;
 		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return;
 
 		options.push({
@@ -37,7 +37,7 @@ export default class GiftSpawnRole extends SpawnRole {
 	getCreepBody(room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.2, [CARRY]: 0.8},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 

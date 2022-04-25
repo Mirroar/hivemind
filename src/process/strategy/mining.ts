@@ -1,5 +1,10 @@
 /* global PWR_OPERATE_SPAWN POWER_INFO */
 
+import Process from 'process/process';
+import hivemind from 'hivemind';
+import RemoteMiningOperation from 'operation/remote-mining';
+import stats from 'utils/stats';
+
 declare global {
 	interface StrategyMemory {
 		remoteHarvesting?: {
@@ -9,11 +14,6 @@ declare global {
 		};
 	}
 }
-
-import hivemind from 'hivemind';
-import Process from 'process/process';
-import RemoteMiningOperation from 'operation/remote-mining';
-import stats from 'utils/stats';
 
 export default class RemoteMiningProcess extends Process {
 	/**
@@ -25,8 +25,8 @@ export default class RemoteMiningProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
+	constructor(parameters, data) {
+		super(parameters, data);
 
 		if (!Memory.strategy) {
 			Memory.strategy = {};
@@ -75,13 +75,13 @@ export default class RemoteMiningProcess extends Process {
 			const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 4) + (room.controller.level >= 7 ? exploitFlags.length * 3 : 0);
 
 			// Increase spawn capacity if there's a power creep that can help.
-			const powerCreep = _.filter(Game.powerCreeps, creep => {
+			const powerCreep = _.find(Game.powerCreeps, creep => {
 				if (!creep.shard) return false;
 				if (creep.shard !== Game.shard.name) return false;
 				if (creep.pos.roomName !== room.name) return false;
 
 				return true;
-			})[0];
+			});
 			if (powerCreep) {
 				const operateSpawnLevel = (powerCreep.powers[PWR_OPERATE_SPAWN] || {}).level || 0;
 				if (operateSpawnLevel > 0) spawnCapacity /= POWER_INFO[PWR_OPERATE_SPAWN].effect[operateSpawnLevel - 1];
@@ -162,8 +162,8 @@ export default class RemoteMiningProcess extends Process {
 		}
 
 		// Check past CPU and bucket usage.
-		const longTermBucket = stats.getStat('bucket', 10000) || 10000;
-		const shortTermBucket = stats.getStat('bucket', 1000) || 10000;
+		const longTermBucket = stats.getStat('bucket', 10_000) || 10_000;
+		const shortTermBucket = stats.getStat('bucket', 1000) || 10_000;
 		const cpuUsage = stats.getStat('cpu_total', 1000) || 0.5;
 		if (longTermBucket >= 9500 && shortTermBucket >= 9500 && cpuUsage <= 0.95 * Game.cpu.limit) {
 			// We've been having bucket reserves and CPU cycles to spare.
@@ -195,7 +195,7 @@ export default class RemoteMiningProcess extends Process {
 
 		// Stop operations for rooms that are no longer selected.
 		_.each(Game.operationsByType.mining, op => {
-			if (memory.remoteHarvesting.rooms.indexOf(op.getRoom()) === -1) {
+			if (!memory.remoteHarvesting.rooms.includes(op.getRoom())) {
 				op.terminate();
 			}
 		});

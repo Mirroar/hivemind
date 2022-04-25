@@ -1,11 +1,9 @@
 declare global {
 	interface Memory {
 		logger: {
-			channelSettings: {
-				[channel: string]: {
-					disabled?: boolean;
-				};
-			};
+			channelSettings: Record<string, {
+				disabled?: boolean;
+			}>;
 		};
 	}
 }
@@ -191,5 +189,4 @@ export default class Logger {
 		console.log(prefix, ...args);
 		Game.notify(prefix + ' ' + args.join(' '));
 	}
-
 }

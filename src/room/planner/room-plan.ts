@@ -1,3 +1,6 @@
+import {packCoordList, unpackCoordListAsPosList} from 'utils/packrat';
+import {serializeCoords} from 'utils/serialization';
+
 declare global {
   type SerializedPlan = {
     [type: string]: string;
@@ -10,44 +13,39 @@ type PositionCache = {
   };
 };
 
-import {packCoordList, unpackCoordListAsPosList} from 'utils/packrat';
-import {serializeCoords} from 'utils/serialization';
-
 const structureSymbols = {
-  container: '⊔',
-  exit: '🚪',
-  extension: '⚬',
-  factory: '⚙',
-  lab: '🔬',
-  link: '🔗',
-  nuker: '☢',
-  observer: '👁',
-  powerSpawn: '⚡',
-  road: '·',
-  spawn: '⭕',
-  storage: '⬓',
-  terminal: '⛋',
-  tower: '⚔',
-  wall: '▦',
+	container: '⊔',
+	exit: '🚪',
+	extension: '⚬',
+	factory: '⚙',
+	lab: '🔬',
+	link: '🔗',
+	nuker: '☢',
+	observer: '👁',
+	powerSpawn: '⚡',
+	road: '·',
+	spawn: '⭕',
+	storage: '⬓',
+	terminal: '⛋',
+	tower: '⚔',
+	wall: '▦',
 };
 
 export default class RoomPlan {
   public readonly MAX_ROOM_LEVEL = 8;
 
-  public readonly roomName: string;
-  protected positionsByType: PositionCache;
+	public readonly roomName: string;
+	protected positionsByType: PositionCache;
 
-  constructor(roomName:string, input?: SerializedPlan) {
-    this.roomName = roomName;
-    this.positionsByType = {};
-    if (input) this.unserialize(input);
-  }
+	constructor(roomName: string, input?: SerializedPlan) {
+		this.roomName = roomName;
+		this.positionsByType = {};
+		if (input) this.unserialize(input);
+	}
 
-  serialize(): SerializedPlan {
-    return _.mapValues(this.positionsByType, function (positions: {[coords: number]: RoomPosition}) {
-      return packCoordList(_.values(positions));
-    });
-  }
+	serialize(): SerializedPlan {
+		return _.mapValues(this.positionsByType, (positions: Record<number, RoomPosition>) => packCoordList(_.values(positions)));
+	}
 
   unserialize(input: SerializedPlan) {
     this.positionsByType = _.mapValues(input, function (posList: string): {[coords: number]: RoomPosition} {
@@ -56,49 +54,49 @@ export default class RoomPlan {
         [coords: number]: RoomPosition;
       } = {};
 
-      for (const pos of positions) {
-        const coord = serializeCoords(pos.x, pos.y);
-        cache[coord] = pos;
-      }
+			for (const pos of positions) {
+				const coord = serializeCoords(pos.x, pos.y);
+				cache[coord] = pos;
+			}
 
-      return cache;
-    }, this);
-  }
+			return cache;
+		}, this);
+	}
 
-  addPosition(type: string, pos: RoomPosition) {
-    if (!this.positionsByType[type]) this.positionsByType[type] = {};
+	addPosition(type: string, pos: RoomPosition) {
+		if (!this.positionsByType[type]) this.positionsByType[type] = {};
 
-    this.positionsByType[type][serializeCoords(pos.x, pos.y)] = pos;
-  }
+		this.positionsByType[type][serializeCoords(pos.x, pos.y)] = pos;
+	}
 
-  removePosition(type: string, pos: RoomPosition) {
-    delete this.positionsByType[type][serializeCoords(pos.x, pos.y)];
-  }
+	removePosition(type: string, pos: RoomPosition) {
+		delete this.positionsByType[type][serializeCoords(pos.x, pos.y)];
+	}
 
-  removeAllPositions(type?: string) {
-    if (type) {
-      delete this.positionsByType[type];
-      return;
-    }
+	removeAllPositions(type?: string) {
+		if (type) {
+			delete this.positionsByType[type];
+			return;
+		}
 
-    this.positionsByType = {};
-  }
+		this.positionsByType = {};
+	}
 
-  hasPosition(type: string, pos: RoomPosition): boolean {
-    if (!this.positionsByType[type]) return false;
+	hasPosition(type: string, pos: RoomPosition): boolean {
+		if (!this.positionsByType[type]) return false;
 
-    return Boolean(this.positionsByType[type][serializeCoords(pos.x, pos.y)]);
-  }
+		return Boolean(this.positionsByType[type][serializeCoords(pos.x, pos.y)]);
+	}
 
-  getPositions(type: string): RoomPosition[] {
-    return _.values(this.positionsByType[type]);
-  }
+	getPositions(type: string): RoomPosition[] {
+		return _.values(this.positionsByType[type]);
+	}
 
-  getPositionTypes(): string[] {
-    return _.keys(this.positionsByType);
-  }
+	getPositionTypes(): string[] {
+		return _.keys(this.positionsByType);
+	}
 
-  /**
+	/**
    * Determines whether more of a certain structure could be placed.
    *
    * @param {string} structureType
@@ -107,11 +105,11 @@ export default class RoomPlan {
    * @return {boolean}
    *   True if the current controller level allows more of this structure.
    */
-  canPlaceMore(structureType: StructureConstant): boolean {
-    return this.remainingStructureCount(structureType) > 0;
-  };
+	canPlaceMore(structureType: StructureConstant): boolean {
+		return this.remainingStructureCount(structureType) > 0;
+	}
 
-  /**
+	/**
    * Determines the number of structures of a type that could be placed.
    *
    * @param {string} structureType
@@ -120,53 +118,53 @@ export default class RoomPlan {
    * @return {number}
    *   The number of structures of the given type that may still be placed.
    */
-  remainingStructureCount(structureType: StructureConstant): number {
-    return CONTROLLER_STRUCTURES[structureType][this.MAX_ROOM_LEVEL] - _.size(this.getPositions(structureType) || []);
-  }
+	remainingStructureCount(structureType: StructureConstant): number {
+		return CONTROLLER_STRUCTURES[structureType][this.MAX_ROOM_LEVEL] - _.size(this.getPositions(structureType) || []);
+	}
 
-  /**
+	/**
    * Draws a simple representation of the room layout using RoomVisuals.
    */
-  visualize() {
-    const visual = new RoomVisual(this.roomName);
-    for (const type in this.positionsByType) {
-      if (!structureSymbols[type]) continue;
+	visualize() {
+		const visual = new RoomVisual(this.roomName);
+		for (const type in this.positionsByType) {
+			if (!structureSymbols[type]) continue;
 
-      const positions = this.positionsByType[type];
-      for (const pos of _.values<RoomPosition>(positions)) {
-        visual.text(structureSymbols[type], pos.x, pos.y + 0.2);
-      }
-    }
+			const positions = this.positionsByType[type];
+			for (const pos of _.values<RoomPosition>(positions)) {
+				visual.text(structureSymbols[type], pos.x, pos.y + 0.2);
+			}
+		}
 
-    for (const pos of _.values<RoomPosition>(this.positionsByType.rampart || [])) {
-      visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, {fill: '#0f0', opacity: 0.2});
-    }
-  }
+		for (const pos of _.values<RoomPosition>(this.positionsByType.rampart || [])) {
+			visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, {fill: '#0f0', opacity: 0.2});
+		}
+	}
 
-  /**
+	/**
    * Gets a cost matrix representing this room when it's fully built.
    *
    * @return {PathFinder.CostMatrix}
    *   The requested cost matrix.
    */
-  createNavigationMatrix(): CostMatrix {
-    const matrix = new PathFinder.CostMatrix();
+	createNavigationMatrix(): CostMatrix {
+		const matrix = new PathFinder.CostMatrix();
 
-    for (const locationType of this.getPositionTypes()) {
-      if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
+		for (const locationType of this.getPositionTypes()) {
+			if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
 
-      for (const pos of this.getPositions(locationType)) {
-        if (locationType === 'road') {
-          if (matrix.get(pos.x, pos.y) === 0) {
-            matrix.set(pos.x, pos.y, 1);
-          }
-        }
-        else {
-          matrix.set(pos.x, pos.y, 255);
-        }
-      }
-    }
+			for (const pos of this.getPositions(locationType)) {
+				if (locationType === 'road') {
+					if (matrix.get(pos.x, pos.y) === 0) {
+						matrix.set(pos.x, pos.y, 1);
+					}
+				}
+				else {
+					matrix.set(pos.x, pos.y, 255);
+				}
+			}
+		}
 
-    return matrix;
-  };
+		return matrix;
+	}
 }

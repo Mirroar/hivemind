@@ -190,7 +190,6 @@ export default class HaulerRole extends Role {
 			// Dropoff spot reached, drop energy.
 			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
 			creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
-			return;
 		}
 	}
 
@@ -355,9 +354,7 @@ export default class HaulerRole extends Role {
 		if (creep.memory.cachedPath && buildRoads) {
 			if (this.buildRoadOnCachedPath(creep)) return true;
 		}
-		else {
-			if (this.repairNearby(creep)) return true;
-		}
+		else if (this.repairNearby(creep)) return true;
 
 		// Check source container and repair that, too.
 		if (this.ensureRemoteHarvestContainerIsBuilt(creep)) return true;

@@ -1,21 +1,21 @@
 /* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
+import hivemind from 'hivemind';
+import Role from 'role/role';
+
 declare global {
 	interface PestCreep extends Creep {
-		memory: PestCreepMemory,
-		heapMemory: PestCreepHeapMemory,
+		memory: PestCreepMemory;
+		heapMemory: PestCreepHeapMemory;
 	}
 
 	interface PestCreepMemory extends CreepMemory {
-		role: 'pest',
+		role: 'pest';
 	}
 
 	interface PestCreepHeapMemory extends CreepHeapMemory {
 	}
 }
-
-import hivemind from 'hivemind';
-import Role from 'role/role';
 
 export default class PestRole extends Role {
 	constructor() {
@@ -38,4 +38,4 @@ export default class PestRole extends Role {
 		const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
 		if (creep.interRoomTravel(targetPosition)) return;
 	}
-};
+}

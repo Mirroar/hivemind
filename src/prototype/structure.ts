@@ -33,9 +33,7 @@ declare global {
 }
 
 // @todo Periodically clear heap memory of deceased creeps.
-const structureHeapMemory: {
-	[id: string]: StructureHeapMemory,
-} = {};
+const structureHeapMemory: Record<string, StructureHeapMemory> = {};
 
 // Define quick access property creep.heapMemory.
 Object.defineProperty(Structure.prototype, 'heapMemory', {
@@ -121,7 +119,7 @@ StructureSpawn.prototype.getSpawnDirections = function (this: StructureSpawn): D
 			const position = new RoomPosition(x, y, this.pos.roomName);
 			if (!this.room.roomPlanner.isPlannedLocation(position, STRUCTURE_ROAD)) return;
 			if (this.room.roomPlanner.isPlannedLocation(position, 'bay_center')) return;
-			if (_.filter(position.lookFor(LOOK_STRUCTURES), s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType)).length > 0) return;
+			if (_.some(position.lookFor(LOOK_STRUCTURES), s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType))) return;
 
 			directions.push(this.pos.getDirectionTo(position));
 		});
@@ -130,7 +128,7 @@ StructureSpawn.prototype.getSpawnDirections = function (this: StructureSpawn): D
 
 		return directions;
 	});
-}
+};
 
 /**
  * Calculates relative tower power at a certain range.

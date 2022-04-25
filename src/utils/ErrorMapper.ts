@@ -1,4 +1,4 @@
-import { SourceMapConsumer } from "source-map";
+import {SourceMapConsumer} from 'source-map';
 
 export class ErrorMapper {
 	// Cache consumer
@@ -8,16 +8,15 @@ export class ErrorMapper {
 		if (this._consumer == null) {
 			let sourceMap;
 			try {
-				sourceMap = require("main.map.js");
+				sourceMap = require('main.map.js');
 				this._consumer = new SourceMapConsumer(sourceMap);
 			}
-			catch (e) {
+			catch {
 				try {
-					sourceMap = require("main.js.map");
-				this._consumer = new SourceMapConsumer(sourceMap);
+					sourceMap = require('main.js.map');
+					this._consumer = new SourceMapConsumer(sourceMap);
 				}
-				catch (e) {
-				}
+				catch {}
 			}
 		}
 
@@ -25,7 +24,7 @@ export class ErrorMapper {
 	}
 
 	// Cache previously mapped traces to improve performance
-	public static cache: { [key: string]: string } = {};
+	public static cache: Record<string, string> = {};
 
 	/**
 	 * Generates a stack trace using a source map generate original symbol names.
@@ -37,7 +36,7 @@ export class ErrorMapper {
 	 * @returns {string} The source-mapped stack trace
 	 */
 	public static sourceMappedStackTrace(error: Error | string): string {
-		const stack: string = error instanceof Error ? (error.stack as string) : error;
+		const stack: string = error instanceof Error ? (error.stack) : error;
 		if (Object.prototype.hasOwnProperty.call(this.cache, stack)) {
 			return this.cache[stack];
 		}
@@ -48,10 +47,10 @@ export class ErrorMapper {
 		let outStack = error.toString();
 
 		while ((match = re.exec(stack))) {
-			if (match[2] === "main") {
+			if (match[2] === 'main') {
 				const pos = this.consumer.originalPositionFor({
-					column: parseInt(match[4], 10),
-					line: parseInt(match[3], 10)
+					column: Number.parseInt(match[4], 10),
+					line: Number.parseInt(match[3], 10),
 				});
 
 				if (pos.line != null) {
@@ -71,7 +70,8 @@ export class ErrorMapper {
 					outStack += '\n' + match[0];
 					continue;
 				}
-			} else {
+			}
+			else {
 				// Line is not source mapped.
 				outStack += '\n' + match[0];
 				continue;
@@ -86,19 +86,22 @@ export class ErrorMapper {
 		return () => {
 			try {
 				loop();
-			} catch (e) {
-				if (e instanceof Error) {
-					if ("sim" in Game.rooms) {
-						const message = `Source maps don't work in the simulator - displaying original error`;
-						console.log(`<span style='color:red'>${message}<br>${_.escape(e.stack)}</span>`);
-					} else {
-						const message = _.escape(this.sourceMappedStackTrace(e));
+			}
+			catch (error) {
+				if (error instanceof Error) {
+					if ('sim' in Game.rooms) {
+						const message = 'Source maps don\'t work in the simulator - displaying original error';
+						console.log(`<span style='color:red'>${message}<br>${_.escape(error.stack)}</span>`);
+					}
+					else {
+						const message = _.escape(this.sourceMappedStackTrace(error));
 						console.log(`<span style='color:red'>${message}</span>`);
 						Game.notify(message);
 					}
-				} else {
-					// can't handle it
-					throw e;
+				}
+				else {
+					// Can't handle it
+					throw error;
 				}
 			}
 		};

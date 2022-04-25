@@ -5,8 +5,8 @@ import RoomVariationBuilder from 'room/planner/variation-builder';
 import VariationGenerator from 'room/planner/variation-generator';
 
 type HeapMemory = {
-  plan: RoomPlan;
-}
+	plan: RoomPlan;
+};
 
 const generatorCache: {
   [roomName: string]: HeapMemory;

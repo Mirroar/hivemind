@@ -49,14 +49,10 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 			// Spawn attackers before healers.
 			const currentDps = _.reduce(
 				activePowerHarvesters,
-				(total, creep) => {
-					return total + (creep.memory.body[ATTACK] * ATTACK_POWER);
-				}, 0);
+				(total, creep) => total + (creep.memory.body[ATTACK] * ATTACK_POWER), 0);
 			const currentHps = _.reduce(
 				activePowerHealers,
-				(total, creep) => {
-					return total + (creep.memory.body[HEAL] * HEAL_POWER);
-				}, 0);
+				(total, creep) => total + (creep.memory.body[HEAL] * HEAL_POWER), 0);
 
 			// @todo Determine realistic time until we crack open the power bank.
 			// Then we can stop spawning attackers and spawn haulers instead.
@@ -115,7 +111,7 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 		const functionalPart = option.isHealer ? HEAL : ATTACK;
 		const body = this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [functionalPart]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 
 		// Move parts should come first to soak up damage.
@@ -147,4 +143,4 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 			disableNotifications: true,
 		};
 	}
-};
+}

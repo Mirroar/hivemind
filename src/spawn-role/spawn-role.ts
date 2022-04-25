@@ -217,4 +217,4 @@ export default class SpawnRole {
 	calculateBodyCost(body: BodyPartConstant[]): number {
 		return _.reduce(body, (sum, part) => sum + BODYPART_COST[part], 0);
 	}
-};
+}

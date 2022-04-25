@@ -90,7 +90,7 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	getCreepBody(room, option) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [WORK]: 0.2, [CARRY]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
@@ -112,4 +112,4 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 			// disableNotifications: true,
 		};
 	}
-};
+}

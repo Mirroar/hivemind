@@ -3,17 +3,12 @@ import localSettings from 'settings.local';
 
 declare global {
 	interface KernelMemory {
-		settings?: {
-			[key: string]: any;
-		}
+		settings?: Record<string, any>;
 	}
 }
 
 class SettingsManager {
-
-	values: {
-		[key: string]: any,
-	};
+	values: Record<string, any>;
 
 	/**
 	 * Creates a new SettingsManager instance.
@@ -87,11 +82,11 @@ class SettingsManager {
 
 		delete Memory.hivemind.settings[key];
 	}
-};
+}
 
 const settings = new SettingsManager();
 
 export default settings;
 export {
-	SettingsManager
+	SettingsManager,
 };

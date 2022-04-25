@@ -1,18 +1,18 @@
 /* global Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
 STRUCTURE_KEEPER_LAIR */
 
-declare global {
-	interface Room {
-		getCostMatrix: () => CostMatrix,
-		generateCostMatrix: (structures?: Record<string, Structure[]>, constructionSites?: Record<string, ConstructionSite[]>) => CostMatrix,
-		calculateRoomPath: (roomName: string, options?: {allowDanger?: boolean, maxPathLength?: number}) => string[] | null,
-	}
-}
-
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import {getCostMatrix, markBuildings} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
+
+declare global {
+	interface Room {
+		getCostMatrix: () => CostMatrix;
+		generateCostMatrix: (structures?: Record<string, Structure[]>, constructionSites?: Record<string, ConstructionSite[]>) => CostMatrix;
+		calculateRoomPath: (roomName: string, options?: {allowDanger?: boolean; maxPathLength?: number}) => string[] | null;
+	}
+}
 
 Room.prototype.getCostMatrix = function () {
 	return getCostMatrix(this.name);
@@ -66,8 +66,12 @@ function createRoomCostMatrix(roomName, structures, constructionSites) {
 				costs.set(structure.pos.x, structure.pos.y, 1);
 			}
 		},
-		structure => costs.set(structure.pos.x, structure.pos.y, 0xFF),
-		(x, y) => costs.set(x, y, 0xFF),
+		structure => {
+			costs.set(structure.pos.x, structure.pos.y, 0xFF);
+		},
+		(x, y) => {
+			costs.set(x, y, 0xFF);
+		},
 	);
 
 	return costs;
@@ -136,13 +140,7 @@ Room.prototype.calculateRoomPath = function (targetRoom: string, options) {
 		}
 
 		// Add unhandled adjacent rooms to open list.
-		let exits;
-		if (hivemind.segmentMemory.isReady()) {
-			exits = _.values(getRoomIntel(nextRoom).getExits());
-		}
-		else {
-			exits = _.values(Game.map.describeExits(nextRoom));
-		}
+		const exits: string[] = hivemind.segmentMemory.isReady() ? _.values(getRoomIntel(nextRoom).getExits()) : _.values(Game.map.describeExits(nextRoom));
 
 		for (const exit of exits) {
 			if (openList[exit] || closedList[exit]) continue;

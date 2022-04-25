@@ -1,5 +1,8 @@
 /* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
+import hivemind from 'hivemind';
+import Role from 'role/role';
+
 declare global {
 	interface GuardianCreep extends Creep {
 		memory: GuardianCreepMemory;
@@ -13,9 +16,6 @@ declare global {
 	interface GuardianCreepHeapMemory extends CreepHeapMemory {
 	}
 }
-
-import hivemind from 'hivemind';
-import Role from 'role/role';
 
 const filterEnemyCreeps = (c: Creep) => !hivemind.relations.isAlly(c.owner.username) && c.isDangerous();
 
@@ -38,7 +38,9 @@ export default class GuardianRole extends Role {
 		const rampart = this.getBestRampartToCover(creep);
 		if (!rampart) return;
 
-		creep.whenInRange(0, rampart, () => this.attackTargetsInRange(creep));
+		creep.whenInRange(0, rampart, () => {
+			this.attackTargetsInRange(creep);
+		});
 	}
 
 	getBestRampartToCover(creep: GuardianCreep): StructureRampart {
@@ -49,7 +51,7 @@ export default class GuardianRole extends Role {
 
 		const ramparts: StructureRampart[] = [];
 		for (const target of targets) {
-			const closestRampart = target.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+			const closestRampart = target.pos.findClosestByRange<StructureRampart>(FIND_MY_STRUCTURES, {
 				filter: s => {
 					if (s.structureType !== STRUCTURE_RAMPART) return false;
 
@@ -59,8 +61,8 @@ export default class GuardianRole extends Role {
 
 					return true;
 				},
-			}) as StructureRampart;
-			if (ramparts.indexOf(closestRampart) === -1) ramparts.push(closestRampart);
+			});
+			if (!ramparts.includes(closestRampart)) ramparts.push(closestRampart);
 		}
 
 		return _.min(ramparts, (s: StructureRampart) => s.pos.getRangeTo(creep.pos) / 2 + s.pos.getRangeTo(s.pos.findClosestByRange(FIND_HOSTILE_CREEPS, {
@@ -87,8 +89,10 @@ export default class GuardianRole extends Role {
 					target = _.sample(targets);
 				}
 			}
+
 			creep.rangedAttack(target);
 		}
+
 		if (creep.getActiveBodyparts(ATTACK) > 0) {
 			const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
 				filter: filterEnemyCreeps,
@@ -100,4 +104,4 @@ export default class GuardianRole extends Role {
 			creep.attack(target);
 		}
 	}
-};
+}

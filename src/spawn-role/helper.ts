@@ -55,4 +55,4 @@ export default class HelperSpawnRole extends SpawnRole {
 			operation: 'room:' + room.name,
 		};
 	}
-};
+}

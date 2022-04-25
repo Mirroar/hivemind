@@ -1,5 +1,5 @@
-import hivemind from 'hivemind';
 import Process from 'process/process';
+import hivemind from 'hivemind';
 
 export default class CleanupProcess extends Process {
 

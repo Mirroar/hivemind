@@ -1,12 +1,11 @@
 /* global RoomVisual PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT
 PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
 
-import Logger from 'utils/debug';
 import ProcessInterface from 'process/process-interface';
+import Logger from 'utils/debug';
 import Relations from 'relations';
 import SegmentedMemory from 'utils/segmented-memory';
-import settings from 'settings-manager';
-import {SettingsManager} from 'settings-manager';
+import settings, {SettingsManager} from 'settings-manager';
 import stats from 'utils/stats';
 import {decodePosition} from 'utils/serialization';
 
@@ -17,13 +16,13 @@ const PROCESS_PRIORITY_ALWAYS = 10;
 
 declare global {
 	interface ProcessMemory {
-		lastRun: number,
-		lastCpu: number,
-		parentId: string,
+		lastRun: number;
+		lastCpu: number;
+		parentId: string;
 	}
 
 	interface Memory {
-		hivemind: KernelMemory,
+		hivemind: KernelMemory;
 	}
 
 	interface KernelMemory {
@@ -38,7 +37,7 @@ declare global {
 }
 
 interface OutdatedRoomMemory {
-	intel: any,
+	intel: any;
 }
 
 /* Default options for the various process priorities. */
@@ -236,7 +235,7 @@ class Hivemind {
 	 *   Function to run while timing.
 	 */
 	timeProcess(id: string, stats, callback: () => void) {
-		const prevRunTime = stats.lastRun;
+		const previousRunTime = stats.lastRun;
 		stats.lastRun = Game.time;
 		const cpuBefore = Game.cpu.getUsed();
 		stats.parentId = this.parentProcessId;
@@ -246,7 +245,7 @@ class Hivemind {
 		const cpuUsage = Game.cpu.getUsed() - cpuBefore;
 
 		this.memory.process[id].cpu = ((this.memory.process[id].cpu || cpuUsage) * 0.99) + (cpuUsage * 0.01);
-		if (prevRunTime === Game.time) {
+		if (previousRunTime === Game.time) {
 			this.memory.process[id].lastCpu += cpuUsage;
 		}
 		else {
@@ -354,7 +353,7 @@ class Hivemind {
 		// Throttle process based on remaining bucket.
 		if (!stopAt) stopAt = 0;
 		if (!throttleAt) throttleAt = 5000;
-		if (Game.cpu.bucket <= stopAt) return 99999;
+		if (Game.cpu.bucket <= stopAt) return 99_999;
 		if (Game.cpu.bucket < throttleAt) {
 			throttling *= (throttleAt - stopAt) / (Game.cpu.bucket - stopAt);
 		}
@@ -426,30 +425,28 @@ class Hivemind {
 	 * Shows a list of processes run in a tick, sorted by CPU usage.
 	 */
 	drawProcessDebug() {
-		const processes = _.map(this.memory.process, (data: ProcessMemory, id: string) => {
-			return {
-				id,
-				lastRun: data.lastRun,
-				lastCpu: data.lastCpu,
-				parentId: data.parentId,
-			};
-		});
+		const processes = _.map(this.memory.process, (data: ProcessMemory, id: string) => ({
+			id,
+			lastRun: data.lastRun,
+			lastCpu: data.lastCpu,
+			parentId: data.parentId,
+		}));
 		const filtered = _.filter(processes, data => data.lastCpu > 0.5);
 		const processData = _.groupBy(_.sortByOrder(filtered, ['lastRun', 'lastCpu'], ['desc', 'desc']), 'parentId');
 
 		const visual = new RoomVisual();
-		let lineNum = 0;
+		let lineNumber = 0;
 
 		const drawProcesses = function (parentId, indent) {
 			_.each(processData[parentId], data => {
-				visual.text("" + _.round(data.lastCpu, 2), 5, lineNum, {align: 'right'});
-				visual.text(data.id, 6 + indent, lineNum, {align: 'left'});
+				visual.text(String(_.round(data.lastCpu, 2)), 5, lineNumber, {align: 'right'});
+				visual.text(data.id, 6 + indent, lineNumber, {align: 'left'});
 
 				if (data.lastRun !== Game.time) {
-					visual.text((Game.time - data.lastRun) + ' ago', 2, lineNum, {align: 'right', color: '#808080'});
+					visual.text((Game.time - data.lastRun) + ' ago', 2, lineNumber, {align: 'right', color: '#808080'});
 				}
 
-				lineNum++;
+				lineNumber++;
 
 				drawProcesses(data.id, indent + 1);
 			});
@@ -457,7 +454,7 @@ class Hivemind {
 
 		drawProcesses('root', 0);
 	}
-};
+}
 
 const hivemind = new Hivemind();
 

@@ -125,4 +125,4 @@ export default class ScoutSpawnRole extends SpawnRole {
 		memory.portals[option.shard][option.portalTarget].scouted = Game.time;
 		interShard.writeLocalMemory();
 	}
-};
+}

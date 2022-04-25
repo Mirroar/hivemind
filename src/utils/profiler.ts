@@ -1,7 +1,5 @@
 import profiler from 'screeps-profiler';
 
-const useProfiler = false;
-
 import Bay from 'manager.bay';
 import BoostManager from 'manager.boost';
 import Exploit from 'manager.exploit';
@@ -10,6 +8,8 @@ import RoomPlanner from 'room/planner/room-planner';
 import Squad from 'manager.squad';
 import stats from 'utils/stats';
 import utilities from 'utilities';
+
+const useProfiler = false;
 
 if (useProfiler) {
 	// Enable profiling of all methods in Game object prototypes defined up to now.

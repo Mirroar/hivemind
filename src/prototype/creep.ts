@@ -1,34 +1,30 @@
 /* global Creep ERR_NOT_ENOUGH_RESOURCES RESOURCE_ENERGY STRUCTURE_LINK */
 
+import 'prototype/creep.military';
+import 'prototype/creep.movement';
+import 'prototype/creep.train';
+
 declare global {
 	interface Creep {
-		heapMemory: CreepHeapMemory,
-		transferAny: (target: Structure) => ScreepsReturnCode,
-		dropAny: () => ScreepsReturnCode,
-		enhanceData: () => void,
+		heapMemory: CreepHeapMemory;
+		transferAny: (target: Structure) => ScreepsReturnCode;
+		dropAny: () => ScreepsReturnCode;
+		enhanceData: () => void;
 	}
 
 	interface PowerCreep {
-		heapMemory: CreepHeapMemory,
+		heapMemory: CreepHeapMemory;
 	}
 
 	interface CreepHeapMemory {}
 
 	interface Game {
-		exploitTemp: {
-			[key: string]: string[],
-		}
+		exploitTemp: Record<string, string[]>;
 	}
 }
 
-import 'prototype/creep.military';
-import 'prototype/creep.movement';
-import 'prototype/creep.train';
-
 // @todo Periodically clear heap memory of deceased creeps.
-const creepHeapMemory: {
-	[id: string]: CreepHeapMemory | PowerCreepHeapMemory,
-} = {};
+const creepHeapMemory: Record<string, CreepHeapMemory | PowerCreepHeapMemory> = {};
 
 // Define quick access property creep.heapMemory.
 Object.defineProperty(Creep.prototype, 'heapMemory', {

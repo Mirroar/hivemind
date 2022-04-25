@@ -1,3 +1,6 @@
+import hivemind from 'hivemind';
+import {getThrottleOffset, throttle} from 'utils/throttle';
+
 declare global {
 	interface CreepMemory {
 		disableNotifications?: boolean;
@@ -5,9 +8,7 @@ declare global {
 		singleRoom?: string;
 
 		blockedPathCounter?: number;
-		body?: {
-			[partType: string]: number;
-		};
+		body?: Record<string, number>;
 		building?: boolean;
 		buildTarget?: any;
 		currentLair?: any;
@@ -35,9 +36,6 @@ declare global {
 	}
 }
 
-import hivemind from 'hivemind';
-import {getThrottleOffset, throttle} from 'utils/throttle';
-
 export default class CreepManager {
 	roles;
 	performance;
@@ -63,7 +61,7 @@ export default class CreepManager {
 	registerCreepRole = function (roleId, role) {
 		this.roles[roleId] = role;
 		this.prepareStatMemory(roleId);
-	}
+	};
 
 	/**
 	 * Runs cleanup tasks at the beginning of a tick.
@@ -72,7 +70,7 @@ export default class CreepManager {
 		this.performance = {};
 		this.prepareStatMemory('total');
 		_.each(_.keys(this.roles), roleId => this.prepareStatMemory(roleId));
-	}
+	};
 
 	/**
 	 * Prepares memory for storing creep CPU statistics.
@@ -87,7 +85,7 @@ export default class CreepManager {
 			total: 0,
 			average: 0,
 		};
-	}
+	};
 
 	/**
 	 * Decides whether a creep's logic should run during this tick.
@@ -110,7 +108,7 @@ export default class CreepManager {
 
 		if (!creep.memory._tO) creep.memory._tO = getThrottleOffset();
 		return throttle(creep.memory._tO, role.stopAt, role.throttleAt);
-	}
+	};
 
 	/**
 	 * Runs logic for a creep according to its role.
@@ -153,7 +151,7 @@ export default class CreepManager {
 		if (creep.memory.operation && Game.operations[creep.memory.operation]) {
 			Game.operations[creep.memory.operation].addCpuCost(totalTime);
 		}
-	}
+	};
 
 	/**
 	 * Decides whether this creep manager can handle a given creep.
@@ -170,7 +168,7 @@ export default class CreepManager {
 		}
 
 		return false;
-	}
+	};
 
 	/**
 	 * Stores CPU statistics for a creep after running logic.
@@ -192,7 +190,7 @@ export default class CreepManager {
 				memory.max = totalTime;
 			}
 		});
-	}
+	};
 
 	/**
 	 * Runs logic for all creeps in a list.
@@ -204,7 +202,7 @@ export default class CreepManager {
 		_.each(creeps, creep => {
 			this.runCreepLogic(creep);
 		});
-	}
+	};
 
 	/**
 	 * Reports statistics like throttled creeps.
@@ -247,5 +245,5 @@ export default class CreepManager {
 			memory.creeps.roles[roleId].throttled += perf.throttled;
 			memory.creeps.roles[roleId].cpu += perf.total;
 		}
-	}
+	};
 }

@@ -1,12 +1,19 @@
 /* global RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY */
 
+import Process from 'process/process';
+import hivemind from 'hivemind';
+import interShard from 'intershard';
+import PathManager from 'remote-path-manager';
+import {decodePosition} from 'utils/serialization';
+import {getRoomIntel} from 'room-intel';
+
 declare global {
 	interface StructureObserver {
-		hasScouted: boolean,
+		hasScouted: boolean;
 	}
 
 	interface RoomMemory {
-		observeTargets?: any,
+		observeTargets?: any;
 	}
 
 	interface Memory {
@@ -36,13 +43,6 @@ declare global {
 	}
 }
 
-import hivemind from 'hivemind';
-import interShard from 'intershard';
-import PathManager from 'remote-path-manager';
-import Process from 'process/process';
-import {decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'room-intel';
-
 const preserveExpansionReasons = false;
 
 export default class ScoutProcess extends Process {
@@ -59,8 +59,8 @@ export default class ScoutProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
+	constructor(parameters, data) {
+		super(parameters, data);
 
 		this.pathManager = new PathManager();
 
@@ -93,7 +93,7 @@ export default class ScoutProcess extends Process {
 		if (!Memory.strategy.roomListProgress) Memory.strategy.roomListProgress = [];
 		for (const roomName of _.keys(Memory.strategy.roomList)) {
 			// Ignore rooms we already checked recently.
-			if (Memory.strategy.roomListProgress.indexOf(roomName) > -1) continue;
+			if (Memory.strategy.roomListProgress.includes(roomName)) continue;
 
 			this.calculateRoomPriorities(roomName);
 			Memory.strategy.roomListProgress.push(roomName);
@@ -281,7 +281,7 @@ export default class ScoutProcess extends Process {
 		for (const adjacentRoom of _.values<string>(exits)) {
 			result.addScore(this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
 
-			if (adjacentRoom.endsWith('0') || adjacentRoom.substr(2).startsWith('0')) {
+			if (adjacentRoom.endsWith('0') || adjacentRoom.slice(2).startsWith('0')) {
 				hasHighwayExit = true;
 			}
 		}
@@ -321,7 +321,7 @@ export default class ScoutProcess extends Process {
 
 			if (roomDistance > 1) continue;
 
-			if (_.values(exits).indexOf(otherRoom.name) !== -1) {
+			if (_.values(exits).includes(otherRoom.name)) {
 				// If we're direct neighbors, that also means we can't remote harvest
 				// after expanding if there is a connecting exit.
 				result.addScore(-this.getHarvestRoomScore(roomName), 'blockHarvest' + otherRoom.name);
@@ -356,7 +356,7 @@ export default class ScoutProcess extends Process {
 	 * @param {object} result
 	 *   The result of the expansion score calculation.
 	 */
-	setExpansionScoreCache(roomName: string, result: {score: number, reasons: Record<string, number>}) {
+	setExpansionScoreCache(roomName: string, result: {score: number; reasons: Record<string, number>}) {
 		if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
 
 		// Preserve expansion score reasons if needed.

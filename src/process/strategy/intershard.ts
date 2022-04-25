@@ -1,6 +1,6 @@
+import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import Process from 'process/process';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
@@ -149,7 +149,9 @@ export default class InterShardProcess extends Process {
 
 		this._shardData.total.neededCpu += this._shardData[shardName].neededCpu;
 
-		_.each(shardMemory.portals, (portals, otherShardName) => this.addShardData(otherShardName));
+		_.each(shardMemory.portals, (portals, otherShardName) => {
+			this.addShardData(otherShardName);
+		});
 	}
 
 	/**

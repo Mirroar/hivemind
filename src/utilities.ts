@@ -3,15 +3,15 @@ OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART STRUCTURE_ROAD BODYPART_COST
 TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT
 STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
 
-declare global {
-	type TileCallback = (x: number, y: number) => boolean | void;
-}
-
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import {ErrorMapper} from 'utils/ErrorMapper';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
+
+declare global {
+	type TileCallback = (x: number, y: number) => boolean | void;
+}
 
 const utilities = {
 
@@ -38,6 +38,7 @@ const utilities = {
 			if (error instanceof Error) {
 				stackTrace = _.escape(ErrorMapper.sourceMappedStackTrace(error));
 			}
+
 			Game.notify(error.name + ' in ' + errorLocation + ':<br>' + stackTrace);
 			console.log('<span style="color:red">' + error.name + ' in ' + errorLocation + ':<br>' + stackTrace + '</span>');
 		}
@@ -60,11 +61,11 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger: boolean = false, addOptions: {allowDanger?: boolean, whiteListRooms?: string[], singleRoom?: string} = {}) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string} = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
-			maxOps: 10000, // The default 2000 can be too little even at a distance of only 2 rooms.
+			maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
 
 			roomCallback: roomName => {
 				// If a room is considered inaccessible, don't look for paths through it.
@@ -189,7 +190,7 @@ const utilities = {
 	 *   compound.
 	 */
 	getReactionRecipes() {
-		return cache.inHeap('reverseReactions', 100000, () => {
+		return cache.inHeap('reverseReactions', 100_000, () => {
 			const recipes = {};
 
 			_.each(REACTIONS, (reaction, resourceType) => {

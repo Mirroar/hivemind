@@ -1,12 +1,12 @@
 /* global FIND_MY_STRUCTURES CONTROLLER_STRUCTURES */
 
+import Process from 'process/process';
+
 declare global {
 	interface RoomMemory {
-		inactiveStructures,
+		inactiveStructures;
 	}
 }
-
-import Process from 'process/process';
 
 export default class InactiveStructuresProcess extends Process {
 	room: Room;
@@ -20,9 +20,9 @@ export default class InactiveStructuresProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**

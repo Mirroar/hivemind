@@ -43,7 +43,8 @@
 	},
 	"xo": {
 		"rules": {
-			"brace-style": [
+			"brace-style": "off",
+			"@typescript-eslint/brace-style": [
 				"error",
 				"stroustrup"
 			],
@@ -68,7 +69,7 @@
 				"error",
 				{
 					"allow": [
-						"**/prototype.*",
+						"prototype/*",
 						"**/constants"
 					]
 				}
@@ -79,7 +80,8 @@
 					"array": false,
 					"object": false
 				}
-			]
+			],
+			"unicorn/prefer-node-protocol": ["off"]
 		},
 		"globals": [
 			"_",
@@ -87,10 +89,9 @@
 			"Memory"
 		],
 		"ignores": [
-			"src/packrat.js",
-			"src/screeps-profiler.js",
-			"src/snippets.js",
-			"mock/constants.js"
+			"src/screeps-profiler.ts",
+			"snippets.js",
+			"mock/constants.ts"
 		],
 		"settings": {
 			"import/resolver": {

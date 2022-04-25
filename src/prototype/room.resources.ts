@@ -1,6 +1,12 @@
 /* global Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
+import cache from 'utils/cache';
+import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
+import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
+import {decodePosition} from 'utils/serialization';
+import {getRoomIntel} from 'room-intel';
+
 declare global {
 	interface Room {
 		sourceDispatcher: ResourceSourceDispatcher;
@@ -32,18 +38,10 @@ declare global {
 	}
 }
 
-import cache from 'utils/cache';
-import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
-import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
-import {decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'room-intel';
-
 // Define quick access property room.sourceDispatcher.
 Object.defineProperty(Room.prototype, 'sourceDispatcher', {
 	get(this: Room) {
-		return cache.inObject(this, 'sourceDispatcher', 1, () => {
-			return new ResourceSourceDispatcher(this);
-		})
+		return cache.inObject(this, 'sourceDispatcher', 1, () => new ResourceSourceDispatcher(this));
 	},
 	enumerable: false,
 	configurable: true,
@@ -52,9 +50,7 @@ Object.defineProperty(Room.prototype, 'sourceDispatcher', {
 // Define quick access property room.destinationDispatcher.
 Object.defineProperty(Room.prototype, 'destinationDispatcher', {
 	get(this: Room) {
-		return cache.inObject(this, 'destinationDispatcher', 1, () => {
-			return new ResourceDestinationDispatcher(this);
-		})
+		return cache.inObject(this, 'destinationDispatcher', 1, () => new ResourceDestinationDispatcher(this));
 	},
 	enumerable: false,
 	configurable: true,
@@ -254,9 +250,9 @@ Room.prototype.getStorageLocation = function (this: Room) {
  *   Amount of resources to store.
  */
 Room.prototype.prepareForTrading = function (this: Room, resourceType: ResourceConstant, amount: number) {
-	if (!amount) amount = Math.min(10000, this.getCurrentResourceAmount(resourceType));
+	if (!amount) amount = Math.min(10_000, this.getCurrentResourceAmount(resourceType));
 	this.memory.fillTerminal = resourceType;
-	this.memory.fillTerminalAmount = Math.min(amount, 50000);
+	this.memory.fillTerminalAmount = Math.min(amount, 50_000);
 };
 
 /**
@@ -400,25 +396,25 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 	if (amount >= cutoffs[1]) return 'high';
 	if (amount >= cutoffs[2]) return 'medium';
 	return 'low';
-}
+};
 
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 	if (resourceType === RESOURCE_ENERGY) {
 		// Defending rooms need energy to defend.
-		if (this.defense.getEnemyStrength() > 0) return [1000000, 100000, 50000];
-		return [200000, 50000, 20000];
+		if (this.defense.getEnemyStrength() > 0) return [1_000_000, 100_000, 50_000];
+		return [200_000, 50_000, 20_000];
 	}
 
 	if (resourceType === RESOURCE_POWER) {
 		// Only rooms with power spawns need power.
 		if (!this.powerSpawn) return [1, 1, 0];
-		return [50000, 30000, 10000];
+		return [50_000, 30_000, 10_000];
 	}
 
 	if (resourceType === RESOURCE_OPS) {
 		// Only rooms with power creeps need ops.
 		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 1, 0];
-		return [10000, 5000, 1000];
+		return [10_000, 5000, 1000];
 	}
 
 	// @todo If the room has a factory, consolidate normal resources and bars.
@@ -426,7 +422,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	// Basic commodities need a factory.
 	if (([RESOURCE_SILICON, RESOURCE_METAL, RESOURCE_BIOMASS, RESOURCE_MIST] as string[]).includes(resourceType)) {
 		if (!this.factory) return [1, 1, 0];
-		return [30000, 10000, 2000];
+		return [30_000, 10_000, 2000];
 	}
 
 	// @todo For commodities, ignore anything we don't need for recipes of the
@@ -442,14 +438,14 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	) {
 		if (!this.factory) return [1, 1, 0];
 		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 1, 0];
-		return [10000, 5000, 500];
+		return [10_000, 5000, 500];
 	}
 
 	// @todo For boosts, try to have a minimum amount for all types. Later, make
 	// dependent on room military state and so on.
 
-	return [50000, 30000, 10000];
-}
+	return [50_000, 30_000, 10_000];
+};
 
 function isCommodityNeededAtFactoryLevel(factoryLevel: number, resourceType: ResourceConstant): boolean {
 	for (const productType in COMMODITIES) {

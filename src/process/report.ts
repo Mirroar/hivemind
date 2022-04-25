@@ -1,5 +1,7 @@
 /* global RESOURCE_POWER */
 
+import Process from 'process/process';
+
 declare global {
 	interface StrategyMemory {
 		reports?: {
@@ -8,16 +10,14 @@ declare global {
 				time: number;
 				gcl: GlobalControlLevel;
 				gpl: GlobalPowerLevel;
-				power
-				storedPower
+				power;
+				storedPower;
 				remoteHarvestCount: number;
-				cpu
-			}
+				cpu;
+			};
 		};
 	}
 }
-
-import Process from 'process/process';
 
 export default class ReportProcess extends Process {
 	memory;
@@ -31,12 +31,12 @@ export default class ReportProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
+	constructor(parameters, data) {
+		super(parameters, data);
 
-		if (!Memory.strategy.reports) this.initMemory((new Date()).getTime());
+		if (!Memory.strategy.reports) this.initMemory(Date.now());
 		this.memory = Memory.strategy.reports;
-	};
+	}
 
 	/**
 	 * (Re-)initializes report memory.
@@ -63,18 +63,18 @@ export default class ReportProcess extends Process {
 
 		// Update reference to memory.
 		this.memory = Memory.strategy.reports;
-	};
+	}
 
 	/**
 	 * Sends regular email reports.
 	 */
 	run() {
 		// Check if it's time for sending a report.
-		if ((new Date()).getTime() < this.memory.nextReportTime) return;
+		if (Date.now() < this.memory.nextReportTime) return;
 
 		this.generateReport();
 		this.initMemory(this.memory.nextReportTime);
-	};
+	}
 
 	/**
 	 * Normalizes a date object so that it points to 8:00 UTC on the given day.
@@ -91,7 +91,7 @@ export default class ReportProcess extends Process {
 		date.setUTCHours(8);
 
 		return date;
-	};
+	}
 
 	/**
 	 * Generates and sends a report email.
@@ -106,7 +106,7 @@ export default class ReportProcess extends Process {
 		this.generateMiningOperationsReport();
 
 		// @todo Report market transactions.
-	};
+	}
 
 	/**
 	 * Generates report email for gcl / gpl changes.
@@ -132,7 +132,7 @@ export default class ReportProcess extends Process {
 		reportText += '\nProgress: ' + (100 * currentValues.progress / currentValues.progressTotal).toPrecision(3) + '% (+' + (100 * pointsDiff / currentValues.progressTotal).toPrecision(3) + '% @ ' + (pointsDiff / tickDiff).toPrecision(3) + '/tick)';
 
 		Game.notify(reportText);
-	};
+	}
 
 	/**
 	 * Generates report email for power harvesting.
@@ -153,7 +153,7 @@ export default class ReportProcess extends Process {
 		reportText += 'Stored: ' + this.getStoredPower() + ' (+' + (this.getStoredPower() - (this.memory.data.storedPower || 0)) + ')';
 
 		Game.notify(reportText);
-	};
+	}
 
 	/**
 	 * Gets the amount of power in storage across owned rooms.
@@ -169,7 +169,7 @@ export default class ReportProcess extends Process {
 		}
 
 		return amount;
-	};
+	}
 
 	/**
 	 * Generates report email for CPU stats.
@@ -187,7 +187,7 @@ export default class ReportProcess extends Process {
 		reportText += 'CPU: ' + cpuAverage.toPrecision(3) + '/' + cpuTotalAverage.toPrecision(3) + ' (' + cpuPercent.toPrecision(3) + '%)<br>';
 
 		Game.notify(reportText);
-	};
+	}
 
 	/**
 	 * Generates report email for remote mining.
@@ -204,7 +204,7 @@ export default class ReportProcess extends Process {
 		}
 
 		Game.notify(reportText);
-	};
+	}
 
 	/**
 	 * Generates report email for operations.
@@ -216,23 +216,23 @@ export default class ReportProcess extends Process {
 		const operationScores = this.getMiningOperationScores();
 
 		reportText += '<pre>';
-		reportText += this.formatSignificantEntries(operationScores, (o, index) => (index + 1) + '. ' + o.name + ' - ' + o.score.toPrecision(3)).join("\n");
+		reportText += this.formatSignificantEntries(operationScores, (o, index) => (index + 1) + '. ' + o.name + ' - ' + o.score.toPrecision(3)).join('\n');
 		reportText += '</pre>';
 
 		Game.notify(reportText);
 	}
 
-	getMiningOperationScores(): {
+	getMiningOperationScores(): Array<{
 		name: string;
 		score: number;
-	}[] {
-		const operationScores: {
+	}> {
+		const operationScores: Array<{
 			name: string;
 			score: number;
-		}[] = [];
+		}> = [];
 		for (const operationName in Game.operationsByType.mining) {
 			const operation = Game.operationsByType.mining[operationName];
-			if (operation.getAge() < 10000) continue;
+			if (operation.getAge() < 10_000) continue;
 
 			const cpuUsage = operation.getStat('cpu');
 			const energyChange = operation.getStat(RESOURCE_ENERGY);
@@ -258,20 +258,20 @@ export default class ReportProcess extends Process {
 		const operationScores = this.getRoomOperationScores();
 
 		reportText += '<pre>';
-		reportText += this.formatSignificantEntries(operationScores, (o, index) => (index + 1) + '. ' + o.name + ' - ' + o.score.toPrecision(3)).join("\n");
+		reportText += this.formatSignificantEntries(operationScores, (o, index) => (index + 1) + '. ' + o.name + ' - ' + o.score.toPrecision(3)).join('\n');
 		reportText += '</pre>';
 
 		Game.notify(reportText);
 	}
 
-	getRoomOperationScores(): {
+	getRoomOperationScores(): Array<{
 		name: string;
 		score: number;
-	}[] {
-		const operationScores: {
+	}> {
+		const operationScores: Array<{
 			name: string;
 			score: number;
-		}[] = [];
+		}> = [];
 		for (const operationName in Game.operationsByType.room) {
 			const operation = Game.operationsByType.room[operationName];
 			const cpuUsage = operation.getStat('cpu');
@@ -308,5 +308,5 @@ export default class ReportProcess extends Process {
 	 */
 	generateHeading(text) {
 		return '<h3>' + text + '</h3>';
-	};
+	}
 }

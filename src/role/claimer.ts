@@ -1,6 +1,5 @@
 /* global OK */
 
-import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition} from 'utils/serialization';
@@ -108,7 +107,7 @@ export default class ClaimerRole extends Role {
 				};
 			}
 
-			if (target.sign && target.sign.username) {
+			if (target.sign?.username) {
 				creep.signController(target, '');
 			}
 		});

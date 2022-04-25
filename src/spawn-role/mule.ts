@@ -1,7 +1,7 @@
 /* global hivemind MOVE CARRY */
 
-import SpawnRole from'spawn-role/spawn-role';
-import TradeRoute from'trade-route';
+import SpawnRole from 'spawn-role/spawn-role';
+import TradeRoute from 'trade-route';
 
 export default class MuleSpawnRole extends SpawnRole {
   /**

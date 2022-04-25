@@ -13,10 +13,10 @@ export default class ManageFactoryProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
-	};
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
+	}
 
 	/**
 	 * Sets appropriate reactions for each room depending on available resources.

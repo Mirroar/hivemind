@@ -151,7 +151,7 @@ export default class GathererRole extends Role {
 
 			options.push({
 				priority: structure.structureType === STRUCTURE_STORAGE || structure.structureType === STRUCTURE_TERMINAL ? 2 : 1,
-				weight: structure.store.getUsedCapacity() / 10000,
+				weight: structure.store.getUsedCapacity() / 10_000,
 				target: structure.id,
 			});
 		}
@@ -173,7 +173,7 @@ export default class GathererRole extends Role {
 
 			options.push({
 				priority: 1,
-				weight: ruin.store.getUsedCapacity() / 10000,
+				weight: ruin.store.getUsedCapacity() / 10_000,
 				target: ruin.id,
 			});
 		}
@@ -244,4 +244,4 @@ export default class GathererRole extends Role {
 			creep.memory.delivering = false;
 		}
 	}
-};
+}

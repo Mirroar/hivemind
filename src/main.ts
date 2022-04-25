@@ -26,7 +26,7 @@ interface DeprecatedRoomMemory extends RoomMemory {
 }
 
 // Make sure game object prototypes are enhanced.
-import {ErrorMapper} from "utils/ErrorMapper";
+import {ErrorMapper} from 'utils/ErrorMapper';
 
 import './prototype/construction-site';
 import './prototype/cost-matrix';
@@ -273,9 +273,9 @@ const main = {
 
 		// Check if memory is getting too bloated.
 		const usedMemory = RawMemory.get().length;
-		if (Game.time % 7836 === 0 || usedMemory > 2000000) {
+		if (Game.time % 7836 === 0 || usedMemory > 2_000_000) {
 			const currentScoutDistance = Memory.hivemind.maxScoutDistance || 7;
-			if (usedMemory > 1800000 && currentScoutDistance > 2) {
+			if (usedMemory > 1_800_000 && currentScoutDistance > 2) {
 				Memory.hivemind.maxScoutDistance = currentScoutDistance - 1;
 				for (const roomName in Memory.strategy.roomList) {
 					if (Memory.strategy.roomList[roomName].range > Memory.hivemind.maxScoutDistance) {
@@ -284,7 +284,7 @@ const main = {
 					}
 				}
 			}
-			else if (usedMemory < 1500000 && currentScoutDistance < 10) {
+			else if (usedMemory < 1_500_000 && currentScoutDistance < 10) {
 				Memory.hivemind.maxScoutDistance = currentScoutDistance + 1;
 			}
 		}
@@ -293,7 +293,7 @@ const main = {
 		if (Game.time % 3738 === 2100 && hivemind.segmentMemory.isReady()) {
 			let count = 0;
 			_.each(Memory.rooms, (memory, roomName) => {
-				if (getRoomIntel(roomName).getAge() > 100000) {
+				if (getRoomIntel(roomName).getAge() > 100_000) {
 					delete Memory.rooms[roomName];
 					count++;
 				}
@@ -347,29 +347,29 @@ const main = {
 	cleanupSegmentMemory() {
 		// Clean old entries from remote path manager from segment memory.
 		hivemind.segmentMemory.each<RemotePathMemory>('remotePath:', (key, memory) => {
-			if (Game.time - (memory.generated || 0) > 10000) hivemind.segmentMemory.delete(key);
+			if (Game.time - (memory.generated || 0) > 10_000) hivemind.segmentMemory.delete(key);
 		});
 
 		// Periodically clean old room intel from segment memory.
 		hivemind.segmentMemory.each<RoomIntelMemory>('intel:', (key, memory) => {
-			if (Game.time - (memory.lastScan || 0) > 100000) hivemind.segmentMemory.delete(key);
+			if (Game.time - (memory.lastScan || 0) > 100_000) hivemind.segmentMemory.delete(key);
 		});
 
 		// Periodically clean old player intel from segment memory.
 		hivemind.segmentMemory.each<PlayerIntelMemory>('u-intel:', (key, memory) => {
-			if (Game.time - (memory.lastSeen || 0) > 100000) hivemind.segmentMemory.delete(key);
+			if (Game.time - (memory.lastSeen || 0) > 100_000) hivemind.segmentMemory.delete(key);
 		});
 
 		// Periodically clean old room planner from segment memory.
 		hivemind.segmentMemory.each<RoomPlannerMemory>('planner:', (key, memory) => {
-			const roomName = key.substr(8);
+			const roomName = key.slice(8);
 			const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
-			if (!isMyRoom || Game.time - (memory.lastRun || 0) > 10000) hivemind.segmentMemory.delete(key);
+			if (!isMyRoom || Game.time - (memory.lastRun || 0) > 10_000) hivemind.segmentMemory.delete(key);
 		});
 
 		// Periodically clean old room plans from segment memory.
 		hivemind.segmentMemory.each('room-plan:', key => {
-			const roomName = key.substr(10);
+			const roomName = key.slice(10);
 			const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 			if (!isMyRoom) hivemind.segmentMemory.delete(key);
 		});

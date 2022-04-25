@@ -1,21 +1,23 @@
 /* global Room BOOSTS FIND_STRUCTURES STRUCTURE_LAB LAB_BOOST_MINERAL
 LAB_BOOST_ENERGY OK */
 
+import cache from 'utils/cache';
+
 declare global {
 	interface Room {
-		boostManager?: BoostManager,
-		getAvailableBoosts: (type: string) => AvailableBoosts,
-		canSpawnBoostedCreeps: () => boolean,
-		getBoostLabs: () => StructureLab[],
-		getBoostLabMemory: () => BoostLabsMemory,
+		boostManager?: BoostManager;
+		getAvailableBoosts: (type: string) => AvailableBoosts;
+		canSpawnBoostedCreeps: () => boolean;
+		getBoostLabs: () => StructureLab[];
+		getBoostLabMemory: () => BoostLabsMemory;
 	}
 
 	interface CreepMemory {
-		needsBoosting?: boolean,
+		needsBoosting?: boolean;
 	}
 
 	interface RoomMemory {
-		boostManager?: BoostManagerMemory,
+		boostManager?: BoostManagerMemory;
 	}
 
 	type AvailableBoosts = {
@@ -26,10 +28,10 @@ declare global {
 	}
 
 	type BoostLabMemory = {
-		resourceType?: string,
-		resourceAmount?: number,
-		energyAmount?: number,
-	}
+		resourceType?: string;
+		resourceAmount?: number;
+		energyAmount?: number;
+	};
 
 	type BoostLabsMemory = {
 		[labId: string]: BoostLabMemory,
@@ -44,8 +46,6 @@ declare global {
 		// labs: BoostLabsMemory,
 	}
 }
-
-import cache from 'utils/cache';
 
 /**
  * Collects available boosts in a room, optionally filtered by effect.
@@ -90,7 +90,7 @@ Room.prototype.getAvailableBoosts = function (this: Room, type: string): Availab
 			});
 
 			return boosts;
-		}
+		},
 	);
 
 	return availableBoosts[type];
@@ -165,7 +165,7 @@ Room.prototype.getBoostLabMemory = function (this: Room): BoostLabsMemory {
 			}
 
 			return {};
-		}
+		},
 	);
 };
 
@@ -173,7 +173,6 @@ Room.prototype.getBoostLabMemory = function (this: Room): BoostLabsMemory {
  * BoostManager is responsible for choosing an applying boosts to creeps.
  */
 export default class BoostManager {
-
 	roomName: string;
 	room: Room;
 	memory: BoostManagerMemory;
@@ -325,9 +324,7 @@ export default class BoostManager {
 			}
 
 			if (!labMemory[lab.id].resourceType || !queuedBoosts[labMemory[lab.id].resourceType]) {
-				const unassigned = _.filter(_.keys(queuedBoosts), resourceType => {
-					return _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0;
-				});
+				const unassigned = _.filter(_.keys(queuedBoosts), resourceType => _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0);
 
 				if (unassigned.length === 0) {
 					delete labMemory[lab.id].resourceType;
@@ -349,9 +346,7 @@ export default class BoostManager {
 		}
 
 		// Make sure to delete memory of any labs no longer used for boosting.
-		const unusedLabs = _.filter(_.keys(labMemory), id => {
-			return _.filter(labs, lab => lab.id === id).length === 0;
-		});
+		const unusedLabs = _.filter(_.keys(labMemory), id => _.filter(labs, lab => lab.id === id).length === 0);
 		for (const id of unusedLabs) {
 			delete labMemory[id];
 		}
@@ -378,4 +373,4 @@ export default class BoostManager {
 
 		return false;
 	}
-};
+}

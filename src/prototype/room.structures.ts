@@ -1,6 +1,10 @@
 /* global Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
 FIND_STRUCTURES */
 
+import Bay from 'manager.bay';
+import cache from 'utils/cache';
+import LinkNetwork from 'link-network';
+
 declare global {
 	interface Room {
 		addStructureReference: (structureType: StructureConstant) => void;
@@ -11,7 +15,7 @@ declare global {
 		linkNetwork: LinkNetwork;
 		setClearingTerminal: (clear: boolean) => void;
 		setEvacuating: (evacuate: boolean) => void;
-		getEnergyStructures: () => (StructureSpawn | StructureExtension)[];
+		getEnergyStructures: () => Array<StructureSpawn | StructureExtension>;
 	}
 
 	interface RoomMemory {
@@ -19,10 +23,6 @@ declare global {
 		isClearingTerminal?: boolean;
 	}
 }
-
-import Bay from 'manager.bay';
-import cache from 'utils/cache';
-import LinkNetwork from 'link-network';
 
 /**
  * Creates and populates a room's link network.
@@ -51,14 +51,14 @@ Room.prototype.generateLinkNetwork = function (this: Room) {
 	// Add links to network.
 	for (const link of links) {
 		if (link.id === controllerLinkId) {
-			if (sourceLinkIds.indexOf(link.id) >= 0) {
+			if (sourceLinkIds.includes(link.id)) {
 				this.linkNetwork.addInOutLink(link);
 			}
 			else {
 				this.linkNetwork.addOutLink(link);
 			}
 		}
-		else if (sourceLinkIds.indexOf(link.id) >= 0) {
+		else if (sourceLinkIds.includes(link.id)) {
 			this.linkNetwork.addInLink(link);
 		}
 		else {
@@ -160,11 +160,11 @@ Room.prototype.isClearingStorage = function (this: Room) {
 	return false;
 };
 
-Room.prototype.getEnergyStructures = function (this: Room): (StructureSpawn | StructureExtension)[] {
+Room.prototype.getEnergyStructures = function (this: Room): Array<StructureSpawn | StructureExtension> {
 	if (!this.roomPlanner) return undefined;
 
 	const ids = cache.inHeap('energyStructures:' + this.name, 100, () => {
-		const structures: (Id<StructureSpawn | StructureExtension>)[] = [];
+		const structures: Array<Id<StructureSpawn | StructureExtension>> = [];
 
 		for (const bay of getBaysByPriority(this)) {
 			for (const structure of bay.extensions) {
@@ -182,7 +182,7 @@ Room.prototype.getEnergyStructures = function (this: Room): (StructureSpawn | St
 	});
 
 	return _.map<Id<StructureSpawn | StructureExtension>, StructureSpawn | StructureExtension>(ids, Game.getObjectById);
-}
+};
 
 function getBaysByPriority(room: Room): Bay[] {
 	const center = room.roomPlanner.getRoomCenter();
@@ -196,12 +196,12 @@ function getBaysByPriority(room: Room): Bay[] {
 	});
 }
 
-function getUnmappedEnergyStructures(room: Room, map: Id<Structure>[]): (StructureSpawn | StructureExtension)[] {
+function getUnmappedEnergyStructures(room: Room, map: Array<Id<Structure>>): Array<StructureSpawn | StructureExtension> {
 	const center = room.roomPlanner.getRoomCenter();
 	return _.sortBy(
 		room.find(FIND_MY_STRUCTURES, {
-			filter: s => ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION] as string[]).includes(s.structureType) && !map.includes(s.id)
+			filter: s => ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION] as string[]).includes(s.structureType) && !map.includes(s.id),
 		}),
-		s => s.pos.getRangeTo(center)
+		s => s.pos.getRangeTo(center),
 	);
 }

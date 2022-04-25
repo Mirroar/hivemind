@@ -70,7 +70,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
-		let availableEnergy = room.getStoredEnergy();
+		const availableEnergy = room.getStoredEnergy();
 		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {
 			// Do not spawn upgraders when builders and spawns will need most of
 			// our energy.
@@ -93,9 +93,9 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// Spawn upgraders depending on stored energy.
 		// RCL 7 rooms need to keep a bit more energy in reserve for doing other
 		// things like power or deposit harvesting, sending squads, ...
-		if (availableEnergy < (room.controller.level === 7 ? 25000 : 10000)) return 0;
-		if (availableEnergy < (room.controller.level === 7 ? 75000 : 50000)) return 1;
-		if (availableEnergy < 100000) return 2;
+		if (availableEnergy < (room.controller.level === 7 ? 25_000 : 10_000)) return 0;
+		if (availableEnergy < (room.controller.level === 7 ? 75_000 : 50_000)) return 1;
+		if (availableEnergy < 100_000) return 2;
 		// @todo Have maximum depend on number of work parts.
 		// @todo Make sure enough energy is brought by.
 		return 3;
@@ -122,7 +122,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			bodyWeights,
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[WORK]: CONTROLLER_MAX_UPGRADE_PER_TICK}
+			{[WORK]: CONTROLLER_MAX_UPGRADE_PER_TICK},
 		);
 	}
 
@@ -158,9 +158,9 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option, body: BodyPartConstant[]) {
-		if (room.getStoredEnergy() < 200000) return {};
+		if (room.getStoredEnergy() < 200_000) return {};
 		if (room.controller.level < 8) return {};
 
 		return this.generateCreepBoosts(room, body, WORK, 'upgradeController');
 	}
-};
+}

@@ -33,7 +33,6 @@ import {packPosList, unpackPosList} from 'utils/packrat';
  * @todo Use dedicated builder creeps instead of haulers for road maintenance.
  */
 export default class RemoteMiningOperation extends Operation {
-
 	protected memory: RemoteMiningOperationMemory;
 	protected pathManager: PathManager;
 
@@ -53,8 +52,7 @@ export default class RemoteMiningOperation extends Operation {
 	 *
 	 * @todo Remove construction sites for this operation.
 	 */
-	onTerminate() {
-	}
+	onTerminate() {}
 
 	/**
 	 * Gets a list of active source positions keyed by room name.
@@ -103,7 +101,7 @@ export default class RemoteMiningOperation extends Operation {
 		const locations = this.getMiningLocationsByRoom();
 
 		for (const roomName in locations) {
-			if (locations[roomName].indexOf(sourceLocation) !== -1) return roomName;
+			if (locations[roomName].includes(sourceLocation)) return roomName;
 		}
 
 		return null;
@@ -430,4 +428,4 @@ export default class RemoteMiningOperation extends Operation {
 	isProfitable(): boolean {
 		return (this.getStat(RESOURCE_ENERGY) || 0) > 0;
 	}
-};
+}

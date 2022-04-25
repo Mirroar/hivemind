@@ -1,7 +1,7 @@
 /* global FIND_HOSTILE_STRUCTURES STRUCTURE_INVADER_CORE */
 
-import hivemind from 'hivemind';
 import Process from 'process/process';
+import hivemind from 'hivemind';
 import {getRoomIntel} from 'room-intel';
 
 declare global {
@@ -27,9 +27,9 @@ export default class RoomIntelProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
 	}
 
 	/**

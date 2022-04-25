@@ -6,17 +6,22 @@ LOOK_CONSTRUCTION_SITES CONSTRUCTION_COST CREEP_LIFE_TIME MAX_CONSTRUCTION_SITES
 FIND_STRUCTURES CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
+import cache from 'utils/cache';
+import hivemind from 'hivemind';
+import RoomPlanner from 'room/planner/room-planner';
+import {serializeCoords} from 'utils/serialization';
+
 declare global {
 	interface Structure {
-		needsDismantling: () => boolean,
+		needsDismantling: () => boolean;
 	}
 
 	interface Room {
-		roomManager: RoomManager,
+		roomManager: RoomManager;
 	}
 
 	interface RoomMemory {
-		manager: RoomManagerMemory,
+		manager: RoomManagerMemory;
 	}
 
 	interface RoomManagerMemory {
@@ -26,23 +31,16 @@ declare global {
 	}
 }
 
-import cache from 'utils/cache';
-import hivemind from 'hivemind';
-import RoomPlanner from 'room/planner/room-planner';
-import {serializeCoords} from 'utils/serialization';
-
 export default class RoomManager {
 	room: Room;
 	roomPlanner: RoomPlanner;
 	memory: RoomManagerMemory;
 	roomConstructionSites: ConstructionSite[];
-	constructionSitesByType: {
-		[key: string]: ConstructionSite[],
-	};
+	constructionSitesByType: Record<string, ConstructionSite[]>;
+
 	roomStructures: Structure[];
-	structuresByType: {
-		[key: string]: Structure[],
-	};
+	structuresByType: Record<string, Structure[]>;
+
 	newStructures: number;
 
 	/**
@@ -123,14 +121,15 @@ export default class RoomManager {
 			if (position) this.tryBuild(position, STRUCTURE_RAMPART);
 
 			// Build towers.
-			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER)
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
 		}
+
 		// Build normal ramparts.
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 
 		// Build spawn.
-		if (this.checkWallIntegrity(10000)) {
-			this.buildPlannedStructures('spawn.0', STRUCTURE_SPAWN)
+		if (this.checkWallIntegrity(10_000)) {
+			this.buildPlannedStructures('spawn.0', STRUCTURE_SPAWN);
 		}
 	}
 
@@ -145,6 +144,7 @@ export default class RoomManager {
 
 			extension.destroy();
 		}
+
 		for (const lab of this.structuresByType[STRUCTURE_LAB] || []) {
 			if (this.roomPlanner.isPlannedLocation(lab.pos, 'lab')) continue;
 			if (
@@ -156,6 +156,7 @@ export default class RoomManager {
 
 			lab.destroy();
 		}
+
 		for (const lab of this.structuresByType[STRUCTURE_LINK] || []) {
 			if (this.roomPlanner.isPlannedLocation(lab.pos, 'link')) continue;
 			if (
@@ -234,6 +235,7 @@ export default class RoomManager {
 		for (let i = 0; i < maxTowers; i++) {
 			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
 		}
+
 		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
 
 		// Make sure all current spawns have been built.
@@ -249,6 +251,7 @@ export default class RoomManager {
 			for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]; i++) {
 				this.buildPlannedStructures('spawn.' + i, STRUCTURE_SPAWN);
 			}
+
 			this.buildPlannedStructures('spawn', STRUCTURE_SPAWN);
 		}
 
@@ -281,12 +284,14 @@ export default class RoomManager {
 		if (this.hasMisplacedStorage() && this.room.storage.store.getUsedCapacity() < 5000) {
 			this.removeUnplannedStructures('storage', STRUCTURE_STORAGE, 1);
 		}
+
 		this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
 
 		// Also build terminal when available.
 		if (this.hasMisplacedTerminal() && this.room.terminal.store.getUsedCapacity() < 5000) {
 			this.removeUnplannedStructures('terminal', STRUCTURE_TERMINAL, 1);
 		}
+
 		this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL);
 
 		if (this.room.storage) {
@@ -701,7 +706,7 @@ export default class RoomManager {
 
 		return null;
 	}
-};
+}
 
 /**
  * Decides whether a structure is supposed to be dismantled.

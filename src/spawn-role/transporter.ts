@@ -56,12 +56,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 
 		// On higher level rooms, spawn less, but bigger, transporters.
 		maxTransporters /= transporterSize;
-		if (room.controller.level > 6) {
-			maxTransporters = Math.max(maxTransporters, 2);
-		}
-		else {
-			maxTransporters = Math.max(maxTransporters, 3);
-		}
+		maxTransporters = Math.max(maxTransporters, room.controller.level > 6 ? 2 : 3);
 
 		if (room.isClearingTerminal() && room.terminal && room.terminal.store.getUsedCapacity() > room.terminal.store.getCapacity() * 0.01) {
 			maxTransporters *= 1.5;
@@ -146,7 +141,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [CARRY]: 0.65},
 			Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: option.size || 8}
+			{[CARRY]: option.size || 8},
 		);
 	}
 
@@ -167,4 +162,4 @@ export default class TransporterSpawnRole extends SpawnRole {
 			operation: 'room:' + room.name,
 		};
 	}
-};
+}

@@ -28,5 +28,5 @@ function handleMapArea(x: number, y: number, callback: TileCallback, range?: num
 }
 
 export {
-  handleMapArea,
-}
+	handleMapArea,
+};

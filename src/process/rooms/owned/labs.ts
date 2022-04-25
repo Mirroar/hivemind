@@ -1,8 +1,7 @@
-import hivemind from 'hivemind';
-import {PROCESS_PRIORITY_LOW} from 'hivemind';
 import Process from 'process/process';
 import ReactionsProcess from 'process/rooms/owned/labs.reactions';
 import PositionsProcess from 'process/rooms/owned/labs.position';
+import hivemind, {PROCESS_PRIORITY_LOW} from 'hivemind';
 
 export default class ManageLabsProcess extends Process {
 	room: Room;
@@ -16,10 +15,10 @@ export default class ManageLabsProcess extends Process {
 	 * @param {object} data
 	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(params, data) {
-		super(params, data);
-		this.room = params.room;
-	};
+	constructor(parameters, data) {
+		super(parameters, data);
+		this.room = parameters.room;
+	}
 
 	/**
 	 * Runs reactions in a room's labs.

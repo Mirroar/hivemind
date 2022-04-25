@@ -71,9 +71,9 @@ export default class MuleRole extends Role {
 
 	setDelivering(creep: MuleCreep, deliver: boolean) {
 		creep.memory.delivering = deliver;
-		const prevIndex = creep.memory.pathIndex;
+		const previousIndex = creep.memory.pathIndex;
 		this.setRoomPath(creep, deliver ? this.tradeRoute.getPath() : this.tradeRoute.getReversePath());
-		if (prevIndex) creep.memory.pathIndex = creep.memory.roomPath.length - prevIndex - 1;
+		if (previousIndex) creep.memory.pathIndex = creep.memory.roomPath.length - previousIndex - 1;
 	}
 
 	setRoomPath(creep: MuleCreep, path: string[]) {
@@ -149,6 +149,7 @@ export default class MuleRole extends Role {
 			if (!this.tradeRoute.hasTravelLength()) {
 				creep.memory.recordTravelLength = Game.time;
 			}
+
 			return;
 		}
 
@@ -222,4 +223,4 @@ export default class MuleRole extends Role {
 			delete creep.memory.recordTravelLength;
 		}
 	}
-};
+}

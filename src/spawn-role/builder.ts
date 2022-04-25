@@ -21,7 +21,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		});
 
 		const availableEnergy = room.getStoredEnergy();
-		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3000000 && availableEnergy > 10000;
+		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
 		const needsInitialBuildings = room.controller.level < 5 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
 		if (numWorkParts < maxWorkParts) {
@@ -77,10 +77,10 @@ export default class BuilderSpawnRole extends SpawnRole {
 
 		// Add more builders if we have a lot of energy to spare.
 		const availableEnergy = room.getStoredEnergy();
-		if (availableEnergy > 400000) {
+		if (availableEnergy > 400_000) {
 			maxWorkParts *= 2;
 		}
-		else if (availableEnergy > 200000) {
+		else if (availableEnergy > 200_000) {
 			maxWorkParts *= 1.5;
 		}
 
@@ -91,7 +91,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 
 		// Add more builders if we have a terminal, but ramparts are too low to
 		// reasonably protect the room.
-		if (room.terminal && this.getLowestRampartValue(room) < 3000000 && availableEnergy > 10000) {
+		if (room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000) {
 			maxWorkParts *= 2.5;
 		}
 
@@ -137,7 +137,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxParts
+			maxParts,
 		);
 	}
 
@@ -175,4 +175,4 @@ export default class BuilderSpawnRole extends SpawnRole {
 	getCreepBoosts(room, option, body) {
 		return this.generateCreepBoosts(room, body, WORK, 'repair');
 	}
-};
+}
