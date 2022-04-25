@@ -8,18 +8,31 @@ export type PlayerIntelMemory = {
 
 export default class PlayerIntel {
 	protected memory: PlayerIntelMemory;
+	protected readonly memoryKey: string;
 
 	constructor(readonly userName: string) {
-		const key = 'u-intel:' + userName;
-		if (!hivemind.segmentMemory.has(key)) {
-			hivemind.segmentMemory.set(key, {
+		this.memoryKey = 'u-intel:' + userName;
+		if (!this.hasMemory()) {
+			this.setMemory({
 				lastSeen: Game.time,
 				rooms: [],
 				remotes: [],
 			});
 		}
 
-		this.memory = hivemind.segmentMemory.get(key);
+		this.memory = this.getMemory();
+	}
+
+	hasMemory() {
+		return hivemind.segmentMemory.has(this.memoryKey);
+	}
+
+	setMemory(memory: PlayerIntelMemory) {
+		hivemind.segmentMemory.set(this.memoryKey, memory);
+	}
+
+	getMemory(): PlayerIntelMemory {
+		return hivemind.segmentMemory.get(this.memoryKey) as PlayerIntelMemory;
 	}
 
 	isNpc(): boolean {
