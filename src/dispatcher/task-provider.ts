@@ -4,11 +4,9 @@ declare global {
 		priority: number;
 		weight: number;
 	}
-
-	interface Context {}
 }
 
-export default interface TaskProvider<TaskType extends Task, ContextType extends Context> {
+export default interface TaskProvider<TaskType extends Task, ContextType> {
 	getType: () => string;
 	getHighestPriority: () => number;
 	getTasks: (context?: ContextType) => TaskType[];
