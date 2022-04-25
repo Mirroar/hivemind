@@ -1,4 +1,3 @@
-import hivemind from 'hivemind';
 import Process from 'process/process';
 
 export default class ManageFactoryProcess extends Process {

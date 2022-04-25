@@ -41,7 +41,7 @@ export default class FactoryDestination implements TaskProvider<FactoryDestinati
 		return options;
 	}
 
-	validate(task: FactoryDestinationTask) {
+	validate() {
 		if (!this.room.factory) return false;
 		if (this.room.factory.store.getFreeCapacity() === 0) return false;
 

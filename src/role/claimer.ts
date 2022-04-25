@@ -67,10 +67,10 @@ export default class ClaimerRole extends Role {
 			}
 
 			// @todo Use intershard info for determining number of rooms available.
-			const numRooms = Game.myRooms.length;
+			const roomCount = Game.myRooms.length;
 			const maxRooms = Game.gcl.level;
 
-			if (numRooms < maxRooms) {
+			if (roomCount < maxRooms) {
 				creep.claimController(target);
 			}
 			else {

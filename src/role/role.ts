@@ -34,7 +34,7 @@ export default class Role {
 	preRun(creep: Creep): boolean {
 		if (this.containSingleRoomCreep(creep)) return false;
 
-		if (creep.room.boostManager && creep.room.boostManager.overrideCreepLogic(creep)) {
+		if (creep.room.boostManager?.overrideCreepLogic(creep)) {
 			return false;
 		}
 
