@@ -168,7 +168,7 @@ class Hivemind {
 	 *   - requireSegments: If true, the process may only run after segment memory
 	 *     has been fully loaded.
 	 */
-	runProcess(id, ProcessConstructor, options) {
+	runProcess<P extends ProcessParameters>(id: string, ProcessConstructor: {new (parameters: P): ProcessInterface}, options: P) {
 		if (this.pullEmergengyBrake(id)) return;
 		if (options && options.requireSegments && !this.segmentMemory.isReady()) return;
 
@@ -176,7 +176,7 @@ class Hivemind {
 		const stats = this.initializeProcessStats(id);
 
 		// @todo Think about reusing process objects between ticks.
-		const process = new ProcessConstructor(options, this.memory.process[id]);
+		const process = new ProcessConstructor(options);
 
 		if (this.isProcessAllowedToRun(stats, options) && process.shouldRun()) {
 			const previousProcess = this.currentProcess;

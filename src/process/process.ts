@@ -1,20 +1,28 @@
 import ProcessInterface from 'process/process-interface';
 
+declare global {
+	interface ProcessParameters {
+		interval: number;
+		priority?: number;
+		throttleAt?: number;
+		stopAt?: number;
+		requireSegments?: boolean;
+	}
+}
+
 export default class Process implements ProcessInterface {
-	id: string;
-	data: any;
+	public readonly id: string;
+	protected parameters: ProcessParameters;
 
 	/**
 	 * Processes are run and managed by the hivemind kernel.
 	 * @constructor
 	 *
-	 * @param {object} parameters
+	 * @param {ProcessParameters} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		this.data = data;
+	constructor(parameters: ProcessParameters) {
+		this.parameters = parameters;
 	}
 
 	/**
