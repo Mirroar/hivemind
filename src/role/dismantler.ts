@@ -1,4 +1,4 @@
-/* global RoomPosition FIND_FLAGS LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
+/* global RoomPosition LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
 STRUCTURE_RAMPART */
 
 import RemoteMiningOperation from 'operation/remote-mining';
@@ -66,7 +66,7 @@ export default class DismantlerRole extends Role {
 		}
 
 		const targetPositions = creep.operation.getDismantlePositions(creep.memory.source);
-		let target;
+		let target: RoomPosition;
 		for (const pos of targetPositions) {
 			if (creep.heapMemory.finishedPositions.includes(encodePosition(pos))) continue;
 

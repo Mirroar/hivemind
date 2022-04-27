@@ -50,7 +50,7 @@ Creep.prototype.getEffectiveHealth = function (this: Creep) {
 	for (const part of this.body) {
 		if (part.hits === 0) continue;
 		if (part.boost) {
-			const effects = BOOSTS[part.type][part.boost];
+			const effects = BOOSTS[part.type][part.boost] as Record<string, number>;
 			if (effects.damage) {
 				total += part.hits / effects.damage;
 				continue;

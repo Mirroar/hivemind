@@ -44,7 +44,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 				weight: missingResources[resourceType] / 1000,
 				resourceType,
 				target: structure.id,
-				amount: structure.store[resourceType] || 0,
+				amount: structure.store.getUsedCapacity(resourceType as ResourceConstant),
 			});
 		}
 	}
@@ -64,7 +64,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 				weight: 0,
 				resourceType,
 				target: structure.id,
-				amount: structure.store[resourceType] || 0,
+				amount: structure.store.getUsedCapacity(resourceType as ResourceConstant),
 			});
 		}
 	}

@@ -2,13 +2,13 @@ import hivemind from 'hivemind';
 import RoomPlan from 'room/planner/room-plan';
 
 declare global {
-  type RoomPlanWithVersion = {
-  	plan: RoomPlan;
-  	version: number;
-  };
+	type RoomPlanWithVersion = {
+		plan: RoomPlan;
+		version: number;
+	};
 }
 
-const roomPlanCache: Record<string, RoomPlanWithVersion> = {};
+const roomPlanCache = new Map<string, RoomPlanWithVersion>();
 
 function getRoomPlanFor(roomName: string): RoomPlanWithVersion | null {
 	if (!hivemind.segmentMemory.isReady()) return null;
@@ -16,20 +16,20 @@ function getRoomPlanFor(roomName: string): RoomPlanWithVersion | null {
 	const key = 'room-plan:' + roomName;
 	if (!hivemind.segmentMemory.has(key)) return null;
 
-	if (!roomPlanCache[roomName]) {
+	if (!roomPlanCache.has(roomName)) {
 		const saved: {plan: SerializedPlan; version: number} = hivemind.segmentMemory.get(key);
 		const plan = new RoomPlan(roomName, saved.plan);
-		roomPlanCache[roomName] = {plan, version: saved.version};
+		roomPlanCache.set(roomName, {plan, version: saved.version});
 	}
 
-	return roomPlanCache[roomName];
+	return roomPlanCache.get(roomName);
 }
 
 function setRoomPlanFor(roomName: string, plan: RoomPlan, version: number) {
 	const key = 'room-plan:' + roomName;
 	if (!plan) {
 		hivemind.segmentMemory.delete(key);
-		delete roomPlanCache[roomName];
+		roomPlanCache.delete(roomName);
 		return;
 	}
 
@@ -37,7 +37,7 @@ function setRoomPlanFor(roomName: string, plan: RoomPlan, version: number) {
 		plan: plan.serialize(),
 		version,
 	});
-	roomPlanCache[roomName] = {plan, version};
+	roomPlanCache.set(roomName, {plan, version});
 }
 
 export {

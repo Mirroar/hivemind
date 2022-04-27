@@ -2,11 +2,15 @@ import ProcessInterface from 'process/process-interface';
 
 declare global {
 	interface ProcessParameters {
-		interval: number;
+		interval?: number;
 		priority?: number;
 		throttleAt?: number;
 		stopAt?: number;
 		requireSegments?: boolean;
+	}
+
+	interface RoomProcessParameters extends ProcessParameters {
+		room: Room;
 	}
 }
 

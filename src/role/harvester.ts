@@ -51,16 +51,13 @@ export default class HarvesterRole extends Role {
 	run(creep: HarvesterCreep) {
 		this.transporterRole.creep = creep;
 
-		const carryAmount = creep.store.getUsedCapacity();
-		if (!creep.memory.harvesting && carryAmount <= 0) {
+		if (this.hasFinishedDelivering(creep)) {
 			this.setHarvesterState(creep, true);
 		}
-		else if (creep.memory.harvesting && carryAmount >= creep.store.getCapacity()) {
+		else if (this.hasFinishedHarvesting(creep) && !this.isStationaryHarvester(creep)) {
 			// Have harvester explicitly deliver resources, unless it's a fixed energy
 			// harvester with no need to move.
-			if (creep.memory.fixedSource && _.size(creep.room.creepsByRole.transporter) === 0) {
-				this.setHarvesterState(creep, false);
-			}
+			this.setHarvesterState(creep, false);
 		}
 
 		if (creep.memory.harvesting) {
@@ -69,6 +66,18 @@ export default class HarvesterRole extends Role {
 		}
 
 		this.performHarvesterDeliver(creep);
+	}
+
+	hasFinishedDelivering(creep: HarvesterCreep) {
+		return !creep.memory.harvesting && creep.store.getUsedCapacity() === 0;
+	}
+
+	hasFinishedHarvesting(creep: HarvesterCreep) {
+		return creep.memory.harvesting && creep.store.getFreeCapacity() === 0;
+	}
+
+	isStationaryHarvester(creep: HarvesterCreep) {
+		return creep.memory.fixedSource && _.size(creep.room.creepsByRole.transporter) > 0;
 	}
 
 	/**

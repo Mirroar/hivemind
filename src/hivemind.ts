@@ -7,7 +7,6 @@ import Relations from 'relations';
 import SegmentedMemory from 'utils/segmented-memory';
 import settings, {SettingsManager} from 'settings-manager';
 import stats from 'utils/stats';
-import {decodePosition} from 'utils/serialization';
 
 const PROCESS_PRIORITY_LOW = 1;
 const PROCESS_PRIORITY_DEFAULT = 2;

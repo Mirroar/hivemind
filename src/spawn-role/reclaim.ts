@@ -69,7 +69,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -87,7 +87,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option) {
 		return {
 			role: 'builder.remote',
 			targetRoom: option.targetRoom,

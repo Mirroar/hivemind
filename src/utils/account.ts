@@ -1,5 +1,5 @@
 
-let ownUserName;
+let ownUserName: string;
 
 /**
  * Dynamically determines the username of the current user.

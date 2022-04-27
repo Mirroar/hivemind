@@ -18,7 +18,7 @@ const maxSegmentLength = 100 * 1000;
 export default class SegmentedMemory {
 	_isReady: boolean;
 	memory;
-	data;
+	data: Record<string, unknown>;
 	loadedSegments;
 	totalLength: number;
 	savedKeys: Record<string, boolean>;
@@ -177,25 +177,25 @@ export default class SegmentedMemory {
 		return this._isReady;
 	}
 
-	set(key, value) {
+	set<T>(key: string, value: T) {
 		if (!this.isReady()) throw new Error('Segmented Memory is not ready yet.');
 
 		this.data[key] = value;
 	}
 
-	get(key) {
+	get<T>(key: string): T {
 		if (!this.isReady()) throw new Error('Segmented Memory is not ready yet.');
 
 		return this.data[key];
 	}
 
-	delete(key) {
+	delete(key: string) {
 		if (!this.isReady()) throw new Error('Segmented Memory is not ready yet.');
 
 		delete this.data[key];
 	}
 
-	has(key) {
+	has(key: string): boolean {
 		if (!this.isReady()) throw new Error('Segmented Memory is not ready yet.');
 
 		return typeof this.data[key] !== 'undefined';

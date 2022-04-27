@@ -16,7 +16,9 @@ interface ExpansionTarget extends RoomListEntry {
 type ExpandProcessMemory = {
 	started?: number;
 	claimed?: number;
-	currentTarget;
+	currentTarget: {
+		roomName: string;
+	};
 	inProgress: {
 		rooms: Record<string, boolean>;
 		bestTarget: ExpansionTarget;

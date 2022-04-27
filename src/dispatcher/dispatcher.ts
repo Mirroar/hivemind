@@ -1,21 +1,20 @@
 import TaskProvider from 'dispatcher/task-provider';
 import utilities from 'utilities';
 
-export default class Dispatcher<TaskType extends Task, ContextType extends Context> {
+export default class Dispatcher<TaskType extends Task, ContextType> {
 	protected providers: Record<string, TaskProvider<TaskType, ContextType>> = {};
 
 	getTask(context: ContextType): TaskType {
-		const options = [];
+		const options: TaskType[] = [];
 
-		for (const type in this.providers) {
+		_.each(this.providers, provider => {
 			// @todo Get options by provider priority.
-			const provider = this.providers[type];
 			const providerOptions = provider.getTasks(context);
 
 			for (const option of providerOptions) {
 				options.push(option);
 			}
-		}
+		});
 
 		return utilities.getBestOption(options);
 	}

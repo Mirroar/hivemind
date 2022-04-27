@@ -68,7 +68,7 @@ export default class TradeRoute {
 		return this.memory.resourceType;
 	}
 
-	setTravelLength(length) {
+	setTravelLength(length: number) {
 		this.memory.travelLength = length;
 		this.memory.travelLengthCalculated = Game.time;
 	}

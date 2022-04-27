@@ -32,7 +32,7 @@ export default class PlayerIntel {
 	}
 
 	getMemory(): PlayerIntelMemory {
-		return hivemind.segmentMemory.get(this.memoryKey) as PlayerIntelMemory;
+		return hivemind.segmentMemory.get(this.memoryKey);
 	}
 
 	isNpc(): boolean {
