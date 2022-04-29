@@ -4,11 +4,13 @@ import hivemind from 'hivemind';
 
 declare global {
 	interface Memory {
-		segmented: {
-			lastFullSave: number;
-			startSegment: number;
-			endSegment: number;
-		};
+		segmented: SegmentManagerMemory;
+	}
+
+	interface SegmentManagerMemory {
+		lastFullSave: number;
+		startSegment: number;
+		endSegment: number;
 	}
 }
 
@@ -17,9 +19,9 @@ const maxSegmentLength = 100 * 1000;
 
 export default class SegmentedMemory {
 	_isReady: boolean;
-	memory;
-	data: Record<string, unknown>;
-	loadedSegments;
+	memory: SegmentManagerMemory;
+	data: Record<string, any>;
+	loadedSegments: Record<number, boolean>;
 	totalLength: number;
 	savedKeys: Record<string, boolean>;
 	currentSegment: number;
