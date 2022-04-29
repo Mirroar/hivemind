@@ -16,13 +16,11 @@ export default class ReactionsProcess extends Process {
 	 * Checks which labs are close to each other and can perform reactions.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		super(parameters, data);
+	constructor(parameters: RoomProcessParameters) {
+		super(parameters);
 		this.room = parameters.room;
 	}
 

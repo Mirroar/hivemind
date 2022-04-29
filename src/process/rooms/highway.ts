@@ -27,10 +27,8 @@ export default class OwnedRoomProcess extends Process {
 	 * Manages rooms we own.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
 	constructor(parameters: RoomProcessParameters) {
 		super(parameters);

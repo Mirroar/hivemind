@@ -11,13 +11,11 @@ export default class RoomDefenseProcess extends Process {
 	 * Manage defenses in a room.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		super(parameters, data);
+	constructor(parameters) {
+		super(parameters);
 		this.room = parameters.room;
 	}
 

@@ -16,13 +16,13 @@ export default class CleanupProcess extends Process {
    * Sends regular email reports about routine stats.
    * @constructor
    *
-   * @param {object} params
+   * @param {object} parameters
    *   Options on how to run this process.
    * @param {object} data
    *   Memory object allocated for this process' stats.
    */
-  constructor(params, data) {
-    super(params, data);
+  constructor(parameters: ProcessParameters) {
+    super(parameters);
 
     if (!hivemind.segmentMemory.has('process:cleanup')) hivemind.segmentMemory.set('process:cleanup', {
       constructionSites: {},

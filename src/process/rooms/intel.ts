@@ -22,10 +22,8 @@ export default class RoomIntelProcess extends Process {
 	/**
 	 * Gathers tick-by-tick intel in a room.
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
 	constructor(parameters: RoomProcessParameters) {
 		super(parameters);

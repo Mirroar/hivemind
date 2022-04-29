@@ -26,13 +26,11 @@ export default class ReportProcess extends Process {
 	 * Sends regular email reports about routine stats.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		super(parameters, data);
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
 
 		if (!Memory.strategy.reports) this.initMemory(Date.now());
 		this.memory = Memory.strategy.reports;
@@ -44,7 +42,7 @@ export default class ReportProcess extends Process {
 	 * @param {Number} baseTimestamp
 	 *   Timestamp in milliseconds that marks the start of this reporting period.
 	 */
-	initMemory(baseTimestamp) {
+	initMemory(baseTimestamp: number) {
 		Memory.strategy.reports = {
 			nextReportTime: this.normalizeDate(new Date(baseTimestamp + (24 * 60 * 60 * 1000))).getTime(),
 			data: {
@@ -116,7 +114,7 @@ export default class ReportProcess extends Process {
 	 * @param {String} label
 	 *   Label of the heading for the generated report section.
 	 */
-	generateLevelReport(variable, label) {
+	generateLevelReport(variable: string, label: string) {
 		const previousValues = this.memory.data[variable];
 		const currentValues = Game[variable];
 
@@ -161,7 +159,7 @@ export default class ReportProcess extends Process {
 	 * @return {number}
 	 *   Global amount of stored power.
 	 */
-	getStoredPower() {
+	getStoredPower(): number {
 		let amount = 0;
 		for (const room of Game.myRooms) {
 			amount += room.storage ? (room.storage.store[RESOURCE_POWER] || 0) : 0;
@@ -306,7 +304,7 @@ export default class ReportProcess extends Process {
 	 * @return {String}
 	 *   The formatted heading.
 	 */
-	generateHeading(text) {
+	generateHeading(text: string): string {
 		return '<h3>' + text + '</h3>';
 	}
 }

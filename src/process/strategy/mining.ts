@@ -20,13 +20,11 @@ export default class RemoteMiningProcess extends Process {
 	 * Manages which and how many rooms may be remotely mined.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		super(parameters, data);
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
 
 		if (!Memory.strategy) {
 			Memory.strategy = {};

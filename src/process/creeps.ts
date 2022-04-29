@@ -67,13 +67,11 @@ export default class CreepsProcess extends Process {
 	 * Runs logic for all creeps and power creeps.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		super(parameters, data);
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
 
 		this.creepManager = new CreepManager();
 		for (const roleName in creepRoles) {

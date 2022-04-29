@@ -18,6 +18,8 @@ type ExpandProcessMemory = {
 	claimed?: number;
 	currentTarget: {
 		roomName: string;
+		supportingRooms: string[];
+		spawnRoom: string;
 	};
 	inProgress: {
 		rooms: Record<string, boolean>;
@@ -48,13 +50,11 @@ export default class ExpandProcess extends Process {
 	 * Chooses rooms for expansion and sends creeps there.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
-	constructor(parameters, data) {
-		super(parameters, data);
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
 
 		if (!Memory.strategy) {
 			Memory.strategy = {};
@@ -507,7 +507,7 @@ export default class ExpandProcess extends Process {
 	 * @return {string}
 	 *   Name of the room to spawn from.
 	 */
-	findClosestSpawn(targetRoom) {
+	findClosestSpawn(targetRoom: string): string {
 		let bestRoom = null;
 		let bestLength = 0;
 		for (const room of Game.myRooms) {

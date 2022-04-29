@@ -12,10 +12,8 @@ export default class ManageLinksProcess extends Process {
 	 * Manages links in our rooms.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
 	constructor(parameters: RoomProcessParameters) {
 		super(parameters);
@@ -28,7 +26,7 @@ export default class ManageLinksProcess extends Process {
 	 * @return {boolean}
 	 *   True if this process may be run.
 	 */
-	shouldRun() {
+	shouldRun(): boolean {
 		if (!super.shouldRun()) return false;
 		if (!this.room.linkNetwork) return false;
 

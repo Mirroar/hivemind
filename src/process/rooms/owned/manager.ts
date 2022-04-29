@@ -9,8 +9,6 @@ export default class RoomManagerProcess extends Process {
 	 *
 	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
 	constructor(parameters: RoomProcessParameters) {
 		super(parameters);

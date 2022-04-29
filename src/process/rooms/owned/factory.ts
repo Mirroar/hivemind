@@ -7,10 +7,8 @@ export default class ManageFactoryProcess extends Process {
 	 * Manages which reactions take place in a room's labs.
 	 * @constructor
 	 *
-	 * @param {object} params
+	 * @param {object} parameters
 	 *   Options on how to run this process.
-	 * @param {object} data
-	 *   Memory object allocated for this process' stats.
 	 */
 	constructor(parameters: RoomProcessParameters) {
 		super(parameters);
