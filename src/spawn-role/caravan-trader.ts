@@ -1,14 +1,15 @@
 /* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
-import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
-import {encodePosition, decodePosition} from 'utils/serialization';
-import {getRoomIntel} from 'room-intel';
 import {isCrossroads} from 'utils/room-name';
-import {unpackCoordAsPos} from 'utils/packrat';
+
+interface CaravanTraderSpawnOption extends SpawnOption {
+	target: string;
+	resourceType: ResourceConstant;
+}
 
 export default class CaravanTraderSpawnRole extends SpawnRole {
 	/**
@@ -16,14 +17,13 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {
-		if (!hivemind.settings.get('season4EnableCaravanDelivery')) return;
-		if (room.getStoredEnergy() < (BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) * MAX_CREEP_SIZE / 2) return;
-		if (!Memory.strategy || !Memory.strategy.caravans) return;
+	getSpawnOptions(room: Room): CaravanTraderSpawnOption[] {
+		if (!hivemind.settings.get('season4EnableCaravanDelivery')) return [];
+		if (room.getStoredEnergy() < (BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) * MAX_CREEP_SIZE / 2) return [];
+		if (!Memory.strategy || !Memory.strategy.caravans) return [];
 
+		const options: CaravanTraderSpawnOption[] = [];
 		_.each(Memory.strategy.caravans, (info, id) => {
 			if (Game.time > info.expires) return;
 			if (!this.isARoomInRange(room, info.rooms)) return;
@@ -45,11 +45,13 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 						priority: 4,
 						weight: 0,
 						target: id,
-						resourceType,
+						resourceType: resourceType as ResourceConstant,
 					});
 				}
 			}
 		});
+
+		return options;
 	}
 
 	isARoomInRange(room: Room, targetRooms: Array<{name: string; time: number}>): boolean {
@@ -81,7 +83,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option: CaravanTraderSpawnOption): BodyPartConstant[] {
 		const availableResources = room.getCurrentResourceAmount(option.resourceType);
 
 		return this.generateCreepBodyFromWeights(
@@ -102,7 +104,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option): CaravanTraderCreepMemory {
+	getCreepMemory(room: Room, option: CaravanTraderSpawnOption): CaravanTraderCreepMemory {
 		return {
 			role: 'caravan-trader',
 			delivering: false,
@@ -112,7 +114,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 		};
 	}
 
-	onSpawn(room: Room, option, body: BodyPartConstant[], name: string) {
+	onSpawn(room: Room, option: CaravanTraderSpawnOption, body: BodyPartConstant[], name: string) {
 		hivemind.log('creeps', room.name).notify('Spawned new caravan trader ' + name + ' in ' + room.name + ' to deliver ' + option.resourceType + '.');
 	}
 }

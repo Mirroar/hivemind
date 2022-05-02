@@ -8,20 +8,20 @@ import NavMesh from 'utils/nav-mesh';
 declare global {
 	interface StrategyMemory {
 		power?: {
-			rooms: {
-				[key: string]: {
-					decays: number;
-					isActive?: boolean;
-					amount: number;
-					hits: number;
-					freeTiles: number;
-					maxAttackers?: number;
-					neededDps?: number;
-					dps?: number;
-					spawnRooms?: Record<string, {room: string, distance: number}>;
-				};
-			};
+			rooms: Record<string, PowerTargetRoom>;
 		};
+	}
+
+	interface PowerTargetRoom {
+		decays: number;
+		isActive?: boolean;
+		amount: number;
+		hits: number;
+		freeTiles: number;
+		maxAttackers?: number;
+		neededDps?: number;
+		dps?: number;
+		spawnRooms?: Record<string, {room: string, distance: number}>;
 	}
 }
 

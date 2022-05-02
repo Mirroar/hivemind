@@ -23,8 +23,8 @@ declare global {
 		getStorageLocation: () => RoomPosition;
 		prepareForTrading;
 		stopTradePreparation;
-		getRemoteHarvestSourcePositions;
-		getRemoteReservePositions;
+		getRemoteHarvestSourcePositions: () => RoomPosition[];
+		getRemoteReservePositions: () => RoomPosition[];
 		getResourceState;
 		getBestStorageTarget: (amount: number, resourceType: string) => AnyStoreStructure;
 		getBestStorageSource: (resourceType: string) => AnyStoreStructure;
@@ -269,8 +269,8 @@ Room.prototype.stopTradePreparation = function () {
  * @return {RoomPosition[]}
  *   An array of objects containing information about remote harvest targets.
  */
-Room.prototype.getRemoteHarvestSourcePositions = function () {
-	const harvestPositions = [];
+Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
+	const harvestPositions: RoomPosition[] = [];
 	_.each(Game.operationsByType.mining, operation => {
 		const locations = operation.getMiningLocationsByRoom();
 
@@ -288,7 +288,7 @@ Room.prototype.getRemoteHarvestSourcePositions = function () {
  * @return {RoomPosition[]}
  *   An array of objects containing information about controller targets.
  */
-Room.prototype.getRemoteReservePositions = function () {
+Room.prototype.getRemoteReservePositions = function (this: Room) {
 	const reservePositions = [];
 	_.each(Game.operationsByType.mining, operation => {
 		const roomName = operation.getClaimerSourceRoom();

@@ -13,10 +13,10 @@ declare global {
 
 	interface MuleCreepMemory extends CreepMemory {
 		route: string;
-		demiseReported: boolean;
-		roomPath: string[];
-		pathIndex: number;
-		recordTravelLength: number;
+		demiseReported?: boolean;
+		roomPath?: string[];
+		pathIndex?: number;
+		recordTravelLength?: number;
 	}
 }
 

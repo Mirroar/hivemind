@@ -8,19 +8,17 @@ export default class GiftSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {
+	getSpawnOptions(room: Room): SpawnOption[] {
 		// @todo This is unlikely to happen exactly when a spawn is idle.
-		if (Game.time % 123 !== 67) return;
-		if (room.getStoredEnergy() < 10_000) return;
-		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return;
+		if (Game.time % 123 !== 67) return [];
+		if (room.getStoredEnergy() < 10_000) return [];
+		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return [];
 
-		options.push({
+		return [{
 			priority: 3,
 			weight: 0.5,
-		});
+		}];
 	}
 
 	/**
@@ -34,7 +32,7 @@ export default class GiftSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.2, [CARRY]: 0.8},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -52,7 +50,7 @@ export default class GiftSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room) {
+	getCreepMemory(room: Room): CreepMemory {
 		return {origin: room.name};
 	}
 }

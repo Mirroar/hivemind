@@ -3,14 +3,12 @@ import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface ReclaimSpawnOption extends SpawnOption {
+	targetRoom: string;
+}
+
 export default class ReclaimSpawnRole extends SpawnRole {
 	navMesh?: NavMesh;
-	spawnOptions: Array<{
-		priority: number;
-		weight: number;
-		targetRoom: string;
-	}>;
-
 	room: Room;
 
 	/**
@@ -18,24 +16,24 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {
-		if (!hivemind.segmentMemory.isReady()) return;
+	getSpawnOptions(room: Room): ReclaimSpawnOption[] {
+		if (!hivemind.segmentMemory.isReady()) return [];
 
-		this.spawnOptions = options;
+		const options: ReclaimSpawnOption[] = [];
 		this.room = room;
 		for (const targetRoom of Game.myRooms) {
 			if (room.name === targetRoom.name) continue;
-			this.addSpawnOptionsFor(targetRoom);
+			this.addSpawnOptionsFor(targetRoom, options);
 		}
+
+		return options;
 	}
 
-	addSpawnOptionsFor(targetRoom: Room) {
+	addSpawnOptionsFor(targetRoom: Room, options: ReclaimSpawnOption[]) {
 		if (!this.canReclaimRoom(targetRoom)) return;
 
-		this.spawnOptions.push({
+		options.push({
 			priority: 3,
 			weight: 1,
 			targetRoom: targetRoom.name,
@@ -69,7 +67,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room: Room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -87,7 +85,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room: Room, option) {
+	getCreepMemory(room: Room, option: ReclaimSpawnOption): CreepMemory {
 		return {
 			role: 'builder.remote',
 			targetRoom: option.targetRoom,

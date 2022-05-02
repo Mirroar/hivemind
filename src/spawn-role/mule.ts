@@ -3,18 +3,23 @@
 import SpawnRole from 'spawn-role/spawn-role';
 import TradeRoute from 'trade-route';
 
+declare global {
+  interface MuleSpawnOption extends SpawnOption {
+    routeName: string;
+  }
+}
+
 export default class MuleSpawnRole extends SpawnRole {
   /**
    * Adds mule spawn options for the given room.
    *
    * @param {Room} room
    *   The room to add spawn options for.
-   * @param {Object[]} options
-   *   A list of spawn options to add to.
    */
-  getSpawnOptions(room: Room, options) {
-    if (!room.storage) return;
+  getSpawnOptions(room: Room): MuleSpawnOption[] {
+    if (!room.storage) return [];
 
+    const options: MuleSpawnOption[] = [];
     _.each(Memory.tradeRoutes, (mem, routeName) => {
       const tradeRoute = new TradeRoute(routeName);
       if (!tradeRoute.isActive()) return;
@@ -23,7 +28,7 @@ export default class MuleSpawnRole extends SpawnRole {
       const storedAmount = room.getCurrentResourceAmount(resourceType);
       if (storedAmount < 1000) return;
 
-      const numMules = _.filter(Game.creepsByRole.mule || [], creep => creep.memory.origin === room.name && creep.memory.route === routeName).length;
+      const numMules = _.filter(Game.creepsByRole.mule || [], (creep: MuleCreep) => creep.memory.origin === room.name && creep.memory.route === routeName).length;
       // @todo Allow more mules at low priority if a lot of resources need
       // delivering.
       if (numMules > 0) return;
@@ -34,6 +39,8 @@ export default class MuleSpawnRole extends SpawnRole {
         routeName,
       });
     });
+
+    return options;
   }
 
   /**
@@ -47,7 +54,7 @@ export default class MuleSpawnRole extends SpawnRole {
    * @return {string[]}
    *   A list of body parts the new creep should consist of.
    */
-  getCreepBody(room: Room) {
+  getCreepBody(room: Room): BodyPartConstant[] {
     return this.generateCreepBodyFromWeights(
       this.getBodyWeights(),
       Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable) * 0.7,
@@ -60,7 +67,7 @@ export default class MuleSpawnRole extends SpawnRole {
    * @return {object}
    *   An object containing body part weights, keyed by type.
    */
-  getBodyWeights() {
+  getBodyWeights(): Partial<Record<BodyPartConstant, number>> {
     return {[MOVE]: 0.5, [CARRY]: 0.5};
   }
 
@@ -75,7 +82,7 @@ export default class MuleSpawnRole extends SpawnRole {
    * @return {Object}
    *   The boost compound to use keyed by body part type.
    */
-  getCreepMemory(room: Room, option) {
+  getCreepMemory(room: Room, option: MuleSpawnOption): MuleCreepMemory {
     return {
       origin: room.name,
       route: option.routeName,

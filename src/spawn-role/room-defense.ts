@@ -3,6 +3,13 @@
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 
+declare global {
+	interface RoomDefenseSpawnOption extends SpawnOption {
+		responseType?: number;
+		creepRole: string;
+	}
+}
+
 const RESPONSE_NONE = 0;
 const RESPONSE_ATTACKER = 1;
 const RESPONSE_RANGED_ATTACKER = 2;
@@ -13,13 +20,14 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {
+	getSpawnOptions(room: Room) {
+		const options: RoomDefenseSpawnOption[] = [];
 		this.addLowLevelRoomSpawnOptions(room, options);
 		this.addRampartDefenderSpawnOptions(room, options);
 		this.addEmergencyRepairSpawnOptions(room, options);
+
+		return options;
 	}
 
 	/**
@@ -30,7 +38,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addLowLevelRoomSpawnOptions(room: Room, options) {
+	addLowLevelRoomSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		// In low level rooms, add defenses!
 		if (room.controller.level >= 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
@@ -51,7 +59,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addRampartDefenderSpawnOptions(room: Room, options) {
+	addRampartDefenderSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
 
@@ -78,7 +86,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addEmergencyRepairSpawnOptions(room: Room, options) {
+	addEmergencyRepairSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
 		if (room.getStoredEnergy() < 10_000) return;
@@ -99,7 +107,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		});
 	}
 
-	getDefenseCreepSize(room: Room) {
+	getDefenseCreepSize(room: Room): number {
 		const enemyStrength = room.defense.getEnemyStrength();
 
 		if (enemyStrength >= 2) {
@@ -129,7 +137,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room: Room, option) {
+	getCreepBody(room: Room, option: RoomDefenseSpawnOption): BodyPartConstant[] {
 		if (option.creepRole === 'builder') return this.getRepairCreepBody(room);
 
 		if (option.responseType) {
@@ -146,21 +154,21 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		return this.getAttackCreepBody(room);
 	}
 
-	getAttackCreepBody(room: Room) {
+	getAttackCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [ATTACK]: 0.65},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
-	getRangedCreepBody(room: Room) {
+	getRangedCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [RANGED_ATTACK]: 0.65},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
-	getRepairCreepBody(room: Room) {
+	getRepairCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -178,7 +186,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room: Room, option): GuardianCreepMemory {
+	getCreepMemory(room: Room, option: RoomDefenseSpawnOption): CreepMemory {
 		const memory = {
 			singleRoom: room.name,
 			role: option.creepRole,
@@ -200,7 +208,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room: Room, option, body) {
+	getCreepBoosts(room: Room, option: RoomDefenseSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		// @todo Only use boosts if they'd make the difference between being able to damage the enemy or not.
 		if (option.creepRole === 'builder') {
 			return this.generateCreepBoosts(room, body, WORK, 'repair');
@@ -229,7 +237,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room: Room, option, body, name: string) {
+	onSpawn(room: Room, option: RoomDefenseSpawnOption, body: BodyPartConstant[], name: string) {
 		if (option.creepRole === 'guardian') {
 			hivemind.log('creeps', room.name).info('Spawning new guardian', name, 'to defend', room.name);
 		}

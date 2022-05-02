@@ -6,10 +6,10 @@ export default class SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {}
+	getSpawnOptions(room: Room): SpawnOption[] {
+		return [];
+	}
 
 	/**
 	 * Gets the body of a creep to be spawned.
@@ -22,7 +22,7 @@ export default class SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room: Room, option): BodyPartConstant[] {
+	getCreepBody(room: Room, option: SpawnOption): BodyPartConstant[] {
 		return [];
 	}
 
@@ -39,7 +39,7 @@ export default class SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room: Room, option, body: string[]) {
+	getCreepBoosts(room: Room, option: SpawnOption, body: string[]): Record<string, ResourceConstant> {
 		return null;
 	}
 
@@ -54,7 +54,7 @@ export default class SpawnRole {
 	 * @return {Object}
 	 *   The newly spawned creep's initial memory.
 	 */
-	getCreepMemory(room: Room, option?: any): CreepMemory {
+	getCreepMemory(room: Room, option?: SpawnOption): CreepMemory {
 		return {};
 	}
 
@@ -70,7 +70,7 @@ export default class SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room: Room, option, body: BodyPartConstant[], name: string) {}
+	onSpawn(room: Room, option: SpawnOption, body: BodyPartConstant[], name: string) {}
 
 	/**
 	 * Dynamically generates a creep body using body part weights and limits.
@@ -85,7 +85,7 @@ export default class SpawnRole {
 	 * @return {string[]}
 	 *   List of parts that make up the requested creep.
 	 */
-	generateCreepBodyFromWeights(weights, maxCost: number, maxParts?: {[key: string]: number}): BodyPartConstant[] {
+	generateCreepBodyFromWeights(weights: Record<string, number>, maxCost: number, maxParts?: Record<string, number>): BodyPartConstant[] {
 		const totalWeight = _.sum(weights);
 		const newParts = {};
 		let size = 0;
@@ -184,17 +184,17 @@ export default class SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	generateCreepBoosts(room: Room, body: BodyPartConstant[], partType: BodyPartConstant, boostType: string) {
+	generateCreepBoosts(room: Room, body: BodyPartConstant[], partType: BodyPartConstant, boostType: string): Record<string, ResourceConstant> {
 		if (!room.canSpawnBoostedCreeps()) return {};
 
 		const availableBoosts = room.getAvailableBoosts(boostType);
 		const numAffectedParts = _.countBy(body)[partType] || 0;
-		let bestBoost;
+		let bestBoost: ResourceConstant;
 		for (const resourceType in availableBoosts || []) {
 			if (availableBoosts[resourceType].available < numAffectedParts) continue;
 
 			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-				bestBoost = resourceType;
+				bestBoost = resourceType as ResourceConstant;
 			}
 		}
 

@@ -14,7 +14,7 @@ declare global {
 					name: string;
 					time: number;
 				}[];
-				contents: Record<string, number>;
+				contents: Partial<Record<ResourceConstant, number>>;
 			};
 		};
 	}

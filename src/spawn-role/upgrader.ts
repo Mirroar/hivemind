@@ -10,10 +10,9 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {
+	getSpawnOptions(room: Room) {
+		const options: SpawnOption[] = [];
 		const maxUpgraders = this.getUpgraderAmount(room);
 		const numUpgraders = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
 		if (numUpgraders < maxUpgraders) {
@@ -22,6 +21,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 				weight: 1,
 			});
 		}
+
+		return options;
 	}
 
 	/**
@@ -137,7 +138,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room: Room) {
+	getCreepMemory(room: Room): CreepMemory {
 		return {
 			singleRoom: room.name,
 			operation: 'room:' + room.name,
@@ -157,7 +158,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room: Room, option, body: BodyPartConstant[]) {
+	getCreepBoosts(room: Room, option: SpawnOption, body: BodyPartConstant[]) {
 		if (room.getStoredEnergy() < 200_000) return {};
 		if (room.controller.level < 8) return {};
 

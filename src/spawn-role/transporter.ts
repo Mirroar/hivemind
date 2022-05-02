@@ -2,22 +2,27 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface TransporterSpawnOption extends SpawnOption {
+	force: boolean;
+	size: number;
+}
+
 export default class TransporterSpawnRole extends SpawnRole {
 	/**
 	 * Adds transporter spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room) {
+		const options: TransporterSpawnOption[] = [];
+
 		const transporterSize = this.getTransporterSize(room);
 		const maxTransporters = this.getTransporterAmount(room, transporterSize);
 
 		const numTransporters = _.size(room.creepsByRole.transporter);
 		if (numTransporters < maxTransporters) {
-			const option = {
+			const option: TransporterSpawnOption = {
 				priority: 5,
 				weight: 0.5,
 				force: false,
@@ -38,6 +43,8 @@ export default class TransporterSpawnRole extends SpawnRole {
 
 			options.push(option);
 		}
+
+		return options;
 	}
 
 	/**
@@ -51,7 +58,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   Number of transporters needed in this room.
 	 */
-	getTransporterAmount(room, transporterSize) {
+	getTransporterAmount(room: Room, transporterSize: number): number {
 		let maxTransporters = this.getTransporterBaseAmount(room) * 2 / 3;
 
 		// On higher level rooms, spawn less, but bigger, transporters.
@@ -78,7 +85,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   Number of transporters needed in this room.
 	 */
-	getTransporterBaseAmount(room) {
+	getTransporterBaseAmount(room: Room): number {
 		// On low level rooms, do not use (too many) transporters.
 		if (room.controller.level < 3) return 1;
 		if (room.controller.level < 4) return 2;
@@ -119,7 +126,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   Size of transporters for this room.
 	 */
-	getTransporterSize(room) {
+	getTransporterSize(room: Room): number {
 		if (room.controller.level >= 7) return 24;
 		if (room.controller.level >= 6) return 18;
 		if (room.controller.level >= 5) return 15;
@@ -137,7 +144,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option: TransporterSpawnOption): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [CARRY]: 0.65},
 			Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -156,7 +163,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room) {
+	getCreepMemory(room: Room): CreepMemory {
 		return {
 			singleRoom: room.name,
 			operation: 'room:' + room.name,

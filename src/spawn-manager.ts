@@ -16,6 +16,13 @@ declare global {
 	interface Memory {
 		creepCounter: Record<string, number>;
 	}
+
+	interface SpawnOption {
+		role?: string;
+		priority: number;
+		weight: number;
+		preferClosestSpawn?: RoomPosition;
+	}
 }
 
 const roleNameMap = {
@@ -64,7 +71,7 @@ export default class SpawnManager {
 	 * @param {Role} role
 	 *   The role to register.
 	 */
-	registerSpawnRole(roleId, role) {
+	registerSpawnRole(roleId: string, role: SpawnRole) {
 		this.roles[roleId] = role;
 	}
 
@@ -77,21 +84,18 @@ export default class SpawnManager {
 	 * @return {object[]}
 	 *   An array of possible spawn options for the current room.
 	 */
-	getAllSpawnOptions(room) {
-		const options = [];
+	getAllSpawnOptions(room: Room): SpawnOption[] {
+		const options: SpawnOption[] = [];
 
 		_.each(this.roles, (role, roleId) => {
-			if (role.getSpawnOptions) {
-				const roleOptions = [];
-				role.getSpawnOptions(room, roleOptions);
+			const roleOptions = role.getSpawnOptions(room);
 
-				_.each(roleOptions, option => {
-					// Set default values for options.
-					if (typeof option.role === 'undefined') option.role = roleId;
+			_.each(roleOptions, option => {
+				// Set default values for options.
+				if (typeof option.role === 'undefined') option.role = roleId;
 
-					options.push(option);
-				});
-			}
+				options.push(option);
+			});
 		});
 
 		return options;
@@ -107,6 +111,7 @@ export default class SpawnManager {
 	 */
 	manageSpawns(room: Room, spawns: StructureSpawn[]) {
 		this.makeWayForSpawns(spawns);
+
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
 

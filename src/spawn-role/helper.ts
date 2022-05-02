@@ -8,19 +8,14 @@ export default class HelperSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
-		if (!room.boostManager) return;
+	getSpawnOptions(room: Room): SpawnOption[] {
+		if (!room.boostManager?.needsSpawning()) return [];
 
-		if (room.boostManager.needsSpawning()) {
-			options.push({
-				priority: 4,
-				weight: 1,
-				roomName: room.name,
-			});
-		}
+		return [{
+			priority: 4,
+			weight: 1,
+		}];
 	}
 
 	/**
@@ -34,7 +29,7 @@ export default class HelperSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody() {
+	getCreepBody(): BodyPartConstant[] {
 		return [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY];
 	}
 
@@ -49,7 +44,7 @@ export default class HelperSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room) {
+	getCreepMemory(room: Room): CreepMemory {
 		return {
 			singleRoom: room.name,
 			operation: 'room:' + room.name,

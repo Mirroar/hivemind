@@ -13,9 +13,9 @@ declare global {
 
 	interface DismantlerCreepMemory extends CreepMemory {
 		role: 'dismantler';
-		sourceRoom: string;
-		targetRoom: string;
-		source: string;
+		sourceRoom?: string;
+		targetRoom?: string;
+		source?: string;
 	}
 
 	interface DismantlerCreepHeapMemory extends CreepHeapMemory {

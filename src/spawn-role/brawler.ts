@@ -7,6 +7,15 @@ import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 
+interface BrawlerSpawnOption extends SpawnOption {
+	targetPos?: string;
+	pathTarget?: string;
+	responseType?: number;
+	operation?: string;
+	trainStarter?: Id<Creep>;
+	segmentType?: number;
+}
+
 declare global {
 	interface RoomMemory {
 		recentBrawler?: Record<string, number>;
@@ -37,14 +46,15 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room): BrawlerSpawnOption[] {
+		const options: BrawlerSpawnOption[] = [];
 		this.getRemoteDefenseSpawnOptions(room, options);
 		this.getPowerHarvestDefenseSpawnOptions(room, options);
 		this.getTrainPartSpawnOptions(room, options);
 		this.getReclaimSpawnOptions(room, options);
+
+		return options;
 	}
 
 	/**
@@ -55,7 +65,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getRemoteDefenseSpawnOptions(room: Room, options) {
+	getRemoteDefenseSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
 		const harvestPositions: RoomPosition[] = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
@@ -73,21 +83,21 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const targetPos = encodePosition(new RoomPosition(25, 25, pos.roomName));
 			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -1000) < 1000) continue;
 
-			const brawlers = _.filter(Game.creepsByRole.brawler || [], creep => creep.memory.operation === 'mine:' + pos.roomName);
+			const brawlers = _.filter(Game.creepsByRole.brawler || [], (creep: Creep) => creep.memory.operation === 'mine:' + pos.roomName);
 			if (_.size(brawlers) > 0) continue;
 
-			const totalEnemyData: {
-				parts: Record<string, number>;
-				damage: number;
-				heal: number;
-			} = {
+			const totalEnemyData: EnemyData = {
 				parts: {},
 				damage: 0,
 				heal: 0,
+				lastSeen: Game.time,
+				safe: false,
 			};
 
 			for (const roomName of operation.getRoomsOnPath()) {
-				const roomMemory = Memory.rooms[pos.roomName];
+				// @todo Now that we're spawning defense for every room on the path,
+				// make sure brawlers actually move to threatened rooms.
+				const roomMemory = Memory.rooms[roomName];
 				if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
 
 				totalEnemyData.damage += roomMemory.enemies.damage;
@@ -112,7 +122,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		}
 	}
 
-	getPowerHarvestDefenseSpawnOptions(room, options) {
+	getPowerHarvestDefenseSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
 		if (!hivemind.settings.get('enablePowerMining')) return;
 		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return;
 
@@ -147,7 +157,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		});
 	}
 
-	getDefenseCreepSize(room, enemyData) {
+	getDefenseCreepSize(room: Room, enemyData: EnemyData): number {
 		// Default defense creep has 4 attack and 3 heal parts.
 		const defaultAttack = 4;
 		const defaultHeal = 3;
@@ -229,7 +239,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	getTrainPartSpawnOptions(room, options) {
+	getTrainPartSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
 		const trainStarters = _.filter(room.creepsByRole.brawler || [], (creep: Creep) => creep.memory.train && _.size(creep.memory.train.partsToSpawn) > 0);
 
 		for (const creep of trainStarters) {
@@ -244,7 +254,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		}
 	}
 
-	getReclaimSpawnOptions(room: Room, options) {
+	getReclaimSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
 		for (const targetRoom of Game.myRooms) {
 			if (room.name === targetRoom.name) continue;
 			if (!this.canReclaimRoom(targetRoom, room)) continue;
@@ -286,7 +296,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option: BrawlerSpawnOption): BodyPartConstant[] {
 		if (option.responseType) {
 			switch (option.responseType) {
 				case RESPONSE_MINI_BRAWLER:
@@ -374,7 +384,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room: Room, option) {
+	getCreepMemory(room: Room, option: BrawlerSpawnOption): CreepMemory {
 		const memory = {
 			target: option.targetPos || encodePosition(room.controller.pos),
 			pathTarget: option.pathTarget,
@@ -428,10 +438,10 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room: Room, option, body: BodyPartConstant[], name: string) {
+	onSpawn(room: Room, option: BrawlerSpawnOption, body: BodyPartConstant[], name: string) {
 		if (option.trainStarter) {
 			// Remove segment from train spawn queue.
-			const creep = Game.getObjectById<Creep>(option.trainStarter);
+			const creep = Game.getObjectById(option.trainStarter);
 			creep.memory.train.partsToSpawn = creep.memory.train.partsToSpawn.slice(1);
 		}
 

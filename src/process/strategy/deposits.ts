@@ -9,17 +9,17 @@ import {getRoomIntel} from 'room-intel';
 declare global {
 	interface StrategyMemory {
 		deposits?: {
-			rooms: {
-				[key: string]: {
-					spawnRooms?: {
-						room: string;
-						distance: number;
-					}[];
-					isActive?: boolean;
-					scouted?: boolean;
-				};
-			};
+			rooms: Record<string, DepositTargetRoom>;
 		};
+	}
+
+	interface DepositTargetRoom {
+		spawnRooms?: {
+			room: string;
+			distance: number;
+		}[];
+		isActive?: boolean;
+		scouted?: boolean;
 	}
 }
 

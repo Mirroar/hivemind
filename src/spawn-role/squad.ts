@@ -3,16 +3,21 @@
 import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
 
+interface SquadSpawnOption extends SpawnOption {
+	unitType: string;
+	squad: string;
+}
+
 export default class SquadSpawnRole extends SpawnRole {
 	/**
 	 * Adds squad spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room) {
+		const options: SquadSpawnOption[] = [];
+
 		_.each(Game.squads, squad => {
 			if (squad.getSpawn() !== room.name) return;
 			const spawnUnitType = this.needsSpawning(squad);
@@ -26,6 +31,8 @@ export default class SquadSpawnRole extends SpawnRole {
 				squad: squad.name,
 			});
 		});
+
+		return options;
 	}
 
 	/**
@@ -37,7 +44,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {string|null}
 	 *   Type of the unit that needs spawning.
 	 */
-	needsSpawning(squad: Squad) {
+	needsSpawning(squad: Squad): string | null {
 		const neededUnits = [];
 		for (const unitType in squad.memory.composition) {
 			if (squad.memory.composition[unitType] > _.size(squad.units[unitType])) {
@@ -63,7 +70,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option: SquadSpawnOption): BodyPartConstant[] {
 		// Automatically call spawning function for selected unit type.
 		const methodName = 'get' + _.capitalize(option.unitType) + 'CreepBody';
 		if (this[methodName]) return this[methodName](room, option);
@@ -72,21 +79,21 @@ export default class SquadSpawnRole extends SpawnRole {
 		return this.getBrawlerCreepBody(room);
 	}
 
-	getRangerCreepBody(room) {
+	getRangerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
-	getHealerCreepBody(room) {
+	getHealerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [HEAL]: 0.48},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
-	getClaimerCreepBody(room) {
+	getClaimerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [TOUGH]: 0.18, [CLAIM]: 0.3},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -97,14 +104,14 @@ export default class SquadSpawnRole extends SpawnRole {
 		return [MOVE, MOVE, MOVE, MOVE, MOVE, CLAIM];
 	}
 
-	getBuilderCreepBody(room) {
+	getBuilderCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
-	getAttackerCreepBody(room) {
+	getAttackerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -115,7 +122,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return [MOVE];
 	}
 
-	getBrawlerCreepBody(room) {
+	getBrawlerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -133,7 +140,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option: SquadSpawnOption): CreepMemory {
 		return {
 			role: 'brawler',
 			squadName: option.squad,
@@ -154,7 +161,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room, option, body) {
+	getCreepBoosts(room: Room, option: SquadSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		if (option.unitType === 'healer') {
 			return this.generateCreepBoosts(room, body, HEAL, 'heal');
 		}

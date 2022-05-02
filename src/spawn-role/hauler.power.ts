@@ -3,18 +3,22 @@
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface PowerHaulerSpawnOption extends SpawnOption {
+	targetRoom: string;
+}
+
 export default class PowerHaulerSpawnRole extends SpawnRole {
 	/**
 	 * Adds gift spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
-		if (!hivemind.settings.get('enablePowerMining')) return;
-		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return;
+	getSpawnOptions(room: Room): PowerHaulerSpawnOption[] {
+		if (!hivemind.settings.get('enablePowerMining')) return [];
+		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return [];
+
+		const options: PowerHaulerSpawnOption[] = [];
 
 		_.each(Memory.strategy.power.rooms, (info, roomName) => {
 			if (!info.isActive) return;
@@ -38,6 +42,8 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 				});
 			}
 		});
+
+		return options;
 	}
 
 	/**
@@ -51,7 +57,7 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		const moveRatio = hivemind.settings.get('powerHaulerMoveRatio');
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: moveRatio, [CARRY]: 1 - moveRatio},
@@ -70,7 +76,7 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option: PowerHaulerSpawnOption): CreepMemory {
 		return {
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,

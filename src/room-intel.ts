@@ -14,21 +14,21 @@ import {handleMapArea} from 'utils/map';
 import {markBuildings} from 'utils/cost-matrix';
 import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 
-interface DepositInfo {
-	x: number;
-	y: number;
-	id: Id<Deposit>;
-	type: DepositConstant;
-	decays: number;
-	cooldown: number;
-	freeTiles: number;
-}
-
 declare global {
 	interface RoomMemory {
 		abandonedResources?: Record<string, {
 			[resourceType: string]: number;
 		}>;
+	}
+
+	interface DepositInfo {
+		x: number;
+		y: number;
+		id: Id<Deposit>;
+		type: DepositConstant;
+		decays: number;
+		cooldown: number;
+		freeTiles: number;
 	}
 }
 

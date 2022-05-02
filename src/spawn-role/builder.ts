@@ -3,16 +3,18 @@
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface BuilderSpawnOption extends SpawnOption {
+	size: number;
+}
+
 export default class BuilderSpawnRole extends SpawnRole {
 	/**
 	 * Adds builder spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room: Room, options) {
+	getSpawnOptions(room: Room): BuilderSpawnOption[] {
 		const maxWorkParts = this.getNeededWorkParts(room);
 
 		let numWorkParts = 0;
@@ -24,13 +26,13 @@ export default class BuilderSpawnRole extends SpawnRole {
 		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
 		const needsInitialBuildings = room.controller.level < 5 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-		if (numWorkParts < maxWorkParts) {
-			options.push({
-				priority: (needsStrongerRamparts || needsInitialBuildings) ? 4 : 3,
-				weight: 0.5,
-				size: room.isEvacuating() ? 3 : null,
-			});
-		}
+		if (numWorkParts >= maxWorkParts) return [];
+
+		return [{
+			priority: (needsStrongerRamparts || needsInitialBuildings) ? 4 : 3,
+			weight: 0.5,
+			size: room.isEvacuating() ? 3 : null,
+		}];
 	}
 
 	/**
@@ -42,7 +44,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   The number of work parts needed.
 	 */
-	getNeededWorkParts(room) {
+	getNeededWorkParts(room: Room): number {
 		const numConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
 
 		if (room.isEvacuating()) {
@@ -110,7 +112,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @return {number}
 	 *   Number of hits for the lowest rampart.
 	 */
-	getLowestRampartValue(room: Room) {
+	getLowestRampartValue(room: Room): number {
 		return cache.inHeap('lowestRampart:' + room.name, 100, () => {
 			const ramparts = room.find(FIND_MY_STRUCTURES, {
 				filter: s => s.structureType === STRUCTURE_RAMPART,
@@ -131,7 +133,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
 		const maxParts = option.size && {[WORK]: option.size};
 
 		return this.generateCreepBodyFromWeights(
@@ -152,8 +154,9 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room): BuilderCreepMemory {
+	getCreepMemory(room: Room): BuilderCreepMemory {
 		return {
+			role: 'builder',
 			singleRoom: room.name,
 			operation: 'room:' + room.name,
 		};
@@ -172,7 +175,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room, option, body) {
+	getCreepBoosts(room: Room, option: BuilderSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		return this.generateCreepBoosts(room, body, WORK, 'repair');
 	}
 }

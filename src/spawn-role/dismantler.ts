@@ -2,19 +2,26 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface DismantlerSpawnOption extends SpawnOption {
+	targetRoom?: string;
+	operation?: string;
+	source?: string;
+}
+
 export default class DismantlerSpawnRole extends SpawnRole {
 	/**
 	 * Adds dismantler spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room): DismantlerSpawnOption[] {
+		const options: DismantlerSpawnOption[] = [];
 		this.addManualDismantlers(room, options);
 		this.addRoomPlannerDismantlers(room, options);
 		this.addOperationDismantlers(room, options);
+
+		return options;
 	}
 
 	/**
@@ -25,14 +32,14 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addManualDismantlers(room, options) {
+	addManualDismantlers(room: Room, options: DismantlerSpawnOption[]) {
 		// @todo Move from flag based to something the AI can control.
 		const flags = _.filter(Game.flags, flag => flag.name.startsWith('Dismantle:' + room.name));
 		if (flags.length === 0) return;
 
 		// @todo Check if there is enough dismantlers per room with flags in it.
 		const flag = flags[0];
-		const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === flag.pos.roomName && creep.memory.sourceRoom === room.name).length;
+		const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === flag.pos.roomName && creep.memory.sourceRoom === room.name).length;
 
 		if (numDismantlers < flags.length) {
 			options.push({
@@ -51,11 +58,11 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addRoomPlannerDismantlers(room: Room, options) {
+	addRoomPlannerDismantlers(room: Room, options: DismantlerSpawnOption[]) {
 		if (room.isEvacuating()) return;
 		if (!room.roomManager.needsDismantling()) return;
 
-		const numDismantlers = _.filter(room.creepsByRole.dismantler || [], creep => creep.memory.targetRoom === room.name && creep.memory.sourceRoom === room.name).length;
+		const numDismantlers = _.filter(room.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === room.name && creep.memory.sourceRoom === room.name).length;
 		if (numDismantlers > 0) return;
 
 		options.push({
@@ -73,7 +80,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addOperationDismantlers(room, options) {
+	addOperationDismantlers(room: Room, options: DismantlerSpawnOption[]) {
 		const operations = _.filter(Game.operationsByType.mining, o => o.needsDismantler());
 		_.each(operations, operation => {
 			const locations = operation.getMiningLocationsByRoom()[room.name];
@@ -82,7 +89,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 			for (const sourceLocation of locations) {
 				if (!operation.needsDismantler(sourceLocation)) continue;
 
-				const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], creep => creep.memory.source === sourceLocation).length;
+				const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.source === sourceLocation).length;
 				if (numDismantlers > 0) continue;
 
 				options.push({
@@ -106,7 +113,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.65},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -124,15 +131,17 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option: DismantlerSpawnOption): DismantlerCreepMemory {
 		if (option.operation) {
 			return {
+				role: 'dismantler',
 				operation: option.operation,
 				source: option.source,
 			};
 		}
 
 		return {
+			role: 'dismantler',
 			sourceRoom: room.name,
 			targetRoom: option.targetRoom,
 			operation: 'room:' + room.name,
@@ -153,7 +162,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room, option, body) {
+	getCreepBoosts(room: Room, option: DismantlerSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		return this.generateCreepBoosts(room, body, WORK, 'dismantle');
 	}
 }

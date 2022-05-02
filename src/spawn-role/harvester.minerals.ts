@@ -2,19 +2,21 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface MineralHarvesterSpawnOption extends SpawnOption {
+	source: Id<Mineral>;
+}
+
 export default class MineralHarvesterSpawnRole extends SpawnRole {
 	/**
 	 * Adds mineral harvester spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room): MineralHarvesterSpawnOption[] {
 		// Stop harvesting if we can't really store any more minerals.
-		if (room.isFullOnMinerals()) return;
-		if (room.isEvacuating()) return;
+		if (room.isFullOnMinerals()) return [];
+		if (room.isEvacuating()) return [];
 
 		// Find mineral sources with an extractor.
 		// @todo This could be done on script startup and partially kept in room memory.
@@ -30,12 +32,13 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 		});
 
 		// We assume there is always at most one mineral deposit in a room.
-		if (_.size(mineralHarvesters) > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return;
+		if (_.size(mineralHarvesters) > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return [];
 
-		options.push({
+		return [{
 			priority: 2,
+			weight: 0,
 			source: minerals[0].id,
-		});
+		}];
 	}
 
 	/**
@@ -49,7 +52,7 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [WORK]: 0.6, [CARRY]: 0.05},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -67,8 +70,9 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option: MineralHarvesterSpawnOption): HarvesterCreepMemory {
 		return {
+			role: 'harvester',
 			singleRoom: room.name,
 			fixedMineralSource: option.source,
 			operation: 'room:' + room.name,
@@ -88,7 +92,7 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room, option, body) {
+	getCreepBoosts(room: Room, option: MineralHarvesterSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		return this.generateCreepBoosts(room, body, WORK, 'harvest');
 	}
 }

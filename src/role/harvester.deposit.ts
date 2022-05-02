@@ -20,7 +20,7 @@ declare global {
 		role: 'harvester.deposit';
 		targetPos: string;
 		origin: string;
-		delivering: boolean;
+		delivering?: boolean;
 	}
 
 	interface DepositHarvesterCreepHeapMemory extends CreepHeapMemory {

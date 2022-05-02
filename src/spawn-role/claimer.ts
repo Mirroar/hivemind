@@ -3,6 +3,10 @@
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
 
+interface ClaimerSpawnOption extends SpawnOption {
+	targetPos: RoomPosition;
+}
+
 declare global {
 	interface RoomMemory {
 		lastClaim?: any;
@@ -15,13 +19,12 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room): ClaimerSpawnOption[] {
 		// Only spawn claimers if they can have 2 or more claim parts.
-		if (room.energyCapacityAvailable < 2 * (BODYPART_COST[CLAIM] + BODYPART_COST[MOVE])) return;
+		if (room.energyCapacityAvailable < 2 * (BODYPART_COST[CLAIM] + BODYPART_COST[MOVE])) return [];
 
+		const options: ClaimerSpawnOption[] = [];
 		const reservePositions = room.getRemoteReservePositions();
 		for (const pos of reservePositions) {
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
@@ -50,6 +53,8 @@ export default class ClaimerSpawnRole extends SpawnRole {
 				targetPos: pos,
 			});
 		}
+
+		return options;
 	}
 
 	/**
@@ -63,7 +68,7 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [CLAIM]: 0.5},
 			room.energyCapacityAvailable,
@@ -82,7 +87,7 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option): ClaimerCreepMemory {
+	getCreepMemory(room: Room, option: ClaimerSpawnOption): ClaimerCreepMemory {
 		return {
 			role: 'claimer',
 			target: encodePosition(option.targetPos),
@@ -105,7 +110,7 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room, option, body) {
+	onSpawn(room: Room, option: ClaimerSpawnOption, body: BodyPartConstant[]) {
 		const operationName = 'mine:' + option.targetPos.roomName;
 		const operation = Game.operations[operationName];
 		if (!operation) return;

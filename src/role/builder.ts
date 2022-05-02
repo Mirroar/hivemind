@@ -26,6 +26,7 @@ declare global {
 	}
 
 	interface BuilderCreepMemory extends CreepMemory {
+		role: 'builder';
 		repairing?: boolean;
 		order?: RepairOrder | BuildOrder;
 	}

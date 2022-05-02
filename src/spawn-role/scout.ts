@@ -5,30 +5,45 @@ import interShard from 'intershard';
 import SpawnRole from 'spawn-role/spawn-role';
 import {decodePosition} from 'utils/serialization';
 
+declare global {
+	interface RoomMemory {
+		recentScout: number;
+	}
+
+	interface ScoutSpawnOption extends SpawnOption {
+		shard?: string;
+		portalTarget?: string;
+	}
+}
+
+// Minimum time between spawning 2 scouts in the same room.
+const scoutSpawnThrottle = CREEP_LIFE_TIME / 3;
+
 export default class ScoutSpawnRole extends SpawnRole {
 	/**
 	 * Adds scout spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
+	getSpawnOptions(room: Room): ScoutSpawnOption[] {
+		const options: ScoutSpawnOption[] = [];
 		this.addIntershardSpawnOptions(room, options);
 
 		// Don't spawn scouts in quick succession.
 		// If they die immediately, they might be running into enemies right outside
 		// of the room.
-		if (room.memory.recentScout && Game.time - (room.memory.recentScout || -500) < 500) return;
+		if (room.memory.recentScout && Game.time - (room.memory.recentScout || -scoutSpawnThrottle) < scoutSpawnThrottle) return options;
 
 		const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
-		if (_.size(roomScouts) >= hivemind.settings.get('maxScoutsPerRoom') || !room.needsScout()) return;
+		if (_.size(roomScouts) >= hivemind.settings.get('maxScoutsPerRoom') || !room.needsScout()) return options;
 
 		options.push({
 			priority: hivemind.settings.get('scoutSpawnPriority'),
 			weight: 0,
 		});
+
+		return options;
 	}
 
 	/**
@@ -39,7 +54,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 	 * @param {Object[]} options
 	 *   A list of spawn options to add to.
 	 */
-	addIntershardSpawnOptions(room, options) {
+	addIntershardSpawnOptions(room: Room, options: ScoutSpawnOption[]) {
 		// Check if a portal requires a scout and has this room as origin.
 		const memory = interShard.getLocalMemory();
 
@@ -73,7 +88,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody() {
+	getCreepBody(): BodyPartConstant[] {
 		return [MOVE];
 	}
 
@@ -88,7 +103,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room: Room, option): ScoutCreepMemory {
+	getCreepMemory(room: Room, option: ScoutSpawnOption): ScoutCreepMemory {
 		const memory: ScoutCreepMemory = {
 			role: 'scout',
 			origin: room.name,
@@ -114,7 +129,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 	 * @param {string} name
 	 *   The name of the new creep.
 	 */
-	onSpawn(room, option) {
+	onSpawn(room: Room, option: ScoutSpawnOption) {
 		if (!option.portalTarget) {
 			room.memory.recentScout = Game.time;
 			return;

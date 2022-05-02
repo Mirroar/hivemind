@@ -6,8 +6,12 @@ import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {getRoomIntel} from 'room-intel';
-import {unpackCoordAsPos} from 'utils/packrat';
 import {encodePosition, decodePosition} from 'utils/serialization';
+
+interface DepositHarvesterSpawnOption extends SpawnOption {
+	targetPos: string;
+	origin: string;
+}
 
 export default class DepositHarvesterSpawnRole extends SpawnRole {
 	/**
@@ -15,14 +19,13 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
-		if (!hivemind.settings.get('enableDepositMining')) return;
-		if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return;
-		if (!Memory.strategy || !Memory.strategy.deposits || !Memory.strategy.deposits.rooms) return;
+	getSpawnOptions(room: Room): DepositHarvesterSpawnOption[] {
+		if (!hivemind.settings.get('enableDepositMining')) return [];
+		if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
+		if (!Memory.strategy || !Memory.strategy.deposits || !Memory.strategy.deposits.rooms) return [];
 
+		const options: DepositHarvesterSpawnOption[] = [];
 		_.each(Memory.strategy.deposits.rooms, (info, roomName) => {
 			if (!info.isActive) return;
 
@@ -35,45 +38,46 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 
 			// We're assigned to spawn creeps for this deposit mining operation!
 			for (const depositInfo of deposits) {
-				const targetPos = encodePosition(new RoomPosition(depositInfo.x, depositInfo.y, roomName));
-				const activeDepositHarvesters = _.filter(Game.creepsByRole['harvester.deposit'] || [], (creep: DepositHarvesterCreep) => {
-					if (creep.memory.targetPos !== targetPos) return false;
-
-					const travelTime = this.getTravelTime(creep.memory.origin, creep.memory.targetPos) || spawnRoomInfo.distance * 50;
-					// if ((creep.ticksToLive || CREEP_LIFE_TIME) < (CREEP_SPAWN_TIME * creep.body.length) + travelTime) return false;
-
-					return true;
-				});
-
-				if (activeDepositHarvesters.length < (depositInfo.freeTiles || 1)) {
-					options.push({
-						priority: 3,
-						weight: 0,
-						targetPos,
-						origin: _.min(info.spawnRooms, r => r.distance).room,
-					});
-				}
+				this.addOptionForDeposit(depositInfo, info, roomName, spawnRoomInfo, options);
 			}
 		});
+
+		return options;
 	}
 
-	getTravelTime(sourceRoom: string, targetPos: string) {
-		if (!hivemind.segmentMemory.isReady()) return null;
+	addOptionForDeposit(depositInfo: DepositInfo, strategyInfo: DepositTargetRoom, depositRoomName: string, spawnRoomInfo: {room: string; distance: number;}, options: DepositHarvesterSpawnOption[]) {
+		const targetPos = encodePosition(new RoomPosition(depositInfo.x, depositInfo.y, depositRoomName));
+		const activeDepositHarvesters = _.filter(Game.creepsByRole['harvester.deposit'] || [], (creep: DepositHarvesterCreep) => {
+			if (creep.memory.targetPos !== targetPos) return false;
 
-		return cache.inHeap('depositTravelTime:' + sourceRoom + ':' + targetPos, 1000, () => {
-			const mesh = new NavMesh();
-			if (!Game.rooms[sourceRoom]) return null;
-			if (!Game.rooms[sourceRoom].isMine()) return null;
+			const travelTime = this.getTravelTime(creep.memory.origin, creep.memory.targetPos) || spawnRoomInfo.distance * 50;
+			// if ((creep.ticksToLive || CREEP_LIFE_TIME) < (CREEP_SPAWN_TIME * creep.body.length) + travelTime) return false;
 
-			const sourcePos = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
-			const targetPosition = decodePosition(targetPos);
-			const result = mesh.findPath(sourcePos, targetPosition);
-			if (result.incomplete) return null;
-
-			// @todo Pathfind between waypoints to get actual travel time.
-
-			return result.path.length * 25;
+			return true;
 		});
+
+		if (activeDepositHarvesters.length < (depositInfo.freeTiles || 1)) {
+			options.push({
+				priority: 3,
+				weight: 0,
+				targetPos,
+				// We use the closest spawn room as supposed origin, because that will
+				// make delivery faster.
+				origin: _.min(strategyInfo.spawnRooms, r => r.distance).room,
+			});
+		}
+	}
+
+	getTravelTime(sourceRoom: string, targetPos: string): number {
+		if (!hivemind.segmentMemory.isReady()) return null;
+		if (!Game.rooms[sourceRoom]) return null;
+		if (!Game.rooms[sourceRoom].isMine()) return null;
+
+		const sourcePosition = Game.rooms[sourceRoom].roomPlanner.getRoomCenter();
+		const targetPosition = decodePosition(targetPos);
+
+		const mesh = new NavMesh();
+		return mesh.estimateTravelTime(sourcePosition, targetPosition);
 	}
 
 	/**
@@ -87,7 +91,7 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room, option) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [WORK]: 0.2, [CARRY]: 0.3},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -105,8 +109,9 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option: DepositHarvesterSpawnOption): DepositHarvesterCreepMemory {
 		return {
+			role: 'harvester.deposit',
 			origin: option.origin,
 			targetPos: option.targetPos,
 			// disableNotifications: true,

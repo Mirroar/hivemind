@@ -4,25 +4,28 @@ import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 import {getRoomIntel} from 'room-intel';
 
+interface GathererSpawnOption extends SpawnOption {
+	targetRoom: string;
+}
+
 export default class GathererSpawnRole extends SpawnRole {
 	/**
 	 * Adds gatherer spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
-	 * @param {Object[]} options
-	 *   A list of spawn options to add to.
 	 */
-	getSpawnOptions(room, options) {
-		if (!room.storage) return;
-		if (room.getStoredEnergy() < 5000) return;
+	getSpawnOptions(room: Room): GathererSpawnOption[] {
+		if (!room.storage) return [];
+		if (room.getStoredEnergy() < 5000) return [];
 
+		const options: GathererSpawnOption[] = [];
 		_.each(room.memory.abandonedResources, (resources, roomName) => {
 			// @todo Estimate resource value.
 			const totalAmount = _.sum(_.map(room.memory.abandonedResources, (m: Record<string, number>) => _.sum(m)));
 			if (totalAmount < 5000) return;
 
-			const gathererCount = _.filter(Game.creepsByRole.gatherer || [], creep => creep.memory.targetRoom === roomName && creep.memory.origin === room.name).length;
+			const gathererCount = _.filter(Game.creepsByRole.gatherer || [], (creep: Creep) => creep.memory.targetRoom === roomName && creep.memory.origin === room.name).length;
 			// @todo Allow more gatherers at low priority if a lot of resources need
 			// gathering.
 			// @todo Make sure gatherers can reach their targets.
@@ -38,6 +41,8 @@ export default class GathererSpawnRole extends SpawnRole {
 				targetRoom: roomName,
 			});
 		});
+
+		return options;
 	}
 
 	/**
@@ -51,7 +56,7 @@ export default class GathererSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room) {
+	getCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
 			this.getBodyWeights(),
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
@@ -64,7 +69,7 @@ export default class GathererSpawnRole extends SpawnRole {
 	 * @return {object}
 	 *   An object containing body part weights, keyed by type.
 	 */
-	getBodyWeights() {
+	getBodyWeights(): Partial<Record<BodyPartConstant, number>> {
 		return {[MOVE]: 0.5, [CARRY]: 0.5};
 	}
 
@@ -79,7 +84,7 @@ export default class GathererSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepMemory(room, option) {
+	getCreepMemory(room: Room, option: GathererSpawnOption): CreepMemory {
 		return {
 			origin: room.name,
 			targetRoom: option.targetRoom,

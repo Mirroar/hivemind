@@ -18,11 +18,11 @@ declare global {
 
 	interface HarvesterCreepMemory extends CreepMemory {
 		role: 'harvester';
-		harvesting: boolean;
-		fixedSource: Id<Source>;
-		fixedMineralSource: Id<Mineral>;
-		harvestPos: number;
-		noHarvestPos: boolean;
+		harvesting?: boolean;
+		fixedSource?: Id<Source>;
+		fixedMineralSource?: Id<Mineral>;
+		harvestPos?: number;
+		noHarvestPos?: boolean;
 	}
 
 	interface HarvesterCreepHeapMemory extends CreepHeapMemory {

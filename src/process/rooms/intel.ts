@@ -6,13 +6,15 @@ import {getRoomIntel} from 'room-intel';
 
 declare global {
 	interface RoomMemory {
-		enemies: {
-			parts: Record<string, number>;
-			lastSeen: number;
-			safe: boolean;
-			damage: number;
-			heal: number;
-		};
+		enemies: EnemyData;
+	}
+
+	interface EnemyData {
+		parts: Record<string, number>;
+		lastSeen: number;
+		safe: boolean;
+		damage: number;
+		heal: number;
 	}
 }
 
