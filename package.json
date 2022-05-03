@@ -81,7 +81,9 @@
 					"object": false
 				}
 			],
-			"unicorn/prefer-node-protocol": ["off"]
+			"unicorn/prefer-node-protocol": ["off"],
+			"unicorn/no-array-callback-reference": ["off"],
+			"unicorn/no-array-method-this-argument": ["off"]
 		},
 		"globals": [
 			"_",
