@@ -47,7 +47,7 @@ class SettingsManager {
 	 * @return {mixed}
 	 *   The value for this setting.
 	 */
-	get(key) {
+	get<T>(key: string): T {
 		// @todo Periodically check if a setting was changed in memory.
 		return this.values[key];
 	}
@@ -60,7 +60,7 @@ class SettingsManager {
 	 * @param {string} value
 	 *   The value for the setting to set.
 	 */
-	set(key, value) {
+	set<T>(key: string, value: T) {
 		if (typeof this.values[key] === 'undefined') return;
 		if (typeof value === 'undefined') return;
 		if (!Memory.hivemind.settings) Memory.hivemind.settings = {};
@@ -75,7 +75,7 @@ class SettingsManager {
 	 * @param {string} key
 	 *   The key for the setting to reset.
 	 */
-	reset(key) {
+	reset(key: string) {
 		// @todo Reload values from local or base settings.
 		if (typeof this.values[key] === 'undefined') return;
 		if (!Memory.hivemind.settings) return;

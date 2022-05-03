@@ -127,15 +127,15 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 *   Number of needed work parts.
 	 */
 	getMaxWorkParts(source: Source): number {
-		let numParts = source.energyCapacity / ENERGY_REGEN_TIME / 2;
+		let numberOfParts = source.energyCapacity / ENERGY_REGEN_TIME / 2;
 
-		_.each(source.effects, effect => {
-			if ('power' in effect && effect.power === PWR_REGEN_SOURCE) {
-				numParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
+		for (const effect of source.effects) {
+			if (effect.effect === PWR_REGEN_SOURCE) {
+				numberOfParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
 			}
-		});
+		}
 
-		return 1.2 * numParts;
+		return 1.2 * numberOfParts;
 	}
 
 	/**
@@ -150,7 +150,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
-		const source = Game.getObjectById<Source>(option.source);
+		const source = Game.getObjectById(option.source);
 		const weights = {[MOVE]: 0.01, [WORK]: 0.79, [CARRY]: 0.2};
 		const hasSpawnAtSource = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {filter: s => s.structureType === STRUCTURE_SPAWN}).length > 0;
 		if (!hasSpawnAtSource) {
@@ -162,7 +162,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			weights,
 			Math.max(option.force ? 200 : room.energyCapacityAvailable, room.energyAvailable),
-			option.size && {[WORK]: option.size},
+			{[WORK]: option.size},
 		);
 	}
 

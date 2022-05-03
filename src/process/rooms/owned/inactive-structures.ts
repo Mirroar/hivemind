@@ -4,7 +4,7 @@ import Process from 'process/process';
 
 declare global {
 	interface RoomMemory {
-		inactiveStructures;
+		inactiveStructures: Partial<Record<Id<Structure>, number>>;
 	}
 }
 

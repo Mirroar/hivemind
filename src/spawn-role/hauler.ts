@@ -38,7 +38,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 		// Don't spawn if there is no full path.
 		const paths = operation.getPaths();
 		const path = paths[targetPos];
-		const travelTime = path && path.travelTime;
+		const travelTime = path?.travelTime;
 		if (!travelTime) return;
 
 		const requiredCarryParts = operation.getHaulerSize(targetPos);

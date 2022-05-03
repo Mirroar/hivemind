@@ -21,13 +21,13 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		const options: RemoteHarvesterSpawnOption[] = [];
 		for (const position of harvestPositions) {
-			this.addOptionForPosition(room, position, options);
+			this.addOptionForPosition(position, options);
 		}
 
 		return options;
 	}
 
-	addOptionForPosition(room: Room, position: RoomPosition, options: RemoteHarvesterSpawnOption[]) {
+	addOptionForPosition(position: RoomPosition, options: RemoteHarvesterSpawnOption[]) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
 
@@ -37,7 +37,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 		// Don't spawn if there is no full path.
 		const paths = operation.getPaths();
 		const path = paths[targetPos];
-		const travelTime = path && path.travelTime;
+		const travelTime = path?.travelTime;
 		if (!travelTime) return;
 
 		const harvesters = _.filter(
