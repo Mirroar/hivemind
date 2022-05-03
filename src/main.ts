@@ -23,6 +23,7 @@ interface DeprecatedRoomMemory extends RoomMemory {
 	sources: unknown;
 	spawns: unknown;
 	structureCache: unknown;
+	inactiveStructures: unknown;
 }
 
 // Make sure game object prototypes are enhanced.
@@ -336,6 +337,7 @@ const main = {
 				delete roomMemory.sources;
 				delete roomMemory.spawns;
 				delete roomMemory.structureCache;
+				delete roomMemory.inactiveStructures;
 			});
 		}
 

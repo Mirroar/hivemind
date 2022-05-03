@@ -70,16 +70,38 @@ Structure.prototype.isWalkable = function () {
 
 /**
  * Replacement for Structure.prototype.isActive that is less CPU intensive.
- * @see InactiveStructuresProcess
  *
  * @return {boolean}
  *   True if the structure is operational.
  */
-Structure.prototype.isOperational = function () {
-	if (!this.room.memory.inactiveStructures) return true;
-	if (!this.room.memory.inactiveStructures[this.id]) return true;
+Structure.prototype.isOperational = function (this: Structure) {
+	const inactiveStructures = getInactiveStructures(this.room);
+
+	if (!inactiveStructures[this.id]) return true;
 	return false;
 };
+
+function getInactiveStructures(room: Room): Partial<Record<Id<Structure>, boolean>> {
+	const rcl = room.controller.level;
+	if (rcl >= 8) return {};
+
+	return cache.inHeap('inactiveStructures:' + room.name, 500, () => {
+		const groupedStructures: _.Dictionary<Structure[]> = _.groupBy(room.find(FIND_MY_STRUCTURES), 'structureType');
+		const inactiveStructures = {};
+		_.each(groupedStructures, (structures, structureType) => {
+			// Check if more structures than allowed exist.
+			if (!CONTROLLER_STRUCTURES[structureType] || structures.length <= CONTROLLER_STRUCTURES[structureType][rcl]) return;
+
+			for (const structure of structures) {
+				if (!structure.isActive()) {
+					inactiveStructures[structure.id] = true;
+				}
+			}
+		});
+
+		return inactiveStructures;
+	});
+}
 
 /**
  * Checks whether this extension belongs to any bay.

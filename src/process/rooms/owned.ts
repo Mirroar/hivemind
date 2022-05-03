@@ -8,7 +8,6 @@ declare global {
 	}
 }
 
-import InactiveStructuresProcess from 'process/rooms/owned/inactive-structures';
 import ManageFactoryProcess from 'process/rooms/owned/factory';
 import ManageLabsProcess from 'process/rooms/owned/labs';
 import ManageLinksProcess from 'process/rooms/owned/links';
@@ -59,14 +58,6 @@ export default class OwnedRoomProcess extends Process {
 				interval: prioritizeRoomManager ? 0 : 100,
 				room: this.room,
 				priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
-			});
-		});
-
-		hivemind.runSubProcess('rooms_inactive_structs', () => {
-			hivemind.runProcess(this.room.name + '_inactive_structs', InactiveStructuresProcess, {
-				interval: 500,
-				room: this.room,
-				priority: PROCESS_PRIORITY_LOW,
 			});
 		});
 
