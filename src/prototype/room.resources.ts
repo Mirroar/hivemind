@@ -7,34 +7,44 @@ import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
+interface RoomResourceState {
+	totalResources: Partial<Record<ResourceConstant, number>>;
+	state: Partial<Record<ResourceConstant, ResourceLevel>>;
+	canTrade: boolean;
+	isEvacuating: boolean;
+	mineralType: ResourceConstant;
+	addResource: (resourceType: ResourceConstant, amount: number) => void;
+}
+
 declare global {
 	interface Room {
 		sourceDispatcher: ResourceSourceDispatcher;
 		destinationDispatcher: ResourceDestinationDispatcher;
 		getStorageLimit: () => number;
-		getFreeStorage;
+		getFreeStorage: () => number;
 		getCurrentResourceAmount: (resourceType: string) => number;
 		getStoredEnergy: () => number;
-		getCurrentMineralAmount;
+		getCurrentMineralAmount: () => number;
 		isFullOnEnergy: () => boolean;
 		isFullOnPower: () => boolean;
 		isFullOnMinerals: () => boolean;
-		isFullOn;
+		isFullOn: (resourceType: string) => boolean;
 		getStorageLocation: () => RoomPosition;
-		prepareForTrading;
-		stopTradePreparation;
+		prepareForTrading: (resourceType: ResourceConstant, amount?: number) => void;
+		stopTradePreparation: () => void;
 		getRemoteHarvestSourcePositions: () => RoomPosition[];
 		getRemoteReservePositions: () => RoomPosition[];
-		getResourceState;
-		getBestStorageTarget: (amount: number, resourceType: string) => AnyStoreStructure;
-		getBestStorageSource: (resourceType: string) => AnyStoreStructure;
-		getBestCircumstancialStorageSource;
-		determineResourceLevel;
-		getResourceLevelCutoffs;
+		getResourceState: () => RoomResourceState;
+		getBestStorageTarget: (amount: number, resourceType: ResourceConstant) => AnyStoreStructure;
+		getBestStorageSource: (resourceType: ResourceConstant) => AnyStoreStructure;
+		getBestCircumstancialStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
+		determineResourceLevel: (amount: number, resourceType: ResourceConstant) => ResourceLevel;
+		getResourceLevelCutoffs: (resourceType: ResourceConstant) => ResourceLevelCuttoffs;
 	}
 
 	interface RoomMemory {
-		fillTerminalAmount;
+		fillTerminal?: ResourceConstant;
+		fillTerminalAmount?: number;
 	}
 }
 
@@ -85,7 +95,7 @@ Room.prototype.getStorageLimit = function (this: Room) {
  * @return {number}
  *   The currently available free storage space.
  */
-Room.prototype.getFreeStorage = function () {
+Room.prototype.getFreeStorage = function (this: Room) {
 	// Determines amount of free space in storage.
 	let limit = this.getStorageLimit();
 	if (this.storage) {
@@ -170,7 +180,7 @@ Room.prototype.getStoredEnergy = function (this: Room) {
  * @return {number}
  *   Amount of minerals stored in this room.
  */
-Room.prototype.getCurrentMineralAmount = function () {
+Room.prototype.getCurrentMineralAmount = function (this: Room) {
 	// @todo This could use caching.
 	let total = 0;
 
@@ -188,7 +198,7 @@ Room.prototype.getCurrentMineralAmount = function () {
  * @return {boolean}
  *   True if storage limit for energy has been reached.
  */
-Room.prototype.isFullOnEnergy = function () {
+Room.prototype.isFullOnEnergy = function (this: Room) {
 	return this.getCurrentResourceAmount(RESOURCE_ENERGY) > this.getStorageLimit() / 2;
 };
 
@@ -198,7 +208,7 @@ Room.prototype.isFullOnEnergy = function () {
  * @return {boolean}
  *   True if storage limit for power has been reached.
  */
-Room.prototype.isFullOnPower = function () {
+Room.prototype.isFullOnPower = function (this: Room) {
 	return this.getCurrentResourceAmount(RESOURCE_POWER) > this.getStorageLimit() / 6;
 };
 
@@ -208,7 +218,7 @@ Room.prototype.isFullOnPower = function () {
  * @return {boolean}
  *   True if storage limit for minerals has been reached.
  */
-Room.prototype.isFullOnMinerals = function () {
+Room.prototype.isFullOnMinerals = function (this: Room) {
 	return this.getCurrentMineralAmount() > this.getStorageLimit() / 3;
 };
 
@@ -221,7 +231,7 @@ Room.prototype.isFullOnMinerals = function () {
  * @return {boolean}
  *   True if storage limit for the resource has been reached.
  */
-Room.prototype.isFullOn = function (resourceType) {
+Room.prototype.isFullOn = function (this: Room, resourceType: ResourceConstant) {
 	if (resourceType === RESOURCE_ENERGY) return this.isFullOnEnergy();
 	if (resourceType === RESOURCE_POWER) return this.isFullOnPower();
 	return this.isFullOnMinerals();
@@ -249,7 +259,7 @@ Room.prototype.getStorageLocation = function (this: Room) {
  * @param {number} amount
  *   Amount of resources to store.
  */
-Room.prototype.prepareForTrading = function (this: Room, resourceType: ResourceConstant, amount: number) {
+Room.prototype.prepareForTrading = function (this: Room, resourceType: ResourceConstant, amount?: number) {
 	if (!amount) amount = Math.min(10_000, this.getCurrentResourceAmount(resourceType));
 	this.memory.fillTerminal = resourceType;
 	this.memory.fillTerminalAmount = Math.min(amount, 50_000);
@@ -258,7 +268,7 @@ Room.prototype.prepareForTrading = function (this: Room, resourceType: ResourceC
 /**
  * Stops deliberately storing resources in the room's terminal.
  */
-Room.prototype.stopTradePreparation = function () {
+Room.prototype.stopTradePreparation = function (this: Room) {
 	delete this.memory.fillTerminal;
 	delete this.memory.fillTerminalAmount;
 };
@@ -323,17 +333,17 @@ Room.prototype.getRemoteReservePositions = function (this: Room) {
  *   - canTrade: Whether the room can perform trades.
  */
 Room.prototype.getResourceState = function (this: Room) {
-	if (!this.isMine()) return {};
+	if (!this.isMine()) return null;
 
 	const storage = this.storage;
 	const terminal = this.terminal;
 
 	return cache.inObject(this, 'resourceState', 1, () => {
-		const roomData = {
+		const roomData: RoomResourceState = {
 			totalResources: {},
 			state: {},
 			canTrade: false,
-			addResource(resourceType, amount) {
+			addResource(resourceType: ResourceConstant, amount: number) {
 				this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
 			},
 			isEvacuating: false,
@@ -347,19 +357,19 @@ Room.prototype.getResourceState = function (this: Room) {
 		roomData.isEvacuating = this.isEvacuating();
 
 		if (storage && !roomData.isEvacuating) {
-			_.each(storage.store, (amount, resourceType) => {
+			_.each(storage.store, (amount: number, resourceType: ResourceConstant) => {
 				roomData.addResource(resourceType, amount);
 			});
 		}
 
 		if (terminal) {
-			_.each(terminal.store, (amount, resourceType) => {
+			_.each(terminal.store, (amount: number, resourceType: ResourceConstant) => {
 				roomData.addResource(resourceType, amount);
 			});
 		}
 
 		if (this.factory) {
-			_.each(this.factory.store, (amount, resourceType) => {
+			_.each(this.factory.store, (amount: number, resourceType: ResourceConstant) => {
 				roomData.addResource(resourceType, amount);
 			});
 		}
@@ -468,7 +478,7 @@ function isCommodityNeededAtFactoryLevel(factoryLevel: number, resourceType: Res
  * @return {Structure}
  *   The room's storage or terminal.
  */
-Room.prototype.getBestStorageTarget = function (amount, resourceType) {
+Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType) {
 	if (this.storage && this.terminal) {
 		const storageFree = this.storage.store.getFreeCapacity();
 		const terminalFree = this.terminal.store.getFreeCapacity();
@@ -518,6 +528,8 @@ Room.prototype.getBestStorageTarget = function (amount, resourceType) {
 	else if (this.terminal) {
 		return this.terminal;
 	}
+
+	return null;
 };
 
 /**
@@ -529,7 +541,7 @@ Room.prototype.getBestStorageTarget = function (amount, resourceType) {
  * @return {Structure}
  *   The room's storage or terminal.
  */
-Room.prototype.getBestStorageSource = function (resourceType) {
+Room.prototype.getBestStorageSource = function (this: Room, resourceType: ResourceConstant) {
 	if (this.storage && this.terminal) {
 		const specialSource = this.getBestCircumstancialStorageSource(resourceType);
 		if (specialSource) return specialSource;
@@ -550,6 +562,8 @@ Room.prototype.getBestStorageSource = function (resourceType) {
 	else if (this.terminal && this.terminal.store[resourceType] && this.memory.fillTerminal !== resourceType) {
 		return this.terminal;
 	}
+
+	return null;
 };
 
 /**
@@ -563,9 +577,9 @@ Room.prototype.getBestStorageSource = function (resourceType) {
  * @return {Structure}
  *   The room's storage or terminal.
  */
-Room.prototype.getBestCircumstancialStorageSource = function (resourceType) {
-	let primarySource;
-	let secondarySource;
+Room.prototype.getBestCircumstancialStorageSource = function (this: Room, resourceType: ResourceConstant) {
+	let primarySource: StructureStorage | StructureTerminal;
+	let secondarySource: StructureStorage | StructureTerminal;
 	if (this.isEvacuating()) {
 		// Take resources out of storage if possible to empty it out.
 		primarySource = this.storage;
@@ -577,15 +591,15 @@ Room.prototype.getBestCircumstancialStorageSource = function (resourceType) {
 		secondarySource = this.storage;
 	}
 
-	if (primarySource) {
-		const secondaryFull = secondarySource.store.getUsedCapacity() > secondarySource.store.getCapacity() * 0.8;
+	const secondaryFull = secondarySource.store.getUsedCapacity() > secondarySource.store.getCapacity() * 0.8;
 
-		if (primarySource.store[resourceType] && (!secondaryFull || !secondarySource.store[resourceType])) {
-			return primarySource;
-		}
-
-		if (secondarySource.store[resourceType] && (resourceType === RESOURCE_ENERGY || secondaryFull)) {
-			return secondarySource;
-		}
+	if (primarySource.store[resourceType] && (!secondaryFull || !secondarySource.store[resourceType])) {
+		return primarySource;
 	}
+
+	if (secondarySource.store[resourceType] && (resourceType === RESOURCE_ENERGY || secondaryFull)) {
+		return secondarySource;
+	}
+
+	return null;
 };

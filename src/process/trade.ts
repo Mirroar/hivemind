@@ -7,12 +7,6 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 
-declare global {
-	interface RoomMemory {
-		fillTerminal?: any;
-	}
-}
-
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
 // Amount of credits to keep in reserve for creating orders.
@@ -149,6 +143,7 @@ export default class TradeProcess extends Process {
 
 		for (const room of Game.myRooms) {
 			const roomData = room.getResourceState();
+			if (!roomData) continue;
 
 			total.rooms++;
 			for (const resourceType of _.keys(roomData.totalResources)) {
