@@ -39,9 +39,9 @@ export default class DismantlerSpawnRole extends SpawnRole {
 
 		// @todo Check if there is enough dismantlers per room with flags in it.
 		const flag = flags[0];
-		const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === flag.pos.roomName && creep.memory.sourceRoom === room.name).length;
+		const dismantlerCount = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === flag.pos.roomName && creep.memory.sourceRoom === room.name).length;
 
-		if (numDismantlers < flags.length) {
+		if (dismantlerCount < flags.length) {
 			options.push({
 				priority: 4,
 				weight: 0,
@@ -62,8 +62,8 @@ export default class DismantlerSpawnRole extends SpawnRole {
 		if (room.isEvacuating()) return;
 		if (!room.roomManager.needsDismantling()) return;
 
-		const numDismantlers = _.filter(room.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === room.name && creep.memory.sourceRoom === room.name).length;
-		if (numDismantlers > 0) return;
+		const dismantlerCount = _.filter(room.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === room.name && creep.memory.sourceRoom === room.name).length;
+		if (dismantlerCount > 0) return;
 
 		options.push({
 			priority: 3,
@@ -89,8 +89,8 @@ export default class DismantlerSpawnRole extends SpawnRole {
 			for (const sourceLocation of locations) {
 				if (!operation.needsDismantler(sourceLocation)) continue;
 
-				const numDismantlers = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.source === sourceLocation).length;
-				if (numDismantlers > 0) continue;
+				const dismantlerCount = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.source === sourceLocation).length;
+				if (dismantlerCount > 0) continue;
 
 				options.push({
 					priority: 3,

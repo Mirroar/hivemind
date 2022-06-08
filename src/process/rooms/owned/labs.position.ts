@@ -31,21 +31,25 @@ export default class ReactionsProcess extends Process {
 		// @todo Find labs not used for reactions, to do creep boosts.
 		this.room.memory.canPerformReactions = false;
 
-		const labs = this.room.find(FIND_STRUCTURES, {
+		const labs = this.room.find<StructureLab>(FIND_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_LAB && structure.isOperational(),
 		});
 		if (labs.length < 3) return;
 
 		// Find best 2 source labs for other labs to perform reactions.
-		let best = null;
+		let best: {
+			source1: Id<StructureLab>;
+			source2: Id<StructureLab>;
+			reactor: Array<Id<StructureLab>>;
+		} = null;
 		for (const lab of labs) {
-			const closeLabs = lab.pos.findInRange(FIND_STRUCTURES, 2, {
+			const closeLabs = lab.pos.findInRange<StructureLab>(FIND_STRUCTURES, 2, {
 				filter: structure => structure.structureType === STRUCTURE_LAB && structure.id !== lab.id,
 			});
 			if (closeLabs.length < 2) continue;
 
 			for (const lab2 of closeLabs) {
-				const reactors = [];
+				const reactors: Array<Id<StructureLab>> = [];
 				for (const reactor of closeLabs) {
 					if (reactor === lab || reactor === lab2) continue;
 					if (reactor.pos.getRangeTo(lab2) > 2) continue;

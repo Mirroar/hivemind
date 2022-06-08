@@ -20,15 +20,13 @@ declare global {
 		boostManager?: BoostManagerMemory;
 	}
 
-	type AvailableBoosts = {
-		[mineralType: string]: {
-			effect: number,
-			available: number,
-		},
-	}
+	type AvailableBoosts = Partial<Record<ResourceConstant, {
+		effect: number,
+		available: number,
+	}>>;
 
 	type BoostLabMemory = {
-		resourceType?: string;
+		resourceType?: ResourceConstant;
 		resourceAmount?: number;
 		energyAmount?: number;
 	};
@@ -93,7 +91,7 @@ Room.prototype.getAvailableBoosts = function (this: Room, type: string): Availab
 		},
 	);
 
-	return availableBoosts[type];
+	return availableBoosts[type] || {};
 };
 
 /**
@@ -298,9 +296,7 @@ export default class BoostManager {
 
 		if (_.size(this.memory.creepsToBoost) === 0) return {};
 
-		const queuedBoosts: {
-			[resourceType: string]: number,
-		} = {};
+		const queuedBoosts: Partial<Record<ResourceConstant, number>> = {};
 		const toDelete: string[] = [];
 		_.each(this.memory.creepsToBoost, (boostMemory, creepName) => {
 			if (!Game.creeps[creepName]) {
@@ -324,7 +320,7 @@ export default class BoostManager {
 			}
 
 			if (!labMemory[lab.id].resourceType || !queuedBoosts[labMemory[lab.id].resourceType]) {
-				const unassigned = _.filter(_.keys(queuedBoosts), resourceType => _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0);
+				const unassigned = _.filter<ResourceConstant>(_.keys(queuedBoosts) as ResourceConstant[], resourceType => _.filter(labs, lab => labMemory[lab.id].resourceType === resourceType).length === 0);
 
 				if (unassigned.length === 0) {
 					delete labMemory[lab.id].resourceType;

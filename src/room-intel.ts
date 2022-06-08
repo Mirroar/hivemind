@@ -126,7 +126,7 @@ export default class RoomIntel {
 		this.registerScoutAttempt();
 
 		// @todo Have process logic handle throttling of this task.
-		let lastScanThreshold = hivemind.settings.get('roomIntelCacheDuration');
+		let lastScanThreshold = hivemind.settings.get<number>('roomIntelCacheDuration');
 		if (Game.cpu.bucket < 5000) {
 			lastScanThreshold *= 5;
 		}

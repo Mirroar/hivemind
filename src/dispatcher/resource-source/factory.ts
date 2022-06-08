@@ -1,4 +1,5 @@
 import TaskProvider from 'dispatcher/task-provider';
+import {getResourcesIn} from 'utils/store';
 
 interface FactorySourceTask extends ResourceSourceTask {
 	type: 'factory';
@@ -31,7 +32,8 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 		const missingResources = this.room.factoryManager.getMissingComponents();
 		if (!missingResources) return;
 
-		for (const resourceType in missingResources) {
+		let resourceType: ResourceConstant;
+		for (resourceType in missingResources) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
 
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
@@ -44,7 +46,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 				weight: missingResources[resourceType] / 1000,
 				resourceType,
 				target: structure.id,
-				amount: structure.store.getUsedCapacity(resourceType as ResourceConstant),
+				amount: structure.store.getUsedCapacity(resourceType),
 			});
 		}
 	}
@@ -52,7 +54,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 	addEmptyFactoryTasks(options: FactorySourceTask[], context: ResourceSourceContext) {
 		const neededResources = this.room.factoryManager.getRequestedComponents() || {};
 
-		for (const resourceType in this.room.factory.store) {
+		for (const resourceType of getResourcesIn(this.room.factory.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
 			if (neededResources[resourceType]) continue;
 
@@ -60,11 +62,11 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 			const structure = this.room.factory;
 			options.push({
 				type: this.getType(),
-				priority: structure.store.getUsedCapacity(resourceType as ResourceConstant) > 1000 ? 3 : 2,
+				priority: structure.store.getUsedCapacity(resourceType) > 1000 ? 3 : 2,
 				weight: 0,
 				resourceType,
 				target: structure.id,
-				amount: structure.store.getUsedCapacity(resourceType as ResourceConstant),
+				amount: structure.store.getUsedCapacity(resourceType),
 			});
 		}
 	}

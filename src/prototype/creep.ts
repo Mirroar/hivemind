@@ -3,6 +3,7 @@
 import 'prototype/creep.military';
 import 'prototype/creep.movement';
 import 'prototype/creep.train';
+import {getResourcesIn} from 'utils/store';
 
 declare global {
 	interface Creep {
@@ -88,7 +89,7 @@ Object.defineProperty(Creep.prototype, 'operation', {
  *   Error codes as in Creep.transfer().
  */
 Creep.prototype.transferAny = function (this: Creep, target: Structure): ScreepsReturnCode {
-	for (const resourceType of _.keys(this.store) as ResourceConstant[]) {
+	for (const resourceType of getResourcesIn(this.store)) {
 		if (target.structureType === STRUCTURE_LINK && resourceType !== RESOURCE_ENERGY) continue;
 		if (this.store[resourceType] > 0) {
 			return this.transfer(target, resourceType);
@@ -105,7 +106,7 @@ Creep.prototype.transferAny = function (this: Creep, target: Structure): Screeps
  *   Error codes as in Creep.drop().
  */
 Creep.prototype.dropAny = function (this: Creep): ScreepsReturnCode {
-	for (const resourceType of _.keys(this.store) as ResourceConstant[]) {
+	for (const resourceType of getResourcesIn(this.store)) {
 		if (this.store[resourceType] > 0) {
 			return this.drop(resourceType);
 		}

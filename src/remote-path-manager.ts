@@ -34,7 +34,7 @@ export default class RemotePathManager {
 		const sortedByDist = _.sortBy(availableSourceRooms, r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name));
 
 		let minPath;
-		let minPathLength = hivemind.settings.get('maxRemoteMinePathLength') + 50;
+		let minPathLength = hivemind.settings.get<number>('maxRemoteMinePathLength') + 50;
 		for (const room of sortedByDist) {
 			// Disregard rooms that are too far away to reach quickly.
 			const cannotFindShorterPath = Game.map.getRoomLinearDistance(sourcePosition.roomName, room.name) > Math.ceil(minPathLength / 50);

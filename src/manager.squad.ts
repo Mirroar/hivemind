@@ -14,9 +14,7 @@ declare global {
 	}
 
 	type SquadMemory = {
-		composition: {
-			[unitType: string]: number,
-		},
+		composition: Partial<Record<SquadUnitType, number>>,
 		fullySpawned: boolean,
 		spawnRoom?: string,
 		targetPos?: string,
@@ -24,9 +22,7 @@ declare global {
 }
 
 export default class Squad {
-	units: {
-		[unitType: string]: Id<Creep>[];
-	};
+	units: Partial<Record<SquadUnitType, Id<Creep>[]>>;
 	name: string;
 	memory: SquadMemory;
 

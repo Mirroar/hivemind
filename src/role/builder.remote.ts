@@ -192,7 +192,7 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		if (this.creep.memory.repairTarget) {
-			const maxRampartHits = this.creep.room.controller.level < 6 ? 15_000 : hivemind.settings.get('minWallIntegrity') * 1.1;
+			const maxRampartHits = this.creep.room.controller.level < 6 ? 15_000 : hivemind.settings.get<number>('minWallIntegrity') * 1.1;
 			const target = Game.getObjectById<Structure>(this.creep.memory.repairTarget);
 			if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > maxRampartHits)) {
 				delete this.creep.memory.repairTarget;

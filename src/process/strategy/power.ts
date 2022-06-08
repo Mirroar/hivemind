@@ -94,7 +94,7 @@ export default class PowerMiningProcess extends Process {
 			}
 
 			// Disregard rooms the user doesn't want harvested.
-			const roomFilter = hivemind.settings.get('powerMineRoomFilter');
+			const roomFilter = hivemind.settings.get<(roomName: string) => boolean>('powerMineRoomFilter');
 			if (roomFilter && !roomFilter(roomName)) return;
 
 			// Skip if this doesn't need harvesting anymore.
@@ -174,7 +174,7 @@ export default class PowerMiningProcess extends Process {
 
 			// @todo Use actual position of power cache.
 			const roomRoute = this.mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, roomName));
-			if (roomRoute.incomplete || roomRoute.path.length > 2 * hivemind.settings.get('maxRangeForPowerMining')) continue;
+			if (roomRoute.incomplete || roomRoute.path.length > 2 * hivemind.settings.get<number>('maxRangeForPowerMining')) continue;
 
 			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
 

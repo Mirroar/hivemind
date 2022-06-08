@@ -22,10 +22,10 @@ export default class FactoryDestination implements TaskProvider<FactoryDestinati
 		const options: FactoryDestinationTask[] = [];
 		const missingResources = this.room.factoryManager.getMissingComponents();
 		if (!missingResources) return [];
-
-		for (const resourceType in missingResources) {
+		let resourceType: ResourceConstant;
+		for (resourceType in missingResources) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
-			if (context.creep && context.creep.store.getUsedCapacity(resourceType as ResourceConstant) === 0) continue;
+			if (context.creep && context.creep.store.getUsedCapacity(resourceType) === 0) continue;
 
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
 			options.push({

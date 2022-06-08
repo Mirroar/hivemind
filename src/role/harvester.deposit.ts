@@ -9,6 +9,7 @@ import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import {deserializePosition} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
+import {getResourcesIn} from 'utils/store';
 
 declare global {
 	interface DepositHarvesterCreep extends Creep {
@@ -117,9 +118,9 @@ export default class DepositHarvesterRole extends Role {
 		if (creep.interRoomTravel(targetPosition)) return;
 		if (creep.pos.roomName != targetPosition.roomName) return;
 
-		let resourceType: string;
-		for (const contentType in creep.store) {
-			if (creep.store.getUsedCapacity(contentType as ResourceConstant) > 0) {
+		let resourceType: ResourceConstant;
+		for (const contentType of getResourcesIn(creep.store)) {
+			if (creep.store.getUsedCapacity(contentType) > 0) {
 				resourceType = contentType;
 				break;
 			}

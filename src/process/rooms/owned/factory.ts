@@ -23,7 +23,8 @@ export default class ManageFactoryProcess extends Process {
 		if (this.room.factory.cooldown > 0) return;
 
 		const jobs = this.room.factoryManager.getJobs();
-		for (const product in jobs) {
+		let product: FactoryProductConstant;
+		for (product in jobs) {
 			if (!this.room.factoryManager.hasAllComponents(product)) continue;
 			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) continue;
 

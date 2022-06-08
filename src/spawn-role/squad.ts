@@ -3,8 +3,12 @@
 import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
 
+declare global {
+	type SquadUnitType = 'ranger' | 'healer' | 'claimer' | 'singleClaim' | 'builder' | 'attacker' | 'brawler' | 'test';
+}
+
 interface SquadSpawnOption extends SpawnOption {
-	unitType: string;
+	unitType: SquadUnitType;
 	squad: string;
 }
 
@@ -44,11 +48,11 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {string|null}
 	 *   Type of the unit that needs spawning.
 	 */
-	needsSpawning(squad: Squad): string | null {
-		const neededUnits = [];
+	needsSpawning(squad: Squad): SquadUnitType | null {
+		const neededUnits: SquadUnitType[] = [];
 		for (const unitType in squad.memory.composition) {
 			if (squad.memory.composition[unitType] > _.size(squad.units[unitType])) {
-				neededUnits.push(unitType);
+				neededUnits.push(unitType as SquadUnitType);
 			}
 		}
 
@@ -73,7 +77,8 @@ export default class SquadSpawnRole extends SpawnRole {
 	getCreepBody(room: Room, option: SquadSpawnOption): BodyPartConstant[] {
 		// Automatically call spawning function for selected unit type.
 		const methodName = 'get' + _.capitalize(option.unitType) + 'CreepBody';
-		if (this[methodName]) return this[methodName](room, option);
+		const bodyCallback: (room: Room, option: SquadSpawnOption) => BodyPartConstant[] = this[methodName];
+		if (bodyCallback) return bodyCallback(room, option);
 
 		// If the unit type is not supported, spawn a general brawler.
 		return this.getBrawlerCreepBody(room);

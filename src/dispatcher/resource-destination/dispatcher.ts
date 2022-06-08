@@ -7,7 +7,7 @@ declare global {
 		amount: number;
 	}
 
-	interface ResourceDestinationContext extends Context {
+	interface ResourceDestinationContext {
 		resourceType?: string;
 		creep?: Creep;
 	}

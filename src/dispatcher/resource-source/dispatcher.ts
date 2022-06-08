@@ -7,7 +7,7 @@ declare global {
 		amount?: number;
 	}
 
-	interface ResourceSourceContext extends Context {
+	interface ResourceSourceContext {
 		resourceType?: ResourceConstant;
 		creep?: Creep;
 	}

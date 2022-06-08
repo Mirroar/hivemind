@@ -81,7 +81,7 @@ export default class DepositMiningProcess extends Process {
 			}
 
 			// Disregard rooms the user doesn't want harvested.
-			const roomFilter = hivemind.settings.get('depositMineRoomFilter');
+			const roomFilter = hivemind.settings.get<(roomName: string) => boolean>('depositMineRoomFilter');
 			if (roomFilter && !roomFilter(roomName)) return;
 
 			// Disregard rooms other players are already harvesting.
@@ -108,7 +108,7 @@ export default class DepositMiningProcess extends Process {
 
 			// @todo Use actual position of power cache.
 			const roomRoute = this.mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom));
-			if (roomRoute.incomplete || roomRoute.path.length > 3 * hivemind.settings.get('maxRangeForDepositMining')) continue;
+			if (roomRoute.incomplete || roomRoute.path.length > 3 * hivemind.settings.get<number>('maxRangeForDepositMining')) continue;
 
 			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
 

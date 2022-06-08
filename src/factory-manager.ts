@@ -1,10 +1,15 @@
 import cache from 'utils/cache';
 
+declare global {
+	type FactoryProductConstant = keyof typeof COMMODITIES;
+	type FactoryComponentConstant = FactoryProductConstant | DepositConstant;
+}
+
 interface Recipe {
 	level?: number;
 	amount: number;
 	cooldown: number;
-	components: Record<string, number>;
+	components: Partial<Record<FactoryComponentConstant, number>>;
 }
 
 const compressRecipes = {
@@ -34,23 +39,25 @@ export default class FactoryManager {
 		this.room = Game.rooms[roomName];
 	}
 
-	hasAllComponents(product: string): boolean {
+	hasAllComponents(product: FactoryProductConstant): boolean {
 		const recipe = COMMODITIES[product];
 		if (!recipe) return false;
 
-		for (const resourceType in recipe.components) {
-			if (this.room.factory.store.getUsedCapacity(resourceType as ResourceConstant) < recipe.components[resourceType]) return false;
+		let resourceType: FactoryComponentConstant;
+		for (resourceType in recipe.components) {
+			if (this.room.factory.store.getUsedCapacity(resourceType) < recipe.components[resourceType]) return false;
 		}
 
 		return true;
 	}
 
-	getMissingComponents(): Record<string, number> | null {
+	getMissingComponents(): Partial<Record<FactoryComponentConstant, number>> | null {
 		const requestedResources = this.getRequestedComponents();
-		const result: Record<string, number> = {};
+		const result: Partial<Record<FactoryComponentConstant, number>> = {};
 		let hasNeed = false;
 
-		for (const resourceType in requestedResources) {
+		let resourceType: FactoryComponentConstant;
+		for (resourceType in requestedResources) {
 			if ((this.room.factory.store[resourceType] || 0) > requestedResources[resourceType]) continue;
 
 			result[resourceType] = requestedResources[resourceType] - (this.room.factory.store[resourceType] || 0);
@@ -60,16 +67,18 @@ export default class FactoryManager {
 		return hasNeed ? result : null;
 	}
 
-	getRequestedComponents(): Record<string, number> {
+	getRequestedComponents(): Partial<Record<FactoryComponentConstant, number>> {
 		const neededResources = {};
 		const jobs = this.getJobs();
 		const numberJobs = _.size(jobs);
 
-		for (const productName in jobs) {
+		let productName: FactoryProductConstant;
+		for (productName in jobs) {
 			const recipe = jobs[productName];
 
 			const amount = Math.max(1, factoryFillTime / recipe.cooldown / numberJobs);
-			for (const resourceType in recipe.components) {
+			let resourceType: FactoryComponentConstant;
+			for (resourceType in recipe.components) {
 				neededResources[resourceType] = (neededResources[resourceType] || 0) + (recipe.components[resourceType] * amount);
 			}
 		}
@@ -77,10 +86,11 @@ export default class FactoryManager {
 		return neededResources;
 	}
 
-	getJobs(): Record<string, Recipe> {
+	getJobs(): Partial<Record<FactoryProductConstant, Recipe>> {
 		return cache.inHeap('factoryJobs:' + this.roomName, 50, () => {
-			const result: Record<string, Recipe> = {};
-			for (const resourceType in COMMODITIES) {
+			const result: Partial<Record<FactoryProductConstant, Recipe>> = {};
+			let resourceType: FactoryProductConstant;
+			for (resourceType in COMMODITIES) {
 				const recipe: Recipe = COMMODITIES[resourceType];
 
 				if (this.isRecipeAvailable(resourceType, recipe)) result[resourceType] = recipe;
@@ -96,7 +106,7 @@ export default class FactoryManager {
 		return this.room.factory.getEffectiveLevel();
 	}
 
-	isRecipeAvailable(resourceType: string, recipe: Recipe): boolean {
+	isRecipeAvailable(resourceType: FactoryProductConstant, recipe: Recipe): boolean {
 		if (recipe.level && recipe.level !== this.getFactoryLevel()) return false;
 
 		if (resourceType === RESOURCE_BATTERY) {
@@ -118,7 +128,7 @@ export default class FactoryManager {
 		return this.mayCreateCommodities(resourceType, recipe);
 	}
 
-	mayCreateCommodities(product: string, recipe: Recipe): boolean {
+	mayCreateCommodities(product: FactoryProductConstant, recipe: Recipe): boolean {
 		const createdAmount = this.room.getCurrentResourceAmount(product) / recipe.amount;
 
 		if (this.isMadeOnlyFromBasicResources(recipe)) {

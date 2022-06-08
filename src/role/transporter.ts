@@ -9,6 +9,7 @@ import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
 import {encodePosition} from 'utils/serialization';
+import {getResourcesIn} from 'utils/store';
 import {handleMapArea} from 'utils/map';
 
 export default class TransporterRole extends Role {
@@ -306,7 +307,7 @@ export default class TransporterRole extends Role {
 			this.addLinkDeliveryOptions(options);
 		}
 
-		for (const resourceType of _.keys(creep.store)) {
+		for (const resourceType of getResourcesIn(creep.store)) {
 			// If it's needed for transferring, store in terminal.
 			if (resourceType === creep.room.memory.fillTerminal && creep.store[resourceType] > 0 && !creep.room.isClearingTerminal()) {
 				if (terminal && ((terminal.store[resourceType] || 0) < (creep.room.memory.fillTerminalAmount || 10_000)) && terminal.store.getFreeCapacity() > 0) {

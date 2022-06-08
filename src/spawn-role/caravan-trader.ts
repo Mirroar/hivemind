@@ -28,7 +28,8 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 			if (Game.time > info.expires) return;
 			if (!this.isARoomInRange(room, info.rooms)) return;
 
-			for (const resourceType in info.contents) {
+			let resourceType: ResourceConstant;
+			for (resourceType in info.contents) {
 				if (info.contents[resourceType] >= 1000) continue;
 				if (room.getCurrentResourceAmount(resourceType) === 0) continue;
 
@@ -45,7 +46,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 						priority: 4,
 						weight: 0,
 						target: id,
-						resourceType: resourceType as ResourceConstant,
+						resourceType: resourceType,
 					});
 				}
 			}

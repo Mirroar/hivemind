@@ -20,8 +20,8 @@ export default class TransporterSpawnRole extends SpawnRole {
 		const transporterSize = this.getTransporterSize(room);
 		const maxTransporters = this.getTransporterAmount(room, transporterSize);
 
-		const numTransporters = _.size(room.creepsByRole.transporter);
-		if (numTransporters < maxTransporters) {
+		const transporterCount = _.size(room.creepsByRole.transporter);
+		if (transporterCount < maxTransporters) {
 			const option: TransporterSpawnOption = {
 				priority: 5,
 				weight: 0.5,
@@ -29,10 +29,10 @@ export default class TransporterSpawnRole extends SpawnRole {
 				size: transporterSize,
 			};
 
-			if (numTransporters >= maxTransporters / 2) {
+			if (transporterCount >= maxTransporters / 2) {
 				option.priority = 4;
 			}
-			else if (numTransporters > 1) {
+			else if (transporterCount > 1) {
 				option.weight = 0;
 			}
 			else {
@@ -93,8 +93,8 @@ export default class TransporterSpawnRole extends SpawnRole {
 		// Storage mostly takes place in containers, units will get their energy from there.
 		if (!room.storage) return 2;
 
-		const numSources = _.size(room.sources);
-		let maxTransporters = 2 + (2 * numSources); // @todo Find a good way to gauge needed number of transporters by measuring distances.
+		const sourceCount = _.size(room.sources);
+		let maxTransporters = 2 + (2 * sourceCount); // @todo Find a good way to gauge needed number of transporters by measuring distances.
 
 		// If we have links to beam energy around, we'll need less transporters.
 		if (room.memory.controllerLink) {
