@@ -10,15 +10,57 @@ import {handleMapArea} from 'utils/map';
 
 declare global {
 	interface Memory {
-		nav;
+		nav: NavMemory;
 	}
 }
 
+interface NavMemory {
+	rooms: Record<string, {
+		paths: Record<number, Record<number, number>>;
+		gen: number;
+		exits: Array<{
+			id: number;
+			center: number;
+		}>;
+		regions?: Array<{
+			exits: number[];
+			center: number;
+		}>;
+	}>;
+}
+
+interface ExitInfo {
+	id: number;
+	center: number;
+	vertical: boolean;
+	offset: number;
+	touched?: boolean;
+}
+
+interface RegionInfo {
+	exits: number[],
+	minX: number;
+	maxX: number;
+	minY: number;
+	maxY: number;
+	center: number;
+}
+
+interface NavMeshPathfindingEntry {
+	exitId: number;
+	pos: number;
+	roomName: string;
+	parent: NavMeshPathfindingEntry;
+	pathLength: number;
+	totalSteps: number;
+	heuristic: number;
+}
+
 export default class NavMesh {
-	memory: any;
+	memory: NavMemory;
 	terrain: RoomTerrain;
 	costMatrix: CostMatrix;
-	exitLookup: {[key: number]: any};
+	exitLookup: Record<number, ExitInfo>;
 
 	constructor() {
 		if (!Memory.nav) {
@@ -36,7 +78,7 @@ export default class NavMesh {
 	 * @param {String} roomName
 	 *   Name of the target room.
 	 */
-	generateForRoom(roomName) {
+	generateForRoom(roomName: string) {
 		// Mesh doesn't need to be updated very often.
 		// @todo Allow forcing update for when we dismantle a structure.
 		if (this.memory.rooms[roomName] && this.memory.rooms[roomName].paths && !hivemind.hasIntervalPassed(10_000, this.memory.rooms[roomName].gen)) return;
@@ -45,9 +87,12 @@ export default class NavMesh {
 		this.costMatrix = getCostMatrix(roomName).clone();
 		const exits = this.getExitInfo();
 		const regions = this.getRegions(exits);
-		const paths = this.getConnectingPaths(exits, regions, roomName);
+		const paths = this.getConnectingPaths(regions, roomName);
 
-		const exitMem = [];
+		const exitMem: Array<{
+			id: number;
+			center: number;
+		}> = [];
 		for (const exit of exits) {
 			const centerX = exit.vertical ? exit.offset : exit.center;
 			const centerY = exit.vertical ? exit.center : exit.offset;
@@ -57,7 +102,10 @@ export default class NavMesh {
 			});
 		}
 
-		const regionMem = [];
+		const regionMem: Array<{
+			exits: number[];
+			center: number;
+		}> = [];
 		for (const region of regions) {
 			const centerX = region.center % 50;
 			const centerY = Math.floor(region.center / 50);
@@ -84,8 +132,8 @@ export default class NavMesh {
 	 * @return {Object[]}
 	 *   An array of exit information objects.
 	 */
-	getExitInfo() {
-		const exits = [];
+	getExitInfo(): ExitInfo[] {
+		const exits: ExitInfo[] = [];
 
 		this.collectExitGroups(exits, LEFT, true, 0);
 		this.collectExitGroups(exits, RIGHT, true, 49);
@@ -95,10 +143,10 @@ export default class NavMesh {
 		return exits;
 	}
 
-	collectExitGroups(exits, dir, vertical, offset) {
+	collectExitGroups(exits: ExitInfo[], dir: DirectionConstant, vertical: boolean, offset: number) {
 		let groupId = 1;
 
-		let currentStart = null;
+		let currentStart: number = null;
 		let nextId = (groupId++) + (10 * (dir - 1));
 		for (let i = 1; i < 50; i++) {
 			const x = vertical ? offset : i;
@@ -127,14 +175,14 @@ export default class NavMesh {
 		}
 	}
 
-	getRegions(exits) {
+	getRegions(exits: ExitInfo[]): RegionInfo[] {
 		this.exitLookup = {};
 		for (const exit of exits) {
 			this.exitLookup[exit.id] = exit;
 		}
 
-		const regions = [];
-		let region = {
+		const regions: RegionInfo[] = [];
+		let region: RegionInfo = {
 			exits: [],
 			minX: 49,
 			maxX: 0,
@@ -223,7 +271,7 @@ export default class NavMesh {
 		return regions;
 	}
 
-	getUntouchedExit(region, exits) {
+	getUntouchedExit(region: RegionInfo, exits: ExitInfo[]): number {
 		for (const exit of exits) {
 			if (exit.touched) continue;
 
@@ -237,8 +285,8 @@ export default class NavMesh {
 		return null;
 	}
 
-	getConnectingPaths(exits, regions, roomName) {
-		const paths = {};
+	getConnectingPaths(regions: RegionInfo[], roomName: string): Record<number, Record<number, number>> {
+		const paths: Record<number, Record<number, number>> = {};
 		const costMatrix = getCostMatrix(roomName);
 
 		for (const region of regions) {
@@ -301,15 +349,18 @@ export default class NavMesh {
 		});
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: any): {path?: RoomPosition[]; length?: number; incomplete: boolean} {
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number, allowDanger?: boolean}): {path?: RoomPosition[]; length?: number; incomplete: boolean} {
 		if (!options) options = {};
 
 		const startRoom = startPos.roomName;
 		const endRoom = endPos.roomName;
-		let availableExits = [];
-		const openList = [];
-		const openListLookup = {};
-		const closedList = {};
+		let availableExits: Array<{
+			id: number;
+			center: number;
+		}> = [];
+		const openList: NavMeshPathfindingEntry[] = [];
+		const openListLookup: Record<string, boolean> = {};
+		const closedList: Record<string, boolean> = {};
 		if (!this.memory.rooms[startRoom]) {
 			// Trying to find a path outside of nav mesh. We can't really decide.
 			return {
@@ -343,7 +394,7 @@ export default class NavMesh {
 
 		for (const exit of availableExits) {
 			const segmentLength = roomMemory.paths[exit.id] ? roomMemory.paths[exit.id][0] : 50;
-			const entry = {
+			const entry: NavMeshPathfindingEntry = {
 				exitId: exit.id,
 				pos: exit.center,
 				roomName: startRoom,
@@ -366,8 +417,6 @@ export default class NavMesh {
 			if (current.roomName === endRoom) {
 				// @todo There might be shorter paths to the actual endPosition.
 				// @todo Check if we came out in the correct region.
-
-				//console.log(JSON.stringify(current));
 
 				// Alright, we arrived! Get final path.
 				return {
@@ -446,7 +495,7 @@ export default class NavMesh {
 				};
 
 				if (nextRoom === endRoom) {
-					item.pos = serializePosition(endPos, nextRoom);
+					item.pos = serializeCoords(endPos.x, endPos.y);
 					item.heuristic = 0;
 					item.pathLength = current.pathLength + roomMemory.paths[correspondingExit][0];
 					item.totalSteps = current.totalSteps + roomMemory.paths[correspondingExit][0];
@@ -465,7 +514,7 @@ export default class NavMesh {
 		};
 	}
 
-	popBestCandidate(openList) {
+	popBestCandidate(openList: NavMeshPathfindingEntry[]): NavMeshPathfindingEntry {
 		// Find element id with lowest pathLength + heuristic.
 		let minId = null;
 		let minDist = 0;
@@ -486,7 +535,7 @@ export default class NavMesh {
 		return openList.pop();
 	}
 
-	getAdjacentRoom(roomName, exitId) {
+	getAdjacentRoom(roomName: string, exitId: number): string {
 		// @todo Use RoomIntel.getExits() or Game.map.describeExits() instead.
 		const parts = roomName.match(/(\w)(\d+)(\w)(\d+)/);
 
@@ -542,11 +591,11 @@ export default class NavMesh {
 		}
 	}
 
-	getCorrespondingExitId(exitId) {
+	getCorrespondingExitId(exitId: number): number {
 		return (exitId + 40) % 80;
 	}
 
-	pluckRoomPath(current) {
+	pluckRoomPath(current: NavMeshPathfindingEntry): RoomPosition[] {
 		const path = [deserializePosition(current.pos, current.roomName)];
 		while (current.parent) {
 			current = current.parent;

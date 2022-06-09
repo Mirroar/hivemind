@@ -2,6 +2,22 @@
 
 import Role from 'role/role';
 
+declare global {
+	interface HelperCreep extends Creep {
+		role: 'helper';
+		memory: HelperCreepMemory;
+		heapMemory: HelperCreepHeapMemory;
+	}
+
+	interface HelperCreepMemory extends CreepMemory {
+		role: 'helper';
+		delivering?: boolean;
+	}
+
+	interface HelperCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
 export default class HelperRole extends Role {
 	/**
 	 * Makes a creep behave like a helper.
@@ -9,7 +25,7 @@ export default class HelperRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: HelperCreep) {
 		if (!creep.room.boostManager) {
 			this.parkHelper(creep);
 			return;
@@ -42,7 +58,7 @@ export default class HelperRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	parkHelper(creep) {
+	parkHelper(creep: HelperCreep) {
 		if (!creep.room.roomPlanner) return;
 
 		const targetPos = _.sample(creep.room.roomPlanner.getLocations('helper_parking'));
@@ -61,7 +77,7 @@ export default class HelperRole extends Role {
 	 * @param {boolean} delivering
 	 *   Whether this creep should be delivering resources.
 	 */
-	setHelperState(creep, delivering) {
+	setHelperState(creep: HelperCreep, delivering: boolean) {
 		creep.memory.delivering = delivering;
 	}
 
@@ -76,7 +92,7 @@ export default class HelperRole extends Role {
 	 * @return {boolean}
 	 *   True if the creep is busy cleaning up resources.
 	 */
-	performHelperCleanup(creep, orders) {
+	performHelperCleanup(creep: HelperCreep, orders: BoostLabsMemory): boolean {
 		const storage = creep.room.storage;
 		const terminal = creep.room.terminal;
 
@@ -87,24 +103,20 @@ export default class HelperRole extends Role {
 			if (lab.mineralType && lab.mineralType !== orders[id].resourceType) {
 				if (creep.memory.delivering) {
 					// Put everything away.
-					let target = terminal;
+					let target: AnyStoreStructure = terminal;
 					if (storage && storage.store.getUsedCapacity() + creep.store.getUsedCapacity() < storage.store.getCapacity()) {
 						target = storage;
 					}
 
-					if (creep.pos.getRangeTo(target) > 1) {
-						creep.moveToRange(target, 1);
-					}
-					else {
+					creep.whenInRange(1, target, () => {
 						creep.transferAny(target);
-					}
+					});
 				}
 				// Clean out lab.
-				else if (creep.pos.getRangeTo(lab) > 1) {
-					creep.moveToRange(lab, 1);
-				}
 				else {
-					creep.withdraw(lab, lab.mineralType);
+					creep.whenInRange(1, lab, () => {
+						creep.withdraw(lab, lab.mineralType);
+					});
 				}
 
 				return true;
@@ -122,7 +134,7 @@ export default class HelperRole extends Role {
 	 * @param {object} orders
 	 *   Boosting information, keyed by lab id.
 	 */
-	performHelperDeliver(creep, orders) {
+	performHelperDeliver(creep: HelperCreep, orders: BoostLabsMemory) {
 		const storage = creep.room.storage;
 		const terminal = creep.room.terminal;
 
@@ -132,29 +144,21 @@ export default class HelperRole extends Role {
 		if (creep.store[RESOURCE_ENERGY] > 0) {
 			const labs = creep.room.getBoostLabs();
 			for (const lab of labs) {
-				if (lab.energy + creep.store[RESOURCE_ENERGY] <= lab.energyCapacity) {
-					if (creep.pos.getRangeTo(lab) > 1) {
-						creep.moveToRange(lab, 1);
-					}
-					else {
+				if (lab.store.getFreeCapacity(RESOURCE_ENERGY) > lab.store.getCapacity(RESOURCE_ENERGY) / 2) {
+					creep.whenInRange(1, lab, () => {
 						creep.transfer(lab, RESOURCE_ENERGY);
-					}
+					});
 
 					return;
 				}
 			}
-		}
 
-		// Nothing to do, store excess energy in terminal.
-		if (creep.store[RESOURCE_ENERGY] > 0 && storage && terminal && !creep.room.isClearingTerminal()) {
-			if (terminal.store.energy < storage.store.energy * 0.05) {
-				if (terminal.store.getUsedCapacity() + creep.store[RESOURCE_ENERGY] <= terminal.store.getCapacity()) {
-					if (creep.pos.getRangeTo(terminal) > 1) {
-						creep.moveToRange(terminal, 1);
-					}
-					else {
+			// Nothing to do, store excess energy in terminal.
+			if (storage && terminal && !creep.room.isClearingTerminal()) {
+				if (terminal.store.energy < storage.store.energy * 0.05 && terminal.store.getFreeCapacity() > 0) {
+					creep.whenInRange(1, terminal, () => {
 						creep.transfer(terminal, RESOURCE_ENERGY);
-					}
+					});
 
 					return;
 				}
@@ -162,17 +166,14 @@ export default class HelperRole extends Role {
 		}
 
 		// Store anything else in storage or terminal.
-		let target = terminal;
+		let target: AnyStoreStructure = terminal;
 		if (storage && (!creep.room.isClearingTerminal() || storage.store.getUsedCapacity() + creep.store.getUsedCapacity() < storage.store.getCapacity())) {
 			target = storage;
 		}
 
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
-		}
-		else {
+		creep.whenInRange(1, target, () => {
 			creep.transferAny(target);
-		}
+		});
 	}
 
 	/**
@@ -186,7 +187,7 @@ export default class HelperRole extends Role {
 	 * @return {boolean}
 	 *   Whether a delivery is taking place.
 	 */
-	performHelperLabDeliver(creep, orders) {
+	performHelperLabDeliver(creep: HelperCreep, orders: BoostLabsMemory): boolean {
 		for (const id of _.keys(orders)) {
 			const lab = Game.getObjectById<StructureLab>(id);
 			if (!lab) continue;
@@ -194,32 +195,26 @@ export default class HelperRole extends Role {
 			const resourceType = orders[id].resourceType;
 
 			if (creep.store[resourceType] && creep.store[resourceType] > 0) {
-				const diff = orders[id].resourceAmount - (lab.mineralAmount || 0);
+				const diff = orders[id].resourceAmount - (lab.store[lab.mineralType] || 0);
 				if (diff > 0) {
-					if (creep.pos.getRangeTo(lab) > 1) {
-						creep.moveToRange(lab, 1);
-					}
-					else {
+					creep.whenInRange(1, lab, () => {
 						const amount = Math.min(diff, creep.store[resourceType]);
 
 						creep.transfer(lab, resourceType, amount);
-					}
+					});
 
 					return true;
 				}
 			}
 
 			if (creep.store[RESOURCE_ENERGY] && creep.store[RESOURCE_ENERGY] > 0) {
-				const diff = orders[id].energyAmount - (lab.energy || 0);
+				const diff = orders[id].energyAmount - (lab.store[RESOURCE_ENERGY] || 0);
 				if (diff > 0) {
-					if (creep.pos.getRangeTo(lab) > 1) {
-						creep.moveToRange(lab, 1);
-					}
-					else {
+					creep.whenInRange(1, lab, () => {
 						const amount = Math.min(diff, creep.store[RESOURCE_ENERGY]);
 
 						creep.transfer(lab, RESOURCE_ENERGY, amount);
-					}
+					});
 
 					return true;
 				}
@@ -237,7 +232,7 @@ export default class HelperRole extends Role {
 	 * @param {object} orders
 	 *   Boosting information, keyed by lab id.
 	 */
-	performHelperGather(creep, orders) {
+	performHelperGather(creep: HelperCreep, orders: BoostLabsMemory) {
 		const storage = creep.room.storage;
 		const terminal = creep.room.terminal;
 
@@ -246,16 +241,12 @@ export default class HelperRole extends Role {
 		// Get energy to fill labs when needed.
 		const labs = creep.room.getBoostLabs();
 		for (const lab of labs) {
-			if (lab.energy + creep.store.getCapacity() > lab.energyCapacity) continue;
+			if (creep.store.getCapacity() > lab.store.getFreeCapacity(RESOURCE_ENERGY)) continue;
 
 			const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
-
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
+			creep.whenInRange(1, target, () => {
 				creep.withdraw(target, RESOURCE_ENERGY);
-			}
+			});
 
 			return;
 		}
@@ -264,12 +255,9 @@ export default class HelperRole extends Role {
 		if (storage && terminal && terminal.store.energy < storage.store.energy * 0.05 && !creep.room.isClearingTerminal()) {
 			const target = storage;
 
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
+			creep.whenInRange(1, target, () => {
 				creep.withdraw(target, RESOURCE_ENERGY);
-			}
+			});
 
 			return;
 		}
@@ -294,7 +282,7 @@ export default class HelperRole extends Role {
 	 * @return {boolean}
 	 *   Whether the creep is currently fulfilling an order.
 	 */
-	performHelperLabGather(creep, orders) {
+	performHelperLabGather(creep: HelperCreep, orders: BoostLabsMemory): boolean {
 		for (const id of _.keys(orders)) {
 			const order = orders[id];
 			const lab = Game.getObjectById<StructureLab>(id);
@@ -302,7 +290,7 @@ export default class HelperRole extends Role {
 
 			const resourceType = order.resourceType;
 
-			let diff = order.resourceAmount - (creep.store[resourceType] || 0) - (lab.mineralAmount || 0);
+			let diff = order.resourceAmount - (creep.store[resourceType] || 0) - (lab.store[lab.mineralType] || 0);
 			if (diff > 0) {
 				const target = creep.room.getBestStorageSource(resourceType);
 				if (creep.pos.getRangeTo(target) > 1) {
@@ -330,18 +318,15 @@ export default class HelperRole extends Role {
 				return true;
 			}
 
-			diff = order.energyAmount - (creep.store[RESOURCE_ENERGY] || 0) - (lab.energy || 0);
+			diff = order.energyAmount - (creep.store[RESOURCE_ENERGY] || 0) - (lab.store[RESOURCE_ENERGY] || 0);
 			if (diff <= 0) continue;
 
 			const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-			}
-			else {
+			creep.whenInRange(1, target, () => {
 				const amount = Math.min(diff, creep.store.getFreeCapacity());
 
 				creep.withdraw(target, RESOURCE_ENERGY, amount);
-			}
+			});
 
 			return true;
 		}

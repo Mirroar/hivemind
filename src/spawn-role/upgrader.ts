@@ -14,8 +14,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	getSpawnOptions(room: Room) {
 		const options: SpawnOption[] = [];
 		const maxUpgraders = this.getUpgraderAmount(room);
-		const numUpgraders = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
-		if (numUpgraders < maxUpgraders) {
+		const upgraderCount = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
+		if (upgraderCount < maxUpgraders) {
 			options.push({
 				priority: 3,
 				weight: 1,
@@ -50,7 +50,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 				hivemind.log('creeps', room.name).info('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
 				return 1;
 			}
-			else if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getStoredEnergy() > 5000) {
+
+			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getStoredEnergy() > 5000) {
 				return 1;
 			}
 		}
@@ -86,8 +87,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		// Small rooms that don't have a storage yet shouls spawn upgraders depending on available energy.
 		if (room.controller.level <= 4 && !room.storage) {
-			const numSources = _.size(room.sources);
-			const maxUpgraders = 1 + numSources + Math.floor(availableEnergy / 1000);
+			const sourceCount = _.size(room.sources);
+			const maxUpgraders = 1 + sourceCount + Math.floor(availableEnergy / 1000);
 			return Math.min(maxUpgraders, 9);
 		}
 

@@ -13,16 +13,16 @@ export default class PlayerIntelProcess extends Process {
 		}
 	}
 
-  collectPlayerRooms() {
-    const availableRooms = getRoomsWithIntel();
-    const result: {
-      [userName: string]: {
-        owned: string[],
-        remotes: string[],
-      }
-    } = {};
-    for (const roomName of availableRooms) {
-      const roomIntel = getRoomIntel(roomName);
+	collectPlayerRooms() {
+		const availableRooms = getRoomsWithIntel();
+		const result: {
+			[userName: string]: {
+				owned: string[],
+				remotes: string[],
+			}
+		} = {};
+		for (const roomName of availableRooms) {
+			const roomIntel = getRoomIntel(roomName);
 
 			if (roomIntel.isOwned()) {
 				const userName = roomIntel.getOwner();

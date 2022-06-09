@@ -29,8 +29,8 @@ class SettingsManager {
 		}
 
 		// Add user settings from memory.
-		if (Memory.hivemind && Memory.hivemind.settings) {
-			_.each(Memory.hivemind.settings, (value, key) => {
+		if (Memory.hivemind?.settings) {
+			_.each(Memory.hivemind.settings, (value: unknown, key) => {
 				if (typeof this.values[key] === 'undefined') return;
 
 				this.values[key] = value;
@@ -49,7 +49,7 @@ class SettingsManager {
 	 */
 	get<T>(key: string): T {
 		// @todo Periodically check if a setting was changed in memory.
-		return this.values[key];
+		return this.values[key] as T;
 	}
 
 	/**

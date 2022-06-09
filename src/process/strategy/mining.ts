@@ -54,13 +54,13 @@ export default class RemoteMiningProcess extends Process {
 			// Start remote mining as early as RCL 2, even in first room.
 			if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === room.name && room.controller.level < 2) continue;
 
-			let numSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
-			if (numSpawns === 0) {
+			let spawnCount = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
+			if (spawnCount === 0) {
 				if (room.controller.level > 3 && room.controller.level < 7) {
 					// It's possible we're only moving the room's only spawn to a different
 					// location. Treat room as having one spawn so we can resume when it
 					// has been rebuilt.
-					numSpawns = 1;
+					spawnCount = 1;
 				}
 				else {
 					continue;
@@ -68,7 +68,7 @@ export default class RemoteMiningProcess extends Process {
 			}
 
 			// @todo Actually calculate spawn usage for each.
-			let spawnCapacity = numSpawns * 5;
+			let spawnCapacity = spawnCount * 5;
 			const exploitFlags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + room.name + ':'));
 			const roomNeeds = room.controller.level < 4 ? 1 : (room.controller.level < 6 ? 2 : 4) + (room.controller.level >= 7 ? exploitFlags.length * 3 : 0);
 

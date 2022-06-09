@@ -1,4 +1,4 @@
-/* global LOOK_STRUCTURES STRUCTURE_ROAD OK RESOURCE_ENERGY LOOK_CREEPS
+/* global STRUCTURE_ROAD OK RESOURCE_ENERGY LOOK_CREEPS
 FIND_STRUCTURES STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
 FIND_MY_CONSTRUCTION_SITES */
 
@@ -102,7 +102,8 @@ export default class RemoteHarvesterRole extends Role {
 			filter: site => (site.structureType === STRUCTURE_CONTAINER) || (site.structureType === STRUCTURE_ROAD),
 		});
 		if (needsBuild && creep.pos.getRangeTo(needsBuild) <= 3 && creep.store.energy >= workParts * 5 && workParts > 0) {
-			if (creep.build(needsBuild) === OK) {
+			const result = creep.build(needsBuild);
+			if (result === OK) {
 				const buildCost = Math.min(creep.store.energy || 0, workParts * 5, needsBuild.progressTotal - needsBuild.progress);
 				creep.operation.addResourceCost(buildCost, RESOURCE_ENERGY);
 				return;
@@ -115,7 +116,8 @@ export default class RemoteHarvesterRole extends Role {
 			filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.hits <= structure.hitsMax - (workParts * 100),
 		});
 		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3 && creep.store.energy >= workParts && workParts > 0) {
-			if (creep.repair(needsRepair) === OK) {
+			const result = creep.repair(needsRepair);
+			if (result === OK) {
 				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
 				return;
 			}
