@@ -591,6 +591,10 @@ Room.prototype.getBestCircumstancialStorageSource = function (this: Room, resour
 		secondarySource = this.storage;
 	}
 
+	if(!secondarySource) {
+		return primarySource;
+	}
+	
 	const secondaryFull = secondarySource.store.getUsedCapacity() > secondarySource.store.getCapacity() * 0.8;
 
 	if (primarySource.store[resourceType] && (!secondaryFull || !secondarySource.store[resourceType])) {
