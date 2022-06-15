@@ -7,13 +7,10 @@ declare global {
 		operation?: string;
 		singleRoom?: string;
 
-		blockedPathCounter?: number;
 		body?: Record<string, number>;
 		building?: boolean;
 		buildTarget?: any;
 		currentLair?: any;
-		delivering?: boolean;
-		deliverTarget?: any;
 		exploitName?: any;
 		extraEnergyTarget?: any;
 		isHealer?: boolean;
