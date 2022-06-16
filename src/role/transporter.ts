@@ -983,7 +983,6 @@ export default class TransporterRole extends Role {
 		this.addContainerResourceOptions(options);
 		this.addHighLevelResourceOptions(options);
 		this.addEvacuatingRoomResourceOptions(options);
-		this.addClearingStorageResourceOptions(options);
 		this.addLabResourceOptions(options);
 
 		return options;
@@ -999,52 +998,29 @@ export default class TransporterRole extends Role {
 		const room = this.creep.room;
 		const options: TransporterOrderOption[] = [];
 
-		let storagePriority = 0;
+		const task = this.creep.room.sourceDispatcher.getTask({
+			creep: this.creep,
+			resourceType: RESOURCE_ENERGY,
+		});
+		if (task) options.push(task);
+
+		let priority = 0;
 		if (room.energyAvailable < room.energyCapacityAvailable * 0.9) {
 			// Spawning is important, so get energy when needed.
-			storagePriority = 4;
+			priority = 4;
 		}
 		else if (room.terminal && room.storage && room.terminal.store.energy < room.storage.store.energy * 0.05) {
 			// Take some energy out of storage to put into terminal from time to time.
-			storagePriority = 2;
+			priority = 2;
 		}
 
-		this.addStorageEnergySourceOptions(options, storagePriority);
-		this.addObjectEnergySourceOptions(options, FIND_DROPPED_RESOURCES, 'resource', storagePriority);
-		this.addObjectEnergySourceOptions(options, FIND_TOMBSTONES, 'tombstone', storagePriority);
-		this.addObjectEnergySourceOptions(options, FIND_RUINS, 'tombstone', storagePriority);
+		this.addObjectEnergySourceOptions(options, FIND_DROPPED_RESOURCES, 'resource', priority);
+		this.addObjectEnergySourceOptions(options, FIND_TOMBSTONES, 'tombstone', priority);
+		this.addObjectEnergySourceOptions(options, FIND_RUINS, 'tombstone', priority);
 		this.addContainerEnergySourceOptions(options);
 		this.addLinkEnergySourceOptions(options);
 
 		return options;
-	}
-
-	/**
-	 * Adds options for picking up energy from storage to priority list.
-	 *
-	 * @param {Array} options
-	 *   A list of potential energy sources.
-	 * @param {number} storagePriority
-	 *   Priority assigned for transporters picking up from storage.
-	 */
-	addStorageEnergySourceOptions(options: TransporterOrderOption[], storagePriority: number) {
-		const creep = this.creep;
-
-		// Energy can be gotten at the room's storage or terminal.
-		const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
-		if (!storageTarget) return;
-		if (storageTarget.store[RESOURCE_ENERGY] < creep.store.getFreeCapacity()) return;
-
-		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
-		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
-			options.push({
-				priority: creep.memory.role === 'transporter' ? storagePriority : 5,
-				weight: 0,
-				type: 'structure',
-				object: storageTarget,
-				resourceType: RESOURCE_ENERGY,
-			});
-		}
 	}
 
 	/**
@@ -1434,35 +1410,6 @@ export default class TransporterRole extends Role {
 		}
 
 		// @todo Destroy nuker once storage is empty so we can pick up contained resources.
-	}
-
-	/**
-	 * Adds options for emptying storage.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 */
-	addClearingStorageResourceOptions(options: TransporterOrderOption[]) {
-		const room = this.creep.room;
-		if (!room.isClearingStorage()) return;
-
-		const storage = room.storage;
-		const terminal = room.terminal;
-		if (storage && terminal && terminal.store.getUsedCapacity() < terminal.store.getCapacity() * 0.95) {
-			for (const resourceType in storage.store) {
-				if (storage.store[resourceType] <= 0) continue;
-
-				options.push({
-					priority: 2,
-					weight: 0,
-					type: 'structure',
-					object: storage,
-					resourceType,
-				});
-
-				break;
-			}
-		}
 	}
 
 	/**

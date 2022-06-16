@@ -35,8 +35,8 @@ declare global {
 		getRemoteHarvestSourcePositions: () => RoomPosition[];
 		getRemoteReservePositions: () => RoomPosition[];
 		getResourceState: () => RoomResourceState;
-		getBestStorageTarget: (amount: number, resourceType: ResourceConstant) => AnyStoreStructure;
-		getBestStorageSource: (resourceType: ResourceConstant) => AnyStoreStructure;
+		getBestStorageTarget: (amount: number, resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
+		getBestStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
 		getBestCircumstancialStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
 		determineResourceLevel: (amount: number, resourceType: ResourceConstant) => ResourceLevel;
 		getResourceLevelCutoffs: (resourceType: ResourceConstant) => ResourceLevelCuttoffs;

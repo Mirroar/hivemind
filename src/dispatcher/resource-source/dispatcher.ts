@@ -3,7 +3,7 @@ import FactorySource from 'dispatcher/resource-source/factory';
 
 declare global {
 	interface ResourceSourceTask extends Task {
-		resourceType: string;
+		resourceType: ResourceConstant;
 		amount?: number;
 	}
 
