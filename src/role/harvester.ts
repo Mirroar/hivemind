@@ -252,14 +252,8 @@ export default class HarvesterRole extends Role {
 		}
 
 		if (target) {
-			const distance = creep.pos.getRangeTo(target);
 			creep.whenInRange(1, target, () => {
-				if (target.structureType === STRUCTURE_CONTAINER && distance === 0) {
-					// Nothing to do, resources will drop into the container.
-				}
-				else {
-					creep.transferAny(target);
-				}
+				creep.transferAny(target);
 			});
 		}
 	}
