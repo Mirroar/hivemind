@@ -129,11 +129,11 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	getMaxWorkParts(source: Source): number {
 		let numberOfParts = source.energyCapacity / ENERGY_REGEN_TIME / 2;
 
-		for (const effect of source.effects) {
+		_.each(source.effects, effect => {
 			if (effect.effect === PWR_REGEN_SOURCE) {
 				numberOfParts += POWER_INFO[PWR_REGEN_SOURCE].effect[effect.level - 1] / POWER_INFO[PWR_REGEN_SOURCE].period / 2;
 			}
-		}
+		});
 
 		return 1.2 * numberOfParts;
 	}
