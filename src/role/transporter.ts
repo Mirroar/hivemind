@@ -940,7 +940,10 @@ export default class TransporterRole extends Role {
 	ensureValidResourceSource(order: TransporterOrder, calculateSourceCallback: () => void): order is TransporterGetEnergyOrder | ResourceSourceTask {
 		const creep = this.creep;
 
-		if (!order) calculateSourceCallback();
+		if (!order) {
+			calculateSourceCallback();
+			order = creep.memory.order;
+		}
 		if (!order) return false;
 
 		if (isResourceSourceOrder(creep.room, order)) {
