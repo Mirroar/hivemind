@@ -114,7 +114,9 @@ export default class BuilderRole extends Role {
 		}
 
 		if (!creep.room.storage || creep.room.getStoredEnergy() > 2500) {
-			this.transporterRole.performGetEnergy(creep);
+			// @todo Instead of completely circumventing TypeScript, find a way to
+			// make energy gathering reusable between multiple roles.
+			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 		}
 	}
 

@@ -100,7 +100,7 @@ export default class RemoteBuilderRole extends Role {
 	 * @param {boolean} building
 	 *   Whether to start building / repairing or not.
 	 */
-	setBuilderState(building) {
+	setBuilderState(building: boolean) {
 		this.creep.memory.building = building;
 		delete this.creep.memory.buildTarget;
 		delete this.creep.memory.repairTarget;
@@ -130,7 +130,7 @@ export default class RemoteBuilderRole extends Role {
 		const spawns = creep.room.find<StructureSpawn>(FIND_MY_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_SPAWN,
 		});
-		if (spawns && spawns.length > 0 && spawns[0].energy < spawns[0].energyCapacity * 0.8) {
+		if (spawns && spawns.length > 0 && spawns[0].store[RESOURCE_ENERGY] < spawns[0].store.getCapacity(RESOURCE_ENERGY) * 0.8) {
 			creep.whenInRange(1, spawns[0], () => creep.transfer(spawns[0], RESOURCE_ENERGY));
 			return;
 		}
@@ -180,7 +180,7 @@ export default class RemoteBuilderRole extends Role {
 	 * @return {boolean}
 	 *   True if we're trying to repair ramparts.
 	 */
-	saveExpiringRamparts(minHits: number) {
+	saveExpiringRamparts(minHits: number): boolean {
 		if (!this.creep.memory.repairTarget) {
 			// Make sure ramparts don't break.
 			const targets = this.creep.room.find(FIND_MY_STRUCTURES, {
@@ -297,13 +297,14 @@ export default class RemoteBuilderRole extends Role {
 			const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
 			if (source) {
 				creep.memory.resourceTarget = source.id;
-				delete creep.memory.deliverTarget;
 			}
 			else {
 				// Or even get energy from adjacent rooms if marked.
 				this.setExtraEnergyTarget(creep);
 
-				this.transporterRole.performGetEnergy(creep);
+				// @todo Instead of completely circumventing TypeScript, find a way to
+				// make energy gathering reusable between multiple roles.
+				this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 				return;
 			}
 		}

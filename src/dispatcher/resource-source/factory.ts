@@ -1,9 +1,11 @@
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
-interface FactorySourceTask extends ResourceSourceTask {
-	type: 'factory';
-	target: Id<AnyStoreStructure>;
+declare global {
+	interface FactorySourceTask extends ResourceSourceTask {
+		type: 'factory';
+		target: Id<AnyStoreStructure>;
+	}
 }
 
 export default class FactorySource implements TaskProvider<FactorySourceTask, ResourceSourceContext> {

@@ -1,9 +1,11 @@
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
-interface StorageSourceTask extends ResourceSourceTask {
-	type: 'storage';
-	target: Id<StructureStorage | StructureTerminal>;
+declare global {
+	interface StorageSourceTask extends ResourceSourceTask {
+		type: 'storage';
+		target: Id<StructureStorage | StructureTerminal>;
+	}
 }
 
 export default class StorageSource implements TaskProvider<StorageSourceTask, ResourceSourceContext> {
@@ -46,7 +48,7 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 		this.addClearingStorageResourceOptions(options, context);
 
 		return options;
-  }
+	}
 
 	addStorageEnergySourceOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;

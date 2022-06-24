@@ -49,7 +49,9 @@ export default class HarvesterRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep: HarvesterCreep) {
-		this.transporterRole.creep = creep;
+		// @todo Instead of completely circumventing TypeScript, find a way to
+		// make energy gathering reusable between multiple roles.
+		this.transporterRole.creep = creep as unknown as TransporterCreep;
 
 		if (this.hasFinishedDelivering(creep)) {
 			this.setHarvesterState(creep, true);
@@ -117,7 +119,6 @@ export default class HarvesterRole extends Role {
 	setHarvesterState(creep: HarvesterCreep, harvesting: boolean) {
 		creep.memory.harvesting = harvesting;
 		delete creep.memory.resourceTarget;
-		delete creep.memory.deliverTarget;
 	}
 
 	/**
@@ -176,7 +177,7 @@ export default class HarvesterRole extends Role {
 	 * @return {boolean}
 	 *   True if the harvester is in a bay.
 	 */
-	depositInBay(creep: HarvesterCreep) {
+	depositInBay(creep: HarvesterCreep): boolean {
 		if (!creep.memory.harvestPos) return false;
 		const harvestPosition = deserializePosition(creep.memory.harvestPos, creep.room.name);
 		const bay = _.find(creep.room.bays, bay => bay.name === encodePosition(harvestPosition));
@@ -239,12 +240,12 @@ export default class HarvesterRole extends Role {
 		let target: StructureContainer | StructureLink = source.getNearbyContainer();
 		if (source instanceof Source && creep.store.energy > 0) {
 			const link = source.getNearbyLink();
-			if (link && link.energy < link.energyCapacity) {
+			if (link && link.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
 				target = link;
 			}
 			else {
 				// Check for other nearby links.
-				const links: StructureLink[] = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.energy < structure.energyCapacity});
+				const links: StructureLink[] = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0});
 				if (links.length > 0) {
 					target = links[0];
 				}
