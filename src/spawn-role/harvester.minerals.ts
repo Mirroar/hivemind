@@ -20,18 +20,17 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 
 		// Find mineral sources with an extractor.
 		// @todo This could be done on script startup and partially kept in room memory.
-		const mineralHarvesters = room.creepsByRole['harvester.minerals'] || {};
 		const minerals = room.find(FIND_MINERALS, {
 			filter: mineral => {
-				const extractors = mineral.pos.findInRange(FIND_STRUCTURES, 1, {
+				const extractors = mineral.mineralAmount > 0 ? mineral.pos.findInRange(FIND_STRUCTURES, 0, {
 					filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.isOperational(),
-				});
-
+				}) : [];
 				return extractors.length > 0;
 			},
 		});
 
 		// We assume there is always at most one mineral deposit in a room.
+		let mineralHarvesters = minerals.length > 0? minerals[0].harvesters : {};
 		if (_.size(mineralHarvesters) > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return [];
 
 		return [{
