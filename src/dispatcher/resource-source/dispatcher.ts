@@ -1,5 +1,6 @@
 import Dispatcher from 'dispatcher/dispatcher';
 import FactorySource from 'dispatcher/resource-source/factory';
+import StorageSource from 'dispatcher/resource-source/storage';
 
 declare global {
 	interface ResourceSourceTask extends Task {
@@ -17,5 +18,6 @@ export default class ResourceSourceDispatcher extends Dispatcher<ResourceSourceT
 	constructor(readonly room: Room) {
 		super();
 		this.addProvider(new FactorySource(room));
+		this.addProvider(new StorageSource(room));
 	}
 }
