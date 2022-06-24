@@ -82,7 +82,7 @@ Structure.prototype.isOperational = function (this: Structure) {
 };
 
 function getInactiveStructures(room: Room): Partial<Record<Id<Structure>, boolean>> {
-	const rcl = room.controller.level;
+	const rcl = room.controller?.level ?? 0;
 	if (rcl >= 8) return {};
 
 	return cache.inHeap('inactiveStructures:' + room.name, 500, () => {
