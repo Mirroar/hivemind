@@ -240,7 +240,7 @@ export default class TransporterRole extends Role {
 			if (bay.isBlocked()) continue;
 
 			// It's fine if we're explicitly delivering to this bay right now.
-			if (isBayOrder(creep.memory.order) && creep.memory.order.name === bay.name) continue;
+			if (creep.memory.order && isBayOrder(creep.memory.order) && creep.memory.order.name === bay.name) continue;
 
 			// We're standing in a bay that we're not delivering to.
 			const terrain = new Room.Terrain(creep.pos.roomName);
