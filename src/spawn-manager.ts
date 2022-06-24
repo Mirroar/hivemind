@@ -38,7 +38,6 @@ const roleNameMap = {
 	harvester: 'H',
 	'harvester.deposit': 'HD',
 	'harvester.exploit': 'HE',
-	'harvester.minerals': 'HM',
 	'harvester.remote': 'HR',
 	'harvester.power': 'HP',
 	mule: 'M',
