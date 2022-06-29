@@ -9,7 +9,6 @@ import Bay from 'manager.bay';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
-import {encodePosition} from 'utils/serialization';
 import {getResourcesIn} from 'utils/store';
 import {handleMapArea} from 'utils/map';
 
@@ -896,7 +895,7 @@ export default class TransporterRole extends Role {
 
 		if (isResourceSourceOrder(creep.room, creep.memory.order) && !isTargettedSourceOrder(creep.memory.order)) return;
 
-		const target = Game.getObjectById<Resource | AnyStoreStructure>(creep.memory.order.target);
+		const target = Game.getObjectById(creep.memory.order.target);
 		creep.whenInRange(1, target, () => {
 			const resourceType = creep.memory.order.resourceType;
 			let orderDone = false;
