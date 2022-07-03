@@ -45,6 +45,9 @@ import SegmentedMemory from 'utils/segmented-memory';
 hivemind.setSegmentedMemory(new SegmentedMemory());
 hivemind.logGlobalReset();
 
+import balancer from 'excess-energy-balancer';
+balancer.init();
+
 import {getRoomIntel} from 'room-intel';
 import {PlayerIntelMemory} from 'player-intel';
 import {RoomIntelMemory} from 'room-intel';

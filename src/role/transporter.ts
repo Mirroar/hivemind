@@ -5,6 +5,7 @@ STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
+import balancer from 'excess-energy-balancer';
 import Bay from 'manager.bay';
 import hivemind from 'hivemind';
 import Role from 'role/role';
@@ -690,6 +691,7 @@ export default class TransporterRole extends Role {
 			};
 
 			if (target instanceof StructurePowerSpawn) {
+				if (!balancer.maySpendEnergyOnPowerProcessing()) continue;
 				if (target.store.getFreeCapacity(RESOURCE_ENERGY) < target.store.getCapacity(RESOURCE_ENERGY) * 0.2) continue;
 				option.priority += 2;
 			}
