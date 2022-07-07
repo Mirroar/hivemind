@@ -1,6 +1,7 @@
 /* global FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE
 MOVE WORK CARRY CONTROLLER_MAX_UPGRADE_PER_TICK */
 
+import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 
@@ -71,6 +72,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	getBaseUpgraderAmount(room: Room): number {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
+
+		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
 		const availableEnergy = room.getStoredEnergy();
 		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {

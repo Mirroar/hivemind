@@ -1,8 +1,10 @@
 import TaskProvider from 'dispatcher/task-provider';
 
-interface FactoryDestinationTask extends ResourceDestinationTask {
-	type: 'factory';
-	target: Id<StructureFactory>;
+declare global {
+	interface FactoryDestinationTask extends ResourceDestinationTask {
+		type: 'factory';
+		target: Id<StructureFactory>;
+	}
 }
 
 export default class FactoryDestination implements TaskProvider<FactoryDestinationTask, ResourceDestinationContext> {

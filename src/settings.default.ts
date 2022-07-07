@@ -130,6 +130,9 @@ const settings = {
 	maxVisitorsPerUser: 0,
 	dismantleUnwantedRamparts: true,
 	recordRoomStats: true,
+	// The ratio of leftover energy to put into power processing vs. GPL.
+	// Must be between 0 and 1.
+	powerProcessingEnergyRatio: 0.5,
 
 	// Trade:
 	enableTradeManagement: true,

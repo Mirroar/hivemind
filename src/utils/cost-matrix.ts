@@ -186,7 +186,7 @@ function markBuildings(roomName, structures, constructionSites, roadCallback, bl
 		// should not be marked inaccessible.
 		const roomIntel = getRoomIntel(roomName);
 		// @todo Make sure Game.exploits is set at this point and use that instead.
-		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0 && !Memory.exploits[roomName]) {
+		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0 && !Memory.exploits?.[roomName]) {
 			// Add area around keeper lairs as obstacles.
 			_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
 				handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {

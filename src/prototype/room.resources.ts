@@ -35,8 +35,8 @@ declare global {
 		getRemoteHarvestSourcePositions: () => RoomPosition[];
 		getRemoteReservePositions: () => RoomPosition[];
 		getResourceState: () => RoomResourceState;
-		getBestStorageTarget: (amount: number, resourceType: ResourceConstant) => AnyStoreStructure;
-		getBestStorageSource: (resourceType: ResourceConstant) => AnyStoreStructure;
+		getBestStorageTarget: (amount: number, resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
+		getBestStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
 		getBestCircumstancialStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
 		determineResourceLevel: (amount: number, resourceType: ResourceConstant) => ResourceLevel;
 		getResourceLevelCutoffs: (resourceType: ResourceConstant) => ResourceLevelCuttoffs;
@@ -589,6 +589,9 @@ Room.prototype.getBestCircumstancialStorageSource = function (this: Room, resour
 		// Take resources out of terminal if possible to empty it out.
 		primarySource = this.terminal;
 		secondarySource = this.storage;
+	}
+	else {
+		return null;
 	}
 
 	const secondaryFull = secondarySource.store.getUsedCapacity() > secondarySource.store.getCapacity() * 0.8;

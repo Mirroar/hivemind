@@ -3,7 +3,6 @@ STRUCTURE_STORAGE STRUCTURE_TERMINAL FIND_SYMBOL_CONTAINERS */
 
 import Role from 'role/role';
 import TradeRoute from 'trade-route';
-import utilities from 'utilities';
 
 declare global {
 	interface MuleCreep extends Creep {
@@ -12,6 +11,7 @@ declare global {
 	}
 
 	interface MuleCreepMemory extends CreepMemory {
+		delivering?: boolean;
 		route: string;
 		demiseReported?: boolean;
 		roomPath?: string[];

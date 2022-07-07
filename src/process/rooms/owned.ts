@@ -8,6 +8,7 @@ declare global {
 	}
 }
 
+import balancer from 'excess-energy-balancer';
 import ManageFactoryProcess from 'process/rooms/owned/factory';
 import ManageLabsProcess from 'process/rooms/owned/labs';
 import ManageLinksProcess from 'process/rooms/owned/links';
@@ -93,7 +94,7 @@ export default class OwnedRoomProcess extends Process {
 			// Process power in power spawns.
 			const powerSpawn = this.room.powerSpawn;
 			if (powerSpawn && powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
-				powerSpawn.processPower();
+				if (powerSpawn.processPower() === OK) balancer.recordPowerEnergy(POWER_SPAWN_ENERGY_RATIO);
 			}
 		});
 

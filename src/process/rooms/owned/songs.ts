@@ -9,7 +9,7 @@ declare global {
 /* eslint-disable array-element-newline */
 const songs = {
 	harder: {
-		roles: ['harvester', 'harvester.minerals', 'transporter', 'upgrader', 'builder', 'hauler'],
+		roles: ['harvester', 'transporter', 'upgrader', 'builder', 'hauler'],
 		lines: [
 			// 2 x 2 nothing
 			'work it', '', 'make it', '', 'do it', '', 'makes us', '', '♪', '♪', '♪', '♬', '♪', '♪', '♪', '♬',

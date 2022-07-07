@@ -1,5 +1,7 @@
-/* global RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER */
+/* global RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER WORK
+UPGRADE_CONTROLLER_POWER */
 
+import balancer from 'excess-energy-balancer';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 
@@ -58,7 +60,11 @@ export default class UpgraderRole extends Role {
 		}
 
 		if (distance <= 3) {
-			creep.upgradeController(controller);
+			const result = creep.upgradeController(controller);
+			if (controller.level == 8 && result == OK) {
+				const amount = Math.min(creep.store[RESOURCE_ENERGY], creep.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER);
+				balancer.recordGplEnergy(amount);
+			}
 
 			if (distance === 1 && controller.sign && controller.sign.username) {
 				creep.signController(controller, '');

@@ -79,8 +79,6 @@ export default class CreepsProcess extends Process {
 			this.creepManager.registerCreepRole(roleName, new RoleClass());
 		}
 
-		this.creepManager.registerCreepRole('harvester.minerals', this.creepManager.roles['harvester']);
-
 		this.powerCreepManager = new CreepManager();
 		this.powerCreepManager.registerCreepRole('operator', new OperatorRole());
 	}

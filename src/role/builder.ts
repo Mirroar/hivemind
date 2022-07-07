@@ -1,6 +1,8 @@
-/* global FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN
-STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER */
+/* global FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES STRUCTURE_SPAWN OK
+STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER WORK
+UPGRADE_CONTROLLER_POWER RESOURCE_ENERGY */
 
+import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
@@ -114,7 +116,9 @@ export default class BuilderRole extends Role {
 		}
 
 		if (!creep.room.storage || creep.room.getStoredEnergy() > 2500) {
-			this.transporterRole.performGetEnergy(creep);
+			// @todo Instead of completely circumventing TypeScript, find a way to
+			// make energy gathering reusable between multiple roles.
+			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 		}
 	}
 
@@ -134,15 +138,20 @@ export default class BuilderRole extends Role {
 	}
 
 	performUpgrade(creep: BuilderCreep) {
-		if (creep.room.storage && creep.room.getStoredEnergy() < 25_000) {
+		if (!creep.room.storage || creep.room.getStoredEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
 			// Prevent draining energy stores by recicling.
 			creep.room.memory.noBuilderNeeded = Game.time;
 			this.performRecycle(creep);
 			return;
 		}
 
-		creep.whenInRange(3, creep.room.controller, () => {
-			creep.upgradeController(creep.room.controller);
+		const controller = creep.room.controller;
+		creep.whenInRange(3, controller, () => {
+			const result = creep.upgradeController(controller);
+			if (controller.level == 8 && result == OK) {
+				const amount = Math.min(creep.store[RESOURCE_ENERGY], creep.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER);
+				balancer.recordGplEnergy(amount);
+			}
 		});
 	}
 
