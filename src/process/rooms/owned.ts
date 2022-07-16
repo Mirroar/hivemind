@@ -18,7 +18,7 @@ import RoomDefenseProcess from 'process/rooms/owned/defense';
 import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomSongsProcess from 'process/rooms/owned/songs';
 import RoomOperation from 'operation/room';
-import hivemind, {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 
 export default class OwnedRoomProcess extends Process {
 	room: Room;

@@ -1,7 +1,7 @@
 /* global RoomPosition OK */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import Role from 'role/role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';

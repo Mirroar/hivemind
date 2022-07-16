@@ -2,7 +2,7 @@
 TERRAIN_MASK_WALL STRUCTURE_KEEPER_LAIR */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import {encodePosition, serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';

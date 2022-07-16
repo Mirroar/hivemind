@@ -2,7 +2,7 @@
 RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';

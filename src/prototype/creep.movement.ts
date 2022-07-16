@@ -1,7 +1,7 @@
 /* global Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';

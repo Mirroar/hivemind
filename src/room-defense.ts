@@ -1,7 +1,7 @@
 /* global STRUCTURE_RAMPART ATTACK HEAL CLAIM MOVE TOUGH CARRY
 FIND_STRUCTURES LOOK_STRUCTURES */
 
-import hivemind from 'hivemind';
+
 import Operation from 'operation/operation';
 
 declare global {

@@ -1,7 +1,7 @@
 /* global FIND_HOSTILE_STRUCTURES STRUCTURE_INVADER_CORE */
 
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 import {getRoomIntel} from 'room-intel';
 
 declare global {

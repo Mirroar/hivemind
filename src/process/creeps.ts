@@ -1,6 +1,6 @@
 import Process from 'process/process';
 import CreepManager from 'creep-manager';
-import hivemind from 'hivemind';
+
 import utilities from 'utilities';
 
 import brawlerRole from 'role/brawler';

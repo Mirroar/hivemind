@@ -1,7 +1,7 @@
 import Process from 'process/process';
 import ReactionsProcess from 'process/rooms/owned/labs.reactions';
 import PositionsProcess from 'process/rooms/owned/labs.position';
-import hivemind, {PROCESS_PRIORITY_LOW} from 'hivemind';
+import {PROCESS_PRIORITY_LOW} from 'hivemind';
 
 export default class ManageLabsProcess extends Process {
 	room: Room;

@@ -3,7 +3,7 @@ FIND_MY_STRUCTURES RESOURCE_ENERGY ERR_NOT_IN_RANGE STRUCTURE_RAMPART
 FIND_MY_CONSTRUCTION_SITES STRUCTURE_TOWER FIND_DROPPED_RESOURCES
 STRUCTURE_CONTAINER FIND_SOURCES_ACTIVE */
 
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';

@@ -2,7 +2,7 @@
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {getRoomIntel} from 'room-intel';

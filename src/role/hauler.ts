@@ -5,7 +5,7 @@ LOOK_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
-import hivemind from 'hivemind';
+
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';

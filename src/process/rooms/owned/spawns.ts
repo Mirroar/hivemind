@@ -1,5 +1,5 @@
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 import SpawnManager from 'spawn-manager';
 
 import brawlerSpawnRole from 'spawn-role/brawler';

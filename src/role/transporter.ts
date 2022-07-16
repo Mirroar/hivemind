@@ -7,7 +7,7 @@ FIND_TOMBSTONES FIND_RUINS */
 
 import balancer from 'excess-energy-balancer';
 import Bay from 'manager.bay';
-import hivemind from 'hivemind';
+
 import Role from 'role/role';
 import utilities from 'utilities';
 import {getResourcesIn} from 'utils/store';

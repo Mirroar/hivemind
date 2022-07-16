@@ -1,6 +1,6 @@
 /* global MOVE CARRY */
 
-import hivemind from 'hivemind';
+
 import SpawnRole from 'spawn-role/spawn-role';
 import {getRoomIntel} from 'room-intel';
 

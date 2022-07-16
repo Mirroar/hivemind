@@ -1,5 +1,5 @@
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 
 export default class SpawnPowerCreepsProcess extends Process {
 	/**

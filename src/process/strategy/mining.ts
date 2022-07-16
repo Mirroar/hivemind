@@ -1,7 +1,7 @@
 /* global PWR_OPERATE_SPAWN POWER_INFO */
 
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 import RemoteMiningOperation from 'operation/remote-mining';
 import stats from 'utils/stats';
 

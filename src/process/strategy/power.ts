@@ -2,7 +2,7 @@
 CONTROLLER_STRUCTURES STRUCTURE_POWER_SPAWN */
 
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 
 declare global {

@@ -1,5 +1,5 @@
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 

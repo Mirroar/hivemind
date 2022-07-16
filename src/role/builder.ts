@@ -3,7 +3,7 @@ STRUCTURE_RAMPART STRUCTURE_WALL STRUCTURE_ROAD STRUCTURE_CONTAINER WORK
 UPGRADE_CONTROLLER_POWER RESOURCE_ENERGY */
 
 import balancer from 'excess-energy-balancer';
-import hivemind from 'hivemind';
+
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';

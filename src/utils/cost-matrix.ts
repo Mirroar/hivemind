@@ -1,5 +1,5 @@
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';

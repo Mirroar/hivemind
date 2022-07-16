@@ -62,7 +62,7 @@ const priorityEffects = {
 /**
  * Kernel that can be used to run various processes.
  */
-class Hivemind {
+export default class Hivemind {
 	memory: KernelMemory;
 	relations: Relations;
 	// @todo hivemind.settings should be removed. Any module needing access to
@@ -455,7 +455,7 @@ class Hivemind {
 	}
 }
 
-const hivemind = new Hivemind();
+// const hivemind = new Hivemind();
 
 export {
 	PROCESS_PRIORITY_LOW,
@@ -463,4 +463,4 @@ export {
 	PROCESS_PRIORITY_HIGH,
 	PROCESS_PRIORITY_ALWAYS,
 };
-export default hivemind;
+// export default hivemind;

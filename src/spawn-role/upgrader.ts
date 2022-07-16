@@ -2,7 +2,7 @@
 MOVE WORK CARRY CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 import balancer from 'excess-energy-balancer';
-import hivemind from 'hivemind';
+
 import SpawnRole from 'spawn-role/spawn-role';
 
 export default class UpgraderSpawnRole extends SpawnRole {
