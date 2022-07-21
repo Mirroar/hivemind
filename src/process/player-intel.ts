@@ -1,13 +1,15 @@
 import Process from 'process/process';
-import {getPlayerIntel} from 'player-intel';
+import container from 'utils/container';
+import PlayerIntelManager from 'player-intel-manager';
 import {getRoomIntel, getRoomsWithIntel} from 'room-intel';
 
 export default class PlayerIntelProcess extends Process {
 	run() {
 		const playerRooms = this.collectPlayerRooms();
+		const playerIntelManager = container.get<PlayerIntelManager>('PlayerIntelManager');
 
 		for (const userName in playerRooms) {
-			const playerIntel = getPlayerIntel(userName);
+			const playerIntel = playerIntelManager.get(userName);
 			playerIntel.setPlayerRooms(playerRooms[userName].owned);
 			playerIntel.setPlayerRemotes(playerRooms[userName].remotes);
 		}
