@@ -4,6 +4,7 @@ export class Container {
 
 	constructor() {
 		this.services = new Map();
+		this.constructors = new Map();
 	}
 
 	get<T>(key: string): T {
