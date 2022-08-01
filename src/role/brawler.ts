@@ -107,7 +107,7 @@ export default class BrawlerRole extends Role {
 	 * @return {Array}
 	 *   An array of target options for this creep.
 	 */
-	getAvailableMilitaryTargets(creep) {
+	getAvailableMilitaryTargets(creep: Creep) {
 		const options = [];
 
 		if (!creep.memory.target) return options;
@@ -132,7 +132,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// Attack / Reserve controllers.
-		if (creep.memory.body[CLAIM] && creep.memory.body[CLAIM] >= 5) {
+		if (creep.getActiveBodyparts(CLAIM) >= 5) {
 			if (creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
 				options.push({
 					priority: 5,
@@ -143,7 +143,7 @@ export default class BrawlerRole extends Role {
 			}
 		}
 
-		if (creep.memory.body[CLAIM] && creep.room.controller && !creep.room.controller.owner) {
+		if (creep.getActiveBodyparts(CLAIM) > 0 && creep.room.controller && !creep.room.controller.owner) {
 			options.push({
 				priority: 4,
 				weight: 0,
@@ -153,6 +153,9 @@ export default class BrawlerRole extends Role {
 		}
 
 		// @todo Run home for healing if no functional parts are left.
+		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0) {
+			this.performRecycle(creep);
+		}
 
 		return options;
 	}
