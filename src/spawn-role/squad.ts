@@ -78,7 +78,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		// Automatically call spawning function for selected unit type.
 		const methodName = 'get' + _.capitalize(option.unitType) + 'CreepBody';
 		const bodyCallback: (room: Room, option: SquadSpawnOption) => BodyPartConstant[] = this[methodName];
-		if (bodyCallback) return bodyCallback.call(this, [room, option]);
+		if (bodyCallback) return bodyCallback.call(this, room, option);
 
 		// If the unit type is not supported, spawn a general brawler.
 		return this.getBrawlerCreepBody(room);
