@@ -128,6 +128,13 @@ export default class SpawnManager {
 		if (!this.trySpawnCreep(room, spawn, option)) {
 			_.each(availableSpawns, s => {
 				s.waiting = true;
+				room.visual.text(option.role + '@' + option.priority.toPrecision(1), spawn.pos.x + 0.05, spawn.pos.y + 0.65, {
+					font: 0.5,
+					color: 'black',
+				});
+				room.visual.text(option.role + '@' + option.priority.toPrecision(1), spawn.pos.x, spawn.pos.y + 0.6, {
+					font: 0.5,
+				});
 			});
 		}
 
