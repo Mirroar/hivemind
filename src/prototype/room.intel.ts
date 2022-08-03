@@ -195,7 +195,23 @@ Room.prototype.enhanceData = function (this: Room) {
 				hasHarvester = creeps.length > 0 && creeps[0].my && creeps[0].memory.role === 'harvester';
 			}
 
-			this.bays.push(new Bay(pos, hasHarvester));
+			const bay = new Bay(pos, hasHarvester);
+			this.bays.push(bay);
+
+			// Draw bay.
+			// @todo Move out of constructor into separate function, called in owned rooms
+			// process.
+			if (typeof RoomVisual !== 'undefined') {
+				const visual = this.visual;
+				let color = '255, 255, 128';
+				if (bay.isBlocked()) color = '255, 0, 0';
+				else if (bay.energyCapacity === 0) color = '128, 128, 128';
+				visual.rect(bay.pos.x - 1.4, bay.pos.y - 1.4, 2.8, 2.8, {
+					fill: 'rgba(' + color + ', 0.2)',
+					opacity: 0.5,
+					stroke: 'rgba(' + color + ', 1)',
+				});
+			}
 		}
 	}
 

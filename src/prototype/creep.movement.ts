@@ -1,6 +1,7 @@
 /* global Creep PowerCreep RoomVisual RoomPosition LOOK_CREEPS OK
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import utilities from 'utilities';
@@ -252,7 +253,15 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 
 		if (this.pos.getRangeTo(pos) > 0) {
 			this.say('S:' + pos.x + 'x' + pos.y);
-			if (this.moveTo(pos) === ERR_NO_PATH) {
+			if (this.moveTo(pos, {
+				visualizePathStyle: {
+					fill: 'transparent',
+					stroke: '#f00',
+					lineStyle: 'dashed',
+					strokeWidth: .2,
+					opacity: .1
+				},
+			}) === ERR_NO_PATH) {
 				this.manageBlockingCreeps();
 			}
 
@@ -271,8 +280,6 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 
 	this.incrementCachedPathPosition();
 	if (this.memory.cachedPath.arrived) return;
-
-	this.say('Pos: ' + this.memory.cachedPath.position);
 
 	if (this.moveAroundObstacles()) return;
 
@@ -527,6 +534,52 @@ Creep.prototype.canMoveOnto = function (this: Creep | PowerCreep, position) {
 	return true;
 };
 
+function drawCreepMovement(creep: Creep | PowerCreep, target: RoomPosition) {
+	if (!RoomVisual) return;
+
+	const hue: number = cache.inHeap('creepColor:' + creep.name, 10000, (oldValue) => {
+		return oldValue?.data ?? Math.floor(Math.random() * 360);
+	});
+	const color = 'hsl(' + hue + ', 50%, 50%)'
+
+	const pathPosition = creep.memory.cachedPath?.position || creep.memory.cachedPath?.forceGoTo;
+	if (!pathPosition) {
+		creep.room.visual.line(creep.pos, target, {
+			color,
+			width: .05,
+			opacity: .5,
+		});
+		return;
+	}
+
+	const path = creep.getCachedPath();
+
+	const steps: RoomPosition[] = [];
+	for (let i = pathPosition; i < path.length; i++) {
+		const pos = path[i];
+		if (pos.roomName !== creep.pos.roomName) break;
+
+		steps.push(pos);
+	}
+
+	creep.room.visual.poly(steps, {
+		fill: 'transparent',
+		stroke: color,
+		lineStyle: 'dashed',
+		strokeWidth: .15,
+		opacity: .3,
+	});
+
+	const lineStartPos = steps.length > 0 ? steps.pop() : creep.pos;
+	if (lineStartPos.roomName !== target.roomName) return;
+
+	creep.room.visual.line(lineStartPos, target, {
+		color: color,
+		width: .15,
+		opacity: .3,
+	});
+}
+
 /**
  * Moves a creep using cached paths while moving around obstacles.
  *
@@ -573,8 +626,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 	else {
 		this.followCachedPath();
 
-		// Debug creep movement.
-		new RoomVisual(this.pos.roomName).line(this.pos, target);
+		drawCreepMovement(this, target);
 
 		if (this.heapMemory._moveBlocked) {
 			// Seems like we can't move on the target space for some reason right now.

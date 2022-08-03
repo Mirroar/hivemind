@@ -66,18 +66,6 @@ export default class Bay {
 				this.energyCapacity += extension.store.getCapacity(RESOURCE_ENERGY);
 			}
 		}
-
-		// Draw bay.
-		// @todo Move out of constructor into separate function, called in owned rooms
-		// process.
-		if (typeof RoomVisual !== 'undefined') {
-			const visual = new RoomVisual(this.pos.roomName);
-			visual.rect(this.pos.x - 1.4, this.pos.y - 1.4, 2.8, 2.8, {
-				fill: 'rgba(255, 255, 128, 0.2)',
-				opacity: 0.5,
-				stroke: '#ffff80',
-			});
-		}
 	}
 
 	isBlocked(): boolean {
