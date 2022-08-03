@@ -109,19 +109,29 @@ export default class FactoryManager {
 	isRecipeAvailable(resourceType: FactoryProductConstant, recipe: Recipe): boolean {
 		if (recipe.level && recipe.level !== this.getFactoryLevel()) return false;
 
+		// Compress resource at 95% storage capacity, uncompress under 80%.
+		// @todo Turn into setting.
+		const storageFull = this.room.getFreeStorage() < this.room.getStorageLimit() * 0.05;
+		const storageEmpty = this.room.getFreeStorage() > this.room.getStorageLimit() * 0.2;
+
+		const storedEnergy = this.room.getStoredEnergy();
+		const storedProduct = this.room.getCurrentResourceAmount(resourceType);
+		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]);
+
 		if (resourceType === RESOURCE_BATTERY) {
-			return (this.room.getCurrentResourceAmount(resourceType) < 500 && this.room.getStoredEnergy() > 15_000)
-        || this.room.getStoredEnergy() > 150_000;
+			return (storedProduct < 500 || storageFull) && storedEnergy > 15_000;
+		}
+
+		if (resourceType === RESOURCE_ENERGY) {
+			return (storedProduct < 10_000 || storageEmpty) && storedResource > 100;
 		}
 
 		if (uncompressRecipes[resourceType]) {
-			return (this.room.getCurrentResourceAmount(resourceType) < 500 && this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 5000 && this.room.getStoredEnergy() > 5000)
-        || (this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 30_000 && this.room.getStoredEnergy() > 10_000);
+			return (storedProduct < 500 || storageFull) && storedResource > 5000 && storedEnergy > 5000;
 		}
 
 		if (compressRecipes[resourceType]) {
-			return (this.room.getCurrentResourceAmount(resourceType) < 2000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 100 && this.room.getStoredEnergy() > 10_000)
-        || (this.room.getCurrentResourceAmount(resourceType) < 10_000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 1000 && this.room.getStoredEnergy() > 10_000);
+			return (storedProduct < 2000 || storageEmpty) && storedResource > 100 && storedEnergy > 5_000;
 		}
 
 		// @todo For level-based recipes, use empire-wide resource capabilities and request via terminal.
