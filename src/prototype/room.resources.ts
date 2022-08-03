@@ -74,16 +74,17 @@ Object.defineProperty(Room.prototype, 'destinationDispatcher', {
  */
 Room.prototype.getStorageLimit = function (this: Room) {
 	let total = 0;
-	if (this.storage) {
+	if (this.storage && !this.isClearingStorage()) {
 		total += this.storage.store.getCapacity();
 	}
-	else {
-		// Assume 10000 storage for dropping stuff on the ground.
-		total += 10000;
+
+	if (this.terminal && !this.isClearingTerminal()) {
+		total += this.terminal.store.getCapacity();
 	}
 
-	if (this.terminal) {
-		total += this.terminal.store.getCapacity();
+	if (total === 0) {
+		// Assume 10000 storage for dropping stuff on the ground.
+		total += 10000;
 	}
 
 	return total;
@@ -98,11 +99,13 @@ Room.prototype.getStorageLimit = function (this: Room) {
 Room.prototype.getFreeStorage = function (this: Room) {
 	// Determines amount of free space in storage.
 	let limit = this.getStorageLimit();
-	if (this.storage) {
+	if (this.storage && !this.isClearingStorage()) {
+		// Only count storage resources if we count it's free capacity.
 		limit -= this.storage.store.getUsedCapacity();
 	}
 
-	if (this.terminal) {
+	if (this.terminal && !this.isClearingTerminal()) {
+		// Only count terminal resources if we count it's free capacity.
 		limit -= this.terminal.store.getUsedCapacity();
 	}
 
@@ -487,12 +490,12 @@ Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType
 			return this.terminal;
 		}
 
-		if (this.isClearingTerminal() && storageFree > this.storage.store.getCapacity() * 0.2) {
+		if (this.isClearingTerminal() && storageFree > amount) {
 			// If we're clearing out the terminal, put everything into storage.
 			return this.storage;
 		}
 
-		if (this.isClearingStorage() && terminalFree > this.terminal.store.getCapacity() * 0.2) {
+		if (this.isClearingStorage() && terminalFree > amount) {
 			// If we're clearing out the storage, put everything into terminal.
 			return this.terminal;
 		}
