@@ -228,7 +228,13 @@ export default class SpawnManager {
 		}
 
 		const roleName = roleNameMap[roleId] || roleId;
-		return roleName + '_' + Memory.creepCounter[roleId].toString(36);
+		const name = roleName + '_' + Memory.creepCounter[roleId].toString(36);
+		if (!Game.creeps[name]) return name;
+
+		// Name already exists, sometimes happens after server crash.
+		// Generate another.
+		Memory.creepCounter[roleId]++;
+		return this.generateCreepName(roleId);
 	}
 
 	/**

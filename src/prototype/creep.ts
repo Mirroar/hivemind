@@ -155,7 +155,7 @@ Creep.prototype.enhanceData = function (this: Creep) {
 	}
 
 	// Store creeps that are part of a squad in the correct object.
-	if (this.memory.squadName) {
+	if (this.memory.squadName && Game.squads[this.memory.squadName]) {
 		const squad = Game.squads[this.memory.squadName];
 		if (!squad.units[this.memory.squadUnitType]) {
 			squad.units[this.memory.squadUnitType] = [];
