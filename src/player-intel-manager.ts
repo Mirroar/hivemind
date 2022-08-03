@@ -4,6 +4,9 @@ import hivemind from './hivemind';
 export default class PlayerIntelManager {
 	intelCache: Record<string, PlayerIntel> = {};
 
+	ownedRoomSightings: Record<string, Record<string, number>> = {};
+	claimedRoomSightings: Record<string, Record<string, number>> = {};
+
 	/**
 	 * Factory method for player intel objects.
 	 *
@@ -21,5 +24,19 @@ export default class PlayerIntelManager {
 		}
 
 		return this.intelCache[userName];
+	}
+
+	updateOwnedRoom(userName: string, roomName: string) {
+		if (!this.ownedRoomSightings[userName]) this.ownedRoomSightings[userName] = {};
+		this.ownedRoomSightings[userName][roomName] = Game.time;
+	}
+
+	updateClaimedRoom(userName: string, roomName: string) {
+		if (!this.claimedRoomSightings[userName]) this.claimedRoomSightings[userName] = {};
+		this.claimedRoomSightings[userName][roomName] = Game.time;
+	}
+
+	updateCreepSighting(userName: string, roomName: string, creeps: Creep[]) {
+
 	}
 }
