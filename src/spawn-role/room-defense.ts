@@ -41,6 +41,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addLowLevelRoomSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		// In low level rooms, add defenses!
 		if (room.controller.level >= 4) return;
+		if ((room.controller.safeMode || 0) > 500) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
 		if (_.size(room.creepsByRole.brawler) >= 2) return;
 
