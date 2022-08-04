@@ -403,7 +403,6 @@ export default class TransporterRole extends Role {
 
 		if (creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1) {
 			this.addContainerEnergyDeliveryOptions(options);
-			this.addTowerDeliveryOptions(options);
 			this.addHighLevelEnergyDeliveryOptions(options);
 			this.addStorageEnergyDeliveryOptions(options);
 		}
@@ -533,41 +532,6 @@ export default class TransporterRole extends Role {
 			}
 
 			option.priority -= room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
-
-			options.push(option);
-		}
-	}
-
-	/**
-	 * Adds options for filling towers with energy.
-	 *
-	 * @param {Array} options
-	 *   A list of potential delivery targets.
-	 */
-	addTowerDeliveryOptions(options: TransporterDestinationOrderOption[]) {
-		const room = this.creep.room;
-		const targets = room.find<StructureTower>(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_TOWER) && structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY) * 0.8,
-		});
-
-		for (const target of targets) {
-			const option: TransporterStructureOrderOption = {
-				priority: 3,
-				weight: (target.store.getCapacity(RESOURCE_ENERGY) - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance.
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			if (room.memory.enemies && !room.memory.enemies.safe) {
-				option.priority++;
-			}
-
-			if (target.store[RESOURCE_ENERGY] < target.store.getCapacity(RESOURCE_ENERGY) * 0.2) {
-				option.priority++;
-			}
-
-			option.priority -= room.getCreepsWithOrder('deliver', target.id).length * 2;
 
 			options.push(option);
 		}
