@@ -112,7 +112,6 @@ const settings = {
 	expansionScoreBonusHighwayExit: 0,
 
 	// Room planning:
-	enableMinCutRamparts: false,
 	minCutRampartDistance: 4,
 	visualizeRoomPlan: false,
 
