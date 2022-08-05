@@ -120,19 +120,27 @@ const settings = {
 	// Number of hits for walls / ramparts needed for more expensive structures
 	// to be built.
 	minWallIntegrity: 500_000,
+	// Toggles whether certain specialized structures should be built.
 	constructLabs: true,
 	constructNukers: true,
 	constructPowerSpawns: true,
 	constructObservers: true,
 	constructFactories: true,
+	// Manages energy spending in high level rooms.
 	minEnergyToUpgradeAtRCL8: 50_000,
-	rampartWhitelistedUsers: [],
-	maxVisitorsPerUser: 0,
-	dismantleUnwantedRamparts: true,
-	recordRoomStats: true,
+	minEnergyForNuker: 50_000,
 	// The ratio of leftover energy to put into power processing vs. GPL.
 	// Must be between 0 and 1.
 	powerProcessingEnergyRatio: 0.5,
+
+	// List of user names that may move through our ramparts.
+	rampartWhitelistedUsers: [],
+	maxVisitorsPerUser: 0,
+	dismantleUnwantedRamparts: true,
+
+	// Saves statistics about the time it takes to reach certain milestones.
+	// Available in `Memory.roomStats`.
+	recordRoomStats: true,
 
 	// Trade:
 	enableTradeManagement: true,

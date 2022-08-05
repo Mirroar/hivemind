@@ -5,7 +5,6 @@ STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
-import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
@@ -403,7 +402,6 @@ export default class TransporterRole extends Role {
 
 		if (creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1) {
 			this.addContainerEnergyDeliveryOptions(options);
-			this.addHighLevelEnergyDeliveryOptions(options);
 			this.addStorageEnergyDeliveryOptions(options);
 		}
 
@@ -458,7 +456,6 @@ export default class TransporterRole extends Role {
 				});
 			}
 
-			this.addHighLevelResourceDeliveryOptions(options, resourceType);
 			this.addLabResourceDeliveryOptions(options, resourceType);
 
 			// As a last resort, simply drop the resource since it can't be put anywhere.
@@ -538,42 +535,6 @@ export default class TransporterRole extends Role {
 	}
 
 	/**
-	 * Adds options for filling nukers and power spawns with energy.
-	 *
-	 * @param {Array} options
-	 *   A list of potential delivery targets.
-	 */
-	addHighLevelEnergyDeliveryOptions(options: TransporterDestinationOrderOption[]) {
-		const room = this.creep.room;
-		if (room.isEvacuating()) return;
-		if (room.getCurrentResourceAmount(RESOURCE_ENERGY) < hivemind.settings.get('minEnergyForPowerProcessing')) return;
-
-		const targets = room.find<StructureNuker | StructurePowerSpawn>(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_NUKER || structure.structureType === STRUCTURE_POWER_SPAWN) && structure.energy < structure.energyCapacity,
-		});
-
-		for (const target of targets) {
-			const option: TransporterStructureOrderOption = {
-				priority: 1,
-				weight: (target.energyCapacity - target.energy) / 100, // @todo Also factor in distance.
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			if (target instanceof StructurePowerSpawn) {
-				if (!balancer.maySpendEnergyOnPowerProcessing()) continue;
-				if (target.store.getFreeCapacity(RESOURCE_ENERGY) < target.store.getCapacity(RESOURCE_ENERGY) * 0.2) continue;
-				option.priority += 2;
-			}
-
-			option.priority -= room.getCreepsWithOrder('deliver', target.id).length * 2;
-
-			options.push(option);
-		}
-	}
-
-	/**
 	 * Adds options for storing energy.
 	 *
 	 * @param {Array} options
@@ -601,47 +562,6 @@ export default class TransporterRole extends Role {
 					type: 'position',
 					object: creep.room.getPositionAt(storagePosition.x, storagePosition.y),
 					resourceType: RESOURCE_ENERGY,
-				});
-			}
-		}
-	}
-
-	/**
-	 * Adds options for filling nukers and power spawns with resources.
-	 *
-	 * @param {Array} options
-	 *   A list of potential delivery targets.
-	 * @param {string} resourceType
-	 *   The type of resource to deliver.
-	 */
-	addHighLevelResourceDeliveryOptions(options: TransporterDestinationOrderOption[], resourceType: ResourceConstant) {
-		const creep = this.creep;
-		// Put ghodium in nukers.
-		if (resourceType === RESOURCE_GHODIUM && !creep.room.isEvacuating()) {
-			const targets: StructureNuker[] = creep.room.find(FIND_MY_STRUCTURES, {
-				filter: structure => (structure.structureType === STRUCTURE_NUKER) && structure.store.getFreeCapacity(RESOURCE_GHODIUM) > 0,
-			});
-
-			for (const target of targets) {
-				options.push({
-					priority: 2,
-					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: target,
-					resourceType,
-				});
-			}
-		}
-
-		// Put power in power spawns.
-		if (resourceType === RESOURCE_POWER && creep.room.powerSpawn && !creep.room.isEvacuating()) {
-			if (creep.room.powerSpawn.store[RESOURCE_POWER] < creep.room.powerSpawn.store.getCapacity(RESOURCE_POWER) * 0.1) {
-				options.push({
-					priority: 4,
-					weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-					type: 'structure',
-					object: creep.room.powerSpawn,
-					resourceType,
 				});
 			}
 		}
