@@ -131,9 +131,9 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
 		total += this.terminal.store[resourceType];
 	}
 
-	if (this.factory && this.factory.store[resourceType]) {
+	/*if (this.factory && this.factory.store[resourceType]) {
 		total += this.factory.store[resourceType];
-	}
+	}*/
 
 	return total;
 };
