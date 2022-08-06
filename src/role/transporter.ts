@@ -441,7 +441,7 @@ export default class TransporterRole extends Role {
 			}
 
 			// The following only concerns resources other than energy.
-			if (resourceType === RESOURCE_ENERGY || creep.store[resourceType] <= 0) continue;
+			if (resourceType === RESOURCE_ENERGY) continue;
 
 			const storageTarget = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
 
@@ -455,8 +455,6 @@ export default class TransporterRole extends Role {
 					resourceType,
 				});
 			}
-
-			this.addLabResourceDeliveryOptions(options, resourceType);
 
 			// As a last resort, simply drop the resource since it can't be put anywhere.
 			options.push({
@@ -563,45 +561,6 @@ export default class TransporterRole extends Role {
 					object: creep.room.getPositionAt(storagePosition.x, storagePosition.y),
 					resourceType: RESOURCE_ENERGY,
 				});
-			}
-		}
-	}
-
-	/**
-	 * Adds options for filling labs with resources.
-	 *
-	 * @param {Array} options
-	 *   A list of potential delivery targets.
-	 * @param {string} resourceType
-	 *   The type of resource to deliver.
-	 */
-	addLabResourceDeliveryOptions(options: TransporterDestinationOrderOption[], resourceType: ResourceConstant) {
-		const creep = this.creep;
-		if (creep.room.memory.currentReaction && !creep.room.isEvacuating()) {
-			if (resourceType === creep.room.memory.currentReaction[0]) {
-				const lab = Game.getObjectById<StructureLab>(creep.room.memory.labs.source1);
-				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.store[lab.mineralType] < lab.store.getCapacity(lab.mineralType) * 0.8) {
-					options.push({
-						priority: 4,
-						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: lab,
-						resourceType,
-					});
-				}
-			}
-
-			if (resourceType === creep.room.memory.currentReaction[1]) {
-				const lab = Game.getObjectById<StructureLab>(creep.room.memory.labs.source2);
-				if (lab && (!lab.mineralType || lab.mineralType === resourceType) && lab.store[lab.mineralType] < lab.store.getCapacity(lab.mineralType) * 0.8) {
-					options.push({
-						priority: 4,
-						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: lab,
-						resourceType,
-					});
-				}
 			}
 		}
 	}

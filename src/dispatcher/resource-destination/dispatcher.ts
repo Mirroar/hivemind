@@ -1,6 +1,7 @@
 import Dispatcher from 'dispatcher/dispatcher';
 import BayDestination from 'dispatcher/resource-destination/bay';
 import FactoryDestination from 'dispatcher/resource-destination/factory';
+import LabDestination from 'dispatcher/resource-destination/lab';
 import LinkDestination from 'dispatcher/resource-destination/link';
 import NukerDestination from 'dispatcher/resource-destination/nuker';
 import PowerSpawnDestination from 'dispatcher/resource-destination/power-spawn';
@@ -28,6 +29,7 @@ export default class ResourceDestinationDispatcher extends Dispatcher<ResourceDe
 		super();
 		this.addProvider(new BayDestination(room));
 		this.addProvider(new FactoryDestination(room));
+		this.addProvider(new LabDestination(room));
 		this.addProvider(new LinkDestination(room));
 		this.addProvider(new NukerDestination(room));
 		this.addProvider(new PowerSpawnDestination(room));
