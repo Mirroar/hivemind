@@ -409,7 +409,7 @@ export default class RoomManager {
 
 	buildOperationRoads() {
 		const positions = this.getOperationRoadPositions();
-		for (const pos of _.values(positions)) {
+		for (const pos of _.values<RoomPosition>(positions)) {
 			if (this.tryBuild(pos, STRUCTURE_ROAD)) continue;
 
 			break;
@@ -427,7 +427,7 @@ export default class RoomManager {
 	 * @return {boolean}
 	 *   True if we can continue building.
 	 */
-	tryBuild(pos, structureType) {
+	tryBuild(pos: RoomPosition, structureType) {
 		// Check if there's a structure here already.
 		const structures = pos.lookFor(LOOK_STRUCTURES);
 		for (const i in structures) {
@@ -448,8 +448,13 @@ export default class RoomManager {
 
 		const canCreateMoreSites = this.newStructures + this.roomConstructionSites.length < 5;
 		if (canCreateMoreSites && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
+			// Don't try to build some structures if a nuke is about to land nearby.
+			if ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_LINK, STRUCTURE_CONTAINER, STRUCTURE_ROAD].includes(structureType) && pos.findInRange(FIND_NUKES, 2).length > 0) {
+				return true;
+			}
+
 			const isBlocked = OBSTACLE_OBJECT_TYPES.includes(structureType)
-				&& (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS) > 0);
+				&& (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS).length > 0);
 			if (!isBlocked && pos.createConstructionSite(structureType) === OK) {
 				this.newStructures++;
 				// Structure is being built, continue.
@@ -484,7 +489,7 @@ export default class RoomManager {
 			if (!resourcesAvailable && _.size(roomSpawns) === 1) return false;
 
 			// This spawn is misplaced, set a flag for spawning more builders to help.
-			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 3) {
+			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2) {
 				this.memory.hasMisplacedSpawn = true;
 			}
 
