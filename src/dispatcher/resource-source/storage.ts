@@ -57,7 +57,7 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 		// Energy can be gotten at the room's storage or terminal.
 		const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 		if (!storageTarget) return;
-		if (storageTarget.store[RESOURCE_ENERGY] < creep.store.getFreeCapacity()) return;
+		if (storageTarget.store[RESOURCE_ENERGY] === 0) return;
 
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
 		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {

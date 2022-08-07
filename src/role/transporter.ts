@@ -353,12 +353,15 @@ export default class TransporterRole extends Role {
 	 */
 	calculateDeliveryTarget(): void {
 		const creep = this.creep;
-		const best = utilities.getBestOption(this.getAvailableDeliveryTargets());
+		const options = this.getAvailableDeliveryTargets();
+		const best = utilities.getBestOption(options);
 
 		if (!best) {
 			delete creep.memory.order;
 			return;
 		}
+
+		creep.room.visual.text('target: ' + best.type + '@' + best.priority, creep.pos);
 
 		if (isPositionOrderOption(best)) {
 			creep.memory.order = {
@@ -396,50 +399,25 @@ export default class TransporterRole extends Role {
 		const options: TransporterDestinationOrderOption[] = [];
 
 		const task = creep.room.destinationDispatcher.getTask({creep});
-		if (task && creep.store.getUsedCapacity(task.resourceType as ResourceConstant) > 0) options.push(task);
+		if (task) {
+			if (creep.store.getUsedCapacity(task.resourceType as ResourceConstant) > 0) {
+				options.push(task);
+			}
+			else {
+				hivemind.log('creeps', creep.room.name).notify(
+					'Invalid delivery target calculated for creep ' + creep.name + ': ' + JSON.stringify(task) + '\n\n' +
+					'creep storage: ' + JSON.stringify(getResourcesIn(creep.store))
+				);
+			}
+		}
 
 		const terminal = creep.room.terminal;
 
 		if (creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1) {
-			this.addContainerEnergyDeliveryOptions(options);
 			this.addStorageEnergyDeliveryOptions(options);
 		}
 
 		for (const resourceType of getResourcesIn(creep.store)) {
-			// If it's needed for transferring, store in terminal.
-			if (resourceType === creep.room.memory.fillTerminal && creep.store[resourceType] > 0 && !creep.room.isClearingTerminal()) {
-				if (terminal && ((terminal.store[resourceType] || 0) < (creep.room.memory.fillTerminalAmount || 10_000)) && terminal.store.getFreeCapacity() > 0) {
-					options.push({
-						priority: 4,
-						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: terminal,
-						resourceType,
-					});
-				}
-				else {
-					creep.room.stopTradePreparation();
-				}
-			}
-
-			// If it's needed for trading, store in terminal.
-			if (terminal && !creep.room.isClearingTerminal()) {
-				const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
-				_.each(roomSellOrders, order => {
-					if (order.resourceType !== resourceType) return;
-					if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
-					if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
-
-					options.push({
-						priority: 4,
-						weight: creep.store[resourceType] / 100, // @todo Also factor in distance.
-						type: 'structure',
-						object: terminal,
-						resourceType,
-					});
-				});
-			}
-
 			// The following only concerns resources other than energy.
 			if (resourceType === RESOURCE_ENERGY) continue;
 
@@ -466,70 +444,6 @@ export default class TransporterRole extends Role {
 		}
 
 		return options;
-	}
-
-	/**
-	 * Adds options for filling containers with energy.
-	 *
-	 * @param {Array} options
-	 *   A list of potential delivery targets.
-	 */
-	addContainerEnergyDeliveryOptions(options: TransporterDestinationOrderOption[]) {
-		const room: Room = this.creep.room;
-		const targets = room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => {
-				if (structure.structureType !== STRUCTURE_CONTAINER || structure.store.getFreeCapacity() === 0) return false;
-
-				// Do deliver to controller containers when it is needed.
-				// @todo Hand off energy to upgrader creeps in range.
-				if (structure.id === structure.room.memory.controllerContainer) {
-					if (room.creepsByRole.upgrader) return true;
-					return false;
-				}
-
-				// Do not deliver to containers used as harvester drop off points.
-				if (structure.room.sources) {
-					for (const source of _.values<Source>(structure.room.sources)) {
-						const container = source.getNearbyContainer();
-						if (container && container.id === structure.id) {
-							return false;
-						}
-					}
-
-					if (structure.room.mineral) {
-						const container = structure.room.mineral.getNearbyContainer();
-						if (container && container.id === structure.id) {
-							return false;
-						}
-					}
-				}
-
-				return true;
-			},
-		});
-
-		for (const target of targets) {
-			const option: TransporterStructureOrderOption = {
-				priority: 4,
-				weight: (target.store.getCapacity() - target.store[RESOURCE_ENERGY]) / 100, // @todo Also factor in distance, and other resources.
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			let prioFactor = 1;
-			if (target.store.getUsedCapacity() / target.store.getCapacity() > 0.75) {
-				prioFactor = 3;
-				option.priority--;
-			}
-			else if (target.store.getUsedCapacity() / target.store.getCapacity() > 0.5) {
-				prioFactor = 2;
-			}
-
-			option.priority -= room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
-
-			options.push(option);
-		}
 	}
 
 	/**
@@ -695,6 +609,8 @@ export default class TransporterRole extends Role {
 			delete creep.memory.order;
 			return;
 		}
+
+		creep.room.visual.text('source: ' + best.type + '@' + best.priority, creep.pos);
 
 		if (isResourceSourceOrder(creep.room, best)) {
 			creep.memory.order = best;
@@ -1343,6 +1259,8 @@ export default class TransporterRole extends Role {
 			delete creep.memory.order;
 			return;
 		}
+
+		creep.room.visual.text('source: ' + best.type + '@' + best.priority, creep.pos);
 
 		if (isResourceSourceOrder(creep.room, best)) {
 			creep.memory.order = best;

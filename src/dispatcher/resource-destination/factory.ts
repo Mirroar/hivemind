@@ -15,7 +15,7 @@ export default class FactoryDestination implements TaskProvider<FactoryDestinati
 	}
 
 	getHighestPriority() {
-		return 2;
+		return 3;
 	}
 
 	getTasks(context?: ResourceDestinationContext) {
@@ -32,7 +32,7 @@ export default class FactoryDestination implements TaskProvider<FactoryDestinati
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
 			options.push({
 				type: this.getType(),
-				priority: 2,
+				priority: 3,
 				weight: missingResources[resourceType] / 1000,
 				resourceType,
 				amount: missingResources[resourceType],

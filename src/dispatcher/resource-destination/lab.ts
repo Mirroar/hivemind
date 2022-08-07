@@ -35,6 +35,7 @@ export default class LabDestination implements TaskProvider<LabDestinationTask, 
 		if (!lab) return;
 		if (lab.mineralType && lab.mineralType !== resourceType) return;
 		if (context.resourceType && resourceType !== context.resourceType) return;
+		if (context.creep && context.creep.store[resourceType] === 0) return;
 
 		const freeCapacity = lab.store.getFreeCapacity(resourceType);
 		if (freeCapacity < lab.store.getCapacity(resourceType) * 0.2) return;
@@ -42,7 +43,7 @@ export default class LabDestination implements TaskProvider<LabDestinationTask, 
 		options.push({
 			priority: 4,
 			weight: freeCapacity / 100,
-			type: 'lab',
+			type: this.getType(),
 			target: labId,
 			resourceType,
 			amount: freeCapacity,
