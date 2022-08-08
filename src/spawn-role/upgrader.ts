@@ -73,6 +73,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
+		if (room.roomManager?.hasMisplacedSpawn()) return 0;
+
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
 		const availableEnergy = room.getStoredEnergy();

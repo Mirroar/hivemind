@@ -138,6 +138,8 @@ export default class BuilderRole extends Role {
 	}
 
 	performUpgrade(creep: BuilderCreep) {
+		if (creep.room.roomManager?.hasMisplacedSpawn()) return;
+
 		if (!creep.room.storage || creep.room.getStoredEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
 			// Prevent draining energy stores by recicling.
 			creep.room.memory.noBuilderNeeded = Game.time;
