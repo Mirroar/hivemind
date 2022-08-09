@@ -720,7 +720,6 @@ export default class TransporterRole extends Role {
 		this.addObjectEnergySourceOptions(options, FIND_TOMBSTONES, 'tombstone', priority);
 		this.addObjectEnergySourceOptions(options, FIND_RUINS, 'tombstone', priority);
 		this.addContainerEnergySourceOptions(options);
-		this.addLinkEnergySourceOptions(options);
 
 		return options;
 	}
@@ -843,41 +842,6 @@ export default class TransporterRole extends Role {
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
-
-			options.push(option);
-		}
-	}
-
-	/**
-	 * Adds options for picking up energy from links to priority list.
-	 *
-	 * @param {Array} options
-	 *   A list of potential energy sources.
-	 */
-	addLinkEnergySourceOptions(options: TransporterSourceOrderOption[]) {
-		const creep = this.creep;
-
-		if (!creep.room.linkNetwork) return;
-		if (creep.room.linkNetwork.energy <= creep.room.linkNetwork.maxEnergy) return;
-
-		for (const link of creep.room.linkNetwork.neutralLinks) {
-			if (link.store[RESOURCE_ENERGY] === 0) continue;
-
-			const option = {
-				priority: 5,
-				weight: link.store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
-				type: 'structure',
-				object: link,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			if (creep.pos.getRangeTo(link) > 10) {
-				// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
-				option.priority--;
-			}
-
-			option.priority -= creep.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
-			option.priority -= creep.room.getCreepsWithOrder('getResource', link.id).length * 2;
 
 			options.push(option);
 		}

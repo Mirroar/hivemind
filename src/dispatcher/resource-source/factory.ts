@@ -31,6 +31,8 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 	}
 
 	addNeededResourcesTasks(options: FactorySourceTask[], context: ResourceSourceContext) {
+		// @todo These will be obsolete once we automatically get resources from
+		// storage when there is an unfulfilled destination task.
 		const missingResources = this.room.factoryManager.getMissingComponents();
 		if (!missingResources) return;
 
