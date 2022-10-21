@@ -25,6 +25,7 @@ declare global {
 		getCurrentResourceAmount: (resourceType: string) => number;
 		getStoredEnergy: () => number;
 		getCurrentMineralAmount: () => number;
+		getEffectiveAvailableEnergy: () => number;
 		isFullOnEnergy: () => boolean;
 		isFullOnPower: () => boolean;
 		isFullOnMinerals: () => boolean;
@@ -193,6 +194,21 @@ Room.prototype.getCurrentMineralAmount = function (this: Room) {
 	}
 
 	return total;
+};
+
+/**
+ * Gets amount of energy stored, taking into account batteries.
+ *
+ * @return {number}
+ *   Amount of energy this room has available.
+ */
+Room.prototype.getEffectiveAvailableEnergy = function (this: Room) {
+	const availableEnergy = this.getStoredEnergy();
+
+	if (!this.factory || !this.factory.isOperational()) return availableEnergy;
+
+	// @todo Get resource unpacking factor from API or config.
+	return availableEnergy + Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5;
 };
 
 /**

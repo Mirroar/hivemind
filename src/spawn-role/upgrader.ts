@@ -52,7 +52,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 				return 1;
 			}
 
-			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getStoredEnergy() > 5000) {
+			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getEffectiveAvailableEnergy() > 5000) {
 				return 1;
 			}
 		}
@@ -77,7 +77,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
-		const availableEnergy = room.getStoredEnergy();
+		const availableEnergy = room.getEffectiveAvailableEnergy();
 		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {
 			// Do not spawn upgraders when builders and spawns will need most of
 			// our energy.
@@ -165,7 +165,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: SpawnOption, body: BodyPartConstant[]) {
-		if (room.getStoredEnergy() < 200_000) return {};
+		if (room.getEffectiveAvailableEnergy() < 200_000) return {};
 		if (room.controller.level < 8) return {};
 
 		return this.generateCreepBoosts(room, body, WORK, 'upgradeController');

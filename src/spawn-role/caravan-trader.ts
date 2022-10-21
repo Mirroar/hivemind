@@ -13,14 +13,14 @@ interface CaravanTraderSpawnOption extends SpawnOption {
 
 export default class CaravanTraderSpawnRole extends SpawnRole {
 	/**
-	 * Adds gift spawn options for the given room.
+	 * Adds caravan spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): CaravanTraderSpawnOption[] {
 		if (!hivemind.settings.get('season4EnableCaravanDelivery')) return [];
-		if (room.getStoredEnergy() < (BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) * MAX_CREEP_SIZE / 2) return [];
+		if (room.getEffectiveAvailableEnergy() < (BODYPART_COST[CARRY] + BODYPART_COST[MOVE]) * MAX_CREEP_SIZE / 2) return [];
 		if (!Memory.strategy || !Memory.strategy.caravans) return [];
 
 		const options: CaravanTraderSpawnOption[] = [];

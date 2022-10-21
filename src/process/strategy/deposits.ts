@@ -102,7 +102,7 @@ export default class DepositMiningProcess extends Process {
 			// @todo Allow spawning in rooms full of minerals, as long as there's
 			// another room to deliver to in range.
 			if (room.isFullOnMinerals()) continue;
-			if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) continue;
+			if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForDepositMining')) continue;
 			if (room.controller.level < hivemind.settings.get('minRclForDepositMining')) continue;
 			if (Game.map.getRoomLinearDistance(targetRoom, room.name) > hivemind.settings.get('maxRangeForDepositMining')) continue;
 
