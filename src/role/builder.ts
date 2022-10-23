@@ -50,8 +50,8 @@ const wallHealth = {
 	4: 300_000,
 	5: 1_000_000,
 	6: 2_000_000,
-	7: 5_000_000,
-	8: 300_000_000,
+	7: 3_000_000,
+	8: 20_000_000,
 };
 
 export default class BuilderRole extends Role {
