@@ -7,7 +7,7 @@ import LinkDestination from 'dispatcher/resource-destination/link';
 import NukerDestination from 'dispatcher/resource-destination/nuker';
 import PowerSpawnDestination from 'dispatcher/resource-destination/power-spawn';
 import SpawnDestination from 'dispatcher/resource-destination/spawn';
-import TerminalDestination from 'dispatcher/resource-destination/tower';
+import TerminalDestination from 'dispatcher/resource-destination/terminal';
 import TowerDestination from 'dispatcher/resource-destination/tower';
 
 declare global {
