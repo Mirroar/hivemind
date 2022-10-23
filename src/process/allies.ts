@@ -52,8 +52,9 @@ export default class AlliesProcess extends Process {
 			if (!room.storage || !room.terminal) continue;
 
 			for (const resourceType of [RESOURCE_ENERGY, RESOURCE_OXYGEN, RESOURCE_HYDROGEN, RESOURCE_ZYNTHIUM, RESOURCE_KEANIUM, RESOURCE_LEMERGIUM, RESOURCE_UTRIUM]) {
-				if (room.getCurrentResourceAmount(resourceType) < 5000) {
-					simpleAllies.requestResource(room.name, resourceType, 0.25);
+				const amount = room.getCurrentResourceAmount(resourceType);
+				if (amount < 5000) {
+					simpleAllies.requestResource(room.name, resourceType, (5000 - amount) / 20000);
 				}
 			}
 		}
