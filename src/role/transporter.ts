@@ -634,14 +634,14 @@ export default class TransporterRole extends Role {
 		const creep = this.creep;
 		const options = this.getAvailableEnergySources();
 
-		const task = creep.room.sourceDispatcher.getTask({creep});
-		if (task) options.push(task);
-
 		const terminal = creep.room.terminal;
 		const storage = creep.room.storage;
 
 		// Don't pick up anything that's not energy if there's no place to store.
 		if (!terminal && !storage) return options;
+
+		const task = creep.room.sourceDispatcher.getTask({creep});
+		if (task) options.push(task);
 
 		// Clear out overfull terminal.
 		const storageHasSpace = storage && storage.store.getFreeCapacity() >= 0 && !creep.room.isClearingStorage();
@@ -711,7 +711,7 @@ export default class TransporterRole extends Role {
 			// Spawning is important, so get energy when needed.
 			priority = 4;
 		}
-		else if (room.terminal && room.storage && room.terminal.store.energy < room.storage.store.energy * 0.05 && !room.isClearingTerminal()) {
+		else if (room.terminal && room.storage && room.storage.store.energy > 5000 && room.terminal.store.energy < room.storage.store.energy * 0.05 && !room.isClearingTerminal()) {
 			// Take some energy out of storage to put into terminal from time to time.
 			priority = 2;
 		}
@@ -772,7 +772,7 @@ export default class TransporterRole extends Role {
 
 				// If spawn / extensions need filling, transporters should not pick up
 				// energy from random targets as readily, instead prioritize storage.
-				if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.memory.role === 'transporter') option.priority -= 2;
+				if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.room.getStoredEnergy() > 2000 && creep.memory.role === 'transporter') option.priority -= 2;
 			}
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
@@ -860,7 +860,7 @@ export default class TransporterRole extends Role {
 		if (!storage || !terminal) return;
 
 		// Take resources from storage to terminal for transfer if requested.
-		if (creep.room.memory.fillTerminal) {
+		if (creep.room.memory.fillTerminal && terminal.store[RESOURCE_ENERGY] > 5000) {
 			const resourceType = creep.room.memory.fillTerminal;
 			if (storage.store[resourceType]) {
 				if (terminal.store.getFreeCapacity() > 10_000) {

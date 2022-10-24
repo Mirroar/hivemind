@@ -32,14 +32,15 @@ export default class AlliesProcess extends Process {
 	}
 
 	handleRequest(request: Request) {
-		if (request.requestType === RequestType.RESOURCE) {
-			if (!RESOURCES_ALL.includes(request.resourceType)) return;
+		if (request.requestType === RequestType.RESOURCE || request.requestType === RequestType.FUNNEL) {
+			const resourceType = request.requestType === RequestType.FUNNEL ? RESOURCE_ENERGY : request.resourceType;
+			if (!RESOURCES_ALL.includes(resourceType)) return;
 
-			if (!Memory.requests.trade[request.resourceType]) {
-				Memory.requests.trade[request.resourceType] = {};
+			if (!Memory.requests.trade[resourceType]) {
+				Memory.requests.trade[resourceType] = {};
 			}
 
-			Memory.requests.trade[request.resourceType][request.roomName] = {
+			Memory.requests.trade[resourceType][request.roomName] = {
 				amount: Math.min(request.maxAmount | 5000, 5000),
 				lastSeen: Game.time,
 				priority: Number(request.priority),
@@ -52,8 +53,9 @@ export default class AlliesProcess extends Process {
 			if (!room.storage || !room.terminal) continue;
 
 			for (const resourceType of [RESOURCE_ENERGY, RESOURCE_OXYGEN, RESOURCE_HYDROGEN, RESOURCE_ZYNTHIUM, RESOURCE_KEANIUM, RESOURCE_LEMERGIUM, RESOURCE_UTRIUM]) {
-				if (room.getCurrentResourceAmount(resourceType) < 5000) {
-					simpleAllies.requestResource(room.name, resourceType, 0.25);
+				const amount = room.getCurrentResourceAmount(resourceType);
+				if (amount < 5000) {
+					simpleAllies.requestResource(room.name, resourceType, (5000 - amount) / 20000);
 				}
 			}
 		}
