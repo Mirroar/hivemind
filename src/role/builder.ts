@@ -115,7 +115,7 @@ export default class BuilderRole extends Role {
 			delete creep.memory.sourceTarget;
 		}
 
-		if (!creep.room.storage || creep.room.getStoredEnergy() > 2500) {
+		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() > 2500) {
 			// @todo Instead of completely circumventing TypeScript, find a way to
 			// make energy gathering reusable between multiple roles.
 			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
@@ -140,7 +140,7 @@ export default class BuilderRole extends Role {
 	performUpgrade(creep: BuilderCreep) {
 		if (creep.room.roomManager?.hasMisplacedSpawn()) return;
 
-		if (!creep.room.storage || creep.room.getStoredEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
+		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
 			// Prevent draining energy stores by recicling.
 			creep.room.memory.noBuilderNeeded = Game.time;
 			this.performRecycle(creep);
@@ -365,7 +365,7 @@ export default class BuilderRole extends Role {
 				option.priority++;
 				option.weight++;
 			}
-			else if (creep.room.getStoredEnergy() < 5000) {
+			else if (creep.room.getEffectiveAvailableEnergy() < 5000) {
 				// Don't strengthen ramparts too much if room is struggling for energy.
 				option.priority = -1;
 			}

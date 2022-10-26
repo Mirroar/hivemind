@@ -22,7 +22,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 			numWorkParts += creep.memory.body.work || 0;
 		});
 
-		const availableEnergy = room.getStoredEnergy();
+		const availableEnergy = room.getEffectiveAvailableEnergy();
 		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
 		const needsInitialBuildings = room.controller.level < 5 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
@@ -78,7 +78,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we have a lot of energy to spare.
-		const availableEnergy = room.getStoredEnergy();
+		const availableEnergy = room.getEffectiveAvailableEnergy();
 		if (availableEnergy > 400_000) {
 			maxWorkParts *= 2;
 		}

@@ -90,7 +90,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addEmergencyRepairSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
-		if (room.getStoredEnergy() < 10_000) return;
+		if (room.getEffectiveAvailableEnergy() < 10_000) return;
 
 		// @todo Send energy to rooms under attack for assistance.
 

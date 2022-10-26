@@ -22,7 +22,7 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): DepositHarvesterSpawnOption[] {
 		if (!hivemind.settings.get('enableDepositMining')) return [];
-		if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
+		if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
 		if (!Memory.strategy || !Memory.strategy.deposits || !Memory.strategy.deposits.rooms) return [];
 
 		const options: DepositHarvesterSpawnOption[] = [];

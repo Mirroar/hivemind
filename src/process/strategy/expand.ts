@@ -335,7 +335,7 @@ export default class ExpandProcess extends Process {
 			if (room.controller.level < 4) continue;
 			if (room.name === info.spawnRoom || room.name === info.roomName) continue;
 			if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) continue;
-			if (room.getStoredEnergy() < 50_000) continue;
+			if (room.getEffectiveAvailableEnergy() < 50_000) continue;
 
 			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
 			if (!path || path.incomplete) continue;

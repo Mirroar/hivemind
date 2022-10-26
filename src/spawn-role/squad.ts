@@ -27,7 +27,7 @@ export default class SquadSpawnRole extends SpawnRole {
 			const spawnUnitType = this.needsSpawning(squad);
 			if (!spawnUnitType) return;
 
-			const roomHasReserves = room.getStoredEnergy() > 10_000;
+			const roomHasReserves = room.getEffectiveAvailableEnergy() > 10_000;
 			options.push({
 				priority: roomHasReserves ? 4 : 2,
 				weight: 1.1,
