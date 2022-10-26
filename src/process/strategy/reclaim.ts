@@ -35,6 +35,7 @@ export default class ReclaimProcess extends Process {
   }
 
   needsReclaiming(room: Room): boolean {
+    if (Game.myRooms.length <= 1) return false;
     if (this.hasSpawn(room)) return false;
     if (this.isExpansionTarget(room)) return false;
 
