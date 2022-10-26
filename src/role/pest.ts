@@ -1,6 +1,5 @@
 /* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
-import hivemind from 'hivemind';
 import Role from 'role/role';
 
 declare global {
@@ -35,7 +34,15 @@ export default class PestRole extends Role {
 	run(creep: PestCreep) {
 		// Move to assigned target room.
 		// @todo If enemies are nearby, evade or harass them.
+		// @todo Try to avoid conflict with non-enemy military creeps.
 		const targetPosition = new RoomPosition(25, 25, creep.memory.targetRoom);
 		if (creep.interRoomTravel(targetPosition)) return;
+
+		// @todo Leave room if defenders show up (that we can not kite reliably).
+		// Instead, choose a new target room nearby, or go scouting, or camp outside for a few hundred ticks.
+
+		// @todo Attack harvest / transport creeps, ideally those with energy in them.
+		// @todo Attack containers
+		// @todo Attack roads and other infrastructure
 	}
 }
