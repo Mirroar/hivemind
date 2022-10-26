@@ -466,6 +466,10 @@ export default class TransporterRole extends Role {
 			});
 		}
 		else {
+			// Transporters keep their energy in store on low-level rooms since there
+			// is no storage to reduce decay and deliver faster.
+			if (creep.memory.role === 'transporter' && creep.room?.controller.level < 4) return;
+
 			const storagePosition = creep.room.getStorageLocation();
 			if (storagePosition) {
 				options.push({

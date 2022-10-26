@@ -238,6 +238,8 @@ export default class HarvesterRole extends Role {
 		}
 
 		let target: StructureContainer | StructureLink = source.getNearbyContainer();
+		if (target?.store.getFreeCapacity() === 0) target = null;
+
 		if (source instanceof Source && creep.store.energy > 0) {
 			const link = source.getNearbyLink();
 			if (link && link.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
@@ -262,6 +264,22 @@ export default class HarvesterRole extends Role {
 					creep.transferAny(target);
 				}
 			});
+		}
+
+		if (creep.room.controller.level < 6 && creep.store.energy > 0) {
+			const nearbyCreeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+				filter: c => {
+					if (c.memory.role === 'harvester' && c.store.getUsedCapacity() < 10) return true;
+					if (['transporter', 'upgrader', 'builder'].includes(c.memory.role) && c.store.getFreeCapacity() > 0) return true;
+
+					return false;
+				}
+			});
+
+			if (nearbyCreeps.length > 0) {
+				const targetCreep = _.sample(nearbyCreeps);
+				creep.transfer(targetCreep, RESOURCE_ENERGY, Math.min(creep.store.energy, targetCreep.store.getFreeCapacity()));
+			}
 		}
 	}
 

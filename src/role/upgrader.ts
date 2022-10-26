@@ -25,6 +25,14 @@ export default class UpgraderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep) {
+		if (!creep.heapMemory.currentRcl) {
+			creep.heapMemory.currentRcl = creep.room.controller.level;
+		}
+		else if (creep.heapMemory.currentRcl !== creep.room.controller.level && creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
+			creep.memory.role = 'builder';
+			return;
+		}
+
 		if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setUpgraderState(creep, false);
 		}
@@ -126,8 +134,8 @@ export default class UpgraderRole extends Role {
 		}
 
 		// Check the ground for nearby energy to pick up.
-		const droppedResources = creep.room.controller.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-			filter: resource => resource.resourceType === RESOURCE_ENERGY,
+		const droppedResources = creep.room.controller.pos.findInRange(FIND_DROPPED_RESOURCES, creep.room.controller.level < 4 ? 10 : 3, {
+			filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= creep.store.getCapacity(),
 		});
 		if (droppedResources.length > 0) {
 			creep.whenInRange(1, droppedResources[0], () => {
@@ -138,8 +146,8 @@ export default class UpgraderRole extends Role {
 		}
 
 		// Could also try to get energy from another nearby container.
-		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id !== creep.room.memory.controllerContainer,
+		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, creep.room.controller.level < 4 ? 10 : 3, {
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > CONTAINER_CAPACITY / 4 && structure.id !== creep.room.memory.controllerContainer,
 		});
 		if (otherContainers.length > 0) {
 			creep.whenInRange(1, otherContainers[0], () => {

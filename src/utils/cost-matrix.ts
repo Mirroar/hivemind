@@ -4,6 +4,12 @@ import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
 
+interface CostMatrixOptions {
+	singleRoom?: boolean;
+	isQuad?: boolean;
+	ignoreMilitary?: boolean;
+}
+
 /**
  * Gets the pathfinding cost matrix for a room.
  *
@@ -17,7 +23,7 @@ import {handleMapArea} from 'utils/map';
  * @return {PathFinder.CostMatrix}
  *   The requested cost matrix.
  */
-function getCostMatrix(roomName, options?: any): CostMatrix {
+function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatrix {
 	if (!options) {
 		options = {};
 	}
@@ -40,6 +46,16 @@ function getCostMatrix(roomName, options?: any): CostMatrix {
 			cacheKey,
 			500,
 			() => generateSingleRoomCostMatrix(matrix, roomName),
+		);
+	}
+
+	if (matrix && options.isQuad) {
+		cacheKey += ':quad';
+
+		matrix = cache.inHeap(
+			cacheKey,
+			500,
+			() => generateQuadCostMatrix(matrix, roomName),
 		);
 	}
 
@@ -68,7 +84,7 @@ function getCostMatrix(roomName, options?: any): CostMatrix {
  * @return {PathFinder.CostMatrix}
  *   The modified cost matrix.
  */
-function generateSingleRoomCostMatrix(matrix, roomName) {
+function generateSingleRoomCostMatrix(matrix: CostMatrix, roomName: string): CostMatrix {
 	const newMatrix = matrix.clone();
 	const terrain = new Room.Terrain(roomName);
 	for (let i = 1; i < 49; i++) {
@@ -76,6 +92,48 @@ function generateSingleRoomCostMatrix(matrix, roomName) {
 		if (terrain.get(0, i) !== TERRAIN_MASK_WALL) newMatrix.set(0, i, 50);
 		if (terrain.get(i, 49) !== TERRAIN_MASK_WALL) newMatrix.set(i, 49, 50);
 		if (terrain.get(49, i) !== TERRAIN_MASK_WALL) newMatrix.set(49, i, 50);
+	}
+
+	return newMatrix;
+}
+
+/**
+ * Generates a derivative cost matrix for navigating quads.
+ *
+ * @param {PathFinder.CostMatrix} matrix
+ *   The matrix to use as a base.
+ * @param {string} roomName
+ *   Name of the room this matrix represents.
+ *
+ * @return {PathFinder.CostMatrix}
+ *   The modified cost matrix.
+ */
+function generateQuadCostMatrix(matrix: CostMatrix, roomName: string): CostMatrix {
+	const newMatrix = matrix.clone();
+	const terrain = new Room.Terrain(roomName);
+
+	for (let x = 1; x < 49; x++) {
+		for (let y = 1; y < 49; y++) {
+			if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
+			let max = Math.max(matrix.get(x, y), matrix.get(x + 1, y), matrix.get(x, y + 1), matrix.get(x + 1, y + 1));
+			if (max < 255 && (
+				terrain.get(x + 1, y) === TERRAIN_MASK_WALL ||
+				terrain.get(x, y + 1) === TERRAIN_MASK_WALL ||
+				terrain.get(x + 1, y + 1) === TERRAIN_MASK_WALL
+			)) {
+				max = 255;
+			}
+			else if (max < 5 && (
+				terrain.get(x + 1, y) === TERRAIN_MASK_SWAMP ||
+				terrain.get(x, y + 1) === TERRAIN_MASK_SWAMP ||
+				terrain.get(x + 1, y + 1) === TERRAIN_MASK_SWAMP
+			)) {
+				max = 5;
+			}
+
+			newMatrix.set(x, y, max);
+		}
 	}
 
 	return newMatrix;
@@ -92,7 +150,7 @@ function generateSingleRoomCostMatrix(matrix, roomName) {
  * @return {PathFinder.CostMatrix}
  *   The modified cost matrix.
  */
-function generateCombatCostMatrix(matrix, roomName) {
+function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMatrix {
 	const newMatrix = matrix.clone();
 	const terrain = new Room.Terrain(roomName);
 
@@ -156,7 +214,7 @@ function generateCombatCostMatrix(matrix, roomName) {
  * @param {Function} sourceKeeperCallback
  *   Gets called for every position in range of a source keeper.
  */
-function markBuildings(roomName, structures, constructionSites, roadCallback, blockerCallback, sourceKeeperCallback) {
+function markBuildings(roomName: string, structures, constructionSites, roadCallback, blockerCallback, sourceKeeperCallback) {
 	_.each(OBSTACLE_OBJECT_TYPES, structureType => {
 		_.each(structures[structureType], structure => {
 			// Can't walk through non-walkable buildings.

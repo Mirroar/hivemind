@@ -99,7 +99,7 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.controller.safeMode) return;
 		if (this.room.controller.safeModeCooldown) return;
 		if (this.room.controller.safeModeAvailable < 1) return;
-		if (this.room.defense.getEnemyStrength() < 2) return;
+		if (this.room.defense.getEnemyStrength() < 2 && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
 
 		if (this.room.controller.activateSafeMode() === OK) {

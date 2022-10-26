@@ -73,6 +73,15 @@ export default class TransporterSpawnRole extends SpawnRole {
 			maxTransporters *= 1.5;
 		}
 
+		if (room.controller.level < 4) {
+			// Check if a container is nearly full.
+			for (const source of room.sources) {
+				const container = source.getNearbyContainer();
+				if (container && container.store.getFreeCapacity() < container.store.getCapacity() / 4)
+					maxTransporters++;
+			}
+		}
+
 		return maxTransporters;
 	}
 
