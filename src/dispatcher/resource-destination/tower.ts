@@ -46,7 +46,7 @@ export default class TowerDestination implements TaskProvider<TowerDestinationTa
 				option.priority++;
 			}
 
-			option.priority -= this.room.getCreepsWithOrder('deliver', tower.id).length * 2;
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), tower.id).length * 2;
 
 			options.push(option);
 		}

@@ -76,7 +76,7 @@ export default class ContainerDestination implements TaskProvider<ContainerDesti
 				prioFactor = 2;
 			}
 
-			option.priority -= this.room.getCreepsWithOrder('deliver', target.id).length * prioFactor;
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), target.id).length * prioFactor;
 
 			options.push(option);
 		}

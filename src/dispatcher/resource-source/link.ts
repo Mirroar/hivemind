@@ -40,6 +40,7 @@ export default class LinkSource implements TaskProvider<LinkSourceTask, Resource
 				option.priority--;
 			}
 
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), link.id).length * 2;
 			option.priority -= this.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
 			option.priority -= this.room.getCreepsWithOrder('getResource', link.id).length * 2;
 

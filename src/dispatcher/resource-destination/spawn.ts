@@ -48,7 +48,7 @@ export default class SpawnDestination implements TaskProvider<SpawnDestinationTa
 				option.weight += canDeliver / (context.creep.store.getCapacity()) + 1 - (context.creep.pos.getRangeTo(target) / 100);
 			}
 
-			option.priority -= this.room.getCreepsWithOrder('deliver', target.id).length * 3;
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), target.id).length * 3;
 
 			options.push(option);
 		}

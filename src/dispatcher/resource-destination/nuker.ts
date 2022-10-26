@@ -48,7 +48,7 @@ export default class NukerDestination implements TaskProvider<NukerDestinationTa
 			target: nuker.id,
 		};
 
-		option.priority -= this.room.getCreepsWithOrder('deliver', nuker.id).length * 2;
+		option.priority -= this.room.getCreepsWithOrder(this.getType(), nuker.id).length * 2;
 
 		options.push(option);
 	}

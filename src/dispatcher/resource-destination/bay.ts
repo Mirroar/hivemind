@@ -42,7 +42,7 @@ export default class BayDestination implements TaskProvider<BayDestinationTask, 
 				option.weight += canDeliver / context.creep.store.getCapacity() + 1 - (context.creep.pos.getRangeTo(bay) / 100);
 			}
 
-			option.priority -= this.room.getCreepsWithOrder('deliver', bay.name).length * 3;
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), bay.name).length * 3;
 
 			options.push(option);
 		}

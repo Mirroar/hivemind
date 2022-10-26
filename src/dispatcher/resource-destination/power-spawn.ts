@@ -50,7 +50,7 @@ export default class PowerSpawnDestination implements TaskProvider<PowerSpawnDes
 			target: powerSpawn.id,
 		};
 
-		option.priority -= this.room.getCreepsWithOrder('deliver', powerSpawn.id).length * 2;
+		option.priority -= this.room.getCreepsWithOrder(this.getType(), powerSpawn.id).length * 2;
 
 		options.push(option);
 	}

@@ -400,7 +400,7 @@ export default class BuilderRole extends Role {
 		for (const target of targets) {
 			const option = {
 				priority: 4,
-				weight: 1,
+				weight: target.progress / target.progressTotal,
 				type: 'build',
 				object: target,
 			};
