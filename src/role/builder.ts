@@ -138,7 +138,10 @@ export default class BuilderRole extends Role {
 	}
 
 	performUpgrade(creep: BuilderCreep) {
-		if (creep.room.roomManager?.hasMisplacedSpawn()) return;
+		if (creep.room.roomManager?.hasMisplacedSpawn()) {
+			delete creep.memory.upgrading;
+			return;
+		}
 
 		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
 			// Prevent draining energy stores by recicling.
@@ -166,7 +169,7 @@ export default class BuilderRole extends Role {
 	 * @return {boolean}
 	 *   True if an action was performed.
 	 */
-	performRepair(creep: BuilderCreep) {
+	performRepair(creep: BuilderCreep): boolean {
 		if (!creep.memory.order || !creep.memory.order.target) {
 			this.calculateBuilderTarget(creep);
 		}
