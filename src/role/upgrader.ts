@@ -30,6 +30,7 @@ export default class UpgraderRole extends Role {
 		}
 		else if (creep.heapMemory.currentRcl !== creep.room.controller.level && creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
 			creep.memory.role = 'builder';
+			delete creep.memory.upgrading;
 			return;
 		}
 
