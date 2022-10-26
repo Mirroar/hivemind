@@ -1,11 +1,39 @@
 import PlayerIntel from './player-intel';
 import hivemind from './hivemind';
 
+const memoryKey = 'player-intel-manager';
+
+interface PlayerIntelManagerMemory {
+	ownedRoomSightings: Record<string, Record<string, number>>;
+	claimedRoomSightings: Record<string, Record<string, number>>;
+	creepSightings: Record<string, Record<string, number>>;
+};
+
 export default class PlayerIntelManager {
 	intelCache: Record<string, PlayerIntel> = {};
+	memory: PlayerIntelManagerMemory;
+	usesSegmentMemory: false;
 
-	ownedRoomSightings: Record<string, Record<string, number>> = {};
-	claimedRoomSightings: Record<string, Record<string, number>> = {};
+	constructor() {
+		this.memory = {
+			ownedRoomSightings: {},
+			claimedRoomSightings: {},
+			creepSightings: {},
+		};
+
+		if (hivemind.segmentMemory.isReady()) {
+			if (!hivemind.segmentMemory.has(memoryKey)) {
+				hivemind.segmentMemory.set(memoryKey, this.memory);
+			}
+			else {
+				this.mergeMemory();
+			}
+		}
+	}
+
+	mergeMemory() {
+		const newMemory = hivemind.segmentMemory.get(memoryKey);
+	}
 
 	/**
 	 * Factory method for player intel objects.
