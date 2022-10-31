@@ -4,7 +4,7 @@ import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
 
 declare global {
-	type SquadUnitType = 'ranger' | 'healer' | 'claimer' | 'singleClaim' | 'builder' | 'attacker' | 'brawler' | 'test';
+	type SquadUnitType = 'ranger' | 'healer' | 'claimer' | 'singleClaim' | 'builder' | 'attacker' | 'brawler' | 'test' | 'quad';
 }
 
 interface SquadSpawnOption extends SpawnOption {
@@ -127,6 +127,14 @@ export default class SquadSpawnRole extends SpawnRole {
 		return [MOVE];
 	}
 
+	getQuadCreepBody(room: Room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
+			Math.max(room.energyCapacityAvailable * 0.2, room.energyAvailable*0.2),
+			//Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
+		);
+	}
+
 	getBrawlerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
@@ -146,6 +154,13 @@ export default class SquadSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room: Room, option: SquadSpawnOption): CreepMemory {
+		if (option.unitType === 'quad') {
+			return {
+				role: 'quad',
+				squadName: option.squad,
+			};
+		}
+
 		return {
 			role: 'brawler',
 			squadName: option.squad,
