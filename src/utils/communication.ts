@@ -134,7 +134,7 @@ var simpleAllies = {
     requestArray.push({
       requestType: RequestType.DEFENSE,
       roomName: roomName,
-      priority: priority || 0
+      priority: priority || 0,
     });
   },
 

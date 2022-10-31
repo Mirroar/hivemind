@@ -1,8 +1,9 @@
-/* global STRUCTURE_RAMPART ATTACK HEAL CLAIM MOVE TOUGH CARRY
+/* global STRUCTURE_RAMPART ATTACK RANGED_ATTACK HEAL CLAIM MOVE TOUGH CARRY
 FIND_STRUCTURES LOOK_STRUCTURES */
 
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
+import cache from 'utils/cache';
 
 declare global {
 	interface RoomMemory {
@@ -10,8 +11,25 @@ declare global {
 	}
 }
 
+const attackParts: BodyPartConstant[] = [ATTACK, RANGED_ATTACK, CLAIM, WORK];
+
+const partStrength = {
+	[ATTACK]: ATTACK_POWER,
+	[RANGED_ATTACK]: RANGED_ATTACK_POWER,
+	[HEAL]: HEAL_POWER,
+	[CLAIM]: ATTACK_POWER / 2,
+	[WORK]: DISMANTLE_POWER,
+};
+
+const relevantBoostAttribute = {
+	[ATTACK]: 'attack',
+	[RANGED_ATTACK]: 'rangedAttack',
+	[HEAL]: 'heal',
+	[WORK]: 'dismantle',
+};
+
 // @todo Evacuate room when walls are breached, or when spawns are gone, ...
-// @todo Destroy terminal and storage if not hope of recovery, then unclaim
+// @todo Destroy terminal and storage if not hope of recovery?
 
 export default class RoomDefense {
 	roomName: string;
@@ -34,20 +52,22 @@ export default class RoomDefense {
 	 *   True if all planned ramparts are built and strong enough.
 	 */
 	isWallIntact() {
-		if (!this.room.roomPlanner) return true;
+		return cache.inObject(this.room, 'isWallIntact', 1, () => {
+			if (!this.room.roomPlanner) return true;
 
-		const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
-		const requiredHits = 25_000 * this.room.controller.level * this.room.controller.level;
+			const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
+			const requiredHits = 25_000 * this.room.controller.level * this.room.controller.level;
 
-		for (const pos of rampartPositions) {
-			// Check if there's a rampart here already.
-			const structures = pos.lookFor(LOOK_STRUCTURES);
-			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= requiredHits).length === 0) {
-				return false;
+			for (const pos of rampartPositions) {
+				// Check if there's a rampart here already.
+				const structures = pos.lookFor(LOOK_STRUCTURES);
+				if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= requiredHits).length === 0) {
+					return false;
+				}
 			}
-		}
 
-		return true;
+			return true;
+		});
 	}
 
 	/**
@@ -59,29 +79,52 @@ export default class RoomDefense {
 	 *   2: Enemies are strong or numerous.
 	 */
 	getEnemyStrength() {
-		let attackStrength = 0;
-		let boosts = 0;
+		return cache.inObject(this.room, 'getEnemyStrength', 1, () => {
+			let attackStrength = 0;
+			let totalStrength = 0;
+			let invaderOnly = true;
 
-		// @todo If it's invaders, don't go up to level 2.
+			// @todo If it's invaders, don't go up to level 2.
+			// @todo Take into account boost stength.
+			// @todo Weigh against room defensive capabilities.
 
-		_.each(this.room.enemyCreeps, creeps => {
-			for (const creep of creeps) {
-				for (const part of creep.body) {
-					if (part.type === ATTACK || part.type === HEAL || part.type === CLAIM) {
-						attackStrength++;
+			for (const userName in this.room.enemyCreeps) {
+				if (hivemind.relations.isAlly(userName)) continue;
+				if (userName !== 'Invader') invaderOnly = false;
+
+				const creeps = this.room.enemyCreeps[userName];
+				for (const creep of creeps) {
+					for (const part of creep.body) {
+						let partPower = partStrength[part.type] || 0;
+						let boostPower = 1;
+
 						if (part.boost && typeof part.boost === 'string') {
-							boosts += part.boost.length;
+							const effect = BOOSTS[part.type][part.boost];
+							boostPower = effect[relevantBoostAttribute[part.type]] || 1;
+
+							if (part.type === TOUGH) {
+								partPower = 100;
+								boostPower = 1 / (effect.damage || 1);
+							}
 						}
 
-						continue;
+						if (attackParts.includes(part.type)) {
+							attackStrength += partPower * boostPower;
+						}
+						totalStrength += partPower * boostPower;
 					}
 				}
-			}
-		});
+			};
 
-		if (attackStrength === 0) return 0;
-		if (boosts + attackStrength < 30) return 1;
-		return 2;
+			let defenseStrength = 2 * TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length;
+			defenseStrength += ATTACK_POWER * this.room.energyCapacityAvailable / BODYPART_COST[ATTACK] / 5;
+
+			// @todo Factor available boosts into defense strength.
+
+			if (attackStrength === 0) return 0;
+			if (invaderOnly || totalStrength < defenseStrength) return 1;
+			return 2;
+		});
 	}
 
 	openRampartsToFriendlies() {

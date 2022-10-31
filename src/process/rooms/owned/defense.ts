@@ -3,6 +3,7 @@ HEAL */
 
 import hivemind from 'hivemind';
 import Process from 'process/process';
+import {simpleAllies} from 'utils/communication';
 
 export default class RoomDefenseProcess extends Process {
 	room: Room;
@@ -25,6 +26,7 @@ export default class RoomDefenseProcess extends Process {
 	run() {
 		this.manageTowers();
 		this.manageSafeMode();
+		this.manageDefense();
 		this.room.defense.openRampartsToFriendlies();
 	}
 
@@ -99,11 +101,24 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.controller.safeMode) return;
 		if (this.room.controller.safeModeCooldown) return;
 		if (this.room.controller.safeModeAvailable < 1) return;
+		if (this.room.defense.getEnemyStrength() === 0) return;
 		if (this.room.defense.getEnemyStrength() < 2 && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
 
 		if (this.room.controller.activateSafeMode() === OK) {
 			Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
 		}
+	}
+
+	/**
+	 * Requests defense from allies when under attack.
+	 */
+	manageDefense() {
+		if (this.room.controller.safeMode) return;
+		if (this.room.defense.getEnemyStrength() < 2) return;
+		if (this.room.defense.isWallIntact()) return;
+
+		const priority = 0.5 * this.room.controller.level / 8;
+		simpleAllies.requestHelp(this.room.name, priority);
 	}
 }
