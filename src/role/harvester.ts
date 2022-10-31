@@ -79,7 +79,7 @@ export default class HarvesterRole extends Role {
 	}
 
 	isStationaryHarvester(creep: HarvesterCreep) {
-		return creep.memory.fixedSource && _.size(creep.room.creepsByRole.transporter) > 0;
+		return (creep.memory.fixedSource || creep.memory.fixedMineralSource) && _.size(creep.room.creepsByRole.transporter) > 0;
 	}
 
 	/**
@@ -270,7 +270,7 @@ export default class HarvesterRole extends Role {
 			const nearbyCreeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
 				filter: c => {
 					if (c.memory.role === 'harvester' && c.store.getUsedCapacity() < 10) return true;
-					if (['transporter', 'upgrader', 'builder'].includes(c.memory.role) && c.store.getFreeCapacity() > 0) return true;
+					if (['transporter', 'upgrader', 'builder', 'builder.remote'].includes(c.memory.role) && c.store.getFreeCapacity() > 0) return true;
 
 					return false;
 				}
@@ -290,7 +290,7 @@ export default class HarvesterRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performHarvesterDeliver(creep: HarvesterCreep) {
-		if (!creep.memory.fixedSource) return;
+		if (!creep.memory.fixedSource && !creep.memory.fixedMineralSource) return;
 
 		if (_.size(creep.room.creepsByRole.transporter) === 0) {
 			// Use transporter drop off logic.

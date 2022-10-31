@@ -358,6 +358,7 @@ export default class TransporterRole extends Role {
 
 		if (!best) {
 			delete creep.memory.order;
+			if (creep.store.getFreeCapacity() > 0) this.setTransporterState(false);
 			return;
 		}
 
