@@ -24,7 +24,7 @@ export default class SquadSpawnRole extends SpawnRole {
 
 		_.each(Game.squads, squad => {
 			if (squad.getSpawn() !== room.name) return;
-			const spawnUnitType = this.needsSpawning(squad);
+			const spawnUnitType = this.needsSpawning(room, squad);
 			if (!spawnUnitType) return;
 
 			const roomHasReserves = room.getEffectiveAvailableEnergy() > 10_000;
@@ -48,10 +48,23 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {string|null}
 	 *   Type of the unit that needs spawning.
 	 */
-	needsSpawning(squad: Squad): SquadUnitType | null {
+	needsSpawning(room: Room, squad: Squad): SquadUnitType | null {
 		const neededUnits: SquadUnitType[] = [];
 		for (const unitType in squad.memory.composition) {
-			if (squad.memory.composition[unitType] > _.size(squad.units[unitType])) {
+			if (unitType === 'quad') {
+				const inRoom = _.size(_.filter(room.creepsByRole.quad, (c: QuadCreep) => !c.memory.quadId));
+				if (inRoom > 0 && inRoom < squad.getUnitCount(unitType)) {
+					// Finish partially spawned quad.
+					neededUnits.push('quad');
+				}
+				else if (squad.getUnitCount(unitType) > _.size(squad.units[unitType])) {
+					// Start a new quad.
+					neededUnits.push('quad');
+				}
+				continue;
+			}
+
+			if (squad.getUnitCount(unitType as SquadUnitType) > _.size(squad.units[unitType])) {
 				neededUnits.push(unitType as SquadUnitType);
 			}
 		}
@@ -130,7 +143,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	getQuadCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.2, room.energyAvailable*0.2),
+			Math.max(room.energyCapacityAvailable * 0.2, room.energyAvailable * 0.2),
 			//Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
