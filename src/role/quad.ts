@@ -1,9 +1,10 @@
-
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import Squad from 'manager.squad';
 import TransporterRole from 'role/transporter';
+import utilities from 'utilities';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
@@ -78,12 +79,21 @@ export default class QuadRole extends Role {
 	}
 
 	manageQuadCreeps(creeps: QuadCreep[]) {
+		this.markCreeps(creeps);
+
+		// const isInFormation = this.createFormation(creeps);
+		const path = this.getQuadPath(creeps[0], this.squad.getTarget());
+	}
+
+	markCreeps(creeps: QuadCreep[]) {
 		let creepNumber = 1;
 		for (const creep of creeps) {
 			creep.heapMemory.lastTick = Game.time;
 			if (!creep.heapMemory.n) creep.heapMemory.n = creepNumber++;
 		}
+	}
 
+	createFormation(creeps: QuadCreep[]) {
 		const anchorPosition = creeps[0].pos;
 		let isInFormation = true;
 		for (const index in creeps) {
@@ -99,7 +109,39 @@ export default class QuadRole extends Role {
 			}
 		}
 
-		if (!isInFormation) return;
+		return isInFormation;
+	}
+
+	getQuadPath(creep: QuadCreep, target: RoomPosition) {
+		const pfOptions = {
+			allowDanger: true,
+			maxRooms: 1,
+		}
+
+		const result = utilities.getPath(creep.pos, {
+			pos: target,
+			range: 0,
+			isQuad: true,
+		}, false, pfOptions);
+
+		if (result && result.path) {
+			const hue: number = cache.inHeap('creepColor:' + creep.name, 10000, (oldValue) => {
+				return oldValue?.data ?? Math.floor(Math.random() * 360);
+			});
+			const color = 'hsl(' + hue + ', 50%, 50%)'
+
+			creep.room.visual.poly(result.path, {
+				fill: 'transparent',
+				stroke: color,
+				lineStyle: 'dashed',
+				strokeWidth: .15,
+				opacity: .3,
+			});
+
+			return result.path;
+		}
+
+		return [creep.pos];
 	}
 
 	getPositionOffsets(index: number) {

@@ -156,7 +156,12 @@ export default class RoomIntel {
 		this.memory.exits = Game.map.describeExits(room.name);
 
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
-		const constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
+		let constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
+		if (room.controller && !room.controller.my && room.controller.owner && hivemind.relations.isAlly(room.controller.owner.username)) {
+			constructionSites = _.groupBy(room.find(FIND_CONSTRUCTION_SITES, {
+				filter: site => site.my || hivemind.relations.isAlly(site.owner.username)
+			}), 'structureType');
+		}
 		this.generateCostMatrix(structures, constructionSites);
 
 		// Update nav mesh for this room.

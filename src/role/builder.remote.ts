@@ -76,7 +76,7 @@ export default class RemoteBuilderRole extends Role {
 				delete creep.memory.sourceRoom;
 			}
 			else {
-				creep.moveToRoom(creep.memory.sourceRoom);
+				creep.moveToRoom(creep.memory.sourceRoom, true);
 				return;
 			}
 		}
@@ -127,8 +127,10 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		// Help by filling spawn with energy.
-		const spawns = creep.room.find<StructureSpawn>(FIND_MY_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_SPAWN,
+		const spawns = creep.room.find<StructureSpawn>(FIND_STRUCTURES, {
+			filter: structure => structure.structureType === STRUCTURE_SPAWN && (
+				structure.my || hivemind.relations.isAlly(structure.owner.username)
+			),
 		});
 		if (spawns && spawns.length > 0 && spawns[0].store[RESOURCE_ENERGY] < spawns[0].store.getCapacity(RESOURCE_ENERGY) * 0.8) {
 			creep.whenInRange(1, spawns[0], () => creep.transfer(spawns[0], RESOURCE_ENERGY));
@@ -148,7 +150,9 @@ export default class RemoteBuilderRole extends Role {
 				}
 
 				// Could not set a target for building. Start upgrading instead.
-				creep.memory.upgrading = true;
+				if (creep.room.isMine()) {
+					creep.memory.upgrading = true;
+				}
 			}
 		}
 
@@ -163,8 +167,10 @@ export default class RemoteBuilderRole extends Role {
 	}
 
 	supplyTowers() {
-		const towers = this.creep.room.find<StructureTower>(FIND_MY_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_TOWER,
+		const towers = this.creep.room.find<StructureTower>(FIND_STRUCTURES, {
+			filter: structure => structure.structureType === STRUCTURE_TOWER && (
+				structure.my || hivemind.relations.isAlly(structure.owner.username)
+			),
 		});
 		if (towers && towers.length > 0 && towers[0].store.getFreeCapacity(RESOURCE_ENERGY) > towers[0].store.getCapacity(RESOURCE_ENERGY) * 0.5) {
 			this.creep.whenInRange(1, towers[0], () => this.creep.transfer(towers[0], RESOURCE_ENERGY));
@@ -183,8 +189,10 @@ export default class RemoteBuilderRole extends Role {
 	saveExpiringRamparts(minHits: number): boolean {
 		if (!this.creep.memory.repairTarget) {
 			// Make sure ramparts don't break.
-			const targets = this.creep.room.find(FIND_MY_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < minHits,
+			const targets = this.creep.room.find(FIND_STRUCTURES, {
+				filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < minHits && (
+					structure.my || hivemind.relations.isAlly(structure.owner.username)
+				),
 			});
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;
@@ -207,7 +215,9 @@ export default class RemoteBuilderRole extends Role {
 
 	determineBuildTarget() {
 		// Build structures.
-		const targets = this.creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+		const targets = this.creep.room.find(FIND_CONSTRUCTION_SITES, {
+			filter: site => site.my || hivemind.relations.isAlly(site.owner.username)
+		});
 
 		// Build spawns before building anything else.
 		const spawnSites = _.filter(targets, structure => structure.structureType === STRUCTURE_SPAWN);
@@ -233,8 +243,10 @@ export default class RemoteBuilderRole extends Role {
 		if (this.creep.room.controller.level >= 6) {
 			// Make sure ramparts are of sufficient level.
 			const lowRamparts = this.creep.room.find(
-				FIND_MY_STRUCTURES, {
-					filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < hivemind.settings.get('minWallIntegrity'),
+				FIND_STRUCTURES, {
+					filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < hivemind.settings.get('minWallIntegrity') && (
+						structure.my || hivemind.relations.isAlly(structure.owner.username)
+					),
 				},
 			);
 
@@ -248,7 +260,7 @@ export default class RemoteBuilderRole extends Role {
 	 * Upgrades the room's controller.
 	 */
 	performControllerUpgrade() {
-		if (this.creep.room.controller.level === 0) {
+		if (this.creep.room.controller.level === 0 || !this.creep.room.isMine()) {
 			this.creep.memory.upgrading = false;
 			return;
 		}
@@ -288,14 +300,14 @@ export default class RemoteBuilderRole extends Role {
 			const container = creep.pos.findClosestByPath(FIND_STRUCTURES, {
 				filter: structure => structure.structureType === STRUCTURE_CONTAINER && (structure.store.energy || 0) > 500,
 			});
-			if (container) {
+			if (container && (creep.room.isMine() || !creep.room.controller.safeMode)) {
 				creep.whenInRange(1, container, () => creep.withdraw(container, RESOURCE_ENERGY));
 				return;
 			}
 
 			// Try get energy from a source.
 			const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-			if (source) {
+			if (source && creep.room.isMine()) {
 				creep.memory.resourceTarget = source.id;
 			}
 			else {
@@ -326,6 +338,10 @@ export default class RemoteBuilderRole extends Role {
 				creep.memory.resourceTarget = null;
 				this.setExtraEnergyTarget(creep);
 			}
+		}
+		else if (result === ERR_NOT_OWNER) {
+			creep.memory.resourceTarget = null;
+			this.setExtraEnergyTarget(creep);
 		}
 	}
 

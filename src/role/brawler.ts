@@ -494,7 +494,7 @@ export default class BrawlerRole extends Role {
 
 		// If an enemy is close by, move to attack it.
 		const enemies = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
-			filter: enemy => enemy.isDangerous(),
+			filter: enemy => enemy.isDangerous() && !hivemind.relations.isAlly(enemy.owner.username),
 		});
 		if (enemies.length > 0) {
 			creep.memory.exploitTarget = enemies[0].id;
@@ -713,7 +713,9 @@ export default class BrawlerRole extends Role {
 
 		// See if enemy structures are nearby, attack one of those.
 		const structures = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
-			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.structureType !== STRUCTURE_TERMINAL,
+			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.structureType !== STRUCTURE_TERMINAL && (
+				!structure.owner || !hivemind.relations.isAlly(structure.owner.username)
+			),
 		});
 		// Find target with lowest HP to kill off (usually relevant while trying to break through walls).
 		let lowestStructure;
