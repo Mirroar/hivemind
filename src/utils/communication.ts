@@ -60,7 +60,7 @@ const RequestTypeStr = {
 };
 
 var allyRequests: Request[];
-var requestArray: Request[];
+var requestArray: Request[] = [];
 var simpleAllies = {
   checkAllies(callback: RequestCallback) {
     let allies = [...ALLIES];

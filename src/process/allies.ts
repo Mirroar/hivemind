@@ -13,6 +13,12 @@ declare global {
           }
         }
       };
+      defense: {
+        [roomName: string]: {
+          lastSeen: number;
+          priority: number;
+        }
+      }
     };
   }
 }
@@ -20,7 +26,7 @@ declare global {
 export default class AlliesProcess extends Process {
 	run() {
 		if (!Memory.requests) {
-			Memory.requests = {trade: {}};
+			Memory.requests = {trade: {}, defense: {}};
 		}
 
 		simpleAllies.startOfTick();
@@ -28,6 +34,7 @@ export default class AlliesProcess extends Process {
 			this.handleRequest(request);
 		});
 		this.makeResourceRequests();
+		this.makeDefenseRequests();
 		simpleAllies.endOfTick();
 	}
 
@@ -56,6 +63,18 @@ export default class AlliesProcess extends Process {
 				const amount = room.getCurrentResourceAmount(resourceType);
 				if (amount < 5000) {
 					simpleAllies.requestResource(room.name, resourceType, (5000 - amount) / 20000);
+				}
+			}
+		}
+	}
+
+	makeDefenseRequests() {
+		for (const roomName in (Memory.requests.defense || {})) {
+			const request = Memory.requests.defense[roomName];
+			if (Game.time - request.lastSeen < 10) {
+				simpleAllies.requestHelp(roomName, request.priority);
+				if (Game.rooms[roomName].getEffectiveAvailableEnergy() < 20_000) {
+					simpleAllies.requestResource(roomName, RESOURCE_ENERGY, request.priority);
 				}
 			}
 		}

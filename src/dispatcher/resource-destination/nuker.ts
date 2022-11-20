@@ -33,7 +33,7 @@ export default class NukerDestination implements TaskProvider<NukerDestinationTa
 
 	addResourceTask(resourceType: RESOURCE_ENERGY | RESOURCE_GHODIUM, options: NukerDestinationTask[], context?: ResourceDestinationContext) {
 		const nuker = this.room.nuker;
-		if (!nuker) return;
+		if (!nuker || !settings.get('constructNukers')) return;
 		const freeCapacity = nuker.store.getFreeCapacity(resourceType);
 		if (freeCapacity === 0) return;
 		if (context.resourceType && context.resourceType !== resourceType) return;

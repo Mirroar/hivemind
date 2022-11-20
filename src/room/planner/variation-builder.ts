@@ -7,6 +7,11 @@ import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
 
+const TILE_IS_ENDANGERED = 0;
+const TILE_IS_SAFE = 1;
+const TILE_IS_UNSAFE = 2;
+const TILE_IS_UNSAFE_NEAR_WALL = 3;
+
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	exitCenters: ExitCoords;
 	roomCenter: RoomPosition;
@@ -39,6 +44,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			// @todo Protect positions for mincut
 			this.placeRamparts,
 			this.placeTowers,
+			this.placeOnRamps,
+			this.placeQuadBreaker,
 		];
 	}
 
@@ -275,6 +282,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 			this.placeBayStructures(pos, {spawn: true, id: count++});
 
+			this.protectPosition(pos);
+
 			// Reinitialize pathfinding.
 			this.placementManager.startBuildingPlacement();
 		}
@@ -460,7 +469,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 		const openList = [];
 		openList.push(encodePosition(roomCenter));
-		// @todo Include sources, minerals, controller.
 		openList.push(encodePosition(roomIntel.getControllerPosition()));
 		for (const source of roomIntel.getSourcePositions()) {
 			openList.push(encodePosition(new RoomPosition(source.x, source.y, this.roomName)));
@@ -617,6 +625,49 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	placeTowers(): StepResult {
 		const step = new PlaceTowersStep(this.roomPlan, this.placementManager, this.safetyMatrix);
 		return step.run();
+	}
+
+	placeOnRamps(): StepResult {
+		for (const rampart of this.roomPlan.getPositions('rampart')) {
+			handleMapArea(rampart.x, rampart.y, (x, y) => {
+				if (this.safetyMatrix.get(x, y) !== TILE_IS_ENDANGERED) return;
+
+				const pos = new RoomPosition(x, y, this.roomName);
+				if (!this.roomPlan.hasPosition('road', pos)) return;
+
+				this.placementManager.planLocation(pos, 'rampart', null);
+				this.placementManager.planLocation(pos, 'rampart.ramp', null);
+			}, 3);
+		}
+
+		return 'ok';
+	}
+
+	placeQuadBreaker(): StepResult {
+		for (const rampart of this.roomPlan.getPositions('rampart')) {
+			handleMapArea(rampart.x, rampart.y, (x, y) => {
+				if (this.safetyMatrix.get(x, y) !== TILE_IS_UNSAFE) return;
+
+				this.safetyMatrix.set(x, y, TILE_IS_UNSAFE_NEAR_WALL);
+				if (this.placementManager.getExitDistance(x, y) < 3) return;
+
+				const pos = new RoomPosition(x, y, this.roomName);
+				if (this.roomPlan.hasPosition('road', pos)) return;
+
+				let nearRoad = false;
+				if (this.roomPlan.hasPosition('road', new RoomPosition(x - 1, y, this.roomName))) nearRoad = true;
+				if (this.roomPlan.hasPosition('road', new RoomPosition(x + 1, y, this.roomName))) nearRoad = true;
+				if (this.roomPlan.hasPosition('road', new RoomPosition(x, y - 1, this.roomName))) nearRoad = true;
+				if (this.roomPlan.hasPosition('road', new RoomPosition(x, y + 1, this.roomName))) nearRoad = true;
+
+				if (!nearRoad && (x + y) % 2 === 0) return;
+
+				this.placementManager.planLocation(pos, 'wall', null);
+				this.placementManager.planLocation(pos, 'wall.quad', null);
+			}, 3);
+		}
+
+		return 'ok';
 	}
 
 	isFinished(): boolean {

@@ -325,12 +325,14 @@ export default class RoomManager {
 				return false;
 			},
 		});
-		for (const structure of unwantedDefenses) {
-			if (hivemind.settings.get('dismantleUnwantedDefenses')) {
-				this.memory.dismantle[structure.id] = 1;
-			}
-			else {
-				structure.destroy();
+		if (this.room.memory.isReclaimableSince) {
+			for (const structure of unwantedDefenses) {
+				if (hivemind.settings.get('dismantleUnwantedDefenses')) {
+					this.memory.dismantle[structure.id] = 1;
+				}
+				else if (structure.structureType === STRUCTURE_WALL) {
+					structure.destroy();
+				}
 			}
 		}
 

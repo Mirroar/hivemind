@@ -116,10 +116,14 @@ export default class RoomDefense {
 				}
 			};
 
-			let defenseStrength = 2 * TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length;
-			defenseStrength += ATTACK_POWER * this.room.energyCapacityAvailable / BODYPART_COST[ATTACK] / 5;
+			let defenseStrength = TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length / 2;
+			//defenseStrength += ATTACK_POWER * this.room.energyCapacityAvailable / BODYPART_COST[ATTACK] / 5;
 
 			// @todo Factor available boosts into defense strength.
+
+			this.room.visual.text('Enemy Attack power: ' + attackStrength, 5, 6);
+			this.room.visual.text('Enemy Total power: ' + totalStrength, 5, 7);
+			this.room.visual.text('Our defense power: ' + defenseStrength, 5, 8);
 
 			if (attackStrength === 0) return 0;
 			if (invaderOnly || totalStrength < defenseStrength) return 1;

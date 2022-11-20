@@ -39,8 +39,8 @@ export default class GuardianRole extends Role {
 		if (!rampart) return;
 
 		creep.whenInRange(0, rampart, () => {
-			this.attackTargetsInRange(creep);
 		});
+		this.attackTargetsInRange(creep);
 	}
 
 	getBestRampartToCover(creep: GuardianCreep): StructureRampart {

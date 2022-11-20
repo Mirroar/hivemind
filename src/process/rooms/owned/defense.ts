@@ -28,6 +28,9 @@ export default class RoomDefenseProcess extends Process {
 		this.manageSafeMode();
 		this.manageDefense();
 		this.room.defense.openRampartsToFriendlies();
+
+		this.room.visual.text('Wall status:' + (this.room.defense.isWallIntact() ? 'intact' : 'broken'), 5, 4);
+		this.room.visual.text('Enemy strength: ' + this.room.defense.getEnemyStrength(), 5, 5);
 	}
 
 	/**
@@ -105,6 +108,8 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.defense.getEnemyStrength() < 2 && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
 
+		this.room.visual.text('I should safemode!', 25, 25);
+
 		if (this.room.controller.activateSafeMode() === OK) {
 			Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
 		}
@@ -116,9 +121,12 @@ export default class RoomDefenseProcess extends Process {
 	manageDefense() {
 		if (this.room.controller.safeMode) return;
 		if (this.room.defense.getEnemyStrength() < 2) return;
-		if (this.room.defense.isWallIntact()) return;
 
 		const priority = 0.5 * this.room.controller.level / 8;
-		simpleAllies.requestHelp(this.room.name, priority);
+		if (!Memory.requests.defense) Memory.requests.defense = {};
+		Memory.requests.defense[this.room.name] = {
+			priority,
+			lastSeen: Game.time,
+		}
 	}
 }

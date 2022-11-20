@@ -349,6 +349,12 @@ export default class BuilderRole extends Role {
 
 		// Walls and ramparts get repaired up to a certain health level.
 		let maxHealth = wallHealth[target.room.controller.level];
+		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall.quad')) {
+			maxHealth /= 10;
+		}
+		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'rampart.ramp')) {
+			maxHealth /= 10;
+		}
 		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall.blocker')) {
 			maxHealth = 10_000;
 		}
@@ -373,13 +379,14 @@ export default class BuilderRole extends Role {
 				option.priority = -1;
 			}
 
-			if (target.hits < 3_000_000 && creep.room.controller.level >= 6) {
+			if (target.hits < hivemind.settings.get('minWallIntegrity') && creep.room.controller.level >= 6 && creep.room.terminal) {
 				// Once we have a terminal, get ramparts to a level where we can
 				// comfortably defend the room.
 				option.priority++;
 			}
 			else if (creep.room.defense.getEnemyStrength() > 1) {
 				// Repair defenses as much as possible to keep invaders out.
+				// @todo Prioritize low HP wall / close to invaders.
 				option.priority++;
 				option.priority++;
 				option.weight++;

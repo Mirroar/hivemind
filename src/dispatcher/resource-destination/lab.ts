@@ -15,7 +15,7 @@ export default class LabDestination implements TaskProvider<LabDestinationTask, 
 	}
 
 	getHighestPriority() {
-		return 4;
+		return 3;
 	}
 
 	getTasks(context?: ResourceDestinationContext) {
@@ -41,7 +41,7 @@ export default class LabDestination implements TaskProvider<LabDestinationTask, 
 		if (freeCapacity < lab.store.getCapacity(resourceType) * 0.2) return;
 
 		options.push({
-			priority: 4,
+			priority: 3,
 			weight: freeCapacity / 100,
 			type: this.getType(),
 			target: labId,

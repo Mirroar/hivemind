@@ -1062,7 +1062,7 @@ export default class TransporterRole extends Role {
 		for (const lab of labs) {
 			if (lab.store[RESOURCE_ENERGY] > 0) {
 				options.push({
-					priority: 4,
+					priority: 3,
 					weight: 0,
 					type: 'structure',
 					object: lab,
@@ -1072,7 +1072,7 @@ export default class TransporterRole extends Role {
 
 			if (lab.mineralType) {
 				options.push({
-					priority: 4,
+					priority: 3,
 					weight: 0,
 					type: 'structure',
 					object: lab,

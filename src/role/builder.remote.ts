@@ -22,6 +22,7 @@ declare global {
 	}
 
 	interface RemoteBuilderCreepHeapMemory extends CreepHeapMemory {
+		repairMinHits?: number;
 	}
 }
 
@@ -106,6 +107,7 @@ export default class RemoteBuilderRole extends Role {
 		delete this.creep.memory.repairTarget;
 		delete this.creep.memory.resourceTarget;
 		delete this.creep.memory.upgrading;
+		delete this.creep.heapMemory.repairMinHits;
 	}
 
 	/**
@@ -132,14 +134,21 @@ export default class RemoteBuilderRole extends Role {
 				structure.my || hivemind.relations.isAlly(structure.owner.username)
 			),
 		});
+
 		if (spawns && spawns.length > 0 && spawns[0].store[RESOURCE_ENERGY] < spawns[0].store.getCapacity(RESOURCE_ENERGY) * 0.8) {
-			creep.whenInRange(1, spawns[0], () => creep.transfer(spawns[0], RESOURCE_ENERGY));
-			return;
+			const maySwitchToRefill = (!creep.memory.repairTarget && !creep.memory.buildTarget) || creep.pos.getRangeTo(spawns[0].pos) < 5;
+			if (maySwitchToRefill) {
+				creep.whenInRange(1, spawns[0], () => creep.transfer(spawns[0], RESOURCE_ENERGY));
+				return;
+			}
 		}
 
 		if (this.supplyTowers()) return;
 
-		if (this.saveExpiringRamparts(10_000)) return;
+		let target = Game.getObjectById<ConstructionSite>(creep.memory.buildTarget);
+		if (!target || target.structureType !== STRUCTURE_SPAWN) {
+			if (this.saveExpiringRamparts(10_000)) return;
+		}
 
 		if (!creep.memory.buildTarget) {
 			this.determineBuildTarget();
@@ -156,7 +165,7 @@ export default class RemoteBuilderRole extends Role {
 			}
 		}
 
-		const target = Game.getObjectById<ConstructionSite>(creep.memory.buildTarget);
+		target = Game.getObjectById<ConstructionSite>(creep.memory.buildTarget);
 		if (target) {
 			creep.whenInRange(3, target, () => creep.build(target));
 			return;
@@ -196,14 +205,20 @@ export default class RemoteBuilderRole extends Role {
 			});
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;
+				this.creep.heapMemory.repairMinHits = minHits;
 			}
 		}
 
 		if (this.creep.memory.repairTarget) {
-			const maxRampartHits = this.creep.room.controller.level < 6 ? 15_000 : hivemind.settings.get<number>('minWallIntegrity') * 1.1;
+			const maxRampartHits = Math.max(
+				minHits * 1.1,
+				this.creep.room.controller.level < 6 ? 15_000 : hivemind.settings.get<number>('minWallIntegrity') * 1.1,
+				(this.creep.heapMemory.repairMinHits || 0) * 1.1
+			);
 			const target = Game.getObjectById<Structure>(this.creep.memory.repairTarget);
 			if (!target || (target.structureType === STRUCTURE_RAMPART && target.hits > maxRampartHits)) {
 				delete this.creep.memory.repairTarget;
+				delete this.creep.heapMemory.repairMinHits;
 			}
 
 			this.creep.whenInRange(3, target, () => this.creep.repair(target));
