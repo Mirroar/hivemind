@@ -321,7 +321,7 @@ export default class PlacementManager {
 		return newRoads;
 	}
 
-	isPositionAccessible(pos: RoomPosition) {
+	isPositionAccessible(pos: RoomPosition, noTunnels?: boolean) {
 		// We don't care about cost, just about possibility.
 		const result = PathFinder.search(pos, this.originEntrances, {
 			roomCallback: () => this.buildingMatrix,
@@ -329,6 +329,12 @@ export default class PlacementManager {
 			plainCost: 1,
 			swampCost: 1,
 		});
+
+		if (noTunnels) {
+			for (const position of result.path) {
+				if (this.terrain.get(position.x, position.y) === TERRAIN_MASK_WALL && !this.roomPlan.hasPosition('road', position)) return false;
+			}
+		}
 
 		return !result.incomplete;
 	}

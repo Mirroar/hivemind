@@ -37,7 +37,7 @@ export default class placeTowersStep {
 				info.score = -1;
 
 				// Make sure it's possible to refill this tower.
-				if (!this.placementManager.isPositionAccessible(info.pos)) continue;
+				if (!this.placementManager.isPositionAccessible(info.pos, true)) continue;
 
 				// Add tentative tower location.
 				newTowers.push(info.pos);
@@ -55,10 +55,10 @@ export default class placeTowersStep {
 			// Also create roads to all towers.
 			for (const pos of newTowers) {
 				// Check if access is still possible.
-				// @todo Decrement counter for tower direction.
-				if (!this.placementManager.isPositionAccessible(pos)) continue;
+				if (!this.placementManager.isPositionAccessible(pos, true)) continue;
 
 				this.placementManager.commitTemporaryLocation(pos, 'tower');
+				// @todo Ensure tower access roads are completely behind walls.
 				this.placementManager.placeAccessRoad(pos);
 				this.placementManager.planLocation(pos, 'tower.' + (towerCount++));
 			}
