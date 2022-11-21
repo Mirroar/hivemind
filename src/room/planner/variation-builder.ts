@@ -43,6 +43,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.placeHighLevelStructures,
 			// @todo Protect positions for mincut
 			this.placeRamparts,
+			this.sealRoom,
 			this.placeTowers,
 			this.placeOnRamps,
 			this.placeQuadBreaker,
@@ -508,7 +509,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		for (let x = 0; x < 50; x++) {
 			for (let y = 0; y < 50; y++) {
 				// Only check around unsafe tiles.
-				if (this.safetyMatrix.get(x, y) !== 2) continue;
+				if (this.safetyMatrix.get(x, y) !== TILE_IS_UNSAFE) continue;
 
 				this.markTilesInRangeOfUnsafeTile(x, y);
 			}
@@ -528,7 +529,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	pruneWallFromTiles(walls: RoomPosition[], startLocations: string[], onlyRelevant?: boolean) {
 		const openList = {};
 		const closedList = {};
-		let safetyValue = 1;
+		let safetyValue = TILE_IS_SAFE;
 
 		for (const location of startLocations) {
 			openList[location] = true;
@@ -536,7 +537,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 		// If we're doing an additionall pass, unmark walls first.
 		if (onlyRelevant) {
-			safetyValue = 2;
+			safetyValue = TILE_IS_UNSAFE;
 			for (const wall of walls) {
 				wall.isIrrelevant = true;
 				if (wall.isRelevant) {
@@ -615,11 +616,27 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	 */
 	markTilesInRangeOfUnsafeTile(x: number, y: number) {
 		handleMapArea(x, y, (ax, ay) => {
-			if (this.safetyMatrix.get(ax, ay) === 1) {
+			if (this.safetyMatrix.get(ax, ay) === TILE_IS_SAFE) {
 				// Safe tile in range of an unsafe tile, mark as neutral.
-				this.safetyMatrix.set(ax, ay, 0);
+				this.safetyMatrix.set(ax, ay, TILE_IS_ENDANGERED);
 			}
 		}, 3);
+	}
+
+	/**
+	 * Mark all tiles outside safe area as unbuildable.
+	 */
+	sealRoom(): StepResult {
+		for (let x = 1; x < 49; x++) {
+			for (let y = 1; y < 49; y++) {
+				if (this.safetyMatrix.get(x, y) === TILE_IS_SAFE) continue;
+				if (this.safetyMatrix.get(x, y) === TILE_IS_ENDANGERED) continue;
+
+				this.placementManager.blockPosition(x, y);
+			}
+		}
+
+		return 'ok';
 	}
 
 	placeTowers(): StepResult {
