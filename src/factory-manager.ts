@@ -116,7 +116,7 @@ export default class FactoryManager {
 
 		const storedEnergy = this.room.getStoredEnergy();
 		const storedProduct = this.room.getCurrentResourceAmount(resourceType);
-		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]);
+		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType] || compressRecipes[resourceType]);
 
 		if (resourceType === RESOURCE_BATTERY) {
 			return (storedProduct < 500 || storageFull) && storedEnergy > 15_000;
@@ -131,7 +131,7 @@ export default class FactoryManager {
 		}
 
 		if (compressRecipes[resourceType]) {
-			return (storedProduct < 2000 || storageEmpty) && storedResource > 100 && storedEnergy > 5_000;
+			return (storedProduct < 2000 || storageEmpty) && storedResource > 100 && storedEnergy > 5000;
 		}
 
 		// @todo For level-based recipes, use empire-wide resource capabilities and request via terminal.
