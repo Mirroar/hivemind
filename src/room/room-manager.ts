@@ -615,6 +615,11 @@ export default class RoomManager {
 	 * Builds structures that are relevant in fully built rooms only.
 	 */
 	buildEndgameStructures() {
+		if (this.room.terminal) {
+			// Once there is a terminal, build quad-breaker walls.
+			this.buildPlannedStructures('wall.quad', STRUCTURE_WALL);
+		}
+
 		if (hivemind.settings.get('constructLabs')) {
 			// Make sure labs are built in the right place, remove otherwise.
 			this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
