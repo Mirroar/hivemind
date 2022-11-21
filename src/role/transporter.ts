@@ -1100,6 +1100,7 @@ export default class TransporterRole extends Role {
 		for (const labID of labs) {
 			// Clear out reaction labs.
 			const lab = Game.getObjectById<StructureLab>(labID);
+			if (!lab) continue;
 
 			const mineralAmount = lab.store[lab.mineralType];
 			const mineralCapacity = lab.store.getCapacity(lab.mineralType);
