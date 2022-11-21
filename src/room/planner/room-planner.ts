@@ -62,7 +62,7 @@ export default class RoomPlanner {
 	 *   Name of the room this room planner is assigned to.
 	 */
 	constructor(roomName: string) {
-		this.roomPlannerVersion = 37;
+		this.roomPlannerVersion = 38;
 		this.roomName = roomName;
 		const activeInfo = getRoomPlanFor(roomName);
 		this.activeRoomPlan = activeInfo && activeInfo.plan;

@@ -98,7 +98,7 @@ export default class RoomPlanScorer {
       if (exitDistance < 6) total += (6 - exitDistance) * (6 - exitDistance);
     }
 
-    return -0.003 * total;
+    return (-0.003 * total) - 0.001 * this.getPlannedAmount(plan, STRUCTURE_WALL);
   }
 
   getTravelDistancesScore(plan: RoomPlan): number {
