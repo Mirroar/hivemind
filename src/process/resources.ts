@@ -1,7 +1,7 @@
 /* global RESOURCE_ENERGY */
 
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 import utilities from 'utilities';
 
 /**
@@ -192,7 +192,7 @@ export default class ResourcesProcess extends Process {
 		for (const room of Game.myRooms) {
 			const roomData = room.getResourceState();
 			if (!roomData) continue;
-			
+
 			rooms[room.name] = roomData;
 		}
 

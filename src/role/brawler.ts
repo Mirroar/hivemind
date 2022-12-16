@@ -4,7 +4,7 @@ LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
-import hivemind from 'hivemind';
+
 import PathManager from 'remote-path-manager';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';

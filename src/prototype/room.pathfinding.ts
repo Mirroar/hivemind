@@ -1,7 +1,7 @@
 /* global Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
 STRUCTURE_KEEPER_LAIR */
 
-import hivemind from 'hivemind';
+
 import utilities from 'utilities';
 import {getCostMatrix, markBuildings} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';

@@ -1,6 +1,6 @@
 /* global MOVE ATTACK WORK CARRY HEAL */
 
-import hivemind from 'hivemind';
+
 import SpawnRole from 'spawn-role/spawn-role';
 
 declare global {

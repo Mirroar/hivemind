@@ -1,7 +1,7 @@
 /* global LINK_CAPACITY */
 
 import Process from 'process/process';
-import hivemind from 'hivemind';
+
 
 export default class ManageLinksProcess extends Process {
 	readonly MIN_ENERGY_TRANSFER = LINK_CAPACITY / 4;

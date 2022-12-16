@@ -2,7 +2,7 @@
 CONTROLLER_STRUCTURES FIND_SOURCES FIND_MINERALS */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import RoomPlan from 'room/planner/room-plan';
 import RoomPlanGenerator from 'room/planner/room-plan-generator';
 import stats from 'utils/stats';

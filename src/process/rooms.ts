@@ -4,7 +4,7 @@ import Process from 'process/process';
 import RoomIntelProcess from 'process/rooms/intel';
 import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomManager from 'room/room-manager';
-import hivemind, {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 import RoomPlanner from 'room/planner/room-planner';
 import {isHighway} from 'utils/room-name';
 

@@ -1,4 +1,4 @@
-import hivemind from 'hivemind';
+
 import PlacementManager from 'room/planner/placement-manager';
 import RoomPlan from 'room/planner/room-plan';
 import {handleMapArea} from 'utils/map';

@@ -2,7 +2,7 @@
 STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES FIND_RUINS MAX_CREEP_SIZE
 FIND_TOMBSTONES */
 
-import hivemind from 'hivemind';
+
 import Role from 'role/role';
 
 export default class PowerHaulerRole extends Role {

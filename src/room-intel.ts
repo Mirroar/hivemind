@@ -5,7 +5,7 @@ STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import {deserializeCoords, serializeCoords, serializePosition} from 'utils/serialization';

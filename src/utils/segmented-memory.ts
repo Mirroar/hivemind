@@ -1,6 +1,6 @@
 /* global RawMemory */
 
-import hivemind from 'hivemind';
+
 
 declare global {
 	interface Memory {

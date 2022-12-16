@@ -7,7 +7,7 @@ FIND_STRUCTURES CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import RoomPlanner from 'room/planner/room-planner';
 import {serializeCoords} from 'utils/serialization';
 

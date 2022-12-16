@@ -14,7 +14,7 @@ declare global {
 }
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import Operation from 'operation/operation';
 import PathManager from 'remote-path-manager';
 import {encodePosition} from 'utils/serialization';

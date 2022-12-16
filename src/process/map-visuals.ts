@@ -2,7 +2,7 @@
 
 import Process from 'process/process';
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import {deserializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 

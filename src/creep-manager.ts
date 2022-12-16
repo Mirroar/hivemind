@@ -1,4 +1,4 @@
-import hivemind from 'hivemind';
+
 import {getThrottleOffset, throttle} from 'utils/throttle';
 
 declare global {

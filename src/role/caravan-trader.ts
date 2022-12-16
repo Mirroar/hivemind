@@ -4,7 +4,7 @@ FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
 POWER_BANK_HIT_BACK */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import Role from 'role/role';
 import {isCrossroads} from 'utils/room-name';

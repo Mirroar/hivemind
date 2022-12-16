@@ -1,7 +1,7 @@
 /* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
-import hivemind from 'hivemind';
+
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {isCrossroads} from 'utils/room-name';

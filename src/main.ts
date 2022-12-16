@@ -8,11 +8,12 @@ declare global {
 	namespace NodeJS {
 		interface Global {
 			Memory: Memory,
-			hivemind: typeof hivemind,
+			hivemind: Hivemind,
 		}
 	}
+	let hivemind: Hivemind;
 
-	const _: typeof _;
+	// const _: typeof _;
 }
 
 interface DeprecatedRoomMemory extends RoomMemory {
@@ -34,23 +35,12 @@ import './prototype/cost-matrix';
 import './prototype/creep';
 import './prototype/room';
 import './prototype/structure';
-
-console.log('new global reset');
-
 // Create kernel object.
-import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
-import hivemind from 'hivemind';
-global.hivemind = hivemind;
+import Hivemind, {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_HIGH, PROCESS_PRIORITY_LOW} from 'hivemind';
 import SegmentedMemory from 'utils/segmented-memory';
-hivemind.setSegmentedMemory(new SegmentedMemory());
-hivemind.logGlobalReset();
-
 import balancer from 'excess-energy-balancer';
-balancer.init();
-
-import {getRoomIntel} from 'room-intel';
+import {getRoomIntel, RoomIntelMemory} from 'room-intel';
 import {PlayerIntelMemory} from 'player-intel';
-import {RoomIntelMemory} from 'room-intel';
 import {RoomPlannerMemory} from 'room/planner/room-planner';
 
 // Load top-level processes.
@@ -79,12 +69,21 @@ import TradeProcess from 'process/trade';
 import './manager.military';
 import './manager.source';
 /* eslint-enable import/no-unassigned-import */
-
 import cache from 'utils/cache';
 
 // Allow profiling of code.
 import {profiler, useProfiler} from 'utils/profiler';
 import stats from 'utils/stats';
+
+console.log('new global reset');
+
+global.hivemind = new Hivemind();
+hivemind = global.hivemind;
+
+hivemind.setSegmentedMemory(new SegmentedMemory());
+hivemind.logGlobalReset();
+
+balancer.init();
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 

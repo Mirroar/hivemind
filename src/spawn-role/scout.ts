@@ -1,6 +1,6 @@
 /* global MOVE */
 
-import hivemind from 'hivemind';
+
 import interShard from 'intershard';
 import SpawnRole from 'spawn-role/spawn-role';
 import {decodePosition} from 'utils/serialization';

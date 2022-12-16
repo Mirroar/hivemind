@@ -4,13 +4,20 @@ TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT
 STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
+
 import {ErrorMapper} from 'utils/ErrorMapper';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 
 declare global {
 	type TileCallback = (x: number, y: number) => boolean | void;
+	//
+	// namespace NodeJS {
+	// 	interface Global {
+	// 		utilities: utilities,
+	// 	}
+	// }
+	// let utilities: utilities;
 }
 
 const utilities = {
