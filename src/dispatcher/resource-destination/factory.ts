@@ -20,6 +20,7 @@ export default class FactoryDestination implements TaskProvider<FactoryDestinati
 
 	getTasks(context?: ResourceDestinationContext) {
 		if (!this.room.factory) return [];
+		if (this.room.factory.store.getFreeCapacity() < 100) return [];
 
 		const options: FactoryDestinationTask[] = [];
 		const missingResources = this.room.factoryManager.getMissingComponents();

@@ -60,7 +60,9 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 
 		for (const resourceType of getResourcesIn(this.room.factory.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
-			if (neededResources[resourceType]) continue;
+			if (neededResources[resourceType]) {
+				if (this.room.factory.store.getUsedCapacity(resourceType) < neededResources[resourceType]) continue;
+			}
 
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
 			const structure = this.room.factory;
@@ -70,7 +72,7 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 				weight: 0,
 				resourceType,
 				target: structure.id,
-				amount: structure.store.getUsedCapacity(resourceType),
+				amount: structure.store.getUsedCapacity(resourceType) - (neededResources[resourceType] || 0),
 			});
 		}
 	}
