@@ -480,10 +480,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		this.pruneWalls(potentialWallPositions);
 
 		// Actually place ramparts.
-		for (const i in potentialWallPositions) {
-			if (potentialWallPositions[i].isRelevant) {
-				this.placementManager.planLocation(potentialWallPositions[i], 'rampart', null);
-			}
+		for (const wallPosition of potentialWallPositions) {
+			if (!wallPosition.isRelevant) continue;
+			if (this.terrain.get(wallPosition.x, wallPosition.y) === TERRAIN_MASK_WALL) continue;
+
+			this.placementManager.planLocation(wallPosition, 'rampart', null);
 		}
 
 		return 'ok';
@@ -681,9 +682,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		for (const rampart of this.roomPlan.getPositions('rampart')) {
 			handleMapArea(rampart.x, rampart.y, (x, y) => {
 				if (this.safetyMatrix.get(x, y) !== TILE_IS_ENDANGERED) return;
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
 				const pos = new RoomPosition(x, y, this.roomName);
 				if (!this.roomPlan.hasPosition('road', pos)) return;
+				if (this.roomPlan.hasPosition('rampart', pos)) return;
 
 				this.placementManager.planLocation(pos, 'rampart', null);
 				this.placementManager.planLocation(pos, 'rampart.ramp', null);
