@@ -1,4 +1,5 @@
 import Process from 'process/process';
+import settings from 'settings-manager';
 
 export default class ManageFactoryProcess extends Process {
 	room: Room;
@@ -28,7 +29,7 @@ export default class ManageFactoryProcess extends Process {
 			if (!this.room.factoryManager.hasAllComponents(product)) continue;
 			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) continue;
 
-			if (this.room.factory.produce(product as CommodityConstant) === OK) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
+			if (this.room.factory.produce(product as CommodityConstant) === OK && settings.get('notifyFactoryProduction')) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
 		}
 	}
 }

@@ -131,6 +131,8 @@ const settings = {
 	// The ratio of leftover energy to put into power processing vs. GPL.
 	// Must be between 0 and 1.
 	powerProcessingEnergyRatio: 0.5,
+	// Notify about resources produces in factories via E-Mail.
+	notifyFactoryProduction: false,
 
 	// List of user names that may move through our ramparts.
 	rampartWhitelistedUsers: [],
