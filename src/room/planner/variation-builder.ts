@@ -162,9 +162,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	determineUpgraderPosition(): StepResult {
 		const roomIntel = getRoomIntel(this.roomName);
 		const controllerPosition = roomIntel.getControllerPosition();
-		const controllerRoads = this.placementManager.findAccessRoad(controllerPosition, this.roomCenterEntrances);
 		this.protectPosition(controllerPosition, 1);
 
+		const controllerRoads = this.findBestControllerRoad(controllerPosition);
 		for (const pos of controllerRoads) {
 			this.placementManager.planLocation(pos, 'road', 1);
 			this.placementManager.planLocation(pos, 'road.controller', null);
@@ -180,6 +180,21 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		this.placeLink(controllerRoads, 'controller');
 
 		return 'ok';
+	}
+
+	findBestControllerRoad(controllerPosition: RoomPosition): RoomPosition[] {
+		let best: RoomPosition[];
+		handleMapArea(controllerPosition.x, controllerPosition.y, (x, y) => {
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+			const startPosition = new RoomPosition(x, y, this.roomName);
+			const path = this.placementManager.findAccessRoad(startPosition, this.roomCenterEntrances);
+			path.splice(0, 0, startPosition);
+
+			if (!best || best.length > path.length) best = path;
+		}, 3);
+
+		return best;
 	}
 
 	placeRoadNetwork(): StepResult {

@@ -62,8 +62,8 @@ export default class UpgraderRole extends Role {
 		// Upgrade controller.
 		const controller = creep.room.controller;
 		const distance = creep.pos.getRangeTo(controller);
-		if (distance > 1) {
-			creep.moveToRange(controller, 1);
+		if (distance > 3) {
+			creep.moveToRange(controller, 3);
 			// @todo If there are no free tiles at range 1, stay at range 2, etc.
 			// to save movement intents and pathfinding.
 		}
