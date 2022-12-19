@@ -255,8 +255,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y + 1, this.roomName), 'storage');
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 1, this.roomName), 'terminal');
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 1, this.roomCenter.y, this.roomName), 'factory');
-		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y - 1, this.roomName), 'lab');
-		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y - 1, this.roomName), 'lab.boost');
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'link');
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'link.storage');
 
@@ -368,54 +366,74 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			// Don't build too close to exits.
 			if (this.placementManager.getExitDistance(nextPos.x, nextPos.y) < 8) continue;
 
-			// @todo Dynamically generate lab layout for servers where 10 labs is not the max.
-			// @todo Allow rotating this blueprint for better access.
-			// @todo Use stamper.
-			if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y - 1)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y + 1)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y - 1)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y - 1)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y + 1)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y + 1)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x - 1, nextPos.y + 2)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x, nextPos.y + 2)) continue;
-			if (!this.placementManager.isBuildableTile(nextPos.x + 1, nextPos.y + 2)) continue;
+			const {x, y, roomName} = nextPos;
 
-			// Place center area.
-			this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y, nextPos.roomName), 'lab.reaction');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x, nextPos.y, nextPos.roomName), 'road', 1);
+			// @todo Use a stamper.
+			for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+				const availableTiles = [
+					[x - dx, y + dy],
+					[x - dx, y],
+					[x - dx, y - dy],
+					[x, y - dy],
+					[x + dx, y - dy],
+					[x, y + 2 * dy],
+					[x + dx, y + 2 * dy],
+					[x + 2 * dx, y + 2 * dy],
+					[x + 2 * dx, y + dy],
+					[x + 2 * dx, y ],
+				];
+				if (!this.canFitLabStamp(nextPos, dx, dy, availableTiles)) continue;
 
-			this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y, nextPos.roomName), 'lab.reaction');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x - 1, nextPos.y + 1, nextPos.roomName), 'lab.reaction');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x, nextPos.y + 1, nextPos.roomName), 'road', 1);
+				// Place center area.
+				this.placementManager.planLocation(new RoomPosition(x, y, roomName), 'road', 1);
+				this.placementManager.planLocation(new RoomPosition(x + dx, y, roomName), 'lab');
+				this.placementManager.planLocation(new RoomPosition(x + dx, y, roomName), 'lab.reaction');
+				this.placementManager.planLocation(new RoomPosition(x, y + dy, roomName), 'lab');
+				this.placementManager.planLocation(new RoomPosition(x, y + dy, roomName), 'lab.reaction');
+				this.placementManager.planLocation(new RoomPosition(x + dx, y + dy, roomName), 'road', 1);
 
-			this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab');
-			this.placementManager.planLocation(new RoomPosition(nextPos.x + 1, nextPos.y + 1, nextPos.roomName), 'lab.reaction');
+				this.placementManager.placeAccessRoad(nextPos);
 
-			this.placementManager.placeAccessRoad(nextPos);
+				// Place succounding labs where there is space.
+				for (const [lx, ly] of availableTiles) {
+					if (!this.roomPlan.canPlaceMore('lab')) break;
+					if (!this.placementManager.isBuildableTile(lx, ly)) continue;
 
-			// Add top and bottom buildings.
-			for (let dx = -1; dx <= 1; dx++) {
-				for (let dy = -1; dy <= 2; dy += 3) {
-					if (this.placementManager.isBuildableTile(nextPos.x + dx, nextPos.y + dy)) {
-						this.placementManager.planLocation(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab');
-						this.placementManager.planLocation(new RoomPosition(nextPos.x + dx, nextPos.y + dy, nextPos.roomName), 'lab.reaction');
-					}
+					this.placementManager.planLocation(new RoomPosition(lx, ly, roomName), 'lab');
+					this.placementManager.planLocation(new RoomPosition(lx, ly, roomName), 'lab.reaction');
 				}
-			}
 
-			// Reinitialize pathfinding.
-			this.placementManager.startBuildingPlacement();
+				break;
+			}
 		}
+		
+		// Reinitialize pathfinding.
+		this.placementManager.startBuildingPlacement();
 
 		return 'ok';
-	};
+	}
+
+	canFitLabStamp(pos: RoomPosition, dx: number, dy: number, availableTiles: number[][]): boolean {
+		// This stamp can fit 1 more lab than necessary.
+		//  ooo
+		// oo.o
+		// o.oo
+		// .oo
+
+		// Center 4 tiles need to always be free, for 2 labs and 2 roads.
+		if (!this.placementManager.isBuildableTile(pos.x, pos.y)) return false;
+		if (!this.placementManager.isBuildableTile(pos.x + dx, pos.y)) return false;
+		if (!this.placementManager.isBuildableTile(pos.x, pos.y + dy)) return false;
+		if (!this.placementManager.isBuildableTile(pos.x + dx, pos.y + dy)) return false;
+
+		// We need at least 9 surrounding spots to be available (8 labs + 1 road).
+		let freeTiles = 0;
+		for (const [x, y] of availableTiles) {
+			if (this.placementManager.isBuildableTile(x, y)) freeTiles++;
+		}
+
+		return freeTiles > 8;
+	}
 
 	placeHighLevelStructures(): StepResult {
 		this.placementManager.placeAll('powerSpawn', true);
