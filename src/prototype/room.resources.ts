@@ -368,9 +368,6 @@ Room.prototype.getResourceState = function (this: Room) {
 			isEvacuating: false,
 			mineralType: null,
 		};
-		if (storage && terminal) {
-			roomData.canTrade = true;
-		}
 
 		// @todo Remove in favor of function.
 		roomData.isEvacuating = this.isEvacuating();
@@ -382,6 +379,7 @@ Room.prototype.getResourceState = function (this: Room) {
 		}
 
 		if (terminal) {
+			roomData.canTrade = true;
 			_.each(terminal.store, (amount: number, resourceType: ResourceConstant) => {
 				roomData.addResource(resourceType, amount);
 			});
