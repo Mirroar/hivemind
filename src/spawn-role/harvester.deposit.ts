@@ -15,7 +15,7 @@ interface DepositHarvesterSpawnOption extends SpawnOption {
 
 export default class DepositHarvesterSpawnRole extends SpawnRole {
 	/**
-	 * Adds gift spawn options for the given room.
+	 * Adds deposit harvester spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.

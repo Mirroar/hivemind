@@ -205,7 +205,7 @@ Room.prototype.getCurrentMineralAmount = function (this: Room) {
 Room.prototype.getEffectiveAvailableEnergy = function (this: Room) {
 	const availableEnergy = this.getStoredEnergy();
 
-	if (!this.factory || !this.factory.isOperational()) return availableEnergy;
+	if (!this.factory || !this.factory.isOperational() || this.isEvacuating()) return availableEnergy;
 
 	// @todo Get resource unpacking factor from API or config.
 	return availableEnergy + Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5;
@@ -506,12 +506,12 @@ Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType
 			return this.terminal;
 		}
 
-		if (this.isClearingTerminal() && storageFree > amount) {
+		if (this.isClearingTerminal() && storageFree > amount + 5000) {
 			// If we're clearing out the terminal, put everything into storage.
 			return this.storage;
 		}
 
-		if (this.isClearingStorage() && terminalFree > amount) {
+		if (this.isClearingStorage() && terminalFree > amount + (resourceType == RESOURCE_ENERGY ? 0 : 5000)) {
 			// If we're clearing out the storage, put everything into terminal.
 			return this.terminal;
 		}
@@ -524,7 +524,7 @@ Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType
 			return this.terminal;
 		}
 
-		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 5000) {
+		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 5000 && terminalFree > 0) {
 			// Make sure terminal has energy for transactions.
 			return this.terminal;
 		}

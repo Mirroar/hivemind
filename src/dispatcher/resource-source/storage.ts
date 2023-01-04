@@ -31,7 +31,7 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 			return 4;
 		}
 
-		if (room.terminal && room.storage && room.terminal.store.energy < room.storage.store.energy * 0.05) {
+		if (room.terminal && room.storage && room.terminal.store.getFreeCapacity() > 5000 && room.terminal.store.energy < room.storage.store.energy * 0.05) {
 			// Take some energy out of storage to put into terminal from time to time.
 			return 2;
 		}

@@ -1,14 +1,6 @@
 import Role from 'role/role';
-import ScoutRole from 'role/scout';
 
 export default class GiftRole extends Role {
-	scoutRole: ScoutRole;
-
-	constructor() {
-		super();
-		this.scoutRole = new ScoutRole();
-	}
-
 	/**
 	 * Makes this creep take excess resources from storage.
 	 *
@@ -78,7 +70,11 @@ export default class GiftRole extends Role {
 	performGiftTransport(creep) {
 		// @todo Move to a nearby owned room with enough space left.
 		// @todo Move to a known enemy room and suicide.
-		this.scoutRole.run(creep);
+		if (!creep.heapMemory.targetRoom) {
+			creep.heapMemory.targetRoom = _.sample(Game.map.describeExits(creep.room.name));
+		}
+
+		creep.moveToRange(new RoomPosition(25, 25, creep.heapMemory.targetRoom), 20);
 
 		if (creep.memory.origin && creep.pos.roomName !== creep.memory.origin && creep.isInRoom()) {
 			// We're outside of our origin room. Suicide to get rid of resource and save

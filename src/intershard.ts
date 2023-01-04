@@ -87,3 +87,4 @@ const interShard = {
 };
 
 export default interShard;
+global['interShard'] = interShard;

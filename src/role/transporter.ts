@@ -274,7 +274,11 @@ export default class TransporterRole extends Role {
 		) {
 			const target = Game.getObjectById(order.target);
 			creep.whenInRange(1, target, () => {
-				creep.transfer(target, order.resourceType);
+				if ('amount' in creep.memory.order)
+					creep.transfer(target, order.resourceType, Math.min(creep.memory.order.amount, creep.store.getUsedCapacity(order.resourceType), target.store.getFreeCapacity(order.resourceType)));
+				else
+					creep.transfer(target, order.resourceType);
+
 				delete creep.memory.order;
 			});
 			return;
@@ -560,10 +564,16 @@ export default class TransporterRole extends Role {
 				}
 			}
 			else {
-				orderDone = creep.withdraw(target, resourceType) === OK;
+				if ('amount' in creep.memory.order)
+					orderDone = creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity())) === OK;
+				else
+					orderDone = creep.withdraw(target, resourceType) === OK;
 			}
 
-			if (orderDone) calculateSourceCallback();
+			if (orderDone) {
+				delete creep.memory.order;
+				calculateSourceCallback();
+			}
 		});
 	}
 
@@ -650,8 +660,9 @@ export default class TransporterRole extends Role {
 
 		// Clear out overfull terminal.
 		const storageHasSpace = storage && storage.store.getFreeCapacity() >= 0 && !creep.room.isClearingStorage();
-		const terminalNeedsClearing = terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || creep.room.isClearingTerminal()) && !creep.room.isClearingStorage();
-		if (terminalNeedsClearing && storageHasSpace) {
+		const terminalNeedsClearing = terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || creep.room.isClearingTerminal()) && (!creep.room.isClearingStorage());
+		const noSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
+		if ((terminalNeedsClearing && storageHasSpace) || noSpaceForEnergy) {
 			// Find resource with highest count and take that.
 			// @todo Unless it's supposed to be sent somewhere else.
 			let max = null;
@@ -676,8 +687,8 @@ export default class TransporterRole extends Role {
 				resourceType: maxResourceType,
 			};
 
-			if (creep.room.isClearingTerminal()) {
-				option.priority++;
+			if (creep.room.isClearingTerminal() || noSpaceForEnergy) {
+				option.priority += 2;
 			}
 
 			options.push(option);

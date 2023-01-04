@@ -69,6 +69,8 @@ export default class FactoryManager {
 
 	getRequestedComponents(): Partial<Record<FactoryComponentConstant, number>> {
 		const neededResources = {};
+		if (this.room.isEvacuating()) return neededResources;
+
 		const jobs = this.getJobs();
 		const numberJobs = _.size(jobs);
 
@@ -79,7 +81,7 @@ export default class FactoryManager {
 			const amount = Math.max(1, factoryFillTime / recipe.cooldown / numberJobs);
 			let resourceType: FactoryComponentConstant;
 			for (resourceType in recipe.components) {
-				neededResources[resourceType] = (neededResources[resourceType] || 0) + (recipe.components[resourceType] * amount);
+				neededResources[resourceType] = (neededResources[resourceType] || 0) + Math.ceil(recipe.components[resourceType] * amount);
 			}
 		}
 

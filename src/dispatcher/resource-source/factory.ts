@@ -44,14 +44,18 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 			const structure = this.room.getBestStorageSource(resourceType);
 			if (!structure) continue;
 
-			options.push({
+			const option = {
 				type: this.getType(),
 				priority: 2,
 				weight: missingResources[resourceType] / 1000,
 				resourceType,
 				target: structure.id,
 				amount: structure.store.getUsedCapacity(resourceType),
-			});
+			};
+
+			if (option.amount < 100) option.priority--;
+
+			options.push(option);
 		}
 	}
 

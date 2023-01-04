@@ -115,7 +115,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	getLowestRampartValue(room: Room): number {
 		return cache.inHeap('lowestRampart:' + room.name, 100, () => {
 			const ramparts = room.find(FIND_MY_STRUCTURES, {
-				filter: s => s.structureType === STRUCTURE_RAMPART,
+				filter: s => s.structureType === STRUCTURE_RAMPART && room.roomPlanner?.isPlannedLocation(s.pos, 'rampart') && !room.roomPlanner?.isPlannedLocation(s.pos, 'rampart.ramp'),
 			});
 
 			return _.min(ramparts, 'hits').hits;

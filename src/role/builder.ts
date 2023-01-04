@@ -100,12 +100,19 @@ export default class BuilderRole extends Role {
 			return;
 		}
 
-		delete creep.room.memory.noBuilderNeeded;
 		if (creep.memory.repairing) {
-			if (!this.performRepair(creep) && creep.room.controller?.level < 8) {
-				creep.memory.upgrading = true;
-				delete creep.memory.repairing;
-				this.performUpgrade(creep);
+			if (!this.performRepair(creep)) {
+				if (creep.room.controller?.level < 8) {
+					creep.memory.upgrading = true;
+					delete creep.memory.repairing;
+					this.performUpgrade(creep);
+				}
+				else {
+					// Prevent draining energy stores by recycling.
+					delete creep.memory.repairing;
+					creep.room.memory.noBuilderNeeded = Game.time;
+					this.performRecycle(creep);
+				}
 			}
 
 			return;
@@ -144,7 +151,7 @@ export default class BuilderRole extends Role {
 		}
 
 		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
-			// Prevent draining energy stores by recicling.
+			// Prevent draining energy stores by recycling.
 			creep.room.memory.noBuilderNeeded = Game.time;
 			this.performRecycle(creep);
 			return;
@@ -229,6 +236,7 @@ export default class BuilderRole extends Role {
 		const best = utilities.getBestOption(this.getAvailableBuilderTargets(creep));
 		if (!best || best.priority <= 0) return;
 
+		delete creep.room.memory.noBuilderNeeded;
 		creep.memory.order = {
 			type: best.type,
 			target: best.object.id,
