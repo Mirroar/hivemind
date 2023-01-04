@@ -171,13 +171,13 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.protectPosition(pos, 0);
 		}
 
-		// Make sure no other paths get led through upgrader position.
-		this.placementManager.blockPosition(controllerRoads[0].x, controllerRoads[0].y);
-
 		this.placeContainer(controllerRoads, 'controller');
 
 		// Place a link near controller, but off the calculated path.
 		this.placeLink(controllerRoads, 'controller');
+
+		// Make sure no other paths get led through upgrader position.
+		this.placementManager.blockPosition(controllerRoads[0].x, controllerRoads[0].y);
 
 		return 'ok';
 	}
@@ -406,7 +406,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				break;
 			}
 		}
-		
+
 		// Reinitialize pathfinding.
 		this.placementManager.startBuildingPlacement();
 
