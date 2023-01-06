@@ -136,7 +136,7 @@ export default class RoomVariationBuilderBase {
 		let targetPosition: RoomPosition;
 		for (const pos of _.slice(sourceRoads, 0, 3)) {
 			handleMapArea(pos.x, pos.y, (x, y) => {
-				if (this.placementManager.isBuildableTile(x, y, true)) {
+				if (this.placementManager.isBuildableTile(x, y)) {
 					targetPosition = new RoomPosition(x, y, pos.roomName);
 					return false;
 				}
@@ -146,7 +146,6 @@ export default class RoomVariationBuilderBase {
 		}
 
 		return targetPosition;
-
 	};
 
 	/**
