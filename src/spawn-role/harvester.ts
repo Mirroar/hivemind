@@ -71,12 +71,12 @@ export default class HarvesterSpawnRole extends SpawnRole {
 
 		let totalWorkParts = 0;
 		for (const creep of source.harvesters) {
-			totalWorkParts += creep.memory.body.work || 0;
+			totalWorkParts += creep.getActiveBodyparts(WORK) || 0;
 		}
 
 		// Remote builders want access to sources as well, so spawn less harvesters.
 		for (const creep of _.values<Creep>(source.room.creepsByRole['builder.remote']) || []) {
-			totalWorkParts += (creep.memory.body.work || 0) / 2;
+			totalWorkParts += (creep.getActiveBodyparts(WORK) || 0) / 2;
 		}
 
 		const maxParts = this.getMaxWorkParts(source);

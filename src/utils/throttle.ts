@@ -9,6 +9,10 @@ declare global {
       };
     };
   }
+
+  interface CreepHeapMemory {
+    _tO?: number;
+  }
 }
 
 const throttleNumbers = [];

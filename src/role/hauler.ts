@@ -465,7 +465,7 @@ export default class HaulerRole extends Role {
 		if (!(creep.operation instanceof RemoteMiningOperation)) return false;
 		if ((creep.store.energy || 0) === 0) return false;
 
-		const workParts = creep.memory.body.work || 0;
+		const workParts = creep.getActiveBodyparts(WORK) || 0;
 		if (workParts === 0) return false;
 
 		if (creep.operation.hasContainer(creep.memory.source)) {

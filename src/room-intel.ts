@@ -429,6 +429,11 @@ export default class RoomIntel {
 		const roomMemory = Memory.rooms[strategyInfo.origin];
 		if (!roomMemory) return;
 
+		if (!Game.rooms[strategyInfo.origin] || !Game.rooms[strategyInfo.origin].isMine()) {
+			delete roomMemory.abandonedResources;
+			return;
+		}
+
 		if (!roomMemory.abandonedResources) roomMemory.abandonedResources = {};
 		delete roomMemory.abandonedResources[this.roomName];
 

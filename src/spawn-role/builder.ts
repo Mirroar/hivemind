@@ -19,7 +19,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 
 		let numWorkParts = 0;
 		_.each(room.creepsByRole.builder, creep => {
-			numWorkParts += creep.memory.body.work || 0;
+			numWorkParts += creep.getActiveBodyparts(WORK) || 0;
 		});
 
 		const availableEnergy = room.getEffectiveAvailableEnergy();

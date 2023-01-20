@@ -173,20 +173,6 @@ const utilities = {
 	},
 
 	/**
-	 * Get part counts for this creep.
-	 * @todo Move into Creep.prototype.
-	 *
-	 * @param {Creep} creep
-	 *   The creep in question.
-	 *
-	 * @return {object}
-	 *   Amount of parts of each type in the creep's body.
-	 */
-	getBodyParts(creep) {
-		return creep.memory.body;
-	},
-
-	/**
 	 * Generates lookup table for the ingredients used to crate a compound.
 	 *
 	 * @return {Object}

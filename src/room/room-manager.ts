@@ -501,7 +501,7 @@ export default class RoomManager {
 			let buildPower = 0;
 			for (const creep of _.values<Creep>(this.room.creepsByRole.builder)) {
 				if (creep.ticksToLive) {
-					buildPower += creep.memory.body.work * creep.ticksToLive / CREEP_LIFE_TIME;
+					buildPower += creep.getActiveBodyparts(WORK) * creep.ticksToLive / CREEP_LIFE_TIME;
 				}
 			}
 

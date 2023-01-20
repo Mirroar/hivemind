@@ -241,6 +241,7 @@ Room.prototype.scan = function () {
  * Updates location of the room's controller container.
  */
 Room.prototype.updateControllerContainer = function () {
+	// @todo Split into a get function and set / delete value according to result.
 	// Check if the controller has a container nearby.
 	// Use room planner locations if available.
 	if (this.roomPlanner) {
@@ -251,6 +252,7 @@ Room.prototype.updateControllerContainer = function () {
 				_.filter(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
 			});
 			this.memory.controllerContainer = structures.length > 0 && structures[0].id;
+			if (!this.memory.controllerContainer) delete this.memory.controllerContainer;
 			return;
 		}
 	}
@@ -259,12 +261,14 @@ Room.prototype.updateControllerContainer = function () {
 		filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.pos.getRangeTo(this.controller) <= 3,
 	});
 	this.memory.controllerContainer = structures.length > 0 && structures[0].id;
+	if (!this.memory.controllerContainer) delete this.memory.controllerContainer;
 };
 
 /**
  * Updates location of the room's controller link.
  */
 Room.prototype.updateControllerLink = function () {
+	// @todo Split into a get function and set / delete value according to result.
 	// Check if the controller has a link nearby.
 	// Use room planner locations if available.
 	if (this.roomPlanner) {
@@ -275,6 +279,7 @@ Room.prototype.updateControllerLink = function () {
 				_.filter(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
 			});
 			this.memory.controllerLink = structures.length > 0 && structures[0].id;
+			if (!this.memory.controllerLink) delete this.memory.controllerLink;
 			return;
 		}
 	}
@@ -283,12 +288,14 @@ Room.prototype.updateControllerLink = function () {
 		filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(this.controller) <= 3,
 	});
 	this.memory.controllerLink = structures.length > 0 && structures[0].id;
+	if (!this.memory.controllerLink) delete this.memory.controllerLink;
 };
 
 /**
  * Updates location of the room's storage link.
  */
 Room.prototype.updateStorageLink = function () {
+	// @todo Split into a get function and set / delete value according to result.
 	if (!this.storage) return;
 
 	// Check if storage has a link nearby.

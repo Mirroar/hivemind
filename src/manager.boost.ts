@@ -221,7 +221,7 @@ export default class BoostManager {
 		this.memory.creepsToBoost[creepName] = boostMemory;
 
 		_.each(boosts, (resourceType: ResourceConstant, bodyPart: BodyPartConstant) => {
-			const numParts = creepMemory.body[bodyPart] || 0;
+			const numParts = Game.creeps[creepName].getActiveBodyparts(bodyPart) || 0;
 
 			boostMemory[resourceType] = numParts;
 		});

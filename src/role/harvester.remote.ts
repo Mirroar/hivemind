@@ -95,7 +95,7 @@ export default class RemoteHarvesterRole extends Role {
 
 		// Check if a container nearby is in need of repairs, since we can handle
 		// it with less intents than haulers do.
-		const workParts = creep.memory.body.work || 0;
+		const workParts = creep.getActiveBodyparts(WORK) || 0;
 		const needsBuild = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
 			// It's important we build nearby roads as their sites may prevent the
 			// container construction site from being placed.

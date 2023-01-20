@@ -494,9 +494,9 @@ export default class BuilderRole extends Role {
 	 */
 	repairNearby(creep: BuilderCreep) {
 		if (creep.store[RESOURCE_ENERGY] < creep.store.getCapacity() * 0.7 && creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.3) return;
-		if (throttle(creep.memory._tO)) return;
+		if (throttle(creep.heapMemory._tO)) return;
 
-		const workParts = creep.memory.body.work;
+		const workParts = creep.getActiveBodyparts(WORK);
 		if (!workParts) return;
 
 		const needsRepair = creep.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => {

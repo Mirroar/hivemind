@@ -58,10 +58,10 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 		// Spawn attackers before healers.
 		const currentDps = _.reduce(
 			activePowerHarvesters,
-			(total, creep) => total + (creep.memory.body[ATTACK] * ATTACK_POWER), 0);
+			(total, creep) => total + (creep.getActiveBodyparts(ATTACK) * ATTACK_POWER), 0);
 		const currentHps = _.reduce(
 			activePowerHealers,
-			(total, creep) => total + (creep.memory.body[HEAL] * HEAL_POWER), 0);
+			(total, creep) => total + (creep.getActiveBodyparts(HEAL) * HEAL_POWER), 0);
 
 		// @todo Determine realistic time until we crack open the power bank.
 		// Then we can stop spawning attackers and spawn haulers instead.

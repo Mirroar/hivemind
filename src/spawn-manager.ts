@@ -178,9 +178,6 @@ export default class SpawnManager {
 			memory.role = option.role;
 		}
 
-		// Store creep's body definition in memory for easier access.
-		memory.body = _.countBy(body);
-
 		// Actually try to spawn this creep.
 		// @todo Use extensions grouped by bay to make refilling easier.
 		const creepName = this.generateCreepName(memory.role);
