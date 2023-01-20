@@ -43,10 +43,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.placeHighLevelStructures,
 			// @todo Protect positions for mincut
 			this.placeRamparts,
+			this.placeQuadBreaker,
 			this.sealRoom,
 			this.placeTowers,
 			this.placeOnRamps,
-			this.placeQuadBreaker,
 		];
 	}
 
@@ -170,6 +170,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.placementManager.planLocation(pos, 'road.controller', null);
 			this.protectPosition(pos, 0);
 		}
+
+		// Store position where main upgrader can stay and upgrade.
+		this.placementManager.planLocation(controllerRoads[0], 'upgrader.0', 1);
 
 		this.placeContainer(controllerRoads, 'controller');
 
@@ -703,6 +706,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 				this.safetyMatrix.set(x, y, TILE_IS_UNSAFE_NEAR_WALL);
 				if (this.placementManager.getExitDistance(x, y) < 3) return;
+				if (this.placementManager.isBlockedTile(x, y)) return;
 
 				const pos = new RoomPosition(x, y, this.roomName);
 				if (this.roomPlan.hasPosition('road', pos)) return;

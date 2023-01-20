@@ -113,6 +113,10 @@ export default class PlacementManager {
 		return this.exitDistanceMatrix.get(x, y);
 	}
 
+	isBlockedTile(x: number, y: number): boolean {
+		return this.buildingMatrix.get(x, y) >= 100;
+	}
+
 	/**
 	 * Checks if a structure can be placed on the given tile.
 	 *
