@@ -153,7 +153,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// @todo Run home for healing if no functional parts are left.
-		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0) {
+		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName !== 'interShardSupport') {
 			this.performRecycle(creep);
 		}
 

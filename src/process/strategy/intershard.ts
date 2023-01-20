@@ -1,6 +1,7 @@
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
+import NavMesh from 'utils/nav-mesh';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
@@ -12,11 +13,15 @@ export default class InterShardProcess extends Process {
 	memory;
 	_shardData;
 
+	navMesh: NavMesh;
+
 	/**
 	 * Makes decisions concerning inter-shard travel.
 	 */
 	run() {
 		this.memory = interShard.getLocalMemory();
+
+		this.navMesh = new NavMesh();
 
 		this.updateShardInfo();
 		this.distributeCPU();
@@ -127,11 +132,11 @@ export default class InterShardProcess extends Process {
 		if (shardMemory.info) {
 			this._shardData[shardName].rooms = shardMemory.info.ownedRooms;
 			this._shardData[shardName].creeps = shardMemory.info.ownedCreeps;
-			this._shardData[shardName].neededCpu = 1 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
+			this._shardData[shardName].neededCpu = 3 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
 
 			if (shardMemory.info.interShardExpansion) {
 				// Allow for more CPU while creating out first intershard room.
-				this._shardData[shardName].neededCpu += 1;
+				this._shardData[shardName].neededCpu += 3;
 			}
 		}
 		else {
@@ -190,8 +195,15 @@ export default class InterShardProcess extends Process {
 		}
 
 		// Don't recalculate if we've already set a target.
-		// @todo Unless expanding has failed, e.g. due to attacks.
-		if (this.memory.info.interShardExpansion) return;
+		// Unless expanding has failed, e.g. due to attacks.
+		if (this.memory.info.interShardExpansion) {
+			if (this.memory.info.interShardExpansion.start && Game.time - this.memory.info.interShardExpansion.start < 100_000) return;
+
+			delete this.memory.info.interShardExpansion;
+			const squad = new Squad('interShardExpansion');
+			squad.clearUnits();
+			squad.disband();
+		}
 
 		// Immediately try to expand to the best known room.
 		// @todo Decide when we've scouted enough to claim a room.
@@ -203,6 +215,7 @@ export default class InterShardProcess extends Process {
 		const expansionInfo = {
 			room: targetRoom,
 			portalRoom: null,
+			start: Game.time,
 		};
 		expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom].origin;
 
@@ -262,17 +275,52 @@ export default class InterShardProcess extends Process {
 				if (portalInfo.dest !== roomName) return;
 
 				const pos = decodePosition(portalPosition);
-				const roomInfo = Memory.strategy.roomList[pos.roomName];
-				if (bestPortal && bestPortal.range <= roomInfo.range) return;
+				const bestSourceRoom = this.findClosestSpawn(pos.roomName);
+				if (!bestSourceRoom) return;
+
+				if (bestPortal && bestPortal.range <= bestSourceRoom.range) return;
 
 				bestPortal = {
 					pos,
-					range: roomInfo.range,
-					origin: roomInfo.origin,
+					range: bestSourceRoom.range,
+					origin: bestSourceRoom.name,
 				};
 			});
 		});
 
 		return bestPortal;
 	}
+
+	/**
+	 * Finds the closest valid spawn location for an intershard expansion.
+	 *
+	 * @param {string} targetRoom
+	 *   Name of the room we're expanding to.
+	 *
+	 * @return {string}
+	 *   Name of the room to spawn from.
+	 */
+	findClosestSpawn(targetRoom: string): {name: string, range: number} | null {
+		let bestRoom = null;
+		let bestLength = 0;
+		for (const room of Game.myRooms) {
+			if (room.controller.level < 5) continue;
+			if (room.name === targetRoom) continue;
+			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 7) continue;
+
+			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 350});
+			if (!path || path.incomplete) continue;
+
+			if (!bestRoom || bestLength > path.path.length) {
+				bestRoom = room;
+				bestLength = path.path.length;
+			}
+		}
+
+		return bestRoom && {
+			name: bestRoom.name,
+			range: bestLength,
+		}
+	}
+
 }

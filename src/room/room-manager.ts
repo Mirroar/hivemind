@@ -325,7 +325,7 @@ export default class RoomManager {
 				return false;
 			},
 		});
-		if (this.room.memory.isReclaimableSince) {
+		if (!this.room.memory.isReclaimableSince) {
 			for (const structure of unwantedDefenses) {
 				if (hivemind.settings.get('dismantleUnwantedDefenses')) {
 					this.memory.dismantle[structure.id] = 1;

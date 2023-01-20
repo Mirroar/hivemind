@@ -6,6 +6,7 @@ import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
+import settings from 'settings-manager';
 import Squad from 'manager.squad';
 import stats from 'utils/stats';
 
@@ -86,10 +87,14 @@ export default class ExpandProcess extends Process {
 		const cpuLimit = harvestRooms < 5 ? 0.8 : 1;
 
 		const hasFreeControlLevels = ownedRooms < Game.gcl.level;
+		const maxRooms = settings.get('maxOwnedRooms');
+		const shardMemory = interShard.getLocalMemory();
+		const mayHaveMoreRooms = maxRooms && shardMemory.info && shardMemory.info.ownedRooms < maxRooms;
 		const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
 		const longTermCpuUsage = stats.getStat('cpu_total', 10_000) ? stats.getStat('cpu_total', 10_000) / Game.cpu.limit : shortTermCpuUsage;
 
 		const canExpand = hasFreeControlLevels &&
+			mayHaveMoreRooms &&
 			shortTermCpuUsage < cpuLimit &&
 			longTermCpuUsage < cpuLimit;
 
@@ -114,7 +119,6 @@ export default class ExpandProcess extends Process {
 	 */
 	chooseNewExpansionTarget() {
 		// Choose a room to expand to.
-		// @todo Handle cases where expansion to a target is not reasonable, like it being taken by somebody else, path not being safe, etc.
 		let bestTarget;
 		let modifiedBestExpansionScore: number;
 		const startTime = Game.cpu.getUsed();
@@ -130,7 +134,7 @@ export default class ExpandProcess extends Process {
 		}
 
 		for (const info of _.values<RoomListEntry>(Memory.strategy.roomList)) {
-			if (Game.cpu.getUsed() - startTime >= hivemind.settings.get('maxExpansionCpuPerTick')) {
+			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than 30 cpu trying to find a target each tick.
 				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
 				hivemind.log('strategy').debug('Current best target:', bestTarget ? bestTarget.roomName : 'N/A', '@', bestTarget ? modifiedBestExpansionScore : 'N/A');
@@ -545,7 +549,11 @@ export default class ExpandProcess extends Process {
 		if (!shardMemory.info.rooms) return;
 		if (!shardMemory.info.rooms.bestExpansion) return;
 		if (!shardMemory.info.rooms.worstRoom) return;
-		if (shardMemory.info.rooms.bestExpansion.score - shardMemory.info.rooms.worstRoom.score < 0.5) return;
+
+		const hasBetterExpansion = shardMemory.info.rooms.bestExpansion.score - shardMemory.info.rooms.worstRoom.score >= 0.5;
+		const maxRooms = settings.get('maxOwnedRooms');
+		const hasTooManyRooms = maxRooms && shardMemory.info.ownedRooms > maxRooms;
+		if (!hasBetterExpansion && !hasTooManyRooms) return;
 
 		const roomName = shardMemory.info.rooms.worstRoom.name;
 		if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) return;

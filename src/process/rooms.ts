@@ -1,10 +1,11 @@
 import HighwayRoomProcess from 'process/rooms/highway';
+import hivemind, {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import interShard from 'intershard';
 import OwnedRoomProcess from 'process/rooms/owned';
 import Process from 'process/process';
 import RoomIntelProcess from 'process/rooms/intel';
-import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomManager from 'room/room-manager';
-import hivemind, {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomPlanner from 'room/planner/room-planner';
 import {isHighway} from 'utils/room-name';
 
@@ -51,6 +52,7 @@ export default class RoomsProcess extends Process {
 		this.terminateRoomOperations();
 
 		this.manageExpansionRoomPlan();
+		this.manageInterShardExpansionRoomPlan();
 		this.mockRoomPlan();
 	}
 
@@ -65,7 +67,17 @@ export default class RoomsProcess extends Process {
 		if (!Memory.strategy || !Memory.strategy.expand || !Memory.strategy.expand.currentTarget) return;
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		const roomName = Memory.strategy.expand.currentTarget.roomName;
+		this.runRoomPlannerAndManager(Memory.strategy.expand.currentTarget.roomName);
+	}
+
+	manageInterShardExpansionRoomPlan() {
+		const memory = interShard.getLocalMemory();
+		if (!memory.info.interShardExpansion || !memory.info.interShardExpansion.room) return;
+
+		this.runRoomPlannerAndManager(memory.info.interShardExpansion.room);
+	}
+
+	runRoomPlannerAndManager(roomName: string) {
 		const roomPlanner = new RoomPlanner(roomName);
 
 		hivemind.runSubProcess('rooms_roomplanner', () => {
