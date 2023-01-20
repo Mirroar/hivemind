@@ -2,6 +2,7 @@
 UPGRADE_CONTROLLER_POWER */
 
 import balancer from 'excess-energy-balancer';
+import cache from 'utils/cache';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 
@@ -63,7 +64,21 @@ export default class UpgraderRole extends Role {
 		const controller = creep.room.controller;
 		const distance = creep.pos.getRangeTo(controller);
 		if (distance > 3) {
-			creep.moveToRange(controller, 3);
+			const isOnlyUpgrader = creep.memory.role === 'upgrader' && creep.room.creepsByRole.upgrader.length === 1;
+
+			if (isOnlyUpgrader) {
+				const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
+					if (!creep.room.roomPlanner) return null;
+
+					// Get harvest position from room planner.
+					return _.sample(creep.room.roomPlanner.getLocations('upgrader.0'));
+				});
+				if (upgraderPosition) creep.goTo(upgraderPosition)
+				else creep.moveToRange(controller, 3);
+			}
+			else {
+				creep.moveToRange(controller, 3);
+			}
 			// @todo If there are no free tiles at range 1, stay at range 2, etc.
 			// to save movement intents and pathfinding.
 		}

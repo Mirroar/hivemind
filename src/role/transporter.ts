@@ -788,13 +788,13 @@ export default class TransporterRole extends Role {
 
 				// If spawn / extensions need filling, transporters should not pick up
 				// energy from random targets as readily, instead prioritize storage.
-				if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.room.getStoredEnergy() > 2000 && creep.memory.role === 'transporter') option.priority -= 2;
+				if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.room.getCurrentResourceAmount(RESOURCE_ENERGY) > 5000 && creep.memory.role === 'transporter') option.priority -= 2;
 			}
 
 			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
 			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 
-			if (creep.room.storage && creep.room.getFreeStorage() < store[RESOURCE_ENERGY]) {
+			if (creep.room.storage && creep.room.getFreeStorage() < store[RESOURCE_ENERGY] && creep.room.getEffectiveAvailableEnergy() > 20_000) {
 				// If storage is super full, try leaving stuff on the ground.
 				option.priority -= 2;
 			}
