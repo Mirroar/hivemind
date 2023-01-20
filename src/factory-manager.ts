@@ -111,29 +111,35 @@ export default class FactoryManager {
 	isRecipeAvailable(resourceType: FactoryProductConstant, recipe: Recipe): boolean {
 		if (recipe.level && recipe.level !== this.getFactoryLevel()) return false;
 
-		// Compress resource at 95% storage capacity, uncompress under 80%.
+		// Compress resource at 95% storage capacity, uncompress under 5%.
 		// @todo Turn into setting.
 		const storageFull = this.room.getFreeStorage() < this.room.getStorageLimit() * 0.05;
-		const storageEmpty = this.room.getFreeStorage() > this.room.getStorageLimit() * 0.2;
+		const storageEmpty = this.room.getFreeStorage() > this.room.getStorageLimit() * 0.95;
+		const minRawMaterialRatio = 0.2;
+		const maxRawMaterialRatio = 0.8;
 
 		const storedEnergy = this.room.getStoredEnergy();
 		const storedProduct = this.room.getCurrentResourceAmount(resourceType);
 		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType] || compressRecipes[resourceType]);
 
 		if (resourceType === RESOURCE_BATTERY) {
-			return (storedProduct < 500 || storageFull) && storedEnergy > 15_000;
+			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 500 || storageFull || rawMaterialRatio > maxRawMaterialRatio) && storedEnergy > 15_000;
 		}
 
 		if (resourceType === RESOURCE_ENERGY) {
-			return (storedProduct < 10_000 || storageEmpty) && storedResource > 100;
+			const rawMaterialRatio = storedProduct / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 10_000 || storageEmpty || rawMaterialRatio < minRawMaterialRatio) && storedResource > 100;
 		}
 
 		if (uncompressRecipes[resourceType]) {
-			return (storedProduct < 500 || storageFull) && storedResource > 5000 && storedEnergy > 5000;
+			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 500 || storageFull || rawMaterialRatio > maxRawMaterialRatio) && storedResource > 5000 && storedEnergy > 5000;
 		}
 
 		if (compressRecipes[resourceType]) {
-			return (storedProduct < 2000 || storageEmpty) && storedResource > 100 && storedEnergy > 5000;
+			const rawMaterialRatio = storedProduct / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 2000 || storageEmpty || rawMaterialRatio < minRawMaterialRatio) && storedResource > 100 && storedEnergy > 5000;
 		}
 
 		// @todo For level-based recipes, use empire-wide resource capabilities and request via terminal.
