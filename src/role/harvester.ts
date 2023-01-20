@@ -98,11 +98,6 @@ export default class HarvesterRole extends Role {
 		const harvestPos = _.sample(creep.room.roomPlanner.getLocations('harvester.' + source.id));
 		if (harvestPos) creep.memory.harvestPos = serializeCoords(harvestPos.x, harvestPos.y);
 
-		// Fall back to adjacent bay for older room plans.
-		// @todo Remove when room planner version gets incremented.
-		const bay = _.sample(_.filter(creep.room.bays, bay => bay.pos.getRangeTo(source.pos) <= 1));
-		if (bay) creep.memory.harvestPos = serializeCoords(bay.pos.x, bay.pos.y);
-
 		if (!creep.memory.harvestPos) {
 			creep.memory.noHarvestPos = true;
 		}

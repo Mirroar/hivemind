@@ -148,7 +148,7 @@ export default class PlacementManager {
 		if (matrixValue === this.ROAD_POSITION && !allowRoads) return false;
 
 		return true;
-	};
+	}
 
 	/**
 	 * Initializes pathfinding for finding building placement spots.
