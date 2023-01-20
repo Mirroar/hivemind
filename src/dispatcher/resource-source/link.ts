@@ -15,7 +15,7 @@ export default class LinkSource implements TaskProvider<LinkSourceTask, Resource
 	}
 
 	getHighestPriority() {
-		return 3;
+		return 5;
 	}
 
 	getTasks(context: ResourceSourceContext) {
