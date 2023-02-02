@@ -294,7 +294,7 @@ export default class RoomManager {
 
 		this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL);
 
-		if (this.room.storage) {
+		if (this.room.storage || CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] < 1) {
 			// Build road to sources asap to make getting energy easier.
 			this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
 
@@ -598,12 +598,15 @@ export default class RoomManager {
 	 *   True if walls are considered complete.
 	 */
 	checkWallIntegrity(minHits?: number) {
+		// @todo make this consistent with defense manager.
 		if (!minHits) minHits = hivemind.settings.get('minWallIntegrity');
 		const maxHealth = hivemind.settings.get('maxWallHealth');
 
 		minHits *= maxHealth[this.room.controller.level] / maxHealth[8];
 
 		for (const pos of this.roomPlanner.getLocations('rampart')) {
+			if (this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
+
 			// Check if there's a rampart here already.
 			const structures = pos.lookFor(LOOK_STRUCTURES);
 			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= minHits).length === 0) {
