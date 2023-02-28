@@ -21,7 +21,6 @@ import helperRole from 'role/helper';
 import muleRole from 'role/mule';
 import poweHarvesterRole from 'role/power/harvester';
 import powerHaulerRole from 'role/power/hauler';
-import quadRole from 'role/quad';
 import remoteBuilderRole from 'role/builder.remote';
 import remoteHarvesterRole from 'role/harvester.remote';
 import scoutRole from 'role/scout';
@@ -54,7 +53,6 @@ const creepRoles = {
 	'hauler.power': powerHaulerRole,
 	'helper': helperRole,
 	'mule': muleRole,
-	'quad': quadRole,
 	'scout': scoutRole,
 	'transporter': transporterRole,
 	'unassigned': unassignedRole,

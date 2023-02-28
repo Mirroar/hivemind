@@ -3,8 +3,19 @@
 import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
 
+const availableUnitTypes = [
+	'ranger',
+	'healer',
+	'claimer',
+	'singleClaim',
+	'builder',
+	'attacker',
+	'brawler',
+	'test',
+] as const;
+
 declare global {
-	type SquadUnitType = 'ranger' | 'healer' | 'claimer' | 'singleClaim' | 'builder' | 'attacker' | 'brawler' | 'test' | 'quad';
+	type SquadUnitType = typeof availableUnitTypes[number];
 }
 
 interface SquadSpawnOption extends SpawnOption {
@@ -51,18 +62,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	needsSpawning(room: Room, squad: Squad): SquadUnitType | null {
 		const neededUnits: SquadUnitType[] = [];
 		for (const unitType in squad.memory.composition) {
-			if (unitType === 'quad') {
-				const inRoom = _.size(_.filter(room.creepsByRole.quad, (c: QuadCreep) => !c.memory.quadId));
-				if (inRoom > 0 && inRoom < squad.getUnitCount(unitType)) {
-					// Finish partially spawned quad.
-					neededUnits.push('quad');
-				}
-				else if (squad.getUnitCount(unitType) > _.size(squad.units[unitType])) {
-					// Start a new quad.
-					neededUnits.push('quad');
-				}
-				continue;
-			}
+			if (!availableUnitTypes.includes(unitType as SquadUnitType)) continue;
 
 			if (squad.getUnitCount(unitType as SquadUnitType) > _.size(squad.units[unitType])) {
 				neededUnits.push(unitType as SquadUnitType);
@@ -140,14 +140,6 @@ export default class SquadSpawnRole extends SpawnRole {
 		return [MOVE];
 	}
 
-	getQuadCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.2, room.energyAvailable * 0.2),
-			//Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
-	}
-
 	getBrawlerCreepBody(room: Room) {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
@@ -167,13 +159,6 @@ export default class SquadSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepMemory(room: Room, option: SquadSpawnOption): CreepMemory {
-		if (option.unitType === 'quad') {
-			return {
-				role: 'quad',
-				squadName: option.squad,
-			};
-		}
-
 		return {
 			role: 'brawler',
 			squadName: option.squad,

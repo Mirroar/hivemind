@@ -32,7 +32,10 @@ export default class PlayerIntelManager {
 	}
 
 	mergeMemory() {
-		const newMemory = hivemind.segmentMemory.get(memoryKey);
+		const newMemory = hivemind.segmentMemory.get<PlayerIntelManagerMemory>(memoryKey);
+
+		// @todo Merge instead of overwriting.
+		this.memory = newMemory;
 	}
 
 	/**
@@ -55,13 +58,13 @@ export default class PlayerIntelManager {
 	}
 
 	updateOwnedRoom(userName: string, roomName: string) {
-		if (!this.ownedRoomSightings[userName]) this.ownedRoomSightings[userName] = {};
-		this.ownedRoomSightings[userName][roomName] = Game.time;
+		if (!this.memory.ownedRoomSightings[userName]) this.memory.ownedRoomSightings[userName] = {};
+		this.memory.ownedRoomSightings[userName][roomName] = Game.time;
 	}
 
 	updateClaimedRoom(userName: string, roomName: string) {
-		if (!this.claimedRoomSightings[userName]) this.claimedRoomSightings[userName] = {};
-		this.claimedRoomSightings[userName][roomName] = Game.time;
+		if (!this.memory.claimedRoomSightings[userName]) this.memory.claimedRoomSightings[userName] = {};
+		this.memory.claimedRoomSightings[userName][roomName] = Game.time;
 	}
 
 	updateCreepSighting(userName: string, roomName: string, creeps: Creep[]) {

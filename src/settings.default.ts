@@ -164,6 +164,9 @@ const settings = {
 
 	// Seasons:
 	season4EnableCaravanDelivery: false,
+
+	// Script hooks:
+	onTick: null,
 };
 
 export default settings;
