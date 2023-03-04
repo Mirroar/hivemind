@@ -2,8 +2,8 @@ import hivemind from 'hivemind';
 
 export type PlayerIntelMemory = {
 	lastSeen: number;
-	rooms: string[];
-	remotes: string[];
+	rooms: Record<string, int>;
+	remotes: Record<string, int>;
 };
 
 export default class PlayerIntel {
@@ -15,8 +15,8 @@ export default class PlayerIntel {
 		if (!this.hasMemory()) {
 			this.setMemory({
 				lastSeen: Game.time,
-				rooms: [],
-				remotes: [],
+				rooms: {},
+				remotes: {},
 			});
 		}
 
@@ -39,19 +39,27 @@ export default class PlayerIntel {
 		return this.userName === SYSTEM_USERNAME || this.userName === 'Invader';
 	}
 
-	setPlayerRooms(rooms: string[]) {
-		this.memory.rooms = rooms;
+	getAllOwnedRooms(): string[] {
+		return _.keys(this.memory.rooms);
 	}
 
-	getAllPlayerRooms(): string[] {
-		return this.memory.rooms;
+	updateOwnedRoom(roomName: string) {
+		this.memory.rooms[roomName] = Game.time;
 	}
 
-	setPlayerRemotes(rooms: string[]) {
-		this.memory.remotes = rooms;
+	removeOwnedRoom(roomName: string) {
+		delete this.memory.rooms[roomName];
 	}
 
-	getAllPlayerRemotes(): string[] {
-		return this.memory.remotes;
+	getAllRemotes(): string[] {
+		return _.keys(this.memory.remotes);
+	}
+
+	updateRemote(roomName: string) {
+		this.memory.remotes[roomName] = Game.time;
+	}
+
+	removeRemote(roomName: string) {
+		delete this.memory.remotes[roomName];
 	}
 }

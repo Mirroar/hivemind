@@ -4,38 +4,21 @@ import hivemind from './hivemind';
 const memoryKey = 'player-intel-manager';
 
 interface PlayerIntelManagerMemory {
-	ownedRoomSightings: Record<string, Record<string, number>>;
-	claimedRoomSightings: Record<string, Record<string, number>>;
-	creepSightings: Record<string, Record<string, number>>;
 };
 
 export default class PlayerIntelManager {
 	intelCache: Record<string, PlayerIntel> = {};
 	memory: PlayerIntelManagerMemory;
-	usesSegmentMemory: false;
 
 	constructor() {
-		this.memory = {
-			ownedRoomSightings: {},
-			claimedRoomSightings: {},
-			creepSightings: {},
-		};
+		if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate player intel for user "' + userName + '".');
 
-		if (hivemind.segmentMemory.isReady()) {
-			if (!hivemind.segmentMemory.has(memoryKey)) {
-				hivemind.segmentMemory.set(memoryKey, this.memory);
-			}
-			else {
-				this.mergeMemory();
-			}
+		if (!hivemind.segmentMemory.has(memoryKey)) {
+			hivemind.segmentMemory.set(memoryKey, {
+			});
 		}
-	}
 
-	mergeMemory() {
-		const newMemory = hivemind.segmentMemory.get<PlayerIntelManagerMemory>(memoryKey);
-
-		// @todo Merge instead of overwriting.
-		this.memory = newMemory;
+		this.memory = hivemind.segmentMemory.get<PlayerIntelManagerMemory>(memoryKey);
 	}
 
 	/**
@@ -58,13 +41,15 @@ export default class PlayerIntelManager {
 	}
 
 	updateOwnedRoom(userName: string, roomName: string) {
-		if (!this.memory.ownedRoomSightings[userName]) this.memory.ownedRoomSightings[userName] = {};
-		this.memory.ownedRoomSightings[userName][roomName] = Game.time;
+		const playerIntel = this.get(userName);
+
+		playerIntel.trackOwnedRoom(roomName);
 	}
 
 	updateClaimedRoom(userName: string, roomName: string) {
-		if (!this.memory.claimedRoomSightings[userName]) this.memory.claimedRoomSightings[userName] = {};
-		this.memory.claimedRoomSightings[userName][roomName] = Game.time;
+		const playerIntel = this.get(userName);
+
+		playerIntel.trackRemote(roomName);
 	}
 
 	updateCreepSighting(userName: string, roomName: string, creeps: Creep[]) {
