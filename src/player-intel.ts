@@ -2,8 +2,8 @@ import hivemind from 'hivemind';
 
 export type PlayerIntelMemory = {
 	lastSeen: number;
-	rooms: Record<string, int>;
-	remotes: Record<string, int>;
+	rooms: Record<string, number>;
+	remotes: Record<string, number>;
 };
 
 export default class PlayerIntel {

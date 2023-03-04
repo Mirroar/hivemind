@@ -11,7 +11,7 @@ export default class PlayerIntelManager {
 	memory: PlayerIntelManagerMemory;
 
 	constructor() {
-		if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate player intel for user "' + userName + '".');
+		if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to manage player intel.');
 
 		if (!hivemind.segmentMemory.has(memoryKey)) {
 			hivemind.segmentMemory.set(memoryKey, {
@@ -43,13 +43,13 @@ export default class PlayerIntelManager {
 	updateOwnedRoom(userName: string, roomName: string) {
 		const playerIntel = this.get(userName);
 
-		playerIntel.trackOwnedRoom(roomName);
+		playerIntel.updateOwnedRoom(roomName);
 	}
 
 	updateClaimedRoom(userName: string, roomName: string) {
 		const playerIntel = this.get(userName);
 
-		playerIntel.trackRemote(roomName);
+		playerIntel.updateRemote(roomName);
 	}
 
 	updateCreepSighting(userName: string, roomName: string, creeps: Creep[]) {
