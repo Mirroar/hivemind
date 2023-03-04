@@ -56,7 +56,7 @@ export default class RoomDefense {
 			if (!this.room.roomPlanner) return true;
 
 			const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
-			const requiredHits = Math.min(hivemind.settings.get('minWallIntegrity'), 25_000 * this.room.controller.level * this.room.controller.level);
+			const requiredHits = 1;
 
 			for (const pos of rampartPositions) {
 				if (this.room.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
