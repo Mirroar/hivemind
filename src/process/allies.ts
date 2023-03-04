@@ -2,25 +2,25 @@ import Process from 'process/process';
 import {Request, RequestType, simpleAllies} from 'utils/communication';
 
 declare global {
-  interface Memory {
-    requests: {
-      trade: {
-        [resourceType: string]: {
-          [roomName: string]: {
-            amount: number;
-            lastSeen: number;
-            priority: number;
-          }
-        }
-      };
-      defense: {
-        [roomName: string]: {
-          lastSeen: number;
-          priority: number;
-        }
-      }
-    };
-  }
+	interface Memory {
+		requests: {
+			trade: {
+				[resourceType: string]: {
+					[roomName: string]: {
+						amount: number;
+						lastSeen: number;
+						priority: number;
+					}
+				}
+			};
+			defense: {
+				[roomName: string]: {
+					lastSeen: number;
+					priority: number;
+				}
+			}
+		};
+	}
 }
 
 export default class AlliesProcess extends Process {
