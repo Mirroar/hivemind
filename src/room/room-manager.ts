@@ -599,6 +599,9 @@ export default class RoomManager {
 	 */
 	checkWallIntegrity(minHits?: number) {
 		if (!minHits) minHits = hivemind.settings.get('minWallIntegrity');
+		const maxHealth = hivemind.settings.get('maxWallHealth');
+
+		minHits *= maxHealth[this.room.controller.level] / maxHealth[8];
 
 		for (const pos of this.roomPlanner.getLocations('rampart')) {
 			// Check if there's a rampart here already.

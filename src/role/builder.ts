@@ -42,17 +42,7 @@ declare global {
 }
 
 // @todo Calculate from constants.
-const wallHealth = {
-	0: 1,
-	1: 5000,
-	2: 10_000,
-	3: 20_000,
-	4: 100_000,
-	5: 500_000,
-	6: 2_000_000,
-	7: 3_000_000,
-	8: 20_000_000,
-};
+const wallHealth: Record<number, number> = hivemind.settings.get('maxWallHealth');
 
 export default class BuilderRole extends Role {
 	transporterRole: TransporterRole;

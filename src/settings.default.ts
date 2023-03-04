@@ -120,6 +120,17 @@ const settings = {
 	// Number of hits for walls / ramparts needed for more expensive structures
 	// to be built.
 	minWallIntegrity: 500_000,
+	maxWallHealth: {
+		0: 1,
+		1: 5000,
+		2: 10_000,
+		3: 20_000,
+		4: 100_000,
+		5: 500_000,
+		6: 2_000_000,
+		7: 3_000_000,
+		8: 20_000_000,
+	},
 	// Toggles whether certain specialized structures should be built.
 	constructLabs: true,
 	constructNukers: true,
