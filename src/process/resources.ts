@@ -24,6 +24,9 @@ export default class ResourcesProcess extends Process {
 			if (tradeVolume === 0) {
 				sentSuccessfully = false;
 			}
+			else if (this.roomNeedsTerminalSpace(room) && this.roomHasUncertainStorage(Game.rooms[best.target])) {
+				sentSuccessfully = false;
+			}
 			else if (this.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 				let amount = Math.min(terminal.store[best.resourceType], 50_000);
 				if (best.resourceType === RESOURCE_ENERGY) {
@@ -220,5 +223,11 @@ export default class ResourcesProcess extends Process {
 		return room.isEvacuating()
 			|| (room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3)
 			|| (room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
+	}
+
+	roomHasUncertainStorage(room: Room): boolean {
+		return room.isEvacuating()
+			|| room.isClearingStorage()
+			|| room.isClearingTerminal();
 	}
 }
