@@ -89,7 +89,7 @@ export default class ExpandProcess extends Process {
 		const hasFreeControlLevels = ownedRooms < Game.gcl.level;
 		const maxRooms = settings.get('maxOwnedRooms');
 		const shardMemory = interShard.getLocalMemory();
-		const mayHaveMoreRooms = maxRooms && shardMemory.info && shardMemory.info.ownedRooms < maxRooms;
+		const mayHaveMoreRooms = !maxRooms || (shardMemory.info && shardMemory.info.ownedRooms < maxRooms);
 		const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
 		const longTermCpuUsage = stats.getStat('cpu_total', 10_000) ? stats.getStat('cpu_total', 10_000) / Game.cpu.limit : shortTermCpuUsage;
 

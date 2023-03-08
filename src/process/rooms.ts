@@ -72,7 +72,7 @@ export default class RoomsProcess extends Process {
 
 	manageInterShardExpansionRoomPlan() {
 		const memory = interShard.getLocalMemory();
-		if (!memory.info.interShardExpansion || !memory.info.interShardExpansion.room) return;
+		if (!memory?.info?.interShardExpansion?.room) return;
 
 		this.runRoomPlannerAndManager(memory.info.interShardExpansion.room);
 	}
