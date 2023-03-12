@@ -316,6 +316,11 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.target) {
+			const targetPos = decodePosition(creep.memory.target);
+			if (targetPos && creep.pos.roomName === targetPos.roomName) {
+				this.militaryRoomReached(creep);
+			}
+
 			let enemiesNearby = false;
 			if (creep.getActiveBodyparts(ATTACK) || creep.getActiveBodyparts(RANGED_ATTACK) || creep.getActiveBodyparts(HEAL)) {
 				// Check for enemies and interrupt move accordingly.
@@ -371,6 +376,7 @@ export default class BrawlerRole extends Role {
 
 		creep.moveTo(25, 25, {
 			reusePath: 50,
+			maxRooms: 1,
 		});
 	}
 

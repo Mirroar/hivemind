@@ -358,7 +358,7 @@ export default class BoostManager {
 	 */
 	needsSpawning(): boolean {
 		const maxHelpers = 1;
-		const numHelpers = (this.room.creepsByRole.helper || []).length;
+		const numHelpers = _.size(this.room.creepsByRole.helper);
 
 		if (numHelpers < maxHelpers) {
 			// Make sure we actually need helpers.

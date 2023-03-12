@@ -130,12 +130,13 @@ export default class RemoteBuilderRole extends Role {
 
 		// Help by filling spawn with energy.
 		const spawns = creep.room.find<StructureSpawn>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_SPAWN && (
-				structure.my || hivemind.relations.isAlly(structure.owner.username)
-			),
+			filter: structure =>
+				structure.structureType === STRUCTURE_SPAWN &&
+				structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY) * 0.8 &&
+				(structure.my || hivemind.relations.isAlly(structure.owner.username)),
 		});
 
-		if (spawns && spawns.length > 0 && spawns[0].store[RESOURCE_ENERGY] < spawns[0].store.getCapacity(RESOURCE_ENERGY) * 0.8) {
+		if (spawns && spawns.length > 0) {
 			const maySwitchToRefill = (!creep.memory.repairTarget && !creep.memory.buildTarget) || creep.pos.getRangeTo(spawns[0].pos) < 5;
 			if (maySwitchToRefill) {
 				creep.whenInRange(1, spawns[0], () => creep.transfer(spawns[0], RESOURCE_ENERGY));
@@ -146,7 +147,7 @@ export default class RemoteBuilderRole extends Role {
 		if (this.supplyTowers()) return;
 
 		let target = Game.getObjectById<ConstructionSite>(creep.memory.buildTarget);
-		if (!target || target.structureType !== STRUCTURE_SPAWN) {
+		if (!target || (target.structureType !== STRUCTURE_SPAWN && target.structureType !== STRUCTURE_TOWER)) {
 			if (this.saveExpiringRamparts(10_000)) return;
 		}
 
@@ -177,11 +178,12 @@ export default class RemoteBuilderRole extends Role {
 
 	supplyTowers() {
 		const towers = this.creep.room.find<StructureTower>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_TOWER && (
-				structure.my || hivemind.relations.isAlly(structure.owner.username)
-			),
+			filter: structure =>
+				structure.structureType === STRUCTURE_TOWER &&
+				structure.store.getFreeCapacity(RESOURCE_ENERGY) > structure.store.getCapacity(RESOURCE_ENERGY) * 0.5 &&
+				(structure.my || hivemind.relations.isAlly(structure.owner.username)),
 		});
-		if (towers && towers.length > 0 && towers[0].store.getFreeCapacity(RESOURCE_ENERGY) > towers[0].store.getCapacity(RESOURCE_ENERGY) * 0.5) {
+		if (towers && towers.length > 0) {
 			this.creep.whenInRange(1, towers[0], () => this.creep.transfer(towers[0], RESOURCE_ENERGY));
 			return true;
 		}
@@ -199,9 +201,10 @@ export default class RemoteBuilderRole extends Role {
 		if (!this.creep.memory.repairTarget) {
 			// Make sure ramparts don't break.
 			const targets = this.creep.room.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < minHits && (
-					structure.my || hivemind.relations.isAlly(structure.owner.username)
-				),
+				filter: structure =>
+					(structure.structureType === STRUCTURE_RAMPART || structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER) &&
+					structure.hits < Math.min(minHits, structure.hitsMax) &&
+					(structure.my || hivemind.relations.isAlly(structure.owner.username)),
 			});
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;
@@ -234,17 +237,17 @@ export default class RemoteBuilderRole extends Role {
 			filter: site => site.my || hivemind.relations.isAlly(site.owner.username)
 		});
 
-		// Build spawns before building anything else.
-		const spawnSites = _.filter(targets, structure => structure.structureType === STRUCTURE_SPAWN);
-		if (spawnSites.length > 0) {
-			this.creep.memory.buildTarget = spawnSites[0].id;
-			return;
-		}
-
-		// Towers are also very important.
+		// Build towers before building anything else.
 		const towerSites = _.filter(targets, structure => structure.structureType === STRUCTURE_TOWER);
 		if (towerSites.length > 0) {
 			this.creep.memory.buildTarget = towerSites[0].id;
+			return;
+		}
+
+		// Build spawns with increased priority.
+		const spawnSites = _.filter(targets, structure => structure.structureType === STRUCTURE_SPAWN);
+		if (spawnSites.length > 0) {
+			this.creep.memory.buildTarget = spawnSites[0].id;
 			return;
 		}
 
@@ -403,6 +406,23 @@ export default class RemoteBuilderRole extends Role {
 	collectExtraEnergy() {
 		if (this.creep.store.getFreeCapacity() === 0) {
 			delete this.creep.memory.extraEnergyTarget;
+			return;
+		}
+
+		const dropped = this.creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > this.creep.store.getCapacity() * 0.3 || (this.creep.pos.getRangeTo(drop) <= 1 && drop.amount > 20)),
+		});
+		if (dropped) {
+			this.creep.whenInRange(1, dropped, () => this.creep.pickup(dropped));
+			return;
+		}
+
+		// Try getting energy from full containers.
+		const container = this.creep.pos.findClosestByPath(FIND_STRUCTURES, {
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER && (structure.store.energy || 0) > 500,
+		});
+		if (container && (this.creep.room.isMine() || !this.creep.room.controller.safeMode)) {
+			this.creep.whenInRange(1, container, () => this.creep.withdraw(container, RESOURCE_ENERGY));
 			return;
 		}
 
