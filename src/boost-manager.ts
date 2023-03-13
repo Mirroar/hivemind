@@ -8,6 +8,11 @@ declare global {
 	interface StructureLab {
 		hasBoostedThisTick?: boolean;
 	}
+
+	type AvailableBoosts = Partial<Record<ResourceConstant, {
+		effect: number,
+		available: number,
+	}>>;
 }
 
 type BoostManagerMemory = {
@@ -19,7 +24,7 @@ export default class BoostManager {
 	memory: BoostManagerMemory;
 	room: Room;
 
-	constructor(room: Room) {
+	public 	constructor(room: Room) {
 		this.room = room;
 
 		if (!Memory.boost) Memory.boost = {creeps: {}, labs: {}};
@@ -50,11 +55,11 @@ export default class BoostManager {
 	 * @param {object} boosts
 	 *   List of resource types to use for boosting, indexed by body part.
 	 */
-	markForBoosting(creepName: string, boosts: Partial<Record<ResourceConstant, number>>) {
+	public markForBoosting(creepName: string, boosts: Partial<Record<ResourceConstant, number>>) {
 		this.memory.creeps[creepName] = boosts;
 	}
 
-	creepNeedsBoosting(creep: Creep) {
+	private creepNeedsBoosting(creep: Creep) {
 		if (this.memory.creeps[creep.name]) return true;
 
 		return false;
@@ -69,7 +74,7 @@ export default class BoostManager {
 	 * @return {boolean}
 	 *   True if we're currently overriding the creep's logic.
 	 */
-	overrideCreepLogic(creep: Creep): boolean {
+	public overrideCreepLogic(creep: Creep): boolean {
 		if (!this.creepNeedsBoosting(creep)) return false;
 
 		const targetLab = this.getBestLabForBoosting(creep);
@@ -182,5 +187,54 @@ export default class BoostManager {
 		const needsThisBoost = _.find(this.memory.creeps, (boosts, creepName) => boosts[resourceType] && Game.creeps[creepName]?.pos?.roomName === this.room.name);
 
 		if (!needsThisBoost) delete this.memory.labs[lab.id];
+	}
+
+	/**
+	 * Collects available boosts in a room, filtered by effect.
+	 *
+	 * @param {string} type
+	 *   The effect name we want to use for boosting.
+	 *
+	 * @return {object}
+	 *   An object keyed by mineral type, containing information about the available
+	 *   boost effect and number of parts that can be boosted.
+	 */
+	public getAvailableBoosts = function (type: string): AvailableBoosts {
+		const availableBoosts = cache.inObject(
+			this.room,
+			'availableBoosts',
+			1,
+			() => {
+				const boosts: {
+					[boostType: string]: AvailableBoosts,
+				} = {};
+
+				const storage = this.storage || {store: {}};
+				const terminal = this.terminal || {store: {}};
+				const availableResourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
+
+				_.each(BOOSTS, mineralBoosts => {
+					for (const mineralType in mineralBoosts) {
+						if (!availableResourceTypes.includes(mineralType)) continue;
+
+						const boostValues = mineralBoosts[mineralType];
+						_.each(boostValues, (boostValue, boostType) => {
+							if (!boosts[boostType]) {
+								boosts[boostType] = {};
+							}
+
+							boosts[boostType][mineralType] = {
+								effect: boostValue,
+								available: Math.floor((storage.store[mineralType] || 0 + terminal.store[mineralType] || 0) / LAB_BOOST_MINERAL),
+							};
+						});
+					}
+				});
+
+				return boosts;
+			},
+		);
+
+		return availableBoosts[type] || {};
 	}
 }
