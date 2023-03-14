@@ -10,12 +10,20 @@ export default class HelperSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): SpawnOption[] {
-		if (!room.boostManager?.needsSpawning()) return [];
+		const maxHelpers = 1;
+		const numHelpers = _.size(room.creepsByRole.helper);
 
-		return [{
-			priority: 4,
-			weight: 1,
-		}];
+		if (numHelpers < maxHelpers) {
+			// Make sure we actually need helpers.
+			if (room.boostManager.getBoostLabs().length > 0) {
+				return [{
+					priority: 4,
+					weight: 1,
+				}];
+			}
+		}
+
+		return [];
 	}
 
 	/**
@@ -30,7 +38,7 @@ export default class HelperSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(): BodyPartConstant[] {
-		return [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY];
+		return [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY];
 	}
 
 	/**

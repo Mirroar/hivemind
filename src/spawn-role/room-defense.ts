@@ -215,6 +215,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			return this.generateCreepBoosts(room, body, WORK, 'repair');
 		}
 		else if (option.creepRole === 'guardian') {
+			// @todo Limit boosts to the level of the attacker.
 			if (body.includes(ATTACK)) {
 				return this.generateCreepBoosts(room, body, ATTACK, 'attack');
 			}

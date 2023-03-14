@@ -56,6 +56,8 @@ export default class ManageLabsProcess extends Process {
 		if (!labs) return;
 
 		for (const reactorID of labs) {
+			if (this.room.boostManager.isLabUsedForBoosting(reactorID)) continue;
+
 			const reactor = Game.getObjectById<StructureLab>(reactorID);
 
 			if (reactor && reactor.cooldown <= 0) {

@@ -1,6 +1,10 @@
 import cache from 'utils/cache';
 
 declare global {
+	interface Room {
+		boostManager?: BoostManager;
+	}
+
 	interface Memory {
 		boost: BoostManagerMemory;
 	}
@@ -14,6 +18,11 @@ type BoostManagerMemory = {
 	creeps: Record<string, Partial<Record<ResourceConstant, number>>>
 	labs: Record<Id<StructureLab>, ResourceConstant>
 }
+
+type AvailableBoosts = Partial<Record<ResourceConstant, {
+	effect: number,
+	available: number,
+}>>;
 
 export default class BoostManager {
 	memory: BoostManagerMemory;
@@ -33,6 +42,8 @@ export default class BoostManager {
 	 * Removes memory entries for creeps / labs that no longer exist.
 	 */
 	private cleanBoostMemory() {
+		if (Game.time % 758 !== 0) return;
+
 		for (const creepName in this.memory.creeps) {
 			if (!Game.creeps[creepName]) delete this.memory.creeps[creepName];
 		}
@@ -40,6 +51,43 @@ export default class BoostManager {
 		for (const id in this.memory.labs) {
 			if (!Game.getObjectById(id)) delete this.memory.labs[id];
 		}
+	}
+
+	public canSpawnBoostedCreeps(): boolean {
+		if (this.room.isEvacuating()) return false;
+
+		return this.getAllLabs().length > 0;
+	}
+
+	public isLabUsedForBoosting(labId: Id<StructureLab>): boolean {
+		if (this.memory.labs[labId]) return true;
+
+		return false;
+	}
+
+	public getRequiredBoostType(labId: Id<StructureLab>): ResourceConstant {
+		return this.memory.labs[labId];
+	}
+
+	public getRequiredBoostAmount(labId: Id<StructureLab>): number {
+		if (!this.isLabUsedForBoosting(labId)) return 0;
+
+		return this.getNumberOfPartsToBoost(labId) * LAB_BOOST_MINERAL;
+	}
+
+	public getRequiredEnergyAmount(labId: Id<StructureLab>): number {
+		if (!this.isLabUsedForBoosting(labId)) return 0;
+
+		return this.getNumberOfPartsToBoost(labId) * LAB_BOOST_ENERGY;
+	}
+
+	private getNumberOfPartsToBoost(labId: Id<StructureLab>): number {
+		const resourceType = this.getRequiredBoostType(labId);
+		return _.sum(this.memory.creeps, (boosts, creepName) => {
+			if (Game.creeps[creepName]?.room?.name !== this.room.name) return 0;
+
+			return (boosts[resourceType] || 0) * LAB_BOOST_ENERGY;
+		});
 	}
 
 	/**
@@ -60,6 +108,24 @@ export default class BoostManager {
 		return false;
 	}
 
+	public manageBoostLabs() {
+		const boosts = this.getAllRequestedBoosts();
+		this.ensureBoostsHaveLabAssigned(boosts);
+	}
+
+	private getAllRequestedBoosts(): Partial<Record<ResourceConstant, number>> {
+		const boosts = {};
+		for (const creepName in this.memory.creeps) {
+			if (Game.creeps[creepName]?.room?.name !== this.room.name) continue;
+
+			for (const resourceType in this.memory.creeps[creepName]) {
+				boosts[resourceType] = (boosts[resourceType] || 0) + this.memory.creeps[creepName][resourceType];
+			}
+		}
+
+		return boosts;
+	}
+
 	/**
 	 * Overrides a creep's default logic while it's being boosted.
 	 *
@@ -69,8 +135,10 @@ export default class BoostManager {
 	 * @return {boolean}
 	 *   True if we're currently overriding the creep's logic.
 	 */
-	overrideCreepLogic(creep: Creep): boolean {
+	public overrideCreepLogic(creep: Creep): boolean {
 		if (!this.creepNeedsBoosting(creep)) return false;
+
+		// @todo Make sure the requested boosts are actually available. For that, check storage, terminal, labs and helper creeps. Otherwise cancel boosting.
 
 		const targetLab = this.getBestLabForBoosting(creep);
 		if (!targetLab) {
@@ -91,7 +159,6 @@ export default class BoostManager {
 	}
 
 	private getMostPreparedLab(boosts: Partial<Record<ResourceConstant, number>>): StructureLab {
-		this.ensureBoostsHaveLabAssigned(boosts);
 		const labs = this.getLabsForBoosts(boosts);
 
 		// @todo This part should be another method.
@@ -112,7 +179,7 @@ export default class BoostManager {
 	}
 
 	private ensureBoostsHaveLabAssigned(boosts: Partial<Record<ResourceConstant, number>>) {
-		const roomLabs = this.room.find<StructureLab>(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB && s.isOperational()});
+		const roomLabs = this.getAllLabs();
 
 		for (const resourceType in boosts) {
 			const assignedLab = _.find(roomLabs, lab => this.memory.labs[lab.id] === resourceType);
@@ -134,18 +201,26 @@ export default class BoostManager {
 					bestScore = fullnessScore + energyScore;
 				}
 			}
+
+			if (best) {
+				this.memory.labs[best.id] = resourceType as ResourceConstant;
+			}
 		}
 	}
 
-	private getLabsForBoosts(boosts: Partial<Record<ResourceConstant, number>>): StructureLab[] {
-		const roomLabs = this.room.find<StructureLab>(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB && s.isOperational()});
-		const boostLabs: StructureLab[] = [];
-		for (const resourceType in boosts) {
-			const assignedLab = _.find(roomLabs, lab => this.memory.labs[lab.id] === resourceType);
-			if (assignedLab) boostLabs.push(assignedLab);
-		}
+	public getBoostLabs(): StructureLab[] {
+		return _.filter(this.getAllLabs(), lab => this.isLabUsedForBoosting(lab.id));
+	}
 
-		return boostLabs;
+	public getAllLabs(): StructureLab[] {
+		return cache.inObject(this.room, 'labs', 1, () => {
+			return this.room.find<StructureLab>(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB && s.isOperational()});
+		});
+	}
+
+	private getLabsForBoosts(boosts: Partial<Record<ResourceConstant, number>>): StructureLab[] {
+		const boostLabs = this.getBoostLabs();
+		return _.filter(boostLabs, lab => boosts[this.memory.labs[lab.id]]);
 	}
 
 	private boostCreepAtLab(creep: Creep, lab: StructureLab) {
@@ -154,8 +229,8 @@ export default class BoostManager {
 
 		creep.whenInRange(1, lab, () => {
 			if (lab.mineralType !== resourceType) return;
-			if (lab.mineralAmount < amount * LAB_BOOST_MINERAL) return;
-			if (lab.energy < amount * LAB_BOOST_ENERGY) return;
+			if (lab.store.getUsedCapacity(resourceType) < amount * LAB_BOOST_MINERAL) return;
+			if (lab.store.getUsedCapacity(RESOURCE_ENERGY) < amount * LAB_BOOST_ENERGY) return;
 			if (lab.hasBoostedThisTick) return;
 
 			// @todo When waiting, give way to any other creeps so as to not block them.
@@ -182,5 +257,45 @@ export default class BoostManager {
 		const needsThisBoost = _.find(this.memory.creeps, (boosts, creepName) => boosts[resourceType] && Game.creeps[creepName]?.pos?.roomName === this.room.name);
 
 		if (!needsThisBoost) delete this.memory.labs[lab.id];
+	}
+
+	public getAvailableBoosts(type: string): AvailableBoosts {
+		const availableBoosts = cache.inObject(
+			this.room,
+			'availableBoosts',
+			1,
+			() => {
+				const boosts: {
+					[boostType: string]: AvailableBoosts,
+				} = {};
+
+				const storage = this.room.storage || {store: {}};
+				const terminal = this.room.terminal || {store: {}};
+				const availableResourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
+				const requestedBoosts = this.getAllRequestedBoosts();
+
+				_.each(BOOSTS, mineralBoosts => {
+					for (const resourceType in mineralBoosts) {
+						if (!availableResourceTypes.includes(resourceType)) continue;
+
+						const boostValues = mineralBoosts[resourceType];
+						_.each(boostValues, (boostValue, boostType) => {
+							if (!boosts[boostType]) {
+								boosts[boostType] = {};
+							}
+
+							boosts[boostType][resourceType] = {
+								effect: boostValue,
+								available: Math.floor(this.room.getCurrentResourceAmount(resourceType) / LAB_BOOST_MINERAL) - (requestedBoosts[resourceType] || 0),
+							};
+						});
+					}
+				});
+
+				return boosts;
+			},
+		);
+
+		return availableBoosts[type] || {};
 	}
 }

@@ -197,7 +197,16 @@ export default class SpawnManager {
 		// Also notify room's boost manager if necessary.
 		const boosts = role.getCreepBoosts(room, option, body);
 		if (boosts && room.boostManager) {
-			room.boostManager.markForBoosting(creepName, boosts);
+			const boostResources = {};
+			let found = false;
+			for (const partType of body) {
+				if (!boosts[partType]) continue;
+
+				boostResources[boosts[partType]] = (boostResources[boosts[partType]] || 0) + 1;
+				found = true;
+			}
+
+			if (found) room.boostManager.markForBoosting(creepName, boostResources);
 		}
 
 		// Notify the role that spawning was successful.
