@@ -12,6 +12,11 @@ declare global {
 	interface StructureLab {
 		hasBoostedThisTick?: boolean;
 	}
+
+	type AvailableBoosts = Partial<Record<ResourceConstant, {
+		effect: number,
+		available: number,
+	}>>;
 }
 
 type BoostManagerMemory = {
@@ -28,7 +33,7 @@ export default class BoostManager {
 	memory: BoostManagerMemory;
 	room: Room;
 
-	constructor(room: Room) {
+	public 	constructor(room: Room) {
 		this.room = room;
 
 		if (!Memory.boost) Memory.boost = {creeps: {}, labs: {}};
@@ -98,11 +103,11 @@ export default class BoostManager {
 	 * @param {object} boosts
 	 *   List of resource types to use for boosting, indexed by body part.
 	 */
-	markForBoosting(creepName: string, boosts: Partial<Record<ResourceConstant, number>>) {
+	public markForBoosting(creepName: string, boosts: Partial<Record<ResourceConstant, number>>) {
 		this.memory.creeps[creepName] = boosts;
 	}
 
-	creepNeedsBoosting(creep: Creep) {
+	private creepNeedsBoosting(creep: Creep) {
 		if (this.memory.creeps[creep.name]) return true;
 
 		return false;
@@ -259,6 +264,16 @@ export default class BoostManager {
 		if (!needsThisBoost) delete this.memory.labs[lab.id];
 	}
 
+	/**
+	 * Collects available boosts in a room, filtered by effect.
+	 *
+	 * @param {string} type
+	 *   The effect name we want to use for boosting.
+	 *
+	 * @return {object}
+	 *   An object keyed by mineral type, containing information about the available
+	 *   boost effect and number of parts that can be boosted.
+	 */
 	public getAvailableBoosts(type: string): AvailableBoosts {
 		const availableBoosts = cache.inObject(
 			this.room,
