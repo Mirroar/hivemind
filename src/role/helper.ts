@@ -203,13 +203,15 @@ export default class HelperRole extends Role {
 		const labs = boostManager.getBoostLabs();
 		const totalNeededEnergy = _.sum(labs, lab => boostManager.getRequiredEnergyAmount(lab.id));
 		const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
-		const amount = Math.min(totalNeededEnergy, creep.store.getFreeCapacity(RESOURCE_ENERGY), target.store.getUsedCapacity(RESOURCE_ENERGY));
-		if (amount > 0) {
-			creep.whenInRange(1, target, () => {
-				creep.withdraw(target, RESOURCE_ENERGY, amount);
-			});
+		if (target) {
+			const amount = Math.min(totalNeededEnergy, creep.store.getFreeCapacity(RESOURCE_ENERGY), target.store.getUsedCapacity(RESOURCE_ENERGY));
+			if (amount > 0) {
+				creep.whenInRange(1, target, () => {
+					creep.withdraw(target, RESOURCE_ENERGY, amount);
+				});
 
-			return;
+				return;
+			}
 		}
 
 		// If we got here, there's nothing left to gather. Deliver what we have stored.
@@ -242,6 +244,7 @@ export default class HelperRole extends Role {
 			if (diff <= 0) continue;
 
 			const target = creep.room.getBestStorageSource(resourceType);
+			if (!target) continue;
 			let amount = Math.min(diff, creep.store.getFreeCapacity(resourceType), target.store.getUsedCapacity(resourceType));
 			if (amount > 0) {
 				creep.whenInRange(1, target, () => {
