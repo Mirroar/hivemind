@@ -212,19 +212,35 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	getCreepBoosts(room: Room, option: RoomDefenseSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		// @todo Only use boosts if they'd make the difference between being able to damage the enemy or not.
 		if (option.creepRole === 'builder') {
-			return this.generateCreepBoosts(room, body, WORK, 'repair');
+			// @todo Only use boosts if walls have some damage on them.
+			return this.generateCreepBoosts(room, body, WORK, 'repair', this.getMaxEnemyBoostLevel(room));
 		}
 		else if (option.creepRole === 'guardian') {
-			// @todo Limit boosts to the level of the attacker.
 			if (body.includes(ATTACK)) {
-				return this.generateCreepBoosts(room, body, ATTACK, 'attack');
+				return this.generateCreepBoosts(room, body, ATTACK, 'attack', this.getMaxEnemyBoostLevel(room));
 			}
 			else {
-				return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack');
+				return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack', this.getMaxEnemyBoostLevel(room));
 			}
 		}
 
 		return null;
+	}
+
+	private getMaxEnemyBoostLevel(room: Room): number {
+		let highest = 0;
+
+		for (const userName in room.enemyCreeps) {
+			if (hivemind.relations.isAlly(userName)) continue;
+
+			highest = Math.max(highest, _.max(_.map(room.enemyCreeps[userName], creep => _.max(_.map(creep.body, part => {
+				if (!part.boost || typeof part.boost !== 'string') return 0;
+
+				return part.boost.length || 0;
+			})))));
+		}
+
+		return highest;
 	}
 
 	/**

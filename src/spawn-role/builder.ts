@@ -176,6 +176,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: BuilderSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
+		// @todo Only boost if ramparts need a lot of repairs.
 		return this.generateCreepBoosts(room, body, WORK, 'repair');
 	}
 }

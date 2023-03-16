@@ -165,7 +165,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: SpawnOption, body: BodyPartConstant[]) {
-		if (room.getEffectiveAvailableEnergy() < 200_000) return {};
+		if (room.getEffectiveAvailableEnergy() < 50_000) return {};
 		if (room.controller.level < 8) return {};
 
 		return this.generateCreepBoosts(room, body, WORK, 'upgradeController');

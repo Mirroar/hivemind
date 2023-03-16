@@ -184,7 +184,7 @@ export default class SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	generateCreepBoosts(room: Room, body: BodyPartConstant[], partType: BodyPartConstant, boostType: string): Partial<Record<string, ResourceConstant>> {
+	generateCreepBoosts(room: Room, body: BodyPartConstant[], partType: BodyPartConstant, boostType: string, maxTier?: number): Partial<Record<string, ResourceConstant>> {
 		if (!room.boostManager.canSpawnBoostedCreeps()) return {};
 
 		const availableBoosts = room.boostManager.getAvailableBoosts(boostType);
@@ -193,6 +193,7 @@ export default class SpawnRole {
 		let resourceType: ResourceConstant;
 		for (resourceType in availableBoosts) {
 			if (availableBoosts[resourceType].available < numAffectedParts) continue;
+			if (maxTier && resourceType.length > maxTier) continue;
 
 			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
 				bestBoost = resourceType;
