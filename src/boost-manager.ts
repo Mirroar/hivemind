@@ -288,6 +288,7 @@ export default class BoostManager {
 				const terminal = this.room.terminal || {store: {}};
 				const availableResourceTypes = _.union(_.keys(storage.store), _.keys(terminal.store));
 				const requestedBoosts = this.getAllRequestedBoosts();
+				if ((storage.store[RESOURCE_ENERGY] || 0) + (terminal.store[RESOURCE_ENERGY] || 0) < 2500) return boosts;
 
 				_.each(BOOSTS, mineralBoosts => {
 					for (const resourceType in mineralBoosts) {
