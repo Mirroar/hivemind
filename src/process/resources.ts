@@ -156,7 +156,10 @@ export default class ResourcesProcess extends Process {
 			const shouldReceiveResources =
 				roomState.state[resourceType] === 'excessive' && info.priority >= 0.05 ||
 				roomState.state[resourceType] === 'high' && (info.priority >= 0.5 || tier > 1) ||
+				roomState.state[resourceType] === 'medium' && (info.priority >= 0.8) ||
 				roomState.state[resourceType] === 'medium' && (info.priority >= 0.5 && tier > 1) ||
+				roomState.state[resourceType] === 'low' && (info.priority >= 0.9) ||
+				roomState.state[resourceType] === 'low' && (info.priority >= 0.8 && tier > 1) ||
 				roomState.state[resourceType] === 'low' && (info.priority >= 0.5 && tier > 4);
 			if (!shouldReceiveResources) continue;
 

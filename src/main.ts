@@ -200,7 +200,7 @@ const main = {
 				priority: PROCESS_PRIORITY_LOW,
 			});
 			hivemind.runProcess('empire.resources', ResourcesProcess, {
-				interval: 20,
+				interval: 5,
 			});
 		}
 
