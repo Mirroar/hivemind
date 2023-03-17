@@ -1071,6 +1071,8 @@ export default class TransporterRole extends Role {
 		});
 
 		for (const lab of labs) {
+			if (room.boostManager.isLabUsedForBoosting(lab.id)) continue;
+
 			if (lab.store[RESOURCE_ENERGY] > 0) {
 				options.push({
 					priority: 3,
@@ -1116,6 +1118,8 @@ export default class TransporterRole extends Role {
 			const mineralAmount = lab.store[lab.mineralType];
 			const mineralCapacity = lab.store.getCapacity(lab.mineralType);
 			if (lab && mineralAmount > 0) {
+				if (room.boostManager.isLabUsedForBoosting(lab.id) && lab.mineralType === room.boostManager.getRequiredBoostType(lab.id)) continue;
+
 				const option = {
 					priority: 0,
 					weight: mineralAmount / mineralCapacity,
