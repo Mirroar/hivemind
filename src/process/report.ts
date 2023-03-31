@@ -71,7 +71,7 @@ export default class ReportProcess extends Process {
 		if (Date.now() < this.memory.nextReportTime) return;
 
 		this.generateReport();
-		this.initMemory(this.memory.nextReportTime);
+		this.initMemory(Date.now());
 	}
 
 	/**
