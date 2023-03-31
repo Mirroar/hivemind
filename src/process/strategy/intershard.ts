@@ -6,6 +6,8 @@ import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
+const minRoomLevelToIntershardScout = 7;
+
 /**
  * Chooses rooms for expansion and sends creeps there.
  */
@@ -146,9 +148,9 @@ export default class InterShardProcess extends Process {
 				const compareMemory = compareShard === Game.shard.name ? interShard.getLocalMemory() : interShard.getRemoteMemory(compareShard);
 				if (!compareMemory.info) return;
 				if (!compareMemory.portals || !compareMemory.portals[shardName]) return;
-				if ((compareMemory.info.maxRoomLevel || 0) < 8) return;
+				if ((compareMemory.info.maxRoomLevel || 0) < minRoomLevelToIntershardScout) return;
 
-				// If we have at least one level 8 room, assign a little CPU to unexplored
+				// If we have at least one high-level room, assign a little CPU to unexplored
 				// adjacent shards for scouting.
 				this._shardData[shardName].neededCpu = 0.5;
 			});
@@ -166,7 +168,7 @@ export default class InterShardProcess extends Process {
 	 */
 	manageScouting() {
 		this.memory.scouting = {};
-		if (this.memory.info.maxRoomLevel < 8) return;
+		if (this.memory.info.maxRoomLevel < minRoomLevelToIntershardScout) return;
 
 		// Scout nearby shards that have no rooms claimed.
 		for (const shardName in this.memory.portals) {
