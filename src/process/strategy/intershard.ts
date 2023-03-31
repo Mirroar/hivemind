@@ -201,6 +201,11 @@ export default class InterShardProcess extends Process {
 		if (this.memory.info.interShardExpansion) {
 			if (this.memory.info.interShardExpansion.start && Game.time - this.memory.info.interShardExpansion.start < 100_000) return;
 
+			Memory.strategy.expand.failedExpansions.push({
+				roomName: this.memory.info.interShardExpansion.room,
+				time: Game.time,
+			});
+
 			delete this.memory.info.interShardExpansion;
 			const squad = new Squad('interShardExpansion');
 			squad.clearUnits();
