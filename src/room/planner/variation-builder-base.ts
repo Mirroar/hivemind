@@ -143,6 +143,8 @@ export default class RoomVariationBuilderBase {
 
 				return true;
 			});
+
+			if (targetPosition) break;
 		}
 
 		return targetPosition;
