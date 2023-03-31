@@ -158,7 +158,6 @@ export default class ResourcesProcess extends Process {
 				roomState.state[resourceType] === 'high' && (info.priority >= 0.5 || tier > 1) ||
 				roomState.state[resourceType] === 'medium' && (info.priority >= 0.8) ||
 				roomState.state[resourceType] === 'medium' && (info.priority >= 0.5 && tier > 1) ||
-				roomState.state[resourceType] === 'low' && (info.priority >= 0.9) ||
 				roomState.state[resourceType] === 'low' && (info.priority >= 0.8 && tier > 1) ||
 				roomState.state[resourceType] === 'low' && (info.priority >= 0.5 && tier > 4);
 			if (!shouldReceiveResources) continue;
@@ -215,7 +214,7 @@ export default class ResourcesProcess extends Process {
 		for (const room of Game.myRooms) {
 			const roomData = room.getResourceState();
 			if (!roomData) continue;
-			
+
 			rooms[room.name] = roomData;
 		}
 
