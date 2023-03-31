@@ -2,15 +2,15 @@ import {packCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 import {serializeCoords} from 'utils/serialization';
 
 declare global {
-  type SerializedPlan = {
-    [type: string]: string;
-  };
+	type SerializedPlan = {
+		[type: string]: string;
+	};
 }
 
 type PositionCache = {
-  [type: string]: {
-    [coords: number]: RoomPosition;
-  };
+	[type: string]: {
+		[coords: number]: RoomPosition;
+	};
 };
 
 const structureSymbols = {
@@ -32,7 +32,7 @@ const structureSymbols = {
 };
 
 export default class RoomPlan {
-  public readonly MAX_ROOM_LEVEL = 8;
+	public readonly MAX_ROOM_LEVEL = 8;
 
 	public readonly roomName: string;
 	protected positionsByType: PositionCache;
@@ -47,12 +47,12 @@ export default class RoomPlan {
 		return _.mapValues(this.positionsByType, (positions: Record<number, RoomPosition>) => packCoordList(_.values(positions)));
 	}
 
-  unserialize(input: SerializedPlan) {
-    this.positionsByType = _.mapValues(input, function (posList: string): {[coords: number]: RoomPosition} {
-      const positions = unpackCoordListAsPosList(posList, this.roomName);
-      const cache: {
-        [coords: number]: RoomPosition;
-      } = {};
+	unserialize(input: SerializedPlan) {
+		this.positionsByType = _.mapValues(input, function (posList: string): {[coords: number]: RoomPosition} {
+			const positions = unpackCoordListAsPosList(posList, this.roomName);
+			const cache: {
+				[coords: number]: RoomPosition;
+			} = {};
 
 			for (const pos of positions) {
 				const coord = serializeCoords(pos.x, pos.y);
@@ -97,34 +97,34 @@ export default class RoomPlan {
 	}
 
 	/**
-   * Determines whether more of a certain structure could be placed.
-   *
-   * @param {string} structureType
-   *   The type of structure to check for.
-   *
-   * @return {boolean}
-   *   True if the current controller level allows more of this structure.
-   */
+	 * Determines whether more of a certain structure could be placed.
+	 *
+	 * @param {string} structureType
+	 *   The type of structure to check for.
+	 *
+	 * @return {boolean}
+	 *   True if the current controller level allows more of this structure.
+	 */
 	canPlaceMore(structureType: StructureConstant): boolean {
 		return this.remainingStructureCount(structureType) > 0;
 	}
 
 	/**
-   * Determines the number of structures of a type that could be placed.
-   *
-   * @param {string} structureType
-   *   The type of structure to check for.
-   *
-   * @return {number}
-   *   The number of structures of the given type that may still be placed.
-   */
+	 * Determines the number of structures of a type that could be placed.
+	 *
+	 * @param {string} structureType
+	 *   The type of structure to check for.
+	 *
+	 * @return {number}
+	 *   The number of structures of the given type that may still be placed.
+	 */
 	remainingStructureCount(structureType: StructureConstant): number {
 		return CONTROLLER_STRUCTURES[structureType][this.MAX_ROOM_LEVEL] - _.size(this.getPositions(structureType) || []);
 	}
 
 	/**
-   * Draws a simple representation of the room layout using RoomVisuals.
-   */
+	 * Draws a simple representation of the room layout using RoomVisuals.
+	 */
 	visualize() {
 		const visual = new RoomVisual(this.roomName);
 		for (const type in this.positionsByType) {
@@ -142,11 +142,11 @@ export default class RoomPlan {
 	}
 
 	/**
-   * Gets a cost matrix representing this room when it's fully built.
-   *
-   * @return {PathFinder.CostMatrix}
-   *   The requested cost matrix.
-   */
+	 * Gets a cost matrix representing this room when it's fully built.
+	 *
+	 * @return {PathFinder.CostMatrix}
+	 *   The requested cost matrix.
+	 */
 	createNavigationMatrix(): CostMatrix {
 		const matrix = new PathFinder.CostMatrix();
 
