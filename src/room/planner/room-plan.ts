@@ -151,7 +151,7 @@ export default class RoomPlan {
 		const matrix = new PathFinder.CostMatrix();
 
 		for (const locationType of this.getPositionTypes()) {
-			if (!['road', 'harvester', 'bay_center'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
+			if (!['road', 'harvester', 'bay_center', 'wall'].includes(locationType) && !(OBSTACLE_OBJECT_TYPES as string[]).includes(locationType)) continue;
 
 			for (const pos of this.getPositions(locationType)) {
 				if (locationType === 'road') {
