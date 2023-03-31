@@ -46,6 +46,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.placeQuadBreaker,
 			this.sealRoom,
 			this.placeTowers,
+			this.placeRoadsToRamps,
 			this.placeOnRamps,
 		];
 	}
@@ -679,6 +680,55 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	placeTowers(): StepResult {
 		const step = new PlaceTowersStep(this.roomPlan, this.placementManager, this.safetyMatrix);
 		return step.run();
+	}
+
+	placeRoadsToRamps(): StepResult {
+		for (const rampartGroup of this.getRampartGroups()) {
+			const roads = this.placementManager.findAccessRoad(this.roomCenterEntrances[0], rampartGroup);
+
+			for (const road of roads) {
+				this.placementManager.planLocation(road, 'road', 1)
+			}
+		}
+
+		return 'ok';
+	}
+
+	getRampartGroups(): RoomPosition[][] {
+		const allRamparts = _.map(this.roomPlan.getPositions('rampart'), pos => {
+			return {
+				pos,
+				isUsed: false,
+			};
+		});
+
+		const rampartGroups: RoomPosition[][] = [];
+		for (const rampart of allRamparts) {
+			if (rampart.isUsed) continue;
+
+			rampart.isUsed = true;
+			const currentGroup = [rampart.pos];
+			let rampartAdded = false;
+			do {
+				rampartAdded = false;
+				for (const otherRampart of allRamparts) {
+					if (otherRampart.isUsed) continue;
+
+					for (const currentRampart of currentGroup) {
+						if (currentRampart.getRangeTo(otherRampart) !== 1) continue;
+
+						otherRampart.isUsed = true;
+						currentGroup.push(otherRampart.pos);
+						rampartAdded = true;
+						break;
+					}
+				}
+			} while (rampartAdded);
+
+			rampartGroups.push(currentGroup);
+		}
+
+		return rampartGroups;
 	}
 
 	placeOnRamps(): StepResult {
