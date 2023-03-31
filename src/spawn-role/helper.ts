@@ -17,8 +17,8 @@ export default class HelperSpawnRole extends SpawnRole {
 			// Make sure we actually need helpers.
 			if (room.boostManager.getBoostLabs().length > 0) {
 				return [{
-					priority: 4,
-					weight: 1,
+					priority: 5,
+					weight: 1.1,
 				}];
 			}
 		}
