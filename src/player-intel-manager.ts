@@ -53,6 +53,8 @@ export default class PlayerIntelManager {
 	}
 
 	updateCreepSighting(userName: string, roomName: string, creeps: Creep[]) {
+		const playerIntel = this.get(userName);
 
+		playerIntel.updateCreeps(creeps);
 	}
 }

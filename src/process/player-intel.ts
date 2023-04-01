@@ -1,10 +1,13 @@
-import Process from 'process/process';
 import container from 'utils/container';
+import hivemind from 'hivemind';
 import PlayerIntelManager from 'player-intel-manager';
+import Process from 'process/process';
 import {getRoomIntel, getRoomsWithIntel} from 'room-intel';
 
 export default class PlayerIntelProcess extends Process {
 	run() {
+		if (!hivemind.segmentMemory.isReady()) return;
+
 		const manager = container.get<PlayerIntelManager>('PlayerIntelManager');
 		this.collectPlayerRooms(manager);
 	}
