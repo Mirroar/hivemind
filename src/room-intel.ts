@@ -891,7 +891,7 @@ export default class RoomIntel {
 	 * @param {object} base
 	 *   Information about the room this operation is base on.
 	 */
-	addAdjacentRoomToCheck(roomName: string, openList, base) {
+	addAdjacentRoomToCheck(roomName: string, openList: Record<string, {range: number, origin: string, room: string}>, base: {range: number, dir: string}) {
 		if (!this.isPotentiallyUnsafeRoom(roomName)) return;
 
 		openList[roomName] = {
@@ -924,7 +924,7 @@ export default class RoomIntel {
 	 * @param {object} closedList
 	 *   List of rooms that have been checked.
 	 */
-	handleAdjacentRoom(roomData, openList, closedList) {
+	handleAdjacentRoom(roomData: {range: number, origin: string, room: string}, openList: Record<string, {range: number, origin: string, room: string}>, closedList: Record<string, {range: number, origin: string, room: string}>) {
 		const roomIntel = getRoomIntel(roomData.room);
 		if (roomIntel.getAge() > 100_000) {
 			// Room has no intel, declare it as unsafe.
@@ -933,8 +933,7 @@ export default class RoomIntel {
 		}
 
 		// Add new adjacent rooms to openList if available.
-		const roomExits = roomIntel.getExits();
-		for (const roomName of _.values<string>(roomExits)) {
+		for (const roomName of _.values<string>(roomIntel.getExits())) {
 			if (roomData.range >= 3) {
 				// Room has open exits more than 3 rooms away.
 				// Mark direction as unsafe.
@@ -957,7 +956,7 @@ export default class RoomIntel {
 				continue;
 			}
 
-			this.addAdjacentRoomToCheck(roomName, openList, {roomData});
+			this.addAdjacentRoomToCheck(roomName, openList, {dir: roomData.origin, range: roomData.range});
 		}
 	}
 
