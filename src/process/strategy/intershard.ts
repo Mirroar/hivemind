@@ -187,10 +187,7 @@ export default class InterShardProcess extends Process {
 		if (this.memory.info.ownedRooms > 0) {
 			// Remove expansion request when our room has hopefully stabilized.
 			if (this.memory.info.maxRoomLevel >= 4) {
-				delete this.memory.info.interShardExpansion;
-				const squad = new Squad('interShardExpansion');
-				squad.clearUnits();
-				squad.disband();
+				this.removeIntershardExpansionRequest();
 			}
 
 			return;
@@ -199,19 +196,36 @@ export default class InterShardProcess extends Process {
 		// Don't recalculate if we've already set a target.
 		// Unless expanding has failed, e.g. due to attacks.
 		if (this.memory.info.interShardExpansion) {
-			if (this.memory.info.interShardExpansion.start && Game.time - this.memory.info.interShardExpansion.start < 100_000) return;
+			if (this.memory.info.interShardExpansion.start && Game.time - this.memory.info.interShardExpansion.start < 50 * CREEP_LIFE_TIME) return;
 
-			Memory.strategy.expand.failedExpansions.push({
-				roomName: this.memory.info.interShardExpansion.room,
-				time: Game.time,
-			});
-
-			delete this.memory.info.interShardExpansion;
-			const squad = new Squad('interShardExpansion');
-			squad.clearUnits();
-			squad.disband();
+			this.failIntershardExpansion();
 		}
 
+		this.startIntershardExpansion();
+	}
+
+	failIntershardExpansion() {
+		if (!Memory.strategy.expand.failedExpansions)
+			Memory.strategy.expand.failedExpansions = [];
+		Memory.strategy.expand.failedExpansions.push({
+			roomName: this.memory.info.interShardExpansion.room,
+			time: Game.time,
+		});
+
+		hivemind.log('strategy').notify('💀 Intershard expansion to ' + this.memory.info.interShardExpansion.room + ' has failed. A new target will be chosen soon.');
+
+		this.removeIntershardExpansionRequest();
+	}
+
+	removeIntershardExpansionRequest() {
+		delete this.memory.info.interShardExpansion;
+
+		const squad = new Squad('interShardExpansion');
+		squad.clearUnits();
+		squad.disband();
+	}
+
+	startIntershardExpansion() {
 		// Immediately try to expand to the best known room.
 		// @todo Decide when we've scouted enough to claim a room.
 		if (!this.memory.info.rooms.bestExpansion) return;
