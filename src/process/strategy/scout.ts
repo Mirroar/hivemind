@@ -400,22 +400,28 @@ export default class ScoutProcess extends Process {
 	 * @return {number}
 	 *   Harvest score for this room.
 	 */
-	getHarvestRoomScore(roomName) {
+	getHarvestRoomScore(roomName: string, forOwnedRoom: boolean = false) {
 		const roomIntel = getRoomIntel(roomName);
 
 		// We don't care about rooms without controllers.
 		// @todo Once automated, we might care for exploiting source keeper rooms.
 		if (!roomIntel.isClaimable()) return 0;
 
-		// Try not to expand too close to other players.
-		if (roomIntel.isOwned() && roomIntel.memory.owner !== 'Invader') return -0.5;
-
 		// Can't remote harvest from my own room.
 		if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) return 0;
 
 		let sourceFactor = 0.25;
-		// If another player has reserved the adjacent room, we can't profit all that well.
-		if (roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader') sourceFactor = 0.1;
+
+		// Score modifications related to other players should not be applied to
+		// our owned rooms. Else we might abandon rooms because another player
+		// claimed nearby. Instead, we should... negotiate.
+		if (!forOwnedRoom) {
+			// Try not to expand too close to other players.
+			if (roomIntel.isOwned() && roomIntel.memory.owner !== 'Invader') return -0.5;
+
+			// If another player has reserved the adjacent room, we can't profit all that well.
+			if (roomIntel.isClaimed() && roomIntel.memory.reservation.username !== 'Invader') sourceFactor = 0.1;
+		}
 
 		// @todo factor in path length to sources.
 		return roomIntel.getSourcePositions().length * sourceFactor;
