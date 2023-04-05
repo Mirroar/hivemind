@@ -816,10 +816,10 @@ export default class RoomIntel {
 			}
 
 			const dirMap = {
-				1: 'N',
-				3: 'E',
-				5: 'S',
-				7: 'W',
+				[TOP]: 'N',
+				[RIGHT]: 'E',
+				[BOTTOM]: 'S',
+				[LEFT]: 'W',
 			};
 
 			this.newStatus = {

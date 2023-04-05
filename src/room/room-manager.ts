@@ -188,6 +188,13 @@ export default class RoomManager {
 		for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
 			structure.destroy();
 		}
+
+		// Remove hostile construction sites as they might count against our limits.
+		for (const site of this.room.find(FIND_CONSTRUCTION_SITES)) {
+			if (site.my) continue;
+
+			site.remove();
+		}
 	}
 
 	getOperationRoadPositions(): {[location: number]: RoomPosition} {

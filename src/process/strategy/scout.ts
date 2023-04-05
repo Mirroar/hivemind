@@ -310,7 +310,7 @@ export default class ScoutProcess extends Process {
 
 			if (roomDistance > 2) continue;
 			// Check if we need to share adjacent harvest rooms.
-			for (const adjacentRoom of _.values(otherRoomExits)) {
+			for (const adjacentRoom of _.values<string>(otherRoomExits)) {
 				if (adjacentRoom === roomName) result.addScore(-this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);
 				for (const j in exits) {
 					if (exits[j] === adjacentRoom) result.addScore(-this.getHarvestRoomScore(adjacentRoom), 'doubleUse' + adjacentRoom);

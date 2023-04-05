@@ -102,6 +102,8 @@ export default class PlayerIntel {
 	}
 
 	updateCreeps(creeps: Creep[]) {
+		if (!this.memory.creeps) this.memory.creeps = {};
+
 		for (const creep of creeps) {
 			if (!this.memory.creeps[creep.id]) {
 				// Record some info about this creep.

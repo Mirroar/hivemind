@@ -62,6 +62,13 @@ export default class BuilderSpawnRole extends SpawnRole {
 			return 1;
 		}
 
+		const availableEnergy = room.getEffectiveAvailableEnergy();
+		if ((room.storage || room.terminal) && availableEnergy < 5000) {
+			// Just spawn a small builder for keeping roads intact. Wait for
+			// harvesting to fill up storage.
+			return 1;
+		}
+
 		if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
 			return 0;
 		}
@@ -78,7 +85,6 @@ export default class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we have a lot of energy to spare.
-		const availableEnergy = room.getEffectiveAvailableEnergy();
 		if (availableEnergy > 400_000) {
 			maxWorkParts *= 2;
 		}
