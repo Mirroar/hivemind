@@ -153,6 +153,7 @@ function generateQuadCostMatrix(matrix: CostMatrix, roomName: string): CostMatri
 function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMatrix {
 	const newMatrix = matrix.clone();
 	const terrain = new Room.Terrain(roomName);
+	const dangerMatrix = new PathFinder.CostMatrix();
 
 	// We flood fill from enemies and make all tiles they can reach more
 	// difficult to travel through.
@@ -179,6 +180,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMat
 		}
 
 		newMatrix.set(pos.x, pos.y, value + 10);
+		dangerMatrix.set(pos.x, pos.y, 1);
 
 		// Add available adjacent tiles.
 		handleMapArea(pos.x, pos.y, (x, y) => {
@@ -189,13 +191,22 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMat
 			const newLocation = encodePosition(newPos);
 			if (closedList[newLocation]) return;
 			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
 
 			closedList[newLocation] = true;
 			openList.push(newPos);
 		});
 	}
 
+	cache.inHeap('dangerMatrix:' + roomName, 20, () => dangerMatrix);
+
 	return newMatrix;
+}
+
+function getDangerMatrix(roomName: string): CostMatrix {
+	getCostMatrix(roomName);
+
+	return cache.inHeap('dangerMatrix:' + roomName, 20, () => new PathFinder.CostMatrix());
 }
 
 /**
@@ -304,5 +315,6 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 
 export {
 	getCostMatrix,
+	getDangerMatrix,
 	markBuildings,
 };

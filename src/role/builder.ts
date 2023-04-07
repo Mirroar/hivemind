@@ -262,7 +262,9 @@ export default class BuilderRole extends Role {
 	 */
 	addRepairOptions(creep: BuilderCreep, options) {
 		const targets = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => structure.hits < structure.hitsMax && !structure.needsDismantling(),
+			filter: structure => structure.hits < structure.hitsMax
+				&& !structure.needsDismantling()
+				&& this.isSafePosition(creep, structure.pos),
 		});
 		for (const target of targets) {
 			const option = {
@@ -366,6 +368,11 @@ export default class BuilderRole extends Role {
 		option.maxHealth = maxHealth;
 
 		if (target.structureType === STRUCTURE_RAMPART) {
+			if (creep.room.defense.getEnemyStrength() >= 2) {
+				option.priority++;
+				return;
+			}
+
 			if (target.hits < 10_000 && creep.room.controller.level >= 3) {
 				// Low ramparts get special treatment so they don't decay.
 				option.priority++;
@@ -401,7 +408,9 @@ export default class BuilderRole extends Role {
 	 *   An array of repair or build option objects to add to.
 	 */
 	addBuildOptions(creep: BuilderCreep, options) {
-		const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+		const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES, {
+			filter: site => this.isSafePosition(creep, site.pos),
+		});
 		for (const target of targets) {
 			const option = {
 				priority: 4,

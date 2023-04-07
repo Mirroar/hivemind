@@ -1,5 +1,7 @@
 /* global RoomPosition RIGHT LEFT TOP BOTTOM */
 
+import {getDangerMatrix} from 'utils/cost-matrix';
+
 declare global {
 	interface CreepMemory {
 		role?: string;
@@ -109,5 +111,15 @@ export default class Role {
 				delete creep.heapMemory.suicideSpawn;
 			}
 		}
+	}
+
+	isSafePosition(creep: Creep, pos): boolean {
+		if (!creep.room.isMine()) return true;
+		if (creep.room.defense.getEnemyStrength() === 0) return true;
+
+		const matrix = getDangerMatrix(creep.room.name);
+		if (matrix.get(pos.x, pos.y) > 0) return false;
+
+		return true;
 	}
 }

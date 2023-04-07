@@ -196,7 +196,7 @@ const main = {
 
 		if (shardHasEstablishedRooms) {
 			hivemind.runProcess('empire.trade', TradeProcess, {
-				interval: 100,
+				interval: 20,
 				priority: PROCESS_PRIORITY_LOW,
 			});
 			hivemind.runProcess('empire.resources', ResourcesProcess, {

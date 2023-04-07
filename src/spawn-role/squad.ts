@@ -35,10 +35,14 @@ export default class SquadSpawnRole extends SpawnRole {
 
 		_.each(Game.squads, squad => {
 			if (squad.getSpawn() !== room.name) return;
+
+			const availableEnergy = room.getEffectiveAvailableEnergy();
+			if (availableEnergy < 5000) return;
+
 			const spawnUnitType = this.needsSpawning(room, squad);
 			if (!spawnUnitType) return;
 
-			const roomHasReserves = room.getEffectiveAvailableEnergy() > 10_000;
+			const roomHasReserves = availableEnergy > 10_000;
 			options.push({
 				priority: roomHasReserves ? 4 : 2,
 				weight: 1.1,

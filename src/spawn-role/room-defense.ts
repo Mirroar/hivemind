@@ -63,6 +63,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addRampartDefenderSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
+		if (room.defense.getEnemyStrength() < 2) return;
 
 		const responseType = this.getDefenseCreepSize(room);
 

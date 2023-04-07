@@ -136,6 +136,12 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
 		total += this.factory.store[resourceType];
 	}*/
 
+	// Add resources in transporters to prevent fluctuation from transporters
+	// moving stuff around.
+	_.each(this.creepsByRole.transporter, creep => {
+		total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
+	});
+
 	return total;
 };
 

@@ -242,11 +242,11 @@ export default class TransporterRole extends Role {
 				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
 				if (_.some(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType))) return;
 
-				// Move out of the way.
 				availableTiles.push(pos);
 			});
 
 			if (availableTiles.length === 1) {
+				// Move out of the way.
 				const dir = creep.pos.getDirectionTo(availableTiles[0]);
 				creep.move(dir);
 				return true;
@@ -761,6 +761,7 @@ export default class TransporterRole extends Role {
 			filter: target => {
 				const store = target instanceof Resource ? {[target.resourceType]: target.amount} : target.store;
 				if ((store[RESOURCE_ENERGY] || 0) < 20) return false;
+				if (!this.isSafePosition(creep, target.pos)) return false;
 
 				// const result = PathFinder.search(creep.pos, target.pos);
 				// if (result.incomplete) return false;
@@ -814,7 +815,9 @@ export default class TransporterRole extends Role {
 
 		// Look for energy in Containers.
 		const targets = creep.room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1,
+			filter: structure => (structure.structureType === STRUCTURE_CONTAINER)
+				&& structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1
+				&& this.isSafePosition(creep, structure.pos),
 		});
 
 		// Prefer containers used as harvester dropoff.
@@ -929,6 +932,8 @@ export default class TransporterRole extends Role {
 		// Look for resources on the ground.
 		const targets = creep.room.find(findConstant, {
 			filter: target => {
+				if (!this.isSafePosition(creep, target.pos)) return false;
+
 				const storeAmount = target instanceof Resource ? target.amount : target.store.getUsedCapacity();
 				if (storeAmount > 10) {
 					const result = PathFinder.search(creep.pos, target.pos);
@@ -983,7 +988,7 @@ export default class TransporterRole extends Role {
 
 		// Take non-energy out of containers.
 		const containers = room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER && this.isSafePosition(this.creep, structure.pos),
 		});
 
 		for (const container of containers) {

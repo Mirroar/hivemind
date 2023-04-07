@@ -18,6 +18,8 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): RemoteHarvesterSpawnOption[] {
+		if (room.defense.getEnemyStrength() >= 2) return [];
+
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		const options: RemoteHarvesterSpawnOption[] = [];
 		for (const position of harvestPositions) {

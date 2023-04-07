@@ -1,6 +1,8 @@
 /* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO MOVE WORK CARRY */
 
 import SpawnRole from 'spawn-role/spawn-role';
+import {getDangerMatrix} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 interface HarvesterSpawnOption extends SpawnOption {
 	source: Id<Source>;
@@ -41,6 +43,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		// @todo Spawn new harvester before previous harvester dies.
 
 		if (source.harvesters.length > 0) return;
+		if (!this.isSourceSafe(source)) return;
 
 		const force = this.isSmallHarvesterNeeded(source.room);
 		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
@@ -68,6 +71,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 
 		// Don't spawn more harvesters than we have space for.
 		if (source.harvesters.length >= source.getNumHarvestSpots()) return;
+		if (!this.isSourceSafe(source)) return;
 
 		let totalWorkParts = 0;
 		for (const creep of source.harvesters) {
@@ -90,6 +94,22 @@ export default class HarvesterSpawnRole extends SpawnRole {
 				force: false,
 			});
 		}
+	}
+
+	isSourceSafe(source: Source) {
+		const dangerMatrix = getDangerMatrix(source.room.name);
+
+		let safe = true;
+		handleMapArea(source.pos.x, source.pos.y, (x, y) => {
+			if (dangerMatrix.get(x, y) > 0) {
+				safe = false;
+				return false;
+			}
+
+			return null;
+		});
+
+		return safe;
 	}
 
 	/**

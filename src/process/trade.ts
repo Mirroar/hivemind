@@ -43,7 +43,18 @@ export default class TradeProcess extends Process {
 		for (const resourceType of RESOURCES_ALL) {
 			const tier = this.getResourceTier(resourceType);
 
-			if (tier === 1) {
+			if (resourceType === RESOURCE_ENERGY) {
+				// Buy energy for rooms under attack so we can hold out longer.
+				for (const room of Game.myRooms) {
+					if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= 2) {
+						if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500)
+							this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
+						else
+							this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
+					}
+				}
+			}
+			else if (tier === 1) {
 				// Check for base resources we have too much of.
 				if ((total.resources[resourceType] || 0) > maxStorage) {
 					this.instaSellResources(resourceType, resources.rooms);
@@ -227,7 +238,7 @@ export default class TradeProcess extends Process {
 	 * @param {object} rooms
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
-	instaBuyResources(resourceType, rooms?: any) {
+	instaBuyResources(resourceType, rooms?: any, force?: boolean) {
 		const isIntershardResource = INTERSHARD_RESOURCES.includes(resourceType);
 
 		// Find room with lowest amount of this resource.
@@ -243,14 +254,14 @@ export default class TradeProcess extends Process {
 
 		const maxPrice = history.average - Math.min(history.stdDev / 5, history.average * 0.1);
 		hivemind.log('trade', roomName).debug('Could buy', resourceType, 'for', bestOrder.price, '- we want to spend at most', maxPrice);
-		if (bestOrder.price > maxPrice) return;
+		if (bestOrder.price > maxPrice && !force) return;
 
-		const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount);
+		let amount = Math.min(force ? 10_000 : this.getMaxOrderAmount(resourceType), bestOrder.amount);
 		if (isIntershardResource) {
 			hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each.');
 		}
 		else {
-			const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
+			let transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
 
 			if (transactionCost > room.terminal.store.energy) {
 				if (room.memory.fillTerminal) {
@@ -261,7 +272,11 @@ export default class TradeProcess extends Process {
 					hivemind.log('trade', roomName).info('Preparing', transactionCost, 'energy for buying', amount, resourceType, 'from', bestOrder.roomName, 'at', bestOrder.price, 'credits each');
 				}
 
-				return;
+				if (force) {
+					amount = Math.floor(amount * room.terminal.store.energy / transactionCost);
+					transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
+				}
+				else return;
 			}
 
 			hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each, costing', transactionCost, 'energy.');

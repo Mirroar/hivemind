@@ -17,6 +17,8 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): HaulerSpawnOption[] {
+		if (room.defense.getEnemyStrength() >= 2) return [];
+
 		const options: HaulerSpawnOption[] = [];
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 

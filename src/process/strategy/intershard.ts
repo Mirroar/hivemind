@@ -327,6 +327,7 @@ export default class InterShardProcess extends Process {
 		for (const room of Game.myRooms) {
 			if (room.controller.level < 5) continue;
 			if (room.name === targetRoom) continue;
+			if (room.getEffectiveAvailableEnergy() < 30_000) continue;
 			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 7) continue;
 
 			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 350});
