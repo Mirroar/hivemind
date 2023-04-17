@@ -669,6 +669,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	sealRoom(): StepResult {
 		for (let x = 1; x < 49; x++) {
 			for (let y = 1; y < 49; y++) {
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) {
+					this.placementManager.blockPosition(x, y);
+					continue;
+				}
+
 				if (this.safetyMatrix.get(x, y) === TILE_IS_SAFE) continue;
 				if (this.safetyMatrix.get(x, y) === TILE_IS_ENDANGERED) continue;
 
