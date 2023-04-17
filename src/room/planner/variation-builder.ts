@@ -764,10 +764,22 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				if (this.roomPlan.hasPosition('road', pos)) return;
 
 				let nearRoad = false;
-				if (this.roomPlan.hasPosition('road', new RoomPosition(x - 1, y, this.roomName))) nearRoad = true;
-				if (this.roomPlan.hasPosition('road', new RoomPosition(x + 1, y, this.roomName))) nearRoad = true;
-				if (this.roomPlan.hasPosition('road', new RoomPosition(x, y - 1, this.roomName))) nearRoad = true;
-				if (this.roomPlan.hasPosition('road', new RoomPosition(x, y + 1, this.roomName))) nearRoad = true;
+				if (
+					this.roomPlan.hasPosition('road', new RoomPosition(x - 1, y, this.roomName))
+					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x - 1, y, this.roomName))
+				) nearRoad = true;
+				if (
+					this.roomPlan.hasPosition('road', new RoomPosition(x + 1, y, this.roomName))
+					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x + 1, y, this.roomName))
+				) nearRoad = true;
+				if (
+					this.roomPlan.hasPosition('road', new RoomPosition(x, y - 1, this.roomName))
+					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x, y - 1, this.roomName))
+				) nearRoad = true;
+				if (
+					this.roomPlan.hasPosition('road', new RoomPosition(x, y + 1, this.roomName))
+					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x, y + 1, this.roomName))
+				) nearRoad = true;
 
 				if (!nearRoad && (x + y) % 2 === 0) return;
 
