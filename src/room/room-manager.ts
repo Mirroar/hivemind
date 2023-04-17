@@ -106,6 +106,7 @@ export default class RoomManager {
 	}
 
 	isRoomRecovering(): boolean {
+		if ((this.room.controller.safeMode ?? 0) > 5000) return false;
 		if (this.room.memory.isReclaimableSince) return true;
 
 		if (this.structuresByType[STRUCTURE_SPAWN] && this.structuresByType[STRUCTURE_SPAWN].length > 0) return false;

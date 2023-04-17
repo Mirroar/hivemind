@@ -42,7 +42,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 
 	canReclaimRoom(targetRoom: Room): boolean {
 		if (!targetRoom.memory.isReclaimableSince) return false;
-		if (Game.time - targetRoom.memory.isReclaimableSince < 2000) return false;
+		if (Game.time - targetRoom.memory.isReclaimableSince < 2000 && (targetRoom.controller.safeMode ?? 0) < 2_000) return false;
 
 		const remoteBuilderCount = _.filter(Game.creepsByRole['builder.remote'], (creep: RemoteBuilderCreep) => creep.memory.targetRoom === targetRoom.name || creep.memory.singleRoom === targetRoom.name).length;
 		if (remoteBuilderCount > 5) return false;
