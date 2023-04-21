@@ -85,7 +85,7 @@ export default class NavMesh {
 
 		this.terrain = new Room.Terrain(roomName);
 		this.costMatrix = getCostMatrix(roomName).clone();
-		const exits = this.getExitInfo();
+		const exits = this.getExitInfo(roomName);
 		const regions = this.getRegions(exits);
 		const paths = this.getConnectingPaths(regions, roomName);
 
@@ -132,27 +132,27 @@ export default class NavMesh {
 	 * @return {Object[]}
 	 *   An array of exit information objects.
 	 */
-	getExitInfo(): ExitInfo[] {
+	getExitInfo(roomName: string): ExitInfo[] {
 		const exits: ExitInfo[] = [];
 
-		this.collectExitGroups(exits, LEFT, true, 0);
-		this.collectExitGroups(exits, RIGHT, true, 49);
-		this.collectExitGroups(exits, TOP, false, 0);
-		this.collectExitGroups(exits, BOTTOM, false, 49);
+		this.collectExitGroups(roomName, exits, LEFT, true, 0);
+		this.collectExitGroups(roomName, exits, RIGHT, true, 49);
+		this.collectExitGroups(roomName, exits, TOP, false, 0);
+		this.collectExitGroups(roomName, exits, BOTTOM, false, 49);
 
 		return exits;
 	}
 
-	collectExitGroups(exits: ExitInfo[], dir: DirectionConstant, vertical: boolean, offset: number) {
+	collectExitGroups(roomName: string, exits: ExitInfo[], dir: DirectionConstant, vertical: boolean, offset: number) {
+		const isAvailable = this.isAvailableExitDirection(roomName, dir);
 		let groupId = 1;
-
 		let currentStart: number = null;
 		let nextId = (groupId++) + (10 * (dir - 1));
 		for (let i = 1; i < 50; i++) {
 			const x = vertical ? offset : i;
 			const y = vertical ? i : offset;
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL || this.costMatrix.get(x, y) > 200) {
-				if (currentStart) {
+				if (currentStart && isAvailable) {
 					// Commit end of the current exit group.
 					exits.push({
 						id: nextId,
@@ -171,8 +171,15 @@ export default class NavMesh {
 				currentStart = i;
 			}
 
-			this.costMatrix.set(x, y, nextId + 100);
+			this.costMatrix.set(x, y, isAvailable ? (nextId + 100) : 255);
 		}
+	}
+
+	isAvailableExitDirection(roomName: string, dir: DirectionConstant): boolean {
+		const otherRoomName = Game.map.describeExits(roomName)[dir];
+		if (!otherRoomName) return false;
+
+		return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
 	}
 
 	getRegions(exits: ExitInfo[]): RegionInfo[] {
@@ -454,8 +461,7 @@ export default class NavMesh {
 				else if (roomIntel.isClaimed()) {
 					costMultiplier *= 1.5;
 				}
-
-				if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+				else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
 					// Allow pathing through source keeper rooms since we can safely avoid them.
 					costMultiplier *= 2;
 				}

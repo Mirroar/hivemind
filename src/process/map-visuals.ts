@@ -114,10 +114,28 @@ export default class MapVisualsProcess extends Process {
 		if (!hivemind.settings.get('visualizeNavMesh')) return;
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
+			const roomIntel = getRoomIntel(roomName);
+			let color = '#ffffff';
+			if (roomIntel.isOwned()) {
+				color = '#ff0000';
+			}
+			else if (roomIntel.isClaimed()) {
+				color = '#ffff00';
+			}
+			else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+				color = '#ff8000';
+			}
+			const style = {
+				color,
+				opacity: 1,
+				width: 2,
+				lineStyle: 'dotted' as const,
+			};
+
 			if (!navInfo.regions) {
 				// Single region, all exits are connected.
 				for (const exit of navInfo.exits) {
-					Game.map.visual.line(new RoomPosition(25, 25, roomName), deserializePosition(exit.center, roomName));
+					Game.map.visual.line(new RoomPosition(25, 25, roomName), deserializePosition(exit.center, roomName), style);
 				}
 
 				return;
@@ -128,7 +146,7 @@ export default class MapVisualsProcess extends Process {
 				for (const exit of navInfo.exits) {
 					if (!region.exits.includes(exit.id)) continue;
 
-					Game.map.visual.line(deserializePosition(region.center, roomName), deserializePosition(exit.center, roomName));
+					Game.map.visual.line(deserializePosition(region.center, roomName), deserializePosition(exit.center, roomName), style);
 				}
 			}
 		});
