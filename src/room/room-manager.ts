@@ -107,7 +107,7 @@ export default class RoomManager {
 
 	isRoomRecovering(): boolean {
 		if ((this.room.controller.safeMode ?? 0) > 5000) return false;
-		if (this.room.memory.isReclaimableSince) return true;
+		if (this.room.needsReclaiming()) return true;
 
 		if (this.structuresByType[STRUCTURE_SPAWN] && this.structuresByType[STRUCTURE_SPAWN].length > 0) return false;
 		if (this.room.controller.level < 3) return false;
@@ -128,9 +128,16 @@ export default class RoomManager {
 		// Build normal ramparts.
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 
-		// Build spawn.
+		// Build spawn once we have enough capacity for decently sized creeps.
 		if (this.checkWallIntegrity(10_000)) {
+			const creepCost = 6 * BODYPART_COST[WORK] + 3 * BODYPART_COST[MOVE] + 3 * BODYPART_COST[CARRY];
+			if (this.room.energyCapacityAvailable + SPAWN_ENERGY_CAPACITY < creepCost) {
+				this.manageExtensions();
+			}
+
 			this.buildPlannedStructures('spawn.0', STRUCTURE_SPAWN);
+			this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
+			this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
 		}
 	}
 
@@ -333,7 +340,7 @@ export default class RoomManager {
 				return false;
 			},
 		});
-		if (!this.room.memory.isReclaimableSince) {
+		if (!this.room.needsReclaiming()) {
 			for (const structure of unwantedDefenses) {
 				if (hivemind.settings.get('dismantleUnwantedDefenses')) {
 					this.memory.dismantle[structure.id] = 1;

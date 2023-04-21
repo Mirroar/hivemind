@@ -1,7 +1,8 @@
-import Process from 'process/process';
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
+import Process from 'process/process';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
@@ -30,6 +31,7 @@ export default class InterShardProcess extends Process {
 		this.manageScouting();
 		this.manageExpanding();
 		this.manageExpansionSupport();
+		this.manageReclaiming();
 
 		interShard.writeLocalMemory();
 	}
@@ -235,10 +237,9 @@ export default class InterShardProcess extends Process {
 
 		const expansionInfo = {
 			room: targetRoom,
-			portalRoom: null,
+			portalRoom: this.findClosestPortalToRoom(targetRoom),
 			start: Game.time,
 		};
-		expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom].origin;
 
 		this.memory.info.interShardExpansion = expansionInfo;
 
@@ -345,4 +346,61 @@ export default class InterShardProcess extends Process {
 		}
 	}
 
+	manageReclaiming() {
+		const roomStats = this.memory.info.rooms;
+
+		const needsReclaiming = [];
+		for (const room of Game.myRooms) {
+			if (!room.needsReclaiming()) continue;
+
+			needsReclaiming.push({
+				name: room.name,
+				safe: room.isSafeForReclaiming(),
+				rcl: room.controller.level,
+				portalRoom: this.findClosestPortalToRoom(room.name)
+			});
+
+			const squad = new Squad('intershardReclaim:' + room.name);
+			squad.setUnitCount('builder', 1);
+			squad.setUnitCount('brawler', 1);
+			squad.setTarget(new RoomPosition(25, 25, room.name));
+			squad.setSpawn(null);
+		}
+
+		if (needsReclaiming.length > 0) {
+			roomStats.reclaimable = needsReclaiming;
+		}
+		else {
+			delete roomStats.reclaimable;
+		}
+	}
+
+	findClosestPortalToRoom(roomName: string) {
+		return cache.inHeap('portalRoomName:' + roomName, 2 * CREEP_LIFE_TIME, () => {
+			let bestPortal;
+			_.each(this.memory.portals, (portals, shardName) => {
+				if (shardName === Game.shard.name) return;
+
+				_.each(portals, (portalInfo, portalLocation) => {
+					const portalPosition = decodePosition(portalLocation);
+					if (Game.map.getRoomLinearDistance(portalPosition.roomName, roomName) > 10) return;
+
+					// console.log('Checking if we can reach ' + roomName + ' from portal at ' + portalPosition + '...');
+
+					const path = this.navMesh.findPath(portalPosition, new RoomPosition(25, 25, roomName), {maxPathLength: 700});
+					// console.log(path.incomplete ? 'incomplete' : path.path.length);
+					if (!path || path.incomplete) return;
+
+					if (bestPortal && bestPortal.range <= path.path.length) return;
+
+					bestPortal = {
+						portalPosition,
+						range: path.path.length,
+					};
+				});
+			});
+
+			return bestPortal?.portalPosition.roomName;
+		});
+	}
 }

@@ -19,6 +19,7 @@ declare global {
 	interface RemoteBuilderCreepMemory extends CreepMemory {
 		role: 'builder.remote';
 		targetRoom?: string;
+		interShardPortal?: string;
 	}
 
 	interface RemoteBuilderCreepHeapMemory extends CreepHeapMemory {
@@ -52,6 +53,14 @@ export default class RemoteBuilderRole extends Role {
 		this.creep = creep;
 
 		if (creep.memory.targetRoom) {
+			if (creep.memory.interShardPortal) {
+				const targetPos = decodePosition(creep.memory.interShardPortal);
+				if (creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.targetRoom), true)) return;
+
+				creep.whenInRange(1, targetPos, () => creep.moveTo(targetPos));
+				return;
+			}
+
 			if (creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.targetRoom))) return;
 			if (creep.pos.roomName !== creep.memory.targetRoom) return;
 			creep.memory.singleRoom = creep.memory.targetRoom;
@@ -123,7 +132,7 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		// Recovering rooms need some RCL for defense.
-		if (creep.room.isMine() && creep.room.memory.isReclaimableSince && creep.room.controller.level < 4) {
+		if (creep.room.isMine() && creep.room.needsReclaiming() && creep.room.controller.level < 4) {
 			creep.memory.upgrading = true;
 			return;
 		}
@@ -155,7 +164,7 @@ export default class RemoteBuilderRole extends Role {
 			this.determineBuildTarget();
 
 			if (!creep.memory.buildTarget && !creep.memory.repairTarget) {
-				if (this.creep.room.memory.isReclaimableSince) {
+				if (this.creep.room.needsReclaiming()) {
 					if (this.saveExpiringRamparts(hivemind.settings.get('minWallIntegrity'))) return;
 				}
 

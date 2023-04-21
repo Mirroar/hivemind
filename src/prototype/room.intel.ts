@@ -2,10 +2,12 @@
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
+import container from 'utils/container';
 import Bay from 'manager.bay';
 import cache from 'utils/cache';
 import Exploit from 'manager.exploit';
 import FactoryManager from 'factory-manager';
+import ReclaimManager from 'reclaim-manager';
 import RoomDefense from 'room-defense';
 import utilities from 'utilities';
 import {getUsername} from 'utils/account';
@@ -42,6 +44,8 @@ declare global {
 		observer?: StructureObserver;
 		factory?: StructureFactory;
 		factoryManager: FactoryManager;
+		needsReclaiming: () => boolean;
+		isSafeForReclaiming: () => boolean;
 	}
 
 	interface RoomMemory {
@@ -60,12 +64,10 @@ Object.defineProperty(Room.prototype, 'enemyCreeps', {
 	 * @return {Object}
 	 *   All enemy creeps in this room.
 	 */
-	get() {
-		if (!this._enemyCreeps) {
-			this._enemyCreeps = _.groupBy(this.find(FIND_HOSTILE_CREEPS), 'owner.username');
-		}
-
-		return this._enemyCreeps;
+	get(this: Room) {
+		return cache.inObject(this, 'enemyCreeps', 1, () => {
+			return _.groupBy(this.find(FIND_HOSTILE_CREEPS), 'owner.username');
+		});
 	},
 	enumerable: false,
 	configurable: true,
@@ -103,12 +105,10 @@ Object.defineProperty(Room.prototype, 'defense', {
 	 * @return {RoomDefense}
 	 *   The room's defense manager.
 	 */
-	get() {
-		if (!this._defenseManager) {
-			this._defenseManager = new RoomDefense(this.name);
-		}
-
-		return this._defenseManager;
+	get(this: Room) {
+		return cache.inObject(this, 'roomDefense', 1, () => {
+			return new RoomDefense(this.name);
+		});
 	},
 	enumerable: false,
 	configurable: true,
@@ -123,7 +123,7 @@ Object.defineProperty(Room.prototype, 'sources', {
 	 * @return {Source[]}
 	 *   The room's sources.
 	 */
-	get() {
+	get(this: Room) {
 		return cache.inObject(this, 'sources', 1, () => {
 			const sourceIds = cache.inHeap('sources:' + this.name, 10_000, () => _.map(this.find(FIND_SOURCES), 'id'));
 
@@ -143,7 +143,7 @@ Object.defineProperty(Room.prototype, 'mineral', {
 	 * @return {Source[]}
 	 *   The room's mineral.
 	 */
-	get(): Mineral {
+	get(this: Room): Mineral {
 		return cache.inObject(this, 'mineral', 1, () => {
 			const mineralIds = cache.inHeap('mineral:' + this.name, 10_000, () => _.map<Mineral, string>(this.find(FIND_MINERALS), 'id'));
 
@@ -231,7 +231,7 @@ Room.prototype.enhanceData = function (this: Room) {
 /**
 * Gathers information about a room and saves it to memory for faster access.
 */
-Room.prototype.scan = function () {
+Room.prototype.scan = function (this: Room) {
 	this.updateControllerContainer();
 	this.updateControllerLink();
 	this.updateStorageLink();
@@ -240,7 +240,7 @@ Room.prototype.scan = function () {
 /**
  * Updates location of the room's controller container.
  */
-Room.prototype.updateControllerContainer = function () {
+Room.prototype.updateControllerContainer = function (this: Room) {
 	// @todo Split into a get function and set / delete value according to result.
 	// Check if the controller has a container nearby.
 	// Use room planner locations if available.
@@ -267,7 +267,7 @@ Room.prototype.updateControllerContainer = function () {
 /**
  * Updates location of the room's controller link.
  */
-Room.prototype.updateControllerLink = function () {
+Room.prototype.updateControllerLink = function (this: Room) {
 	// @todo Split into a get function and set / delete value according to result.
 	// Check if the controller has a link nearby.
 	// Use room planner locations if available.
@@ -294,7 +294,7 @@ Room.prototype.updateControllerLink = function () {
 /**
  * Updates location of the room's storage link.
  */
-Room.prototype.updateStorageLink = function () {
+Room.prototype.updateStorageLink = function (this: Room) {
 	// @todo Split into a get function and set / delete value according to result.
 	if (!this.storage) return;
 
@@ -324,7 +324,7 @@ Room.prototype.updateStorageLink = function () {
  * @return {boolean}
  *   True if a scout is needed.
  */
-Room.prototype.needsScout = function () {
+Room.prototype.needsScout = function (this: Room) {
 	if (!Memory.strategy) return false;
 
 	const room = this;
@@ -340,7 +340,7 @@ Room.prototype.needsScout = function () {
  * @return {boolean}
  *   True if the room is owned / reserved by the player.
  */
-Room.prototype.isMine = function (allowReserved?: boolean) {
+Room.prototype.isMine = function (this: Room, allowReserved?: boolean) {
 	if (!this.controller) return false;
 	if (this.controller.my) return true;
 
@@ -350,3 +350,13 @@ Room.prototype.isMine = function (allowReserved?: boolean) {
 
 	return false;
 };
+
+Room.prototype.needsReclaiming = function (this: Room) {
+	const reclaimManager = container.get<ReclaimManager>('ReclaimManager');
+	return reclaimManager.roomNeedsReclaiming(this);
+}
+
+Room.prototype.isSafeForReclaiming = function (this: Room) {
+	const reclaimManager = container.get<ReclaimManager>('ReclaimManager');
+	return reclaimManager.roomIsSafeForReclaiming(this);
+}

@@ -93,7 +93,7 @@ export default class RoomsProcess extends Process {
 			const prioritizeRoomManager = room.roomManager.shouldRunImmediately();
 			hivemind.runSubProcess('rooms_manager', () => {
 				hivemind.runProcess(room.name + '_manager', RoomManagerProcess, {
-					interval: prioritizeRoomManager ? 0 : (room.memory.isReclaimableSince ? 20 : 100),
+					interval: prioritizeRoomManager ? 0 : (room.needsReclaiming() ? 20 : 100),
 					room,
 					priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
 				});

@@ -2,7 +2,7 @@ import hivemind from 'hivemind';
 
 declare global {
 	interface RoomMemory {
-		isReclaimableSince: number;
+		isReclaimableSince?: number;
 	}
 }
 
@@ -11,7 +11,7 @@ let lastReclaimCleanup = Game.time;
 export default class ReclaimManager {
 
 	public updateReclaimStatus(room: Room) {
-		if (this.needsReclaiming(room)) {
+		if (this.needsToReclaim(room)) {
 			this.updateReclaimTimer(room);
 			return;
 		}
@@ -21,7 +21,7 @@ export default class ReclaimManager {
 		}
 	}
 
-	private needsReclaiming(room: Room): boolean {
+	private needsToReclaim(room: Room): boolean {
 		if (Game.myRooms.length <= 1) return false;
 		if (this.hasSpawn(room)) return false;
 		if (this.isExpansionTarget(room)) return false;
@@ -77,6 +77,19 @@ export default class ReclaimManager {
 
 			delete Memory.rooms[roomName].isReclaimableSince;
 		}
+	}
+
+	public roomNeedsReclaiming(room: Room): boolean {
+		if (room.memory.isReclaimableSince) return true;
+
+		return false;
+	}
+
+	public roomIsSafeForReclaiming(room: Room): boolean {
+		if (!room.memory.isReclaimableSince) return false;
+
+		return Game.time - room.memory.isReclaimableSince > 2000
+			|| (room.controller?.safeMode ?? 0) > 2000;
 	}
 
 }

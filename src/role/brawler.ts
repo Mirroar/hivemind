@@ -294,7 +294,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.fillWithEnergy) {
-			if (creep.store.getFreeCapacity() > 0) {
+			if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
 				if (creep.room.getEffectiveAvailableEnergy() < 3000) {
 					creep.moveToRange(new RoomPosition(25, 25, creep.room.name), 5);
 					return;
