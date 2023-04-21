@@ -49,6 +49,8 @@ export default class VariationGenerator {
 			roomCenter: this.chooseCorePosition(potentialCorePositions),
 		};
 
+		if (!weightedCenterVariation.roomCenter) return {};
+
 		const variations = {'weighted': weightedCenterVariation};
 		this.addGridCorePositions(variations, baseVariation, potentialCorePositions);
 
@@ -78,6 +80,9 @@ export default class VariationGenerator {
 	chooseCorePosition(potentialCorePositions: RoomPosition[]) {
 		const roomIntel = getRoomIntel(this.roomName);
 		const controllerPosition = roomIntel.getControllerPosition();
+
+		if (!controllerPosition) return null;
+
 		const exitCenters = getExitCenters(this.roomName);
 
 		// Decide where room center should be by averaging exit positions.

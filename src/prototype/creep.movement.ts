@@ -27,7 +27,7 @@ declare global {
 		moveToRoom: (roomName: string, allowDanger?: boolean) => boolean;
 		calculateRoomPath: (roomName: string, allowDanger?: boolean) => string[] | null;
 		isInRoom: () => boolean;
-		interRoomTravel: (targetPos: RoomPosition) => boolean;
+		interRoomTravel: (targetPos: RoomPosition, allowDanger?: boolean) => boolean;
 		moveUsingNavMesh: (targetPos: RoomPosition, options?: GoToOptions) => OK | ERR_NO_PATH;
 		getNavMeshMoveTarget: () => string | null;
 		stopNavMeshMove: () => void;
@@ -54,7 +54,7 @@ declare global {
 		moveToRoom: (roomName: string, allowDanger?: boolean) => boolean;
 		calculateRoomPath: (roomName: string, allowDanger?: boolean) => string[] | null;
 		isInRoom: () => boolean;
-		interRoomTravel: (targetPos: RoomPosition) => boolean;
+		interRoomTravel: (targetPos: RoomPosition, allowDanger?: boolean) => boolean;
 		moveUsingNavMesh: (targetPos: RoomPosition, options?: GoToOptions) => OK | ERR_NO_PATH;
 		getNavMeshMoveTarget: () => string | null;
 		stopNavMeshMove: () => void;
