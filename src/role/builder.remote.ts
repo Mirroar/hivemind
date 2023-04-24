@@ -137,6 +137,17 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
+		// Restore downgraded controllers.
+		if (creep.room.isMine() && creep.room.controller.progress > creep.room.controller.progressTotal && !creep.room.controller.upgradeBlocked) {
+			const upgrading = _.size(creep.room.creepsByRole.upgrader) +
+				_.size(_.filter(creep.room.creepsByRole['builder.remote'], creep => creep.memory.upgrading));
+
+			if (upgrading === 0) {
+				creep.memory.upgrading = true;
+				return;
+			}
+		}
+
 		// Help by filling spawn with energy.
 		const spawns = creep.room.find<StructureSpawn>(FIND_STRUCTURES, {
 			filter: structure =>

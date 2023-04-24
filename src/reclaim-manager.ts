@@ -63,6 +63,10 @@ export default class ReclaimManager {
 		if (!room.memory.isReclaimableSince) return false;
 		if (!room.roomManager) return false;
 		if (!room.roomManager.checkWallIntegrity()) return false;
+		if (room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_SPAWN }).length === 0)
+			return false;
+		if (room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_TOWER }).length === 0)
+			return false;
 
 		return true;
 	}

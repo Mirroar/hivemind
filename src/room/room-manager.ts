@@ -99,6 +99,7 @@ export default class RoomManager {
 			this.buildRoomDefenseFirst();
 
 			if (!this.structuresByType[STRUCTURE_SPAWN] || this.structuresByType[STRUCTURE_SPAWN].length === 0) return;
+			if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0 && (!this.structuresByType[STRUCTURE_STORAGE] || this.structuresByType[STRUCTURE_STORAGE].length === 0)) return;
 		}
 
 		this.cleanRoom();

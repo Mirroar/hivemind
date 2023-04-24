@@ -148,12 +148,11 @@ export default class RoomIntel {
 		this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 		this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
 		this.gatherInvaderIntel(structures);
+		this.gatherExitIntel(room.name);
 
 		const ruins = room.find(FIND_RUINS);
 		this.gatherAbandonedResourcesIntel(structures, ruins);
 
-		// Remember room exits.
-		this.memory.exits = Game.map.describeExits(room.name);
 
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
 		let constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
@@ -460,6 +459,19 @@ export default class RoomIntel {
 
 		// @todo Also consider saving containers with resources if it's not one
 		// of our harvest rooms, so we can "borrow" from other players.
+	}
+
+	gatherExitIntel(roomName: string) {
+		// Remember room exits.
+		this.memory.exits = Game.map.describeExits(roomName);
+
+		for (const dir in this.memory.exits) {
+			if (!this.isAvailableExitDirection(roomName, this.memory.exits[dir])) delete this.memory.exits[dir];
+		}
+	}
+
+	isAvailableExitDirection(roomName: string, otherRoomName: string): boolean {
+		return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
 	}
 
 	/**
