@@ -22,4 +22,5 @@ export class Container {
 	}
 }
 
-export default new Container();
+global['container'] = new Container();
+export default global['container'];

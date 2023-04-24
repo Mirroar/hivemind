@@ -39,7 +39,7 @@ export default class RemoteMiningOperation extends Operation {
 	/**
 	 * Constructs a new RemoteMiningOperation instance.
 	 */
-	constructor(name: string) {
+	public constructor(name: string) {
 		super(name);
 		this.memory.type = 'mining';
 		this.pathManager = new PathManager();

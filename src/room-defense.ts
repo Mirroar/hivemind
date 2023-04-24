@@ -223,7 +223,7 @@ export default class RoomDefense {
 		const opName = 'playerTrade:' + username;
 		const operation = Game.operations[opName] || new Operation(opName);
 
-		operation.recordStatChange(amount, resourceType);
+		operation.addResourceGain(amount, resourceType);
 
 		hivemind.log('trade', this.roomName).notify('Trade with', username, ':', amount, resourceType);
 	}

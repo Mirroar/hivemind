@@ -57,9 +57,11 @@ export default class InitProcess extends Process {
 				return;
 			}
 
-			const operation = new operationClasses[data.type](opName);
-			Game.operations[opName] = operation;
-			Game.operationsByType[data.type][opName] = operation;
+			if (operationClasses[data.type]) {
+				const operation = new operationClasses[data.type](opName);
+				Game.operations[opName] = operation;
+				Game.operationsByType[data.type][opName] = operation;
+			}
 		});
 
 		// Define quick access property Game.myRooms.
