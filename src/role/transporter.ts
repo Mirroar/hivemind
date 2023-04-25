@@ -964,7 +964,7 @@ export default class TransporterRole extends Role {
 
 				if (creep.room.getFreeStorage() < store[resourceType]) {
 					// If storage is super full, try leaving stuff on the ground.
-					option.priority -= 2;
+					continue;
 				}
 
 				option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 2;
