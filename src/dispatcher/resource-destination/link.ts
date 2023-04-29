@@ -21,10 +21,10 @@ export default class LinkDestination extends StructureDestination<LinkDestinatio
 		return 5;
 	}
 
-	getTasks(context?: ResourceDestinationContext) {
-		if (!this.room.linkNetwork || this.room.linkNetwork.energy >= this.room.linkNetwork.minEnergy) return [];
+	getTasks(context: ResourceDestinationContext) {
+		if (!this.room.linkNetwork) return [];
+		if (this.room.linkNetwork.energy >= this.room.linkNetwork.minEnergy) return [];
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
-		if (context.creep && context.creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return [];
 
 		const options: LinkDestinationTask[] = [];
 
@@ -41,7 +41,7 @@ export default class LinkDestination extends StructureDestination<LinkDestinatio
 				target: link.id,
 			};
 
-			if (context.creep && context.creep.pos.getRangeTo(link) > 10) {
+			if (context.creep.pos.getRangeTo(link) > 10) {
 				// Don't go out of your way to fill the link, do it when nearby, e.g. at storage.
 				option.priority--;
 			}
@@ -50,5 +50,13 @@ export default class LinkDestination extends StructureDestination<LinkDestinatio
 		}
 
 		return options;
+	}
+
+	isValid(task: LinkDestinationTask, context: ResourceDestinationContext) {
+		if (!super.isValid(task, context)) return false;
+		if (!this.room.linkNetwork) return false;
+		if (this.room.linkNetwork.energy >= this.room.linkNetwork.minEnergy) return false;
+
+		return true;
 	}
 }

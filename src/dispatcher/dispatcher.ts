@@ -12,7 +12,7 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 			const providerOptions = provider.getTasks(context);
 
 			for (const option of providerOptions) {
-				options.push(option);
+				if (provider.isValid(option, context)) options.push(option);
 			}
 		});
 
@@ -27,10 +27,10 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 		return Boolean(this.providers[type]);
 	}
 
-	validateTask(task: TaskType, creep: Creep) {
+	validateTask(task: TaskType, context: ContextType) {
 		if (!this.hasProvider(task.type)) return false;
 
-		if (this.providers[task.type].isValid) return this.providers[task.type].isValid(task, creep);
+		if (this.providers[task.type].isValid) return this.providers[task.type].isValid(task, context);
 
 		return true;
 	}

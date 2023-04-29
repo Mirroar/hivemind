@@ -21,7 +21,7 @@ export default class TerminalDestination extends StructureDestination<TerminalDe
 		return 4;
 	}
 
-	getTasks(context?: ResourceDestinationContext) {
+	getTasks(context: ResourceDestinationContext) {
 		if (!this.room.terminal) return [];
 		if (this.room.isClearingTerminal()) return [];
 
@@ -33,16 +33,13 @@ export default class TerminalDestination extends StructureDestination<TerminalDe
 		return options;
 	}
 
-	addTransferResourceDestination(options: TerminalDestinationTask[], context?: ResourceDestinationContext) {
+	addTransferResourceDestination(options: TerminalDestinationTask[], context: ResourceDestinationContext) {
 		if (!this.room.memory.fillTerminal) return;
 
 		const resourceType = this.room.memory.fillTerminal;
 		if (context.resourceType && resourceType !== context.resourceType) return;
-		if (context.creep && context.creep.store[resourceType] === 0) return;
 
 		const terminal = this.room.terminal;
-		const freeCapacity = terminal.store.getFreeCapacity();
-		if (freeCapacity === 0) return;
 
 		const fillAmount = this.room.memory.fillTerminalAmount || 10_000;
 		if (terminal.store[resourceType] >= fillAmount) {
@@ -60,14 +57,12 @@ export default class TerminalDestination extends StructureDestination<TerminalDe
 		});
 	}
 
-	addResourcesForSaleDestination(options: TerminalDestinationTask[], context?: ResourceDestinationContext) {
+	addResourcesForSaleDestination(options: TerminalDestinationTask[], context: ResourceDestinationContext) {
 		const terminal = this.room.terminal;
-		if (terminal.store.getFreeCapacity() === 0) return;
 
 		const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === this.room.name && order.type === ORDER_SELL);
 		for (const order of roomSellOrders) {
 			if (context.resourceType && order.resourceType !== context.resourceType) continue;
-			if (context.creep && context.creep.store[order.resourceType] === 0) continue;
 			if (terminal.store[order.resourceType] >= order.remainingAmount) continue;
 
 			options.push({
@@ -79,5 +74,12 @@ export default class TerminalDestination extends StructureDestination<TerminalDe
 				amount: order.remainingAmount - terminal.store[order.resourceType],
 			});
 		}
+	}
+
+	isValid(task: TerminalDestinationTask, context: ResourceDestinationContext) {
+		if (!super.isValid(task, context)) return false;
+		if (this.room.isClearingTerminal()) return false;
+
+		return true;
 	}
 }

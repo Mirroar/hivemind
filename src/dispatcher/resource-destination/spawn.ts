@@ -21,9 +21,8 @@ export default class SpawnDestination extends StructureDestination<SpawnDestinat
 		return 5;
 	}
 
-	getTasks(context?: ResourceDestinationContext) {
+	getTasks(context: ResourceDestinationContext) {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
-		if (context.creep && context.creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return [];
 
 		const options: SpawnDestinationTask[] = [];
 
@@ -46,11 +45,8 @@ export default class SpawnDestination extends StructureDestination<SpawnDestinat
 				amount: target.store.getFreeCapacity(RESOURCE_ENERGY),
 			};
 
-			if (context.creep) {
-				const canDeliver = Math.min(context.creep.store[RESOURCE_ENERGY] || 0, target.store.getFreeCapacity(RESOURCE_ENERGY));
-				option.weight += canDeliver / (context.creep.store.getCapacity()) + 1 - (context.creep.pos.getRangeTo(target) / 100);
-			}
-
+			const deliveryAmount = Math.min(context.creep.store[RESOURCE_ENERGY] || 0, target.store.getFreeCapacity(RESOURCE_ENERGY));
+			option.weight += deliveryAmount / (context.creep.store.getCapacity()) + 1 - (context.creep.pos.getRangeTo(target) / 100);
 			option.priority -= this.room.getCreepsWithOrder(this.getType(), target.id).length * 3;
 
 			options.push(option);

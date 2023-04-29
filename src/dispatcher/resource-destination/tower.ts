@@ -21,7 +21,7 @@ export default class TowerDestination extends StructureDestination<TowerDestinat
 		return 5;
 	}
 
-	getTasks(context?: ResourceDestinationContext): TowerDestinationTask[] {
+	getTasks(context: ResourceDestinationContext): TowerDestinationTask[] {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
 
 		const options: TowerDestinationTask[] = [];

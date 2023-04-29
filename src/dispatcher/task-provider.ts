@@ -9,7 +9,7 @@ declare global {
 export default interface TaskProvider<TaskType extends Task, ContextType> {
 	getType: () => string;
 	getHighestPriority: (context?: ContextType) => number;
-	getTasks: (context?: ContextType) => TaskType[];
-	isValid?: (task: TaskType, creep: Creep) => boolean;
-	execute?: (task: TaskType, creep: Creep) => void;
+	getTasks: (context: ContextType) => TaskType[];
+	isValid?: (task: TaskType, context: ContextType) => boolean;
+	execute?: (task: TaskType, context: ContextType) => void;
 }

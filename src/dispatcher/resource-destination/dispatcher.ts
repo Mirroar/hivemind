@@ -18,7 +18,7 @@ declare global {
 
 	interface ResourceDestinationContext {
 		resourceType?: string;
-		creep?: Creep;
+		creep: Creep;
 	}
 }
 

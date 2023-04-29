@@ -21,7 +21,7 @@ export default class LabDestination extends StructureDestination<LabDestinationT
 		return 3;
 	}
 
-	getTasks(context?: ResourceDestinationContext) {
+	getTasks(context: ResourceDestinationContext) {
 		if (!this.room.memory.currentReaction) return [];
 		if (this.room.isEvacuating()) return [];
 
@@ -33,12 +33,11 @@ export default class LabDestination extends StructureDestination<LabDestinationT
 		return options;
 	}
 
-	addLabTask(resourceType: ResourceConstant, labId: Id<StructureLab>, options: LabDestinationTask[], context?: ResourceDestinationContext) {
+	addLabTask(resourceType: ResourceConstant, labId: Id<StructureLab>, options: LabDestinationTask[], context: ResourceDestinationContext) {
 		const lab = Game.getObjectById(labId);
 		if (!lab) return;
 		if (lab.mineralType && lab.mineralType !== resourceType) return;
 		if (context.resourceType && resourceType !== context.resourceType) return;
-		if (context.creep && context.creep.store[resourceType] === 0) return;
 
 		const freeCapacity = lab.store.getFreeCapacity(resourceType);
 		if (freeCapacity < lab.store.getCapacity(resourceType) * 0.2) return;
@@ -51,5 +50,14 @@ export default class LabDestination extends StructureDestination<LabDestinationT
 			resourceType,
 			amount: freeCapacity,
 		});
+	}
+
+	isValid(task: LabDestinationTask, context: ResourceDestinationContext) {
+		if (!super.isValid(task, context)) return false;
+
+		const lab = Game.getObjectById(task.target);
+		if (lab.mineralType && lab.mineralType !== task.resourceType) return false;
+
+		return true;
 	}
 }
