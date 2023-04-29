@@ -27,10 +27,10 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 		return Boolean(this.providers[type]);
 	}
 
-	validateTask(task: TaskType) {
+	validateTask(task: TaskType, creep: Creep) {
 		if (!this.hasProvider(task.type)) return false;
 
-		if (this.providers[task.type].validate) return this.providers[task.type].validate(task);
+		if (this.providers[task.type].isValid) return this.providers[task.type].isValid(task, creep);
 
 		return true;
 	}

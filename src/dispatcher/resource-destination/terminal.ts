@@ -1,3 +1,4 @@
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -7,8 +8,10 @@ declare global {
 	}
 }
 
-export default class TerminalDestination implements TaskProvider<TerminalDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class TerminalDestination extends StructureDestination<TerminalDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'terminal' {
 		return 'terminal';
@@ -76,13 +79,5 @@ export default class TerminalDestination implements TaskProvider<TerminalDestina
 				amount: order.remainingAmount - terminal.store[order.resourceType],
 			});
 		}
-	}
-
-	validate(task: TerminalDestinationTask) {
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if (structure.store.getFreeCapacity(task.resourceType) === 0) return false;
-
-		return true;
 	}
 }

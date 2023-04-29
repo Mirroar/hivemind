@@ -10,5 +10,6 @@ export default interface TaskProvider<TaskType extends Task, ContextType> {
 	getType: () => string;
 	getHighestPriority: (context?: ContextType) => number;
 	getTasks: (context?: ContextType) => TaskType[];
-	validate?: (task: TaskType) => boolean;
+	isValid?: (task: TaskType, creep: Creep) => boolean;
+	execute?: (task: TaskType, creep: Creep) => void;
 }

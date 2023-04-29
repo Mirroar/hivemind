@@ -1,3 +1,4 @@
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -7,8 +8,10 @@ declare global {
 	}
 }
 
-export default class TowerDestination implements TaskProvider<TowerDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class TowerDestination extends StructureDestination<TowerDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'tower' {
 		return 'tower';
@@ -18,9 +21,8 @@ export default class TowerDestination implements TaskProvider<TowerDestinationTa
 		return 5;
 	}
 
-	getTasks(context?: ResourceDestinationContext) {
+	getTasks(context?: ResourceDestinationContext): TowerDestinationTask[] {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
-		if (context.creep && context.creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return [];
 
 		const options: TowerDestinationTask[] = [];
 
@@ -52,13 +54,5 @@ export default class TowerDestination implements TaskProvider<TowerDestinationTa
 		}
 
 		return options;
-	}
-
-	validate(task: TowerDestinationTask) {
-		const tower = Game.getObjectById(task.target);
-		if (!tower) return false;
-		if (tower.store.getFreeCapacity(task.resourceType) === 0) return false;
-
-		return true;
 	}
 }

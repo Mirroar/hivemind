@@ -1,5 +1,6 @@
 import balancer from 'excess-energy-balancer';
 import settings from 'settings-manager';
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -9,8 +10,10 @@ declare global {
 	}
 }
 
-export default class PowerSpawnDestination implements TaskProvider<PowerSpawnDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class PowerSpawnDestination extends StructureDestination<PowerSpawnDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'powerSpawn' {
 		return 'powerSpawn';
@@ -53,13 +56,5 @@ export default class PowerSpawnDestination implements TaskProvider<PowerSpawnDes
 		option.priority -= this.room.getCreepsWithOrder(this.getType(), powerSpawn.id).length * 2;
 
 		options.push(option);
-	}
-
-	validate(task: PowerSpawnDestinationTask) {
-		const powerSpawn = Game.getObjectById(task.target);
-		if (!powerSpawn) return false;
-		if (powerSpawn.store.getFreeCapacity(task.resourceType) === 0) return false;
-
-		return true;
 	}
 }

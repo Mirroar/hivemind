@@ -1,3 +1,4 @@
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -7,8 +8,10 @@ declare global {
 	}
 }
 
-export default class FactoryDestination implements TaskProvider<FactoryDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class FactoryDestination extends StructureDestination<FactoryDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'factory' {
 		return 'factory';
@@ -47,12 +50,5 @@ export default class FactoryDestination implements TaskProvider<FactoryDestinati
 		}
 
 		return options;
-	}
-
-	validate() {
-		if (!this.room.factory) return false;
-		if (this.room.factory.store.getFreeCapacity() === 0) return false;
-
-		return true;
 	}
 }

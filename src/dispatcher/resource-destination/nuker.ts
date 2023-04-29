@@ -1,4 +1,5 @@
 import settings from 'settings-manager';
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -8,8 +9,10 @@ declare global {
 	}
 }
 
-export default class NukerDestination implements TaskProvider<NukerDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class NukerDestination extends StructureDestination<NukerDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'nuker' {
 		return 'nuker';
@@ -51,13 +54,5 @@ export default class NukerDestination implements TaskProvider<NukerDestinationTa
 		option.priority -= this.room.getCreepsWithOrder(this.getType(), nuker.id).length * 2;
 
 		options.push(option);
-	}
-
-	validate(task: NukerDestinationTask) {
-		const nuker = Game.getObjectById(task.target);
-		if (!nuker) return false;
-		if (nuker.store.getFreeCapacity(task.resourceType) === 0) return false;
-
-		return true;
 	}
 }

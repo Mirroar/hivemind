@@ -22,6 +22,8 @@ declare global {
  *   An array of creeps that have a matching order.
  */
 Room.prototype.getCreepsWithOrder = function (this: Room, type: string, target): Creep[] {
+	// @todo Make sure this works with new dispatcher system.
+
 	return _.filter(this.creeps, creep => {
 		if (!creep.memory.order) return false;
 		if (creep.memory.order.type !== type) return false;

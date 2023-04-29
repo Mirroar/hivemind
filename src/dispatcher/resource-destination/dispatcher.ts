@@ -16,10 +16,6 @@ declare global {
 		amount: number;
 	}
 
-	interface StructureDestinationTask extends ResourceDestinationTask {
-		target: Id<AnyStoreStructure>;
-	}
-
 	interface ResourceDestinationContext {
 		resourceType?: string;
 		creep?: Creep;

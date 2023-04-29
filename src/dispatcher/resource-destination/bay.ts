@@ -50,7 +50,7 @@ export default class BayDestination implements TaskProvider<BayDestinationTask, 
 		return options;
 	}
 
-	validate(task: BayDestinationTask) {
+	isValid(task: BayDestinationTask) {
 		const bay = _.find(this.room.bays, b => b.name === task.name);
 		if (!bay) return false;
 		if (bay.energy >= bay.energyCapacity) return false;

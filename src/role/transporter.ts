@@ -338,7 +338,7 @@ export default class TransporterRole extends Role {
 		if ((creep.store[resourceType] || 0) <= 0) return false;
 
 		if (isResourceDestinationOrder(creep.room, creep.memory.order)) {
-			return creep.room.destinationDispatcher.validateTask(creep.memory.order);
+			return creep.room.destinationDispatcher.validateTask(creep.memory.order, creep);
 		}
 
 		if (isPositionOrder(creep.memory.order)) {
@@ -596,7 +596,7 @@ export default class TransporterRole extends Role {
 		if (!order) return false;
 
 		if (isResourceSourceOrder(creep.room, order)) {
-			return creep.room.sourceDispatcher.validateTask(order);
+			return creep.room.sourceDispatcher.validateTask(order, creep);
 		}
 
 		// The only valid source order type is `getEnergy` / `getResource`.

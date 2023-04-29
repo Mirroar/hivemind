@@ -1,3 +1,4 @@
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -7,8 +8,10 @@ declare global {
 	}
 }
 
-export default class LinkDestination implements TaskProvider<LinkDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class LinkDestination extends StructureDestination<LinkDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'link' {
 		return 'link';
@@ -47,13 +50,5 @@ export default class LinkDestination implements TaskProvider<LinkDestinationTask
 		}
 
 		return options;
-	}
-
-	validate(task: LinkDestinationTask) {
-		const link = Game.getObjectById(task.target);
-		if (!link) return false;
-		if (link.store.getFreeCapacity(task.resourceType) === 0) return false;
-
-		return true;
 	}
 }

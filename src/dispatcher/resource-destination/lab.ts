@@ -1,3 +1,4 @@
+import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
@@ -7,8 +8,10 @@ declare global {
 	}
 }
 
-export default class LabDestination implements TaskProvider<LabDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class LabDestination extends StructureDestination<LabDestinationTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'lab' {
 		return 'lab';
@@ -48,13 +51,5 @@ export default class LabDestination implements TaskProvider<LabDestinationTask, 
 			resourceType,
 			amount: freeCapacity,
 		});
-	}
-
-	validate(task: LabDestinationTask) {
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if (structure.store.getFreeCapacity(task.resourceType) === 0) return false;
-
-		return true;
 	}
 }
