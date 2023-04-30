@@ -28,10 +28,14 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 	}
 
 	validateTask(task: TaskType, context: ContextType) {
-		if (!this.hasProvider(task.type)) return false;
+		if (!this.hasProvider(task.type)) throw new Error('Invalid task type: ' + task.type);
 
-		if (this.providers[task.type].isValid) return this.providers[task.type].isValid(task, context);
+		return this.providers[task.type].isValid(task, context);
+	}
 
-		return true;
+	executeTask(task: TaskType, context: ContextType) {
+		if (!this.hasProvider(task.type)) throw new Error('Invalid task type: ' + task.type);
+
+		this.providers[task.type].execute(task, context);
 	}
 }

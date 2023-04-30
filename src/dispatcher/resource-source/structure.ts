@@ -29,4 +29,20 @@ export default class StructureSource<TaskType extends StructureSourceTask> imple
 
 		return true;
 	}
+
+	execute(task: TaskType, context: ResourceSourceContext) {
+		const creep = context.creep;
+		const target = Game.getObjectById(task.target);
+
+		creep.whenInRange(1, target, () => {
+			const resourceType = task.resourceType;
+
+			if (task.amount)
+				creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity()));
+			else
+				creep.withdraw(target, resourceType);
+
+			delete creep.memory.order;
+		});
+	}
 }

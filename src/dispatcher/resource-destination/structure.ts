@@ -29,4 +29,18 @@ export default class StructureDestination<TaskType extends StructureDestinationT
 
 		return true;
 	}
+
+	execute(task: TaskType, context: ResourceDestinationContext) {
+		const creep = context.creep;
+		const target = Game.getObjectById(task.target);
+
+		creep.whenInRange(1, target, () => {
+			if (task.amount)
+				creep.transfer(target, task.resourceType, Math.min(task.amount, creep.store.getUsedCapacity(task.resourceType), target.store.getFreeCapacity(task.resourceType)));
+			else
+				creep.transfer(target, task.resourceType);
+
+			delete creep.memory.order;
+		});
+	}
 }

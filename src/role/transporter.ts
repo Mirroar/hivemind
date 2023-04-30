@@ -109,10 +109,6 @@ function isResourceDestinationOrder(room: Room, order: TransporterOrder): order 
 	return false;
 }
 
-function isTargettedDestinationOrder(order: ResourceDestinationTask): order is StructureDestinationTask {
-	return 'target' in order;
-}
-
 function isBayDestinationOrder(order: ResourceDestinationTask): order is BayDestinationTask {
 	return order.type === 'bay';
 }
@@ -123,10 +119,6 @@ function isResourceSourceOrder(room: Room, order: TransporterOrder): order is Re
 	}
 
 	return false;
-}
-
-function isTargettedSourceOrder(order: ResourceSourceTask): order is FactorySourceTask | StorageSourceTask {
-	return 'target' in order;
 }
 
 function isPositionOrder(order: TransporterOrder): order is TransporterPositionOrder {
@@ -268,10 +260,12 @@ export default class TransporterRole extends Role {
 		}
 
 		const order = creep.memory.order;
-		if (
-			isResourceDestinationOrder(creep.room, order) && isTargettedDestinationOrder(order)
-			|| isDeliverOrder(order)
-		) {
+		if (isResourceDestinationOrder(creep.room, order)) {
+			creep.room.destinationDispatcher.executeTask(order, {creep});
+			return;
+		}
+
+		if (isDeliverOrder(order)) {
 			const target = Game.getObjectById(order.target);
 			creep.whenInRange(1, target, () => {
 				if ('amount' in creep.memory.order)
@@ -280,14 +274,6 @@ export default class TransporterRole extends Role {
 					creep.transfer(target, order.resourceType);
 
 				delete creep.memory.order;
-			});
-			return;
-		}
-
-		if (isResourceDestinationOrder(creep.room, order) && isBayDestinationOrder(order)) {
-			const target = _.find(creep.room.bays, bay => bay.name === (order as BayDestinationTask).name);
-			creep.whenInRange(0, target.pos, () => {
-				target.refillFrom(creep);
 			});
 			return;
 		}
@@ -537,7 +523,10 @@ export default class TransporterRole extends Role {
 			return;
 		}
 
-		if (isResourceSourceOrder(creep.room, creep.memory.order) && !isTargettedSourceOrder(creep.memory.order)) return;
+		if (isResourceSourceOrder(creep.room, creep.memory.order)) {
+			creep.room.sourceDispatcher.executeTask(creep.memory.order, {creep});
+			return;
+		}
 
 		const target = Game.getObjectById(creep.memory.order.target);
 		creep.whenInRange(1, target, () => {

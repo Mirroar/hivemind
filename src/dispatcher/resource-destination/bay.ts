@@ -52,4 +52,12 @@ export default class BayDestination implements TaskProvider<BayDestinationTask, 
 
 		return true;
 	}
+
+	execute(task: BayDestinationTask, context: ResourceDestinationContext) {
+		const creep = context.creep;
+		const target = _.find(creep.room.bays, bay => bay.name === task.name);
+		creep.whenInRange(0, target.pos, () => {
+			target.refillFrom(creep);
+		});
+	}
 }
