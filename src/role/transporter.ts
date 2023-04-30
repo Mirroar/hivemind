@@ -419,49 +419,15 @@ export default class TransporterRole extends Role {
 		const terminal = creep.room.terminal;
 		const storage = creep.room.storage;
 
+		const task = this.creep.room.sourceDispatcher.getTask({
+			creep,
+			resourceType: (terminal || storage) ? null : RESOURCE_ENERGY,
+		});
+		if (task) options.push(task);
+
 		// Don't pick up anything that's not energy if there's no place to store.
 		if (!terminal && !storage) return options;
 
-		const task = creep.room.sourceDispatcher.getTask({creep});
-		if (task) options.push(task);
-
-		// Clear out overfull terminal.
-		const storageHasSpace = storage && storage.store.getFreeCapacity() >= 0 && !creep.room.isClearingStorage();
-		const terminalNeedsClearing = terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || creep.room.isClearingTerminal()) && (!creep.room.isClearingStorage());
-		const noSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
-		if ((terminalNeedsClearing && storageHasSpace) || noSpaceForEnergy) {
-			// Find resource with highest count and take that.
-			// @todo Unless it's supposed to be sent somewhere else.
-			let max = null;
-			let maxResourceType = null;
-			for (const resourceType in terminal.store) {
-				// Do not take out energy if there is enough in storage.
-				if (!creep.room.isClearingTerminal() && resourceType === RESOURCE_ENERGY && storage && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
-				// Do not take out resources that should be sent away.
-				if (resourceType === creep.room.memory.fillTerminal) continue;
-
-				if (!max || terminal.store[resourceType] > max) {
-					max = terminal.store[resourceType];
-					maxResourceType = resourceType;
-				}
-			}
-
-			const option: TransporterStructureOrderOption = {
-				priority: 1,
-				weight: 0,
-				type: 'structure',
-				object: terminal,
-				resourceType: maxResourceType,
-			};
-
-			if (creep.room.isClearingTerminal() || noSpaceForEnergy) {
-				option.priority += 2;
-			}
-
-			options.push(option);
-		}
-
-		this.addTerminalOperationResourceOptions(options);
 		this.addObjectResourceOptions(options, FIND_DROPPED_RESOURCES, 'resource');
 		this.addObjectResourceOptions(options, FIND_TOMBSTONES, 'tombstone');
 		this.addObjectResourceOptions(options, FIND_RUINS, 'tombstone');
@@ -482,12 +448,6 @@ export default class TransporterRole extends Role {
 	getAvailableEnergySources(): TransporterSourceOrderOption[] {
 		const room = this.creep.room;
 		const options: TransporterSourceOrderOption[] = [];
-
-		const task = this.creep.room.sourceDispatcher.getTask({
-			creep: this.creep,
-			resourceType: RESOURCE_ENERGY,
-		});
-		if (task) options.push(task);
 
 		let priority = 0;
 		if (room.energyAvailable < room.energyCapacityAvailable * 0.9) {
@@ -631,56 +591,6 @@ export default class TransporterRole extends Role {
 
 			options.push(option);
 		}
-	}
-
-	/**
-	 * Take resources that need to be put in terminal for trading.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 */
-	addTerminalOperationResourceOptions(options: TransporterSourceOrderOption[]) {
-		const creep = this.creep;
-		const storage = creep.room.storage;
-		const terminal = creep.room.terminal;
-		if (!storage || !terminal) return;
-
-		// Take resources from storage to terminal for transfer if requested.
-		if (creep.room.memory.fillTerminal && terminal.store[RESOURCE_ENERGY] > 5000) {
-			const resourceType = creep.room.memory.fillTerminal;
-			if (storage.store[resourceType]) {
-				if (terminal.store.getFreeCapacity() > 10_000) {
-					options.push({
-						priority: 4,
-						weight: 0,
-						type: 'structure',
-						object: storage,
-						resourceType,
-					});
-				}
-			}
-			else {
-				// No more of these resources can be taken into terminal.
-				delete creep.room.memory.fillTerminal;
-			}
-		}
-
-		if (creep.room.isClearingTerminal()) return;
-
-		const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === creep.room.name && order.type === ORDER_SELL);
-		_.each(roomSellOrders, order => {
-			if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
-			if (!storage.store[order.resourceType]) return;
-			if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
-
-			options.push({
-				priority: 4,
-				weight: 0,
-				type: 'structure',
-				object: storage,
-				resourceType: order.resourceType as ResourceConstant,
-			});
-		});
 	}
 
 	/**

@@ -46,6 +46,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 
 		this.addStorageEnergySourceOptions(options, context);
 		this.addClearingStorageResourceOptions(options, context);
+		this.addClearingTerminalResourceOptions(options, context);
 
 		return options;
 	}
@@ -88,6 +89,46 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 				target: storage.id,
 				resourceType,
 			});
+		}
+	}
+
+	addClearingTerminalResourceOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
+		const storage = this.room.storage;
+		const terminal = this.room.terminal;
+
+		// Clear out overfull terminal.
+		const storageHasSpace = storage && storage.store.getFreeCapacity() >= 0 && !this.room.isClearingStorage();
+		const terminalNeedsClearing = terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || this.room.isClearingTerminal()) && !this.room.isClearingStorage();
+		const noSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
+		if ((terminalNeedsClearing && storageHasSpace) || noSpaceForEnergy) {
+			// Find resource with highest count and take that.
+			let max = null;
+			let maxResourceType = null;
+			for (const resourceType of getResourcesIn(terminal.store)) {
+				// Do not take out energy if there is enough in storage.
+				if (!this.room.isClearingTerminal() && resourceType === RESOURCE_ENERGY && storage && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
+				// Do not take out resources that should be sent away.
+				if (resourceType === this.room.memory.fillTerminal) continue;
+
+				if (!max || terminal.store[resourceType] > max) {
+					max = terminal.store[resourceType];
+					maxResourceType = resourceType;
+				}
+			}
+
+			const option: StorageSourceTask = {
+				priority: 1,
+				weight: 0,
+				type: 'storage',
+				target: terminal.id,
+				resourceType: maxResourceType,
+			};
+
+			if (this.room.isClearingTerminal() || noSpaceForEnergy) {
+				option.priority += 2;
+			}
+
+			options.push(option);
 		}
 	}
 }

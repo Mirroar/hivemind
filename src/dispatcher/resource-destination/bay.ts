@@ -1,8 +1,10 @@
 import TaskProvider from 'dispatcher/task-provider';
 
-interface BayDestinationTask extends ResourceDestinationTask {
-	type: 'bay';
-	name: string;
+declare global {
+	interface BayDestinationTask extends ResourceDestinationTask {
+		type: 'bay';
+		name: string;
+	}
 }
 
 export default class BayDestination implements TaskProvider<BayDestinationTask, ResourceDestinationContext> {
