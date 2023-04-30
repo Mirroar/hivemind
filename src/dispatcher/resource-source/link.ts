@@ -1,14 +1,17 @@
+import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
 declare global {
-	interface LinkSourceTask extends ResourceSourceTask {
+	interface LinkSourceTask extends StructureSourceTask {
 		type: 'link';
 		target: Id<StructureLink>;
 	}
 }
 
-export default class LinkSource implements TaskProvider<LinkSourceTask, ResourceSourceContext> {
-	constructor(readonly room: Room) {}
+export default class LinkSource extends StructureSource<LinkSourceTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'link' {
 		return 'link';
@@ -20,7 +23,7 @@ export default class LinkSource implements TaskProvider<LinkSourceTask, Resource
 
 	getTasks(context: ResourceSourceContext) {
 		if (!this.room.linkNetwork) return [];
-		if (this.room.linkNetwork.energy <= this.room.linkNetwork.maxEnergy) return [];
+		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
 
 		const options: LinkSourceTask[] = [];
 
@@ -35,7 +38,7 @@ export default class LinkSource implements TaskProvider<LinkSourceTask, Resource
 				resourceType: RESOURCE_ENERGY,
 			};
 
-			if (context.creep && context.creep.pos.getRangeTo(link) > 10) {
+			if (context.creep.pos.getRangeTo(link) > 10) {
 				// Don't go out of your way to empty the link, do it when nearby, e.g. at storage.
 				option.priority--;
 			}
@@ -50,10 +53,10 @@ export default class LinkSource implements TaskProvider<LinkSourceTask, Resource
 		return options;
 	}
 
-	validate(task: LinkSourceTask) {
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if (structure.store[task.resourceType] === 0) return false;
+	isValid(task: LinkSourceTask, context: ResourceSourceContext) {
+		if (!super.isValid(task, context)) return false;
+		if (!this.room.linkNetwork) return false;
+		if (this.room.linkNetwork.energy <= this.room.linkNetwork.maxEnergy) return false;
 
 		return true;
 	}

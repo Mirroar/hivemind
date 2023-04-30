@@ -1,27 +1,29 @@
+import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
 declare global {
-	interface StorageSourceTask extends ResourceSourceTask {
+	interface StorageSourceTask extends StructureSourceTask {
 		type: 'storage';
 		target: Id<StructureStorage | StructureTerminal>;
 	}
 }
 
-export default class StorageSource implements TaskProvider<StorageSourceTask, ResourceSourceContext> {
-	constructor(readonly room: Room) {}
+export default class StorageSource extends StructureSource<StorageSourceTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'storage' {
 		return 'storage';
 	}
 
-	getHighestPriority(context: ResourceSourceContext) {
-		// @todo If we pass the context here, we might be able to reduce this most
-		// of the time.
+	getHighestPriority(context?: ResourceSourceContext) {
 		return Math.max(2, this.getEnergyPickupPriority(context));
 	}
 
-	getEnergyPickupPriority(context: ResourceSourceContext): number {
+	getEnergyPickupPriority(context?: ResourceSourceContext): number {
+		if (!context) return 0;
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return 0;
 		if (context.creep.memory.role !== 'transporter') return 5;
 
@@ -57,7 +59,6 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 		// Energy can be gotten at the room's storage or terminal.
 		const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 		if (!storageTarget) return;
-		if (storageTarget.store[RESOURCE_ENERGY] === 0) return;
 
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
 		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
@@ -89,18 +90,6 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 				target: storage.id,
 				resourceType,
 			});
-
-			break;
 		}
-	}
-
-	validate(task: StorageSourceTask) {
-		if (!this.room.storage) return false;
-
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if ((structure.store[task.resourceType] || 0) === 0) return false;
-
-		return true;
 	}
 }

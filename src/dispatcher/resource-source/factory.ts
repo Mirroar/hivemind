@@ -1,15 +1,18 @@
+import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
 declare global {
-	interface FactorySourceTask extends ResourceSourceTask {
+	interface FactorySourceTask extends StructureSourceTask {
 		type: 'factory';
 		target: Id<AnyStoreStructure>;
 	}
 }
 
-export default class FactorySource implements TaskProvider<FactorySourceTask, ResourceSourceContext> {
-	constructor(readonly room: Room) {}
+export default class FactorySource extends StructureSource<FactorySourceTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'factory' {
 		return 'factory';
@@ -79,15 +82,5 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 				amount: structure.store.getUsedCapacity(resourceType) - (neededResources[resourceType] || 0),
 			});
 		}
-	}
-
-	validate(task: FactorySourceTask) {
-		if (!this.room.factory) return false;
-
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if ((structure.store[task.resourceType] || 0) === 0) return false;
-
-		return true;
 	}
 }

@@ -11,7 +11,7 @@ declare global {
 
 	interface ResourceSourceContext {
 		resourceType?: ResourceConstant;
-		creep?: Creep;
+		creep: Creep;
 	}
 }
 
