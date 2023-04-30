@@ -24,6 +24,7 @@ export default class StructureDestination<TaskType extends StructureDestinationT
 	isValid(task: TaskType, context: ResourceDestinationContext) {
 		const structure = Game.getObjectById(task.target);
 		if (!structure) return false;
+		if (context.creep.memory.singleRoom && structure.pos.roomName !== context.creep.memory.singleRoom) return false;
 		if (structure.store.getFreeCapacity(task.resourceType) === 0) return false;
 		if (context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
 
