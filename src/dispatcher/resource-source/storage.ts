@@ -2,11 +2,9 @@ import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
-declare global {
-	interface StorageSourceTask extends StructureSourceTask {
-		type: 'storage';
-		target: Id<StructureStorage | StructureTerminal>;
-	}
+interface StorageSourceTask extends StructureSourceTask {
+	type: 'storage';
+	target: Id<StructureStorage | StructureTerminal>;
 }
 
 export default class StorageSource extends StructureSource<StorageSourceTask> {

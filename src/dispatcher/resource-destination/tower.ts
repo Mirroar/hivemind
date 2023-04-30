@@ -1,11 +1,9 @@
 import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
-declare global {
-	interface TowerDestinationTask extends StructureDestinationTask {
-		type: 'tower';
-		target: Id<StructureTower>;
-	}
+interface TowerDestinationTask extends StructureDestinationTask {
+	type: 'tower';
+	target: Id<StructureTower>;
 }
 
 export default class TowerDestination extends StructureDestination<TowerDestinationTask> {

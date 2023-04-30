@@ -3,11 +3,9 @@ import settings from 'settings-manager';
 import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
-declare global {
-	interface PowerSpawnDestinationTask extends StructureDestinationTask {
-		type: 'powerSpawn';
-		target: Id<StructurePowerSpawn>;
-	}
+interface PowerSpawnDestinationTask extends StructureDestinationTask {
+	type: 'powerSpawn';
+	target: Id<StructurePowerSpawn>;
 }
 
 export default class PowerSpawnDestination extends StructureDestination<PowerSpawnDestinationTask> {

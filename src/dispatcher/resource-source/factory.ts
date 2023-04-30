@@ -2,11 +2,9 @@ import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
-declare global {
-	interface FactorySourceTask extends StructureSourceTask {
-		type: 'factory';
-		target: Id<AnyStoreStructure>;
-	}
+interface FactorySourceTask extends StructureSourceTask {
+	type: 'factory';
+	target: Id<AnyStoreStructure>;
 }
 
 export default class FactorySource extends StructureSource<FactorySourceTask> {

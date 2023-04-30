@@ -1,11 +1,9 @@
 import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
-declare global {
-	interface ContainerSourceTask extends StructureSourceTask {
-		type: 'container';
-		target: Id<StructureContainer>;
-	}
+interface ContainerSourceTask extends StructureSourceTask {
+	type: 'container';
+	target: Id<StructureContainer>;
 }
 
 export default class ContainerSource extends StructureSource<ContainerSourceTask> {

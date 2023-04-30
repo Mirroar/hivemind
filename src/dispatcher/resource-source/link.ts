@@ -1,11 +1,9 @@
 import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
-declare global {
-	interface LinkSourceTask extends StructureSourceTask {
-		type: 'link';
-		target: Id<StructureLink>;
-	}
+interface LinkSourceTask extends StructureSourceTask {
+	type: 'link';
+	target: Id<StructureLink>;
 }
 
 export default class LinkSource extends StructureSource<LinkSourceTask> {

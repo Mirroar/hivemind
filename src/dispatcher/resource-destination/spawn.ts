@@ -1,11 +1,9 @@
 import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
-declare global {
-	interface SpawnDestinationTask extends StructureDestinationTask {
-		type: 'spawn';
-		target: Id<StructureSpawn | StructureExtension>;
-	}
+interface SpawnDestinationTask extends StructureDestinationTask {
+	type: 'spawn';
+	target: Id<StructureSpawn | StructureExtension>;
 }
 
 export default class SpawnDestination extends StructureDestination<SpawnDestinationTask> {

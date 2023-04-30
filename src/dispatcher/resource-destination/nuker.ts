@@ -2,11 +2,9 @@ import settings from 'settings-manager';
 import StructureDestination from 'dispatcher/resource-destination/structure';
 import TaskProvider from 'dispatcher/task-provider';
 
-declare global {
-	interface NukerDestinationTask extends StructureDestinationTask {
-		type: 'nuker';
-		target: Id<StructureNuker>;
-	}
+interface NukerDestinationTask extends StructureDestinationTask {
+	type: 'nuker';
+	target: Id<StructureNuker>;
 }
 
 export default class NukerDestination extends StructureDestination<NukerDestinationTask> {
