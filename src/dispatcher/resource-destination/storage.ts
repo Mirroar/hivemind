@@ -40,7 +40,7 @@ export default class StorageDestination extends StructureDestination<StorageDest
 				weight: creep.store[resourceType] / 100,
 				type: 'storage',
 				target: storageTarget.id,
-				resourceType: RESOURCE_ENERGY,
+				resourceType: resourceType,
 				amount: creep.store[resourceType],
 			});
 		}
