@@ -52,15 +52,15 @@ export default class RemoteBuilderRole extends Role {
 	run(creep: RemoteBuilderCreep) {
 		this.creep = creep;
 
+		if (creep.memory.interShardPortal) {
+			const targetPos = decodePosition(creep.memory.interShardPortal);
+			if (creep.interRoomTravel(targetPos, true)) return;
+
+			creep.whenInRange(1, targetPos, () => creep.moveTo(targetPos));
+			return;
+		}
+
 		if (creep.memory.targetRoom) {
-			if (creep.memory.interShardPortal) {
-				const targetPos = decodePosition(creep.memory.interShardPortal);
-				if (creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.targetRoom), true)) return;
-
-				creep.whenInRange(1, targetPos, () => creep.moveTo(targetPos));
-				return;
-			}
-
 			if (creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.targetRoom))) return;
 			if (creep.pos.roomName !== creep.memory.targetRoom) return;
 			creep.memory.singleRoom = creep.memory.targetRoom;

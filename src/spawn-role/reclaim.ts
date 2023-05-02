@@ -81,7 +81,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 		if (!request.safe) return;
 
 		const remoteBuilderCount = _.filter(Game.creepsByRole['builder.remote'], (creep: RemoteBuilderCreep) => creep.memory.targetRoom === request.name && creep.memory.interShardPortal).length;
-		if (remoteBuilderCount > 3) return;
+		if (remoteBuilderCount > 5) return;
 
 		const portalLocation = this.findClosestPortalToRemoteRoom(request.portalRoom, shardName);
 		if (!portalLocation) return;

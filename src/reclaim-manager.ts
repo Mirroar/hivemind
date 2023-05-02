@@ -48,7 +48,6 @@ export default class ReclaimManager {
 
 		// Reset reclaim timer if we have no defense in the room.
 		if (room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length > 0) return;
-		if (room.find(FIND_MY_CREEPS, {filter: c => c.getActiveBodyparts(ATTACK) > 0 || c.getActiveBodyparts(RANGED_ATTACK) > 0}).length > 0) return;
 		if ((room.controller.safeMode ?? 0) > 5000) return;
 
 		for (const username in room.enemyCreeps) {
