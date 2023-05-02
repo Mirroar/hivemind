@@ -247,7 +247,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			options.push({
 				priority: 4,
-				weight: 1,
+				weight: 0,
 				trainStarter: creep.id,
 				segmentType,
 			});
@@ -261,7 +261,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			options.push({
 				priority: 4,
-				weight: 1,
+				weight: 0,
 				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
 				responseType: RESPONSE_BLINKY,
 			});

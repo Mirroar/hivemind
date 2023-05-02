@@ -24,12 +24,12 @@ export default class BuilderSpawnRole extends SpawnRole {
 
 		const availableEnergy = room.getEffectiveAvailableEnergy();
 		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
-		const needsInitialBuildings = room.controller.level < 5 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+		const needsBuildings = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
 		if (numWorkParts >= maxWorkParts) return [];
 
 		return [{
-			priority: (needsStrongerRamparts || needsInitialBuildings) ? 4 : 3,
+			priority: (needsStrongerRamparts || needsBuildings) ? 4 : 3,
 			weight: 0.5,
 			size: room.isEvacuating() ? 3 : null,
 		}];

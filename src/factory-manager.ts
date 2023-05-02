@@ -113,8 +113,8 @@ export default class FactoryManager {
 
 		// Compress resource at 95% storage capacity, uncompress under 5%.
 		// @todo Turn into setting.
-		const storageFull = this.room.getFreeStorage() < this.room.getStorageLimit() * 0.05;
-		const storageEmpty = this.room.getFreeStorage() > this.room.getStorageLimit() * 0.95;
+		const storageFull = this.room.getFreeStorage() - this.room.factory.store.getUsedCapacity() < this.room.getStorageLimit() * 0.05;
+		const storageEmpty = this.room.getFreeStorage() - this.room.factory.store.getUsedCapacity() > this.room.getStorageLimit() * 0.95;
 		const minRawMaterialRatio = 0.2;
 		const maxRawMaterialRatio = 0.8;
 

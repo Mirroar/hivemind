@@ -32,6 +32,13 @@ export default class ResourcesProcess extends Process {
 				if (best.resourceType === RESOURCE_ENERGY) {
 					amount -= Game.market.calcTransactionCost(amount, best.source, best.target);
 				}
+				else {
+					const energyCost = Game.market.calcTransactionCost(amount, best.source, best.target);
+					const availableEnergy = terminal.store.getUsedCapacity(RESOURCE_ENERGY);
+					if (energyCost > availableEnergy) {
+						amount = Math.floor(amount * availableEnergy / energyCost);
+					}
+				}
 
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);

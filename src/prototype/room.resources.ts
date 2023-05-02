@@ -447,13 +447,13 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 
 	if (resourceType === RESOURCE_POWER) {
 		// Only rooms with power spawns need power.
-		if (!this.powerSpawn) return [1, 1, 0];
+		if (!this.powerSpawn) return [1, 0, 0];
 		return [50_000, 30_000, 10_000];
 	}
 
 	if (resourceType === RESOURCE_OPS) {
 		// Only rooms with power creeps need ops.
-		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 1, 0];
+		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 0, 0];
 		return [10_000, 5000, 1000];
 	}
 
@@ -461,7 +461,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 
 	// Basic commodities need a factory.
 	if (([RESOURCE_SILICON, RESOURCE_METAL, RESOURCE_BIOMASS, RESOURCE_MIST] as string[]).includes(resourceType)) {
-		if (!this.factory) return [1, 1, 0];
+		if (!this.factory) return [1, 0, 0];
 		return [30_000, 10_000, 2000];
 	}
 
@@ -476,8 +476,8 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 			RESOURCE_CONDENSATE, RESOURCE_CONCENTRATE, RESOURCE_EXTRACT, RESOURCE_SPIRIT, RESOURCE_EMANATION, RESOURCE_ESSENCE,
 		] as string[]).includes(resourceType)
 	) {
-		if (!this.factory) return [1, 1, 0];
-		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 1, 0];
+		if (!this.factory) return [1, 0, 0];
+		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 0, 0];
 		return [10_000, 5000, 500];
 	}
 

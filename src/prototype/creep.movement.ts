@@ -367,7 +367,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 	// @todo This needs some debugging and testing, ideally with room visuals.
 	const path = this.getCachedPath();
-	if (typeof this.memory.cachedPath.position === 'undefined') {
+	if (typeof this.memory.cachedPath.position === 'undefined' || this.memory.cachedPath.position === null) {
 		for (const pos of path) {
 			if (pos.getRangeTo(this.pos) > 1) continue;
 

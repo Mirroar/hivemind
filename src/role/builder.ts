@@ -436,6 +436,11 @@ export default class BuilderRole extends Role {
 				option.priority = 5;
 			}
 
+			if (([STRUCTURE_ROAD, STRUCTURE_RAMPART, STRUCTURE_WALL] as string[]).includes(target.structureType)) {
+				// Roads and defenses can be built after functional buildings are done.
+				option.priority--;
+			}
+
 			if (([STRUCTURE_LAB, STRUCTURE_NUKER, STRUCTURE_FACTORY] as string[]).includes(target.structureType)) {
 				// Expensive structures should only be built with excess energy.
 				option.priority--;

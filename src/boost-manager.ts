@@ -49,12 +49,22 @@ export default class BoostManager {
 	private cleanBoostMemory() {
 		if (Game.time % 758 !== 0) return;
 
+		const neededBoosts = {};
 		for (const creepName in this.memory.creeps) {
-			if (!Game.creeps[creepName]) delete this.memory.creeps[creepName];
+			if (!Game.creeps[creepName]) {
+				delete this.memory.creeps[creepName];
+				continue;
+			}
+
+			for (const resourceType in this.memory.creeps[creepName]) {
+				neededBoosts[resourceType] = true;
+			}
 		}
 
 		for (const id in this.memory.labs) {
-			if (!Game.getObjectById(id)) delete this.memory.labs[id];
+			if (!Game.getObjectById(id) || !neededBoosts[this.memory.labs[id]]) {
+				delete this.memory.labs[id];
+			}
 		}
 	}
 
@@ -142,6 +152,13 @@ export default class BoostManager {
 	 */
 	public overrideCreepLogic(creep: Creep): boolean {
 		if (!this.creepNeedsBoosting(creep)) return false;
+
+		// @todo If the creep has claim parts, it cannot be boosted.
+		if (creep.ticksToLive < CREEP_LIFE_TIME * 0.7) {
+			delete this.memory.creeps[creep.name];
+			// @todo Free up lab memory if no longer needed.
+			return false;
+		}
 
 		// @todo Make sure the requested boosts are actually available. For that, check storage, terminal, labs and helper creeps. Otherwise cancel boosting.
 

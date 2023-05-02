@@ -570,6 +570,7 @@ export default class OperatorRole extends Role {
 		if (!this.creep.powers[PWR_GENERATE_OPS]) return;
 		if (this.creep.powers[PWR_GENERATE_OPS].level < 1) return;
 		if (this.creep.powers[PWR_GENERATE_OPS].cooldown > 0) return;
+		if (this.creep.room.isMine() && this.creep.room.getCurrentResourceAmount(RESOURCE_OPS) > 15_000) return;
 
 		this.creep.usePower(PWR_GENERATE_OPS);
 	}
