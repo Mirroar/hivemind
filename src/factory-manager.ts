@@ -118,9 +118,9 @@ export default class FactoryManager {
 		const minRawMaterialRatio = 0.2;
 		const maxRawMaterialRatio = 0.8;
 
-		const storedEnergy = this.room.getStoredEnergy();
-		const storedProduct = this.room.getCurrentResourceAmount(resourceType);
-		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType] || compressRecipes[resourceType]);
+		const storedEnergy = this.room.getStoredEnergy() + this.room.factory.store.getUsedCapacity(RESOURCE_ENERGY);
+		const storedProduct = this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType);
+		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType] || compressRecipes[resourceType]) + this.room.factory.store.getUsedCapacity(uncompressRecipes[resourceType] || compressRecipes[resourceType]);
 
 		if (resourceType === RESOURCE_BATTERY) {
 			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
@@ -151,7 +151,7 @@ export default class FactoryManager {
 
 		if (this.isMadeOnlyFromBasicResources(recipe)) {
 			for (const resourceType in recipe.components) {
-				const resourceAmount = this.room.getCurrentResourceAmount(resourceType);
+				const resourceAmount = this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType as ResourceConstant);
 				if (resourceAmount === 0) return false;
 				if (resourceAmount < recipe.components[resourceType] * createdAmount * 5) return false;
 			}
@@ -172,7 +172,7 @@ export default class FactoryManager {
 
 	hasRequiredResources(recipe: Recipe): boolean {
 		for (const resourceType in recipe.components) {
-			if (this.room.getCurrentResourceAmount(resourceType) < recipe.components[resourceType]) return false;
+			if (this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType as ResourceConstant) < recipe.components[resourceType]) return false;
 		}
 
 		return true;

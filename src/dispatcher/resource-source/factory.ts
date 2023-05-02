@@ -37,6 +37,8 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 		const missingResources = this.room.factoryManager.getMissingComponents();
 		if (!missingResources) return;
 
+		const neededResources = this.room.factoryManager.getRequestedComponents() || {};
+
 		let resourceType: ResourceConstant;
 		for (resourceType in missingResources) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
@@ -47,8 +49,8 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 
 			const option = {
 				type: this.getType(),
-				priority: 2,
-				weight: missingResources[resourceType] / 1000,
+				priority: missingResources[resourceType] > 1000 ? 3 : 2,
+				weight: missingResources[resourceType] / neededResources[resourceType],
 				resourceType,
 				target: structure.id,
 				amount: structure.store.getUsedCapacity(resourceType),
@@ -66,18 +68,20 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 		for (const resourceType of getResourcesIn(this.room.factory.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
 			if (neededResources[resourceType]) {
-				if (this.room.factory.store.getUsedCapacity(resourceType) < neededResources[resourceType]) continue;
+				if (this.room.factory.store.getUsedCapacity(resourceType) <= neededResources[resourceType] * 1.5) continue;
 			}
+			const storedAmount = this.room.factory.store.getUsedCapacity(resourceType);
+			const extraAmount = storedAmount - (neededResources[resourceType] || 0);
 
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
 			const structure = this.room.factory;
 			options.push({
 				type: this.getType(),
-				priority: structure.store.getUsedCapacity(resourceType) > 1000 ? 3 : 2,
-				weight: 0,
+				priority: (extraAmount > 1000 ? 3 : 2) - this.room.getCreepsWithOrder('factory', structure.id).length,
+				weight: extraAmount / storedAmount,
 				resourceType,
 				target: structure.id,
-				amount: structure.store.getUsedCapacity(resourceType) - (neededResources[resourceType] || 0),
+				amount: extraAmount,
 			});
 		}
 	}
