@@ -173,7 +173,8 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		const source = Game.getObjectById(option.source);
 		const weights = {[MOVE]: 0.01, [WORK]: 0.79, [CARRY]: 0.2};
 		const hasSpawnAtSource = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {filter: s => s.structureType === STRUCTURE_SPAWN}).length > 0;
-		if (!hasSpawnAtSource) {
+		const hasFewExtensions = room.energyCapacityAvailable < SPAWN_ENERGY_CAPACITY * 2;
+		if (!hasSpawnAtSource && !hasFewExtensions) {
 			weights[MOVE] = 0.35;
 			weights[WORK] = 0.5;
 			weights[CARRY] = 0.15;

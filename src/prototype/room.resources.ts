@@ -142,6 +142,13 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
 		total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
 	});
 
+	if (!this.terminal && !this.storage) {
+		// Until a storage is built, haulers effectively act as transporters.
+		_.each(this.creepsByRole.hauler, creep => {
+			total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
+		});
+	}
+
 	return total;
 };
 

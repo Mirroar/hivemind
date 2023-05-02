@@ -28,6 +28,7 @@ declare global {
 		lastWaitCount: number;
 		energyPickupTarget: string;
 		deliveryTarget: Id<AnyStoreStructure>;
+		order?: ResourceDestinationTask;
 	}
 }
 
@@ -155,6 +156,20 @@ export default class HaulerRole extends Role {
 	}
 
 	storeResources(creep: HaulerCreep, target: AnyStoreStructure) {
+		if (!creep.room.storage && !creep.room.terminal) {
+			if (!creep.heapMemory.order || !creep.room.destinationDispatcher.validateTask(creep.heapMemory.order, {creep})) {
+				creep.heapMemory.order = creep.room.destinationDispatcher.getTask({
+					creep,
+					resourceType: RESOURCE_ENERGY,
+				});
+			}
+
+			if (creep.heapMemory.order) {
+				creep.room.destinationDispatcher.executeTask(creep.heapMemory.order, {creep});
+				return;
+			}
+		}
+
 		// @todo If no storage is available, use default delivery method.
 		if (!target || creep.store[RESOURCE_ENERGY] > target.store.getFreeCapacity(RESOURCE_ENERGY)) {
 			this.dropResources(creep);

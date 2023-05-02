@@ -11,6 +11,7 @@ import SpawnDestination from 'dispatcher/resource-destination/spawn';
 import StorageDestination from 'dispatcher/resource-destination/storage';
 import TerminalDestination from 'dispatcher/resource-destination/terminal';
 import TowerDestination from 'dispatcher/resource-destination/tower';
+import WorkerCreepDestination from 'dispatcher/resource-destination/worker-creep';
 
 declare global {
 	interface ResourceDestinationTask extends Task {
@@ -39,5 +40,6 @@ export default class ResourceDestinationDispatcher extends Dispatcher<ResourceDe
 		this.addProvider(new StorageDestination(room));
 		this.addProvider(new TerminalDestination(room));
 		this.addProvider(new TowerDestination(room));
+		this.addProvider(new WorkerCreepDestination(room));
 	}
 }
