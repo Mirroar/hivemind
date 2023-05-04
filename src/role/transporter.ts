@@ -446,8 +446,15 @@ export default class TransporterRole extends Role {
 	 *   A list of potential energy sources.
 	 */
 	getAvailableEnergySources(): TransporterSourceOrderOption[] {
-		const room = this.creep.room;
+		const creep = this.creep;
+		const room = creep.room;
 		const options: TransporterSourceOrderOption[] = [];
+
+		const task = creep.room.sourceDispatcher.getTask({
+			creep,
+			resourceType: RESOURCE_ENERGY,
+		});
+		if (task) options.push(task);
 
 		let priority = 0;
 		if (room.energyAvailable < room.energyCapacityAvailable * 0.9) {
@@ -924,6 +931,7 @@ export default class TransporterRole extends Role {
 
 		if (!best) {
 			delete creep.memory.order;
+			creep.room.visual.text('no source :(', creep.pos);
 			return;
 		}
 
