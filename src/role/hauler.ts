@@ -21,6 +21,7 @@ declare global {
 		role: 'hauler';
 		delivering: boolean;
 		source: string;
+		order?: ResourceDestinationTask;
 	}
 
 	interface HaulerCreepHeapMemory extends CreepHeapMemory {
@@ -28,7 +29,6 @@ declare global {
 		lastWaitCount: number;
 		energyPickupTarget: string;
 		deliveryTarget: Id<AnyStoreStructure>;
-		order?: ResourceDestinationTask;
 	}
 }
 
@@ -136,6 +136,11 @@ export default class HaulerRole extends Role {
 		const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
 		if (!targetPosition) return;
 
+		if (targetPosition.roomName === creep.pos.roomName) {
+			this.storeResources(creep, target);
+			return;
+		}
+
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
 			if (creep.hasArrived() || creep.pos.getRangeTo(targetPosition) <= 3) {
@@ -146,26 +151,20 @@ export default class HaulerRole extends Role {
 			}
 		}
 
-		if (targetPosition.roomName !== creep.pos.roomName) {
-			creep.moveToRange(targetPosition, 1);
-
-			return;
-		}
-
-		this.storeResources(creep, target);
+		creep.moveToRange(targetPosition, 1);
 	}
 
-	storeResources(creep: HaulerCreep, target: AnyStoreStructure) {
+	storeResources(creep: HaulerCreep, target?: AnyStoreStructure) {
 		if (!creep.room.storage && !creep.room.terminal) {
-			if (!creep.heapMemory.order || !creep.room.destinationDispatcher.validateTask(creep.heapMemory.order, {creep})) {
-				creep.heapMemory.order = creep.room.destinationDispatcher.getTask({
+			if (!creep.memory.order || !creep.room.destinationDispatcher.validateTask(creep.memory.order, {creep})) {
+				creep.memory.order = creep.room.destinationDispatcher.getTask({
 					creep,
 					resourceType: RESOURCE_ENERGY,
 				});
 			}
 
-			if (creep.heapMemory.order) {
-				creep.room.destinationDispatcher.executeTask(creep.heapMemory.order, {creep});
+			if (creep.memory.order) {
+				creep.room.destinationDispatcher.executeTask(creep.memory.order, {creep});
 				return;
 			}
 		}

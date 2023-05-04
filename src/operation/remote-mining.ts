@@ -335,7 +335,15 @@ export default class RemoteMiningOperation extends Operation {
 	getHaulerSize(sourceLocation: string): number {
 		const paths = this.getPaths();
 
-		return paths[sourceLocation] && paths[sourceLocation].accessible ? paths[sourceLocation].requiredCarryParts : 0;
+		if (!paths[sourceLocation]) return 0;
+		if (!paths[sourceLocation].accessible) return 0;
+
+		// Low-level rooms seem to have problems transporting all energy, so
+		// we increase hauler size.
+		const room = Game.rooms[paths[sourceLocation].sourceRoom];
+		const haulerFactor = (room.isMine() && room.controller.level < 3) ? 1.2 : 1;
+
+		return paths[sourceLocation].requiredCarryParts * haulerFactor;
 	}
 
 	/**

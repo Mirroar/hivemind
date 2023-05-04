@@ -178,6 +178,12 @@ export default class UpgraderRole extends Role {
 			this.setUpgraderState(creep, true);
 		}
 
+		const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
+		if (deliveringCreeps.length > 0) {
+			creep.moveToRange(deliveringCreeps[0], 1);
+			return;
+		}
+
 		// If all else fails and we can't excpect resupply, look for energy ourselves.
 		if (!creep.room.memory.controllerLink && !creep.room.memory.controllerContainer) {
 			this.transporterRole.performGetEnergy(creep);

@@ -113,7 +113,7 @@ export default class Role {
 		}
 	}
 
-	isSafePosition(creep: Creep, pos): boolean {
+	isSafePosition(creep: Creep, pos: RoomPosition): boolean {
 		if (!creep.room.isMine()) return true;
 		if (creep.room.defense.getEnemyStrength() === 0) return true;
 

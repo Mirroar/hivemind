@@ -22,32 +22,32 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 
 		const options: WorkerCreepDestinationTask[] = [];
 
-		const targetRoles = [
-			'upgrader',
-			'builder',
-			'builder.remote',
-		];
+		const targetRoleWeights = {
+			['builder.remote']: 2,
+			builder: 1.5,
+			upgrader: 0.5,
+		};
 
-		if (context.creep.memory.role !== 'transporter') {
-			targetRoles.push('transporter');
-		}
+		/*if (context.creep.memory.role !== 'transporter') {
+			targetRoleWeights['transporter'] = 0;
+		}//*/
 
-		for (const role of targetRoles) {
-			this.addRoleTasks(options, role, context);
+		for (const role in targetRoleWeights) {
+			this.addRoleTasks(options, role, targetRoleWeights[role], context);
 		}
 
 		return options;
 	}
 
-	private addRoleTasks(options: WorkerCreepDestinationTask[], role: string, context: ResourceDestinationContext) {
+	private addRoleTasks(options: WorkerCreepDestinationTask[], role: string, weight: number, context: ResourceDestinationContext) {
 		for (const creep of _.values<Creep>(this.room.creepsByRole[role])) {
-			if (creep.store.getFreeCapacity(RESOURCE_ENERGY) < creep.store.getCapacity(RESOURCE_ENERGY) / 2) continue;
+			if (creep.store.getFreeCapacity(RESOURCE_ENERGY) < creep.store.getCapacity(RESOURCE_ENERGY) / 3) continue;
 
 			options.push({
 				type: 'workerCreep',
 				resourceType: RESOURCE_ENERGY,
 				priority: 2 - this.room.getCreepsWithOrder(this.getType(), creep.id).length * 3,
-				weight: Math.min(1, creep.store.getFreeCapacity(RESOURCE_ENERGY) / context.creep.store.getUsedCapacity(RESOURCE_ENERGY)),
+				weight: weight + Math.min(1, creep.store.getFreeCapacity(RESOURCE_ENERGY) / context.creep.store.getUsedCapacity(RESOURCE_ENERGY)),
 				target: creep.id,
 				amount: context.creep.store.getUsedCapacity(RESOURCE_ENERGY),
 			});

@@ -47,8 +47,10 @@ export default class ContainerDestination extends StructureDestination<Container
 		if (container.store.getUsedCapacity() / container.store.getCapacity() > 0.75) {
 			prioFactor = 3;
 			option.priority--;
+			option.priority--;
 		}
 		else if (container.store.getUsedCapacity() / container.store.getCapacity() > 0.5) {
+			option.priority--;
 			prioFactor = 2;
 		}
 

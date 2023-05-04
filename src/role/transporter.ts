@@ -419,7 +419,7 @@ export default class TransporterRole extends Role {
 		const terminal = creep.room.terminal;
 		const storage = creep.room.storage;
 
-		const task = this.creep.room.sourceDispatcher.getTask({
+		const task = creep.room.sourceDispatcher.getTask({
 			creep,
 			resourceType: (terminal || storage) ? null : RESOURCE_ENERGY,
 		});
@@ -567,7 +567,7 @@ export default class TransporterRole extends Role {
 				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity()) {
 					// This container is filling up, prioritize emptying it when we aren't
 					// busy filling extensions.
-					if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || creep.memory.role !== 'transporter') option.priority += 2;
+					if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || !creep.room.storage || creep.memory.role !== 'transporter') option.priority += 2;
 				}
 
 				break;

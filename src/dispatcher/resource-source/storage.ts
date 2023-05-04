@@ -64,7 +64,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 			options.push({
 				priority: this.getEnergyPickupPriority(context),
 				weight: 0,
-				type: 'storage',
+				type: this.getType(),
 				target: storageTarget.id,
 				resourceType: RESOURCE_ENERGY,
 			});
@@ -85,7 +85,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 			options.push({
 				priority: storage.store[resourceType] > context.creep.store.getCapacity() / 2 ? 2 : 1,
 				weight: 0, // @todo Increase weight of more expensive resources.
-				type: 'storage',
+				type: this.getType(),
 				target: storage.id,
 				resourceType,
 			});
@@ -119,7 +119,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 			const option: StorageSourceTask = {
 				priority: 1,
 				weight: 0,
-				type: 'storage',
+				type: this.getType(),
 				target: terminal.id,
 				resourceType: maxResourceType,
 			};

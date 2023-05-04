@@ -322,6 +322,12 @@ export default class RemoteBuilderRole extends Role {
 			return;
 		}
 
+		const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
+		if (deliveringCreeps.length > 0) {
+			creep.moveToRange(deliveringCreeps[0], 1);
+			return;
+		}
+
 		const dropped = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
 			filter: drop => drop.resourceType === RESOURCE_ENERGY && (drop.amount > creep.store.getCapacity() * 0.3 || (creep.pos.getRangeTo(drop) <= 1 && drop.amount > 20)),
 		});

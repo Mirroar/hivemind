@@ -113,8 +113,16 @@ export default class BuilderRole extends Role {
 		}
 
 		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() > 2500) {
+			const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
+			if (deliveringCreeps.length > 0) {
+				creep.moveToRange(deliveringCreeps[0], 1);
+				return;
+			}
+
 			// @todo Instead of completely circumventing TypeScript, find a way to
 			// make energy gathering reusable between multiple roles.
+			// @todo Replace with dispatcher calls similar to hauler creeps delivery
+			// once all sources are covered by dispatcher.
 			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 		}
 	}
@@ -438,7 +446,7 @@ export default class BuilderRole extends Role {
 
 			if (([STRUCTURE_ROAD, STRUCTURE_RAMPART, STRUCTURE_WALL] as string[]).includes(target.structureType)) {
 				// Roads and defenses can be built after functional buildings are done.
-				option.priority--;
+				option.weight--;
 			}
 
 			if (([STRUCTURE_LAB, STRUCTURE_NUKER, STRUCTURE_FACTORY] as string[]).includes(target.structureType)) {
