@@ -201,6 +201,7 @@ export default class InterShardProcess extends Process {
 			if (this.memory.info.interShardExpansion.start && Game.time - this.memory.info.interShardExpansion.start < 50 * CREEP_LIFE_TIME) return;
 
 			this.failIntershardExpansion();
+			return;
 		}
 
 		this.startIntershardExpansion();
