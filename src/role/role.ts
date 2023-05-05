@@ -1,5 +1,6 @@
 /* global RoomPosition RIGHT LEFT TOP BOTTOM */
 
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {getDangerMatrix} from 'utils/cost-matrix';
 
 declare global {
@@ -115,7 +116,7 @@ export default class Role {
 
 	isSafePosition(creep: Creep, pos: RoomPosition): boolean {
 		if (!creep.room.isMine()) return true;
-		if (creep.room.defense.getEnemyStrength() === 0) return true;
+		if (creep.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return true;
 
 		const matrix = getDangerMatrix(creep.room.name);
 		if (matrix.get(pos.x, pos.y) > 0) return false;

@@ -1,6 +1,7 @@
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import {encodePosition} from 'utils/serialization';
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
 
@@ -59,7 +60,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		);
 	}
 
-	if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine() && Game.rooms[roomName].defense.getEnemyStrength() > 0 && !options.ignoreMilitary) {
+	if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine() && Game.rooms[roomName].defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !options.ignoreMilitary) {
 		// Discourage unprotected areas when enemies are in the room.
 		cacheKey += ':inCombat';
 

@@ -2,10 +2,11 @@
 ORDER_BUY ORDER_SELL PIXEL STORAGE_CAPACITY INTERSHARD_RESOURCES
 REACTION_TIME */
 
-import Process from 'process/process';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
+import Process from 'process/process';
 import utilities from 'utilities';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
@@ -46,7 +47,7 @@ export default class TradeProcess extends Process {
 			if (resourceType === RESOURCE_ENERGY) {
 				// Buy energy for rooms under attack so we can hold out longer.
 				for (const room of Game.myRooms) {
-					if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= 2) {
+					if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
 						if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500)
 							this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
 						else

@@ -54,6 +54,8 @@ export default class GuardianRole extends Role {
 			const closestRampart = target.pos.findClosestByRange<StructureRampart>(FIND_MY_STRUCTURES, {
 				filter: s => {
 					if (s.structureType !== STRUCTURE_RAMPART) return false;
+					if (!creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart')) return false;
+					if (creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart.ramp')) return false;
 
 					// Only target ramparts not occupied by another creep.
 					const occupyingCreeps = s.pos.lookFor(LOOK_CREEPS);

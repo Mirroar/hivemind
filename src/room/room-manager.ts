@@ -9,6 +9,7 @@ FIND_MY_CONSTRUCTION_SITES */
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RoomPlanner from 'room/planner/room-planner';
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {serializeCoords} from 'utils/serialization';
 
 declare global {
@@ -86,7 +87,7 @@ export default class RoomManager {
 	 */
 	runLogic() {
 		if (!this.roomPlanner || !this.roomPlanner.isPlanningFinished()) return;
-		if (this.room.defense.getEnemyStrength() > 0) return;
+		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE) return;
 
 		delete this.memory.runNextTick;
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);

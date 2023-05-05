@@ -8,6 +8,7 @@ import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {throttle} from 'utils/throttle';
+import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 interface RepairOrder {
 	type: 'repair';
@@ -321,7 +322,7 @@ export default class BuilderRole extends Role {
 			if (target.hits >= (option.maxHealth || target.hitsMax)) continue;
 
 			// Spread out repairs unless room is under attack.
-			if (creep.room.defense.getEnemyStrength() === 0) {
+			if (creep.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) {
 				option.priority -= creep.room.getCreepsWithOrder('repair', target.id).length;
 			}
 
@@ -376,13 +377,16 @@ export default class BuilderRole extends Role {
 		option.maxHealth = maxHealth;
 
 		if (target.structureType === STRUCTURE_RAMPART) {
-			if (creep.room.defense.getEnemyStrength() >= 2) {
-				option.priority++;
-				return;
-			}
-
 			if (target.hits < 10_000 && creep.room.controller.level >= 3) {
 				// Low ramparts get special treatment so they don't decay.
+				option.priority++;
+				option.priority++;
+				option.weight++;
+			}
+
+			if (creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
+				// Repair defenses as much as possible to keep invaders out.
+				// @todo Prioritize low HP wall / close to invaders.
 				option.priority++;
 				option.priority++;
 				option.weight++;
@@ -391,18 +395,10 @@ export default class BuilderRole extends Role {
 				// Don't strengthen ramparts too much if room is struggling for energy.
 				option.priority = -1;
 			}
-
-			if (target.hits < hivemind.settings.get('minWallIntegrity') && creep.room.controller.level >= 6 && creep.room.terminal) {
+			else if (target.hits < hivemind.settings.get('minWallIntegrity') && creep.room.controller.level >= 6 && creep.room.terminal) {
 				// Once we have a terminal, get ramparts to a level where we can
 				// comfortably defend the room.
 				option.priority++;
-			}
-			else if (creep.room.defense.getEnemyStrength() > 1) {
-				// Repair defenses as much as possible to keep invaders out.
-				// @todo Prioritize low HP wall / close to invaders.
-				option.priority++;
-				option.priority++;
-				option.weight++;
 			}
 		}
 	}

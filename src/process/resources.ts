@@ -1,8 +1,9 @@
 /* global RESOURCE_ENERGY */
 
-import Process from 'process/process';
 import hivemind from 'hivemind';
+import Process from 'process/process';
 import utilities from 'utilities';
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 
 /**
  * Sends resources between owned rooms when needed.
@@ -112,7 +113,7 @@ export default class ResourcesProcess extends Process {
 					if (!roomState2.canTrade) return;
 					if (this.roomNeedsTerminalSpace(room2)) return;
 
-					const isLow = resourceLevel2 === 'low' || (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > 0 && resourceLevel2 === 'medium');
+					const isLow = resourceLevel2 === 'low' || (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
 					const isLowEnough = resourceLevel2 === 'medium';
 					const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
 

@@ -2,6 +2,7 @@
 
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 declare global {
 	interface RoomDefenseSpawnOption extends SpawnOption {
@@ -63,7 +64,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addRampartDefenderSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
-		if (room.defense.getEnemyStrength() < 2) return;
+		if (room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL) return;
 
 		const responseType = this.getDefenseCreepSize(room);
 
@@ -112,12 +113,12 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	getDefenseCreepSize(room: Room): number {
 		const enemyStrength = room.defense.getEnemyStrength();
 
-		if (enemyStrength >= 2) {
+		if (enemyStrength >= ENEMY_STRENGTH_NORMAL) {
 			// Spawn a mix of meelee and ranged defenders.
 			const totalGuardians = _.size(room.creepsByRole.guardian);
 			const rangedGuardians = _.size(_.filter(room.creepsByRole.guardian, (creep: GuardianCreep) => creep.getActiveBodyparts(RANGED_ATTACK) > 0));
 
-			if (rangedGuardians < totalGuardians / 2) return RESPONSE_RANGED_ATTACKER;
+			if (rangedGuardians < Math.floor(totalGuardians / 4)) return RESPONSE_RANGED_ATTACKER;
 
 			return RESPONSE_ATTACKER;
 		}
@@ -229,8 +230,9 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	}
 
 	private getMaxEnemyBoostLevel(room: Room): number {
-		let highest = 0;
+		if (room.defense.getEnemyStrength() <= ENEMY_STRENGTH_NORMAL) return 0;
 
+		let highest = 0;
 		for (const userName in room.enemyCreeps) {
 			if (hivemind.relations.isAlly(userName)) continue;
 

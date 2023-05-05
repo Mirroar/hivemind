@@ -5,6 +5,7 @@ import cache from 'utils/cache';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 
 interface RoomResourceState {
@@ -441,7 +442,7 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 	if (resourceType === RESOURCE_ENERGY) {
 		// Defending rooms need energy to defend.
-		if (this.defense.getEnemyStrength() > 0) return [1_000_000, 100_000, 50_000];
+		if (this.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [1_000_000, 100_000, 50_000];
 		return [200_000, 50_000, 20_000];
 	}
 

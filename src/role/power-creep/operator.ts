@@ -4,8 +4,9 @@ FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
 PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
 import hivemind from 'hivemind';
-import utilities from 'utilities';
 import Role from 'role/role';
+import utilities from 'utilities';
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 
 declare global {
 	interface PowerCreep {
@@ -370,7 +371,7 @@ export default class OperatorRole extends Role {
 		if (this.creep.powers[PWR_OPERATE_TOWER].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_TOWER].cooldown > 0) return;
 		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_TOWER].ops) return;
-		if (this.creep.room.defense.getEnemyStrength() === 0) return;
+		if (this.creep.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
 
 		const towers: StructureTower[] = this.creep.room.find<StructureTower>(FIND_MY_STRUCTURES, {
 			filter: s => s.structureType === STRUCTURE_TOWER,
