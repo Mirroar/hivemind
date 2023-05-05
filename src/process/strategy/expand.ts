@@ -43,6 +43,8 @@ declare global {
 	}
 }
 
+let lastCleanup = 0;
+
 export default class ExpandProcess extends Process {
 	memory: ExpandProcessMemory;
 	navMesh: NavMesh;
@@ -112,6 +114,7 @@ export default class ExpandProcess extends Process {
 		}
 
 		this.manageEvacuation();
+		this.cleanupMemory();
 	}
 
 	/**
@@ -608,6 +611,18 @@ export default class ExpandProcess extends Process {
 			_.filter(room.find(FIND_MY_CREEPS), creep => creep.memory.singleRoom === room.name),
 			creep => creep.suicide(),
 		);
+	}
+
+	private cleanupMemory() {
+		if (!hivemind.hasIntervalPassed(5000, lastCleanup)) return;
+		lastCleanup = Game.time;
+
+		for (let i = this.memory.failedExpansions.length - 1; i >= 0; i--) {
+			if (Game.time - this.memory.failedExpansions[i].time < 1_000_000) continue;
+
+			this.memory.failedExpansions.splice(i, 1);
+		}
+
 	}
 }
 global['ExpandProcess'] = ExpandProcess;
