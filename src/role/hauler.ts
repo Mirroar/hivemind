@@ -21,6 +21,7 @@ declare global {
 		role: 'hauler';
 		delivering: boolean;
 		source: string;
+		order?: ResourceDestinationTask;
 	}
 
 	interface HaulerCreepHeapMemory extends CreepHeapMemory {
@@ -135,6 +136,11 @@ export default class HaulerRole extends Role {
 		const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
 		if (!targetPosition) return;
 
+		if (targetPosition.roomName === creep.pos.roomName) {
+			this.storeResources(creep, target);
+			return;
+		}
+
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
 			if (creep.hasArrived() || creep.pos.getRangeTo(targetPosition) <= 3) {
@@ -145,16 +151,24 @@ export default class HaulerRole extends Role {
 			}
 		}
 
-		if (targetPosition.roomName !== creep.pos.roomName) {
-			creep.moveToRange(targetPosition, 1);
-
-			return;
-		}
-
-		this.storeResources(creep, target);
+		creep.moveToRange(targetPosition, 1);
 	}
 
-	storeResources(creep: HaulerCreep, target: AnyStoreStructure) {
+	storeResources(creep: HaulerCreep, target?: AnyStoreStructure) {
+		if (!creep.room.storage && !creep.room.terminal) {
+			if (!creep.memory.order || !creep.room.destinationDispatcher.validateTask(creep.memory.order, {creep})) {
+				creep.memory.order = creep.room.destinationDispatcher.getTask({
+					creep,
+					resourceType: RESOURCE_ENERGY,
+				});
+			}
+
+			if (creep.memory.order) {
+				creep.room.destinationDispatcher.executeTask(creep.memory.order, {creep});
+				return;
+			}
+		}
+
 		// @todo If no storage is available, use default delivery method.
 		if (!target || creep.store[RESOURCE_ENERGY] > target.store.getFreeCapacity(RESOURCE_ENERGY)) {
 			this.dropResources(creep);
@@ -465,7 +479,7 @@ export default class HaulerRole extends Role {
 		if (!(creep.operation instanceof RemoteMiningOperation)) return false;
 		if ((creep.store.energy || 0) === 0) return false;
 
-		const workParts = creep.memory.body.work || 0;
+		const workParts = creep.getActiveBodyparts(WORK) || 0;
 		if (workParts === 0) return false;
 
 		if (creep.operation.hasContainer(creep.memory.source)) {

@@ -247,7 +247,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			options.push({
 				priority: 4,
-				weight: 1,
+				weight: 0,
 				trainStarter: creep.id,
 				segmentType,
 			});
@@ -261,7 +261,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			options.push({
 				priority: 4,
-				weight: 1,
+				weight: 0,
 				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
 				responseType: RESPONSE_BLINKY,
 			});
@@ -269,8 +269,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	}
 
 	canReclaimRoom(targetRoom: Room, room: Room): boolean {
-		if (!targetRoom.memory.isReclaimableSince) return false;
-		if (Game.time - targetRoom.memory.isReclaimableSince < 2000) return false;
+		if (!targetRoom.needsReclaiming()) return false;
+		if (!targetRoom.isSafeForReclaiming()) return false;
 		if (!targetRoom.roomPlanner) return false;
 
 		const remoteDefense = _.filter(Game.creepsByRole.brawler, (creep: Creep) => creep.memory.target === encodePosition(targetRoom.roomPlanner.getRoomCenter())).length;

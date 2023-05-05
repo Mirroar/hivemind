@@ -1,9 +1,13 @@
-import Process from 'process/process';
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
+import NavMesh from 'utils/nav-mesh';
+import Process from 'process/process';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
+
+const minRoomLevelToIntershardScout = 7;
 
 /**
  * Chooses rooms for expansion and sends creeps there.
@@ -12,17 +16,22 @@ export default class InterShardProcess extends Process {
 	memory;
 	_shardData;
 
+	navMesh: NavMesh;
+
 	/**
 	 * Makes decisions concerning inter-shard travel.
 	 */
 	run() {
 		this.memory = interShard.getLocalMemory();
 
+		this.navMesh = new NavMesh();
+
 		this.updateShardInfo();
 		this.distributeCPU();
 		this.manageScouting();
 		this.manageExpanding();
 		this.manageExpansionSupport();
+		this.manageReclaiming();
 
 		interShard.writeLocalMemory();
 	}
@@ -48,7 +57,9 @@ export default class InterShardProcess extends Process {
 		this.memory.info.rooms = {};
 		const roomStats = this.memory.info.rooms;
 		_.each(Memory.strategy.roomList, (info, roomName) => {
-			if (info.range > 0) {
+			if (!info.expansionScore || info.expansionScore <= 0) return;
+
+			if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) {
 				// The following scores only apply to unowned rooms.
 				if (!roomStats.bestExpansion || roomStats.bestExpansion.score < info.expansionScore) {
 					roomStats.bestExpansion = {
@@ -125,11 +136,11 @@ export default class InterShardProcess extends Process {
 		if (shardMemory.info) {
 			this._shardData[shardName].rooms = shardMemory.info.ownedRooms;
 			this._shardData[shardName].creeps = shardMemory.info.ownedCreeps;
-			this._shardData[shardName].neededCpu = 1 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
+			this._shardData[shardName].neededCpu = 3 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
 
 			if (shardMemory.info.interShardExpansion) {
 				// Allow for more CPU while creating out first intershard room.
-				this._shardData[shardName].neededCpu += 1;
+				this._shardData[shardName].neededCpu += 3;
 			}
 		}
 		else {
@@ -139,9 +150,9 @@ export default class InterShardProcess extends Process {
 				const compareMemory = compareShard === Game.shard.name ? interShard.getLocalMemory() : interShard.getRemoteMemory(compareShard);
 				if (!compareMemory.info) return;
 				if (!compareMemory.portals || !compareMemory.portals[shardName]) return;
-				if ((compareMemory.info.maxRoomLevel || 0) < 8) return;
+				if ((compareMemory.info.maxRoomLevel || 0) < minRoomLevelToIntershardScout) return;
 
-				// If we have at least one level 8 room, assign a little CPU to unexplored
+				// If we have at least one high-level room, assign a little CPU to unexplored
 				// adjacent shards for scouting.
 				this._shardData[shardName].neededCpu = 0.5;
 			});
@@ -159,7 +170,7 @@ export default class InterShardProcess extends Process {
 	 */
 	manageScouting() {
 		this.memory.scouting = {};
-		if (this.memory.info.maxRoomLevel < 8) return;
+		if (this.memory.info.maxRoomLevel < minRoomLevelToIntershardScout) return;
 
 		// Scout nearby shards that have no rooms claimed.
 		for (const shardName in this.memory.portals) {
@@ -178,19 +189,45 @@ export default class InterShardProcess extends Process {
 		if (this.memory.info.ownedRooms > 0) {
 			// Remove expansion request when our room has hopefully stabilized.
 			if (this.memory.info.maxRoomLevel >= 4) {
-				delete this.memory.info.interShardExpansion;
-				const squad = new Squad('interShardExpansion');
-				squad.clearUnits();
-				squad.disband();
+				this.removeIntershardExpansionRequest();
 			}
 
 			return;
 		}
 
 		// Don't recalculate if we've already set a target.
-		// @todo Unless expanding has failed, e.g. due to attacks.
-		if (this.memory.info.interShardExpansion) return;
+		// Unless expanding has failed, e.g. due to attacks.
+		if (this.memory.info.interShardExpansion) {
+			if (this.memory.info.interShardExpansion.start && Game.time - this.memory.info.interShardExpansion.start < 50 * CREEP_LIFE_TIME) return;
 
+			this.failIntershardExpansion();
+		}
+
+		this.startIntershardExpansion();
+	}
+
+	failIntershardExpansion() {
+		if (!Memory.strategy.expand.failedExpansions)
+			Memory.strategy.expand.failedExpansions = [];
+		Memory.strategy.expand.failedExpansions.push({
+			roomName: this.memory.info.interShardExpansion.room,
+			time: Game.time,
+		});
+
+		hivemind.log('strategy').notify('💀 Intershard expansion to ' + this.memory.info.interShardExpansion.room + ' has failed. A new target will be chosen soon.');
+
+		this.removeIntershardExpansionRequest();
+	}
+
+	removeIntershardExpansionRequest() {
+		delete this.memory.info.interShardExpansion;
+
+		const squad = new Squad('interShardExpansion');
+		squad.clearUnits();
+		squad.disband();
+	}
+
+	startIntershardExpansion() {
 		// Immediately try to expand to the best known room.
 		// @todo Decide when we've scouted enough to claim a room.
 		if (!this.memory.info.rooms.bestExpansion) return;
@@ -200,9 +237,9 @@ export default class InterShardProcess extends Process {
 
 		const expansionInfo = {
 			room: targetRoom,
-			portalRoom: null,
+			portalRoom: this.findClosestPortalToRoom(targetRoom),
+			start: Game.time,
 		};
-		expansionInfo.portalRoom = Memory.strategy.roomList[targetRoom].origin;
 
 		this.memory.info.interShardExpansion = expansionInfo;
 
@@ -260,17 +297,110 @@ export default class InterShardProcess extends Process {
 				if (portalInfo.dest !== roomName) return;
 
 				const pos = decodePosition(portalPosition);
-				const roomInfo = Memory.strategy.roomList[pos.roomName];
-				if (bestPortal && bestPortal.range <= roomInfo.range) return;
+				const bestSourceRoom = this.findClosestSpawn(pos.roomName);
+				if (!bestSourceRoom) return;
+
+				if (bestPortal && bestPortal.range <= bestSourceRoom.range) return;
 
 				bestPortal = {
 					pos,
-					range: roomInfo.range,
-					origin: roomInfo.origin,
+					range: bestSourceRoom.range,
+					origin: bestSourceRoom.name,
 				};
 			});
 		});
 
 		return bestPortal;
+	}
+
+	/**
+	 * Finds the closest valid spawn location for an intershard expansion.
+	 *
+	 * @param {string} targetRoom
+	 *   Name of the room we're expanding to.
+	 *
+	 * @return {string}
+	 *   Name of the room to spawn from.
+	 */
+	findClosestSpawn(targetRoom: string): {name: string, range: number} | null {
+		let bestRoom = null;
+		let bestLength = 0;
+		for (const room of Game.myRooms) {
+			if (room.controller.level < 5) continue;
+			if (room.name === targetRoom) continue;
+			if (room.getEffectiveAvailableEnergy() < 30_000) continue;
+			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 7) continue;
+
+			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 350});
+			if (!path || path.incomplete) continue;
+
+			if (!bestRoom || bestLength > path.path.length) {
+				bestRoom = room;
+				bestLength = path.path.length;
+			}
+		}
+
+		return bestRoom && {
+			name: bestRoom.name,
+			range: bestLength,
+		}
+	}
+
+	manageReclaiming() {
+		const roomStats = this.memory.info.rooms;
+
+		const needsReclaiming = [];
+		for (const room of Game.myRooms) {
+			if (!room.needsReclaiming()) continue;
+
+			needsReclaiming.push({
+				name: room.name,
+				safe: room.isSafeForReclaiming(),
+				rcl: room.controller.level,
+				portalRoom: this.findClosestPortalToRoom(room.name)
+			});
+
+			const squad = new Squad('intershardReclaim:' + room.name);
+			squad.setUnitCount('builder', 1);
+			squad.setUnitCount('brawler', 1);
+			squad.setTarget(new RoomPosition(25, 25, room.name));
+			squad.setSpawn(null);
+		}
+
+		if (needsReclaiming.length > 0) {
+			roomStats.reclaimable = needsReclaiming;
+		}
+		else {
+			delete roomStats.reclaimable;
+		}
+	}
+
+	findClosestPortalToRoom(roomName: string) {
+		return cache.inHeap('portalRoomName:' + roomName, 2 * CREEP_LIFE_TIME, () => {
+			let bestPortal;
+			_.each(this.memory.portals, (portals, shardName) => {
+				if (shardName === Game.shard.name) return;
+
+				_.each(portals, (portalInfo, portalLocation) => {
+					const portalPosition = decodePosition(portalLocation);
+					if (Game.map.getRoomLinearDistance(portalPosition.roomName, roomName) > 10) return;
+
+					// console.log('Checking if we can reach ' + roomName + ' from portal at ' + portalPosition + '...');
+
+					const path = this.navMesh.findPath(portalPosition, new RoomPosition(25, 25, roomName), {maxPathLength: 700});
+					// console.log(path.incomplete ? 'incomplete' : path.path.length);
+					if (!path || path.incomplete) return;
+
+					if (bestPortal && bestPortal.range <= path.path.length) return;
+
+					bestPortal = {
+						portalPosition,
+						range: path.path.length,
+					};
+				});
+			});
+
+			return bestPortal?.portalPosition.roomName;
+		});
 	}
 }

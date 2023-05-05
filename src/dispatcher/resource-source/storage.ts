@@ -1,27 +1,27 @@
+import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
-declare global {
-	interface StorageSourceTask extends ResourceSourceTask {
-		type: 'storage';
-		target: Id<StructureStorage | StructureTerminal>;
-	}
+interface StorageSourceTask extends StructureSourceTask {
+	type: 'storage';
+	target: Id<StructureStorage | StructureTerminal>;
 }
 
-export default class StorageSource implements TaskProvider<StorageSourceTask, ResourceSourceContext> {
-	constructor(readonly room: Room) {}
+export default class StorageSource extends StructureSource<StorageSourceTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'storage' {
 		return 'storage';
 	}
 
-	getHighestPriority(context: ResourceSourceContext) {
-		// @todo If we pass the context here, we might be able to reduce this most
-		// of the time.
+	getHighestPriority(context?: ResourceSourceContext) {
 		return Math.max(2, this.getEnergyPickupPriority(context));
 	}
 
-	getEnergyPickupPriority(context: ResourceSourceContext): number {
+	getEnergyPickupPriority(context?: ResourceSourceContext): number {
+		if (!context) return 0;
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return 0;
 		if (context.creep.memory.role !== 'transporter') return 5;
 
@@ -31,7 +31,7 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 			return 4;
 		}
 
-		if (room.terminal && room.storage && room.terminal.store.energy < room.storage.store.energy * 0.05) {
+		if (room.terminal && room.storage && room.terminal.store.getFreeCapacity() > 5000 && room.terminal.store.energy < room.storage.store.energy * 0.05) {
 			// Take some energy out of storage to put into terminal from time to time.
 			return 2;
 		}
@@ -46,6 +46,7 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 
 		this.addStorageEnergySourceOptions(options, context);
 		this.addClearingStorageResourceOptions(options, context);
+		this.addClearingTerminalResourceOptions(options, context);
 
 		return options;
 	}
@@ -57,14 +58,13 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 		// Energy can be gotten at the room's storage or terminal.
 		const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 		if (!storageTarget) return;
-		if (storageTarget.store[RESOURCE_ENERGY] < creep.store.getFreeCapacity()) return;
 
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
 		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
 			options.push({
 				priority: this.getEnergyPickupPriority(context),
 				weight: 0,
-				type: 'storage',
+				type: this.getType(),
 				target: storageTarget.id,
 				resourceType: RESOURCE_ENERGY,
 			});
@@ -85,22 +85,50 @@ export default class StorageSource implements TaskProvider<StorageSourceTask, Re
 			options.push({
 				priority: storage.store[resourceType] > context.creep.store.getCapacity() / 2 ? 2 : 1,
 				weight: 0, // @todo Increase weight of more expensive resources.
-				type: 'storage',
+				type: this.getType(),
 				target: storage.id,
 				resourceType,
 			});
-
-			break;
 		}
 	}
 
-	validate(task: StorageSourceTask) {
-		if (!this.room.storage) return false;
+	addClearingTerminalResourceOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
+		const storage = this.room.storage;
+		const terminal = this.room.terminal;
 
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if ((structure.store[task.resourceType] || 0) === 0) return false;
+		// Clear out overfull terminal.
+		const storageHasSpace = storage && storage.store.getFreeCapacity() >= 0 && !this.room.isClearingStorage();
+		const terminalNeedsClearing = terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || this.room.isClearingTerminal()) && !this.room.isClearingStorage();
+		const noSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
+		if ((terminalNeedsClearing && storageHasSpace) || noSpaceForEnergy) {
+			// Find resource with highest count and take that.
+			let max = null;
+			let maxResourceType = null;
+			for (const resourceType of getResourcesIn(terminal.store)) {
+				// Do not take out energy if there is enough in storage.
+				if (!this.room.isClearingTerminal() && resourceType === RESOURCE_ENERGY && storage && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
+				// Do not take out resources that should be sent away.
+				if (resourceType === this.room.memory.fillTerminal) continue;
 
-		return true;
+				if (!max || terminal.store[resourceType] > max) {
+					max = terminal.store[resourceType];
+					maxResourceType = resourceType;
+				}
+			}
+
+			const option: StorageSourceTask = {
+				priority: 1,
+				weight: 0,
+				type: this.getType(),
+				target: terminal.id,
+				resourceType: maxResourceType,
+			};
+
+			if (this.room.isClearingTerminal() || noSpaceForEnergy) {
+				option.priority += 2;
+			}
+
+			options.push(option);
+		}
 	}
 }

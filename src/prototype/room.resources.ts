@@ -5,6 +5,7 @@ import cache from 'utils/cache';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 
 interface RoomResourceState {
@@ -25,6 +26,7 @@ declare global {
 		getCurrentResourceAmount: (resourceType: string) => number;
 		getStoredEnergy: () => number;
 		getCurrentMineralAmount: () => number;
+		getEffectiveAvailableEnergy: () => number;
 		isFullOnEnergy: () => boolean;
 		isFullOnPower: () => boolean;
 		isFullOnMinerals: () => boolean;
@@ -74,16 +76,17 @@ Object.defineProperty(Room.prototype, 'destinationDispatcher', {
  */
 Room.prototype.getStorageLimit = function (this: Room) {
 	let total = 0;
-	if (this.storage) {
+	if (this.storage && !this.isClearingStorage()) {
 		total += this.storage.store.getCapacity();
 	}
-	else {
-		// Assume 10000 storage for dropping stuff on the ground.
-		total += 10000;
+
+	if (this.terminal && !this.isClearingTerminal()) {
+		total += this.terminal.store.getCapacity();
 	}
 
-	if (this.terminal) {
-		total += this.terminal.store.getCapacity();
+	if (total === 0) {
+		// Assume 10000 storage for dropping stuff on the ground.
+		total += 10000;
 	}
 
 	return total;
@@ -98,11 +101,13 @@ Room.prototype.getStorageLimit = function (this: Room) {
 Room.prototype.getFreeStorage = function (this: Room) {
 	// Determines amount of free space in storage.
 	let limit = this.getStorageLimit();
-	if (this.storage) {
+	if (this.storage && !this.isClearingStorage()) {
+		// Only count storage resources if we count it's free capacity.
 		limit -= this.storage.store.getUsedCapacity();
 	}
 
-	if (this.terminal) {
+	if (this.terminal && !this.isClearingTerminal()) {
+		// Only count terminal resources if we count it's free capacity.
 		limit -= this.terminal.store.getUsedCapacity();
 	}
 
@@ -128,8 +133,21 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
 		total += this.terminal.store[resourceType];
 	}
 
-	if (this.factory && this.factory.store[resourceType]) {
+	/*if (this.factory && this.factory.store[resourceType]) {
 		total += this.factory.store[resourceType];
+	}*/
+
+	// Add resources in transporters to prevent fluctuation from transporters
+	// moving stuff around.
+	_.each(this.creepsByRole.transporter, creep => {
+		total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
+	});
+
+	if (!this.terminal && !this.storage) {
+		// Until a storage is built, haulers effectively act as transporters.
+		_.each(this.creepsByRole.hauler, creep => {
+			total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
+		});
 	}
 
 	return total;
@@ -190,6 +208,21 @@ Room.prototype.getCurrentMineralAmount = function (this: Room) {
 	}
 
 	return total;
+};
+
+/**
+ * Gets amount of energy stored, taking into account batteries.
+ *
+ * @return {number}
+ *   Amount of energy this room has available.
+ */
+Room.prototype.getEffectiveAvailableEnergy = function (this: Room) {
+	const availableEnergy = this.getStoredEnergy();
+
+	if (!this.factory || !this.factory.isOperational() || this.isEvacuating()) return availableEnergy;
+
+	// @todo Get resource unpacking factor from API or config.
+	return availableEnergy + Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5;
 };
 
 /**
@@ -349,9 +382,6 @@ Room.prototype.getResourceState = function (this: Room) {
 			isEvacuating: false,
 			mineralType: null,
 		};
-		if (storage && terminal) {
-			roomData.canTrade = true;
-		}
 
 		// @todo Remove in favor of function.
 		roomData.isEvacuating = this.isEvacuating();
@@ -363,6 +393,7 @@ Room.prototype.getResourceState = function (this: Room) {
 		}
 
 		if (terminal) {
+			roomData.canTrade = true;
 			_.each(terminal.store, (amount: number, resourceType: ResourceConstant) => {
 				roomData.addResource(resourceType, amount);
 			});
@@ -411,19 +442,19 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 	if (resourceType === RESOURCE_ENERGY) {
 		// Defending rooms need energy to defend.
-		if (this.defense.getEnemyStrength() > 0) return [1_000_000, 100_000, 50_000];
+		if (this.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [1_000_000, 100_000, 50_000];
 		return [200_000, 50_000, 20_000];
 	}
 
 	if (resourceType === RESOURCE_POWER) {
 		// Only rooms with power spawns need power.
-		if (!this.powerSpawn) return [1, 1, 0];
+		if (!this.powerSpawn) return [1, 0, 0];
 		return [50_000, 30_000, 10_000];
 	}
 
 	if (resourceType === RESOURCE_OPS) {
 		// Only rooms with power creeps need ops.
-		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 1, 0];
+		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 0, 0];
 		return [10_000, 5000, 1000];
 	}
 
@@ -431,7 +462,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 
 	// Basic commodities need a factory.
 	if (([RESOURCE_SILICON, RESOURCE_METAL, RESOURCE_BIOMASS, RESOURCE_MIST] as string[]).includes(resourceType)) {
-		if (!this.factory) return [1, 1, 0];
+		if (!this.factory) return [1, 0, 0];
 		return [30_000, 10_000, 2000];
 	}
 
@@ -446,8 +477,8 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 			RESOURCE_CONDENSATE, RESOURCE_CONCENTRATE, RESOURCE_EXTRACT, RESOURCE_SPIRIT, RESOURCE_EMANATION, RESOURCE_ESSENCE,
 		] as string[]).includes(resourceType)
 	) {
-		if (!this.factory) return [1, 1, 0];
-		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 1, 0];
+		if (!this.factory) return [1, 0, 0];
+		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 0, 0];
 		return [10_000, 5000, 500];
 	}
 
@@ -487,12 +518,12 @@ Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType
 			return this.terminal;
 		}
 
-		if (this.isClearingTerminal() && storageFree > this.storage.store.getCapacity() * 0.2) {
+		if (this.isClearingTerminal() && storageFree > amount + 5000) {
 			// If we're clearing out the terminal, put everything into storage.
 			return this.storage;
 		}
 
-		if (this.isClearingStorage() && terminalFree > this.terminal.store.getCapacity() * 0.2) {
+		if (this.isClearingStorage() && terminalFree > amount + (resourceType == RESOURCE_ENERGY ? 0 : 5000)) {
 			// If we're clearing out the storage, put everything into terminal.
 			return this.terminal;
 		}
@@ -505,7 +536,7 @@ Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType
 			return this.terminal;
 		}
 
-		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 5000) {
+		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 5000 && terminalFree > 0) {
 			// Make sure terminal has energy for transactions.
 			return this.terminal;
 		}

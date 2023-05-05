@@ -45,6 +45,9 @@ import SegmentedMemory from 'utils/segmented-memory';
 hivemind.setSegmentedMemory(new SegmentedMemory());
 hivemind.logGlobalReset();
 
+import containerSetup from 'container-factory';
+containerSetup();
+
 import balancer from 'excess-energy-balancer';
 balancer.init();
 
@@ -120,13 +123,14 @@ const main = {
 
 		this.cleanup();
 
+		const hook = hivemind.settings.get<Function>('onTick');
+		if (hook) {
+			hook();
+		}
+
 		hivemind.runProcess('init', InitProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
-
-		const interShardMemory = interShard.getLocalMemory();
-		const shardHasRooms = interShardMemory.info && interShardMemory.info.ownedRooms > 0;
-		const shardHasEstablishedRooms = shardHasRooms && interShardMemory.info.maxRoomLevel > 3;
 
 		hivemind.runProcess('creeps', CreepsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
@@ -140,6 +144,10 @@ const main = {
 			priority: PROCESS_PRIORITY_LOW,
 			requireSegments: true,
 		});
+
+		const interShardMemory = interShard.getLocalMemory();
+		const shardHasRooms = interShardMemory.info && interShardMemory.info.ownedRooms > 0;
+		const shardHasEstablishedRooms = shardHasRooms && interShardMemory.info.maxRoomLevel > 3;
 
 		if (shardHasEstablishedRooms) {
 			// @todo This process could be split up - decisions about when and where to expand can be executed at low priority. But management of actual expansions is high priority.
@@ -188,11 +196,11 @@ const main = {
 
 		if (shardHasEstablishedRooms) {
 			hivemind.runProcess('empire.trade', TradeProcess, {
-				interval: 100,
+				interval: 20,
 				priority: PROCESS_PRIORITY_LOW,
 			});
 			hivemind.runProcess('empire.resources', ResourcesProcess, {
-				interval: 20,
+				interval: 5,
 			});
 		}
 

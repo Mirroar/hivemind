@@ -4,12 +4,13 @@ import {getRoomIntel} from 'room-intel';
 export default class RoomPlanScorer {
 	constructor(protected readonly roomName: string) {}
 
-	getScore(plan: RoomPlan): Record<string, number> {
+	getScore(plan: RoomPlan, exitMatrix?: CostMatrix, wallMatrix?: CostMatrix): Record<string, number> {
 		const score: Record<string, number> = {};
 
 		score.structures = this.getPlannedBuildingsScore(plan);
 		score.maintenance = this.getRequiredMaintenanceScore(plan);
 		score.towers = this.getAverageTowerScore(plan);
+    score.defense = this.getDefensibilityScore(plan, exitMatrix);
 		score.distance = this.getTravelDistancesScore(plan);
 
 		// @todo Score unprotected structures.
@@ -85,6 +86,19 @@ export default class RoomPlanScorer {
   getTowerEffectScore(pos: RoomPosition, otherPos: RoomPosition): number {
     const effectiveRange = Math.min(Math.max(pos.getRangeTo(otherPos) + 2, TOWER_OPTIMAL_RANGE), TOWER_FALLOFF_RANGE);
     return 1 - ((effectiveRange - TOWER_OPTIMAL_RANGE) / (TOWER_FALLOFF_RANGE - TOWER_OPTIMAL_RANGE));
+  }
+
+  getDefensibilityScore(plan: RoomPlan, exitMatrix?: CostMatrix): number {
+    if (!exitMatrix) return 0;
+
+    let total = 0;
+    const ramparts = plan.getPositions(STRUCTURE_RAMPART);
+    for (const rampartPosition of ramparts) {
+      const exitDistance = exitMatrix.get(rampartPosition.x, rampartPosition.y);
+      if (exitDistance < 6) total += (6 - exitDistance) * (6 - exitDistance);
+    }
+
+    return (-0.003 * total) - 0.001 * this.getPlannedAmount(plan, STRUCTURE_WALL);
   }
 
   getTravelDistancesScore(plan: RoomPlan): number {

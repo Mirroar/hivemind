@@ -139,7 +139,7 @@ export default class PowerHarvesterRole extends Role {
 
 				if (creep.pos.getRangeTo(damagedCreep) <= 3) {
 					creep.heal(damagedCreep);
-					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (creep.memory.body[HEAL] * healPower);
+					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (creep.getActiveBodyparts(HEAL) * healPower);
 				}
 			}
 			else if (creep.pos.getRangeTo(powerBank) > 5) {

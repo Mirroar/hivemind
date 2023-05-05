@@ -17,7 +17,7 @@ export default class GathererSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): GathererSpawnOption[] {
 		if (!room.storage) return [];
-		if (room.getStoredEnergy() < 5000) return [];
+		if (room.getEffectiveAvailableEnergy() < 5000) return [];
 
 		const options: GathererSpawnOption[] = [];
 		_.each(room.memory.abandonedResources, (resources, roomName) => {

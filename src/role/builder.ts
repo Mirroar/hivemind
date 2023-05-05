@@ -8,6 +8,7 @@ import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {throttle} from 'utils/throttle';
+import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 interface RepairOrder {
 	type: 'repair';
@@ -42,17 +43,7 @@ declare global {
 }
 
 // @todo Calculate from constants.
-const wallHealth = {
-	0: 1,
-	1: 5000,
-	2: 30_000,
-	3: 100_000,
-	4: 300_000,
-	5: 1_000_000,
-	6: 2_000_000,
-	7: 5_000_000,
-	8: 300_000_000,
-};
+const wallHealth: Record<number, number> = hivemind.settings.get('maxWallHealth');
 
 export default class BuilderRole extends Role {
 	transporterRole: TransporterRole;
@@ -100,12 +91,19 @@ export default class BuilderRole extends Role {
 			return;
 		}
 
-		delete creep.room.memory.noBuilderNeeded;
 		if (creep.memory.repairing) {
-			if (!this.performRepair(creep) && creep.room.controller?.level < 8) {
-				creep.memory.upgrading = true;
-				delete creep.memory.repairing;
-				this.performUpgrade(creep);
+			if (!this.performRepair(creep)) {
+				if (creep.room.controller?.level < 8) {
+					creep.memory.upgrading = true;
+					delete creep.memory.repairing;
+					this.performUpgrade(creep);
+				}
+				else {
+					// Prevent draining energy stores by recycling.
+					delete creep.memory.repairing;
+					creep.room.memory.noBuilderNeeded = Game.time;
+					this.performRecycle(creep);
+				}
 			}
 
 			return;
@@ -115,9 +113,17 @@ export default class BuilderRole extends Role {
 			delete creep.memory.sourceTarget;
 		}
 
-		if (!creep.room.storage || creep.room.getStoredEnergy() > 2500) {
+		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() > 2500) {
+			const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
+			if (deliveringCreeps.length > 0) {
+				creep.moveToRange(deliveringCreeps[0], 1);
+				return;
+			}
+
 			// @todo Instead of completely circumventing TypeScript, find a way to
 			// make energy gathering reusable between multiple roles.
+			// @todo Replace with dispatcher calls similar to hauler creeps delivery
+			// once all sources are covered by dispatcher.
 			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 		}
 	}
@@ -138,8 +144,13 @@ export default class BuilderRole extends Role {
 	}
 
 	performUpgrade(creep: BuilderCreep) {
-		if (!creep.room.storage || creep.room.getStoredEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
-			// Prevent draining energy stores by recicling.
+		if (creep.room.roomManager?.hasMisplacedSpawn()) {
+			delete creep.memory.upgrading;
+			return;
+		}
+
+		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
+			// Prevent draining energy stores by recycling.
 			creep.room.memory.noBuilderNeeded = Game.time;
 			this.performRecycle(creep);
 			return;
@@ -164,7 +175,7 @@ export default class BuilderRole extends Role {
 	 * @return {boolean}
 	 *   True if an action was performed.
 	 */
-	performRepair(creep: BuilderCreep) {
+	performRepair(creep: BuilderCreep): boolean {
 		if (!creep.memory.order || !creep.memory.order.target) {
 			this.calculateBuilderTarget(creep);
 		}
@@ -224,6 +235,7 @@ export default class BuilderRole extends Role {
 		const best = utilities.getBestOption(this.getAvailableBuilderTargets(creep));
 		if (!best || best.priority <= 0) return;
 
+		delete creep.room.memory.noBuilderNeeded;
 		creep.memory.order = {
 			type: best.type,
 			target: best.object.id,
@@ -259,7 +271,9 @@ export default class BuilderRole extends Role {
 	 */
 	addRepairOptions(creep: BuilderCreep, options) {
 		const targets = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => structure.hits < structure.hitsMax && !structure.needsDismantling(),
+			filter: structure => structure.hits < structure.hitsMax
+				&& !structure.needsDismantling()
+				&& this.isSafePosition(creep, structure.pos),
 		});
 		for (const target of targets) {
 			const option = {
@@ -308,7 +322,7 @@ export default class BuilderRole extends Role {
 			if (target.hits >= (option.maxHealth || target.hitsMax)) continue;
 
 			// Spread out repairs unless room is under attack.
-			if (creep.room.defense.getEnemyStrength() === 0) {
+			if (creep.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) {
 				option.priority -= creep.room.getCreepsWithOrder('repair', target.id).length;
 			}
 
@@ -344,6 +358,12 @@ export default class BuilderRole extends Role {
 
 		// Walls and ramparts get repaired up to a certain health level.
 		let maxHealth = wallHealth[target.room.controller.level];
+		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall.quad')) {
+			maxHealth /= 10;
+		}
+		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'rampart.ramp')) {
+			maxHealth /= 10;
+		}
 		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall.blocker')) {
 			maxHealth = 10_000;
 		}
@@ -363,21 +383,22 @@ export default class BuilderRole extends Role {
 				option.priority++;
 				option.weight++;
 			}
-			else if (creep.room.getStoredEnergy() < 5000) {
-				// Don't strengthen ramparts too much if room is struggling for energy.
-				option.priority = -1;
-			}
 
-			if (target.hits < 3_000_000 && creep.room.controller.level >= 6) {
-				// Once we have a terminal, get ramparts to a level where we can
-				// comfortably defend the room.
-				option.priority++;
-			}
-			else if (creep.room.defense.getEnemyStrength() > 1) {
+			if (creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
 				// Repair defenses as much as possible to keep invaders out.
+				// @todo Prioritize low HP wall / close to invaders.
 				option.priority++;
 				option.priority++;
 				option.weight++;
+			}
+			else if (creep.room.getEffectiveAvailableEnergy() < 5000) {
+				// Don't strengthen ramparts too much if room is struggling for energy.
+				option.priority = -1;
+			}
+			else if (target.hits < hivemind.settings.get('minWallIntegrity') && creep.room.controller.level >= 6 && creep.room.terminal) {
+				// Once we have a terminal, get ramparts to a level where we can
+				// comfortably defend the room.
+				option.priority++;
 			}
 		}
 	}
@@ -391,11 +412,13 @@ export default class BuilderRole extends Role {
 	 *   An array of repair or build option objects to add to.
 	 */
 	addBuildOptions(creep: BuilderCreep, options) {
-		const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES);
+		const targets = creep.room.find(FIND_MY_CONSTRUCTION_SITES, {
+			filter: site => this.isSafePosition(creep, site.pos),
+		});
 		for (const target of targets) {
 			const option = {
 				priority: 4,
-				weight: 1,
+				weight: target.progress / target.progressTotal,
 				type: 'build',
 				object: target,
 			};
@@ -415,6 +438,11 @@ export default class BuilderRole extends Role {
 				// Spawns have highest construction priority - we want to make
 				// sure moving a spawn always works out.
 				option.priority = 5;
+			}
+
+			if (([STRUCTURE_ROAD, STRUCTURE_RAMPART, STRUCTURE_WALL] as string[]).includes(target.structureType)) {
+				// Roads and defenses can be built after functional buildings are done.
+				option.weight--;
 			}
 
 			if (([STRUCTURE_LAB, STRUCTURE_NUKER, STRUCTURE_FACTORY] as string[]).includes(target.structureType)) {
@@ -474,9 +502,9 @@ export default class BuilderRole extends Role {
 	 */
 	repairNearby(creep: BuilderCreep) {
 		if (creep.store[RESOURCE_ENERGY] < creep.store.getCapacity() * 0.7 && creep.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.3) return;
-		if (throttle(creep.memory._tO)) return;
+		if (throttle(creep.heapMemory._tO)) return;
 
-		const workParts = creep.memory.body.work;
+		const workParts = creep.getActiveBodyparts(WORK);
 		if (!workParts) return;
 
 		const needsRepair = creep.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => {

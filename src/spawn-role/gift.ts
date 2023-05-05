@@ -12,7 +12,7 @@ export default class GiftSpawnRole extends SpawnRole {
 	getSpawnOptions(room: Room): SpawnOption[] {
 		// @todo This is unlikely to happen exactly when a spawn is idle.
 		if (Game.time % 123 !== 67) return [];
-		if (room.getStoredEnergy() < 10_000) return [];
+		if (room.getEffectiveAvailableEnergy() < 10_000) return [];
 		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return [];
 
 		return [{

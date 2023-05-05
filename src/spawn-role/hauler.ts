@@ -2,6 +2,7 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 interface HaulerSpawnOption extends SpawnOption {
 	targetPos: string;
@@ -17,6 +18,8 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): HaulerSpawnOption[] {
+		if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [];
+
 		const options: HaulerSpawnOption[] = [];
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 

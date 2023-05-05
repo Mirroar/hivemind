@@ -1,7 +1,7 @@
 import profiler from 'screeps-profiler';
 
 import Bay from 'manager.bay';
-import BoostManager from 'manager.boost';
+import BoostManager from 'boost-manager';
 import Exploit from 'manager.exploit';
 import Logger from 'utils/debug';
 import RoomPlanner from 'room/planner/room-planner';

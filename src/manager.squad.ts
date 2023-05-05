@@ -105,6 +105,10 @@ export default class Squad {
 		this.memory.composition[unitType] = count;
 	}
 
+	getUnitCount(unitType: SquadUnitType) {
+		return this.memory.composition[unitType] || 0;
+	}
+
 	/**
 	 * Clears all registered units for this squad.
 	 */
@@ -190,3 +194,5 @@ export default class Squad {
 		return null;
 	}
 }
+
+global['Squad'] = Squad;

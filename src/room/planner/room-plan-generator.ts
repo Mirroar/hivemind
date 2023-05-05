@@ -82,7 +82,7 @@ export default class RoomPlanGenerator {
     const plan = this.variationBuilder.getRoomPlan();
     this.results[this.currentVariation] = {
       plan,
-      score: this.scorer.getScore(plan),
+      score: this.scorer.getScore(plan, this.exitMatrix, this.wallMatrix),
     };
 
     delete this.variationBuilder;

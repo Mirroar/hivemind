@@ -101,6 +101,7 @@ export default class OwnedRoomProcess extends Process {
 		hivemind.runSubProcess('rooms_factory', () => {
 			hivemind.runProcess(this.room.name + '_factory', ManageFactoryProcess, {
 				room: this.room,
+				priority: PROCESS_PRIORITY_ALWAYS,
 			});
 		});
 

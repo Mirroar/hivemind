@@ -107,7 +107,7 @@ export default class BrawlerRole extends Role {
 	 * @return {Array}
 	 *   An array of target options for this creep.
 	 */
-	getAvailableMilitaryTargets(creep) {
+	getAvailableMilitaryTargets(creep: Creep) {
 		const options = [];
 
 		if (!creep.memory.target) return options;
@@ -122,17 +122,17 @@ export default class BrawlerRole extends Role {
 		if (creep.pos.roomName !== targetPosition.roomName) return options;
 
 		// Find enemies to attack.
-		if (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK]) {
+		if (creep.getActiveBodyparts(ATTACK) || creep.getActiveBodyparts(RANGED_ATTACK)) {
 			this.addMilitaryAttackOptions(creep, options);
 		}
 
 		// Find friendlies to heal.
-		if (creep.memory.body[HEAL]) {
+		if (creep.getActiveBodyparts(HEAL)) {
 			this.addMilitaryHealOptions(creep, options);
 		}
 
 		// Attack / Reserve controllers.
-		if (creep.memory.body[CLAIM] && creep.memory.body[CLAIM] >= 5) {
+		if (creep.getActiveBodyparts(CLAIM) >= 5) {
 			if (creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
 				options.push({
 					priority: 5,
@@ -143,7 +143,7 @@ export default class BrawlerRole extends Role {
 			}
 		}
 
-		if (creep.memory.body[CLAIM] && creep.room.controller && !creep.room.controller.owner) {
+		if (creep.getActiveBodyparts(CLAIM) > 0 && creep.room.controller && !creep.room.controller.owner) {
 			options.push({
 				priority: 4,
 				weight: 0,
@@ -153,6 +153,9 @@ export default class BrawlerRole extends Role {
 		}
 
 		// @todo Run home for healing if no functional parts are left.
+		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName !== 'interShardSupport') {
+			this.performRecycle(creep);
+		}
 
 		return options;
 	}
@@ -291,7 +294,12 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.fillWithEnergy) {
-			if (creep.store.getFreeCapacity() > 0) {
+			if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
+				if (creep.room.getEffectiveAvailableEnergy() < 3000) {
+					creep.moveToRange(new RoomPosition(25, 25, creep.room.name), 5);
+					return;
+				}
+
 				this.transporterRole.performGetEnergy(creep);
 				return;
 			}
@@ -313,8 +321,13 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.target) {
+			const targetPos = decodePosition(creep.memory.target);
+			if (targetPos && creep.pos.roomName === targetPos.roomName) {
+				this.militaryRoomReached(creep);
+			}
+
 			let enemiesNearby = false;
-			if (creep.memory.body[ATTACK] || creep.memory.body[RANGED_ATTACK] || creep.memory.body[HEAL]) {
+			if (creep.getActiveBodyparts(ATTACK) || creep.getActiveBodyparts(RANGED_ATTACK) || creep.getActiveBodyparts(HEAL)) {
 				// Check for enemies and interrupt move accordingly.
 				_.each(creep.room.enemyCreeps, (hostiles, owner) => {
 					if (hivemind.relations.isAlly(owner)) return null;
@@ -368,6 +381,7 @@ export default class BrawlerRole extends Role {
 
 		creep.moveTo(25, 25, {
 			reusePath: 50,
+			maxRooms: 1,
 		});
 	}
 
@@ -379,7 +393,7 @@ export default class BrawlerRole extends Role {
 			return;
 		}
 
-		if (creep.memory.body[ATTACK]) {
+		if (creep.getActiveBodyparts(ATTACK)) {
 			// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
 			const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			creep.moveTo(target, {
@@ -391,7 +405,7 @@ export default class BrawlerRole extends Role {
 			return;
 		}
 
-		if (creep.memory.body[RANGED_ATTACK]) {
+		if (creep.getActiveBodyparts(RANGED_ATTACK)) {
 			// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
 			const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			if (creep.pos.getRangeTo(target.pos) >= 3) {
@@ -491,7 +505,7 @@ export default class BrawlerRole extends Role {
 
 		// If an enemy is close by, move to attack it.
 		const enemies = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
-			filter: enemy => enemy.isDangerous(),
+			filter: enemy => enemy.isDangerous() && !hivemind.relations.isAlly(enemy.owner.username),
 		});
 		if (enemies.length > 0) {
 			creep.memory.exploitTarget = enemies[0].id;
@@ -686,7 +700,7 @@ export default class BrawlerRole extends Role {
 			// Attack ordered target first.
 			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
 
-			if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.memory.body[ATTACK] || 0) > 0;
+			if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.getActiveBodyparts(ATTACK) || 0) > 0;
 		}
 
 		// See if enemies are nearby, attack one of those.
@@ -696,11 +710,11 @@ export default class BrawlerRole extends Role {
 			if (!hostile.isDangerous()) continue;
 			if (hostile.owner && hivemind.relations.isAlly(hostile.owner.username)) continue;
 
-			if (creep.memory.body[ATTACK] && creep.attack(hostile) === OK) {
+			if (creep.getActiveBodyparts(ATTACK) && creep.attack(hostile) === OK) {
 				return true;
 			}
 
-			if (creep.memory.body[RANGED_ATTACK] && creep.rangedAttack(hostile) === OK) {
+			if (creep.getActiveBodyparts(RANGED_ATTACK) && creep.rangedAttack(hostile) === OK) {
 				return false;
 			}
 		}
@@ -710,7 +724,9 @@ export default class BrawlerRole extends Role {
 
 		// See if enemy structures are nearby, attack one of those.
 		const structures = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
-			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.structureType !== STRUCTURE_TERMINAL,
+			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.structureType !== STRUCTURE_TERMINAL && (
+				!structure.owner || !hivemind.relations.isAlly(structure.owner.username)
+			),
 		});
 		// Find target with lowest HP to kill off (usually relevant while trying to break through walls).
 		let lowestStructure;
@@ -764,11 +780,11 @@ export default class BrawlerRole extends Role {
 			}
 		}
 		else if (!target.owner || !hivemind.relations.isAlly(target.owner.username)) {
-			if (creep.memory.body[ATTACK] && creep.attack(target) === OK) {
+			if (creep.getActiveBodyparts(ATTACK) && creep.attack(target) === OK) {
 				return true;
 			}
 
-			if (creep.memory.body[RANGED_ATTACK] && creep.rangedAttack(target) === OK) {
+			if (creep.getActiveBodyparts(RANGED_ATTACK) && creep.rangedAttack(target) === OK) {
 				return true;
 			}
 		}

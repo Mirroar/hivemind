@@ -168,7 +168,7 @@ export default class PowerMiningProcess extends Process {
 		let potentialSpawns: Array<{room: string; distance: number}> = [];
 		for (const room of Game.myRooms) {
 			if (room.isFullOnPower()) continue;
-			if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) continue;
+			if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForPowerHarvesting')) continue;
 			if (room.controller.level < hivemind.settings.get('minRclForPowerMining')) continue;
 			if (Game.map.getRoomLinearDistance(roomName, room.name) > hivemind.settings.get('maxRangeForPowerMining')) continue;
 

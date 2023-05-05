@@ -69,6 +69,8 @@ export default class FactoryManager {
 
 	getRequestedComponents(): Partial<Record<FactoryComponentConstant, number>> {
 		const neededResources = {};
+		if (this.room.isEvacuating()) return neededResources;
+
 		const jobs = this.getJobs();
 		const numberJobs = _.size(jobs);
 
@@ -79,7 +81,7 @@ export default class FactoryManager {
 			const amount = Math.max(1, factoryFillTime / recipe.cooldown / numberJobs);
 			let resourceType: FactoryComponentConstant;
 			for (resourceType in recipe.components) {
-				neededResources[resourceType] = (neededResources[resourceType] || 0) + (recipe.components[resourceType] * amount);
+				neededResources[resourceType] = (neededResources[resourceType] || 0) + Math.ceil(recipe.components[resourceType] * amount);
 			}
 		}
 
@@ -109,19 +111,35 @@ export default class FactoryManager {
 	isRecipeAvailable(resourceType: FactoryProductConstant, recipe: Recipe): boolean {
 		if (recipe.level && recipe.level !== this.getFactoryLevel()) return false;
 
+		// Compress resource at 95% storage capacity, uncompress under 5%.
+		// @todo Turn into setting.
+		const storageFull = this.room.getFreeStorage() - this.room.factory.store.getUsedCapacity() < this.room.getStorageLimit() * 0.05;
+		const storageEmpty = this.room.getFreeStorage() - this.room.factory.store.getUsedCapacity() > this.room.getStorageLimit() * 0.95;
+		const minRawMaterialRatio = 0.2;
+		const maxRawMaterialRatio = 0.8;
+
+		const storedEnergy = this.room.getStoredEnergy() + this.room.factory.store.getUsedCapacity(RESOURCE_ENERGY);
+		const storedProduct = this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType);
+		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType] || compressRecipes[resourceType]) + this.room.factory.store.getUsedCapacity(uncompressRecipes[resourceType] || compressRecipes[resourceType]);
+
 		if (resourceType === RESOURCE_BATTERY) {
-			return (this.room.getCurrentResourceAmount(resourceType) < 500 && this.room.getStoredEnergy() > 15_000)
-        || this.room.getStoredEnergy() > 150_000;
+			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 500 || storageFull || rawMaterialRatio > maxRawMaterialRatio) && storedEnergy > 15_000;
+		}
+
+		if (resourceType === RESOURCE_ENERGY) {
+			const rawMaterialRatio = storedProduct / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 10_000 || storageEmpty || rawMaterialRatio < minRawMaterialRatio) && storedResource > 100;
 		}
 
 		if (uncompressRecipes[resourceType]) {
-			return (this.room.getCurrentResourceAmount(resourceType) < 500 && this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 5000 && this.room.getStoredEnergy() > 5000)
-        || (this.room.getCurrentResourceAmount(uncompressRecipes[resourceType]) > 30_000 && this.room.getStoredEnergy() > 10_000);
+			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 500 || storageFull || rawMaterialRatio > maxRawMaterialRatio) && storedResource > 5000 && storedEnergy > 5000;
 		}
 
 		if (compressRecipes[resourceType]) {
-			return (this.room.getCurrentResourceAmount(resourceType) < 2000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 100 && this.room.getStoredEnergy() > 10_000)
-        || (this.room.getCurrentResourceAmount(resourceType) < 10_000 && this.room.getCurrentResourceAmount(compressRecipes[resourceType]) >= 1000 && this.room.getStoredEnergy() > 10_000);
+			const rawMaterialRatio = storedProduct / Math.max(storedProduct + storedResource, 1);
+			return (storedProduct < 2000 || storageEmpty || rawMaterialRatio < minRawMaterialRatio) && storedResource > 100 && storedEnergy > 5000;
 		}
 
 		// @todo For level-based recipes, use empire-wide resource capabilities and request via terminal.
@@ -133,7 +151,7 @@ export default class FactoryManager {
 
 		if (this.isMadeOnlyFromBasicResources(recipe)) {
 			for (const resourceType in recipe.components) {
-				const resourceAmount = this.room.getCurrentResourceAmount(resourceType);
+				const resourceAmount = this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType as ResourceConstant);
 				if (resourceAmount === 0) return false;
 				if (resourceAmount < recipe.components[resourceType] * createdAmount * 5) return false;
 			}
@@ -154,7 +172,7 @@ export default class FactoryManager {
 
 	hasRequiredResources(recipe: Recipe): boolean {
 		for (const resourceType in recipe.components) {
-			if (this.room.getCurrentResourceAmount(resourceType) < recipe.components[resourceType]) return false;
+			if (this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType as ResourceConstant) < recipe.components[resourceType]) return false;
 		}
 
 		return true;

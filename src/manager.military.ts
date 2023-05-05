@@ -192,6 +192,9 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
 Room.prototype.assertMilitaryStructurePower = function (structure) {
 	if (structure.structureType !== STRUCTURE_TOWER) return;
 	if (structure.store[RESOURCE_ENERGY] < TOWER_ENERGY_COST) return;
+	// Don't count our towers if they're almost empty so we don't shoot at targets
+	// we can't kill after all.
+	if (structure.my && structure.store[RESOURCE_ENERGY] < TOWER_ENERGY_COST * 10) return;
 
 	let hostile;
 	let targets;
@@ -279,7 +282,8 @@ Room.prototype.assertTargetPriorities = function () {
 
 		const visual = this.visual;
 
-		if (effectiveDamage > potentialHealing) {
+		const neededDamageFactor = creep.hits === creep.hitsMax ? 1.1 : 1;
+		if (effectiveDamage > potentialHealing * neededDamageFactor) {
 			// @todo Reduce priority (even stop targeting) when close to exit, to prevent tower drain by fleeing.
 			creep.militaryPriority = creep.getMilitaryValue() * (effectiveDamage - potentialHealing) * (creep.hitsMax / creep.hits) * creep.ticksToLive / CREEP_LIFE_TIME;
 			visual.text(creep.militaryPriority.toPrecision(2), creep.pos.x + 1, creep.pos.y + 0.2, {font: 0.5, color: 'yellow'});

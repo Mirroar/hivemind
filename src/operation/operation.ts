@@ -45,7 +45,7 @@ export default class Operation {
 	protected roomName?: string;
 	protected memory: OperationMemory;
 
-	constructor(readonly name: string) {
+	public constructor(readonly name: string) {
 		if (!Memory.operations) Memory.operations = {};
 		if (!Memory.operations[name]) Memory.operations[name] = {} as OperationMemory;
 
@@ -60,49 +60,49 @@ export default class Operation {
 		if (!this.memory.stats) this.memory.stats = {};
 	}
 
-	getType(): string {
+	public getType(): string {
 		return this.memory.type || 'default';
 	}
 
-	setRoom(roomName: string) {
+	public setRoom(roomName: string) {
 		this.memory.roomName = roomName;
 		this.roomName = roomName;
 	}
 
-	getRoom(): string {
+	public getRoom(): string {
 		return this.roomName;
 	}
 
-	getAge(): number {
+	public getAge(): number {
 		return this.memory.age || 0;
 	}
 
-	getLastActiveTick(): number {
+	public getLastActiveTick(): number {
 		return Math.min(this.memory.lastActive || Game.time, this.memory.currentTick || Game.time);
 	}
 
-	terminate() {
+	public terminate() {
 		this.memory.shouldTerminate = true;
 		this.onTerminate();
 	}
 
-	onTerminate() {
+	public onTerminate() {
 		// This space intentionally left blank.
 	}
 
-	addCpuCost(amount: number) {
+	public addCpuCost(amount: number) {
 		this.recordStatChange(amount, 'cpu');
 	}
 
-	addResourceCost(amount: number, resourceType: string) {
+	public addResourceCost(amount: number, resourceType: string) {
 		this.recordStatChange(-amount, resourceType);
 	}
 
-	addResourceGain(amount: number, resourceType: string) {
+	public addResourceGain(amount: number, resourceType: string) {
 		this.recordStatChange(amount, resourceType);
 	}
 
-	recordStatChange(amount: number, resourceType: string) {
+	private recordStatChange(amount: number, resourceType: string) {
 		if (this.memory.currentTick !== Game.time) {
 			this.memory.currentTick = Game.time;
 			this.memory.statTicks = (this.memory.statTicks || 0) + 1;
@@ -114,7 +114,7 @@ export default class Operation {
 		this.memory.stats[resourceType] = (this.memory.stats[resourceType] || 0) + amount;
 	}
 
-	squashStats() {
+	private squashStats() {
 		if (this.memory.statTicks < 10_000) return;
 		const squashFactor = 2;
 
@@ -124,7 +124,7 @@ export default class Operation {
 		}
 	}
 
-	getStat(resourceType: string): number {
+	public getStat(resourceType: string): number {
 		return (this.memory.stats[resourceType] || 0) / (this.memory.statTicks || 1);
 	}
 }

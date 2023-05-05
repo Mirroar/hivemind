@@ -1,4 +1,5 @@
 import Process from 'process/process';
+import settings from 'settings-manager';
 
 export default class ManageFactoryProcess extends Process {
 	room: Room;
@@ -23,12 +24,25 @@ export default class ManageFactoryProcess extends Process {
 		if (this.room.factory.cooldown > 0) return;
 
 		const jobs = this.room.factoryManager.getJobs();
+		let count = 0;
 		let product: FactoryProductConstant;
 		for (product in jobs) {
-			if (!this.room.factoryManager.hasAllComponents(product)) continue;
-			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) continue;
+			count++;
+			this.room.visual.text(product, 40, 1 + count, {align: 'left'});
+			if (!this.room.factoryManager.hasAllComponents(product)) {
+				this.room.visual.text('Missing components', 39, 1 + count, {align: 'right'});
+				continue;
+			}
+			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) {
+				this.room.visual.text('Finished', 39, 1 + count, {align: 'right'});
+				continue;
+			}
 
-			if (this.room.factory.produce(product as CommodityConstant) === OK) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
+			this.room.visual.text('OK', 39, 1 + count, {align: 'right'});
+			if (this.room.factory.produce(product as CommodityConstant) === OK) {
+				if (settings.get('notifyFactoryProduction')) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
+				break;
+			}
 		}
 	}
 }

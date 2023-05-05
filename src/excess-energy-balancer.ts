@@ -20,6 +20,7 @@ const balancer = {
   },
 
   getRatio(): number {
+    if (!settings.get<boolean>('constructPowerSpawns')) return 0;
     return settings.get<number>('powerProcessingEnergyRatio');
   },
 
@@ -60,12 +61,15 @@ const balancer = {
   },
 
   maySpendEnergyOnGpl(): boolean {
+    if (!settings.get<boolean>('constructPowerSpawns')) return true;
+
     const ratio = 1 - this.getRatio();
 
     return ratio >= 1 || Memory.energyBalace.gplEnergy < 10_000;
   },
 
   maySpendEnergyOnPowerProcessing(): boolean {
+    if (!settings.get<boolean>('constructPowerSpawns')) return false;
     const ratio = this.getRatio();
 
     return ratio >= 1 || Memory.energyBalace.powerEnergy < 10_000;

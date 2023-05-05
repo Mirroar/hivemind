@@ -2,6 +2,7 @@
 
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 
 interface RemoteHarvesterSpawnOption extends SpawnOption {
@@ -18,6 +19,8 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): RemoteHarvesterSpawnOption[] {
+		if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [];
+
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		const options: RemoteHarvesterSpawnOption[] = [];
 		for (const position of harvestPositions) {

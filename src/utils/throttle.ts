@@ -9,6 +9,10 @@ declare global {
       };
     };
   }
+
+  interface CreepHeapMemory {
+    _tO?: number;
+  }
 }
 
 const throttleNumbers = [];
@@ -31,8 +35,8 @@ function throttle(offset: number, minBucket?: number, maxBucket?: number) {
   initThrottleMemory();
 
   if (!offset) offset = 0;
-  if (!minBucket) minBucket = Memory.throttleInfo.bucket.critical;
-  if (!maxBucket) maxBucket = Memory.throttleInfo.bucket.normal;
+  if (typeof minBucket !== 'number') minBucket = Memory.throttleInfo.bucket.critical;
+  if (typeof maxBucket !== 'number') maxBucket = Memory.throttleInfo.bucket.normal;
 
   const bucket = Game.cpu.bucket;
   if (bucket >= maxBucket) return false;

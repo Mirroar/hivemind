@@ -9,6 +9,7 @@ FIND_MY_CONSTRUCTION_SITES */
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RoomPlanner from 'room/planner/room-planner';
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {serializeCoords} from 'utils/serialization';
 
 declare global {
@@ -86,7 +87,7 @@ export default class RoomManager {
 	 */
 	runLogic() {
 		if (!this.roomPlanner || !this.roomPlanner.isPlanningFinished()) return;
-		if (this.room.defense.getEnemyStrength() > 0) return;
+		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE) return;
 
 		delete this.memory.runNextTick;
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
@@ -99,6 +100,7 @@ export default class RoomManager {
 			this.buildRoomDefenseFirst();
 
 			if (!this.structuresByType[STRUCTURE_SPAWN] || this.structuresByType[STRUCTURE_SPAWN].length === 0) return;
+			if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0 && (!this.structuresByType[STRUCTURE_STORAGE] || this.structuresByType[STRUCTURE_STORAGE].length === 0)) return;
 		}
 
 		this.cleanRoom();
@@ -106,7 +108,8 @@ export default class RoomManager {
 	}
 
 	isRoomRecovering(): boolean {
-		if (this.room.memory.isReclaimableSince) return true;
+		if ((this.room.controller.safeMode ?? 0) > 5000) return false;
+		if (this.room.needsReclaiming()) return true;
 
 		if (this.structuresByType[STRUCTURE_SPAWN] && this.structuresByType[STRUCTURE_SPAWN].length > 0) return false;
 		if (this.room.controller.level < 3) return false;
@@ -127,9 +130,16 @@ export default class RoomManager {
 		// Build normal ramparts.
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 
-		// Build spawn.
+		// Build spawn once we have enough capacity for decently sized creeps.
 		if (this.checkWallIntegrity(10_000)) {
+			const creepCost = 6 * BODYPART_COST[WORK] + 3 * BODYPART_COST[MOVE] + 3 * BODYPART_COST[CARRY];
+			if (this.room.energyCapacityAvailable + SPAWN_ENERGY_CAPACITY < creepCost) {
+				this.manageExtensions();
+			}
+
 			this.buildPlannedStructures('spawn.0', STRUCTURE_SPAWN);
+			this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
+			this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
 		}
 	}
 
@@ -187,6 +197,13 @@ export default class RoomManager {
 		// before reaching rcl 4.
 		for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
 			structure.destroy();
+		}
+
+		// Remove hostile construction sites as they might count against our limits.
+		for (const site of this.room.find(FIND_CONSTRUCTION_SITES)) {
+			if (site.my) continue;
+
+			site.remove();
 		}
 	}
 
@@ -294,7 +311,7 @@ export default class RoomManager {
 
 		this.buildPlannedStructures('terminal', STRUCTURE_TERMINAL);
 
-		if (this.room.storage) {
+		if (this.room.storage || CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] < 1) {
 			// Build road to sources asap to make getting energy easier.
 			this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
 
@@ -325,12 +342,14 @@ export default class RoomManager {
 				return false;
 			},
 		});
-		for (const structure of unwantedDefenses) {
-			if (hivemind.settings.get('dismantleUnwantedDefenses')) {
-				this.memory.dismantle[structure.id] = 1;
-			}
-			else {
-				structure.destroy();
+		if (!this.room.needsReclaiming()) {
+			for (const structure of unwantedDefenses) {
+				if (hivemind.settings.get('dismantleUnwantedDefenses')) {
+					this.memory.dismantle[structure.id] = 1;
+				}
+				else if (structure.structureType === STRUCTURE_WALL) {
+					structure.destroy();
+				}
 			}
 		}
 
@@ -409,7 +428,7 @@ export default class RoomManager {
 
 	buildOperationRoads() {
 		const positions = this.getOperationRoadPositions();
-		for (const pos of _.values(positions)) {
+		for (const pos of _.values<RoomPosition>(positions)) {
 			if (this.tryBuild(pos, STRUCTURE_ROAD)) continue;
 
 			break;
@@ -427,7 +446,7 @@ export default class RoomManager {
 	 * @return {boolean}
 	 *   True if we can continue building.
 	 */
-	tryBuild(pos, structureType) {
+	tryBuild(pos: RoomPosition, structureType) {
 		// Check if there's a structure here already.
 		const structures = pos.lookFor(LOOK_STRUCTURES);
 		for (const i in structures) {
@@ -448,8 +467,13 @@ export default class RoomManager {
 
 		const canCreateMoreSites = this.newStructures + this.roomConstructionSites.length < 5;
 		if (canCreateMoreSites && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.9) {
+			// Don't try to build some structures if a nuke is about to land nearby.
+			if ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_LINK, STRUCTURE_CONTAINER, STRUCTURE_ROAD].includes(structureType) && pos.findInRange(FIND_NUKES, 2).length > 0) {
+				return true;
+			}
+
 			const isBlocked = OBSTACLE_OBJECT_TYPES.includes(structureType)
-				&& (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS) > 0);
+				&& (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS).length > 0);
 			if (!isBlocked && pos.createConstructionSite(structureType) === OK) {
 				this.newStructures++;
 				// Structure is being built, continue.
@@ -484,7 +508,7 @@ export default class RoomManager {
 			if (!resourcesAvailable && _.size(roomSpawns) === 1) return false;
 
 			// This spawn is misplaced, set a flag for spawning more builders to help.
-			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 3) {
+			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2) {
 				this.memory.hasMisplacedSpawn = true;
 			}
 
@@ -494,7 +518,7 @@ export default class RoomManager {
 			let buildPower = 0;
 			for (const creep of _.values<Creep>(this.room.creepsByRole.builder)) {
 				if (creep.ticksToLive) {
-					buildPower += creep.memory.body.work * creep.ticksToLive / CREEP_LIFE_TIME;
+					buildPower += creep.getActiveBodyparts(WORK) * creep.ticksToLive / CREEP_LIFE_TIME;
 				}
 			}
 
@@ -591,9 +615,15 @@ export default class RoomManager {
 	 *   True if walls are considered complete.
 	 */
 	checkWallIntegrity(minHits?: number) {
+		// @todo make this consistent with defense manager.
 		if (!minHits) minHits = hivemind.settings.get('minWallIntegrity');
+		const maxHealth = hivemind.settings.get('maxWallHealth');
+
+		minHits *= maxHealth[this.room.controller.level] / maxHealth[8];
 
 		for (const pos of this.roomPlanner.getLocations('rampart')) {
+			if (this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
+
 			// Check if there's a rampart here already.
 			const structures = pos.lookFor(LOOK_STRUCTURES);
 			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= minHits).length === 0) {
@@ -608,6 +638,11 @@ export default class RoomManager {
 	 * Builds structures that are relevant in fully built rooms only.
 	 */
 	buildEndgameStructures() {
+		if (this.room.terminal) {
+			// Once there is a terminal, build quad-breaker walls.
+			this.buildPlannedStructures('wall.quad', STRUCTURE_WALL);
+		}
+
 		if (hivemind.settings.get('constructLabs')) {
 			// Make sure labs are built in the right place, remove otherwise.
 			this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);

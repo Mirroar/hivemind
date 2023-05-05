@@ -15,14 +15,14 @@ interface DepositHarvesterSpawnOption extends SpawnOption {
 
 export default class DepositHarvesterSpawnRole extends SpawnRole {
 	/**
-	 * Adds gift spawn options for the given room.
+	 * Adds deposit harvester spawn options for the given room.
 	 *
 	 * @param {Room} room
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): DepositHarvesterSpawnOption[] {
 		if (!hivemind.settings.get('enableDepositMining')) return [];
-		if (room.getStoredEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
+		if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
 		if (!Memory.strategy || !Memory.strategy.deposits || !Memory.strategy.deposits.rooms) return [];
 
 		const options: DepositHarvesterSpawnOption[] = [];

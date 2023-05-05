@@ -1,3 +1,4 @@
+import container from 'utils/container';
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import SpawnManager from 'spawn-manager';
@@ -89,7 +90,7 @@ export default class ManageSpawnsProcess extends Process {
 		super(parameters);
 		this.room = parameters.room;
 
-		this.spawnManager = new SpawnManager();
+		this.spawnManager = container.get('SpawnManager');
 		for (const roleName in spawnClasses) {
 			this.spawnManager.registerSpawnRole(roleName, new spawnClasses[roleName]());
 		}

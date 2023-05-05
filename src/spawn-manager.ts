@@ -128,6 +128,13 @@ export default class SpawnManager {
 		if (!this.trySpawnCreep(room, spawn, option)) {
 			_.each(availableSpawns, s => {
 				s.waiting = true;
+				room.visual.text(option.role + '@' + option.priority.toPrecision(1), spawn.pos.x + 0.05, spawn.pos.y + 0.65, {
+					font: 0.5,
+					color: 'black',
+				});
+				room.visual.text(option.role + '@' + option.priority.toPrecision(1), spawn.pos.x, spawn.pos.y + 0.6, {
+					font: 0.5,
+				});
 			});
 		}
 
@@ -171,9 +178,6 @@ export default class SpawnManager {
 			memory.role = option.role;
 		}
 
-		// Store creep's body definition in memory for easier access.
-		memory.body = _.countBy(body);
-
 		// Actually try to spawn this creep.
 		// @todo Use extensions grouped by bay to make refilling easier.
 		const creepName = this.generateCreepName(memory.role);
@@ -193,7 +197,16 @@ export default class SpawnManager {
 		// Also notify room's boost manager if necessary.
 		const boosts = role.getCreepBoosts(room, option, body);
 		if (boosts && room.boostManager) {
-			room.boostManager.markForBoosting(creepName, boosts);
+			const boostResources = {};
+			let found = false;
+			for (const partType of body) {
+				if (!boosts[partType]) continue;
+
+				boostResources[boosts[partType]] = (boostResources[boosts[partType]] || 0) + 1;
+				found = true;
+			}
+
+			if (found) room.boostManager.markForBoosting(creepName, boostResources);
 		}
 
 		// Notify the role that spawning was successful.
@@ -221,7 +234,13 @@ export default class SpawnManager {
 		}
 
 		const roleName = roleNameMap[roleId] || roleId;
-		return roleName + '_' + Memory.creepCounter[roleId].toString(36);
+		const name = roleName + '_' + Memory.creepCounter[roleId].toString(36);
+		if (!Game.creeps[name]) return name;
+
+		// Name already exists, sometimes happens after server crash.
+		// Generate another.
+		Memory.creepCounter[roleId]++;
+		return this.generateCreepName(roleId);
 	}
 
 	/**

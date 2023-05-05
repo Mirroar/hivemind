@@ -19,17 +19,17 @@ export default class BuilderSpawnRole extends SpawnRole {
 
 		let numWorkParts = 0;
 		_.each(room.creepsByRole.builder, creep => {
-			numWorkParts += creep.memory.body.work || 0;
+			numWorkParts += creep.getActiveBodyparts(WORK) || 0;
 		});
 
-		const availableEnergy = room.getStoredEnergy();
+		const availableEnergy = room.getEffectiveAvailableEnergy();
 		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
-		const needsInitialBuildings = room.controller.level < 5 && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+		const needsBuildings = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
 		if (numWorkParts >= maxWorkParts) return [];
 
 		return [{
-			priority: (needsStrongerRamparts || needsInitialBuildings) ? 4 : 3,
+			priority: (needsStrongerRamparts || needsBuildings) ? 4 : 3,
 			weight: 0.5,
 			size: room.isEvacuating() ? 3 : null,
 		}];
@@ -62,6 +62,13 @@ export default class BuilderSpawnRole extends SpawnRole {
 			return 1;
 		}
 
+		const availableEnergy = room.getEffectiveAvailableEnergy();
+		if ((room.storage || room.terminal) && availableEnergy < 5000) {
+			// Just spawn a small builder for keeping roads intact. Wait for
+			// harvesting to fill up storage.
+			return 1;
+		}
+
 		if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
 			return 0;
 		}
@@ -78,7 +85,6 @@ export default class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we have a lot of energy to spare.
-		const availableEnergy = room.getStoredEnergy();
 		if (availableEnergy > 400_000) {
 			maxWorkParts *= 2;
 		}
@@ -115,7 +121,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	getLowestRampartValue(room: Room): number {
 		return cache.inHeap('lowestRampart:' + room.name, 100, () => {
 			const ramparts = room.find(FIND_MY_STRUCTURES, {
-				filter: s => s.structureType === STRUCTURE_RAMPART,
+				filter: s => s.structureType === STRUCTURE_RAMPART && room.roomPlanner?.isPlannedLocation(s.pos, 'rampart') && !room.roomPlanner?.isPlannedLocation(s.pos, 'rampart.ramp'),
 			});
 
 			return _.min(ramparts, 'hits').hits;
@@ -176,6 +182,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: BuilderSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
+		// @todo Only boost if ramparts need a lot of repairs.
 		return this.generateCreepBoosts(room, body, WORK, 'repair');
 	}
 }

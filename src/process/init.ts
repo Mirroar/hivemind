@@ -1,5 +1,5 @@
 import Process from 'process/process';
-import BoostManager from 'manager.boost';
+import BoostManager from 'boost-manager';
 import cache from 'utils/cache';
 import Exploit from 'manager.exploit';
 import hivemind from 'hivemind';
@@ -57,9 +57,11 @@ export default class InitProcess extends Process {
 				return;
 			}
 
-			const operation = new operationClasses[data.type](opName);
-			Game.operations[opName] = operation;
-			Game.operationsByType[data.type][opName] = operation;
+			if (operationClasses[data.type]) {
+				const operation = new operationClasses[data.type](opName);
+				Game.operations[opName] = operation;
+				Game.operationsByType[data.type][opName] = operation;
+			}
 		});
 
 		// Define quick access property Game.myRooms.
@@ -87,7 +89,8 @@ export default class InitProcess extends Process {
 			if (room.isMine()) {
 				if (hivemind.segmentMemory.isReady()) room.roomPlanner = new RoomPlanner(room.name);
 				room.roomManager = new RoomManager(room);
-				room.boostManager = new BoostManager(room.name);
+				room.boostManager = new BoostManager(room);
+				room.boostManager.manageBoostLabs();
 				room.generateLinkNetwork();
 			}
 

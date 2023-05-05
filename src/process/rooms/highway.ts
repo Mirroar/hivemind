@@ -1,3 +1,4 @@
+import cache from 'utils/cache';
 import Process from 'process/process';
 import {getRoomIntel} from 'room-intel';
 import {isCrossroads} from 'utils/room-name';
@@ -20,7 +21,7 @@ declare global {
 	}
 }
 
-export default class OwnedRoomProcess extends Process {
+export default class HighwayRoomProcess extends Process {
 	room: Room;
 
 	/**
@@ -40,6 +41,7 @@ export default class OwnedRoomProcess extends Process {
 	 */
 	run() {
 		this.detectCaravans();
+		this.pruneOldCaravans();
 	}
 
 	detectCaravans() {
@@ -143,5 +145,17 @@ export default class OwnedRoomProcess extends Process {
 		}
 
 		return result;
+	}
+
+	pruneOldCaravans() {
+		cache.inHeap('pruneOldCaravans', 1000, () => {
+			const caravanMemory = Memory?.strategy?.caravans || {};
+			for (const id in caravanMemory) {
+				if (caravanMemory[id].expires < Game.time - 2500) {
+					// This caravan is long gone. No need to keep it in memory.
+					delete caravanMemory[id];
+				}
+			}
+		});
 	}
 }

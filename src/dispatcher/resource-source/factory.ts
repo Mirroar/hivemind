@@ -1,15 +1,16 @@
+import StructureSource from 'dispatcher/resource-source/structure';
 import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
-declare global {
-	interface FactorySourceTask extends ResourceSourceTask {
-		type: 'factory';
-		target: Id<AnyStoreStructure>;
-	}
+interface FactorySourceTask extends StructureSourceTask {
+	type: 'factory';
+	target: Id<AnyStoreStructure>;
 }
 
-export default class FactorySource implements TaskProvider<FactorySourceTask, ResourceSourceContext> {
-	constructor(readonly room: Room) {}
+export default class FactorySource extends StructureSource<FactorySourceTask> {
+	constructor(readonly room: Room) {
+		super(room);
+	}
 
 	getType(): 'factory' {
 		return 'factory';
@@ -31,8 +32,12 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 	}
 
 	addNeededResourcesTasks(options: FactorySourceTask[], context: ResourceSourceContext) {
+		// @todo These will be obsolete once we automatically get resources from
+		// storage when there is an unfulfilled destination task.
 		const missingResources = this.room.factoryManager.getMissingComponents();
 		if (!missingResources) return;
+
+		const neededResources = this.room.factoryManager.getRequestedComponents() || {};
 
 		let resourceType: ResourceConstant;
 		for (resourceType in missingResources) {
@@ -42,14 +47,18 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 			const structure = this.room.getBestStorageSource(resourceType);
 			if (!structure) continue;
 
-			options.push({
+			const option = {
 				type: this.getType(),
-				priority: 2,
-				weight: missingResources[resourceType] / 1000,
+				priority: missingResources[resourceType] > 1000 ? 3 : 2,
+				weight: missingResources[resourceType] / neededResources[resourceType],
 				resourceType,
 				target: structure.id,
 				amount: structure.store.getUsedCapacity(resourceType),
-			});
+			};
+
+			if (option.amount < 100) option.priority--;
+
+			options.push(option);
 		}
 	}
 
@@ -58,28 +67,22 @@ export default class FactorySource implements TaskProvider<FactorySourceTask, Re
 
 		for (const resourceType of getResourcesIn(this.room.factory.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
-			if (neededResources[resourceType]) continue;
+			if (neededResources[resourceType]) {
+				if (this.room.factory.store.getUsedCapacity(resourceType) <= neededResources[resourceType] * 1.5) continue;
+			}
+			const storedAmount = this.room.factory.store.getUsedCapacity(resourceType);
+			const extraAmount = storedAmount - (neededResources[resourceType] || 0);
 
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
 			const structure = this.room.factory;
 			options.push({
 				type: this.getType(),
-				priority: structure.store.getUsedCapacity(resourceType) > 1000 ? 3 : 2,
-				weight: 0,
+				priority: (extraAmount > 1000 ? 3 : 2) - this.room.getCreepsWithOrder('factory', structure.id).length,
+				weight: extraAmount / storedAmount,
 				resourceType,
 				target: structure.id,
-				amount: structure.store.getUsedCapacity(resourceType),
+				amount: extraAmount,
 			});
 		}
-	}
-
-	validate(task: FactorySourceTask) {
-		if (!this.room.factory) return false;
-
-		const structure = Game.getObjectById(task.target);
-		if (!structure) return false;
-		if ((structure.store[task.resourceType] || 0) === 0) return false;
-
-		return true;
 	}
 }

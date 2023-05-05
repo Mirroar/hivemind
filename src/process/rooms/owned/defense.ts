@@ -3,6 +3,8 @@ HEAL */
 
 import hivemind from 'hivemind';
 import Process from 'process/process';
+import {simpleAllies} from 'utils/communication';
+import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 export default class RoomDefenseProcess extends Process {
 	room: Room;
@@ -25,7 +27,11 @@ export default class RoomDefenseProcess extends Process {
 	run() {
 		this.manageTowers();
 		this.manageSafeMode();
+		this.manageDefense();
 		this.room.defense.openRampartsToFriendlies();
+
+		this.room.visual.text('Wall status:' + (this.room.defense.isWallIntact() ? 'intact' : 'broken'), 5, 4);
+		this.room.visual.text('Enemy strength: ' + this.room.defense.getEnemyStrength(), 5, 5);
 	}
 
 	/**
@@ -69,7 +75,7 @@ export default class RoomDefenseProcess extends Process {
 			}
 
 			// Repair ramparts during a strong attack.
-			if (enemyStrength > 1 && tower.store.getUsedCapacity(RESOURCE_ENERGY) > tower.store.getCapacity(RESOURCE_ENERGY) / 2) {
+			if (enemyStrength >= ENEMY_STRENGTH_NORMAL && tower.store.getUsedCapacity(RESOURCE_ENERGY) > tower.store.getCapacity(RESOURCE_ENERGY) / 2) {
 				let availableRamparts = [];
 				for (const creep of hostileCreeps) {
 					if (!creep.isDangerous()) continue;
@@ -98,12 +104,31 @@ export default class RoomDefenseProcess extends Process {
 	manageSafeMode() {
 		if (this.room.controller.safeMode) return;
 		if (this.room.controller.safeModeCooldown) return;
-		if (this.room.controller.safeModeAvailable < 1) return;
-		if (this.room.defense.getEnemyStrength() < 2) return;
+		if (this.room.controller.safeModeAvailable === 0) return;
+		if (this.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
+		if (this.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
+		if (this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_SPAWN}).length === 0) return;
+
+		this.room.visual.text('I should safemode!', 25, 25);
 
 		if (this.room.controller.activateSafeMode() === OK) {
 			Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
+		}
+	}
+
+	/**
+	 * Requests defense from allies when under attack.
+	 */
+	manageDefense() {
+		if (this.room.controller.safeMode) return;
+		if (this.room.defense.getEnemyStrength() <= ENEMY_STRENGTH_NORMAL) return;
+
+		const priority = 0.5 * this.room.controller.level / 8;
+		if (!Memory.requests.defense) Memory.requests.defense = {};
+		Memory.requests.defense[this.room.name] = {
+			priority,
+			lastSeen: Game.time,
 		}
 	}
 }

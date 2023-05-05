@@ -5,6 +5,10 @@ import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 
+interface UpgraderSpawnOption extends SpawnOption {
+	mini?: boolean;
+}
+
 export default class UpgraderSpawnRole extends SpawnRole {
 	/**
 	 * Adds upgrader spawn options for the given room.
@@ -13,13 +17,22 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room) {
-		const options: SpawnOption[] = [];
+		const options: UpgraderSpawnOption[] = [];
 		const maxUpgraders = this.getUpgraderAmount(room);
 		const upgraderCount = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
 		if (upgraderCount < maxUpgraders) {
 			options.push({
 				priority: 3,
 				weight: 1,
+			});
+		}
+
+		if (maxUpgraders === 0 && upgraderCount === 0 && room.controller.progress > room.controller.progressTotal) {
+			// Spawn a mini upgrader to get ticksToDowngrade up so level gets raised.
+			options.push({
+				priority: 3,
+				weight: 1,
+				mini: true,
 			});
 		}
 
@@ -52,7 +65,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 				return 1;
 			}
 
-			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getStoredEnergy() > 5000) {
+			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.5 && room.getEffectiveAvailableEnergy() > 5000) {
 				return 1;
 			}
 		}
@@ -73,9 +86,11 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
+		if (room.roomManager?.hasMisplacedSpawn()) return 0;
+
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
-		const availableEnergy = room.getStoredEnergy();
+		const availableEnergy = room.getEffectiveAvailableEnergy();
 		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {
 			// Do not spawn upgraders when builders and spawns will need most of
 			// our energy.
@@ -117,17 +132,21 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(room: Room): BodyPartConstant[] {
+	getCreepBody(room: Room, option: UpgraderSpawnOption): BodyPartConstant[] {
 		let bodyWeights = {[MOVE]: 0.35, [WORK]: 0.3, [CARRY]: 0.35};
 		if (room.memory.controllerContainer || room.memory.controllerLink) {
 			// If there is easy access to energy, we can save on move an carry parts.
 			bodyWeights = {[MOVE]: 0.2, [WORK]: 0.75, [CARRY]: 0.05};
 		}
+		else if (option.mini) {
+			// No need to get large amounts of progress if we just need the ticksToDowngrade to rise.
+			bodyWeights = {[MOVE]: 0.35, [WORK]: 0.15, [CARRY]: 0.5};
+		}
 
 		return this.generateCreepBodyFromWeights(
 			bodyWeights,
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[WORK]: CONTROLLER_MAX_UPGRADE_PER_TICK},
+			{[WORK]: option.mini ? 2 : CONTROLLER_MAX_UPGRADE_PER_TICK},
 		);
 	}
 
@@ -162,8 +181,9 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 * @return {Object}
 	 *   The boost compound to use keyed by body part type.
 	 */
-	getCreepBoosts(room: Room, option: SpawnOption, body: BodyPartConstant[]) {
-		if (room.getStoredEnergy() < 200_000) return {};
+	getCreepBoosts(room: Room, option: UpgraderSpawnOption, body: BodyPartConstant[]) {
+		if (option.mini) return {};
+		if (room.getEffectiveAvailableEnergy() < 50_000) return {};
 		if (room.controller.level < 8) return {};
 
 		return this.generateCreepBoosts(room, body, WORK, 'upgradeController');

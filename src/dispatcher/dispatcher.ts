@@ -12,7 +12,7 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 			const providerOptions = provider.getTasks(context);
 
 			for (const option of providerOptions) {
-				options.push(option);
+				if (provider.isValid(option, context)) options.push(option);
 			}
 		});
 
@@ -27,11 +27,15 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 		return Boolean(this.providers[type]);
 	}
 
-	validateTask(task: TaskType) {
-		if (!this.hasProvider(task.type)) return false;
+	validateTask(task: TaskType, context: ContextType) {
+		if (!this.hasProvider(task.type)) throw new Error('Invalid task type: ' + task.type);
 
-		if (this.providers[task.type].validate) return this.providers[task.type].validate(task);
+		return this.providers[task.type].isValid(task, context);
+	}
 
-		return true;
+	executeTask(task: TaskType, context: ContextType) {
+		if (!this.hasProvider(task.type)) throw new Error('Invalid task type: ' + task.type);
+
+		this.providers[task.type].execute(task, context);
 	}
 }

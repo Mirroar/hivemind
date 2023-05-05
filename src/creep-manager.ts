@@ -103,8 +103,8 @@ export default class CreepManager {
 		// If we're really low on CPU for this tick, throttle mercilessly!
 		if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.85) return true;
 
-		if (!creep.memory._tO) creep.memory._tO = getThrottleOffset();
-		return throttle(creep.memory._tO, role.stopAt, role.throttleAt);
+		if (!creep.heapMemory._tO) creep.heapMemory._tO = getThrottleOffset();
+		return throttle(creep.heapMemory._tO, role.stopAt, role.throttleAt);
 	};
 
 	/**

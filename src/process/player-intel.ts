@@ -1,46 +1,37 @@
+import container from 'utils/container';
+import hivemind from 'hivemind';
+import PlayerIntelManager from 'player-intel-manager';
 import Process from 'process/process';
-import {getPlayerIntel} from 'player-intel';
 import {getRoomIntel, getRoomsWithIntel} from 'room-intel';
 
 export default class PlayerIntelProcess extends Process {
 	run() {
-		const playerRooms = this.collectPlayerRooms();
+		if (!hivemind.segmentMemory.isReady()) return;
 
-		for (const userName in playerRooms) {
-			const playerIntel = getPlayerIntel(userName);
-			playerIntel.setPlayerRooms(playerRooms[userName].owned);
-			playerIntel.setPlayerRemotes(playerRooms[userName].remotes);
-		}
+		const manager = container.get<PlayerIntelManager>('PlayerIntelManager');
+		this.collectPlayerRooms(manager);
 	}
 
-	collectPlayerRooms() {
+	collectPlayerRooms(manager: PlayerIntelManager) {
 		const availableRooms = getRoomsWithIntel();
-		const result: {
-			[userName: string]: {
-				owned: string[],
-				remotes: string[],
-			}
-		} = {};
 		for (const roomName of availableRooms) {
 			const roomIntel = getRoomIntel(roomName);
 
 			if (roomIntel.isOwned()) {
 				const userName = roomIntel.getOwner();
-				if (!result[userName]) result[userName] = {owned: [], remotes: []};
-
-				result[userName].owned.push(roomName);
+				manager.updateOwnedRoom(userName, roomName);
 			}
 			else if (roomIntel.isClaimed()) {
 				const userName = roomIntel.getReservationStatus().username;
-				if (!result[userName]) result[userName] = {owned: [], remotes: []};
-
-				result[userName].remotes.push(roomName);
+				manager.updateClaimedRoom(userName, roomName);
 			}
-			else {
-				// @todo Try and detect harvester creeps.
+
+			if (Game.rooms[roomName]) {
+				const room = Game.rooms[roomName];
+				for (const userName in room.enemyCreeps) {
+					manager.updateCreepSighting(userName, roomName, room.enemyCreeps[userName]);
+				}
 			}
 		}
-
-		return result;
 	}
 }

@@ -163,7 +163,8 @@ Room.prototype.isClearingStorage = function (this: Room) {
 Room.prototype.getEnergyStructures = function (this: Room): Array<StructureSpawn | StructureExtension> {
 	if (!this.roomPlanner) return undefined;
 
-	const ids = cache.inHeap('energyStructures:' + this.name, 100, () => {
+	// Short cache time, because priority of bays may shift as sources deplete.
+	const ids = cache.inHeap('energyStructures:' + this.name, 1, () => {
 		const structures: Array<Id<StructureSpawn | StructureExtension>> = [];
 
 		for (const bay of getBaysByPriority(this)) {
@@ -174,6 +175,8 @@ Room.prototype.getEnergyStructures = function (this: Room): Array<StructureSpawn
 			}
 		}
 
+		// Add energy structures outside of bays last, because they're less
+		// efficient to refill.
 		for (const structure of getUnmappedEnergyStructures(this, structures)) {
 			structures.push(structure.id);
 		}
@@ -187,12 +190,24 @@ Room.prototype.getEnergyStructures = function (this: Room): Array<StructureSpawn
 function getBaysByPriority(room: Room): Bay[] {
 	const center = room.roomPlanner.getRoomCenter();
 	return _.sortBy(room.bays, bay => {
-		// @todo Prefer partially filled bays.
+		if (bay.energyCapacity <= 0) return 999;
 
+		// Prefer partially filled bays. Lower priority means empty it first.
+		let priority = bay.energy / bay.energyCapacity;
+
+		// Greatly prefer emptying bays filled by harvesters.
+		// Unless they don't have enough reserves.
+		for (const source of room.sources) {
+			if (source.pos.getRangeTo(bay.pos) > 1) continue;
+
+			let missingEnergy = Math.max(0, source.energy + bay.energyCapacity - (source.getNearbyContainer()?.store[RESOURCE_ENERGY] || 0));
+			priority = missingEnergy / bay.energyCapacity;
+			break;
+		}
+
+		// Lastly, closer bays get preferred.
 		const distance = center.getRangeTo(bay.pos);
-		if (_.min(_.map(room.find(FIND_SOURCES), source => source.pos.getRangeTo(bay.pos))) <= 1) return distance / 50;
-
-		return 1 + distance / 50;
+		return priority + distance / 50;
 	});
 }
 

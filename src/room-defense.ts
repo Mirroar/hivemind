@@ -1,8 +1,9 @@
-/* global STRUCTURE_RAMPART ATTACK HEAL CLAIM MOVE TOUGH CARRY
+/* global STRUCTURE_RAMPART ATTACK RANGED_ATTACK HEAL CLAIM MOVE TOUGH CARRY
 FIND_STRUCTURES LOOK_STRUCTURES */
 
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
+import cache from 'utils/cache';
 
 declare global {
 	interface RoomMemory {
@@ -10,8 +11,39 @@ declare global {
 	}
 }
 
+const ENEMY_STRENGTH_NONE = 0; // No enemies in the room.
+const ENEMY_STRENGTH_WEAK = 1; // Enemies are very weak, towers can take them out.
+const ENEMY_STRENGTH_NORMAL = 2; // Enemies are strong or numerous, but can probably be handled with unboosted active defense.
+const ENEMY_STRENGTH_STRONG = 3; // Enemies are strong or numerous, but can probably be handled with boosted active defense.
+const ENEMY_STRENGTH_DEADLY = 4; // Enemies are strong or numerous, and we need help from outside.
+
+const attackParts: BodyPartConstant[] = [ATTACK, RANGED_ATTACK, CLAIM, WORK];
+
+const partStrength = {
+	[ATTACK]: ATTACK_POWER,
+	[RANGED_ATTACK]: RANGED_ATTACK_POWER,
+	[HEAL]: HEAL_POWER,
+	[CLAIM]: ATTACK_POWER / 2,
+	[WORK]: DISMANTLE_POWER,
+};
+
+const relevantBoostAttribute = {
+	[ATTACK]: 'attack',
+	[RANGED_ATTACK]: 'rangedAttack',
+	[HEAL]: 'heal',
+	[WORK]: 'dismantle',
+};
+
 // @todo Evacuate room when walls are breached, or when spawns are gone, ...
-// @todo Destroy terminal and storage if not hope of recovery, then unclaim
+// @todo Destroy terminal and storage if not hope of recovery?
+
+export {
+	ENEMY_STRENGTH_NONE,
+	ENEMY_STRENGTH_WEAK,
+	ENEMY_STRENGTH_NORMAL,
+	ENEMY_STRENGTH_STRONG,
+	ENEMY_STRENGTH_DEADLY,
+}
 
 export default class RoomDefense {
 	roomName: string;
@@ -33,21 +65,33 @@ export default class RoomDefense {
 	 * @return {boolean}
 	 *   True if all planned ramparts are built and strong enough.
 	 */
-	isWallIntact() {
-		if (!this.room.roomPlanner) return true;
+	isWallIntact(): boolean {
+		return this.room.roomPlanner ? this.getLowestWallStrength() > 0 : true;
+	}
 
-		const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
-		const requiredHits = 25_000 * this.room.controller.level * this.room.controller.level;
+	getLowestWallStrength(): number {
+		return cache.inObject(this.room, 'weakestWallStrength', 1, () => {
+			if (!this.room.roomPlanner) return 0;
 
-		for (const pos of rampartPositions) {
-			// Check if there's a rampart here already.
-			const structures = pos.lookFor(LOOK_STRUCTURES);
-			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= requiredHits).length === 0) {
-				return false;
+			const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
+			let minHits: number;
+
+			for (const pos of rampartPositions) {
+				if (this.room.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
+
+				// Check if there's a rampart here already.
+				const structures = pos.lookFor(LOOK_STRUCTURES);
+				const ramps = _.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART);
+				if (ramps.length === 0) {
+					return 0;
+				}
+				if (!minHits || ramps[0].hits < minHits) {
+					minHits = ramps[0].hits;
+				}
 			}
-		}
 
-		return true;
+			return minHits;
+		});
 	}
 
 	/**
@@ -56,32 +100,72 @@ export default class RoomDefense {
 	 * @return {Number}
 	 *   0: No enemies in the room.
 	 *   1: Enemies are very weak, towers can take them out.
-	 *   2: Enemies are strong or numerous.
+	 *   2: Enemies are strong or numerous, but can probably be handled with
+	 * 		unboosted active defense.
+	 *   3: Enemies are strong or numerous, but can probably be handled with
+	 * 		boosted active defense.
+	 *   4: Enemies are strong or numerous, and we need help from outside.
 	 */
 	getEnemyStrength() {
-		let attackStrength = 0;
-		let boosts = 0;
+		return cache.inObject(this.room, 'getEnemyStrength', 1, () => {
+			let attackStrength = 0;
+			let healStrength = 0;
+			let totalStrength = 0;
+			let invaderOnly = true;
 
-		// @todo If it's invaders, don't go up to level 2.
+			for (const userName in this.room.enemyCreeps) {
+				if (hivemind.relations.isAlly(userName)) continue;
+				if (userName !== 'Invader') invaderOnly = false;
 
-		_.each(this.room.enemyCreeps, creeps => {
-			for (const creep of creeps) {
-				for (const part of creep.body) {
-					if (part.type === ATTACK || part.type === HEAL || part.type === CLAIM) {
-						attackStrength++;
+				const creeps = this.room.enemyCreeps[userName];
+				for (const creep of creeps) {
+					for (const part of creep.body) {
+						let partPower = partStrength[part.type] || 0;
+						let boostPower = 1;
+
 						if (part.boost && typeof part.boost === 'string') {
-							boosts += part.boost.length;
+							const effect = BOOSTS[part.type][part.boost];
+							boostPower = effect[relevantBoostAttribute[part.type]] || 1;
+
+							if (part.type === TOUGH) {
+								partPower = 100;
+								boostPower = 1 / (effect.damage || 1);
+							}
 						}
 
-						continue;
+						if (attackParts.includes(part.type)) {
+							attackStrength += partPower * boostPower;
+						}
+						if (part.type === HEAL) {
+							healStrength += partPower * boostPower;
+						}
+						totalStrength += partPower * boostPower;
 					}
 				}
-			}
-		});
+			};
 
-		if (attackStrength === 0) return 0;
-		if (boosts + attackStrength < 30) return 1;
-		return 2;
+			let towerStrength = TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length / 2;
+
+			// Active defense is calculated as having 2 creeps
+			// with 50% attack and move parts.
+			let defensiveCreepStrength = 2 * ATTACK_POWER * Math.min(MAX_CREEP_SIZE / 2, Math.floor(this.room.energyCapacityAvailable / (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])));
+
+			// @todo Factor in if we can use boosts on defense creeps.
+			let defenseBoostPower = 1;
+
+			// If the enemy can take down a piece of wall in < 3000 ticks, that's a problem.
+			let normalDamageThreshold = this.getLowestWallStrength() / 3000;
+
+			// If the enemy can take down a piece of wall in < 1000 ticks, that's a big problem.
+			let highDamageThreshold = this.getLowestWallStrength() / 1000;
+
+			if (attackStrength === 0) return ENEMY_STRENGTH_NONE;
+			if (invaderOnly || (healStrength < towerStrength && attackStrength < highDamageThreshold)) return ENEMY_STRENGTH_WEAK;
+			if (healStrength < towerStrength + defensiveCreepStrength && attackStrength > normalDamageThreshold) return ENEMY_STRENGTH_NORMAL;
+			if (healStrength < towerStrength + defensiveCreepStrength * defenseBoostPower && attackStrength > highDamageThreshold) return ENEMY_STRENGTH_STRONG;
+
+			return ENEMY_STRENGTH_DEADLY;
+		});
 	}
 
 	openRampartsToFriendlies() {
@@ -175,7 +259,7 @@ export default class RoomDefense {
 		const opName = 'playerTrade:' + username;
 		const operation = Game.operations[opName] || new Operation(opName);
 
-		operation.recordStatChange(amount, resourceType);
+		operation.addResourceGain(amount, resourceType);
 
 		hivemind.log('trade', this.roomName).notify('Trade with', username, ':', amount, resourceType);
 	}

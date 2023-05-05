@@ -104,6 +104,7 @@ const settings = {
 	// Expansion:
 	// Number of ticks we may cache expansion scores.
 	expansionScoreCacheDuration: 20_000,
+	maxOwnedRooms: null,
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
@@ -112,7 +113,6 @@ const settings = {
 	expansionScoreBonusHighwayExit: 0,
 
 	// Room planning:
-	enableMinCutRamparts: false,
 	minCutRampartDistance: 4,
 	visualizeRoomPlan: false,
 
@@ -120,19 +120,40 @@ const settings = {
 	// Number of hits for walls / ramparts needed for more expensive structures
 	// to be built.
 	minWallIntegrity: 500_000,
+	maxWallHealth: {
+		0: 1,
+		1: 5000,
+		2: 10_000,
+		3: 20_000,
+		4: 100_000,
+		5: 500_000,
+		6: 2_000_000,
+		7: 3_000_000,
+		8: 20_000_000,
+	},
+	// Toggles whether certain specialized structures should be built.
 	constructLabs: true,
 	constructNukers: true,
 	constructPowerSpawns: true,
 	constructObservers: true,
 	constructFactories: true,
+	// Manages energy spending in high level rooms.
 	minEnergyToUpgradeAtRCL8: 50_000,
-	rampartWhitelistedUsers: [],
-	maxVisitorsPerUser: 0,
-	dismantleUnwantedRamparts: true,
-	recordRoomStats: true,
+	minEnergyForNuker: 50_000,
 	// The ratio of leftover energy to put into power processing vs. GPL.
 	// Must be between 0 and 1.
 	powerProcessingEnergyRatio: 0.5,
+	// Notify about resources produces in factories via E-Mail.
+	notifyFactoryProduction: false,
+
+	// List of user names that may move through our ramparts.
+	rampartWhitelistedUsers: [],
+	maxVisitorsPerUser: 0,
+	dismantleUnwantedRamparts: true,
+
+	// Saves statistics about the time it takes to reach certain milestones.
+	// Available in `Memory.roomStats`.
+	recordRoomStats: true,
 
 	// Trade:
 	enableTradeManagement: true,
@@ -143,6 +164,9 @@ const settings = {
 
 	// Seasons:
 	season4EnableCaravanDelivery: false,
+
+	// Script hooks:
+	onTick: null,
 };
 
 export default settings;

@@ -2,6 +2,7 @@
 
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 declare global {
 	interface RoomDefenseSpawnOption extends SpawnOption {
@@ -41,6 +42,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addLowLevelRoomSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		// In low level rooms, add defenses!
 		if (room.controller.level >= 4) return;
+		if ((room.controller.safeMode || 0) > 500) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
 		if (_.size(room.creepsByRole.brawler) >= 2) return;
 
@@ -62,6 +64,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addRampartDefenderSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
+		if (room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL) return;
 
 		const responseType = this.getDefenseCreepSize(room);
 
@@ -89,7 +92,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	addEmergencyRepairSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
 		if (!room.memory.enemies || room.memory.enemies.safe) return;
-		if (room.getStoredEnergy() < 10_000) return;
+		if (room.getEffectiveAvailableEnergy() < 10_000) return;
 
 		// @todo Send energy to rooms under attack for assistance.
 
@@ -110,12 +113,12 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	getDefenseCreepSize(room: Room): number {
 		const enemyStrength = room.defense.getEnemyStrength();
 
-		if (enemyStrength >= 2) {
+		if (enemyStrength >= ENEMY_STRENGTH_NORMAL) {
 			// Spawn a mix of meelee and ranged defenders.
 			const totalGuardians = _.size(room.creepsByRole.guardian);
 			const rangedGuardians = _.size(_.filter(room.creepsByRole.guardian, (creep: GuardianCreep) => creep.getActiveBodyparts(RANGED_ATTACK) > 0));
 
-			if (rangedGuardians < totalGuardians / 2) return RESPONSE_RANGED_ATTACKER;
+			if (rangedGuardians < Math.floor(totalGuardians / 4)) return RESPONSE_RANGED_ATTACKER;
 
 			return RESPONSE_ATTACKER;
 		}
@@ -211,18 +214,36 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	getCreepBoosts(room: Room, option: RoomDefenseSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
 		// @todo Only use boosts if they'd make the difference between being able to damage the enemy or not.
 		if (option.creepRole === 'builder') {
-			return this.generateCreepBoosts(room, body, WORK, 'repair');
+			// @todo Only use boosts if walls have some damage on them.
+			return this.generateCreepBoosts(room, body, WORK, 'repair', this.getMaxEnemyBoostLevel(room));
 		}
 		else if (option.creepRole === 'guardian') {
 			if (body.includes(ATTACK)) {
-				return this.generateCreepBoosts(room, body, ATTACK, 'attack');
+				return this.generateCreepBoosts(room, body, ATTACK, 'attack', this.getMaxEnemyBoostLevel(room));
 			}
 			else {
-				return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack');
+				return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack', this.getMaxEnemyBoostLevel(room));
 			}
 		}
 
 		return null;
+	}
+
+	private getMaxEnemyBoostLevel(room: Room): number {
+		if (room.defense.getEnemyStrength() <= ENEMY_STRENGTH_NORMAL) return 0;
+
+		let highest = 0;
+		for (const userName in room.enemyCreeps) {
+			if (hivemind.relations.isAlly(userName)) continue;
+
+			highest = Math.max(highest, _.max(_.map(room.enemyCreeps[userName], creep => _.max(_.map(creep.body, part => {
+				if (!part.boost || typeof part.boost !== 'string') return 0;
+
+				return part.boost.length || 0;
+			})))));
+		}
+
+		return highest;
 	}
 
 	/**

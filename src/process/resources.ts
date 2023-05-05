@@ -1,8 +1,9 @@
 /* global RESOURCE_ENERGY */
 
-import Process from 'process/process';
 import hivemind from 'hivemind';
+import Process from 'process/process';
 import utilities from 'utilities';
+import {ENEMY_STRENGTH_NONE} from 'room-defense';
 
 /**
  * Sends resources between owned rooms when needed.
@@ -20,31 +21,58 @@ export default class ResourcesProcess extends Process {
 			const terminal = room.terminal;
 			const maxAmount = room.getCurrentResourceAmount(best.resourceType);
 			const tradeVolume = Math.ceil(Math.min(maxAmount * 0.9, 5000));
-			if (this.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+			let sentSuccessfully = true;
+			if (tradeVolume === 0) {
+				sentSuccessfully = false;
+			}
+			else if (this.roomHasUncertainStorage(Game.rooms[best.target])) {
+				sentSuccessfully = false;
+			}
+			else if (this.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 				let amount = Math.min(terminal.store[best.resourceType], 50_000);
 				if (best.resourceType === RESOURCE_ENERGY) {
 					amount -= Game.market.calcTransactionCost(amount, best.source, best.target);
 				}
+				else {
+					const energyCost = Game.market.calcTransactionCost(amount, best.source, best.target);
+					const availableEnergy = terminal.store.getUsedCapacity(RESOURCE_ENERGY);
+					if (energyCost > availableEnergy) {
+						amount = Math.floor(amount * availableEnergy / energyCost);
+					}
+				}
 
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+				if (result !== OK) sentSuccessfully = false;
 			}
 			else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] >= tradeVolume) {
 				const result = terminal.send(best.resourceType, tradeVolume, best.target, 'Resource equalizing');
 				hivemind.log('trade').info('sending', tradeVolume, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+				if (result !== OK) sentSuccessfully = false;
 			}
-			else if (this.roomNeedsTerminalSpace(room) && room.storage && !room.storage[best.resourceType] && terminal.store[best.resourceType]) {
+			else if (this.roomNeedsTerminalSpace(room) && (!room?.storage[best.resourceType] || terminal.store.getFreeCapacity() < terminal.store.getCapacity() * 0.05) && terminal.store[best.resourceType]) {
 				const amount = terminal.store[best.resourceType];
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+				if (result !== OK) sentSuccessfully = false;
 			}
 			else {
-				hivemind.log('trade').info('Preparing', tradeVolume, best.resourceType, 'for transport from', best.source, 'to', best.target);
-				room.prepareForTrading(best.resourceType);
+				if (!room.memory.fillTerminal) {
+					hivemind.log('trade').info('Preparing', tradeVolume, best.resourceType, 'for transport from', best.source, 'to', best.target);
+					room.prepareForTrading(best.resourceType);
+				}
+				sentSuccessfully = false;
 			}
 
 			// Use multiple routes as long as no room is involved multiple times.
-			routes = _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
+			if (sentSuccessfully) {
+				// Remove any trades involving the rooms sending and receiving.
+				routes = _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
+			}
+			else {
+				// Remove any trades for this resource type and source room.
+				routes = _.filter(routes, (option: any) => option.source !== best.source || option.resourceType !== best.resourceType);
+			}
 			best = utilities.getBestOption(routes);
 		}
 	}
@@ -85,7 +113,7 @@ export default class ResourcesProcess extends Process {
 					if (!roomState2.canTrade) return;
 					if (this.roomNeedsTerminalSpace(room2)) return;
 
-					const isLow = resourceLevel2 === 'low' || (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > 0 && resourceLevel2 === 'medium');
+					const isLow = resourceLevel2 === 'low' || (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
 					const isLowEnough = resourceLevel2 === 'medium';
 					const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
 
@@ -136,7 +164,9 @@ export default class ResourcesProcess extends Process {
 			const shouldReceiveResources =
 				roomState.state[resourceType] === 'excessive' && info.priority >= 0.05 ||
 				roomState.state[resourceType] === 'high' && (info.priority >= 0.5 || tier > 1) ||
+				roomState.state[resourceType] === 'medium' && (info.priority >= 0.8) ||
 				roomState.state[resourceType] === 'medium' && (info.priority >= 0.5 && tier > 1) ||
+				roomState.state[resourceType] === 'low' && (info.priority >= 0.8 && tier > 1) ||
 				roomState.state[resourceType] === 'low' && (info.priority >= 0.5 && tier > 4);
 			if (!shouldReceiveResources) continue;
 
@@ -192,7 +222,7 @@ export default class ResourcesProcess extends Process {
 		for (const room of Game.myRooms) {
 			const roomData = room.getResourceState();
 			if (!roomData) continue;
-			
+
 			rooms[room.name] = roomData;
 		}
 
@@ -203,5 +233,11 @@ export default class ResourcesProcess extends Process {
 		return room.isEvacuating()
 			|| (room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3)
 			|| (room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
+	}
+
+	roomHasUncertainStorage(room: Room): boolean {
+		return room.isEvacuating()
+			|| room.isClearingStorage()
+			|| room.isClearingTerminal();
 	}
 }

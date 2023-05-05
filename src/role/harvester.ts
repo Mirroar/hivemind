@@ -79,7 +79,7 @@ export default class HarvesterRole extends Role {
 	}
 
 	isStationaryHarvester(creep: HarvesterCreep) {
-		return creep.memory.fixedSource && _.size(creep.room.creepsByRole.transporter) > 0;
+		return (creep.memory.fixedSource || creep.memory.fixedMineralSource) && _.size(creep.room.creepsByRole.transporter) > 0;
 	}
 
 	/**
@@ -97,11 +97,6 @@ export default class HarvesterRole extends Role {
 		// Get harvest position from room planner.
 		const harvestPos = _.sample(creep.room.roomPlanner.getLocations('harvester.' + source.id));
 		if (harvestPos) creep.memory.harvestPos = serializeCoords(harvestPos.x, harvestPos.y);
-
-		// Fall back to adjacent bay for older room plans.
-		// @todo Remove when room planner version gets incremented.
-		const bay = _.sample(_.filter(creep.room.bays, bay => bay.pos.getRangeTo(source.pos) <= 1));
-		if (bay) creep.memory.harvestPos = serializeCoords(bay.pos.x, bay.pos.y);
 
 		if (!creep.memory.harvestPos) {
 			creep.memory.noHarvestPos = true;
@@ -238,6 +233,8 @@ export default class HarvesterRole extends Role {
 		}
 
 		let target: StructureContainer | StructureLink = source.getNearbyContainer();
+		if (target?.store.getFreeCapacity() === 0) target = null;
+
 		if (source instanceof Source && creep.store.energy > 0) {
 			const link = source.getNearbyLink();
 			if (link && link.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
@@ -263,6 +260,22 @@ export default class HarvesterRole extends Role {
 				}
 			});
 		}
+
+		if (creep.room.controller.level < 6 && creep.store.energy > 0) {
+			const nearbyCreeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+				filter: c => {
+					if (c.memory.role === 'harvester' && c.store.getUsedCapacity() < 10) return true;
+					if (['transporter', 'upgrader', 'builder', 'builder.remote'].includes(c.memory.role) && c.store.getFreeCapacity() > 0) return true;
+
+					return false;
+				}
+			});
+
+			if (nearbyCreeps.length > 0) {
+				const targetCreep = _.sample(nearbyCreeps);
+				creep.transfer(targetCreep, RESOURCE_ENERGY, Math.min(creep.store.energy, targetCreep.store.getFreeCapacity()));
+			}
+		}
 	}
 
 	/**
@@ -272,7 +285,7 @@ export default class HarvesterRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performHarvesterDeliver(creep: HarvesterCreep) {
-		if (!creep.memory.fixedSource) return;
+		if (!creep.memory.fixedSource && !creep.memory.fixedMineralSource) return;
 
 		if (_.size(creep.room.creepsByRole.transporter) === 0) {
 			// Use transporter drop off logic.

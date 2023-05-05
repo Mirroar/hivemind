@@ -2,6 +2,7 @@
 UPGRADE_CONTROLLER_POWER */
 
 import balancer from 'excess-energy-balancer';
+import cache from 'utils/cache';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 
@@ -25,6 +26,15 @@ export default class UpgraderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep) {
+		if (!creep.heapMemory.currentRcl) {
+			creep.heapMemory.currentRcl = creep.room.controller.level;
+		}
+		else if (creep.heapMemory.currentRcl !== creep.room.controller.level && creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
+			creep.memory.role = 'builder';
+			delete creep.memory.upgrading;
+			return;
+		}
+
 		if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setUpgraderState(creep, false);
 		}
@@ -53,8 +63,22 @@ export default class UpgraderRole extends Role {
 		// Upgrade controller.
 		const controller = creep.room.controller;
 		const distance = creep.pos.getRangeTo(controller);
-		if (distance > 1) {
-			creep.moveToRange(controller, 1);
+		if (distance > 3) {
+			const isOnlyUpgrader = creep.memory.role === 'upgrader' && creep.room.creepsByRole.upgrader.length === 1;
+
+			if (isOnlyUpgrader) {
+				const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
+					if (!creep.room.roomPlanner) return null;
+
+					// Get harvest position from room planner.
+					return _.sample(creep.room.roomPlanner.getLocations('upgrader.0'));
+				});
+				if (upgraderPosition) creep.goTo(upgraderPosition)
+				else creep.moveToRange(controller, 3);
+			}
+			else {
+				creep.moveToRange(controller, 3);
+			}
 			// @todo If there are no free tiles at range 1, stay at range 2, etc.
 			// to save movement intents and pathfinding.
 		}
@@ -126,8 +150,8 @@ export default class UpgraderRole extends Role {
 		}
 
 		// Check the ground for nearby energy to pick up.
-		const droppedResources = creep.room.controller.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-			filter: resource => resource.resourceType === RESOURCE_ENERGY,
+		const droppedResources = creep.room.controller.pos.findInRange(FIND_DROPPED_RESOURCES, creep.room.controller.level < 4 ? 10 : 3, {
+			filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= creep.store.getCapacity(),
 		});
 		if (droppedResources.length > 0) {
 			creep.whenInRange(1, droppedResources[0], () => {
@@ -138,8 +162,8 @@ export default class UpgraderRole extends Role {
 		}
 
 		// Could also try to get energy from another nearby container.
-		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > 0 && structure.id !== creep.room.memory.controllerContainer,
+		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, creep.room.controller.level < 4 ? 10 : 3, {
+			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > CONTAINER_CAPACITY / 4 && structure.id !== creep.room.memory.controllerContainer,
 		});
 		if (otherContainers.length > 0) {
 			creep.whenInRange(1, otherContainers[0], () => {
@@ -152,6 +176,12 @@ export default class UpgraderRole extends Role {
 		// Can't pick up anything. Continue upgrading if possible.
 		if (creep.store[RESOURCE_ENERGY] > 0) {
 			this.setUpgraderState(creep, true);
+		}
+
+		const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
+		if (deliveringCreeps.length > 0) {
+			creep.moveToRange(deliveringCreeps[0], 1);
+			return;
 		}
 
 		// If all else fails and we can't excpect resupply, look for energy ourselves.

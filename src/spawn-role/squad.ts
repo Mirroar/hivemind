@@ -3,8 +3,19 @@
 import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
 
+const availableUnitTypes = [
+	'ranger',
+	'healer',
+	'claimer',
+	'singleClaim',
+	'builder',
+	'attacker',
+	'brawler',
+	'test',
+] as const;
+
 declare global {
-	type SquadUnitType = 'ranger' | 'healer' | 'claimer' | 'singleClaim' | 'builder' | 'attacker' | 'brawler' | 'test';
+	type SquadUnitType = typeof availableUnitTypes[number];
 }
 
 interface SquadSpawnOption extends SpawnOption {
@@ -24,10 +35,14 @@ export default class SquadSpawnRole extends SpawnRole {
 
 		_.each(Game.squads, squad => {
 			if (squad.getSpawn() !== room.name) return;
-			const spawnUnitType = this.needsSpawning(squad);
+
+			const availableEnergy = room.getEffectiveAvailableEnergy();
+			if (availableEnergy < 5000) return;
+
+			const spawnUnitType = this.needsSpawning(room, squad);
 			if (!spawnUnitType) return;
 
-			const roomHasReserves = room.getStoredEnergy() > 10_000;
+			const roomHasReserves = availableEnergy > 10_000;
 			options.push({
 				priority: roomHasReserves ? 4 : 2,
 				weight: 1.1,
@@ -48,10 +63,12 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * @return {string|null}
 	 *   Type of the unit that needs spawning.
 	 */
-	needsSpawning(squad: Squad): SquadUnitType | null {
+	needsSpawning(room: Room, squad: Squad): SquadUnitType | null {
 		const neededUnits: SquadUnitType[] = [];
 		for (const unitType in squad.memory.composition) {
-			if (squad.memory.composition[unitType] > _.size(squad.units[unitType])) {
+			if (!availableUnitTypes.includes(unitType as SquadUnitType)) continue;
+
+			if (squad.getUnitCount(unitType as SquadUnitType) > _.size(squad.units[unitType])) {
 				neededUnits.push(unitType as SquadUnitType);
 			}
 		}
@@ -78,7 +95,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		// Automatically call spawning function for selected unit type.
 		const methodName = 'get' + _.capitalize(option.unitType) + 'CreepBody';
 		const bodyCallback: (room: Room, option: SquadSpawnOption) => BodyPartConstant[] = this[methodName];
-		if (bodyCallback) return bodyCallback.call(this, [room, option]);
+		if (bodyCallback) return bodyCallback.call(this, room, option);
 
 		// If the unit type is not supported, spawn a general brawler.
 		return this.getBrawlerCreepBody(room);

@@ -5,17 +5,17 @@
 PathFinder.CostMatrix.prototype.render = function (this: CostMatrix, roomName?: string): string {
 	const terrain = roomName && Game.map.getRoomTerrain(roomName);
 
-  let output = '<table style="display: inline-block">';
-  for (let y = 0; y < 50; y++) {
-    output += '<tr style="height: 2px">'
-    for (let x = 0; x < 50; x++) {
-      let value = this.get(x, y);
-      if (value === 0 && roomName) {
-        // Simulate fallback to room terrain values.
-        if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
-          value = 255;
-        }
-      }
+	let output = '<table style="display: inline-block">';
+	for (let y = 0; y < 50; y++) {
+		output += '<tr style="height: 2px">'
+		for (let x = 0; x < 50; x++) {
+			let value = this.get(x, y);
+			if (value === 0 && roomName) {
+				// Simulate fallback to room terrain values.
+				if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+					value = 255;
+				}
+			}
 
 			// Generate color gradient for matrix values of 1-99.
 			let color = 'gray';

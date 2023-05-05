@@ -148,15 +148,19 @@ export default class RoomIntel {
 		this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 		this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
 		this.gatherInvaderIntel(structures);
+		this.gatherExitIntel(room.name);
 
 		const ruins = room.find(FIND_RUINS);
 		this.gatherAbandonedResourcesIntel(structures, ruins);
 
-		// Remember room exits.
-		this.memory.exits = Game.map.describeExits(room.name);
 
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
-		const constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
+		let constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
+		if (room.controller && !room.controller.my && room.controller.owner && hivemind.relations.isAlly(room.controller.owner.username)) {
+			constructionSites = _.groupBy(room.find(FIND_CONSTRUCTION_SITES, {
+				filter: site => site.my || hivemind.relations.isAlly(site.owner.username)
+			}), 'structureType');
+		}
 		this.generateCostMatrix(structures, constructionSites);
 
 		// Update nav mesh for this room.
@@ -424,6 +428,11 @@ export default class RoomIntel {
 		const roomMemory = Memory.rooms[strategyInfo.origin];
 		if (!roomMemory) return;
 
+		if (!Game.rooms[strategyInfo.origin] || !Game.rooms[strategyInfo.origin].isMine()) {
+			delete roomMemory.abandonedResources;
+			return;
+		}
+
 		if (!roomMemory.abandonedResources) roomMemory.abandonedResources = {};
 		delete roomMemory.abandonedResources[this.roomName];
 
@@ -450,6 +459,19 @@ export default class RoomIntel {
 
 		// @todo Also consider saving containers with resources if it's not one
 		// of our harvest rooms, so we can "borrow" from other players.
+	}
+
+	gatherExitIntel(roomName: string) {
+		// Remember room exits.
+		this.memory.exits = Game.map.describeExits(roomName);
+
+		for (const dir in this.memory.exits) {
+			if (!this.isAvailableExitDirection(roomName, this.memory.exits[dir])) delete this.memory.exits[dir];
+		}
+	}
+
+	isAvailableExitDirection(roomName: string, otherRoomName: string): boolean {
+		return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
 	}
 
 	/**
@@ -806,10 +828,10 @@ export default class RoomIntel {
 			}
 
 			const dirMap = {
-				1: 'N',
-				3: 'E',
-				5: 'S',
-				7: 'W',
+				[TOP]: 'N',
+				[RIGHT]: 'E',
+				[BOTTOM]: 'S',
+				[LEFT]: 'W',
 			};
 
 			this.newStatus = {
@@ -881,7 +903,7 @@ export default class RoomIntel {
 	 * @param {object} base
 	 *   Information about the room this operation is base on.
 	 */
-	addAdjacentRoomToCheck(roomName: string, openList, base) {
+	addAdjacentRoomToCheck(roomName: string, openList: Record<string, {range: number, origin: string, room: string}>, base: {range: number, dir: string}) {
 		if (!this.isPotentiallyUnsafeRoom(roomName)) return;
 
 		openList[roomName] = {
@@ -914,7 +936,7 @@ export default class RoomIntel {
 	 * @param {object} closedList
 	 *   List of rooms that have been checked.
 	 */
-	handleAdjacentRoom(roomData, openList, closedList) {
+	handleAdjacentRoom(roomData: {range: number, origin: string, room: string}, openList: Record<string, {range: number, origin: string, room: string}>, closedList: Record<string, {range: number, origin: string, room: string}>) {
 		const roomIntel = getRoomIntel(roomData.room);
 		if (roomIntel.getAge() > 100_000) {
 			// Room has no intel, declare it as unsafe.
@@ -923,8 +945,7 @@ export default class RoomIntel {
 		}
 
 		// Add new adjacent rooms to openList if available.
-		const roomExits = roomIntel.getExits();
-		for (const roomName of _.values<string>(roomExits)) {
+		for (const roomName of _.values<string>(roomIntel.getExits())) {
 			if (roomData.range >= 3) {
 				// Room has open exits more than 3 rooms away.
 				// Mark direction as unsafe.
@@ -947,7 +968,7 @@ export default class RoomIntel {
 				continue;
 			}
 
-			this.addAdjacentRoomToCheck(roomName, openList, {roomData});
+			this.addAdjacentRoomToCheck(roomName, openList, {dir: roomData.origin, range: roomData.range});
 		}
 	}
 

@@ -133,17 +133,21 @@ export default class RoomVariationBuilderBase {
 	 *   A Position at which a container can be placed.
 	 */
 	findLinkPosition(sourceRoads: RoomPosition[]): RoomPosition {
+		let targetPosition: RoomPosition;
 		for (const pos of _.slice(sourceRoads, 0, 3)) {
-			for (let dx = -1; dx <= 1; dx++) {
-				for (let dy = -1; dy <= 1; dy++) {
-					if (this.placementManager.isBuildableTile(pos.x + dx, pos.y + dy)) {
-						return new RoomPosition(pos.x + dx, pos.y + dy, pos.roomName);
-					}
+			handleMapArea(pos.x, pos.y, (x, y) => {
+				if (this.placementManager.isBuildableTile(x, y)) {
+					targetPosition = new RoomPosition(x, y, pos.roomName);
+					return false;
 				}
-			}
+
+				return true;
+			});
+
+			if (targetPosition) break;
 		}
 
-		return null;
+		return targetPosition;
 	};
 
 	/**
@@ -167,7 +171,7 @@ export default class RoomVariationBuilderBase {
 	};
 
 	/**
-	 * Finds a spot for a container near a given road.
+	 * Finds a spot for a container near or on a given road.
 	 *
 	 * @param {RoomPosition[]} sourceRoads
 	 *   Positions that make up the road.
@@ -176,27 +180,15 @@ export default class RoomVariationBuilderBase {
 	 *   A Position at which a container can be placed.
 	 */
 	findContainerPosition(sourceRoads: RoomPosition[]): RoomPosition {
-		if (this.placementManager.isBuildableTile(sourceRoads[0].x, sourceRoads[0].y, true)) {
+		if (sourceRoads[0] && this.placementManager.isBuildableTile(sourceRoads[0].x, sourceRoads[0].y, true)) {
 			return sourceRoads[0];
 		}
 
-		if (this.placementManager.isBuildableTile(sourceRoads[1].x, sourceRoads[1].y, true)) {
+		if (sourceRoads[1] && this.placementManager.isBuildableTile(sourceRoads[1].x, sourceRoads[1].y, true)) {
 			return sourceRoads[1];
 		}
 
-		let targetPosition: RoomPosition;
-		for (const pos of _.slice(sourceRoads, 0, 3)) {
-			handleMapArea(pos.x, pos.y, (x, y) => {
-				if (this.placementManager.isBuildableTile(x, y, true)) {
-					targetPosition = new RoomPosition(x, y, pos.roomName);
-					return false;
-				}
-
-				return true;
-			});
-		}
-
-		return targetPosition;
+		return this.findLinkPosition(sourceRoads);
 	};
 
 	/**

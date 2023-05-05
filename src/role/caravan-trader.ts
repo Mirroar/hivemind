@@ -65,19 +65,19 @@ export default class CaravanTraderRole extends Role {
 		if (creep.pos.roomName !== creep.memory.origin) return;
 
 		if (!creep.room.isMine()) {
-			this.performSuicide(creep);
+			this.performRecycle(creep);
 			return;
 		}
 
 		if (creep.store.getUsedCapacity() === 0) {
-			this.performSuicide(creep);
+			this.performRecycle(creep);
 			return;
 		}
 
 		const resourceType = creep.memory.resourceType;
 		const target = creep.room.getBestStorageTarget(creep.store.getUsedCapacity(resourceType), resourceType);
 		if (!target) {
-			this.performSuicide(creep);
+			this.performRecycle(creep);
 			return;
 		}
 
@@ -85,31 +85,6 @@ export default class CaravanTraderRole extends Role {
 			creep.transferAny(target);
 			hivemind.log('creeps', creep.room.name).notify(creep.name, 'emptying inventory:', JSON.stringify(creep.store));
 		});
-	}
-
-	performSuicide(creep: CaravanTraderCreep) {
-		const spawn = this.getSuicideSpawn(creep);
-		if (!spawn) {
-			creep.suicide();
-			hivemind.log('creeps', creep.room.name).notify(creep.name, 'suicided');
-			return;
-		}
-
-		creep.whenInRange(1, spawn, () => {
-			spawn.recycleCreep(creep);
-			hivemind.log('creeps', creep.room.name).notify(creep.name, 'recycled');
-		});
-	}
-
-	getSuicideSpawn(creep: CaravanTraderCreep): StructureSpawn {
-		if (!creep.heapMemory.suicideSpawn) {
-			const spawn = creep.pos.findClosestByRange(FIND_MY_SPAWNS, {filter: s => s.isOperational()});
-			if (!spawn) return null;
-
-			creep.heapMemory.suicideSpawn = spawn.id;
-		}
-
-		return Game.getObjectById(creep.heapMemory.suicideSpawn);
 	}
 
 	performPickup(creep: CaravanTraderCreep) {

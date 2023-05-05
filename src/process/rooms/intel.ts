@@ -88,5 +88,7 @@ export default class RoomIntelProcess extends Process {
 			damage: damageCapacity,
 			heal: healCapacity,
 		};
+
+		if (this.room.memory.enemies.safe && _.size(this.room.memory.enemies.parts) === 0) delete this.room.memory.enemies;
 	}
 }

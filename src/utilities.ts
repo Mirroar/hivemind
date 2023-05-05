@@ -61,7 +61,7 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string} = {}) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?:boolean, allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string} = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
@@ -77,9 +77,13 @@ const utilities = {
 
 				const options = {
 					singleRoom: false,
+					isQuad: false,
 				};
 				if (addOptions.singleRoom && addOptions.singleRoom === roomName) {
 					options.singleRoom = true;
+				}
+				if (addOptions.isQuad) {
+					options.isQuad = true;
 				}
 
 				// Work with roads and structures in a room.
@@ -166,20 +170,6 @@ const utilities = {
 		}
 
 		return cost;
-	},
-
-	/**
-	 * Get part counts for this creep.
-	 * @todo Move into Creep.prototype.
-	 *
-	 * @param {Creep} creep
-	 *   The creep in question.
-	 *
-	 * @return {object}
-	 *   Amount of parts of each type in the creep's body.
-	 */
-	getBodyParts(creep) {
-		return creep.memory.body;
 	},
 
 	/**
