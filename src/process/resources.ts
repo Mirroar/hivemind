@@ -20,9 +20,9 @@ export default class ResourcesProcess extends Process {
 			const room = Game.rooms[best.source];
 			const terminal = room.terminal;
 			const maxAmount = room.getCurrentResourceAmount(best.resourceType);
-			const tradeVolume = Math.ceil(Math.min(maxAmount * 0.9, 5000));
+			const tradeVolume = Math.ceil(Math.min(maxAmount, 5000));
 			let sentSuccessfully = true;
-			if (tradeVolume === 0) {
+			if (maxAmount === 0) {
 				sentSuccessfully = false;
 			}
 			else if (this.roomHasUncertainStorage(Game.rooms[best.target])) {
@@ -45,9 +45,10 @@ export default class ResourcesProcess extends Process {
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 				if (result !== OK) sentSuccessfully = false;
 			}
-			else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] >= tradeVolume) {
-				const result = terminal.send(best.resourceType, tradeVolume, best.target, 'Resource equalizing');
-				hivemind.log('trade').info('sending', tradeVolume, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
+			else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] >= tradeVolume * 0.9) {
+				const amount = Math.min(tradeVolume, terminal.store[best.resourceType]);
+				const result = terminal.send(best.resourceType, amount, best.target, 'Resource equalizing');
+				hivemind.log('trade').info('sending', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
 				if (result !== OK) sentSuccessfully = false;
 			}
 			else if (this.roomNeedsTerminalSpace(room) && (!room?.storage[best.resourceType] || terminal.store.getFreeCapacity() < terminal.store.getCapacity() * 0.05) && terminal.store[best.resourceType]) {
@@ -93,6 +94,8 @@ export default class ResourcesProcess extends Process {
 
 			// Do not try transferring from a room that is already preparing a transfer.
 			if (room.memory.fillTerminal && !this.roomNeedsTerminalSpace(room)) return;
+
+			if (room.terminal.cooldown) return;
 
 			for (const resourceType of _.keys(roomState.state)) {
 				const resourceLevel = roomState.state[resourceType] || 'low';
