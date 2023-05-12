@@ -1,7 +1,9 @@
-import Process from 'process/process';
 import CreepManager from 'creep-manager';
 import hivemind from 'hivemind';
+import Process from 'process/process';
 import utilities from 'utilities';
+import {getCostMatrix} from 'utils/cost-matrix';
+import {handleMapArea} from 'utils/map';
 
 import brawlerRole from 'role/brawler';
 import builderRole from 'role/builder';
@@ -106,22 +108,59 @@ export default class CreepsProcess extends Process {
 		});
 		this.powerCreepManager.report();
 
+		this.manageTraffic();
+	}
+
+	manageTraffic() {
 		// Move blocking creeps if necessary.
 		_.each(Game.creeps, creep => {
-			if (creep._blockingCreepMovement) {
-				creep.room.visual.text('X', creep.pos);
-			}
+			if (!creep._blockingCreepMovement) return;
+			creep.room.visual.text('X', creep.pos);
 
-			if (creep._blockingCreepMovement && !creep._hasMoveIntent) {
-				if (creep.pos.getRangeTo(creep._blockingCreepMovement) === 1) {
-					// Swap with blocked creep.
-					creep.move(creep.pos.getDirectionTo(creep._blockingCreepMovement.pos));
-					creep._blockingCreepMovement.move(creep._blockingCreepMovement.pos.getDirectionTo(creep.pos));
+			if (creep._hasMoveIntent) return;
+
+			const blockedCreep = creep._blockingCreepMovement;
+			if (creep.pos.getRangeTo(blockedCreep) === 1) {
+				const alternatePosition = this.getAlternateCreepPosition(creep);
+				if (alternatePosition) {
+					// Move aside for the other creep.
+					creep.move(creep.pos.getDirectionTo(alternatePosition));
+					blockedCreep.move(blockedCreep.pos.getDirectionTo(creep.pos));
 				}
 				else {
-					creep.moveTo(creep._blockingCreepMovement.pos, {range: 1});
+					// Swap with blocked creep.
+					creep.move(creep.pos.getDirectionTo(blockedCreep.pos));
+					blockedCreep.move(blockedCreep.pos.getDirectionTo(creep.pos));
 				}
 			}
+			else {
+				creep.moveTo(blockedCreep.pos, {range: 1});
+			}
 		});
+	}
+
+	getAlternateCreepPosition(creep: Creep): RoomPosition | null {
+		if (!creep._requestedMoveArea) return null;
+
+		let alternatePosition: RoomPosition;
+		const costMatrix = getCostMatrix(creep.room.name, {
+			singleRoom: !!creep.memory.singleRoom,
+		});
+
+		// @todo If none of the alternate positions are free, check if
+		// neighboring creeps can be pushed aside recursively.
+		// @todo Prefer moving onto roads / plains instead of swamps.
+		handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
+			if (costMatrix.get(x, y) >= 100) return null;
+			if (creep.room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) return null;
+
+			const pos = new RoomPosition(x, y, creep.room.name);
+			if (pos.getRangeTo(creep._requestedMoveArea.pos) > creep._requestedMoveArea.range) return null;
+
+			alternatePosition = pos;
+			return false;
+		});
+
+		return alternatePosition;
 	}
 }

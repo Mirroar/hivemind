@@ -33,6 +33,10 @@ declare global {
 		stopNavMeshMove: () => void;
 		_blockingCreepMovement: Creep | PowerCreep;
 		_hasMoveIntent: boolean;
+		_requestedMoveArea?: {
+			pos: RoomPosition;
+			range: number;
+		}
 	}
 
 	interface PowerCreep {
@@ -60,26 +64,26 @@ declare global {
 		stopNavMeshMove: () => void;
 		_blockingCreepMovement: Creep | PowerCreep;
 		_hasMoveIntent: boolean;
+		_requestedMoveArea?: {
+			pos: RoomPosition;
+			range: number;
+		}
+	}
+
+	interface CachedPath {
+		path: Array<string | number>;
+		position: number;
+		arrived: boolean;
+		lastPositions: Record<number, string>;
+		forceGoTo?: number;
 	}
 
 	interface CreepMemory {
-		cachedPath?: {
-			path: Array<string | number>;
-			position: number;
-			arrived: boolean;
-			lastPositions: Record<number, string>;
-			forceGoTo?: number;
-		};
+		cachedPath?: CachedPath;
 	}
 
 	interface PowerCreepMemory {
-		cachedPath?: {
-			path: Array<string | number>;
-			position: number;
-			arrived: boolean;
-			lastPositions: Record<number, string>;
-			forceGoTo?: number;
-		};
+		cachedPath?: CachedPath;
 	}
 
 	interface CreepHeapMemory {
@@ -143,6 +147,11 @@ Creep.prototype.moveToRange = function (this: Creep | PowerCreep, target, range,
 Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target, callback) {
 	if (target instanceof RoomObject) {
 		target = target.pos;
+	}
+
+	this._requestedMoveArea = {
+		pos: target,
+		range,
 	}
 
 	if (this.pos.getRangeTo(target) > range) {
@@ -376,6 +385,12 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 				creep._blockingCreepMovement = this;
 				return;
 			}
+
+			const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
+			if (powerCreep) {
+				powerCreep._blockingCreepMovement = this;
+				return;
+			}
 		}
 
 		return;
@@ -387,6 +402,8 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 		// Push away creep on current target tile.
 		const creep = pos.lookFor(LOOK_CREEPS)[0];
 		if (creep) creep._blockingCreepMovement = this;
+		const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
+		if (powerCreep) powerCreep._blockingCreepMovement = this;
 		return;
 	}
 
@@ -396,6 +413,8 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 		// Push away creep on next target tile.
 		const creep = pos.lookFor(LOOK_CREEPS)[0];
 		if (creep) creep._blockingCreepMovement = this;
+		const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
+		if (powerCreep) powerCreep._blockingCreepMovement = this;
 	}
 };
 
