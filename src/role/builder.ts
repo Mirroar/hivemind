@@ -391,7 +391,7 @@ export default class BuilderRole extends Role {
 				option.priority++;
 				option.weight++;
 			}
-			else if (creep.room.getEffectiveAvailableEnergy() < 5000) {
+			else if (creep.room.getEffectiveAvailableEnergy() < 5000 && target.hits >= 10_000) {
 				// Don't strengthen ramparts too much if room is struggling for energy.
 				option.priority = -1;
 			}
