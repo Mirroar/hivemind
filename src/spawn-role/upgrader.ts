@@ -83,6 +83,10 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The requested number of upgraders.
 	 */
 	getBaseUpgraderAmount(room: Room): number {
+		// Early on, builders will take care of upgrading once necessary
+		// structures have been built.
+		if (!room.storage && !room.terminal) return 0;
+
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
@@ -91,23 +95,10 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
 		const availableEnergy = room.getEffectiveAvailableEnergy();
-		if (!room.storage && !room.terminal && room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && availableEnergy < 2000) {
-			// Do not spawn upgraders when builders and spawns will need most of
-			// our energy.
-			return 0;
-		}
-
 		// RCL 8 rooms can't make use of more than 1 upgrader.
 		if (room.controller.level === 8) {
 			if (availableEnergy < hivemind.settings.get('minEnergyToUpgradeAtRCL8')) return 0;
 			return 1;
-		}
-
-		// Small rooms that don't have a storage yet shouls spawn upgraders depending on available energy.
-		if (room.controller.level <= 4 && !room.storage) {
-			const sourceCount = _.size(room.sources);
-			const maxUpgraders = 1 + sourceCount + Math.floor(availableEnergy / 1000);
-			return Math.min(maxUpgraders, 9);
 		}
 
 		// Spawn upgraders depending on stored energy.

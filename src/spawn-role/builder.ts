@@ -56,12 +56,6 @@ export default class BuilderSpawnRole extends SpawnRole {
 			return 1;
 		}
 
-		if (room.controller.level <= 3 && numConstructionSites === 0) {
-			// There isn't really much to repair before RCL 4, so don't spawn
-			// new builders when there's nothing to build.
-			return 1;
-		}
-
 		const availableEnergy = room.getEffectiveAvailableEnergy();
 		if ((room.storage || room.terminal) && availableEnergy < 5000) {
 			// Just spawn a small builder for keeping roads intact. Wait for
@@ -85,7 +79,12 @@ export default class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we have a lot of energy to spare.
-		if (availableEnergy > 400_000) {
+		if (!room.storage && !room.terminal) {
+			// Small rooms that don't have a storage yet should spawn builders
+			// depending on available energy - excess will be used for upgrading.
+			maxWorkParts *= 1 + availableEnergy / 3000;
+		}
+		else if (availableEnergy > 400_000) {
 			maxWorkParts *= 2;
 		}
 		else if (availableEnergy > 200_000) {
