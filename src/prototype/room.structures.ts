@@ -116,7 +116,7 @@ Room.prototype.setEvacuating = function (this: Room, evacuate: boolean) {
 *   Whether this room should be evacuated.
 */
 Room.prototype.isEvacuating = function (this: Room) {
-	return this.memory.isEvacuating;
+	return this.memory.isEvacuating && this.terminal?.isOperational();
 };
 
 /**
