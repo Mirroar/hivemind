@@ -63,36 +63,29 @@ export default class UpgraderRole extends Role {
 		// Upgrade controller.
 		const controller = creep.room.controller;
 		const distance = creep.pos.getRangeTo(controller);
-		if (distance > 3) {
-			const isOnlyUpgrader = creep.memory.role === 'upgrader' && creep.room.creepsByRole.upgrader.length === 1;
+		const isOnlyUpgrader = creep.memory.role === 'upgrader' && creep.room.creepsByRole.upgrader.length === 1;
+		if (distance > 3 && isOnlyUpgrader) {
+			const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
+				if (!creep.room.roomPlanner) return null;
 
-			if (isOnlyUpgrader) {
-				const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
-					if (!creep.room.roomPlanner) return null;
-
-					// Get harvest position from room planner.
-					return _.sample(creep.room.roomPlanner.getLocations('upgrader.0'));
-				});
-				if (upgraderPosition) creep.goTo(upgraderPosition)
-				else creep.moveToRange(controller, 3);
-			}
-			else {
-				creep.moveToRange(controller, 3);
-			}
-			// @todo If there are no free tiles at range 1, stay at range 2, etc.
-			// to save movement intents and pathfinding.
+				// Get harvest position from room planner.
+				return _.sample(creep.room.roomPlanner.getLocations('upgrader.0'));
+			});
+			if (upgraderPosition) creep.goTo(upgraderPosition)
+			else creep.moveToRange(controller, 3);
 		}
+		else {
+			creep.whenInRange(3, controller, () => {
+				const result = creep.upgradeController(controller);
+				if (controller.level == 8 && result == OK) {
+					const amount = Math.min(creep.store[RESOURCE_ENERGY], creep.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER);
+					balancer.recordGplEnergy(amount);
+				}
 
-		if (distance <= 3) {
-			const result = creep.upgradeController(controller);
-			if (controller.level == 8 && result == OK) {
-				const amount = Math.min(creep.store[RESOURCE_ENERGY], creep.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER);
-				balancer.recordGplEnergy(amount);
-			}
-
-			if (distance === 1 && controller.sign && controller.sign.username) {
-				creep.signController(controller, '');
-			}
+				if (distance === 1 && controller.sign && controller.sign.username) {
+					creep.signController(controller, '');
+				}
+			});
 		}
 
 		// Keep syphoning energy from link or controller to ideally never stop upgrading.

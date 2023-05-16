@@ -149,7 +149,9 @@ export default class BuilderRole extends Role {
 			return;
 		}
 
-		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() < 25_000 || (creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl())) {
+		const roomHasTooLittleEnergy = creep.room.storage && creep.room.getEffectiveAvailableEnergy() < 25_000;
+		const shouldNotUpgrade = creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl();
+		if (roomHasTooLittleEnergy || shouldNotUpgrade) {
 			// Prevent draining energy stores by recycling.
 			creep.room.memory.noBuilderNeeded = Game.time;
 			this.performRecycle(creep);
@@ -463,14 +465,13 @@ export default class BuilderRole extends Role {
 	 *   The structure to repair.
 	 */
 	repairTarget(creep: BuilderCreep, target: Structure) {
-		if (creep.pos.getRangeTo(target) > 3) {
-			creep.moveToRange(target, 3);
+		creep.whenInRange(3, target, () => {
+			creep.repair(target);
+		});
 
+		if (creep.pos.getRangeTo(target) > 3) {
 			// Also try to repair things that are close by when appropriate.
 			this.repairNearby(creep);
-		}
-		else {
-			creep.repair(target);
 		}
 	}
 
@@ -483,14 +484,13 @@ export default class BuilderRole extends Role {
 	 *   The construction site to build.
 	 */
 	buildTarget(creep: BuilderCreep, target: ConstructionSite) {
-		if (creep.pos.getRangeTo(target) > 3) {
-			creep.moveToRange(target, 3);
+		creep.whenInRange(3, target, () => {
+			creep.build(target);
+		});
 
+		if (creep.pos.getRangeTo(target) > 3) {
 			// Also try to repair things that are close by when appropriate.
 			this.repairNearby(creep);
-		}
-		else {
-			creep.build(target);
 		}
 	}
 

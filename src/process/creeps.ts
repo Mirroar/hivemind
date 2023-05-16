@@ -115,8 +115,6 @@ export default class CreepsProcess extends Process {
 		// Move blocking creeps if necessary.
 		_.each(Game.creeps, creep => {
 			if (!creep._blockingCreepMovement) return;
-			creep.room.visual.text('X', creep.pos);
-
 			if (creep._hasMoveIntent) return;
 
 			const blockedCreep = creep._blockingCreepMovement;
@@ -156,6 +154,10 @@ export default class CreepsProcess extends Process {
 
 			const pos = new RoomPosition(x, y, creep.room.name);
 			if (pos.getRangeTo(creep._requestedMoveArea.pos) > creep._requestedMoveArea.range) return null;
+			if (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS).length > 0) return null;
+			creep.room.visual.line(x, y, creep.pos.x, creep.pos.y, {
+				color: '#00ff00',
+			});
 
 			alternatePosition = pos;
 			return false;
