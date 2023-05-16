@@ -1,4 +1,5 @@
 import TaskProvider from 'dispatcher/task-provider';
+import {getDangerMatrix} from 'utils/cost-matrix';
 
 declare global {
 	interface StructureSourceTask extends ResourceSourceTask {
@@ -26,6 +27,7 @@ export default class StructureSource<TaskType extends StructureSourceTask> imple
 		if (!structure) return false;
 		if (structure.store.getUsedCapacity(task.resourceType) === 0) return false;
 		if (context.creep.store.getFreeCapacity(task.resourceType) === 0) return false;
+		if (!this.isSafePosition(context.creep, structure.pos)) return false;
 
 		return true;
 	}
@@ -44,5 +46,15 @@ export default class StructureSource<TaskType extends StructureSourceTask> imple
 
 			delete creep.memory.order;
 		});
+	}
+
+	isSafePosition(creep: Creep, pos: RoomPosition): boolean {
+		if (!creep.room.isMine()) return true;
+		if (creep.room.defense.getEnemyStrength() === 0) return true;
+
+		const matrix = getDangerMatrix(creep.room.name);
+		if (matrix.get(pos.x, pos.y) > 0) return false;
+
+		return true;
 	}
 }

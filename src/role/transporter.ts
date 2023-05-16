@@ -469,7 +469,6 @@ export default class TransporterRole extends Role {
 		this.addObjectEnergySourceOptions(options, FIND_DROPPED_RESOURCES, 'resource', priority);
 		this.addObjectEnergySourceOptions(options, FIND_TOMBSTONES, 'tombstone', priority);
 		this.addObjectEnergySourceOptions(options, FIND_RUINS, 'tombstone', priority);
-		this.addContainerEnergySourceOptions(options);
 
 		return options;
 	}
@@ -535,68 +534,6 @@ export default class TransporterRole extends Role {
 				// If storage is super full, try leaving stuff on the ground.
 				option.priority -= 2;
 			}
-
-			options.push(option);
-		}
-	}
-
-	/**
-	 * Adds options for picking up energy from containers to priority list.
-	 *
-	 * @param {Array} options
-	 *   A list of potential energy sources.
-	 */
-	addContainerEnergySourceOptions(options: TransporterSourceOrderOption[]) {
-		const creep = this.creep;
-
-		// Look for energy in Containers.
-		const targets = creep.room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_CONTAINER)
-				&& structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1
-				&& this.isSafePosition(creep, structure.pos),
-		});
-
-		// Prefer containers used as harvester dropoff.
-		for (const target of targets) {
-			// Don't use the controller container as a normal source if we're upgrading.
-			if (target.id === target.room.memory.controllerContainer && creep.room.creepsByRole.upgrader) continue;
-
-			const option: TransporterStructureOrderOption = {
-				priority: 1,
-				weight: target.store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
-				type: 'structure',
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			for (const source of target.room.sources) {
-				if (source.getNearbyContainer()?.id !== target.id) continue;
-
-				option.priority++;
-				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity()) {
-					// This container is filling up, prioritize emptying it when we aren't
-					// busy filling extensions.
-					if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || !creep.room.storage || creep.memory.role !== 'transporter') option.priority += 2;
-				}
-
-				break;
-			}
-
-			for (const bay of target.room.bays) {
-				if (bay.pos.getRangeTo(target.pos) > 0) continue;
-				if (!target.room.roomPlanner) continue;
-				if (!target.room.roomPlanner.isPlannedLocation(target.pos, 'harvester')) continue;
-
-				if (target.store.getUsedCapacity() < target.store.getCapacity() / 3) {
-					// Do not empty containers in harvester bays for quicker extension refills.
-					option.priority = -1;
-				}
-
-				break;
-			}
-
-			option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
-			option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
 
 			options.push(option);
 		}
