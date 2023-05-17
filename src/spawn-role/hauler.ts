@@ -55,7 +55,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 		);
 		const carryPartsPerHauler = _.countBy(maximumBody)[CARRY];
 
-		const multiplier = Math.ceil(Math.min(requiredCarryParts / carryPartsPerHauler, 3));
+		const multiplier = Math.ceil(requiredCarryParts / carryPartsPerHauler);
 		const baseHaulers = operation.getHaulerCount();
 		const maxHaulers = baseHaulers * multiplier;
 		const adjustedCarryParts = Math.ceil(requiredCarryParts / multiplier);

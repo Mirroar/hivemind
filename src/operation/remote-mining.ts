@@ -150,9 +150,9 @@ export default class RemoteMiningOperation extends Operation {
 					}
 
 					const travelTime = path.length;
-					const energyCapacity = this.hasReservation() ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
-					const requiredWorkParts = energyCapacity / ENERGY_REGEN_TIME / HARVEST_POWER;
-					const requiredCarryParts = Math.ceil(travelTime * energyCapacity / ENERGY_REGEN_TIME / CARRY_CAPACITY);
+					const generatedEnergy = this.hasReservation() ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
+					const requiredWorkParts = generatedEnergy / ENERGY_REGEN_TIME / HARVEST_POWER;
+					const requiredCarryParts = Math.ceil(2 * travelTime * generatedEnergy / ENERGY_REGEN_TIME / CARRY_CAPACITY);
 					const sourceRoom = path[path.length - 1].roomName;
 					return {
 						accessible: true,
@@ -338,12 +338,7 @@ export default class RemoteMiningOperation extends Operation {
 		if (!paths[sourceLocation]) return 0;
 		if (!paths[sourceLocation].accessible) return 0;
 
-		// Low-level rooms seem to have problems transporting all energy, so
-		// we increase hauler size.
-		const room = Game.rooms[paths[sourceLocation].sourceRoom];
-		const haulerFactor = (room.isMine() && room.controller.level < 3) ? 1.2 : 1;
-
-		return paths[sourceLocation].requiredCarryParts * haulerFactor;
+		return paths[sourceLocation].requiredCarryParts;
 	}
 
 	/**

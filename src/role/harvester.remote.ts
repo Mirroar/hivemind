@@ -129,44 +129,40 @@ export default class RemoteHarvesterRole extends Role {
 		});
 		const source = sources[0];
 
-		if (creep.pos.getRangeTo(source) > 1) {
-			// Make sure we stand directly on the container position.
-			creep.moveToRange(source, 1);
-			return;
-		}
+		creep.whenInRange(1, source, () => {
+			// Wait if source is depleted.
+			if (source.energy <= 0) return;
 
-		// Wait if source is depleted.
-		if (source.energy <= 0) return;
+			creep.harvest(source);
 
-		creep.harvest(source);
+			// Immediately deposit energy if a container is nearby.
+			if (!(creep.operation instanceof RemoteMiningOperation)) return;
+			if (!creep.operation.hasContainer(creep.memory.source)) {
+				// Check if there is a container or construction site nearby.
+				const containerPosition = creep.operation.getContainerPosition(creep.memory.source);
+				if (!containerPosition) return;
+				const sites = _.filter(containerPosition.lookFor(LOOK_CONSTRUCTION_SITES), (site: ConstructionSite) => site.structureType === STRUCTURE_CONTAINER);
+				if (sites.length === 0) {
+					// Place a container construction site for this source.
+					containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
+				}
 
-		// Immediately deposit energy if a container is nearby.
-		if (!(creep.operation instanceof RemoteMiningOperation)) return;
-		if (!creep.operation.hasContainer(creep.memory.source)) {
-			// Check if there is a container or construction site nearby.
-			const containerPosition = creep.operation.getContainerPosition(creep.memory.source);
-			if (!containerPosition) return;
-			const sites = _.filter(containerPosition.lookFor(LOOK_CONSTRUCTION_SITES), (site: ConstructionSite) => site.structureType === STRUCTURE_CONTAINER);
-			if (sites.length === 0) {
-				// Place a container construction site for this source.
-				containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
+				return;
 			}
 
-			return;
-		}
+			const container = creep.operation.getContainer(creep.memory.source);
+			const range = creep.pos.getRangeTo(container);
+			if (range === 1) {
+				// Move onto container if it's not occupied by another creep.
+				if (container.pos.lookFor(LOOK_CREEPS).length === 0) {
+					creep.move(creep.pos.getDirectionTo(container.pos));
+				}
 
-		const container = creep.operation.getContainer(creep.memory.source);
-		const range = creep.pos.getRangeTo(container);
-		if (range === 1) {
-			// Move onto container if it's not occupied by another creep.
-			if (container.pos.lookFor(LOOK_CREEPS).length === 0) {
-				creep.move(creep.pos.getDirectionTo(container.pos));
+				// Transfer energy to container if we can't drop directly onto it.
+				if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.8) {
+					creep.transfer(container, RESOURCE_ENERGY);
+				}
 			}
-
-			// Transfer energy to container if we can't drop directly onto it.
-			if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.8) {
-				creep.transfer(container, RESOURCE_ENERGY);
-			}
-		}
+		});
 	}
 }

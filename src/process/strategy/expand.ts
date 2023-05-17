@@ -617,6 +617,8 @@ export default class ExpandProcess extends Process {
 		if (!hivemind.hasIntervalPassed(5000, lastCleanup)) return;
 		lastCleanup = Game.time;
 
+		if (!this.memory.failedExpansions) return;
+
 		for (let i = this.memory.failedExpansions.length - 1; i >= 0; i--) {
 			if (Game.time - this.memory.failedExpansions[i].time < 1_000_000) continue;
 
