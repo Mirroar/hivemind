@@ -53,12 +53,11 @@ export default class HaulerSpawnRole extends SpawnRole {
 			room.energyCapacityAvailable,
 			{[CARRY]: requiredCarryParts},
 		);
-		const carryPartsPerHauler = _.countBy(maximumBody)[CARRY];
-
-		const multiplier = Math.ceil(requiredCarryParts / carryPartsPerHauler);
-		const baseHaulers = operation.getHaulerCount();
-		const maxHaulers = baseHaulers * multiplier;
-		const adjustedCarryParts = Math.ceil(requiredCarryParts / multiplier);
+		const maxCarryPartsOnBiggestBody = _.countBy(maximumBody)[CARRY];
+		const maxCarryPartsToEmptyContainer = Math.ceil(0.9 * CONTAINER_CAPACITY / CARRY_CAPACITY);
+		const maxCarryParts = Math.min(maxCarryPartsOnBiggestBody, maxCarryPartsToEmptyContainer);
+		const maxHaulers = Math.ceil(requiredCarryParts / maxCarryParts);
+		const adjustedCarryParts = Math.ceil(requiredCarryParts / maxHaulers);
 
 		const haulers = _.filter(
 			Game.creepsByRole.hauler || {},
