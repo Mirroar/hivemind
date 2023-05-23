@@ -7,18 +7,29 @@ import hivemind from 'hivemind';
 
 declare global {
 	interface Room {
-		assertMilitarySituation;
-		assertMilitaryCreepPower;
-		assertMilitaryStructurePower;
+		assertMilitarySituation: () => void;
+		assertMilitaryCreepPower: (creep: Creep) => void;
+		assertMilitaryStructurePower: (structure: AnyStructure) => void;
 		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void;
-		getMilitaryAssertion;
-		assertTargetPriorities;
+		getMilitaryAssertion: (x: number, y: number, type: string) => number;
+		assertTargetPriorities: () => void;
 		getTowerTarget: () => AnyCreep | null;
-		drawMilitarySituation;
+		drawMilitarySituation: () => void;
+
+		_sitRepBuilt: boolean;
+		sitRep: SitRep;
+		militaryObjects: {
+			creeps: Creep[];
+			structures: AnyStructure[];
+			myCreeps: Creep[];
+			myStructures: AnyStructure[];
+		};
 	}
 
 	interface Creep {
-		getMilitaryValue;
+		getMilitaryValue: () => number;
+
+		militaryPriority: number;
 	}
 }
 
@@ -48,7 +59,7 @@ interface SitRep {
 /**
  * Scans the room for military targets, grades them, etc.
  */
-Room.prototype.assertMilitarySituation = function () {
+Room.prototype.assertMilitarySituation = function (this: Room) {
 	if (this._sitRepBuilt) return;
 
 	this._sitRepBuilt = true;
@@ -113,7 +124,7 @@ Room.prototype.assertMilitarySituation = function () {
  * @param {Creep} creep
  *   The creep to asses.
  */
-Room.prototype.assertMilitaryCreepPower = function (creep) {
+Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep) {
 	let hostile: boolean;
 	let targets: Creep[];
 	let allies: Creep[];
@@ -189,7 +200,7 @@ Room.prototype.assertMilitaryCreepPower = function (creep) {
  * @param {Structure} structure
  *   The structure to asses.
  */
-Room.prototype.assertMilitaryStructurePower = function (structure) {
+Room.prototype.assertMilitaryStructurePower = function (this: Room, structure: AnyStructure) {
 	if (structure.structureType !== STRUCTURE_TOWER) return;
 	if (structure.store[RESOURCE_ENERGY] < TOWER_ENERGY_COST) return;
 	// Don't count our towers if they're almost empty so we don't shoot at targets
@@ -237,7 +248,7 @@ Room.prototype.assertMilitaryStructurePower = function (structure) {
  * @param {string} type
  *   The type of value to save.
  */
-Room.prototype.addMilitaryAssertion = function (x: number, y: number, amount: number, type: string): void {
+Room.prototype.addMilitaryAssertion = function (this: Room, x: number, y: number, amount: number, type: string): void {
 	if (!amount) return;
 	if (x < 0 || x > 49 || y < 0 || y > 49 || amount <= 0) return;
 
@@ -261,7 +272,7 @@ Room.prototype.addMilitaryAssertion = function (x: number, y: number, amount: nu
  * @return {number}
  *   Current military assesment of the given type.
  */
-Room.prototype.getMilitaryAssertion = function (x, y, type) {
+Room.prototype.getMilitaryAssertion = function (this: Room, x: number, y: number, type: string) {
 	if (this.sitRep[type] && this.sitRep[type][x] && this.sitRep[type][x][y]) {
 		return this.sitRep[type][x][y];
 	}
@@ -272,7 +283,7 @@ Room.prototype.getMilitaryAssertion = function (x, y, type) {
 /**
  * Decides target priority values for all enemy creeps.
  */
-Room.prototype.assertTargetPriorities = function () {
+Room.prototype.assertTargetPriorities = function (this: Room) {
 	// @todo Use target's value / potential damage.
 	for (const creep of this.militaryObjects.creeps) {
 		const potentialDamage = this.getMilitaryAssertion(creep.pos.x, creep.pos.y, 'myDamage');

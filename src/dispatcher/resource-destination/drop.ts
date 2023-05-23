@@ -38,7 +38,7 @@ export default class DropDestination implements TaskProvider<DropDestinationTask
 				priority: 0,
 				weight: 0,
 				type: 'drop',
-				resourceType: resourceType,
+				resourceType,
 				amount: creep.store[resourceType],
 			});
 		}

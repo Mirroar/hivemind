@@ -1,6 +1,5 @@
 import {getResourcesIn} from 'utils/store';
 import StructureDestination from 'dispatcher/resource-destination/structure';
-import TaskProvider from 'dispatcher/task-provider';
 
 interface StorageDestinationTask extends StructureDestinationTask {
 	type: 'storage';
@@ -40,7 +39,7 @@ export default class StorageDestination extends StructureDestination<StorageDest
 				weight: creep.store[resourceType] / 100,
 				type: 'storage',
 				target: storageTarget.id,
-				resourceType: resourceType,
+				resourceType,
 				amount: creep.store[resourceType],
 			});
 		}

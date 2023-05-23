@@ -23,7 +23,6 @@ interface BuildOrder {
 
 declare global {
 	interface BuilderCreep extends Creep {
-		role: 'builder';
 		memory: BuilderCreepMemory;
 		heapMemory: BuilderCreepHeapMemory;
 	}

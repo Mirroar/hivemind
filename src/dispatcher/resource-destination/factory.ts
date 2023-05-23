@@ -1,5 +1,4 @@
 import StructureDestination from 'dispatcher/resource-destination/structure';
-import TaskProvider from 'dispatcher/task-provider';
 
 interface FactoryDestinationTask extends StructureDestinationTask {
 	type: 'factory';
@@ -32,7 +31,7 @@ export default class FactoryDestination extends StructureDestination<FactoryDest
 			if (context.resourceType && resourceType !== context.resourceType) continue;
 
 			// @todo Create only one task, but allow picking up multiple resource types when resolving.
-			const option = {
+			const option: FactoryDestinationTask = {
 				type: this.getType(),
 				priority: 3,
 				weight: missingResources[resourceType] / 1000,

@@ -13,6 +13,55 @@ import {encodePosition, decodePosition, serializePositionPath, deserializePositi
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getUsername} from 'utils/account';
 
+interface ControllerTargetOption extends WeightedOption {
+	type: 'controller';
+	object: StructureController;
+}
+
+interface CreepTargetOption extends WeightedOption {
+	type: 'creep';
+	object: Creep;
+}
+
+interface HostileCreepTargetOption extends WeightedOption {
+	type: 'hostilecreep';
+	object: Creep;
+}
+
+interface HostileStructureTargetOption extends WeightedOption {
+	type: 'hostilestructure';
+	object: AnyStructure;
+}
+
+type MilitaryTargetOption = ControllerTargetOption | CreepTargetOption | HostileCreepTargetOption | HostileStructureTargetOption;
+
+declare global {
+	interface BrawlerCreep extends Creep {
+		memory: BrawlerCreepMemory;
+		heapMemory: BrawlerCreepHeapMemory;
+	}
+
+	interface BrawlerCreepMemory extends CreepMemory {
+		role: 'brawler';
+		initialized?: boolean;
+		squadName: string;
+		squadUnitType: SquadUnitType;
+		fillWithEnergy?: boolean;
+		pathTarget?: string;
+		order: {
+			type: 'attack' | 'heal' | 'claim';
+			target: Id<Creep | AnyStructure>;
+		};
+		target: string;
+
+		exploitTarget: Id<Creep>;
+		patrolPoint: Id<StructureKeeperLair>;
+	}
+
+	interface BrawlerCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
 
@@ -32,7 +81,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: BrawlerCreep) {
 		if (!creep.memory.initialized) {
 			this.initBrawlerState(creep);
 		}
@@ -53,7 +102,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	initBrawlerState(creep) {
+	initBrawlerState(creep: BrawlerCreep) {
 		creep.memory.initialized = true;
 
 		if (creep.memory.squadUnitType === 'builder') {
@@ -76,7 +125,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	calculateMilitaryTarget(creep) {
+	calculateMilitaryTarget(creep: BrawlerCreep) {
 		const best = utilities.getBestOption(this.getAvailableMilitaryTargets(creep));
 
 		if (!best) {
@@ -84,7 +133,7 @@ export default class BrawlerRole extends Role {
 			return;
 		}
 
-		let action = 'heal';
+		let action: "attack" | "heal" | "claim" = 'heal';
 		if (best.type === 'hostilecreep' || best.type === 'hostilestructure') {
 			action = 'attack';
 		}
@@ -107,8 +156,8 @@ export default class BrawlerRole extends Role {
 	 * @return {Array}
 	 *   An array of target options for this creep.
 	 */
-	getAvailableMilitaryTargets(creep: Creep) {
-		const options = [];
+	getAvailableMilitaryTargets(creep: BrawlerCreep) {
+		const options: MilitaryTargetOption[] = [];
 
 		if (!creep.memory.target) return options;
 
@@ -153,6 +202,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// @todo Run home for healing if no functional parts are left.
+		// @todo This should not be in a get function, but have it's own option type.
 		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName !== 'interShardSupport') {
 			this.performRecycle(creep);
 		}
@@ -168,7 +218,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Array} options
 	 *   An array of target options for this creep.
 	 */
-	addMilitaryAttackOptions(creep: Creep, options) {
+	addMilitaryAttackOptions(creep: BrawlerCreep, options: MilitaryTargetOption[]) {
 		const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
 		const targetPosition = decodePosition(creep.memory.target);
 
@@ -176,7 +226,7 @@ export default class BrawlerRole extends Role {
 			for (const enemy of enemies) {
 				if (hivemind.relations.isAlly(creep.owner.username)) continue;
 
-				const option = {
+				const option: HostileCreepTargetOption = {
 					priority: 4,
 					weight: 1 - (creep.pos.getRangeTo(enemy) / 50),
 					type: 'hostilecreep',
@@ -212,7 +262,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		for (const structure of structures) {
-			const option = {
+			const option: HostileStructureTargetOption = {
 				priority: encodePosition(structure.pos) === creep.memory.target ? 5 : 2,
 				weight: 0,
 				type: 'hostilestructure',
@@ -238,7 +288,7 @@ export default class BrawlerRole extends Role {
 			});
 
 			for (const structure of structures) {
-				const option = {
+				const option: HostileStructureTargetOption = {
 					priority: 0,
 					weight: 0,
 					type: 'hostilestructure',
@@ -258,7 +308,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Array} options
 	 *   An array of target options for this creep.
 	 */
-	addMilitaryHealOptions(creep, options) {
+	addMilitaryHealOptions(creep: BrawlerCreep, options: MilitaryTargetOption[]) {
 		let damaged = creep.room.find(FIND_MY_CREEPS, {
 			filter: friendly => ((friendly.id !== creep.id) && (friendly.hits < friendly.hitsMax)),
 		});
@@ -269,7 +319,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		for (const friendly of damaged) {
-			const option = {
+			const option: CreepTargetOption = {
 				priority: 3,
 				weight: 0,
 				type: 'creep',
@@ -288,7 +338,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performMilitaryMove(creep) {
+	performMilitaryMove(creep: BrawlerCreep) {
 		if (creep.isPartOfTrain()) {
 			if (this.performTrainMove(creep) !== OK) return;
 		}
@@ -300,7 +350,7 @@ export default class BrawlerRole extends Role {
 					return;
 				}
 
-				this.transporterRole.performGetEnergy(creep);
+				this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 				return;
 			}
 
@@ -385,7 +435,7 @@ export default class BrawlerRole extends Role {
 		});
 	}
 
-	moveToEngageTarget(creep, target) {
+	moveToEngageTarget(creep: BrawlerCreep, target: RoomObject | null) {
 		if (!target) {
 			// @todo Still try to avoid other hostiles.
 			creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 10);
@@ -442,7 +492,7 @@ export default class BrawlerRole extends Role {
 		});
 	}
 
-	performTrainMove(creep) {
+	performTrainMove(creep: BrawlerCreep) {
 		// @todo Implement joined room border traversal.
 
 		if (!creep.isTrainFullySpawned()) {
@@ -456,7 +506,8 @@ export default class BrawlerRole extends Role {
 			}
 
 			// Move randomly around the room to not block spawns or other creeps.
-			creep.move(1 + Math.floor(Math.random() * 8));
+			const direction = (1 + Math.floor(Math.random() * 8)) as DirectionConstant;
+			creep.move(direction);
 			return ERR_BUSY;
 		}
 
@@ -499,7 +550,7 @@ export default class BrawlerRole extends Role {
 	 * @todo This should probably be done by having the exploit choose targets
 	 * and then using normal military creep movement to get there.
 	 */
-	performExploitMove(creep) {
+	performExploitMove(creep: BrawlerCreep) {
 		const exploit = Game.exploits[creep.memory.exploitName];
 		if (!exploit) return;
 
@@ -557,7 +608,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performExploitPatrol(creep) {
+	performExploitPatrol(creep: BrawlerCreep) {
 		const exploit = Game.exploits[creep.memory.exploitName];
 
 		// Start at closest patrol point to entrance
@@ -566,7 +617,7 @@ export default class BrawlerRole extends Role {
 				creep.memory.patrolPoint = exploit.memory.closestLairToEntrance;
 			}
 			else if (exploit.memory.lairs) {
-				creep.memory.patrolPoint = _.sample(_.keys(exploit.memory.lairs));
+				creep.memory.patrolPoint = _.sample(_.keys(exploit.memory.lairs)) as Id<StructureKeeperLair>;
 			}
 		}
 
@@ -633,7 +684,7 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performSquadMove(creep) {
+	performSquadMove(creep: BrawlerCreep) {
 		// Check if there are orders and set a target accordingly.
 		const squad = Game.squads[creep.memory.squadName];
 		if (!squad) return; // @todo Go recycle.
@@ -655,7 +706,7 @@ export default class BrawlerRole extends Role {
 
 		// Refresh creep if it's getting low, so that it has high lifetime when a mission finally starts.
 		if (creep.ticksToLive < CREEP_LIFE_TIME * 0.66) {
-			const spawn = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+			const spawn = creep.pos.findClosestByRange<StructureSpawn>(FIND_STRUCTURES, {
 				filter: structure => structure.structureType === STRUCTURE_SPAWN,
 			});
 
@@ -678,12 +729,13 @@ export default class BrawlerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	militaryRoomReached(creep) {
+	militaryRoomReached(creep: BrawlerCreep) {
 		if (creep.memory.squadUnitType === 'builder' && creep.room.controller) {
 			// Rebrand as remote builder to work in this room from now on.
-			creep.memory.role = 'builder.remote';
-			creep.memory.target = encodePosition(creep.pos);
-			creep.memory.singleRoom = creep.pos.roomName;
+			const newCreep = creep as unknown as RemoteBuilderCreep;
+			newCreep.memory.role = 'builder.remote';
+			newCreep.memory.target = encodePosition(newCreep.pos);
+			newCreep.memory.singleRoom = newCreep.pos.roomName;
 		}
 	}
 
@@ -695,7 +747,7 @@ export default class BrawlerRole extends Role {
 	 * @return {boolean}
 	 *   True if an attack was made. Will be false even if a ranged attack was made.
 	 */
-	performMilitaryAttack(creep) {
+	performMilitaryAttack(creep: BrawlerCreep) {
 		if (creep.memory.order) {
 			// Attack ordered target first.
 			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
@@ -754,7 +806,7 @@ export default class BrawlerRole extends Role {
 	 * @return {boolean}
 	 *   True if an attack or ranged attack was made.
 	 */
-	attackMilitaryTarget(creep, target) {
+	attackMilitaryTarget(creep: BrawlerCreep, target: Creep | AnyStructure) {
 		if (target instanceof StructureController) {
 			if (target.owner && creep.attackController(target) === OK) {
 				return true;
@@ -779,7 +831,7 @@ export default class BrawlerRole extends Role {
 				return true;
 			}
 		}
-		else if (!target.owner || !hivemind.relations.isAlly(target.owner.username)) {
+		else if (!('owner' in target) || !hivemind.relations.isAlly(target.owner.username)) {
 			if (creep.getActiveBodyparts(ATTACK) && creep.attack(target) === OK) {
 				return true;
 			}
@@ -800,11 +852,11 @@ export default class BrawlerRole extends Role {
 	 * @return {boolean}
 	 *   True if an action was ordered.
 	 */
-	performMilitaryHeal(creep) {
+	performMilitaryHeal(creep: BrawlerCreep) {
 		if (creep.memory.order) {
-			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
+			const target = Game.getObjectById<Creep>(creep.memory.order.target);
 
-			if (target && (target.my || (target.owner && hivemind.relations.isAlly(target.owner.username)))) {
+			if (target && (target.my || ('owner' in target && hivemind.relations.isAlly(target.owner.username)))) {
 				if (creep.heal(target) === OK) {
 					return true;
 				}

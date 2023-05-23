@@ -1,6 +1,5 @@
 import settings from 'settings-manager';
 import StructureDestination from 'dispatcher/resource-destination/structure';
-import TaskProvider from 'dispatcher/task-provider';
 
 interface NukerDestinationTask extends StructureDestinationTask {
 	type: 'nuker';
@@ -26,8 +25,9 @@ export default class NukerDestination extends StructureDestination<NukerDestinat
 		const options: NukerDestinationTask[] = [];
 		this.addResourceTask(RESOURCE_GHODIUM, options, context);
 
-		if (this.room.getCurrentResourceAmount(RESOURCE_ENERGY) >= settings.get('minEnergyForNuker'))
+		if (this.room.getCurrentResourceAmount(RESOURCE_ENERGY) >= settings.get('minEnergyForNuker')) {
 			this.addResourceTask(RESOURCE_ENERGY, options, context);
+		}
 
 		return options;
 	}
@@ -44,7 +44,7 @@ export default class NukerDestination extends StructureDestination<NukerDestinat
 			type: this.getType(),
 			priority: 1,
 			weight: freeCapacity / 100,
-			resourceType: resourceType,
+			resourceType,
 			amount: freeCapacity,
 			target: nuker.id,
 		};

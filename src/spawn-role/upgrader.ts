@@ -1,5 +1,5 @@
-/* global FIND_MY_CONSTRUCTION_SITES CONTROLLER_DOWNGRADE
-MOVE WORK CARRY CONTROLLER_MAX_UPGRADE_PER_TICK */
+/* global CONTROLLER_DOWNGRADE MOVE WORK CARRY
+CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';

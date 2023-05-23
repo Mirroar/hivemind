@@ -1,5 +1,4 @@
 import StructureDestination from 'dispatcher/resource-destination/structure';
-import TaskProvider from 'dispatcher/task-provider';
 
 interface SpawnDestinationTask extends StructureDestinationTask {
 	type: 'spawn';

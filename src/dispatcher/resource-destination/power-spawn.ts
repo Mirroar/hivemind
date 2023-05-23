@@ -1,7 +1,6 @@
 import balancer from 'excess-energy-balancer';
 import settings from 'settings-manager';
 import StructureDestination from 'dispatcher/resource-destination/structure';
-import TaskProvider from 'dispatcher/task-provider';
 
 interface PowerSpawnDestinationTask extends StructureDestinationTask {
 	type: 'powerSpawn';
@@ -28,8 +27,9 @@ export default class PowerSpawnDestination extends StructureDestination<PowerSpa
 		const options: PowerSpawnDestinationTask[] = [];
 		this.addResourceTask(RESOURCE_POWER, 0.9, options, context);
 
-		if (this.room.getCurrentResourceAmount(RESOURCE_ENERGY) >= settings.get('minEnergyForPowerProcessing'))
+		if (this.room.getCurrentResourceAmount(RESOURCE_ENERGY) >= settings.get('minEnergyForPowerProcessing')) {
 			this.addResourceTask(RESOURCE_ENERGY, 0.2, options, context);
+		}
 
 		return options;
 	}
@@ -46,7 +46,7 @@ export default class PowerSpawnDestination extends StructureDestination<PowerSpa
 			type: this.getType(),
 			priority: 3,
 			weight: freeCapacity / 100,
-			resourceType: resourceType,
+			resourceType,
 			amount: freeCapacity,
 			target: powerSpawn.id,
 		};

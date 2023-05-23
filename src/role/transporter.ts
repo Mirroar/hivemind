@@ -62,7 +62,6 @@ type TransporterOrder = TransporterGetEnergyOrder | ResourceSourceTask | Resourc
 
 declare global {
 	interface TransporterCreep extends Creep {
-		role: 'transporter';
 		memory: TransporterCreepMemory;
 		heapMemory: TransporterCreepHeapMemory;
 	}

@@ -1,5 +1,4 @@
 import StructureSource from 'dispatcher/resource-source/structure';
-import TaskProvider from 'dispatcher/task-provider';
 import {getResourcesIn} from 'utils/store';
 
 interface FactorySourceTask extends StructureSourceTask {

@@ -268,7 +268,7 @@ export default class HarvesterRole extends Role {
 					if (['transporter', 'upgrader', 'builder', 'builder.remote'].includes(c.memory.role) && c.store.getFreeCapacity() > 0) return true;
 
 					return false;
-				}
+				},
 			});
 
 			if (nearbyCreeps.length > 0) {

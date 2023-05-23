@@ -11,6 +11,11 @@ import {getRoomIntel} from 'room-intel';
 
 declare global {
 	type TileCallback = (x: number, y: number) => boolean | void;
+
+	interface WeightedOption {
+		priority: number;
+		weight: number
+	}
 }
 
 const utilities = {
@@ -140,7 +145,7 @@ const utilities = {
 	 * @return {object}
 	 *   The object with the highest priority and weight (within that priority).
 	 */
-	getBestOption<T extends {priority: number; weight: number}>(options: T[]): T {
+	getBestOption<T extends WeightedOption>(options: T[]): T {
 		let best = null;
 
 		for (const option of options) {

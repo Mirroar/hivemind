@@ -78,8 +78,9 @@ export default class TransporterSpawnRole extends SpawnRole {
 			// Check if a container is nearly full.
 			for (const source of room.sources) {
 				const container = source.getNearbyContainer();
-				if (container && container.store.getFreeCapacity() < container.store.getCapacity() / 4)
+				if (container && container.store.getFreeCapacity() < container.store.getCapacity() / 4) {
 					maxTransporters++;
+				}
 			}
 		}
 
@@ -158,7 +159,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: 0.35, [CARRY]: 0.65},
 			Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: option.size || 8},
+			{[CARRY]: option.size ?? 8},
 		);
 	}
 

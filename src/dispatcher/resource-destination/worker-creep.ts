@@ -28,10 +28,6 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 			upgrader: 0.5,
 		};
 
-		/*if (context.creep.memory.role !== 'transporter') {
-			targetRoleWeights['transporter'] = 0;
-		}//*/
-
 		for (const role in targetRoleWeights) {
 			this.addRoleTasks(options, role, targetRoleWeights[role], context);
 		}
