@@ -74,21 +74,37 @@ function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 
 
 	// Mark tiles near exits as sinks - walls / ramparts may not be built there.
 	for (let y = 1; y < 49; y++) {
-		if (roomArray[0][y - 1] === EXIT) roomArray[1][y] = TO_EXIT;
-		if (roomArray[0][y] === EXIT) roomArray[1][y] = TO_EXIT;
-		if (roomArray[0][y + 1] === EXIT) roomArray[1][y] = TO_EXIT;
-		if (roomArray[49][y - 1] === EXIT) roomArray[48][y] = TO_EXIT;
-		if (roomArray[49][y] === EXIT) roomArray[48][y] = TO_EXIT;
-		if (roomArray[49][y + 1] === EXIT) roomArray[48][y] = TO_EXIT;
+		if (
+			roomArray[0][y - 1] === EXIT ||
+			roomArray[0][y] === EXIT ||
+			roomArray[0][y + 1] === EXIT
+		) {
+			roomArray[1][y] = TO_EXIT;
+		}
+		if (
+			roomArray[49][y - 1] === EXIT ||
+			roomArray[49][y] === EXIT ||
+			roomArray[49][y + 1] === EXIT
+		) {
+			roomArray[48][y] = TO_EXIT;
+		}
 	}
 
 	for (let x = 1; x < 49; x++) {
-		if (roomArray[x - 1][0] === EXIT) roomArray[x][1] = TO_EXIT;
-		if (roomArray[x][0] === EXIT) roomArray[x][1] = TO_EXIT;
-		if (roomArray[x + 1][0] === EXIT) roomArray[x][1] = TO_EXIT;
-		if (roomArray[x - 1][49] === EXIT) roomArray[x][48] = TO_EXIT;
-		if (roomArray[x][49] === EXIT) roomArray[x][48] = TO_EXIT;
-		if (roomArray[x + 1][49] === EXIT) roomArray[x][48] = TO_EXIT;
+		if (
+			roomArray[x - 1][0] === EXIT ||
+			roomArray[x][0] === EXIT ||
+			roomArray[x + 1][0] === EXIT
+		) {
+			roomArray[x][1] = TO_EXIT;
+		}
+		if (
+			roomArray[x - 1][49] === EXIT ||
+			roomArray[x][49] === EXIT ||
+			roomArray[x + 1][49] === EXIT
+		) {
+			roomArray[x][48] = TO_EXIT;
+		}
 	}
 
 	addProtectedExitsToRoomArray(roomArray, bounds);
