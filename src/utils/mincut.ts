@@ -124,32 +124,47 @@ function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 
 	return roomArray;
 }
 
+let protectedExitTiles: Record<string, boolean>;
+
 /**
  * Marks protected exits.
  */
 function addProtectedExitsToRoomArray(roomArray: number[][], bounds: MinCutRect) {
+	protectedExitTiles = {};
+
 	if (bounds.protectTopExits) {
 		for (let x = 1; x < 49; x++) {
-			if (roomArray[x][1] === TO_EXIT) roomArray[x][1] = PROTECTED;
+			protectExitTile(roomArray, x, 1);
 		}
 	}
 
 	if (bounds.protectBottomExits) {
 		for (let x = 1; x < 49; x++) {
-			if (roomArray[x][48] === TO_EXIT) roomArray[x][48] = PROTECTED;
+			protectExitTile(roomArray, x, 48);
 		}
 	}
 
 	if (bounds.protectLeftExits) {
 		for (let y = 1; y < 49; y++) {
-			if (roomArray[1][y] === TO_EXIT) roomArray[1][y] = PROTECTED;
+			protectExitTile(roomArray, 1, y);
 		}
 	}
 
 	if (bounds.protectRightExits) {
 		for (let y = 1; y < 49; y++) {
-			if (roomArray[48][y] === TO_EXIT) roomArray[48][y] = PROTECTED;
+			protectExitTile(roomArray, 48, y);
 		}
+	}
+}
+
+function protectExitTile(roomArray, x: number, y: number) {
+	if (roomArray[x][y] !== TO_EXIT) return;
+
+	roomArray[x][y] = PROTECTED;
+	protectedExitTiles[x + ',' + y] = true;
+	for (const [dx, dy] of surroundingTiles) {
+		if (roomArray[x + dx][ y + dy] !== NORMAL) continue;
+		roomArray[x + dx][y + dy] = PROTECTED;
 	}
 }
 
@@ -176,17 +191,17 @@ function modifyProblematicProtectedExits(roomArray) {
 
 function floodFillUnprotectedExit(roomArray, corner) {
 	const queue = [];
-	for (const coords of corner) {
-		if (roomArray[coords[0]][coords[1]] === PROTECTED) queue.push(coords);
+	for (const [x, y] of corner) {
+		if (roomArray[x][y] === PROTECTED) queue.push([x, y]);
 	}
 
 	while (queue.length > 0) {
-		const coords = queue.splice(0, 1)[0];
-		if (roomArray[coords[0]][coords[1]] === PROTECTED) {
-			roomArray[coords[0]][coords[1]] = TO_EXIT;
-			for (const tile of surroundingTiles) {
-				if (roomArray[coords[0] + tile[0]][coords[1] + tile[1]] === PROTECTED) {
-					queue.push([coords[0] + tile[0], coords[1] + tile[1]]);
+		const [x, y] = queue.splice(0, 1)[0];
+		if (roomArray[x][y] === PROTECTED) {
+			roomArray[x][y] = protectedExitTiles[x + ',' + y] ? TO_EXIT : NORMAL;
+			for (const [dx, dy] of surroundingTiles) {
+				if (roomArray[x + dx][y + dy] === PROTECTED) {
+					queue.push([x + dx, y + dy]);
 				}
 			}
 		}
@@ -410,22 +425,18 @@ const minCutInterface = {
 				const bot = top + 2500;
 				if (roomTerrain[x][y] === NORMAL) {
 					graph.addEdge(top, bot, 1);
-					for (let i = 0; i < 8; i++) {
-						const dx = x + surroundingTiles[i][0];
-						const dy = y + surroundingTiles[i][1];
-						if (roomTerrain[dx][dy] === NORMAL || roomTerrain[dx][dy] === TO_EXIT) {
-							graph.addEdge(bot, (dy * 50) + dx, infinity);
+					for (const [dx, dy] of surroundingTiles) {
+						if (roomTerrain[x + dx][y + dy] === NORMAL || roomTerrain[x + dx][y + dy] === TO_EXIT) {
+							graph.addEdge(bot, ((y + dy) * 50) + x + dx, infinity);
 						}
 					}
 				}
 				else if (roomTerrain[x][y] === PROTECTED) {
 					graph.addEdge(source, top, infinity);
 					graph.addEdge(top, bot, 1);
-					for (let i = 0; i < 8; i++) {
-						const dx = x + surroundingTiles[i][0];
-						const dy = y + surroundingTiles[i][1];
-						if (roomTerrain[dx][dy] === NORMAL || roomTerrain[dx][dy] === TO_EXIT) {
-							graph.addEdge(bot, (dy * 50) + dx, infinity);
+					for (const [dx, dy] of surroundingTiles) {
+						if (roomTerrain[x + dx][y + dy] === NORMAL || roomTerrain[x + dx][y + dy] === TO_EXIT) {
+							graph.addEdge(bot, ((y + dy) * 50) + x + dx, infinity);
 						}
 					}
 				}
@@ -461,30 +472,26 @@ const minCutInterface = {
 			if (roomTerrain[x][48] === TO_EXIT) openList.push((50 * 48) + x);
 		}
 
-		// Iterate over all unvisited TO_EXIT- Tiles and mark neigbours as TO_EXIT tiles, if walkable (NORMAL), and add to unvisited
+		// Iterate over all unvisited TO_EXIT-Tiles and mark neigbours as TO_EXIT tiles, if walkable (NORMAL), and add to unvisited
 		while (openList.length > 0) {
 			const index = openList.pop();
 			const x = index % 50;
 			const y = Math.floor(index / 50);
-			for (let i = 0; i < 8; i++) {
-				const dx = x + surroundingTiles[i][0];
-				const dy = y + surroundingTiles[i][1];
-				if (roomTerrain[dx][dy] === NORMAL) {
-					openList.push((50 * dy) + dx);
-					roomTerrain[dx][dy] = TO_EXIT;
+			for (const [dx, dy] of surroundingTiles) {
+				if (roomTerrain[x + dx][y + dy] === NORMAL) {
+					openList.push((50 * (y + dy)) + x + dx);
+					roomTerrain[x + dx][y + dy] = TO_EXIT;
 				}
 			}
 		}
 
-		// Remove min-Cut-Tile if there is no TO-EXIT surrounding it
+		// Remove min-Cut-Tile if there is no TO_EXIT surrounding it
 		for (let i = minCut.length - 1; i >= 0; i--) {
 			let leadsToExit = false;
 			const x = minCut[i].x;
 			const y = minCut[i].y;
-			for (let i = 0; i < 8; i++) {
-				const dx = x + surroundingTiles[i][0];
-				const dy = y + surroundingTiles[i][1];
-				if (roomTerrain[dx][dy] === TO_EXIT) {
+			for (const [dx, dy] of surroundingTiles) {
+				if (roomTerrain[x + dx][y + dy] === TO_EXIT) {
 					leadsToExit = true;
 				}
 			}
