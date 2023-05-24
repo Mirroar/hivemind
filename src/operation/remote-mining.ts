@@ -14,10 +14,11 @@ declare global {
 }
 
 import cache from 'utils/cache';
+import HaulerRole from 'spawn-role/hauler';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import PathManager from 'remote-path-manager';
-import {encodePosition} from 'utils/serialization';
+import {decodePosition, encodePosition} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
@@ -35,6 +36,7 @@ import {packPosList, unpackPosList} from 'utils/packrat';
 export default class RemoteMiningOperation extends Operation {
 	protected memory: RemoteMiningOperationMemory;
 	protected pathManager: PathManager;
+	protected haulerRole: HaulerRole;
 
 	/**
 	 * Constructs a new RemoteMiningOperation instance.
@@ -43,6 +45,7 @@ export default class RemoteMiningOperation extends Operation {
 		super(name);
 		this.memory.type = 'mining';
 		this.pathManager = new PathManager();
+		this.haulerRole = new HaulerRole();
 
 		if (!this.memory.status) this.memory.status = {};
 	}
@@ -430,5 +433,35 @@ export default class RemoteMiningOperation extends Operation {
 
 	isProfitable(): boolean {
 		return (this.getStat(RESOURCE_ENERGY) || 0) > 0;
+	}
+
+	drawReport(targetPos: string) {
+		const requiredCarryParts = this.getHaulerSize(targetPos);
+
+		// Determine how many haulers to spawn for this route.
+		// If we cannot create big enough haulers (yet), create more of them!
+		const spawnRoom = Game.rooms[this.getSourceRoom(targetPos)];
+		const maximumBody = this.haulerRole.generateCreepBodyFromWeights(
+			this.haulerRole.getBodyWeights(),
+			spawnRoom.energyCapacityAvailable,
+			{[CARRY]: requiredCarryParts},
+		);
+		const maxCarryPartsOnBiggestBody = _.countBy(maximumBody)[CARRY];
+		const maxCarryPartsToEmptyContainer = Math.ceil(0.9 * CONTAINER_CAPACITY / CARRY_CAPACITY);
+		const maxCarryParts = Math.min(maxCarryPartsOnBiggestBody, maxCarryPartsToEmptyContainer);
+		const maxHaulers = Math.ceil(requiredCarryParts / maxCarryParts);
+		const adjustedCarryParts = Math.ceil(requiredCarryParts / maxHaulers);
+
+		const position = decodePosition(targetPos);
+		const visual = new RoomVisual(position.roomName);
+		visual.text('Requested carry parts: ' + requiredCarryParts, position.x, position.y, {align: 'left'});
+		visual.text('Max parts per hauler: ' + maxCarryParts, position.x, position.y + 1, {align: 'left'});
+		visual.text('Calculated hauler size: ' + adjustedCarryParts, position.x, position.y + 2, {align: 'left'});
+		visual.text('Calculated hauler count: ' + maxHaulers, position.x, position.y + 3, {align: 'left'});
+
+		const activeHaulers = _.filter(Game.creepsByRole.hauler, (creep: HaulerCreep) => creep.memory.source === targetPos);
+		const activeCarryParts = _.sum(activeHaulers, creep => creep.getActiveBodyparts(CARRY));
+		visual.text('Active haulers: ' + activeHaulers.length, position.x, position.y + 4.2, {align: 'left'});
+		visual.text('Active carry parts: ' + activeCarryParts, position.x, position.y + 5.2, {align: 'left'});
 	}
 }

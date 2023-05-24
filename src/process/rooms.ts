@@ -7,7 +7,9 @@ import RoomIntelProcess from 'process/rooms/intel';
 import RoomManager from 'room/room-manager';
 import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomPlanner from 'room/planner/room-planner';
+import settings from 'settings-manager';
 import {isHighway} from 'utils/room-name';
+import {encodePosition} from 'utils/serialization';
 
 declare global {
 	interface Memory {
@@ -29,6 +31,13 @@ export default class RoomsProcess extends Process {
 				priority: PROCESS_PRIORITY_ALWAYS,
 				requireSegments: true,
 			});
+
+			if (Game.operations['mine:' + room.name] && settings.get<boolean>('visualizeRemoteMines')) {
+				const operation = Game.operationsByType.mining['mine:' + room.name];
+				for (const position of operation.getSourcePositions()) {
+					operation.drawReport(encodePosition(position));
+				}
+			}
 
 			// Manage owned rooms.
 			// @todo Keep a list of managed rooms in memory so we can notice when

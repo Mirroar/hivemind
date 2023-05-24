@@ -35,6 +35,7 @@ const settings = {
 	// If true, lines representing connections in the bot's nav mesh will be drawn
 	// on the world map.
 	visualizeNavMesh: false,
+	visualizeRemoteMines: false,
 
 	// Remote mining:
 	// The maximum distance for rooms to be mined.
