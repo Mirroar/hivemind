@@ -89,9 +89,9 @@ export default class HaulerRole extends Role {
 		const path = paths[creep.memory.source].path;
 		// Suicide haulers if they can't make another round trip. Saves us CPU and
 		// returns some energy from spawning.
-		// @todo Go to a spawn to recycle if possible.
 		if (!delivering && creep.ticksToLive < path.length * 2 && creep.pos.roomName === creep.memory.origin) {
 			this.performRecycle(creep);
+			return;
 		}
 
 		creep.setCachedPath(serializePositionPath(path), !delivering, 1);

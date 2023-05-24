@@ -66,13 +66,15 @@ export default class HaulerSpawnRole extends SpawnRole {
 				if (creep.memory.source !== targetPos) return false;
 
 				if (creep.spawning) return true;
-				if (creep.ticksToLive > travelTime || creep.ticksToLive > 500) return true;
+				if (creep.ticksToLive > (travelTime * 2) || creep.ticksToLive > 500) return true;
 
 				return false;
 			},
 		);
 
-		if (haulers.length >= maxHaulers) return;
+		const currentCarryParts = _.sum(haulers, creep => creep.getActiveBodyparts(CARRY));
+
+		if (currentCarryParts >= requiredCarryParts) return;
 
 		options.push({
 			priority: 3,
