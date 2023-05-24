@@ -47,11 +47,11 @@ export default class BuilderSpawnRole extends SpawnRole {
 	getNeededWorkParts(room: Room): number {
 		const numConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
 
-		if (room.isEvacuating()) {
-			if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
-				return 0;
-			}
+		if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
+			return 0;
+		}
 
+		if (room.isEvacuating()) {
 			// Just spawn a small builder for keeping roads intact.
 			return 1;
 		}
@@ -61,10 +61,6 @@ export default class BuilderSpawnRole extends SpawnRole {
 			// Just spawn a small builder for keeping roads intact. Wait for
 			// harvesting to fill up storage.
 			return 1;
-		}
-
-		if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500) {
-			return 0;
 		}
 
 		let maxWorkParts = 5;
