@@ -121,6 +121,7 @@ export default class RoomVariationBuilderBase {
 		}
 
 		this.placementManager.planLocation(targetPos, 'link');
+		this.protectPosition(targetPos, 0);
 	};
 
 	/**

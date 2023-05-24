@@ -138,6 +138,7 @@ const settings = {
 	constructPowerSpawns: true,
 	constructObservers: true,
 	constructFactories: true,
+	constructWallsUnderRamparts: true,
 	// Manages energy spending in high level rooms.
 	minEnergyToUpgradeAtRCL8: 50_000,
 	minEnergyForNuker: 50_000,

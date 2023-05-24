@@ -2,6 +2,7 @@ import hivemind from 'hivemind';
 import minCut from 'utils/mincut';
 import PlaceTowersStep from 'room/planner/step/place-towers';
 import RoomVariationBuilderBase from 'room/planner/variation-builder-base';
+import settings from 'settings-manager';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'room-intel';
@@ -489,8 +490,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			if (this.terrain.get(wallPosition.x, wallPosition.y) === TERRAIN_MASK_WALL) continue;
 
 			this.placementManager.planLocation(wallPosition, 'rampart', null);
-			this.placementManager.planLocation(wallPosition, 'road', null);
-			this.placementManager.planLocation(wallPosition, 'road.rampart', null);
+			if (settings.get<boolean>('constructWallsUnderRamparts') || this.terrain.get(wallPosition.x, wallPosition.y) === TERRAIN_MASK_SWAMP) {
+				this.placementManager.planLocation(wallPosition, 'road', null);
+				this.placementManager.planLocation(wallPosition, 'road.rampart', null);
+			}
 		}
 
 		return 'ok';

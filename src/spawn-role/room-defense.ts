@@ -1,6 +1,7 @@
 /* global MOVE ATTACK WORK CARRY HEAL */
 
 import hivemind from 'hivemind';
+import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
@@ -159,14 +160,18 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 
 	getAttackCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [ATTACK]: 0.65},
+			settings.get('constructWallsUnderRamparts')
+				? {[MOVE]: 0.35, [ATTACK]: 0.65}
+				: {[MOVE]: 0.5, [ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
 
 	getRangedCreepBody(room: Room): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [RANGED_ATTACK]: 0.65},
+			settings.get('constructWallsUnderRamparts')
+				? {[MOVE]: 0.35, [RANGED_ATTACK]: 0.65}
+				: {[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
 		);
 	}
