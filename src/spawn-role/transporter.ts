@@ -23,21 +23,22 @@ export default class TransporterSpawnRole extends SpawnRole {
 		const transporterCount = _.size(room.creepsByRole.transporter);
 		if (transporterCount < maxTransporters) {
 			const option: TransporterSpawnOption = {
-				priority: 5,
+				priority: (room.storage || room.terminal) ? 6 : 5,
 				weight: 0.5,
 				force: false,
 				size: transporterSize,
 			};
 
 			if (transporterCount >= maxTransporters / 2) {
-				option.priority = 4;
+				option.priority--;
+				option.priority--;
 			}
 			else if (transporterCount > 1) {
+				option.priority--;
 				option.weight = 0;
 			}
-			else {
+			else if (room.storage || room.terminal) {
 				option.force = true;
-				option.priority = room.storage ? 6 : 5;
 				option.weight = 1;
 			}
 
