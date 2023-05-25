@@ -10,18 +10,18 @@ declare global {
 			unpackId: <T>(packedId: string) => Id<T>;
 			packIdList: <T>(ids: Id<T>[]) => string;
 			unpackIdList: <T>(packedIds: string) => Id<T>[];
-			packCoord: (coord: Coord): string;
-			unpackCoord: (char: string): Coord;
-			unpackCoordAsPos: (char: string, roomName: string): RoomPosition;
-			packCoordList: (coords: Coord[]): string;
-			unpackCoordList: (chars: string): Coord[];
-			unpackCoordListAsPosList: (chars: string): RoomPosition[];
-			packPos;
-			unpackPos;
-			packPosList;
-			unpackPosList;
-			packRoomName;
-			unpackRoomName;
+			packCoord: (coord: Coord) => string;
+			unpackCoord: (char: string) => Coord;
+			unpackCoordAsPos: (char: string, roomName: string) => RoomPosition;
+			packCoordList: (coords: Coord[]) => string;
+			unpackCoordList: (chars: string) => Coord[];
+			unpackCoordListAsPosList: (chars: string, roomName: string) => RoomPosition[];
+			packPos: (pos: RoomPosition) => string;
+			unpackPos: (chars: string) => RoomPosition;
+			packPosList: (positions: RoomPosition[]) => string;
+			unpackPosList: (chars: string) => RoomPosition[];
+			packRoomName: (roomName: string) => string;
+			unpackRoomName: (packed: string) => string;
 		}
 	}
 }
@@ -66,7 +66,10 @@ declare global {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 
-const PERMACACHE: any = {}; // Create a permanent cache for immutable items such as room names
+const PERMACACHE: {
+	_packedRoomNames?: Record<string, string>;
+	_unpackedRoomNames?: Record<string, string>;
+} = {}; // Create a permanent cache for immutable items such as room names
 
 /**
  * Convert a hex string to a Uint16Array.
@@ -161,7 +164,7 @@ function unpackIdList<T>(packedIds: string): Id<T>[] {
  *
  * Benchmarking: average of 150ns to execute on shard2 public server, reduce stringified size by 80%
  */
-function packCoord(coord: {x: number, y: number}): string {
+function packCoord(coord: Coord): string {
 	return String.fromCharCode(((coord.x << 6) | coord.y) + 65);
 }
 
@@ -170,7 +173,7 @@ function packCoord(coord: {x: number, y: number}): string {
  *
  * Benchmarking: average of 60ns-100ns to execute on shard2 public server
  */
-function unpackCoord(char: string): {x: number, y: number} {
+function unpackCoord(char: string): Coord {
 	const xShiftedSixOrY = char.charCodeAt(0) - 65;
 	return {
 		x: (xShiftedSixOrY & 0b111111000000) >>> 6,
@@ -183,7 +186,7 @@ function unpackCoord(char: string): {x: number, y: number} {
  *
  * Benchmarking: average of 500ns to execute on shard2 public server
  */
-function unpackCoordAsPos(packedCoord, roomName) {
+function unpackCoordAsPos(packedCoord: string, roomName: string): RoomPosition {
 	const coord = unpackCoord(packedCoord);
 	return new RoomPosition(coord.x, coord.y, roomName);
 }
@@ -194,7 +197,7 @@ function unpackCoordAsPos(packedCoord, roomName) {
  *
  * Benchmarking: average of 120ns per coord to execute on shard2 public server, reduce stringified size by 94%
  */
-function packCoordList(coords) {
+function packCoordList(coords: Coord[]): string {
 	let str = '';
 	for (let i = 0; i < coords.length; ++i) {
 		str += String.fromCharCode(((coords[i].x << 6) | coords[i].y) + 65);
@@ -207,15 +210,15 @@ function packCoordList(coords) {
  *
  * Benchmarking: average of 100ns per coord to execute on shard2 public server
  */
-function unpackCoordList(chars) {
+function unpackCoordList(chars: string): Coord[] {
 	const coords = [];
 	let xShiftedSixOrY;
 	for (let i = 0; i < chars.length; ++i) {
 		xShiftedSixOrY = chars.charCodeAt(i) - 65;
 		coords.push({
-						x: (xShiftedSixOrY & 0b111111000000) >>> 6,
-						y: (xShiftedSixOrY & 0b000000111111),
-					});
+			x: (xShiftedSixOrY & 0b111111000000) >>> 6,
+			y: (xShiftedSixOrY & 0b000000111111),
+		});
 	}
 	return coords;
 }
@@ -225,7 +228,7 @@ function unpackCoordList(chars) {
  *
  * Benchmarking: average of 500ns per coord to execute on shard2 public server
  */
-function unpackCoordListAsPosList(packedCoords, roomName) {
+function unpackCoordListAsPosList(packedCoords: string, roomName: string): RoomPosition[] {
 	const positions = [];
 	let coord;
 	for (let i = 0; i < packedCoords.length; ++i) {
@@ -242,7 +245,7 @@ PERMACACHE._unpackedRoomNames = PERMACACHE._unpackedRoomNames || {};
 /**
  * Packs a roomName as a single utf-16 character. Character values are stored on permacache.
  */
-function packRoomName(roomName) {
+function packRoomName(roomName: string): string {
 	if (PERMACACHE._packedRoomNames[roomName] === undefined) {
 		const coordinateRegex = /(E|W)(\d+)(N|S)(\d+)/g;
 		const match = coordinateRegex.exec(roomName);
@@ -279,7 +282,7 @@ function packRoomName(roomName) {
 /**
  * Packs a roomName as a single utf-16 character. Character values are stored on permacache.
  */
-function unpackRoomName(char) {
+function unpackRoomName(char: string): string {
 	if (PERMACACHE._unpackedRoomNames[char] === undefined) {
 		const num = char.charCodeAt(0) - 65;
 		const coords = (num & 0b001111111111111);
@@ -318,7 +321,7 @@ function unpackRoomName(char) {
  *
  * Benchmarking: average of 150ns to execute on shard2 public server, reduce stringified size by 90%
  */
-function packPos(pos) {
+function packPos(pos: RoomPosition): string {
 	return packCoord(pos) + packRoomName(pos.roomName);
 }
 
@@ -327,7 +330,7 @@ function packPos(pos) {
  *
  * Benchmarking: average of 600ns to execute on shard2 public server.
  */
-function unpackPos(chars) {
+function unpackPos(chars: string): RoomPosition {
 	const { x, y } = unpackCoord(chars[0]);
 	return new RoomPosition(x, y, unpackRoomName(chars[1]));
 }
@@ -338,7 +341,7 @@ function unpackPos(chars) {
  *
  * Benchmarking: average of 150ns per position to execute on shard2 public server, reduce stringified size by 95%
  */
-function packPosList(posList) {
+function packPosList(posList: RoomPosition[]): string {
 	let str = '';
 	for (let i = 0; i < posList.length; ++i) {
 		str += packPos(posList[i]);
@@ -351,7 +354,7 @@ function packPosList(posList) {
  *
  * Benchmarking: average of 1.5us per position to execute on shard2 public server.
  */
-function unpackPosList(chars) {
+function unpackPosList(chars: string): RoomPosition[] {
 	const posList = [];
 	for (let i = 0; i < chars.length; i += 2) {
 		posList.push(unpackPos(chars.substr(i, 2)));

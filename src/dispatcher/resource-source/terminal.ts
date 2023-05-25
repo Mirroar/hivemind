@@ -59,7 +59,7 @@ export default class TerminalSource extends StructureSource<TerminalSourceTask> 
 
 		const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === this.room.name && order.type === ORDER_SELL);
 		_.each(roomSellOrders, order => {
-			if (context.resourceType && order.resourceType !== context.resourceType) continue;
+			if (context.resourceType && order.resourceType !== context.resourceType) return;
 			if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
 			if (!storage.store[order.resourceType]) return;
 			if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
