@@ -1,22 +1,27 @@
+interface Coord {
+	x: number;
+	y: number;
+}
+
 declare global {
 	namespace NodeJS {
 		interface Global {
-			packId,
-			unpackId,
-			packIdList,
-			unpackIdList,
-			packCoord,
-			unpackCoord,
-			unpackCoordAsPos,
-			packCoordList,
-			unpackCoordList,
-			unpackCoordListAsPosList,
-			packPos,
-			unpackPos,
-			packPosList,
-			unpackPosList,
-			packRoomName,
-			unpackRoomName,
+			packId: <T>(id: Id<T>) => string;
+			unpackId: <T>(packedId: string) => Id<T>;
+			packIdList: <T>(ids: Id<T>[]) => string;
+			unpackIdList: <T>(packedIds: string) => Id<T>[];
+			packCoord: (coord: Coord): string;
+			unpackCoord: (char: string): Coord;
+			unpackCoordAsPos: (char: string, roomName: string): RoomPosition;
+			packCoordList: (coords: Coord[]): string;
+			unpackCoordList: (chars: string): Coord[];
+			unpackCoordListAsPosList: (chars: string): RoomPosition[];
+			packPos;
+			unpackPos;
+			packPosList;
+			unpackPosList;
+			packRoomName;
+			unpackRoomName;
 		}
 	}
 }
@@ -66,7 +71,7 @@ const PERMACACHE: any = {}; // Create a permanent cache for immutable items such
 /**
  * Convert a hex string to a Uint16Array.
  */
-function hexToUint16Array(hex) {
+function hexToUint16Array(hex: string): Uint16Array {
 	const len = Math.ceil(hex.length / 4); // four hex chars for each 16-bit value
 	const array = new Uint16Array(len);
 	for (let i = 0; i < hex.length; i += 4) {
@@ -80,7 +85,7 @@ function hexToUint16Array(hex) {
  * return '123abcde' since this does not account for zero padding. Fortunately this is not an issue for screeps, since
  * ids do not seem to be allowed to start with a 0.
  */
-function uint16ArrayToHex(array) {
+function uint16ArrayToHex(array: Uint16Array): string {
 	const hex = [];
 	let current;
 	for (let i = 0; i < array.length; ++i) {
@@ -96,7 +101,7 @@ function uint16ArrayToHex(array) {
  *
  * Benchmarking: average of 500ns to execute on shard2 public server, reduce stringified size by 75%
  */
-function packId(id) {
+function packId<T>(id: Id<T>): string {
 	return String.fromCharCode(parseInt(id.substr(0, 4), 16)) +
 		   String.fromCharCode(parseInt(id.substr(4, 4), 16)) +
 		   String.fromCharCode(parseInt(id.substr(8, 4), 16)) +
@@ -110,7 +115,7 @@ function packId(id) {
  *
  * Benchmarking: average of 1.3us to execute on shard2 public server
  */
-function unpackId(packedId) {
+function unpackId<T>(packedId: string): Id<T> {
 	let id = '';
 	let current;
 	for (let i = 0; i < 6; ++i) {
@@ -118,17 +123,17 @@ function unpackId(packedId) {
 		id += (current >>> 8).toString(16).padStart(2, '0'); // String.padStart() requires es2017+ target
 		id += (current & 0xFF).toString(16).padStart(2, '0');
 	}
-	return id;
+	return id as Id<T>;
 }
 
 
 /**
  * Packs a list of ids as a utf-16 string. This is better than having a list of packed coords, as it avoids
- * extra commas and "" when memroy gets stringified.
+ * extra commas and "" when memory gets stringified.
  *
  * Benchmarking: average of 500ns per id to execute on shard2 public server, reduce stringified size by 81%
  */
-function packIdList(ids) {
+function packIdList<T>(ids: Id<T>[]): string {
 	let str = '';
 	for (let i = 0; i < ids.length; ++i) {
 		str += packId(ids[i]);
@@ -141,8 +146,8 @@ function packIdList(ids) {
  *
  * Benchmarking: average of 1.2us per id to execute on shard2 public server.
  */
-function unpackIdList(packedIds) {
-	const ids = [];
+function unpackIdList<T>(packedIds: string): Id<T>[] {
+	const ids: Id<T>[] = [];
 	for (let i = 0; i < packedIds.length; i += 6) {
 		ids.push(unpackId(packedIds.substr(i, 6)));
 	}
@@ -156,7 +161,7 @@ function unpackIdList(packedIds) {
  *
  * Benchmarking: average of 150ns to execute on shard2 public server, reduce stringified size by 80%
  */
-function packCoord(coord) {
+function packCoord(coord: {x: number, y: number}): string {
 	return String.fromCharCode(((coord.x << 6) | coord.y) + 65);
 }
 
@@ -165,7 +170,7 @@ function packCoord(coord) {
  *
  * Benchmarking: average of 60ns-100ns to execute on shard2 public server
  */
-function unpackCoord(char) {
+function unpackCoord(char: string): {x: number, y: number} {
 	const xShiftedSixOrY = char.charCodeAt(0) - 65;
 	return {
 		x: (xShiftedSixOrY & 0b111111000000) >>> 6,
