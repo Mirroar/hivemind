@@ -104,8 +104,11 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 			let max = null;
 			let maxResourceType = null;
 			for (const resourceType of getResourcesIn(terminal.store)) {
+				if (context.resourceType && resourceType !== context.resourceType) continue;
+
 				// Do not take out energy if there is enough in storage.
 				if (!this.room.isClearingTerminal() && resourceType === RESOURCE_ENERGY && storage && storage.store[RESOURCE_ENERGY] > terminal.store[RESOURCE_ENERGY] * 5) continue;
+
 				// Do not take out resources that should be sent away.
 				if (resourceType === this.room.memory.fillTerminal) continue;
 

@@ -112,13 +112,13 @@ export default class BuilderRole extends Role {
 			delete creep.memory.sourceTarget;
 		}
 
-		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() > 2500) {
-			const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
-			if (deliveringCreeps.length > 0) {
-				creep.moveToRange(deliveringCreeps[0], 1);
-				return;
-			}
+		const deliveringCreeps = creep.room.getCreepsWithOrder('workerCreep', creep.id);
+		if (deliveringCreeps.length > 0) {
+			creep.moveToRange(deliveringCreeps[0], 1);
+			return;
+		}
 
+		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() > 2500) {
 			// @todo Instead of completely circumventing TypeScript, find a way to
 			// make energy gathering reusable between multiple roles.
 			// @todo Replace with dispatcher calls similar to hauler creeps delivery

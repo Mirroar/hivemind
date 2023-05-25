@@ -37,6 +37,7 @@ export default class TerminalSource extends StructureSource<TerminalSourceTask> 
 		// Take resources from storage to terminal for transfer if requested.
 		if (this.room.memory.fillTerminal && terminal.store[RESOURCE_ENERGY] > 5000) {
 			const resourceType = this.room.memory.fillTerminal;
+			if (context.resourceType && resourceType !== context.resourceType) return;
 			if (storage.store[resourceType]) {
 				if (terminal.store.getFreeCapacity() > 10_000) {
 					options.push({
@@ -58,6 +59,7 @@ export default class TerminalSource extends StructureSource<TerminalSourceTask> 
 
 		const roomSellOrders = _.filter(Game.market.orders, order => order.roomName === this.room.name && order.type === ORDER_SELL);
 		_.each(roomSellOrders, order => {
+			if (context.resourceType && order.resourceType !== context.resourceType) continue;
 			if ((terminal.store[order.resourceType] || 0) >= order.remainingAmount) return;
 			if (!storage.store[order.resourceType]) return;
 			if (terminal.store.getFreeCapacity() < order.remainingAmount - (terminal.store[order.resourceType] || 0)) return;
