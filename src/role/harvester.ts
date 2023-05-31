@@ -49,6 +49,11 @@ export default class HarvesterRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep: HarvesterCreep) {
+		if (creep.heapMemory.suicideSpawn) {
+			this.performRecycle(creep);
+			return;
+		}
+
 		// @todo Instead of completely circumventing TypeScript, find a way to
 		// make energy gathering reusable between multiple roles.
 		this.transporterRole.creep = creep as unknown as TransporterCreep;
@@ -134,6 +139,7 @@ export default class HarvesterRole extends Role {
 			if (source.mineralAmount === 0) {
 				// Return home and suicide.
 				this.performRecycle(creep);
+				return;
 			}
 		}
 
