@@ -48,10 +48,15 @@ export default class HaulerRole extends Role {
 			this.performRecycle(creep);
 		}
 
-		if (creep.memory.delivering && creep.store[RESOURCE_ENERGY] === 0) {
+		const isEmpty = creep.store.getUsedCapacity() === 0;
+		const isFull = creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9;
+		const path = this.getHaulerPath(creep);
+		const isDying = path && creep.ticksToLive <= path.length;
+		const needsToReturn = isFull || (isDying && !isEmpty);
+		if (creep.memory.delivering && isEmpty) {
 			this.setHaulerState(creep, false);
 		}
-		else if (!creep.memory.delivering && creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9) {
+		else if (!creep.memory.delivering && needsToReturn) {
 			this.setHaulerState(creep, true);
 		}
 
@@ -81,12 +86,8 @@ export default class HaulerRole extends Role {
 		creep.memory.delivering = delivering;
 		delete creep.heapMemory.deliveryTarget;
 
-		if (!creep.operation) return;
-
-		const paths = creep.operation.getPaths();
-		if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return;
-
-		const path = paths[creep.memory.source].path;
+		const path = this.getHaulerPath(creep);
+		if (!path) return;
 		// Suicide haulers if they can't make another round trip. Saves us CPU and
 		// returns some energy from spawning.
 		if (!delivering && creep.ticksToLive < path.length * 2 && creep.pos.roomName === creep.memory.origin) {
@@ -95,6 +96,15 @@ export default class HaulerRole extends Role {
 		}
 
 		creep.setCachedPath(serializePositionPath(path), !delivering, 1);
+	}
+
+	getHaulerPath(creep: HaulerCreep): RoomPosition[] | null {
+		if (!creep.operation) return null;
+
+		const paths = creep.operation.getPaths();
+		if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return null;
+
+		return paths[creep.memory.source].path;
 	}
 
 	/**
@@ -271,19 +281,15 @@ export default class HaulerRole extends Role {
 		const container = creep.operation.getContainer(creep.memory.source);
 		if (container) {
 			creep.whenInRange(1, container, () => {
-				const willFillCreep = (container.store.energy || 0) >= creep.store.getFreeCapacity();
-				const relevantAmountReached = (container.store.energy || 0) >= creep.store.getCapacity() / 2;
-				if (!actionTaken && (relevantAmountReached || willFillCreep)) {
-					creep.withdraw(container, RESOURCE_ENERGY);
+				const relevantAmountReached = (container.store.energy || 0) >= Math.min(creep.store.getCapacity() / 2, creep.store.getFreeCapacity());
+				if (!actionTaken && relevantAmountReached) {
+					creep.withdraw(container, RESOURCE_ENERGY) === OK;
 				}
 			});
-
-			return;
 		}
-
-		// If all else fails, make sure we're close enough to our source.
-		if (creep.pos.getRangeTo(sourcePosition) > 2) {
-			creep.moveToRange(sourcePosition, 2);
+		else if (creep.pos.getRangeTo(sourcePosition) > 2) {
+			// If all else fails, make sure we're close enough to our source.
+			creep.whenInRange(2, sourcePosition, () => {});
 		}
 
 		// Repair / build roads, even when just waiting for more energy.
