@@ -155,6 +155,23 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 		range,
 	}
 
+	const visual = this.room.visual;
+	if (visual) {
+		const color = getVisualizationColor(this);
+		visual.rect(
+			target.x - range - 0.4,
+			target.y - range - 0.4,
+			2 * range + 0.8,
+			2 * range + 0.8,
+			{
+				fill: 'transparent',
+				stroke: color,
+				lineStyle: 'dashed',
+				strokeWidth: .2,
+			}
+		);
+	}
+
 	if (this.pos.getRangeTo(target) > range) {
 		this.moveToRange(target, range);
 		return;
@@ -264,7 +281,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 		const pos = path[this.memory.cachedPath.forceGoTo];
 
 		if (this.pos.getRangeTo(pos) > 0) {
-			const options = {};
+			const options: MoveToOpts = {};
 			if (settings.get('visualizeCreepMovement')) {
 				options.visualizePathStyle = {
 					fill: 'transparent',
@@ -562,7 +579,7 @@ function drawCreepMovement(creep: Creep | PowerCreep) {
 	if (!RoomVisual) return;
 	if (!settings.get('visualizeCreepMovement')) return;
 
-	const target = decodePosition(creep.memory.go.target);
+	const target = creep.memory.go?.target ? decodePosition(creep.memory.go.target) : null;
 
 	const color = getVisualizationColor(creep);
 	const pathPosition = creep.memory.cachedPath?.position || creep.memory.cachedPath?.forceGoTo;
