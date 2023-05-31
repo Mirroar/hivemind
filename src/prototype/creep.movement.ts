@@ -156,7 +156,7 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 	}
 
 	const visual = this.room.visual;
-	if (visual) {
+	if (visual && this.pos.getRangeTo(target) <= range) {
 		const color = getVisualizationColor(this);
 		visual.rect(
 			target.x - range - 0.4,
