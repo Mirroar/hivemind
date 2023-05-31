@@ -73,9 +73,7 @@ export default class PowerHarvesterRole extends Role {
 
 		// @todo Move out of the way (use flee), but escort haulers back home.
 		const center = new RoomPosition(25, 25, creep.pos.roomName);
-		if (creep.pos.getRangeTo(center) > 5) {
-			creep.moveToRange(center, 5);
-		}
+		creep.whenInRange(5, center, () => {});
 	}
 
 	attackNearby(creep: Creep) {
@@ -131,30 +129,25 @@ export default class PowerHarvesterRole extends Role {
 			// @todo Find most wounded in range 1, failing that, look further away.
 
 			if (damagedCreep) {
-				let healPower: number = HEAL_POWER;
-				if (creep.pos.getRangeTo(damagedCreep) > 1) {
-					creep.moveToRange(damagedCreep, 1);
-					healPower = RANGED_HEAL_POWER;
-				}
+				creep.whenInRange(1, damagedCreep, () => {});
 
-				if (creep.pos.getRangeTo(damagedCreep) <= 3) {
-					creep.heal(damagedCreep);
+				if (creep.heal(damagedCreep) === OK) {
+					let healPower: number = HEAL_POWER;
+					if (creep.pos.getRangeTo(damagedCreep) > 1) {
+						healPower = RANGED_HEAL_POWER;
+					}
+
 					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (creep.getActiveBodyparts(HEAL) * healPower);
 				}
 			}
-			else if (creep.pos.getRangeTo(powerBank) > 5) {
-				creep.moveToRange(powerBank, 5);
-			}
+			else creep.whenInRange(5, powerBank, () => {});
 		}
 		else {
-			if (creep.pos.getRangeTo(powerBank) > 1) {
-				creep.moveToRange(powerBank, 1);
-				return;
-			}
-
-			if (creep.hits >= creep.hitsMax * 0.7 || POWER_BANK_HIT_BACK === 0) {
-				creep.attack(powerBank);
-			}
+			creep.whenInRange(1, powerBank, () => {
+				if (creep.hits >= creep.hitsMax * 0.7 || POWER_BANK_HIT_BACK === 0) {
+					creep.attack(powerBank);
+				}
+			});
 		}
 	}
 }

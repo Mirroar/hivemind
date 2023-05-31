@@ -42,9 +42,7 @@ export default class PowerHaulerRole extends Role {
 			const powerBank = powerBanks[0];
 			// Get close to power bank if it's close to being destoryed.
 			if (powerBank.hits < ATTACK_POWER * MAX_CREEP_SIZE * 5) {
-				if (creep.pos.getRangeTo(powerBank) > 1) {
-					creep.moveToRange(powerBank, 1);
-				}
+				creep.whenInRange(1, powerBank, () => {});
 
 				// Also drop anything that's not power, it can be picked up again once
 				// power is depleted.
@@ -64,10 +62,7 @@ export default class PowerHaulerRole extends Role {
 			if (this.pickupResources(creep)) return;
 
 			// Wait close by until power bank is destroyed.
-			if (creep.pos.getRangeTo(powerBank) > 5) {
-				creep.moveToRange(powerBank, 5);
-			}
-
+			creep.whenInRange(5, powerBank, () => {});
 			return;
 		}
 
@@ -98,12 +93,10 @@ export default class PowerHaulerRole extends Role {
 				const target = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
 
 				if (target) {
-					if (creep.pos.getRangeTo(target) > 1) {
-						creep.moveToRange(target, 1);
-						return;
-					}
+					creep.whenInRange(1, target, () => {
+						creep.transfer(target, resourceType);
+					});
 
-					creep.transfer(target, resourceType);
 					return;
 				}
 
@@ -128,12 +121,10 @@ export default class PowerHaulerRole extends Role {
 			filter: resource => resource.resourceType === RESOURCE_POWER,
 		});
 		if (powerResources.length > 0) {
-			if (creep.pos.getRangeTo(powerResources[0]) > 1) {
-				creep.moveToRange(powerResources[0], 1);
-				return;
-			}
+			creep.whenInRange(1, powerResources[0], () => {
+				creep.pickup(powerResources[0]);
+			});
 
-			creep.pickup(powerResources[0]);
 			return;
 		}
 
@@ -141,12 +132,10 @@ export default class PowerHaulerRole extends Role {
 			filter: ruin => (ruin.store.power || 0) > 0,
 		});
 		if (powerRuins.length > 0) {
-			if (creep.pos.getRangeTo(powerRuins[0]) > 1) {
-				creep.moveToRange(powerRuins[0], 1);
-				return;
-			}
+			creep.whenInRange(1, powerRuins[0], () => {
+				creep.withdraw(powerRuins[0], RESOURCE_POWER);
+			});
 
-			creep.withdraw(powerRuins[0], RESOURCE_POWER);
 			return;
 		}
 
@@ -199,18 +188,14 @@ export default class PowerHaulerRole extends Role {
 		}
 
 		if (!target) return false;
-
-		if (creep.pos.getRangeTo(target.pos) > 1) {
-			creep.moveToRange(target, 1);
-			return true;
-		}
-
-		if (target.amount) {
-			creep.pickup(target);
-		}
-		else {
-			creep.withdraw(target, resourceType || _.keys(target.store)[0]);
-		}
+		creep.whenInRange(1, target, () => {
+			if (target.amount) {
+				creep.pickup(target);
+			}
+			else {
+				creep.withdraw(target, resourceType || _.keys(target.store)[0]);
+			}
+		});
 
 		return true;
 	}
