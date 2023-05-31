@@ -224,7 +224,7 @@ export default class BrawlerRole extends Role {
 
 		if (enemies && enemies.length > 0) {
 			for (const enemy of enemies) {
-				if (hivemind.relations.isAlly(creep.owner.username)) continue;
+				if (hivemind.relations.isAlly(enemy.owner.username)) continue;
 
 				const option: HostileCreepTargetOption = {
 					priority: 4,
@@ -248,7 +248,7 @@ export default class BrawlerRole extends Role {
 		let structures = creep.room.find(FIND_HOSTILE_STRUCTURES, {
 			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.hits,
 		});
-		if (!creep.room.controller || !creep.room.controller.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) {
+		if (!creep.room.controller?.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) {
 			// Outside of owned rooms, only attack invader cores.
 			structures = _.filter(structures, structure => structure.structureType === STRUCTURE_INVADER_CORE);
 		}
@@ -445,7 +445,7 @@ export default class BrawlerRole extends Role {
 
 		if (creep.getActiveBodyparts(ATTACK)) {
 			// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
-			const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
+			const ignore = (!creep.room.controller?.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			creep.moveTo(target, {
 				reusePath: 0,
 				ignoreDestructibleStructures: ignore,
@@ -457,7 +457,7 @@ export default class BrawlerRole extends Role {
 
 		if (creep.getActiveBodyparts(RANGED_ATTACK)) {
 			// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
-			const ignore = (!creep.room.controller || !creep.room.controller.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
+			const ignore = (!creep.room.controller?.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			if (creep.pos.getRangeTo(target.pos) >= 3) {
 				creep.moveTo(target, {
 					reusePath: 0,
@@ -856,7 +856,7 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.order) {
 			const target = Game.getObjectById<Creep>(creep.memory.order.target);
 
-			if (target && (target.my || ('owner' in target && hivemind.relations.isAlly(target.owner.username)))) {
+			if (target && (target.my || ('owner' in target && hivemind.relations.isAlly(target?.owner.username)))) {
 				if (creep.heal(target) === OK) {
 					return true;
 				}

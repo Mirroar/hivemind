@@ -35,7 +35,7 @@ export default class Relations {
 	 * @return {boolean} true if the user is our ally.
 	 */
 	isAlly(username: string): boolean {
-		return this.allies.includes(username);
+		return username && this.allies.includes(username);
 	}
 
 	/**
