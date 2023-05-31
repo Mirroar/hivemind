@@ -460,12 +460,9 @@ export default class OperatorRole extends Role {
 
 		if (!powerSpawn) return;
 
-		if (this.creep.pos.getRangeTo(powerSpawn) > 1) {
-			this.creep.moveToRange(powerSpawn, 1);
-		}
-		else if (this.creep.renew(powerSpawn) === OK) {
-			this.orderFinished();
-		}
+		this.creep.whenInRange(1, powerSpawn, () => {
+			if (this.creep.renew(powerSpawn) === OK) this.orderFinished();
+		});
 	}
 
 	/**
@@ -491,12 +488,9 @@ export default class OperatorRole extends Role {
 	 * Makes this creep enable power usage in a room.
 	 */
 	performEnablePowers() {
-		if (this.creep.pos.getRangeTo(this.creep.room.controller) > 1) {
-			this.creep.moveToRange(this.creep.room.controller, 1);
-		}
-		else if (this.creep.enableRoom(this.creep.room.controller) === OK) {
-			this.orderFinished();
-		}
+		this.creep.whenInRange(1, this.creep.room.controller, () => {
+			if (this.creep.enableRoom(this.creep.room.controller) === OK) this.orderFinished();
+		});
 	}
 
 	/**
@@ -504,15 +498,21 @@ export default class OperatorRole extends Role {
 	 */
 	usePower() {
 		const power = this.creep.memory.order.power;
-		const target = this.creep.memory.order.target && Game.getObjectById<RoomObject>(this.creep.memory.order.target);
 		const range = POWER_INFO[power].range || 1;
+		const target = this.creep.memory.order.target && Game.getObjectById<RoomObject>(this.creep.memory.order.target);
 
-		if (target && this.creep.pos.getRangeTo(target) > range) {
-			this.creep.moveToRange(target, range);
+		const execute = () => {
+			if (this.creep.usePower(power, target) === OK) {
+				this.creep._powerUsed = true;
+				this.orderFinished();
+			}
 		}
-		else if (this.creep.usePower(power, target) === OK) {
-			this.creep._powerUsed = true;
-			this.orderFinished();
+
+		if (target) {
+			this.creep.whenInRange(range, target, execute);
+		}
+		else {
+			execute();
 		}
 	}
 
@@ -520,38 +520,42 @@ export default class OperatorRole extends Role {
 	 *
 	 */
 	depositOps() {
-		const storage = Game.getObjectById<StructureStorage | StructureTerminal>(this.creep.memory.order.target);
+		const storage = Game.getObjectById<AnyStoreStructure>(this.creep.memory.order.target);
 		if (!storage) {
 			this.orderFinished();
 			return;
 		}
 
-		const amount = Math.min(Math.floor(this.creep.store.getCapacity() / 2), this.creep.store[RESOURCE_OPS] || 0);
-		if (this.creep.pos.getRangeTo(storage) > 1) {
-			this.creep.moveToRange(storage, 1);
-		}
-		else if (this.creep.transfer(storage, RESOURCE_OPS, amount) === OK) {
+		const amount = Math.min(Math.floor(this.creep.store.getCapacity() / 2), this.creep.store[RESOURCE_OPS] || 0, storage.store.getFreeCapacity(RESOURCE_OPS));
+		if (!amount) {
 			this.orderFinished();
+			return;
 		}
+
+		this.creep.whenInRange(1, storage, () => {
+			if (this.creep.transfer(storage, RESOURCE_OPS, amount) === OK) this.orderFinished();
+		});
 	}
 
 	/**
 	 *
 	 */
 	retrieveOps() {
-		const storage = Game.getObjectById<StructureStorage | StructureTerminal>(this.creep.memory.order.target);
+		const storage = Game.getObjectById<AnyStoreStructure>(this.creep.memory.order.target);
 		if (!storage) {
 			this.orderFinished();
 			return;
 		}
 
-		const amount = Math.min(Math.floor(this.creep.store.getCapacity() / 2), storage.store[RESOURCE_OPS] || 0);
-		if (this.creep.pos.getRangeTo(storage) > 1) {
-			this.creep.moveToRange(storage, 1);
-		}
-		else if (this.creep.withdraw(storage, RESOURCE_OPS, amount) === OK) {
+		const amount = Math.min(Math.floor(this.creep.store.getCapacity() / 2), storage.store[RESOURCE_OPS] || 0, this.creep.store.getFreeCapacity());
+		if (!amount) {
 			this.orderFinished();
+			return;
 		}
+
+		this.creep.whenInRange(1, storage, () => {
+			if (this.creep.withdraw(storage, RESOURCE_OPS, amount) === OK) this.orderFinished();
+		});
 	}
 
 	/**
