@@ -51,17 +51,13 @@ export interface RoomIntelMemory {
 		free: number;
 	}>;
 	// @todo Deprecated, remove later! Use `minerals` instead.
-	mineralInfo: {
-		x: number;
-		y: number;
-		id: Id<Mineral>;
-		type: MineralConstant;
-	};
+	mineralInfo: {};
 	minerals: Array<{
 		x: number;
 		y: number;
 		id: Id<Mineral>;
 		type: MineralConstant;
+		amount: number;
 	}>;
 	power: {
 		amount: number;
@@ -233,6 +229,7 @@ export default class RoomIntel {
 				y: mineral.pos.y,
 				id: mineral.id,
 				type: mineral.mineralType,
+				amount: mineral.mineralAmount,
 			});
 		}
 	}
@@ -668,7 +665,13 @@ export default class RoomIntel {
 	 *   Type of this room's mineral source.
 	 */
 	getMineralTypes(): string[] {
-		return this.memory.mineralInfo ? [this.memory.mineralInfo.type] : [];
+		const result = [];
+
+		for (const mineral of this.memory.minerals || []) {
+			result.push(mineral.type);
+		}
+
+		return result;
 	}
 
 	/**
@@ -678,9 +681,17 @@ export default class RoomIntel {
 	 *   An Object containing id, type, x and y position of the mineral deposit.
 	 */
 	getMineralPositions(): Array<{x: number; y: number; id: Id<Mineral>; type: MineralConstant}> {
-		if (this.memory.minerals) return this.memory.minerals;
+		return this.memory.minerals || [];
+	}
 
-		return [this.memory.mineralInfo];
+	getMineralAmounts(): Partial<Record<ResourceConstant, number>> {
+		const result = {};
+
+		for (const mineral of this.memory.minerals || []) {
+			result[mineral.type] = mineral.amount;
+		}
+
+		return result;
 	}
 
 	getDepositInfo(): DepositInfo[] {
@@ -733,8 +744,8 @@ export default class RoomIntel {
 
 			// Add area around mineral as obstacles.
 			const minerals = this.getMineralPositions();
-			for (const mineralInfo of minerals) {
-				handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+			for (const mineral of minerals) {
+				handleMapArea(mineral.x, mineral.y, (x, y) => {
 					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
 				}, 4);
 			}

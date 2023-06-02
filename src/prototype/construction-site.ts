@@ -1,7 +1,9 @@
 /* global ConstructionSite OBSTACLE_OBJECT_TYPES */
 
-interface ConstructionSite {
-	isWalkable: () => boolean;
+declare global {
+	interface ConstructionSite {
+		isWalkable: () => boolean;
+	}
 }
 
 /**
@@ -15,3 +17,5 @@ ConstructionSite.prototype.isWalkable = function (this: ConstructionSite): boole
 	if (_.includes(OBSTACLE_OBJECT_TYPES, this.structureType)) return false;
 	return true;
 };
+
+export {};

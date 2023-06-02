@@ -441,7 +441,7 @@ export default class OperatorRole extends Role {
 		if (!this.hasOrder()) return;
 
 		if (this.creep.memory.order.target) {
-			const target = Game.getObjectById<RoomObject>(this.creep.memory.order.target);
+			const target = Game.getObjectById<RoomObject & _HasId>(this.creep.memory.order.target);
 
 			if (!target || target.pos.roomName !== this.creep.pos.roomName) {
 				delete this.creep.memory.order;
@@ -499,7 +499,7 @@ export default class OperatorRole extends Role {
 	usePower() {
 		const power = this.creep.memory.order.power;
 		const range = POWER_INFO[power].range || 1;
-		const target = this.creep.memory.order.target && Game.getObjectById<RoomObject>(this.creep.memory.order.target);
+		const target = this.creep.memory.order.target && Game.getObjectById<RoomObject & _HasId>(this.creep.memory.order.target);
 
 		const execute = () => {
 			if (this.creep.usePower(power, target) === OK) {

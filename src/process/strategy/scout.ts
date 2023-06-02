@@ -1,4 +1,4 @@
-/* global RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY */
+/* global RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY RESOURCE_THORIUM */
 
 import Process from 'process/process';
 import hivemind from 'hivemind';
@@ -340,6 +340,9 @@ export default class ScoutProcess extends Process {
 		result.addScore(0.5 - (roomIntel.countTiles('wall') * 0.0002), 'wallTiles');
 		// Having few swamp tiles is good (less cost for road maintenance, easier setup).
 		result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
+
+		// Season 5: Amount of thorium is important for gathering score.
+		result.addScore((roomIntel.getMineralAmounts()[RESOURCE_THORIUM] || -100_000) / 100_000, 'thorium');
 
 		this.setExpansionScoreCache(roomName, result);
 

@@ -84,10 +84,11 @@ export default class GathererRole extends Role {
 		if (!option) {
 			// @todo If there's no valid target, deliver and/or assign to new room.
 			creep.memory.delivering = true;
-			return;
+			return null;
 		}
 
 		creep.memory.target = option.target;
+		return Game.getObjectById(creep.memory.target);
 	}
 
 	/**

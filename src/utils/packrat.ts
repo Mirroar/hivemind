@@ -6,10 +6,10 @@ interface Coord {
 declare global {
 	namespace NodeJS {
 		interface Global {
-			packId: <T>(id: Id<T>) => string;
-			unpackId: <T>(packedId: string) => Id<T>;
-			packIdList: <T>(ids: Id<T>[]) => string;
-			unpackIdList: <T>(packedIds: string) => Id<T>[];
+			packId: <T extends _HasId>(id: Id<T>) => string;
+			unpackId: <T extends _HasId>(packedId: string) => Id<T>;
+			packIdList: <T extends _HasId>(ids: Id<T>[]) => string;
+			unpackIdList: <T extends _HasId>(packedIds: string) => Id<T>[];
 			packCoord: (coord: Coord) => string;
 			unpackCoord: (char: string) => Coord;
 			unpackCoordAsPos: (char: string, roomName: string) => RoomPosition;
@@ -104,7 +104,7 @@ function uint16ArrayToHex(array: Uint16Array): string {
  *
  * Benchmarking: average of 500ns to execute on shard2 public server, reduce stringified size by 75%
  */
-function packId<T>(id: Id<T>): string {
+function packId<T extends _HasId>(id: Id<T>): string {
 	return String.fromCharCode(parseInt(id.substr(0, 4), 16)) +
 		   String.fromCharCode(parseInt(id.substr(4, 4), 16)) +
 		   String.fromCharCode(parseInt(id.substr(8, 4), 16)) +
@@ -118,7 +118,7 @@ function packId<T>(id: Id<T>): string {
  *
  * Benchmarking: average of 1.3us to execute on shard2 public server
  */
-function unpackId<T>(packedId: string): Id<T> {
+function unpackId<T extends _HasId>(packedId: string): Id<T> {
 	let id = '';
 	let current;
 	for (let i = 0; i < 6; ++i) {
@@ -136,7 +136,7 @@ function unpackId<T>(packedId: string): Id<T> {
  *
  * Benchmarking: average of 500ns per id to execute on shard2 public server, reduce stringified size by 81%
  */
-function packIdList<T>(ids: Id<T>[]): string {
+function packIdList<T extends _HasId>(ids: Id<T>[]): string {
 	let str = '';
 	for (let i = 0; i < ids.length; ++i) {
 		str += packId(ids[i]);
@@ -149,7 +149,7 @@ function packIdList<T>(ids: Id<T>[]): string {
  *
  * Benchmarking: average of 1.2us per id to execute on shard2 public server.
  */
-function unpackIdList<T>(packedIds: string): Id<T>[] {
+function unpackIdList<T extends _HasId>(packedIds: string): Id<T>[] {
 	const ids: Id<T>[] = [];
 	for (let i = 0; i < packedIds.length; i += 6) {
 		ids.push(unpackId(packedIds.substr(i, 6)));

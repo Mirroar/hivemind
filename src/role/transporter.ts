@@ -123,7 +123,7 @@ export default class TransporterRole extends Role {
 
 		if (creep.memory.singleRoom) {
 			if (creep.memory.order && 'target' in creep.memory.order) {
-				const target = Game.getObjectById<RoomObject>(creep.memory.order.target);
+				const target = Game.getObjectById<RoomObject & _HasId>(creep.memory.order.target);
 				if (target && target.pos && target.pos.roomName !== creep.memory.singleRoom) {
 					this.setTransporterState(creep.memory.delivering);
 				}
