@@ -32,6 +32,14 @@ declare global {
 	}
 }
 
+
+interface ScoredExtractorPosition {
+	position: RoomPosition;
+	hasExtractor: boolean;
+	score: number;
+}
+
+
 export default class RoomManager {
 	room: Room;
 	roomPlanner: RoomPlanner;
@@ -323,7 +331,7 @@ export default class RoomManager {
 
 		// Build extractor and related container if available.
 		if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
-			this.buildPlannedStructures('extractor', STRUCTURE_EXTRACTOR);
+			this.manageExtractors();
 			this.buildPlannedStructures('container.mineral', STRUCTURE_CONTAINER);
 		}
 
@@ -391,16 +399,73 @@ export default class RoomManager {
 	manageLinks() {
 		// Make sure links are built in the right place, remove otherwise.
 		this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
-		this.buildPlannedStructures('link.controller', STRUCTURE_LINK);
-		// @todo Build link to farthest locations first.
+		if (!this.buildPlannedStructures('link.controller', STRUCTURE_LINK)) return;
+
+		// Build link to farthest locations first.
 		const farthestLinks = _.sortBy(this.roomPlanner.getLocations('link.source'), p => -p.getRangeTo(this.room.controller.pos));
 		for (const pos of farthestLinks) {
-			this.tryBuild(pos, STRUCTURE_LINK);
+			if (!this.tryBuild(pos, STRUCTURE_LINK)) return;
 		}
 
 		this.buildPlannedStructures('link.source', STRUCTURE_LINK);
 		this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
 		this.buildPlannedStructures('link', STRUCTURE_LINK);
+	}
+
+	manageExtractors() {
+		const plannedLocations = this.roomPlanner.getLocations('extractor');
+		if (plannedLocations.length <= CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level]) {
+			this.buildPlannedStructures('extractor', STRUCTURE_EXTRACTOR);
+			return;
+		}
+
+		const sortedMinerals = _.sortBy(this.scoreExtractorPositions(plannedLocations), p => -p.score);
+
+		let missingExtractors = 0;
+		for (const mineral of sortedMinerals) {
+			// Build extractor only on minerals that have resources left.
+			if (mineral.score) {
+				if (!this.tryBuild(mineral.position, STRUCTURE_EXTRACTOR)) {
+					missingExtractors++;
+				}
+				continue;
+			}
+
+			// Dismantle extractors if its mineral is empty and there's an uncovered
+			// mineral with resources left.
+			if (missingExtractors === 0) break;
+			if (!mineral.hasExtractor) continue;
+
+			const extractor = _.filter(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR)[0];
+			if (!extractor) continue;
+
+			if (extractor.destroy() === OK) missingExtractors--;
+		}
+	}
+
+	scoreExtractorPositions(positions: RoomPosition[]): ScoredExtractorPosition[] {
+		const result: ScoredExtractorPosition[] = [];
+
+		for (const position of positions) {
+			const mineral = position.lookFor(LOOK_MINERALS)[0];
+			if (!mineral) continue;
+
+			const structures = position.lookFor(LOOK_STRUCTURES);
+			const constructionSites = position.lookFor(LOOK_CONSTRUCTION_SITES);
+
+			const hasExtractor = _.filter(structures, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0 ||
+				_.filter(constructionSites, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0;
+
+			const scoreFactor = mineral.mineralType === RESOURCE_THORIUM ? 2 : 1;
+
+			result.push({
+				position,
+				hasExtractor,
+				score: mineral.mineralAmount * scoreFactor,
+			})
+		}
+
+		return result;
 	}
 
 	/**
