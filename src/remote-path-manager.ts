@@ -48,42 +48,7 @@ export default class RemotePathManager {
 				plainCost: 2,
 				swampCost: 10,
 				maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
-				roomCallback: roomName => cache.inHeap('remotePathManagerCostMatrix:' + roomName, 1000, () => {
-					const roomIntel = getRoomIntel(roomName);
-
-					// Don't path through rooms owned by other players.
-					if (roomIntel.isOwned()) return false;
-
-					// Initialize a cost matrix for this room.
-					const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
-					const matrix = isMyRoom ? Game.rooms[roomName].roomPlanner.getNavigationMatrix().clone() : new PathFinder.CostMatrix();
-
-					// @todo Set to 1 for each road used by other active remote mining paths in this room.
-					// For now, we just use road locations from intel as a guide.
-					const roads = roomIntel.getRoadCoords();
-					for (const road of roads) {
-						if (matrix.get(road.x, road.y) === 0) matrix.set(road.x, road.y, 1);
-					}
-
-					if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-						// Disallow areas around source keeper sources.
-						_.each(roomIntel.getSourcePositions(), sourceInfo => {
-							handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
-								matrix.set(x, y, 255);
-							}, 4);
-						});
-
-						// Disallow areas around source keeper minerals.
-						const mineralInfo = roomIntel.getMineralPosition();
-						if (mineralInfo) {
-							handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
-								matrix.set(x, y, 255);
-							}, 4);
-						}
-					}
-
-					return matrix;
-				}),
+				roomCallback: roomName => this.getCostMatrix(roomName),
 			});
 
 			if (!result || result.incomplete || result.path.length >= minPathLength) continue;
@@ -97,5 +62,53 @@ export default class RemotePathManager {
 		memory.path = minPath ? packPosList(minPath) : null;
 
 		return minPath;
+	}
+
+	getCostMatrix(roomName: string): CostMatrix | false {
+		return cache.inHeap('remotePathManagerCostMatrix:' + roomName, 1000, () => {
+			const roomIntel = getRoomIntel(roomName);
+
+			// Don't path through rooms owned by other players.
+			if (roomIntel.isOwned()) return false;
+
+			// Initialize a cost matrix for this room.
+			const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
+			const matrix = isMyRoom ? Game.rooms[roomName].roomPlanner.getNavigationMatrix().clone() : new PathFinder.CostMatrix();
+
+			// @todo Set to 1 for each road used by _other_ active remote mining paths in this room.
+			// This should lead to paths converging to reuse road sections where possible.
+			// For now, we just use road locations from intel as a guide.
+			const roads = roomIntel.getRoadCoords();
+			for (const road of roads) {
+				if (matrix.get(road.x, road.y) === 0) matrix.set(road.x, road.y, 1);
+			}
+
+			if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+				// Disallow areas around source keeper sources.
+				_.each(roomIntel.getSourcePositions(), sourceInfo => {
+					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+						matrix.set(x, y, 255);
+					}, 4);
+				});
+
+				// Disallow areas around source keeper sources.
+				const sourcePositions = roomIntel.getSourcePositions();
+				for (const sourceInfo of sourcePositions) {
+					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+						matrix.set(x, y, 255);
+					}, 4);
+				}
+
+				// Disallow areas around source keeper minerals.
+				const mineralPositions = roomIntel.getMineralPositions();
+				for (const mineralInfo of mineralPositions) {
+					handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+						matrix.set(x, y, 255);
+					}, 4);
+				}
+			}
+
+			return matrix;
+		})
 	}
 }

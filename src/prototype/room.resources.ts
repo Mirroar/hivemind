@@ -13,7 +13,7 @@ interface RoomResourceState {
 	state: Partial<Record<ResourceConstant, ResourceLevel>>;
 	canTrade: boolean;
 	isEvacuating: boolean;
-	mineralType: ResourceConstant;
+	mineralTypes: ResourceConstant[];
 	addResource: (resourceType: ResourceConstant, amount: number) => void;
 }
 
@@ -380,7 +380,7 @@ Room.prototype.getResourceState = function (this: Room) {
 				this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
 			},
 			isEvacuating: false,
-			mineralType: null,
+			mineralTypes: [],
 		};
 
 		// @todo Remove in favor of function.
@@ -405,8 +405,10 @@ Room.prototype.getResourceState = function (this: Room) {
 			});
 		}
 
-		if (this.mineral && !roomData.isEvacuating) {
-			roomData.mineralType = this.mineral.mineralType;
+		if (!roomData.isEvacuating) {
+			for (const mineral of this.minerals) {
+				roomData.mineralTypes.push(mineral.mineralType);
+			}
 		}
 
 		// Add resources in labs as well.

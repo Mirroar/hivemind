@@ -619,7 +619,19 @@ export default class TransporterRole extends Role {
 			for (const resourceType of getResourcesIn(container.store)) {
 				if (resourceType === RESOURCE_ENERGY) continue;
 				if (container.store[resourceType] === 0) continue;
-				if (container.id === room.mineral.getNearbyContainer()?.id && resourceType === room.mineral.mineralType && container.store[resourceType] < CONTAINER_CAPACITY / 2) continue;
+
+				let isEmptyMineralContainer = false;
+				for (const mineral of room.minerals) {
+					if (
+						container.id === mineral.getNearbyContainer()?.id &&
+						resourceType === mineral.mineralType &&
+						container.store[resourceType] < CONTAINER_CAPACITY / 2
+					) {
+						isEmptyMineralContainer = true;
+						break;
+					}
+				}
+				if (isEmptyMineralContainer) continue;
 
 				const option: TransporterStructureOrderOption = {
 					priority: 3,
@@ -741,6 +753,8 @@ export default class TransporterRole extends Role {
 		const labs = room.memory.labs.reactor;
 		for (const labID of labs) {
 			// Clear out reaction labs.
+			// @todo collect job so that transporter empties any labs that need
+			// it before doing another action.
 			const lab = Game.getObjectById<StructureLab>(labID);
 			if (!lab) continue;
 

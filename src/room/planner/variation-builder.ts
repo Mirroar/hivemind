@@ -110,18 +110,19 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.storeHarvestPosition(source, harvestPosition);
 		}
 
-		const mineral = roomIntel.getMineralPosition();
-		const mineralPosition = new RoomPosition(mineral.x, mineral.y, this.roomName);
-		this.placementManager.planLocation(mineralPosition, 'extractor');
-		const mineralRoads = this.placementManager.findAccessRoad(mineralPosition, this.roomCenterEntrances);
-		for (const pos of mineralRoads) {
-			this.placementManager.planLocation(pos, 'road', 1);
-			this.placementManager.planLocation(pos, 'road.mineral', null);
+		for (const mineral of roomIntel.getMineralPositions()) {
+			const mineralPosition = new RoomPosition(mineral.x, mineral.y, this.roomName);
+			this.placementManager.planLocation(mineralPosition, 'extractor');
+			const mineralRoads = this.placementManager.findAccessRoad(mineralPosition, this.roomCenterEntrances);
+			for (const pos of mineralRoads) {
+				this.placementManager.planLocation(pos, 'road', 1);
+				this.placementManager.planLocation(pos, 'road.mineral', null);
+			}
+
+			this.placeContainer(mineralRoads, 'mineral');
+
+			this.storeHarvestPosition(mineral, mineralRoads[0]);
 		}
-
-		this.placeContainer(mineralRoads, 'mineral');
-
-		this.storeHarvestPosition(mineral, mineralRoads[0]);
 
 		return 'ok';
 	}
@@ -518,8 +519,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			openList.push(encodePosition(new RoomPosition(source.x, source.y, this.roomName)));
 		}
 
-		const mineral = roomIntel.getMineralPosition();
-		openList.push(encodePosition(new RoomPosition(mineral.x, mineral.y, this.roomName)));
+		for (const mineral of roomIntel.getMineralPositions()) {
+			openList.push(encodePosition(new RoomPosition(mineral.x, mineral.y, this.roomName)));
+		}
 
 		this.pruneWallFromTiles(walls, openList);
 

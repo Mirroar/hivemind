@@ -272,8 +272,7 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 			});
 
 			// Add area around mineral as obstacles.
-			const mineralInfo = roomIntel.getMineralPosition();
-			if (mineralInfo) {
+			for (const mineralInfo of roomIntel.getMineralPositions()) {
 				handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
 					sourceKeeperCallback(x, y);
 				}, 4);

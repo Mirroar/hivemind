@@ -50,12 +50,19 @@ export interface RoomIntelMemory {
 		id: Id<Source>;
 		free: number;
 	}>;
+	// @todo Deprecated, remove later! Use `minerals` instead.
 	mineralInfo: {
 		x: number;
 		y: number;
 		id: Id<Mineral>;
 		type: MineralConstant;
 	};
+	minerals: Array<{
+		x: number;
+		y: number;
+		id: Id<Mineral>;
+		type: MineralConstant;
+	}>;
 	power: {
 		amount: number;
 		hits: number;
@@ -219,12 +226,15 @@ export default class RoomIntel {
 		);
 
 		// Check minerals.
-		this.memory.mineralInfo = room.mineral && {
-			x: room.mineral.pos.x,
-			y: room.mineral.pos.y,
-			id: room.mineral.id,
-			type: room.mineral.mineralType,
-		};
+		this.memory.minerals = [];
+		for (const mineral of room.minerals) {
+			this.memory.minerals.push({
+				x: mineral.pos.x,
+				y: mineral.pos.y,
+				id: mineral.id,
+				type: mineral.mineralType,
+			});
+		}
 	}
 
 	/**
@@ -657,8 +667,8 @@ export default class RoomIntel {
 	 * @return {string}
 	 *   Type of this room's mineral source.
 	 */
-	getMineralType(): string {
-		return this.memory.mineralInfo ? this.memory.mineralInfo.type : null;
+	getMineralTypes(): string[] {
+		return this.memory.mineralInfo ? [this.memory.mineralInfo.type] : [];
 	}
 
 	/**
@@ -667,8 +677,10 @@ export default class RoomIntel {
 	 * @return {object}
 	 *   An Object containing id, type, x and y position of the mineral deposit.
 	 */
-	getMineralPosition(): {x: number; y: number; id: Id<Mineral>; type: MineralConstant} {
-		return this.memory.mineralInfo;
+	getMineralPositions(): Array<{x: number; y: number; id: Id<Mineral>; type: MineralConstant}> {
+		if (this.memory.minerals) return this.memory.minerals;
+
+		return [this.memory.mineralInfo];
 	}
 
 	getDepositInfo(): DepositInfo[] {
@@ -720,8 +732,8 @@ export default class RoomIntel {
 			});
 
 			// Add area around mineral as obstacles.
-			const mineralInfo = this.getMineralPosition();
-			if (mineralInfo) {
+			const minerals = this.getMineralPositions();
+			for (const mineralInfo of minerals) {
 				handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
 					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
 				}, 4);

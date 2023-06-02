@@ -162,7 +162,9 @@ export default class TradeProcess extends Process {
 				total.resources[resourceType] = (total.resources[resourceType] || 0) + roomData.totalResources[resourceType];
 			}
 
-			total.sources[roomData.mineralType] = (total.sources[roomData.mineralType] || 0) + 1;
+			for (const mineralType of roomData.mineralTypes) {
+				total.sources[mineralType] = (total.sources[mineralType] || 0) + 1;
+			}
 			rooms[room.name] = roomData;
 		}
 

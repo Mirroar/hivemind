@@ -198,21 +198,21 @@ export default class OperatorRole extends Role {
 		if (this.creep.powers[PWR_REGEN_MINERAL].level < 1) return;
 		if (this.creep.powers[PWR_REGEN_MINERAL].cooldown > 0) return;
 
-		const mineral: Mineral = this.creep.room.mineral;
-		if (!mineral) return;
-		if (mineral.ticksToRegeneration && mineral.ticksToRegeneration > 0) return;
+		for (const mineral of this.creep.room.minerals) {
+			if (mineral.ticksToRegeneration && mineral.ticksToRegeneration > 0) return;
 
-		const activeEffect = _.first(_.filter(mineral.effects, effect => effect.effect === PWR_REGEN_MINERAL));
-		const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
-		if (ticksRemaining > POWER_INFO[PWR_REGEN_MINERAL].duration / 5) return;
+			const activeEffect = _.first(_.filter(mineral.effects, effect => effect.effect === PWR_REGEN_MINERAL));
+			const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
+			if (ticksRemaining > POWER_INFO[PWR_REGEN_MINERAL].duration / 5) return;
 
-		options.push({
-			type: 'usePower',
-			power: PWR_REGEN_MINERAL,
-			target: mineral.id,
-			priority: 3,
-			weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_REGEN_MINERAL].duration),
-		});
+			options.push({
+				type: 'usePower',
+				power: PWR_REGEN_MINERAL,
+				target: mineral.id,
+				priority: 3,
+				weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_REGEN_MINERAL].duration),
+			});
+		}
 	}
 
 	/**

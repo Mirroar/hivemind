@@ -105,15 +105,13 @@ export default class VariationGenerator {
 			}
 		}
 		// Also include source and mineral positions when determining room center.
-		const mineralInfo = roomIntel.getMineralPosition();
-		if (mineralInfo) {
+		for (const mineral of roomIntel.getMineralPositions()) {
 			count++;
-			cx += mineralInfo.x;
-			cy += mineralInfo.y;
+			cx += mineral.x;
+			cy += mineral.y;
 		}
 
-		const sourceInfo = roomIntel.getSourcePositions();
-		for (const source of sourceInfo) {
+		for (const source of roomIntel.getSourcePositions()) {
 			count++;
 			cx += source.x;
 			cy += source.y;

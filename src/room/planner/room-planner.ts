@@ -1,5 +1,5 @@
 /* global PathFinder Room RoomPosition RoomVisual OBSTACLE_OBJECT_TYPES
-CONTROLLER_STRUCTURES FIND_SOURCES FIND_MINERALS */
+CONTROLLER_STRUCTURES FIND_SOURCES */
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';

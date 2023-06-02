@@ -31,7 +31,7 @@ declare global {
 		exploits: Record<string, Exploit>;
 		defense: RoomDefense;
 		sources: Source[];
-		mineral: Mineral;
+		minerals: Mineral[];
 		enhanceData;
 		scan;
 		updateControllerContainer;
@@ -134,20 +134,25 @@ Object.defineProperty(Room.prototype, 'sources', {
 	configurable: true,
 });
 
-// Define quick access property room.mineral
-Object.defineProperty(Room.prototype, 'mineral', {
+// Define quick access property room.minerals
+Object.defineProperty(Room.prototype, 'minerals', {
 
 	/**
-	 * Gets a room's mineral.
+	 * Gets a room's minerals.
 	 *
 	 * @return {Source[]}
-	 *   The room's mineral.
+	 *   The room's minerals.
 	 */
-	get(this: Room): Mineral {
-		return cache.inObject(this, 'mineral', 1, () => {
+	get(this: Room): Mineral[] {
+		return cache.inObject(this, 'minerals', 1, () => {
 			const mineralIds = cache.inHeap('mineral:' + this.name, 10_000, () => _.map<Mineral, string>(this.find(FIND_MINERALS), 'id'));
 
-			return mineralIds[0] && Game.getObjectById(mineralIds[0]);
+			const minerals = [];
+			for (const mineralId of mineralIds) {
+				minerals.push(Game.getObjectById(mineralId));
+			}
+
+			return minerals;
 		});
 	},
 	enumerable: false,

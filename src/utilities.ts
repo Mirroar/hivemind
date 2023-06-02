@@ -104,7 +104,6 @@ const utilities = {
 				}
 
 				// @todo Try not to drive too close to sources / minerals / controllers.
-				// @todo Avoid source keepers.
 
 				return costs;
 			},

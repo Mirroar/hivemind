@@ -29,15 +29,19 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 			},
 		});
 
-		// We assume there is always at most one mineral deposit in a room.
-		const mineralHarvesters = minerals.length > 0 ? minerals[0].harvesters : {};
-		if (_.size(mineralHarvesters) > 0 || minerals.length === 0 || minerals[0].mineralAmount === 0) return [];
+		const options: MineralHarvesterSpawnOption[] = [];
+		for (const mineral of minerals) {
+			const mineralHarvesters = mineral.harvesters;
+			if (_.size(mineralHarvesters) > 0 || mineral.mineralAmount === 0) continue;
 
-		return [{
-			priority: 2,
-			weight: 0,
-			source: minerals[0].id,
-		}];
+			options.push({
+				priority: 2,
+				weight: 0,
+				source: mineral.id,
+			});
+		}
+
+		return options;
 	}
 
 	/**

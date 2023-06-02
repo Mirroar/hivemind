@@ -245,7 +245,7 @@ export default class ScoutProcess extends Process {
 				if (amount === 0) return;
 
 				this.score += amount;
-				this.reasons[reason] = amount;
+				this.reasons[reason] = (this.reasons[reason] || 0) + amount;
 			},
 		};
 
@@ -267,10 +267,10 @@ export default class ScoutProcess extends Process {
 		// Having a mineral source is good.
 		// We prefer rooms with minerals of which we have few / no sources.
 		const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
-		if (roomIntel.getMineralType()) {
+		for (const mineralType of roomIntel.getMineralTypes()) {
 			// In our own rooms, calculate the score this has gotten us.
 			const mineralGain = isMyRoom ? 0 : 1;
-			result.addScore(1 / ((this.mineralCount[roomIntel.getMineralType()] || 0) + mineralGain), 'numMinerals');
+			result.addScore(1 / ((this.mineralCount[mineralType] || 0) + mineralGain), 'numMinerals');
 		}
 
 		// Add score for harvest room sources.
@@ -617,12 +617,11 @@ export default class ScoutProcess extends Process {
 	 */
 	generateMineralStatus() {
 		this.mineralCount = {};
-		const mineralCount = this.mineralCount;
 		for (const room of Game.myRooms) {
 			const roomIntel = getRoomIntel(room.name);
-			const mineralType = roomIntel.getMineralType();
-
-			mineralCount[mineralType] = (mineralCount[mineralType] || 0) + 1;
+			for (const mineralType of roomIntel.getMineralTypes()) {
+				this.mineralCount[mineralType] = (this.mineralCount[mineralType] || 0) + 1;
+			}
 		}
 	}
 }
