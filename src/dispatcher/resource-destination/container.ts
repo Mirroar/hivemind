@@ -28,7 +28,7 @@ export default class ContainerDestination extends StructureDestination<Container
 
 	addControllerContainerTask(context: ResourceDestinationContext, options: ContainerDestinationTask[]) {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;
-		if (!this.room.creepsByRole.upgrader) return;
+		if (!this.room.creepsByRole.upgrader && !this.room.creepsByRole.builder) return;
 
 		const container = Game.getObjectById<StructureContainer>(this.room.memory.controllerContainer);
 		if (!container) return;
