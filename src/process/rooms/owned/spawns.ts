@@ -1,6 +1,6 @@
 import container from 'utils/container';
 import Process from 'process/process';
-import hivemind from 'hivemind';
+import settings from 'settings-manager';
 import SpawnManager from 'spawn-manager';
 
 import brawlerSpawnRole from 'spawn-role/brawler';
@@ -103,6 +103,7 @@ export default class ManageSpawnsProcess extends Process {
 		const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.room.name && spawn.isOperational());
 		this.visualizeSpawning(roomSpawns);
 		this.spawnManager.manageSpawns(this.room, roomSpawns);
+		this.visualizeSpawnQueue();
 		this.collectSpawnStats(roomSpawns);
 	}
 
@@ -134,7 +135,7 @@ export default class ManageSpawnsProcess extends Process {
 				spawn.heapMemory.history = spawn.heapMemory.history.slice(-maxHistoryChunks);
 
 				// Also record to room stats if enabled.
-				if (hivemind.settings.get('recordRoomStats') && Memory.roomStats[spawn.room.name]) {
+				if (settings.get('recordRoomStats') && Memory.roomStats[spawn.room.name]) {
 					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnSpawning'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnSpawning'] || 0) + spawn.heapMemory.spawning;
 					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnWaiting'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnWaiting'] || 0) + spawn.heapMemory.waiting;
 					Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnIdle'] = (Memory.roomStats[spawn.room.name]['RCL' + spawn.room.controller.level + 'SpawnIdle'] || 0) + spawn.heapMemory.ticks - spawn.heapMemory.waiting - spawn.heapMemory.spawning;
@@ -179,5 +180,28 @@ export default class ManageSpawnsProcess extends Process {
 				font: 0.5,
 			});
 		}
+	}
+
+	visualizeSpawnQueue() {
+		if (!settings.get('visualizeSpawnQueue')) return;
+		if (!this.room.visual) return;
+
+		this.room.visual.text('Spawn Queue:', 49, 1, {
+			align: 'right',
+		});
+
+		const queue = _.sortBy(this.spawnManager.getAllSpawnOptions(this.room), option => -(option.priority + (0.01 * option.weight)));
+		let offset = 0;
+		for (const option of queue) {
+			this.visualizeSpawnQueueLine(option, offset++);
+		}
+	}
+
+	visualizeSpawnQueueLine(option: SpawnOption, yOffset: number) {
+		const text = option.role + ' (' + option.priority + '/' + option.weight.toPrecision(2) + ')';
+
+		this.room.visual.text(text, 49, 2 + yOffset, {
+			align: 'right',
+		});
 	}
 }

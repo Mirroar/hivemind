@@ -9,7 +9,10 @@ interface ClaimerSpawnOption extends SpawnOption {
 
 declare global {
 	interface RoomMemory {
-		lastClaim?: any;
+		lastClaim?: {
+			time: number;
+			value: number;
+		};
 	}
 }
 
@@ -26,22 +29,35 @@ export default class ClaimerSpawnRole extends SpawnRole {
 
 		const options: ClaimerSpawnOption[] = [];
 		const reservePositions = room.getRemoteReservePositions();
+		let offset = -1;
 		for (const pos of reservePositions) {
+			offset++;
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
 			// Don't spawn if enemies are in the room.
 			// @todo Or in any room on the route, actually.
-			if (!operation || operation.isUnderAttack() || operation.needsDismantler()) continue;
+			if (!operation || operation.needsDismantler()) continue;
+			if (operation.isUnderAttack()) {
+				const totalEnemyData = operation.getTotalEnemyData();
+				const isInvaderCore = totalEnemyData.damage === 0 && totalEnemyData.heal === 0;
+				if (!isInvaderCore) continue;
+			}
 
-			const claimers = _.filter(Game.creepsByRole.claimer || {}, (creep: ClaimerCreep) => creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos));
+			const pathLength = operation.getPaths()?.[encodePosition(pos)]?.path.length || 50;
+			const claimerSpawnTime = this.getCreepBody(room).length * CREEP_SPAWN_TIME;
+			const claimers = _.filter(
+				Game.creepsByRole.claimer || {},
+				(creep: ClaimerCreep) =>
+					creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos) &&
+					creep.ticksToLive > pathLength + claimerSpawnTime
+			);
 			if (_.size(claimers) > 0) continue;
 
 			const roomMemory = Memory.rooms[pos.roomName];
-			if (
-				roomMemory &&
-				roomMemory.lastClaim &&
-				roomMemory.lastClaim.time + roomMemory.lastClaim.value - Game.time > CONTROLLER_RESERVE_MAX * 0.5
-			) continue;
+			if (roomMemory?.lastClaim) {
+				const remainingReservation = roomMemory.lastClaim.time + roomMemory.lastClaim.value - Game.time;
+				if (remainingReservation - claimerSpawnTime - pathLength > CONTROLLER_RESERVE_MAX * 0.5) continue;
+			}
 
 			// Don't spawn if enemies are in the room.
 			// @todo Or in any room on the route, actually.
@@ -49,9 +65,10 @@ export default class ClaimerSpawnRole extends SpawnRole {
 
 			options.push({
 				priority: 3,
-				weight: 0,
+				weight: 1 - offset * 0.8,
 				targetPos: pos,
 			});
+
 		}
 
 		return options;

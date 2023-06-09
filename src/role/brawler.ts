@@ -856,7 +856,7 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.order) {
 			const target = Game.getObjectById<Creep>(creep.memory.order.target);
 
-			if (target && (target.my || ('owner' in target && hivemind.relations.isAlly(target?.owner.username)))) {
+			if (target && (target.my || hivemind.relations.isAlly(target?.owner?.username))) {
 				if (creep.heal(target) === OK) {
 					return true;
 				}

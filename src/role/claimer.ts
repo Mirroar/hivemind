@@ -89,23 +89,22 @@ export default class ClaimerRole extends Role {
 		const target = creep.room.controller;
 
 		creep.whenInRange(1, target, () => {
+			let reservation = 0;
+			if (creep.room.controller.reservation && creep.room.controller.reservation.username === getUsername()) {
+				reservation = creep.room.controller.reservation.ticksToEnd;
+			}
+
+			creep.room.memory.lastClaim = {
+				time: Game.time,
+				value: reservation,
+			};
+
 			if (creep.room.controller.reservation && creep.room.controller.reservation.username !== getUsername()) {
 				creep.attackController(target);
 				return;
 			}
 
-			const result = creep.reserveController(target);
-			if (result === OK) {
-				let reservation = 0;
-				if (creep.room.controller.reservation && creep.room.controller.reservation.username === getUsername()) {
-					reservation = creep.room.controller.reservation.ticksToEnd;
-				}
-
-				creep.room.memory.lastClaim = {
-					time: Game.time,
-					value: reservation,
-				};
-			}
+			creep.reserveController(target);
 
 			if (target.sign?.username) {
 				creep.signController(target, '');

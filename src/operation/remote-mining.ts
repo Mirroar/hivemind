@@ -152,11 +152,11 @@ export default class RemoteMiningOperation extends Operation {
 						};
 					}
 
+					const sourceRoom = path[path.length - 1].roomName;
 					const travelTime = path.length;
-					const generatedEnergy = this.hasReservation() ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
+					const generatedEnergy = this.canReserveFrom(sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
 					const requiredWorkParts = generatedEnergy / ENERGY_REGEN_TIME / HARVEST_POWER;
 					const requiredCarryParts = Math.ceil(2 * travelTime * generatedEnergy / ENERGY_REGEN_TIME / CARRY_CAPACITY);
-					const sourceRoom = path[path.length - 1].roomName;
 					return {
 						accessible: true,
 						path: packPosList(path),
@@ -215,6 +215,31 @@ export default class RemoteMiningOperation extends Operation {
 		});
 	}
 
+	getTotalEnemyData(): EnemyData {
+		const totalEnemyData: EnemyData = {
+			parts: {},
+			damage: 0,
+			heal: 0,
+			lastSeen: Game.time,
+			safe: false,
+		};
+
+		for (const roomName of this.getRoomsOnPath()) {
+			// @todo Now that we're spawning defense for every room on the path,
+			// make sure brawlers actually move to threatened rooms.
+			const roomMemory = Memory.rooms[roomName];
+			if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
+
+			totalEnemyData.damage += roomMemory.enemies.damage;
+			totalEnemyData.heal += roomMemory.enemies.heal;
+			for (const part in roomMemory.enemies.parts || {}) {
+				totalEnemyData.parts[part] = (totalEnemyData.parts[part] || 0) + roomMemory.enemies.parts[part];
+			}
+		}
+
+		return totalEnemyData;
+	}
+
 	getRoomsOnPath(sourceLocation?: string): string[] {
 		return cache.inHeap('rmPath:' + this.name, 1000, () => {
 			const paths = this.getPaths();
@@ -235,6 +260,12 @@ export default class RemoteMiningOperation extends Operation {
 
 			return result;
 		});
+	}
+
+	canReserveFrom(roomName: string): boolean {
+		if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) return false;
+
+		return Game.rooms[roomName].energyCapacityAvailable >= 2 * (BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]);
 	}
 
 	/**
@@ -441,6 +472,8 @@ export default class RemoteMiningOperation extends Operation {
 		// Determine how many haulers to spawn for this route.
 		// If we cannot create big enough haulers (yet), create more of them!
 		const spawnRoom = Game.rooms[this.getSourceRoom(targetPos)];
+		if (!spawnRoom) return;
+
 		const maximumBody = this.haulerRole.generateCreepBodyFromWeights(
 			this.haulerRole.getBodyWeights(),
 			spawnRoom.energyCapacityAvailable,

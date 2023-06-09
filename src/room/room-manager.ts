@@ -32,13 +32,11 @@ declare global {
 	}
 }
 
-
 interface ScoredExtractorPosition {
 	position: RoomPosition;
 	hasExtractor: boolean;
 	score: number;
 }
-
 
 export default class RoomManager {
 	room: Room;
@@ -345,14 +343,14 @@ export default class RoomManager {
 		const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
 			filter: structure => {
 				if (structure.structureType === STRUCTURE_WALL && !this.roomPlanner.isPlannedLocation(structure.pos, 'wall')) return true;
-				if (hivemind.settings.get('dismantleUnwantedDefenses') && structure.structureType === STRUCTURE_RAMPART && !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart')) return true;
+				if (hivemind.settings.get('dismantleUnwantedRamparts') && structure.structureType === STRUCTURE_RAMPART && !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart')) return true;
 
 				return false;
 			},
 		});
 		if (!this.room.needsReclaiming()) {
 			for (const structure of unwantedDefenses) {
-				if (hivemind.settings.get('dismantleUnwantedDefenses')) {
+				if (hivemind.settings.get('dismantleUnwantedRamparts')) {
 					this.memory.dismantle[structure.id] = 1;
 				}
 				else if (structure.structureType === STRUCTURE_WALL) {
@@ -424,9 +422,16 @@ export default class RoomManager {
 		let missingExtractors = 0;
 		for (const mineral of sortedMinerals) {
 			// Build extractor only on minerals that have resources left.
-			if (mineral.score) {
-				if (!this.tryBuild(mineral.position, STRUCTURE_EXTRACTOR)) {
-					missingExtractors++;
+			if (mineral.score > 0) {
+				if (!mineral.hasExtractor) {
+					const currentExtractors = _.size(this.structuresByType[STRUCTURE_EXTRACTOR]) + _.size(this.constructionSitesByType[STRUCTURE_EXTRACTOR]);
+
+					if (currentExtractors >= CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level]) {
+						missingExtractors++;
+					}
+					else {
+						this.tryBuild(mineral.position, STRUCTURE_EXTRACTOR);
+					}
 				}
 				continue;
 			}
@@ -439,7 +444,10 @@ export default class RoomManager {
 			const extractor = _.filter(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR)[0];
 			if (!extractor) continue;
 
-			if (extractor.destroy() === OK) missingExtractors--;
+			if (extractor.destroy() === OK) {
+				missingExtractors--;
+				this.memory.runNextTick = true;
+			}
 		}
 	}
 
@@ -448,7 +456,6 @@ export default class RoomManager {
 
 		for (const position of positions) {
 			const mineral = position.lookFor(LOOK_MINERALS)[0];
-			if (!mineral) continue;
 
 			const structures = position.lookFor(LOOK_STRUCTURES);
 			const constructionSites = position.lookFor(LOOK_CONSTRUCTION_SITES);
@@ -461,7 +468,7 @@ export default class RoomManager {
 			result.push({
 				position,
 				hasExtractor,
-				score: mineral.mineralAmount * scoreFactor,
+				score: (mineral?.mineralAmount || -100) * scoreFactor,
 			})
 		}
 

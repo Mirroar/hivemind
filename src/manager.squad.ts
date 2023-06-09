@@ -22,7 +22,7 @@ declare global {
 }
 
 export default class Squad {
-	units: Partial<Record<SquadUnitType, Id<Creep>[]>>;
+	units: Partial<Record<SquadUnitType, Array<Id<Creep>>>>;
 	name: string;
 	memory: SquadMemory;
 
@@ -60,7 +60,7 @@ export default class Squad {
 	 * @return {number}
 	 *   New amount of units of the specified type in the squad.
 	 */
-	addUnit(unitType: string): number {
+	addUnit(unitType: SquadUnitType): number {
 		if (!this.memory.composition[unitType]) {
 			this.memory.composition[unitType] = 0;
 		}
@@ -79,7 +79,7 @@ export default class Squad {
 	 * @return {number}
 	 *   New amount of units of the specified type in the squad.
 	 */
-	removeUnit(unitType: string): number {
+	removeUnit(unitType: SquadUnitType): number {
 		if (!this.memory.composition[unitType]) {
 			return 0;
 		}
@@ -89,7 +89,7 @@ export default class Squad {
 		return this.memory.composition[unitType];
 	}
 
-	getUnits(): {[unitType: string]: Id<Creep>[]} {
+	getUnits(): Partial<Record<SquadUnitType, Array<Id<Creep>>>> {
 		return this.units;
 	}
 
@@ -101,7 +101,7 @@ export default class Squad {
 	 * @param {number} count
 	 *   Number of units of the chosen type that should be in this squad.
 	 */
-	setUnitCount(unitType: string, count: number) {
+	setUnitCount(unitType: SquadUnitType, count: number) {
 		this.memory.composition[unitType] = count;
 	}
 

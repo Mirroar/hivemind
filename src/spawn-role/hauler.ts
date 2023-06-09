@@ -23,14 +23,15 @@ export default class HaulerSpawnRole extends SpawnRole {
 		const options: HaulerSpawnOption[] = [];
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 
+		let offset = 0;
 		for (const position of harvestPositions) {
-			this.addOptionForPosition(room, position, options);
+			this.addOptionForPosition(room, position, options, offset++);
 		}
 
 		return options;
 	}
 
-	addOptionForPosition(room: Room, position: RoomPosition, options: HaulerSpawnOption[]) {
+	addOptionForPosition(room: Room, position: RoomPosition, options: HaulerSpawnOption[], offset: number) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
 
@@ -78,7 +79,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 
 		options.push({
 			priority: 3,
-			weight: 0.8,
+			weight: 0.8 - offset * 0.5 - haulers.length * 0.75,
 			targetPos,
 			size: adjustedCarryParts,
 			builder: operation.needsBuilder(targetPos) && _.filter(haulers, c => c.getActiveBodyparts(WORK) > 0).length === 0,

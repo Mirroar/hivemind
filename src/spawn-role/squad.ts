@@ -11,6 +11,7 @@ const availableUnitTypes = [
 	'builder',
 	'attacker',
 	'brawler',
+	'blinky',
 	'test',
 ] as const;
 
@@ -142,6 +143,13 @@ export default class SquadSpawnRole extends SpawnRole {
 
 	getTestCreepBody() {
 		return [MOVE];
+	}
+
+	getBlinkyCreepBody(room: Room) {
+		return this.generateCreepBodyFromWeights(
+			{[MOVE]: 0.55, [RANGED_ATTACK]: 0.25, [HEAL]: 0.2},
+			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
+		);
 	}
 
 	getBrawlerCreepBody(room: Room) {

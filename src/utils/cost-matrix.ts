@@ -318,3 +318,6 @@ export {
 	getDangerMatrix,
 	markBuildings,
 };
+
+global['getCostMatrix'] = getCostMatrix;
+global['getDangerMatrix'] = getDangerMatrix;

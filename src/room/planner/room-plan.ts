@@ -36,9 +36,11 @@ export default class RoomPlan {
 
 	public readonly roomName: string;
 	protected positionsByType: PositionCache;
+	protected maxLevel: number;
 
-	constructor(roomName: string, input?: SerializedPlan) {
+	constructor(roomName: string, input?: SerializedPlan, maxLevel?: number) {
 		this.roomName = roomName;
+		this.maxLevel = maxLevel || this.MAX_ROOM_LEVEL;
 		this.positionsByType = {};
 		if (input) this.unserialize(input);
 	}
@@ -119,7 +121,7 @@ export default class RoomPlan {
 	 *   The number of structures of the given type that may still be placed.
 	 */
 	remainingStructureCount(structureType: StructureConstant): number {
-		return CONTROLLER_STRUCTURES[structureType][this.MAX_ROOM_LEVEL] - _.size(this.getPositions(structureType) || []);
+		return CONTROLLER_STRUCTURES[structureType][this.maxLevel] - _.size(this.getPositions(structureType) || []);
 	}
 
 	/**

@@ -27,7 +27,7 @@ export default class PowerSpawnDestination extends StructureDestination<PowerSpa
 		const options: PowerSpawnDestinationTask[] = [];
 		this.addResourceTask(RESOURCE_POWER, 0.9, options, context);
 
-		if (this.room.getCurrentResourceAmount(RESOURCE_ENERGY) >= settings.get('minEnergyForPowerProcessing')) {
+		if (this.room.getEffectiveAvailableEnergy() >= settings.get('minEnergyForPowerProcessing')) {
 			this.addResourceTask(RESOURCE_ENERGY, 0.2, options, context);
 		}
 

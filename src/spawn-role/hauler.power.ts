@@ -58,7 +58,7 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		const moveRatio = hivemind.settings.get<number>('powerHaulerMoveRatio');
+		const moveRatio = hivemind.settings.get('powerHaulerMoveRatio');
 		return this.generateCreepBodyFromWeights(
 			{[MOVE]: moveRatio, [CARRY]: 1 - moveRatio},
 			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),

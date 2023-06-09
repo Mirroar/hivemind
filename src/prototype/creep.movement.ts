@@ -7,6 +7,8 @@ import NavMesh from 'utils/nav-mesh';
 import settings from 'settings-manager';
 import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
+import {getCostMatrix} from 'utils/cost-matrix';
+import {getRoomIntel} from 'room-intel';
 
 declare global {
 	interface Creep {
@@ -679,7 +681,40 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 			// Seems like we can't move on the target space for some reason right now.
 			// This should be rare, so we use the default pathfinder to get us the rest of the way there.
 			if (this.pos.getRangeTo(target) > range) {
-				const result = this.moveTo(target, {range});
+				const result = this.moveTo(target, {
+					plainCost: 2,
+					swampCost: 10,
+					maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
+					range,
+					maxRooms: options.maxRooms,
+					costCallback: roomName => {
+						// If a room is considered inaccessible, don't look for paths through it.
+						if (!options.allowDanger && hivemind.segmentMemory.isReady() && getRoomIntel(roomName).isOwned()) {
+							return null;
+						}
+
+						const pfOptions = {
+							singleRoom: false,
+							isQuad: false,
+						};
+
+						// Work with roads and structures in a room.
+						const costs = getCostMatrix(roomName, pfOptions);
+
+						// Also try not to drive through bays.
+						if (Game.rooms[roomName] && Game.rooms[roomName].roomPlanner) {
+							_.each(Game.rooms[roomName].roomPlanner.getLocations('bay_center'), pos => {
+								if (costs.get(pos.x, pos.y) <= 20) {
+									costs.set(pos.x, pos.y, 20);
+								}
+							});
+						}
+
+						// @todo Try not to drive too close to sources / minerals / controllers.
+
+						return costs;
+					}
+				});
 				if (result === ERR_NO_PATH) return false;
 			}
 			else if (this.pos.roomName === target.roomName) {

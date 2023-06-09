@@ -75,7 +75,6 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			// Only spawn if there are enemies.
 			if (!operation || !operation.isUnderAttack()) continue;
-			if (operation.needsDismantler() || !operation.isProfitable()) continue;
 
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
@@ -86,30 +85,13 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], (creep: Creep) => creep.memory.operation === 'mine:' + pos.roomName);
 			if (_.size(brawlers) > 0) continue;
 
-			const totalEnemyData: EnemyData = {
-				parts: {},
-				damage: 0,
-				heal: 0,
-				lastSeen: Game.time,
-				safe: false,
-			};
-
-			for (const roomName of operation.getRoomsOnPath()) {
-				// @todo Now that we're spawning defense for every room on the path,
-				// make sure brawlers actually move to threatened rooms.
-				const roomMemory = Memory.rooms[roomName];
-				if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
-
-				totalEnemyData.damage += roomMemory.enemies.damage;
-				totalEnemyData.heal += roomMemory.enemies.heal;
-				for (const part in roomMemory.enemies.parts || {}) {
-					totalEnemyData.parts[part] = (totalEnemyData.parts[part] || 0) + roomMemory.enemies.parts[part];
-				}
-			}
-
+			const totalEnemyData = operation.getTotalEnemyData();
 			const responseType = this.getDefenseCreepSize(room, totalEnemyData);
 
 			if (responseType === RESPONSE_NONE) continue;
+
+			const isInvaderCore = totalEnemyData.damage === 0 && totalEnemyData.heal === 0;
+			if (!isInvaderCore && (operation.needsDismantler() || !operation.isProfitable())) continue;
 
 			options.push({
 				priority: 3,

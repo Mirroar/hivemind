@@ -25,7 +25,7 @@ PWR_OPERATE_STORAGE PWR_GENERATE_OPS */
  * hivemind.settings.set('visualizeNavMesh', true);
  * @endcode
  */
-const settings = {
+const settings: SettingsObject = {
 	// Relations:
 	// If true, any player that is not declared to be your ally will be treated
 	// as an enemy, rather than neutral, and actively harrassed.
@@ -37,6 +37,7 @@ const settings = {
 	visualizeNavMesh: false,
 	visualizeRemoteMines: true,
 	visualizeCreepMovement: true,
+	visualizeSpawnQueue: true,
 
 	// Remote mining:
 	// The maximum distance for rooms to be mined.

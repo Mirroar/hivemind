@@ -23,14 +23,15 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		const options: RemoteHarvesterSpawnOption[] = [];
+		let offset = 0;
 		for (const position of harvestPositions) {
-			this.addOptionForPosition(position, options);
+			this.addOptionForPosition(room, position, options, offset++);
 		}
 
 		return options;
 	}
 
-	addOptionForPosition(position: RoomPosition, options: RemoteHarvesterSpawnOption[]) {
+	addOptionForPosition(room: Room, position: RoomPosition, options: RemoteHarvesterSpawnOption[], offset: number) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
 
@@ -43,6 +44,17 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 		const travelTime = path?.travelTime;
 		if (!travelTime) return;
 
+		const option = {
+			priority: 3,
+			weight: 1 - offset * 0.5,
+			targetPos,
+			// @todo Consider established when roads are fully built.
+			isEstablished: operation.hasContainer(targetPos),
+			// Use less work parts if room is not reserved yet.
+			size: operation.getHarvesterSize(targetPos),
+		};
+
+		const creepSpawnTime = this.getCreepBody(room, option).length * CREEP_SPAWN_TIME;
 		const harvesters = _.filter(
 			Game.creepsByRole['harvester.remote'] || {},
 			(creep: RemoteHarvesterCreep) => {
@@ -50,7 +62,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 				if (creep.memory.source !== targetPos) return false;
 
 				if (creep.spawning) return true;
-				if (creep.ticksToLive > travelTime || creep.ticksToLive > 500) return true;
+				if (creep.ticksToLive > Math.min(travelTime + creepSpawnTime, 500)) return true;
 
 				return false;
 			},
@@ -66,17 +78,9 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 
 		if (harvesters.length >= freeSpots) return;
 		const workParts = _.sum(harvesters, creep => creep.getActiveBodyparts(WORK));
-		if (workParts >= operation.getHarvesterSize(targetPos)) return;
+		if (workParts >= operation.getHarvesterSize(targetPos) * 0.5) return;
 
-		options.push({
-			priority: 3,
-			weight: 1,
-			targetPos,
-			// @todo Consider established when roads are fully built.
-			isEstablished: operation.hasContainer(targetPos),
-			// Use less work parts if room is not reserved yet.
-			size: operation.getHarvesterSize(targetPos),
-		});
+		options.push(option);
 	}
 
 	/**

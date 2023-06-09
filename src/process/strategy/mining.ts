@@ -117,7 +117,7 @@ export default class RemoteMiningProcess extends Process {
 
 			if (availableHarvestRoomCount < memory.remoteHarvesting.currentCount) {
 				// Disregard rooms the user doesn't want harvested.
-				const roomFilter = hivemind.settings.get<(roomName: string) => boolean>('remoteMineRoomFilter');
+				const roomFilter = hivemind.settings.get('remoteMineRoomFilter');
 				if (roomFilter && !roomFilter(info.roomName)) continue;
 
 				// Harvest from this room.

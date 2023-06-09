@@ -15,6 +15,12 @@ PathFinder.CostMatrix.prototype.render = function (this: CostMatrix, roomName?: 
 				if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
 					value = 255;
 				}
+				else if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) {
+					value = 10;
+				}
+				else {
+					value = 2;
+				}
 			}
 
 			// Generate color gradient for matrix values of 1-99.

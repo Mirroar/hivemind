@@ -72,7 +72,7 @@ export default class ManagePowerCreepsProcess extends Process {
 	}
 
 	upgradePowerCreep(creep: PowerCreep) {
-		for (const powerOption of hivemind.settings.get<PowerConstant[]>('powerPriorities')) {
+		for (const powerOption of hivemind.settings.get('powerPriorities')) {
 			// Check if this power could be upgraded.
 			const info = POWER_INFO[powerOption];
 			const currentLevel = (creep.powers[powerOption] || {}).level || 0;

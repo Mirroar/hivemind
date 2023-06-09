@@ -113,7 +113,7 @@ export default class RemoteHarvesterRole extends Role {
 		const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
 			// @todo Only repair as a last resort. We will have dedicated repair
 			// creeps otherwise.
-			filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.hits <= structure.hitsMax - (workParts * 100),
+			filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.hits <= structure.hitsMax - (workParts * REPAIR_POWER),
 		});
 		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3 && creep.store.energy >= workParts && workParts > 0) {
 			const result = creep.repair(needsRepair);

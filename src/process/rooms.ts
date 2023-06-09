@@ -32,7 +32,7 @@ export default class RoomsProcess extends Process {
 				requireSegments: true,
 			});
 
-			if (Game.operations['mine:' + room.name] && settings.get<boolean>('visualizeRemoteMines')) {
+			if (Game.operations['mine:' + room.name] && settings.get('visualizeRemoteMines')) {
 				const operation = Game.operationsByType.mining['mine:' + room.name];
 				for (const position of operation.getSourcePositions()) {
 					operation.drawReport(encodePosition(position));

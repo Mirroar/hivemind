@@ -45,8 +45,9 @@ import SegmentedMemory from 'utils/segmented-memory';
 hivemind.setSegmentedMemory(new SegmentedMemory());
 hivemind.logGlobalReset();
 
+import container from 'utils/container';
 import containerSetup from 'container-factory';
-containerSetup();
+containerSetup(container);
 
 import balancer from 'excess-energy-balancer';
 balancer.init();
@@ -123,14 +124,14 @@ const main = {
 
 		this.cleanup();
 
-		const hook = hivemind.settings.get<Function>('onTick');
-		if (hook) {
-			hook();
-		}
-
 		hivemind.runProcess('init', InitProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
+
+		const hook = hivemind.settings.get('onTick');
+		if (hook) {
+			hook();
+		}
 
 		hivemind.runProcess('creeps', CreepsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,

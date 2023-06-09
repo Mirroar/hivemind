@@ -33,7 +33,7 @@ export default class BoostManager {
 	memory: BoostManagerMemory;
 	room: Room;
 
-	public 	constructor(room: Room) {
+	public constructor(room: Room) {
 		this.room = room;
 
 		if (!Memory.boost) Memory.boost = {creeps: {}, labs: {}};

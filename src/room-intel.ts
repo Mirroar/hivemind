@@ -129,7 +129,7 @@ export default class RoomIntel {
 		this.registerScoutAttempt();
 
 		// @todo Have process logic handle throttling of this task.
-		let lastScanThreshold = hivemind.settings.get<number>('roomIntelCacheDuration');
+		let lastScanThreshold = hivemind.settings.get('roomIntelCacheDuration');
 		if (Game.cpu.bucket < 5000) {
 			lastScanThreshold *= 5;
 		}
@@ -146,7 +146,7 @@ export default class RoomIntel {
 			[T in StructureConstant]?: Array<Structure<T>>;
 		} = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
 		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
-		this.getherDepositIntel();
+		this.gatherDepositIntel();
 		this.gatherPortalIntel(structures[STRUCTURE_PORTAL] as StructurePortal[]);
 		this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 		this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
@@ -325,7 +325,7 @@ export default class RoomIntel {
 		}
 	}
 
-	getherDepositIntel() {
+	gatherDepositIntel() {
 		delete this.memory.deposits;
 
 		const room = Game.rooms[this.roomName];
@@ -705,6 +705,7 @@ export default class RoomIntel {
 	 *   A cost matrix representing this room.
 	 */
 	getCostMatrix(): CostMatrix {
+		// @todo For some reason, calling this in console gives a different version of the cost matrix. Verify!
 		let obstaclePositions;
 		if (this.memory.costPositions) {
 			obstaclePositions = {
@@ -731,14 +732,14 @@ export default class RoomIntel {
 			const terrain = new Room.Terrain(this.roomName);
 			_.each(lairs, lair => {
 				handleMapArea(lair.x, lair.y, (x, y) => {
-					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
+					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 255);
 				}, 3);
 			});
 
 			// Add area around sources as obstacles.
 			_.each(this.getSourcePositions(), sourceInfo => {
 				handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
-					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
+					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 255);
 				}, 4);
 			});
 
@@ -746,7 +747,7 @@ export default class RoomIntel {
 			const minerals = this.getMineralPositions();
 			for (const mineral of minerals) {
 				handleMapArea(mineral.x, mineral.y, (x, y) => {
-					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 10);
+					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 255);
 				}, 4);
 			}
 		}
@@ -1049,3 +1050,5 @@ export {
 	getRoomIntel,
 	getRoomsWithIntel,
 };
+
+global['getRoomIntel'] = getRoomIntel;

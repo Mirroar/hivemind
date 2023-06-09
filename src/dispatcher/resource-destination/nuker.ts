@@ -25,7 +25,7 @@ export default class NukerDestination extends StructureDestination<NukerDestinat
 		const options: NukerDestinationTask[] = [];
 		this.addResourceTask(RESOURCE_GHODIUM, options, context);
 
-		if (this.room.getCurrentResourceAmount(RESOURCE_ENERGY) >= settings.get('minEnergyForNuker')) {
+		if (this.room.getEffectiveAvailableEnergy() >= settings.get('minEnergyForNuker')) {
 			this.addResourceTask(RESOURCE_ENERGY, options, context);
 		}
 

@@ -1,5 +1,6 @@
 /* global BODYPART_COST OK */
 
+import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 import utilities from 'utilities';
 
@@ -84,20 +85,22 @@ export default class SpawnManager {
 	 *   An array of possible spawn options for the current room.
 	 */
 	getAllSpawnOptions(room: Room): SpawnOption[] {
-		const options: SpawnOption[] = [];
+		return cache.inObject(room, 'spawnQueue', 1, () => {
+			const options: SpawnOption[] = [];
 
-		_.each(this.roles, (role, roleId) => {
-			const roleOptions = role.getSpawnOptions(room);
+			_.each(this.roles, (role, roleId) => {
+				const roleOptions = role.getSpawnOptions(room);
 
-			_.each(roleOptions, option => {
-				// Set default values for options.
-				if (typeof option.role === 'undefined') option.role = roleId;
+				_.each(roleOptions, option => {
+					// Set default values for options.
+					if (typeof option.role === 'undefined') option.role = roleId;
 
-				options.push(option);
+					options.push(option);
+				});
 			});
-		});
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

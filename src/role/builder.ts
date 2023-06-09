@@ -92,6 +92,7 @@ export default class BuilderRole extends Role {
 
 		if (creep.memory.repairing) {
 			if (!this.performRepair(creep)) {
+				creep.room.memory.noBuilderNeeded = Game.time;
 				if (creep.room.controller?.level < 8) {
 					creep.memory.upgrading = true;
 					delete creep.memory.repairing;
@@ -100,7 +101,6 @@ export default class BuilderRole extends Role {
 				else {
 					// Prevent draining energy stores by recycling.
 					delete creep.memory.repairing;
-					creep.room.memory.noBuilderNeeded = Game.time;
 					this.performRecycle(creep);
 				}
 			}
@@ -145,14 +145,15 @@ export default class BuilderRole extends Role {
 	performUpgrade(creep: BuilderCreep) {
 		if (creep.room.roomManager?.hasMisplacedSpawn()) {
 			delete creep.memory.upgrading;
+			delete creep.room.memory.noBuilderNeeded;
 			return;
 		}
 
+		creep.room.memory.noBuilderNeeded = Game.time;
 		const roomHasTooLittleEnergy = creep.room.storage && creep.room.getEffectiveAvailableEnergy() < 25_000;
 		const shouldNotUpgrade = creep.room.controller.level === 8 && !balancer.maySpendEnergyOnGpl();
 		if (roomHasTooLittleEnergy || shouldNotUpgrade) {
 			// Prevent draining energy stores by recycling.
-			creep.room.memory.noBuilderNeeded = Game.time;
 			this.performRecycle(creep);
 			return;
 		}

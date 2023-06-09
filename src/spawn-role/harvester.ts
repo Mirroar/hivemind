@@ -40,16 +40,19 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 */
 	addInitialHarvester(source: Source, options: HarvesterSpawnOption[]) {
 		// @todo Spawn bigger harvesters in high level rooms with plenty of energy to save on CPU.
-		// @todo Spawn new harvester before previous harvester dies.
 
-		if (source.harvesters.length > 0) return;
+		// Spawn new harvester before previous harvester dies.
+		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
+		const minSpawnDistance = _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)));
+		const activeHarvesters = _.filter(source.harvesters, creep => creep.ticksToLive > creep.body.length * CREEP_SPAWN_TIME + minSpawnDistance);
+
+		if (activeHarvesters.length > 0) return;
 		if (!this.isSourceSafe(source)) return;
 
 		const force = this.isSmallHarvesterNeeded(source.room);
-		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
 		options.push({
 			priority: (force ? 6 : 4),
-			weight: (50 - _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)))) / 50,
+			weight: (50 - minSpawnDistance) / 50,
 			source: source.id,
 			preferClosestSpawn: source.pos,
 			size: this.getMaxWorkParts(source),
@@ -155,7 +158,9 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			}
 		});
 
-		return 1.2 * numberOfParts;
+		const sizeFactor = source.room.controller.level < 7 ? 1 : 1.2;
+
+		return sizeFactor * numberOfParts;
 	}
 
 	/**

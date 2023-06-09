@@ -122,9 +122,13 @@ export default class HaulerRole extends Role {
 		// Refill at container if we emptied ourselves too much repairing it.
 		const container = creep.operation.getContainer(creep.memory.source);
 		if (container && container.pos.roomName === creep.pos.roomName && creep.pos.getRangeTo(container) < 4) {
+			const path = this.getHaulerPath(creep);
+			const isDying = path && creep.ticksToLive <= path.length;
+
 			if (
 				creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.9 &&
-				container.store.getUsedCapacity() > container.store.getCapacity() * 0.1
+				container.store.getUsedCapacity() > container.store.getCapacity() * 0.1 &&
+				!isDying
 			) {
 				// If we're close to source container, make sure we fill up before
 				// returnung home.

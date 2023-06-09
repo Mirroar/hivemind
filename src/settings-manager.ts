@@ -2,13 +2,82 @@ import defaultSettings from 'settings.default';
 import localSettings from 'settings.local';
 
 declare global {
+	type SettingsObject = {
+		allowBuyingEnergy: boolean;
+		allowBuyingPixels: boolean;
+		allowSellingOps: boolean;
+		allowSellingPower: boolean;
+		automaticallyUpgradePowerCreeps: boolean;
+		constructFactories: boolean;
+		constructLabs: boolean;
+		constructNukers: boolean;
+		constructObservers: boolean;
+		constructPowerSpawns: boolean;
+		constructWallsUnderRamparts: boolean;
+		depositMineRoomFilter?: (roomName: string) => boolean;
+		dismantleUnwantedRamparts: boolean;
+		enableDepositMining: boolean;
+		enablePowerMining: boolean;
+		enableTradeManagement: boolean;
+		expansionScoreBonusHighwayExit: number;
+		expansionScoreCacheDuration: number;
+		highwayScoutInterval: number;
+		maxDepositCooldown: number;
+		maxExpansionCpuPerTick: number;
+		maxOwnedRooms?: number;
+		maxRangeForDepositMining: number;
+		maxRangeForPowerMining: number;
+		maxRemoteMinePathLength: number;
+		maxRemoteMineRoomDistance: number;
+		maxRoomPrioritizationCpuPerTick: number;
+		maxScoutsPerRoom: number;
+		maxVisitorsPerUser: number;
+		maxWallHealth: Record<number, number>;
+		minCutRampartDistance: number;
+		minEnergyForDepositMining: number;
+		minEnergyForNuker: number;
+		minEnergyForPowerHarvesting: number;
+		minEnergyForPowerProcessing: number;
+		minEnergyToUpgradeAtRCL8: number;
+		minRclForDepositMining: number;
+		minRclForPowerMining: number;
+		minWallIntegrity: number;
+		notifyFactoryProduction: boolean;
+		onTick?: () => void;
+		operatorEachRoom: false | number;
+		operatorNames: string[];
+		powerBankMinAmount: number;
+		powerCreepUpgradeCheckInterval: number;
+		powerHaulerMoveRatio: number;
+		powerMineCreepPriority: number;
+		powerMineRoomFilter?: (roomName: string) => boolean;
+		powerMiningCheckInterval: number;
+		powerPriorities: PowerConstant[];
+		powerProcessingEnergyRatio: number;
+		prioritizeFactoryLevels: boolean;
+		rampartWhitelistedUsers: string[];
+		recordRoomStats: boolean;
+		remoteMineRoomFilter?: (roomName: string) => boolean;
+		roomIntelCacheDuration: number;
+		roomScoutInterval: number;
+		scoutProcessInterval: number;
+		scoutSpawnPriority: number;
+		season4EnableCaravanDelivery: boolean;
+		treatNonAlliesAsEnemies: boolean;
+		visualizeCreepMovement: boolean;
+		visualizeNavMesh: boolean;
+		visualizeRemoteMines: boolean;
+		visualizeRoomPlan: boolean;
+		visualizeSpawnQueue: boolean;
+	};
+
 	interface KernelMemory {
-		settings?: Record<string, any>;
+		settings?: Partial<SettingsObject>;
 	}
 }
 
 class SettingsManager {
-	values: Record<string, any>;
+	values: SettingsObject;
 
 	/**
 	 * Creates a new SettingsManager instance.
@@ -47,9 +116,9 @@ class SettingsManager {
 	 * @return {mixed}
 	 *   The value for this setting.
 	 */
-	get<T>(key: string): T {
+	get<T extends keyof SettingsObject>(key: T) {
 		// @todo Periodically check if a setting was changed in memory.
-		return this.values[key] as T;
+		return this.values[key];
 	}
 
 	/**
@@ -60,7 +129,7 @@ class SettingsManager {
 	 * @param {string} value
 	 *   The value for the setting to set.
 	 */
-	set<T>(key: string, value: T) {
+	set<T extends keyof SettingsObject>(key: T, value: SettingsObject[T]) {
 		if (typeof this.values[key] === 'undefined') return;
 		if (typeof value === 'undefined') return;
 		if (!Memory.hivemind.settings) Memory.hivemind.settings = {};
@@ -75,7 +144,7 @@ class SettingsManager {
 	 * @param {string} key
 	 *   The key for the setting to reset.
 	 */
-	reset(key: string) {
+	reset<T extends keyof SettingsObject>(key: T) {
 		// @todo Reload values from local or base settings.
 		if (typeof this.values[key] === 'undefined') return;
 		if (!Memory.hivemind.settings) return;
