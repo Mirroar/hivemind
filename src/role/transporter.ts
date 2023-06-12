@@ -317,7 +317,7 @@ export default class TransporterRole extends Role {
 				) {
 					const containers = _.filter(target.pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_CONTAINER) as StructureContainer[];
 					if (containers.length > 0 && (containers[0].store.getUsedCapacity(target.resourceType) || 0) > 0) {
-						// We have picked up energy dropped on the ground probably due to a full
+						// We have picked up resources dropped on the ground probably due to a full
 						// container. Pick up resources from the container next.
 						creep.memory.order = {
 							type: 'getResource',
@@ -625,6 +625,7 @@ export default class TransporterRole extends Role {
 					if (
 						container.id === mineral.getNearbyContainer()?.id &&
 						resourceType === mineral.mineralType &&
+						resourceType !== RESOURCE_THORIUM &&
 						container.store[resourceType] < CONTAINER_CAPACITY / 2
 					) {
 						isEmptyMineralContainer = true;

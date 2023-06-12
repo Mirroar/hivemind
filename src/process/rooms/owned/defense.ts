@@ -58,7 +58,10 @@ export default class RoomDefenseProcess extends Process {
 						tower.heal(target);
 					}
 					else {
-						tower.attack(target);
+						// @todo Only attack if we can be sure it's not tower drain.
+						if (!this.room.controller.safeMode) {
+							tower.attack(target);
+						}
 					}
 
 					continue;

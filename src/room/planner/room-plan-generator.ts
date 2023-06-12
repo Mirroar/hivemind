@@ -2,6 +2,7 @@ import RoomPlan from 'room/planner/room-plan';
 import RoomPlanMatrixGenerator from 'room/planner/matrix-generator';
 import RoomPlanScorer from 'room/planner/room-plan-scorer';
 import RoomVariationBuilder from 'room/planner/variation-builder';
+import StripmineRoomVariationBuilder from 'room/planner/variation-builder';
 import VariationGenerator from 'room/planner/variation-generator';
 
 type HeapMemory = {
@@ -9,135 +10,141 @@ type HeapMemory = {
 };
 
 const generatorCache: {
-  [roomName: string]: HeapMemory;
+	[roomName: string]: HeapMemory;
 } = {};
 
 export default class RoomPlanGenerator {
-  roomName: string;
-  variationGenerator: VariationGenerator;
-  variationIndex: number;
-  currentVariation: string;
-  wallMatrix: CostMatrix;
-  exitMatrix: CostMatrix;
-  variationBuilder: RoomVariationBuilder;
-  scorer: RoomPlanScorer;
-  results: {
-    [variation: string]: {
-      plan: RoomPlan;
-      score: {[key: string]: number};
-    }
-  };
+	roomName: string;
+	variationGenerator: VariationGenerator;
+	variationIndex: number;
+	currentVariation: string;
+	wallMatrix: CostMatrix;
+	exitMatrix: CostMatrix;
+	variationBuilder: RoomVariationBuilder;
+	scorer: RoomPlanScorer;
+	results: {
+		[variation: string]: {
+			plan: RoomPlan;
+			score: {[key: string]: number};
+		}
+	};
 
-  constructor(roomName: string, version: number) {
-    this.roomName = roomName;
-    this.variationIndex = 0;
-    this.results = {};
-    this.provideDistanceMatrixes();
-    this.variationGenerator = new VariationGenerator(this.roomName, this.wallMatrix, this.exitMatrix);
-    this.scorer = new RoomPlanScorer(this.roomName);
-  }
+	constructor(roomName: string, version: number) {
+		this.roomName = roomName;
+		this.variationIndex = 0;
+		this.results = {};
+		this.provideDistanceMatrixes();
+		this.variationGenerator = new VariationGenerator(this.roomName, this.wallMatrix, this.exitMatrix);
+		this.scorer = new RoomPlanScorer(this.roomName);
+	}
 
-  generate() {
-    if (this.isFinished()) return;
+	generate() {
+		if (this.isFinished()) return;
 
-    if (!this.currentVariation) {
-      this.initVariation();
-      return;
-    }
+		if (!this.currentVariation) {
+			this.initVariation();
+			return;
+		}
 
-    this.generateVariation();
-  }
+		this.generateVariation();
+	}
 
-  isFinished(): boolean {
-    return !this.currentVariation && this.variationIndex > this.variationGenerator.getVariationAmount();
-  }
+	isFinished(): boolean {
+		return !this.currentVariation && this.variationIndex > this.variationGenerator.getVariationAmount();
+	}
 
-  initVariation() {
-    this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
-    const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
-    this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
-  }
+	initVariation() {
+		this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
+		const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
 
-  generateVariation() {
-    if (!this.variationBuilder.isFinished()) {
-      this.variationBuilder.buildNextStep();
-      return;
-    }
+		if (Memory.rooms[this.roomName].isStripmine) {
+			this.variationBuilder = new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
+		}
+		else {
+			this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
+		}
+	}
 
-    this.finalizeVariation();
-  }
+	generateVariation() {
+		if (!this.variationBuilder.isFinished()) {
+			this.variationBuilder.buildNextStep();
+			return;
+		}
 
-  /**
-   * Generates CostMatrixes needed for structure placement.
-   */
-  provideDistanceMatrixes() {
-    // These matrixes are cached until room plan generation is finished.
-    if (this.wallMatrix) return;
+		this.finalizeVariation();
+	}
 
-    [this.wallMatrix, this.exitMatrix] = new RoomPlanMatrixGenerator().generate(this.roomName);
-  }
+	/**
+	 * Generates CostMatrixes needed for structure placement.
+	 */
+	provideDistanceMatrixes() {
+		// These matrixes are cached until room plan generation is finished.
+		if (this.wallMatrix) return;
 
-  finalizeVariation() {
-    // @todo Store room plan for current variation and score it.
-    const plan = this.variationBuilder.getRoomPlan();
-    this.results[this.currentVariation] = {
-      plan,
-      score: this.scorer.getScore(plan, this.exitMatrix, this.wallMatrix),
-    };
+		[this.wallMatrix, this.exitMatrix] = new RoomPlanMatrixGenerator().generate(this.roomName);
+	}
 
-    delete this.variationBuilder;
-    delete this.currentVariation;
-  }
+	finalizeVariation() {
+		// @todo Store room plan for current variation and score it.
+		const plan = this.variationBuilder.getRoomPlan();
+		this.results[this.currentVariation] = {
+			plan,
+			score: this.scorer.getScore(plan, this.exitMatrix, this.wallMatrix),
+		};
 
-  getRoomPlan(): RoomPlan {
-    // @todo Get room plan with highest score.
-    const best = _.max(this.results, 'score.total');
+		delete this.variationBuilder;
+		delete this.currentVariation;
+	}
 
-    if (best) return best.plan;
+	getRoomPlan(): RoomPlan {
+		// @todo Get room plan with highest score.
+		const best = _.max(this.results, 'score.total');
 
-    return null;
-  }
+		if (best) return best.plan;
 
-  outputScores() {
-    let output = '<table border="1"><tr><th>Variation</th><th>Total Score</th>';
-    let finishedHeader = false;
-    const keys = ['total'];
+		return null;
+	}
 
-    for (const variation in this.results) {
-      const score = this.results[variation].score;
-      if (!finishedHeader) {
-        for (const key in score) {
-          if (!keys.includes(key)) {
-            keys.push(key);
-            output += '<th>' + key + '</th>';
-          }
-        }
+	outputScores() {
+		let output = '<table border="1"><tr><th>Variation</th><th>Total Score</th>';
+		let finishedHeader = false;
+		const keys = ['total'];
 
-        finishedHeader = true;
-        output += '</tr>';
-      }
+		for (const variation in this.results) {
+			const score = this.results[variation].score;
+			if (!finishedHeader) {
+				for (const key in score) {
+					if (!keys.includes(key)) {
+						keys.push(key);
+						output += '<th>' + key + '</th>';
+					}
+				}
 
-      output += '<tr><td>' + variation + '</td>';
-      for (const key of keys) {
-        output += '<td>' + score[key].toPrecision(3) + '</td>';
-      }
-      output += '</tr>';
-    }
+				finishedHeader = true;
+				output += '</tr>';
+			}
 
-    output += '</table>';
-    console.log(output);
-  }
+			output += '<tr><td>' + variation + '</td>';
+			for (const key of keys) {
+				output += '<td>' + score[key].toPrecision(3) + '</td>';
+			}
+			output += '</tr>';
+		}
 
-  visualize() {
-    if (this.variationBuilder) {
-      const plan = this.variationBuilder.getRoomPlan();
-      plan.visualize();
-      return;
-    }
+		output += '</table>';
+		console.log(output);
+	}
 
-    const plan = this.getRoomPlan();
-    if (!plan) return;
+	visualize() {
+		if (this.variationBuilder) {
+			const plan = this.variationBuilder.getRoomPlan();
+			plan.visualize();
+			return;
+		}
 
-    plan.visualize();
-  }
+		const plan = this.getRoomPlan();
+		if (!plan) return;
+
+		plan.visualize();
+	}
 }

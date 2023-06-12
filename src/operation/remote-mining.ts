@@ -475,7 +475,7 @@ export default class RemoteMiningOperation extends Operation {
 		if (!spawnRoom) return;
 
 		const maximumBody = this.haulerRole.generateCreepBodyFromWeights(
-			this.haulerRole.getBodyWeights(),
+			this.haulerRole.getBuilderBodyWeights(),
 			spawnRoom.energyCapacityAvailable,
 			{[CARRY]: requiredCarryParts},
 		);

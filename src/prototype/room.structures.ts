@@ -16,10 +16,13 @@ declare global {
 		setClearingTerminal: (clear: boolean) => void;
 		setEvacuating: (evacuate: boolean) => void;
 		getEnergyStructures: () => Array<StructureSpawn | StructureExtension>;
+		isStripmine: () => boolean;
+		setStripmine: (stripmine: boolean) => void;
 	}
 
 	interface RoomMemory {
 		isEvacuating?: boolean;
+		isStripmine?: boolean;
 		isClearingTerminal?: boolean;
 	}
 }
@@ -117,6 +120,14 @@ Room.prototype.setEvacuating = function (this: Room, evacuate: boolean) {
 */
 Room.prototype.isEvacuating = function (this: Room) {
 	return this.memory.isEvacuating && this.terminal?.isOperational();
+};
+
+Room.prototype.setStripmine = function (this: Room, enable: boolean) {
+	this.memory.isStripmine = enable;
+};
+
+Room.prototype.isStripmine = function (this: Room) {
+	return this.memory.isStripmine;
 };
 
 /**

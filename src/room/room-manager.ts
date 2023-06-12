@@ -421,6 +421,7 @@ export default class RoomManager {
 
 		let missingExtractors = 0;
 		for (const mineral of sortedMinerals) {
+			console.log(missingExtractors, JSON.stringify(mineral));
 			// Build extractor only on minerals that have resources left.
 			if (mineral.score > 0) {
 				if (!mineral.hasExtractor) {
@@ -463,7 +464,11 @@ export default class RoomManager {
 			const hasExtractor = _.filter(structures, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0 ||
 				_.filter(constructionSites, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0;
 
-			const scoreFactor = mineral.mineralType === RESOURCE_THORIUM ? 2 : 1;
+			let scoreFactor = mineral && mineral.mineralType === RESOURCE_THORIUM ? 2 : 1;
+
+			if (!mineral.room.isStripmine() && mineral.mineralAmount < 500) {
+				scoreFactor = 0;
+			}
 
 			result.push({
 				position,

@@ -66,6 +66,14 @@ export interface RoomIntelMemory {
 		freeTiles: number;
 		pos: string;
 	};
+	reactor?: {
+		id: Id<Reactor>;
+		x: number;
+		y: number;
+		owner?: string;
+		thorium: number;
+		ticksActive: number;
+	};
 	deposits?: DepositInfo[];
 	structures: {
 		[T in StructureConstant]?: {
@@ -147,6 +155,7 @@ export default class RoomIntel {
 		} = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
 		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
 		this.gatherDepositIntel();
+		this.gatherReactorIntel();
 		this.gatherPortalIntel(structures[STRUCTURE_PORTAL] as StructurePortal[]);
 		this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
 		this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
@@ -376,6 +385,22 @@ export default class RoomIntel {
 				}
 			}
 		}
+	}
+
+	gatherReactorIntel() {
+		delete this.memory.reactor;
+
+		const reactor = Game.rooms[this.roomName].find(FIND_REACTORS)[0];
+		if (!reactor) return;
+
+		this.memory.reactor = {
+			id: reactor.id,
+			x: reactor.pos.x,
+			y: reactor.pos.y,
+			owner: reactor.owner?.username,
+			thorium: reactor.store.getUsedCapacity(RESOURCE_THORIUM),
+			ticksActive: reactor.continuousWork,
+		};
 	}
 
 	/**
@@ -696,6 +721,16 @@ export default class RoomIntel {
 
 	getDepositInfo(): DepositInfo[] {
 		return this.memory.deposits;
+	}
+
+	getReactorInfo() {
+		if (Game.rooms[this.roomName]) {
+			cache.inObject(Game.rooms[this.roomName], 'reactorInfo', 1, () => {
+				this.gatherReactorIntel();
+			})
+		}
+
+		return this.memory.reactor;
 	}
 
 	/**

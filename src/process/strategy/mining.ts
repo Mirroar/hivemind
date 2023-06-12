@@ -1,7 +1,9 @@
 /* global PWR_OPERATE_SPAWN POWER_INFO */
 
-import Process from 'process/process';
+import container from 'utils/container';
 import hivemind from 'hivemind';
+import Process from 'process/process';
+import ReactorManager from 'warmind.local/reactor-manager';
 import RemoteMiningOperation from 'operation/remote-mining';
 import stats from 'utils/stats';
 
@@ -70,7 +72,12 @@ export default class RemoteMiningProcess extends Process {
 			// @todo Actually calculate spawn usage for each.
 			let spawnCapacity = spawnCount * 5;
 			const exploitFlags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + room.name + ':'));
-			const roomNeeds = room.controller.level < 4 ? 1 : 2 + (room.controller.level >= 7 ? exploitFlags.length * 3 : 0);
+			let roomNeeds = 1;
+			if (room.controller.level >= 4) roomNeeds++;
+			if (room.controller.level >= 6) roomNeeds++;
+			if (room.controller.level >= 7) roomNeeds += exploitFlags.length * 3;
+			if (container.get<ReactorManager>('ReactorManager').getSpawnRoom() === room.name) roomNeeds += 2;
+			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
 
 			// Increase spawn capacity if there's a power creep that can help.
 			const powerCreep = _.find(Game.powerCreeps, creep => {

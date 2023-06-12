@@ -200,6 +200,8 @@ export default class ExpandProcess extends Process {
 	startExpansion(roomInfo) {
 		this.memory.currentTarget = roomInfo;
 
+		this.manageStripmines(roomInfo.roomName);
+
 		// Spawn expansion squad at origin.
 		const squad = new Squad('expand');
 		squad.setSpawn(roomInfo.spawnRoom);
@@ -213,6 +215,15 @@ export default class ExpandProcess extends Process {
 		this.memory.started = Game.time;
 
 		hivemind.log('strategy').notify('🏴 Started expanding to ' + roomInfo.roomName);
+	}
+
+	manageStripmines(roomName: string) {
+		const maxMines = Math.floor(Game.myRooms.length / 3);
+		const totalMines = _.filter(Game.myRooms, room => room.isStripmine()).length;
+
+		if (totalMines < maxMines) {
+			Memory.rooms[roomName].isStripmine = true;
+		}
 	}
 
 	/**

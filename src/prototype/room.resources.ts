@@ -2,6 +2,8 @@
 RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
 import cache from 'utils/cache';
+import container from 'utils/container';
+import ReactorManager from 'warmind.local/reactor-manager';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
@@ -442,6 +444,15 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 };
 
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
+	if (resourceType === RESOURCE_THORIUM) {
+		const reactorManager = container.get<ReactorManager>('ReactorManager');
+		const spawnRoom = reactorManager.getSpawnRoom();
+		if (spawnRoom) {
+			if (spawnRoom === this.name) return [200_000, 100_000, 10_000];
+			return [1, 0, 0];
+		}
+	}
+
 	if (resourceType === RESOURCE_ENERGY) {
 		// Defending rooms need energy to defend.
 		if (this.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [1_000_000, 100_000, 50_000];

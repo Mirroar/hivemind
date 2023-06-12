@@ -123,9 +123,14 @@ export default class SpawnManager {
 
 		let spawn = _.sample(availableSpawns);
 		if (option.preferClosestSpawn) {
-			spawn = _.min(spawns, spawn => spawn.pos.getRangeTo(option.preferClosestSpawn));
+			const closestSpawn = _.min(spawns, spawn => spawn.pos.getRangeTo(option.preferClosestSpawn));
 			// Only spawn once preferred spawn is ready.
-			if (!availableSpawns.includes(spawn)) return;
+
+			if (closestSpawn.pos.getRangeTo(option.preferClosestSpawn) < 3) {
+				if (!availableSpawns.includes(closestSpawn)) return;
+
+				spawn = closestSpawn;
+			}
 		}
 
 		if (!this.trySpawnCreep(room, spawn, option)) {

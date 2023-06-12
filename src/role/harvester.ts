@@ -135,8 +135,12 @@ export default class HarvesterRole extends Role {
 		}
 		else if (creep.memory.fixedMineralSource) {
 			source = Game.getObjectById(creep.memory.fixedMineralSource);
-			// @todo Just in case, handle source not existing anymore, or missing extractor.
-			if (source.mineralAmount === 0) {
+			let minAmount = 0;
+			if (source && source.mineralType === RESOURCE_THORIUM && !creep.room.isStripmine()) {
+				minAmount = creep.getActiveBodyparts(WORK) * 2;
+			}
+
+			if (!source || source.mineralAmount <= minAmount) {
 				// Return home and suicide.
 				this.performRecycle(creep);
 				return;
