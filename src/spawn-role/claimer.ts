@@ -1,5 +1,6 @@
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
+import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
 
@@ -26,6 +27,7 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	getSpawnOptions(room: Room): ClaimerSpawnOption[] {
 		// Only spawn claimers if they can have 2 or more claim parts.
 		if (room.energyCapacityAvailable < 2 * (BODYPART_COST[CLAIM] + BODYPART_COST[MOVE])) return [];
+		if (settings.get('newRemoteMiningRoomFilter') && settings.get('newRemoteMiningRoomFilter')(room.name)) return [];
 
 		const options: ClaimerSpawnOption[] = [];
 		const reservePositions = room.getRemoteReservePositions();

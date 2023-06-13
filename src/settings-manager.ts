@@ -42,6 +42,7 @@ declare global {
 		minRclForDepositMining: number;
 		minRclForPowerMining: number;
 		minWallIntegrity: number;
+		newRemoteMiningRoomFilter?: (roomName: string) => boolean;
 		notifyFactoryProduction: boolean;
 		onTick?: () => void;
 		operatorEachRoom: false | number;

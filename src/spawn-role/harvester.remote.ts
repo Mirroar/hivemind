@@ -1,5 +1,6 @@
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
 
+import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
@@ -20,6 +21,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): RemoteHarvesterSpawnOption[] {
 		if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [];
+		if (settings.get('newRemoteMiningRoomFilter') && settings.get('newRemoteMiningRoomFilter')(room.name)) return [];
 
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		const options: RemoteHarvesterSpawnOption[] = [];
