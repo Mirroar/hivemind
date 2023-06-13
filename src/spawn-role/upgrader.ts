@@ -94,6 +94,8 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		if (room.roomManager?.hasMisplacedSpawn()) return 0;
 
+		if (room.controller.level >=6 && room.isStripmine()) return 0;
+
 		const funnelManager = container.get<FunnelManager>('FunnelManager');
 		if (room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(room.name)) return 0;
 
