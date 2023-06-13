@@ -2,7 +2,7 @@ import RoomPlan from 'room/planner/room-plan';
 import RoomPlanMatrixGenerator from 'room/planner/matrix-generator';
 import RoomPlanScorer from 'room/planner/room-plan-scorer';
 import RoomVariationBuilder from 'room/planner/variation-builder';
-import StripmineRoomVariationBuilder from 'room/planner/variation-builder';
+import StripmineRoomVariationBuilder from 'room/planner/stripmine-variation-builder';
 import VariationGenerator from 'room/planner/variation-generator';
 
 type HeapMemory = {
