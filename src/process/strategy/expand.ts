@@ -113,6 +113,8 @@ export default class ExpandProcess extends Process {
 			this.abandonWeakRoom();
 		}
 
+		this.abandonStripmine();
+
 		this.manageEvacuation();
 		this.cleanupMemory();
 	}
@@ -578,6 +580,31 @@ export default class ExpandProcess extends Process {
 			cooldown: null,
 		};
 		hivemind.log('strategy').notify('💀 Evacuating ' + roomName + ' to free up CPU cycles for expanding. Possible Target: ' + shardMemory.info.rooms.bestExpansion.name);
+	}
+
+	/**
+	 * Decides if it's worth giving up a weak room in favor of a new expansion.
+	 */
+	abandonStripmine() {
+		// Only abandon rooms if we aren't in the process of expanding.
+		if (this.memory.currentTarget) return;
+
+		// Only choose a new target if we aren't already relocating.
+		if (this.memory.evacuatingRoom) return;
+
+		for (const room of Game.myRooms) {
+			if (!room.isStripmine()) continue;
+			if (!room.terminal) continue;
+			if (_.filter(room.minerals, mineral => mineral.mineralAmount > 0).length > 0) continue;
+
+			room.setEvacuating(true);
+			this.memory.evacuatingRoom = {
+				name: room.name,
+				cooldown: null,
+			};
+			hivemind.log('strategy').notify('💀 Evacuating ' + room.name + ' to mine another room instead.');
+			return;
+		}
 	}
 
 	/**
