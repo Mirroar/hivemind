@@ -32,11 +32,14 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 		const options: MineralHarvesterSpawnOption[] = [];
 		for (const mineral of minerals) {
 			const mineralHarvesters = mineral.harvesters;
+			const maxHarvesters = room.isStripmine() ? Math.min(3, mineral.getNumHarvestSpots()) : 1;
+			if (_.size(mineralHarvesters) >= maxHarvesters) continue;
+
 			let minAmount = 0;
 			if (!room.isStripmine() && mineral.mineralType === RESOURCE_THORIUM) {
 				minAmount = 500;
 			}
-			if (_.size(mineralHarvesters) > 0 || mineral.mineralAmount <= minAmount) continue;
+			if (mineral.mineralAmount <= minAmount) continue;
 
 			options.push({
 				priority: room.isStripmine() ? 4 : 3,

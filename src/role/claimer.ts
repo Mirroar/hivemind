@@ -6,6 +6,13 @@ import {decodePosition} from 'utils/serialization';
 import {getUsername} from 'utils/account';
 
 declare global {
+	interface RoomMemory {
+		lastClaim?: {
+			time: number;
+			value: number;
+		};
+	}
+
 	interface ClaimerCreep extends Creep {
 		memory: ClaimerCreepMemory;
 		heapMemory: ClaimerCreepHeapMemory;

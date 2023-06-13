@@ -8,15 +8,6 @@ interface ClaimerSpawnOption extends SpawnOption {
 	targetPos: RoomPosition;
 }
 
-declare global {
-	interface RoomMemory {
-		lastClaim?: {
-			time: number;
-			value: number;
-		};
-	}
-}
-
 export default class ClaimerSpawnRole extends SpawnRole {
 	/**
 	 * Adds claimer spawn options for the given room.
