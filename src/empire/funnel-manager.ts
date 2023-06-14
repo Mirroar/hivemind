@@ -6,7 +6,7 @@ export default class FunnelManager {
 	getRoomsToFunnel(): string[] {
 		return cache.inHeap('funneledRooms', 500, () => {
 			const funneledRooms = [];
-			const roomsAtLevel = _.groupBy(Game.myRooms, room => room.controller.level);
+			const roomsAtLevel = _.groupBy(this.getAvailableRoomsToFunnel(), room => room.controller.level);
 
 			const hasRCL8 = (roomsAtLevel[8]?.length || 0) > 0;
 			const hasRCL7 = (roomsAtLevel[7]?.length || 0) > 0;
@@ -26,6 +26,15 @@ export default class FunnelManager {
 			}
 
 			return funneledRooms;
+		});
+	}
+
+	protected getAvailableRoomsToFunnel(): Room[] {
+		return _.filter(Game.myRooms, room => {
+			if (room.isStripmine() && room.controller.level >= 6) return false;
+			if (room.isEvacuating()) return false;
+
+			return true;
 		});
 	}
 
