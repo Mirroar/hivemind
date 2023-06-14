@@ -31,7 +31,7 @@ export default class GathererSpawnRole extends SpawnRole {
 			// @todo Make sure gatherers can reach their targets.
 			// @todo Currently disabled on shard0 until we automaticall remove
 			// pesky walls / ramparts.
-			if (Game.shard.name === 'shard0' || Game.shard.name === 'shard1') return;
+			if (['shard0', 'shard1', 'shardSeason'].includes(Game.shard.name)) return;
 			if (gathererCount > 0) return;
 			if (!hivemind.segmentMemory.isReady() || getRoomIntel(roomName).isOwned()) return;
 
