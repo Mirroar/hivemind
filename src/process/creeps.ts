@@ -134,10 +134,11 @@ export default class CreepsProcess extends Process {
 			else {
 				creep.moveTo(blockedCreep.pos, {range: 1});
 			}
+			creep._hasMoveIntent = true;
 		});
 	}
 
-	getAlternateCreepPosition(creep: Creep): RoomPosition | null {
+	getAlternateCreepPosition(creep: Creep | PowerCreep): RoomPosition | null {
 		if (!creep._requestedMoveArea) return null;
 
 		let alternatePosition: RoomPosition;
@@ -148,13 +149,26 @@ export default class CreepsProcess extends Process {
 		// @todo If none of the alternate positions are free, check if
 		// neighboring creeps can be pushed aside recursively.
 		// @todo Prefer moving onto roads / plains instead of swamps.
+		let blockingCreeps: Array<Creep | PowerCreep> = [];
 		handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
 			if (costMatrix.get(x, y) >= 100) return null;
 			if (creep.room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) return null;
 
 			const pos = new RoomPosition(x, y, creep.room.name);
 			if (pos.getRangeTo(creep._requestedMoveArea.pos) > creep._requestedMoveArea.range) return null;
-			if (pos.lookFor(LOOK_CREEPS).length > 0 || pos.lookFor(LOOK_POWER_CREEPS).length > 0) return null;
+
+			const blockingCreep = pos.lookFor(LOOK_CREEPS);
+			if (blockingCreep.length > 0) {
+				blockingCreeps.push(blockingCreep[0]);
+				return null;
+			}
+
+			const blockingPowerCreep = pos.lookFor(LOOK_POWER_CREEPS);
+			if (blockingPowerCreep.length > 0) {
+				blockingCreeps.push(blockingPowerCreep[0]);
+				return null;
+			}
+
 			creep.room.visual.line(x, y, creep.pos.x, creep.pos.y, {
 				color: '#00ff00',
 			});
@@ -162,6 +176,23 @@ export default class CreepsProcess extends Process {
 			alternatePosition = pos;
 			return false;
 		});
+
+		if (!alternatePosition && blockingCreeps.length > 0) {
+			for (const blockingCreep of blockingCreeps) {
+				if (!blockingCreep.my) continue;
+				if (blockingCreep._hasMoveIntent) continue;
+				if (blockingCreep._blockingCreepMovement) continue;
+
+				blockingCreep._hasMoveIntent = true;
+				const chainedAlternatePosition = this.getAlternateCreepPosition(blockingCreep);
+				if (chainedAlternatePosition) {
+					// Move aside for the other creep.
+					blockingCreep.move(blockingCreep.pos.getDirectionTo(chainedAlternatePosition));
+					return blockingCreep.pos;
+				}
+				delete blockingCreep._hasMoveIntent;
+			}
+		}
 
 		return alternatePosition;
 	}

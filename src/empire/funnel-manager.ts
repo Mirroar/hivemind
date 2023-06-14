@@ -15,7 +15,7 @@ export default class FunnelManager {
 
 			if (
 				(hasEnoughRCL7 && !hasRCL8) ||
-				(!hasRCL6 && hasRCL7) ||
+				(!hasRCL6 && hasRCL7)
 			) {
 				// Funnel to best RCL 7 room.
 				funneledRooms.push(_.max(roomsAtLevel[7], room => Memory.strategy.roomList[room.name]?.expansionScore).name);
