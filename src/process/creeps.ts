@@ -23,6 +23,7 @@ import helperRole from 'role/helper';
 import muleRole from 'role/mule';
 import poweHarvesterRole from 'role/power/harvester';
 import powerHaulerRole from 'role/power/hauler';
+import relayHaulerRole from 'role/hauler.relay';
 import remoteBuilderRole from 'role/builder.remote';
 import remoteHarvesterRole from 'role/harvester.remote';
 import scoutRole from 'role/scout';
@@ -53,6 +54,7 @@ const creepRoles = {
 	'hauler': haulerRole,
 	'hauler.exploit': exploitHaulerRole,
 	'hauler.power': powerHaulerRole,
+	'hauler.relay': relayHaulerRole,
 	'helper': helperRole,
 	'mule': muleRole,
 	'scout': scoutRole,

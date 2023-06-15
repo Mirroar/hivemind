@@ -391,12 +391,21 @@ export default class RemoteMiningOperation extends Operation {
 		if (!hivemind.segmentMemory.isReady()) return false;
 		if (sourceLocation) return this.getDismantlePositions(sourceLocation).length > 0;
 
-		let result = false;
 		for (const pos of this.getSourcePositions()) {
-			result = result || this.needsDismantler(encodePosition(pos));
+			if (this.needsDismantler(encodePosition(pos))) return true;
 		}
 
-		return result;
+		return false;
+	}
+
+	hasActiveHarvesters(sourceLocation?: string): boolean {
+		if (sourceLocation) return _.filter(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation).length > 0;
+
+		for (const pos of this.getSourcePositions()) {
+			if (this.hasActiveHarvesters(encodePosition(pos))) return true;
+		}
+
+		return false;
 	}
 
 	/**
