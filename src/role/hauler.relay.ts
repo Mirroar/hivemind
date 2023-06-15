@@ -74,12 +74,47 @@ export default class RelayHaulerRole extends Role {
 	}
 
 	determineTargetSource(creep: RelayHaulerCreep) {
-		//@todo
-		throw new Error('Not yet implemented.');
+		const harvestPositions = creep.room.getRemoteHarvestSourcePositions();
+		const scoredPositions = [];
+		for (const position of harvestPositions) {
+			scoredPositions.push(this.scoreHarvestPosition(creep, position));
+		}
+
+		const bestPosition = _.max(_.filter(scoredPositions, p => p.energy > 0), 'energy');
+
+		if (bestPosition) {
+			creep.memory.source = encodePosition(bestPosition.position);
+		}
+	}
+
+	scoreHarvestPosition(creep: RelayHaulerCreep, position: RoomPosition) {
+		const targetPos = encodePosition(position);
+		const operation = Game.operationsByType.mining['mine:' + position.roomName];
+		const path = operation.getPaths[targetPos];
+
+		const currentEnergy = operation.getEnergyForPickup(targetPos);
+		const maxHarvesterLifetime = _.max(
+			_.filter(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source = targetPos),
+			(creep: Creep) => creep.ticksToLive
+		).ticksToLive;
+		const projectedIncomeDuration = Math.min(maxHarvesterLifetime, path.travelTime);
+		const sourceMaxEnergy = operation.canReserveFrom(creep.memory.room) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
+		const projectedIncome = projectedIncomeDuration * sourceMaxEnergy / ENERGY_REGEN_TIME;
+
+		const queuedHaulerCapacity = _.sum(
+			_.filter(Game.creepsByRole['hauler.relay'], (creep: RelayHaulerCreep) => creep.memory.source === targetPos),
+			(creep: Creep) => creep.store.getFreeCapacity(RESOURCE_ENERGY)
+		);
+
+		return {
+			position,
+			energy: currentEnergy + projectedIncome - queuedHaulerCapacity,
+		};
 	}
 
 	startDelivering(creep: RelayHaulerCreep) {
 		creep.memory.delivering = true;
+		delete creep.memory.source;
 		delete creep.heapMemory.deliveryTarget;
 
 		const path = this.getPath(creep);

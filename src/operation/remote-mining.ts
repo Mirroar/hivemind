@@ -340,6 +340,22 @@ export default class RemoteMiningOperation extends Operation {
 		return paths[sourceLocation].path[0];
 	}
 
+	getEnergyForPickup(sourceLocation: string): number {
+		// @todo Keep track of available energy even if we lose visibility of the room.
+		const container = this.getContainer(sourceLocation);
+		let total = container?.store?.energy || 0;
+
+		const position = decodePosition(sourceLocation);
+		if (!Game.rooms[position.roomName]) return total;
+		for (const resource of position.findInRange(FIND_DROPPED_RESOURCES, 1)) {
+			if (resource.resourceType !== RESOURCE_ENERGY) continue;
+
+			total =+ resource.amount;
+		}
+
+		return total;
+	}
+
 	/**
 	 * Decides whether haulers need to be spawned for a location.
 	 */

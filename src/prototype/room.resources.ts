@@ -316,6 +316,7 @@ Room.prototype.stopTradePreparation = function (this: Room) {
  *   An array of objects containing information about remote harvest targets.
  */
 Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
+	// @todo Sort by profitability because it influences spawn order.
 	const harvestPositions: RoomPosition[] = [];
 	_.each(Game.operationsByType.mining, operation => {
 		const locations = operation.getMiningLocationsByRoom();
