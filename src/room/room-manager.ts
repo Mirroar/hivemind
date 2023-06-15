@@ -466,7 +466,7 @@ export default class RoomManager {
 
 			let scoreFactor = mineral && mineral.mineralType === RESOURCE_THORIUM ? 2 : 1;
 
-			if (!mineral.room.isStripmine() && mineral.mineralAmount < 500) {
+			if (mineral && !mineral.room.isStripmine() && mineral.mineralAmount < 500) {
 				scoreFactor = 0;
 			}
 

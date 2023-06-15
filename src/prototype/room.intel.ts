@@ -149,7 +149,10 @@ Object.defineProperty(Room.prototype, 'minerals', {
 
 			const minerals = [];
 			for (const mineralId of mineralIds) {
-				minerals.push(Game.getObjectById(mineralId));
+				const mineral = Game.getObjectById(mineralId);
+				if (!mineral) continue;
+
+				minerals.push(mineral);
 			}
 
 			return minerals;
