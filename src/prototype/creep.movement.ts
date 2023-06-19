@@ -299,6 +299,13 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 				this.manageBlockingCreeps();
 			}
 
+			if (this.pos.getRangeTo(pos) === 1) {
+				// Due to push-behavior we sometimes try to move onto another creep.
+				// That creep needs to be pushed away.
+				this.manageBlockingCreeps();
+				delete this.memory.cachedPath.forceGoTo;
+			}
+
 			return;
 		}
 

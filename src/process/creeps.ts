@@ -20,6 +20,7 @@ import guardianRole from 'role/guardian';
 import harvesterRole from 'role/harvester';
 import haulerRole from 'role/hauler';
 import helperRole from 'role/helper';
+import mineBuilderRole from 'role/builder.mines';
 import muleRole from 'role/mule';
 import poweHarvesterRole from 'role/power/harvester';
 import powerHaulerRole from 'role/power/hauler';
@@ -39,6 +40,7 @@ const creepRoles = {
 	'brawler': brawlerRole,
 	'builder': builderRole,
 	'builder.exploit': exploitBuilderRole,
+	'builder.mines': mineBuilderRole,
 	'builder.remote': remoteBuilderRole,
 	'caravan-trader': caravanTraderRole,
 	'claimer': claimerRole,
