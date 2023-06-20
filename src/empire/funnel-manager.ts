@@ -1,4 +1,10 @@
 import cache from 'utils/cache';
+import TradeRoute from 'trade-route';
+
+interface TraderouteInfo {
+	source: string;
+	destination: string;
+}
 
 export default class FunnelManager {
 	constructor() {}
@@ -31,6 +37,7 @@ export default class FunnelManager {
 
 	protected getAvailableRoomsToFunnel(): Room[] {
 		return _.filter(Game.myRooms, room => {
+			if (!room.terminal) return false;
 			if (room.isStripmine() && room.controller.level >= 6) return false;
 			if (room.isEvacuating()) return false;
 
@@ -44,5 +51,54 @@ export default class FunnelManager {
 
 	isFunnelingTo(roomName: string) {
 		return this.getRoomsToFunnel().includes(roomName);
+	}
+
+	manageTradeRoutes() {
+		const funnelTargets = _.filter(Game.myRooms, room => room.storage && room.controller.level < 6);
+		const funnelTradeRoutes = this.getRequestedFunnelTradeRoutes(funnelTargets);
+
+		this.createAndUpdateTraderoutes(funnelTradeRoutes);
+		this.removeUnneededTraderoutes(funnelTradeRoutes);
+	}
+
+	getRequestedFunnelTradeRoutes(funnelTargets: Room[]): TraderouteInfo[] {
+		const tradeRoutes: TraderouteInfo[] = [];
+		for (const room of funnelTargets) {
+			const sourceRooms = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
+			for (const sourceRoom of sourceRooms) {
+				tradeRoutes.push({
+					source: sourceRoom.name,
+					destination: room.name,
+				});
+			}
+		}
+
+		return tradeRoutes;
+	}
+
+	createAndUpdateTraderoutes(tradeRoutes: TraderouteInfo[]) {
+		for (const route of tradeRoutes) {
+			const name = 'funnel:' + route.source + ':' + route.destination;
+			const tradeRoute = new TradeRoute(name);
+			tradeRoute.setResourceType(RESOURCE_ENERGY);
+			tradeRoute.setTarget(route.destination);
+			tradeRoute.setOrigin(route.source);
+			tradeRoute.setActive(true);
+		}
+	}
+
+	removeUnneededTraderoutes(tradeRoutes: TraderouteInfo[]) {
+		const allowedNames = [];
+		for (const route of tradeRoutes) {
+			allowedNames.push('funnel:' + route.source + ':' + route.destination);
+		}
+
+		for (const name in (Memory.tradeRoutes || {})) {
+			if (!name.startsWith('funnel:')) continue;
+			if (allowedNames.includes(name)) continue;
+
+			const tradeRoute = new TradeRoute(name);
+			tradeRoute.setActive(false);
+		}
 	}
 }

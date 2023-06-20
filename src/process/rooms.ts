@@ -1,3 +1,5 @@
+import container from 'utils/container';
+import FunnelManager from 'empire/funnel-manager';
 import HighwayRoomProcess from 'process/rooms/highway';
 import hivemind, {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 import interShard from 'intershard';
@@ -16,6 +18,8 @@ declare global {
 		mockRoomPlan: string;
 	}
 }
+
+let lastFunnelCheck = 0;
 
 /**
  * Runs logic for all rooms we have visibility in.
@@ -59,7 +63,7 @@ export default class RoomsProcess extends Process {
 		});
 
 		this.terminateRoomOperations();
-
+		this.manageFunneling();
 		this.manageExpansionRoomPlan();
 		this.manageInterShardExpansionRoomPlan();
 		this.mockRoomPlan();
@@ -69,6 +73,16 @@ export default class RoomsProcess extends Process {
 		// Stop operations for rooms that are no longer active.
 		_.each(Game.operationsByType.room, op => {
 			if (Game.time - op.getLastActiveTick() > 10_000) op.terminate();
+		});
+	}
+
+	manageFunneling() {
+		hivemind.runSubProcess('rooms_funneling', () => {
+			if (!hivemind.hasIntervalPassed(500, lastFunnelCheck)) return;
+
+			lastFunnelCheck = Game.time;
+			const funnelManager = container.get<FunnelManager>('FunnelManager');
+			funnelManager.manageTradeRoutes();
 		});
 	}
 
