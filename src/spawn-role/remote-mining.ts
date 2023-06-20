@@ -6,6 +6,11 @@ import {encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 
+interface BuilderSpawnOption extends SpawnOption {
+	unitType: 'builder';
+	size: number;
+}
+
 interface ClaimerSpawnOption extends SpawnOption {
 	unitType: 'claimer';
 	targetPos: RoomPosition;
@@ -23,7 +28,7 @@ interface HaulerSpawnOption extends SpawnOption {
 	size: number;
 }
 
-type RemoteMiningSpawnOption = ClaimerSpawnOption | HarvesterSpawnOption | HaulerSpawnOption;
+type RemoteMiningSpawnOption = BuilderSpawnOption | ClaimerSpawnOption | HarvesterSpawnOption | HaulerSpawnOption;
 
 export default class RemoteMiningSpawnRole extends SpawnRole {
 	/**
@@ -63,7 +68,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			size: maxHaulerSize,
 			priority: 3,
 			weight: 0,
-		})
+		});
 	}
 
 	getNeededCarryParts(room: Room): number {
@@ -96,7 +101,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getMaximumHaulerSize(room: Room, maximumNeededCarryParts: number) {
 		const maximumBody = this.generateCreepBodyFromWeights(
-			room.storage ? this.getBodyWeights() : this.getNoRoadsBodyWeights(),
+			room.storage ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
 			room.energyCapacityAvailable,
 			{[CARRY]: maximumNeededCarryParts},
 		);
@@ -129,7 +134,59 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	addBuilderSpawnOptions(room: Room, options: RemoteMiningSpawnOption[]) {
 		if (options.length > 0) return;
 
-		//@todo
+		const currentlyNeededWorkParts = this.getNeededWorkParts(room);
+		const currentBuilders = _.filter(Game.creepsByRole['builder.mines'], creep => creep.memory.sourceRoom === room.name);
+		const currentWorkParts = _.sum(_.map(currentBuilders, creep => creep.getActiveBodyparts(WORK)));
+
+		if (currentWorkParts >= currentlyNeededWorkParts) return;
+
+		const maximumNeededWorkParts = this.getMaximumWorkParts(room);
+		const maxBuilderSize = this.getMaximumBuilderSize(room, maximumNeededWorkParts);
+
+		options.push({
+			unitType: 'hauler',
+			size: maxBuilderSize,
+			priority: 3,
+			weight: 0,
+		});
+	}
+
+	getNeededWorkParts(room: Room): number {
+		let total = 0;
+		for (const position of this.getActiveRemoteHarvestPositions(room)) {
+			const operation = Game.operationsByType.mining['mine:' + position.roomName];
+
+			const targetPos = encodePosition(position);
+			if (!operation.hasActiveHarvesters(targetPos)) continue;
+
+			total += operation.estimateRequiredWorkPartsForMaintenance(targetPos);
+		}
+
+		return total;
+	}
+
+	getMaximumWorkParts(room: Room): number {
+		let total = 0;
+		for (const position of this.getActiveRemoteHarvestPositions(room)) {
+			const operation = Game.operationsByType.mining['mine:' + position.roomName];
+			const targetPos = encodePosition(position);
+			total += operation.estimateRequiredWorkPartsForMaintenance(targetPos);
+		}
+
+		return total;
+	}
+
+	getMaximumBuilderSize(room: Room, maximumNeededWorkParts: number) {
+		const maximumBody = this.generateCreepBodyFromWeights(
+			room.storage ? this.getBuilderBodyWeights() : this.getNoRoadsBuilderBodyWeights(),
+			room.energyCapacityAvailable,
+			{[WORK]: maximumNeededWorkParts},
+		);
+		const maxWorkParts = _.countBy(maximumBody)[WORK];
+		const maxBuilders = Math.ceil(maximumNeededWorkParts / maxWorkParts);
+		const adjustedWorkParts = Math.ceil(maximumNeededWorkParts / maxBuilders);
+
+		return adjustedWorkParts;
 	}
 
 	addClaimerSpawnOptions(room: Room, options: RemoteMiningSpawnOption[]) {
@@ -257,6 +314,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room: Room, option: RemoteMiningSpawnOption): BodyPartConstant[] {
 		switch (option.unitType) {
+			case 'builder':
+				return this.getBuilderCreepBody(room, option);
 			case 'claimer':
 				return this.getClaimerCreepBody(room);
 			case 'harvester':
@@ -292,18 +351,34 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getHaulerCreepBody(room: Room, option: HaulerSpawnOption): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && room.storage ? this.getBodyWeights() : this.getNoRoadsBodyWeights(),
+			room.controller.level > 3 && room.storage ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
 			room.energyCapacityAvailable,
 			{[CARRY]: option.size},
 		);
 	}
 
-	getBodyWeights(): Partial<Record<BodyPartConstant, number>> {
+	getHaulerBodyWeights(): Partial<Record<BodyPartConstant, number>> {
 		return {[MOVE]: 0.35, [CARRY]: 0.65};
 	}
 
-	getNoRoadsBodyWeights(): Partial<Record<BodyPartConstant, number>> {
+	getNoRoadsHaulerBodyWeights(): Partial<Record<BodyPartConstant, number>> {
 		return {[MOVE]: 0.5, [CARRY]: 0.5};
+	}
+
+	getBuilderCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
+		return this.generateCreepBodyFromWeights(
+			room.controller.level > 3 && room.storage ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
+			room.energyCapacityAvailable,
+			{[CARRY]: option.size},
+		);
+	}
+
+	getBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
+		return {[MOVE]: 0.35, [CARRY]: 0.35, [WORK]: 0.3};
+	}
+
+	getNoRoadsBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
+		return {[MOVE]: 0.5, [CARRY]: 0.3, [WORK]: 0.2};
 	}
 
 	/**
@@ -319,6 +394,12 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	 */
 	getCreepMemory(room: Room, option: RemoteMiningSpawnOption): CreepMemory {
 		switch (option.unitType) {
+			case 'builder':
+				return {
+					role: 'builder.mines',
+					delivering: true,
+					sourceRoom: room.name,
+				} as MineBuilderCreepMemory;
 			case 'claimer':
 				return {
 					role: 'claimer',
@@ -335,7 +416,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			case 'hauler':
 				return {
 					role: 'hauler.relay',
-					room: room.name,
+					sourceRoom: room.name,
 					delivering: true,
 				} as RelayHaulerCreepMemory;
 			default:

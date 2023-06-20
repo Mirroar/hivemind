@@ -22,7 +22,6 @@ declare global {
 		role: 'builder.mines';
 		delivering: boolean;
 		source: string;
-		room: string;
 	}
 
 	interface MineBuilderCreepHeapMemory extends CreepHeapMemory {
@@ -55,6 +54,20 @@ export default class MineBuilderRole extends Role {
 		}
 		else if (!creep.memory.delivering && isFull) {
 			this.setBuildState(creep, true);
+		}
+
+		if (!creep.memory.source) {
+			if (creep.pos.roomName !== creep.memory.sourceRoom) {
+				creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.sourceRoom));
+			}
+			else {
+				creep.whenInRange(3, creep.room.storage || creep.room.terminal || creep.room.getStorageLocation(), () => {
+					// Wait until there's something to do.
+					this.determineTargetSource(creep);
+				});
+			}
+
+			return;
 		}
 
 		if (creep.memory.delivering) {
@@ -91,6 +104,7 @@ export default class MineBuilderRole extends Role {
 	}
 
 	determineTargetSource(creep: MineBuilderCreep) {
+		delete creep.memory.source;
 		const harvestPositions = creep.room.getRemoteHarvestSourcePositions();
 		const scoredPositions = [];
 		for (const position of harvestPositions) {
@@ -107,7 +121,7 @@ export default class MineBuilderRole extends Role {
 	scoreHarvestPosition(creep: MineBuilderCreep, position: RoomPosition) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
-		const path = operation.getPaths[targetPos];
+		const path = operation.getPaths()[targetPos];
 
 		const hasBuilder = _.filter(Game.creepsByRole['builder.mines'], (c: MineBuilderCreep) => c.memory.source === targetPos).length > 0;
 		if (hasBuilder) return {position, work: 0};
@@ -116,19 +130,40 @@ export default class MineBuilderRole extends Role {
 		if (!hasHarvester) return {position, work: 0};
 
 		const neededWork = cache.inHeap('neededRepairs:' + targetPos, 50, () => {
-			let total = 0;
-			const container = operation.getContainer(targetPos);
-			if (container) total += container.hitsMax - container.hits;
+			const containerPositon = operation.getContainerPosition(targetPos);
+			let total = this.getNeededWorkForPosition(containerPositon, STRUCTURE_CONTAINER);
 
-			if (Game.rooms[position.roomName] && !container) {
-				total += CONSTRUCTION_COST[STRUCTURE_CONTAINER] * REPAIR_POWER;
+			for (const position of path.path || []) {
+				if (Game.rooms[position.roomName]?.isMine()) continue;
+
+				total += this.getNeededWorkForPosition(position, STRUCTURE_ROAD);
 			}
+
+			return total;
 		});
 
 		return {
 			position,
 			work: neededWork,
 		};
+	}
+
+	getNeededWorkForPosition(position: RoomPosition, structureType: BuildableStructureConstant) {
+		const room = Game.rooms[position.roomName];
+		if (!room) {
+			// If we don't have visibility, we treat everything as built.
+			return 0;
+		}
+
+		const structures = position.lookFor(LOOK_STRUCTURES);
+		const structure = _.filter(structures, structure => structure.structureType === structureType)[0];
+		if (structure) return structure.hitsMax - structure.hits;
+
+		const sites = position.lookFor(LOOK_STRUCTURES);
+		const site = _.filter(sites, site => site.structureType === structureType)[0];
+		if (site) return (site.hitsMax - site.hits) * REPAIR_POWER;
+
+		return CONSTRUCTION_COST[structureType] * REPAIR_POWER;
 	}
 
 	getPath(creep: MineBuilderCreep): RoomPosition[] | null {

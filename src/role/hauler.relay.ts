@@ -19,7 +19,6 @@ declare global {
 
 	interface RelayHaulerCreepMemory extends CreepMemory {
 		role: 'hauler.relay';
-		room: string;
 		delivering?: boolean;
 		source?: string;
 	}
@@ -98,7 +97,7 @@ export default class RelayHaulerRole extends Role {
 			(creep: Creep) => creep.ticksToLive
 		).ticksToLive;
 		const projectedIncomeDuration = Math.min(maxHarvesterLifetime, path.travelTime);
-		const sourceMaxEnergy = operation.canReserveFrom(creep.memory.room) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
+		const sourceMaxEnergy = operation.canReserveFrom(creep.memory.sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
 		const projectedIncome = projectedIncomeDuration * sourceMaxEnergy / ENERGY_REGEN_TIME;
 
 		const queuedHaulerCapacity = _.sum(
@@ -139,7 +138,7 @@ export default class RelayHaulerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performDeliver(creep: RelayHaulerCreep) {
-		const sourceRoom = creep.memory.room;
+		const sourceRoom = creep.memory.sourceRoom;
 		if (!Game.rooms[sourceRoom]) return;
 
 		const hasTarget = creep.heapMemory.deliveryTarget && creep.isInRoom();
@@ -163,7 +162,7 @@ export default class RelayHaulerRole extends Role {
 			if (target) return target;
 		}
 
-		const target = Game.rooms[creep.memory.room].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
+		const target = Game.rooms[creep.memory.sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
 		if (!target) return null;
 
 		creep.heapMemory.deliveryTarget = target.id;

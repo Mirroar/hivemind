@@ -296,6 +296,8 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 			}
 
 			if (this.moveTo(pos, options) === ERR_NO_PATH) {
+				// @todo This probably makes so sense because cachedPath.position is not correctly set here.
+				// Instead, check if we're on the current position, and if not, update position and forceGoTo. Or fully recalculate path.
 				this.manageBlockingCreeps();
 			}
 

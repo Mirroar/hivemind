@@ -17,6 +17,7 @@ declare global {
 		roomPath?: string[];
 		pathIndex?: number;
 		recordTravelLength?: number;
+		suicideSpawn?: Id<StructureSpawn>;
 	}
 }
 
