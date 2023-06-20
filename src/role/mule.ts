@@ -40,6 +40,11 @@ export default class MuleRole extends Role {
 		// @todo Make TradeRoute object available and reusable.
 		this.tradeRoute = new TradeRoute(creep.memory.route);
 
+		if (creep.memory.suicideSpawn) {
+			this.performRecycle(creep);
+			return;
+		}
+
 		this.reportEarlyDemise(creep);
 
 		if (!this.tradeRoute.isActive()) {
@@ -127,12 +132,10 @@ export default class MuleRole extends Role {
 					const target = creep.room.getBestStorageTarget(amount, resourceType);
 					if (!target) return false;
 
-					if (creep.pos.getRangeTo(target) > 1) {
-						creep.moveToRange(target, 1);
-						return false;
-					}
+					creep.whenInRange(1, target, () => {
+						creep.transfer(target, resourceType);
+					});
 
-					creep.transfer(target, resourceType);
 					return false;
 				});
 				return;
@@ -169,14 +172,10 @@ export default class MuleRole extends Role {
 			return;
 		}
 
-		if (target) {
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-				return;
-			}
-
+		if (!target) return;
+		creep.whenInRange(1, target, () => {
 			creep.withdraw(target, resourceType);
-		}
+		});
 	}
 
 	/**
@@ -199,7 +198,7 @@ export default class MuleRole extends Role {
 
 			// Suicide if another round is unlikely to succeed in time.
 			const travelLength = this.tradeRoute.getTravelLength();
-			if (travelLength && creep.ticksToLive < 2.1 * travelLength) creep.suicide();
+			if (travelLength && creep.ticksToLive < 2.1 * travelLength) this.performRecycle(creep);
 			return;
 		}
 
