@@ -209,7 +209,7 @@ export default class OperatorRole extends Role {
 				type: 'usePower',
 				power: PWR_REGEN_MINERAL,
 				target: mineral.id,
-				priority: 3,
+				priority: mineral.mineralType === RESOURCE_THORIUM ? 4 : 3,
 				weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_REGEN_MINERAL].duration),
 			});
 		}

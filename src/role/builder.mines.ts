@@ -129,41 +129,12 @@ export default class MineBuilderRole extends Role {
 		const hasHarvester = _.filter(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos).length > 0;
 		if (!hasHarvester) return {position, work: 0};
 
-		const neededWork = cache.inHeap('neededRepairs:' + targetPos, 50, () => {
-			const containerPositon = operation.getContainerPosition(targetPos);
-			let total = this.getNeededWorkForPosition(containerPositon, STRUCTURE_CONTAINER);
-
-			for (const position of path.path || []) {
-				if (Game.rooms[position.roomName]?.isMine()) continue;
-
-				total += this.getNeededWorkForPosition(position, STRUCTURE_ROAD);
-			}
-
-			return total;
-		});
+		const neededWork = operation.getNeededWork(targetPos);
 
 		return {
 			position,
 			work: neededWork,
 		};
-	}
-
-	getNeededWorkForPosition(position: RoomPosition, structureType: BuildableStructureConstant) {
-		const room = Game.rooms[position.roomName];
-		if (!room) {
-			// If we don't have visibility, we treat everything as built.
-			return 0;
-		}
-
-		const structures = position.lookFor(LOOK_STRUCTURES);
-		const structure = _.filter(structures, structure => structure.structureType === structureType)[0];
-		if (structure) return structure.hitsMax - structure.hits;
-
-		const sites = position.lookFor(LOOK_STRUCTURES);
-		const site = _.filter(sites, site => site.structureType === structureType)[0];
-		if (site) return (site.hitsMax - site.hits) * REPAIR_POWER;
-
-		return CONSTRUCTION_COST[structureType] * REPAIR_POWER;
 	}
 
 	getPath(creep: MineBuilderCreep): RoomPosition[] | null {

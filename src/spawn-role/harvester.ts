@@ -44,7 +44,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		// Spawn new harvester before previous harvester dies.
 		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
 		const minSpawnDistance = _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)));
-		const activeHarvesters = _.filter(source.harvesters, creep => creep.ticksToLive > creep.body.length * CREEP_SPAWN_TIME + minSpawnDistance);
+		const activeHarvesters = _.filter(source.harvesters, creep => creep.spawning || creep.ticksToLive > creep.body.length * CREEP_SPAWN_TIME + minSpawnDistance);
 
 		if (activeHarvesters.length > 0) return;
 		if (!this.isSourceSafe(source)) return;

@@ -109,12 +109,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 
 		// If we have links to beam energy around, we'll need less transporters.
 		if (room.memory.controllerLink) {
-			maxTransporters -= _.sum(room.sources, (source: Source) => source.getNearbyLink() ? 1 : 0);
-
-			// Need less transporters if energy gets beamed around the place a lot.
-			if (room.memory.controllerLink) {
-				maxTransporters--;
-			}
+			maxTransporters -= 1 + _.sum(room.sources, (source: Source) => source.getNearbyLink() ? 1 : 0);
 		}
 
 		// RCL 5 and 6 are that annoying level at which refilling extensions is
@@ -138,9 +133,11 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 *   Size of transporters for this room.
 	 */
 	getTransporterSize(room: Room): number {
-		if (room.controller.level >= 7) return 24;
+		const fullBayCapacity = Math.max(SPAWN_ENERGY_CAPACITY, EXTENSION_ENERGY_CAPACITY[room.controller.level]) + 6 * EXTENSION_ENERGY_CAPACITY[room.controller.level];
+		if (room.controller.level >= 7) return Math.max(24, fullBayCapacity / CARRY_CAPACITY);
 		if (room.controller.level >= 6) return 18;
 		if (room.controller.level >= 5) return 15;
+
 		return 12;
 	}
 

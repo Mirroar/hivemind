@@ -240,6 +240,43 @@ export default class RemoteMiningOperation extends Operation {
 		return totalEnemyData;
 	}
 
+	estimateNeededWorkParts(sourceLocation: string) {
+		const repairWork = this.getNeededWork(sourceLocation);
+	}
+
+	getNeededWork(sourceLocation: string) {
+		return cache.inHeap('neededRepairs:' + sourceLocation, 50, () => {
+			const containerPositon = this.getContainerPosition(sourceLocation);
+			let total = this.getNeededWorkForPosition(containerPositon, STRUCTURE_CONTAINER);
+
+			for (const position of path.path || []) {
+				if (Game.rooms[position.roomName]?.isMine()) continue;
+
+				total += this.getNeededWorkForPosition(position, STRUCTURE_ROAD);
+			}
+
+			return total;
+		});
+	}
+
+	getNeededWorkForPosition(position: RoomPosition, structureType: BuildableStructureConstant) {
+		const room = Game.rooms[position.roomName];
+		if (!room) {
+			// If we don't have visibility, we treat everything as built.
+			return 0;
+		}
+
+		const structures = position.lookFor(LOOK_STRUCTURES);
+		const structure = _.filter(structures, structure => structure.structureType === structureType)[0];
+		if (structure) return structure.hitsMax - structure.hits;
+
+		const sites = position.lookFor(LOOK_STRUCTURES);
+		const site = _.filter(sites, site => site.structureType === structureType)[0];
+		if (site) return (site.hitsMax - site.hits) * REPAIR_POWER;
+
+		return CONSTRUCTION_COST[structureType] * REPAIR_POWER;
+	}
+
 	getRoomsOnPath(sourceLocation?: string): string[] {
 		return cache.inHeap('rmPath:' + this.name, 1000, () => {
 			const paths = this.getPaths();
