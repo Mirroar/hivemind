@@ -145,7 +145,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		const maxBuilderSize = this.getMaximumBuilderSize(room, maximumNeededWorkParts);
 
 		options.push({
-			unitType: 'hauler',
+			unitType: 'builder',
 			size: maxBuilderSize,
 			priority: 3,
 			weight: 0,
@@ -368,9 +368,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getBuilderCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && (room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
+			room.controller.level > 3 && (room.storage || room.terminal) ? this.getBuilderBodyWeights() : this.getNoRoadsBuilderBodyWeights(),
 			room.energyCapacityAvailable,
-			{[CARRY]: option.size},
+			{[WORK]: option.size},
 		);
 	}
 
@@ -398,7 +398,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			case 'builder':
 				return {
 					role: 'builder.mines',
-					delivering: true,
+					returning: true,
 					sourceRoom: room.name,
 				} as MineBuilderCreepMemory;
 			case 'claimer':

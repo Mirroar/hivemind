@@ -30,6 +30,7 @@ const roleNameMap = {
 	builder: 'B',
 	'builder.exploit': 'BE',
 	'builder.remote': 'BR',
+	'builder.mines': 'BM',
 	claimer: 'C',
 	dismantler: 'D',
 	brawler: 'F',
@@ -47,6 +48,7 @@ const roleNameMap = {
 	transporter: 'T',
 	'hauler.exploit': 'TE',
 	'hauler.power': 'TP',
+	'hauler.relay': 'TRR',
 	hauler: 'TR',
 	upgrader: 'U',
 };
