@@ -240,8 +240,36 @@ export default class RemoteMiningOperation extends Operation {
 		return totalEnemyData;
 	}
 
-	estimateNeededWorkParts(sourceLocation: string) {
-		const repairWork = this.getNeededWork(sourceLocation);
+	estimateRequiredWorkPartsForMaintenance(sourceLocation: string) {
+		return cache.inHeap('neededWorkParts:' + sourceLocation, 500, () => {
+			let total = 1;
+
+			const path = this.getPaths()[sourceLocation];
+			for (const position of path.path || []) {
+				if (Game.rooms[position.roomName]?.isMine()) continue;
+
+				total += 0.05;
+			}
+
+			return Math.ceil(total);
+		});
+	}
+
+	needsRepairs(sourceLocation: string) {
+		return cache.inHeap('needsRepairs:' + sourceLocation, 50, () => {
+			const containerPositon = this.getContainerPosition(sourceLocation);
+			if (this.getNeededWorkForPosition(containerPositon, STRUCTURE_CONTAINER) > CONTAINER_HITS / 2) return true;
+
+			const path = this.getPaths()[sourceLocation];
+			for (const position of path.path || []) {
+				if (Game.rooms[position.roomName]?.isMine()) continue;
+
+				// @todo This should depend on whether it's a swamp tile.
+				if (this.getNeededWorkForPosition(position, STRUCTURE_ROAD) > ROAD_HITS / 3) return true;
+			}
+
+			return false;
+		});
 	}
 
 	getNeededWork(sourceLocation: string) {
@@ -249,6 +277,7 @@ export default class RemoteMiningOperation extends Operation {
 			const containerPositon = this.getContainerPosition(sourceLocation);
 			let total = this.getNeededWorkForPosition(containerPositon, STRUCTURE_CONTAINER);
 
+			const path = this.getPaths()[sourceLocation];
 			for (const position of path.path || []) {
 				if (Game.rooms[position.roomName]?.isMine()) continue;
 

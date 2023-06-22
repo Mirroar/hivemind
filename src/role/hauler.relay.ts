@@ -79,21 +79,24 @@ export default class RelayHaulerRole extends Role {
 			scoredPositions.push(this.scoreHarvestPosition(creep, position));
 		}
 
-		const bestPosition = _.max(_.filter(scoredPositions, p => p.energy > 0), 'energy');
+		if (!scoredPositions.length) return;
+
+		const bestPosition = _.max(scoredPositions, 'energy');
 
 		if (bestPosition) {
 			creep.memory.source = encodePosition(bestPosition.position);
+			creep.memory.operation = 'mine:' + bestPosition.position.roomName;
 		}
 	}
 
 	scoreHarvestPosition(creep: RelayHaulerCreep, position: RoomPosition) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
-		const path = operation.getPaths[targetPos];
+		const path = operation.getPaths()[targetPos];
 
 		const currentEnergy = operation.getEnergyForPickup(targetPos);
 		const maxHarvesterLifetime = _.max(
-			_.filter(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source = targetPos),
+			_.filter(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === targetPos),
 			(creep: Creep) => creep.ticksToLive
 		).ticksToLive;
 		const projectedIncomeDuration = Math.min(maxHarvesterLifetime, path.travelTime);
@@ -113,10 +116,11 @@ export default class RelayHaulerRole extends Role {
 
 	startDelivering(creep: RelayHaulerCreep) {
 		creep.memory.delivering = true;
+		const path = this.getPath(creep);
+
 		delete creep.memory.source;
 		delete creep.heapMemory.deliveryTarget;
 
-		const path = this.getPath(creep);
 		if (!path) return;
 
 		creep.setCachedPath(serializePositionPath(path), false, 1);
@@ -153,6 +157,9 @@ export default class RelayHaulerRole extends Role {
 
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
+		}
+		else {
+			creep.moveToRange(Game.rooms[sourceRoom].getStorageLocation(), 1);
 		}
 	}
 
@@ -220,11 +227,17 @@ export default class RelayHaulerRole extends Role {
 	 */
 	performPickup(creep: RelayHaulerCreep) {
 		const sourcePosition = decodePosition(creep.memory.source);
+		if (!sourcePosition) {
+			creep.say('newtar');
+			this.startPickup(creep);
+			return;
+		}
 
 		//@todo Pick up energy / resources directly next to the creep.
 		// From drops, tombstones or ruins.
 
 		if (creep.hasCachedPath()) {
+			creep.say('follow');
 			creep.followCachedPath();
 			if (creep.hasArrived()) {
 				creep.clearCachedPath();
@@ -237,23 +250,26 @@ export default class RelayHaulerRole extends Role {
 			}
 		}
 
+		creep.say('p1');
+
 		if (sourcePosition.roomName !== creep.pos.roomName) {
 			creep.moveToRange(sourcePosition, 1);
 			return;
 		}
 
-		if (this.pickupNearbyEnergy(creep)) return;
+		if (this.pickupNearbyEnergy(creep)) {creep.say('ene');return;}
 
 		// Get energy from target container.
 		if (!creep.operation) {
 			// @todo Operation has probably ended. Return home.
-			this.startDelivering(creep);
+			//this.startDelivering(creep);
 			return;
 		}
+		creep.say('p2');
 
-		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
 		const container = creep.operation.getContainer(creep.memory.source);
 		if (container) {
+			creep.say('container');
 			creep.whenInRange(1, container, () => {
 				const relevantAmountReached = (container.store.energy || 0) >= Math.min(creep.store.getCapacity() / 2, creep.store.getFreeCapacity());
 				if (relevantAmountReached) {

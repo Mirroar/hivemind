@@ -92,8 +92,6 @@ class SettingsManager {
 		// Add user settings from file.
 		if (localSettings) {
 			_.each(localSettings, (value, key) => {
-				if (typeof this.values[key] === 'undefined') return;
-
 				this.values[key] = value;
 			});
 		}

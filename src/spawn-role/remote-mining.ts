@@ -101,7 +101,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getMaximumHaulerSize(room: Room, maximumNeededCarryParts: number) {
 		const maximumBody = this.generateCreepBodyFromWeights(
-			room.storage ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
+			(room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
 			room.energyCapacityAvailable,
 			{[CARRY]: maximumNeededCarryParts},
 		);
@@ -133,6 +133,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	addBuilderSpawnOptions(room: Room, options: RemoteMiningSpawnOption[]) {
 		if (options.length > 0) return;
+		if (!room.storage || room.terminal) return;
 
 		const currentlyNeededWorkParts = this.getNeededWorkParts(room);
 		const currentBuilders = _.filter(Game.creepsByRole['builder.mines'], creep => creep.memory.sourceRoom === room.name);
@@ -159,7 +160,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			const targetPos = encodePosition(position);
 			if (!operation.hasActiveHarvesters(targetPos)) continue;
 
-			total += operation.estimateRequiredWorkPartsForMaintenance(targetPos);
+			total += operation.needsRepairs(targetPos) ? operation.estimateRequiredWorkPartsForMaintenance(targetPos) : 0;
 		}
 
 		return total;
@@ -244,11 +245,11 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 		const harvestPositions = room.getRemoteHarvestSourcePositions();
 		for (const position of harvestPositions) {
-			this.addOptionForPosition(room, position, options);
+			this.addHarvesterOptionForPosition(room, position, options);
 		}
 	}
 
-	addOptionForPosition(room: Room, position: RoomPosition, options: RemoteMiningSpawnOption[]) {
+	addHarvesterOptionForPosition(room: Room, position: RoomPosition, options: RemoteMiningSpawnOption[]) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
 
@@ -263,8 +264,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 		const option: HarvesterSpawnOption = {
 			unitType: 'harvester',
-			priority: 3,
-			weight: 1,
+			priority: 1,
+			weight: 0,
 			targetPos: position,
 			// @todo Consider established when roads are fully built.
 			isEstablished: operation.hasContainer(targetPos),
@@ -351,7 +352,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getHaulerCreepBody(room: Room, option: HaulerSpawnOption): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && room.storage ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
+			room.controller.level > 3 && (room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
 			room.energyCapacityAvailable,
 			{[CARRY]: option.size},
 		);
@@ -367,7 +368,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getBuilderCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
 		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && room.storage ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
+			room.controller.level > 3 && (room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
 			room.energyCapacityAvailable,
 			{[CARRY]: option.size},
 		);
