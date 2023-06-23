@@ -248,7 +248,7 @@ export default class RemoteMiningOperation extends Operation {
 			for (const position of path.path || []) {
 				if (Game.rooms[position.roomName]?.isMine()) continue;
 
-				total += 0.05;
+				total += 0.03;
 			}
 
 			return Math.ceil(total);

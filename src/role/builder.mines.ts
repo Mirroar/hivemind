@@ -45,17 +45,6 @@ export default class MineBuilderRole extends Role {
 			this.performRecycle(creep);
 		}
 
-		const isEmpty = creep.store.getUsedCapacity() === 0;
-		const isFull = creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9;
-		const path = this.getPath(creep);
-		if (creep.memory.returning && isEmpty) {
-			// @todo Determine if it's faster to go home, or to the source.
-			this.setBuildState(creep, false);
-		}
-		else if (!creep.memory.returning && isFull) {
-			this.setBuildState(creep, true);
-		}
-
 		if (!creep.memory.source) {
 			if (creep.pos.roomName !== creep.memory.sourceRoom) {
 				creep.interRoomTravel(new RoomPosition(25, 25, creep.memory.sourceRoom));
@@ -90,7 +79,7 @@ export default class MineBuilderRole extends Role {
 	 * @param {boolean} returning
 	 *   Whether this creep should be delivering it's carried resources.
 	 */
-	setBuildState(creep: MineBuilderCreep, returning: boolean) {
+	setReturning(creep: MineBuilderCreep, returning: boolean) {
 		creep.memory.returning = returning;
 
 		if (!returning) {
@@ -117,6 +106,7 @@ export default class MineBuilderRole extends Role {
 
 		if (bestPosition?.position) {
 			creep.memory.source = encodePosition(bestPosition.position);
+			creep.memory.operation = 'mine:' + bestPosition.position.roomName;
 		}
 	}
 
@@ -155,36 +145,35 @@ export default class MineBuilderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performReturnHome(creep: MineBuilderCreep) {
-		if (!creep.operation) {
-			// @todo Operation has probably ended. Return home and suicide?
-			return;
-		}
-
 		// Refill at container if we emptied ourselves too much repairing it.
-		const container = creep.operation.getContainer(creep.memory.source);
+		const container = creep.operation?.getContainer(creep.memory.source);
 		if (container && container.pos.roomName === creep.pos.roomName && creep.pos.getRangeTo(container) < 10) {
-			const path = this.getPath(creep);
-			const isDying = path && creep.ticksToLive <= path.length;
-
 			if (
 				creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.5 &&
-				container.store.getUsedCapacity() > container.store.getCapacity() * 0.1 &&
-				!isDying
+				container.store.getUsedCapacity(RESOURCE_ENERGY) > container.store.getCapacity() * 0.1
 			) {
 				// If we're close to source container, make sure we fill up before
 				// returning home.
-				this.setBuildState(creep, false);
+				creep.whenInRange(1, container, () => {
+					creep.withdraw(container, RESOURCE_ENERGY);
+				});
+
+				return;
 			}
 		}
 
-		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
-		if (!Game.rooms[sourceRoom]) return;
-
-		if (creep.room.name === sourceRoom) {
+		if (creep.room.name === creep.memory.sourceRoom) {
 			const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
-			creep.whenInRange(1, target, () => {
-				if (creep.withdraw(target, RESOURCE_ENERGY) === OK) this.setBuildState(creep, false);
-			});
+
+			if (target) {
+				creep.whenInRange(1, target, () => {
+					if (creep.withdraw(target, RESOURCE_ENERGY) === OK) this.setReturning(creep, false);
+				});
+			}
+			else {
+				// Wait for energy to become available.
+				creep.whenInRange(5, creep.room.getStorageLocation(), () => {});
+			}
 
 			return;
 		}
@@ -197,6 +186,9 @@ export default class MineBuilderRole extends Role {
 			else {
 				return;
 			}
+		}
+		else {
+			creep.moveToRange(new RoomPosition(25, 25, creep.memory.sourceRoom), 20);
 		}
 	}
 
@@ -211,10 +203,8 @@ export default class MineBuilderRole extends Role {
 
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
+			this.performBuildRoad(creep);
 			if (creep.hasArrived()) {
-				creep.clearCachedPath();
-			}
-			else if (creep.pos.getRangeTo(sourcePosition) <= 3) {
 				creep.clearCachedPath();
 			}
 			else {
@@ -230,29 +220,19 @@ export default class MineBuilderRole extends Role {
 
 		const actionTaken = this.pickupNearbyEnergy(creep);
 
-		// Get energy from target container.
 		if (!creep.operation) {
 			// @todo Operation has probably ended. Return home and suicide?
+			this.setReturning(creep, true);
 			return;
 		}
 
-		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
-		const container = creep.operation.getContainer(creep.memory.source);
-		if (container) {
-			creep.whenInRange(1, container, () => {
-				const relevantAmountReached = (container.store.energy || 0) >= Math.min(creep.store.getCapacity() / 2, creep.store.getFreeCapacity());
-				if (!actionTaken && relevantAmountReached) {
-					creep.withdraw(container, RESOURCE_ENERGY) === OK;
-				}
-			});
-		}
-		else if (creep.pos.getRangeTo(sourcePosition) > 2) {
-			// If all else fails, make sure we're close enough to our source.
-			creep.whenInRange(2, sourcePosition, () => {});
-		}
+		// Get close to the source and then return home, building and refreshing energy as necessary.
+		creep.whenInRange(2, sourcePosition, () => {
+			this.setReturning(creep, true);
+		});
 
 		// Repair / build roads, even when just waiting for more energy.
-		if (!actionTaken && sourceRoom !== creep.pos.roomName && !creep.room.isMine()) {
+		if (!actionTaken && !creep.room.isMine()) {
 			this.performBuildRoad(creep);
 		}
 	}
@@ -324,13 +304,9 @@ export default class MineBuilderRole extends Role {
 
 		if (!creep.operation) return false;
 
-		const sourceRoom = creep.operation.getSourceRoom(creep.memory.source);
-		const sourceRoomLevel = Game.rooms[sourceRoom] ? Game.rooms[sourceRoom].controller.level : 0;
-		const buildRoads = sourceRoomLevel > 3;
-
 		this.actionTaken = false;
 
-		if (creep.memory.cachedPath && buildRoads) {
+		if (creep.memory.cachedPath) {
 			if (this.buildRoadOnCachedPath(creep)) return true;
 		}
 		else if (this.repairNearby(creep)) return true;

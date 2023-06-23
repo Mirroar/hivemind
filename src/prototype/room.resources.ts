@@ -5,6 +5,7 @@ import cache from 'utils/cache';
 import container from 'utils/container';
 import FunnelManager from 'empire/funnel-manager';
 import ReactorManager from 'warmind.local/reactor-manager';
+import RemoteMiningOperation from 'operation/remote-mining';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
@@ -317,17 +318,41 @@ Room.prototype.stopTradePreparation = function (this: Room) {
  */
 Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
 	// @todo Sort by profitability because it influences spawn order.
-	const harvestPositions: RoomPosition[] = [];
-	_.each(Game.operationsByType.mining, operation => {
-		const locations = operation.getMiningLocationsByRoom();
+	return cache.inHeap('remoteSourcePositions:' + this.name, 500, () => {
+		const evaluations = [];
+		_.each(Game.operationsByType.mining, operation => {
+			const locations = operation.getMiningLocationsByRoom();
 
-		_.each(locations[this.name], location => {
-			harvestPositions.push(decodePosition(location));
+			_.each(locations[this.name], location => {
+				if (!operation.getPaths()[location]?.path) return;
+
+				evaluations.push(getRemoteHarvestSourceEvaluation(operation, location));
+			});
 		});
-	});
 
-	return harvestPositions;
+		const harvestPositions: RoomPosition[] = [];
+		for (const evaluation of _.sortBy(evaluations, evaluation => {
+			if (this.storage || this.terminal) return evaluation.averageDistance * (1.2 - (evaluation.sourceCount / 5));
+
+			return evaluation.distance;
+		})) {
+			harvestPositions.push(decodePosition(evaluation.location));
+		}
+
+		return harvestPositions;
+	});
 };
+
+function getRemoteHarvestSourceEvaluation(operation: RemoteMiningOperation, location: string) {
+	const paths = operation.getPaths();
+
+	return {
+		location,
+		sourceCount: _.size(paths),
+		distance: paths[location].path.length,
+		averageDistance: _.sum(paths, path => path.path.length) / _.size(paths),
+	};
+}
 
 /**
  * Returns the position of all nearby controllers that should be reserved.
