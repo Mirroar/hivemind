@@ -26,7 +26,7 @@ declare global {
 	interface RelayHaulerCreepHeapMemory extends CreepHeapMemory {
 		deliveryTarget?: Id<AnyStoreStructure>;
 		order?: ResourceDestinationTask;
-		energyPickupTarget?: Id<Resource>;
+		energyPickupTarget?: Id<Resource | Tombstone | Ruin>;
 	}
 }
 
@@ -83,7 +83,7 @@ export default class RelayHaulerRole extends Role {
 
 		const bestPosition = _.max(scoredPositions, 'energy');
 
-		if (bestPosition) {
+		if (bestPosition?.position) {
 			creep.memory.source = encodePosition(bestPosition.position);
 			creep.memory.operation = 'mine:' + bestPosition.position.roomName;
 		}
@@ -92,6 +92,8 @@ export default class RelayHaulerRole extends Role {
 	scoreHarvestPosition(creep: RelayHaulerCreep, position: RoomPosition) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
+		if (operation.isUnderAttack()) return {position, energy: -1000};
+
 		const path = operation.getPaths()[targetPos];
 
 		const currentEnergy = operation.getEnergyForPickup(targetPos);
@@ -104,13 +106,21 @@ export default class RelayHaulerRole extends Role {
 		const projectedIncome = projectedIncomeDuration * sourceMaxEnergy / ENERGY_REGEN_TIME;
 
 		const queuedHaulerCapacity = _.sum(
-			_.filter(Game.creepsByRole['hauler.relay'], (creep: RelayHaulerCreep) => creep.memory.source === targetPos),
+			_.filter(Game.creepsByRole['hauler.relay'], (creep: RelayHaulerCreep) => creep.memory.source === targetPos && !creep.memory.delivering),
+			(creep: Creep) => creep.store.getFreeCapacity(RESOURCE_ENERGY)
+		);
+		const oldHaulerCapacity = _.sum(
+			_.filter(Game.creepsByRole['hauler'], (creep: HaulerCreep) => creep.memory.source === targetPos && !creep.memory.delivering),
+			(creep: Creep) => creep.store.getFreeCapacity(RESOURCE_ENERGY)
+		);
+		const queuedBuilderCapacity = _.sum(
+			_.filter(Game.creepsByRole['builder.mines'], (creep: MineBuilderCreep) => creep.memory.source === targetPos && !creep.memory.returning),
 			(creep: Creep) => creep.store.getFreeCapacity(RESOURCE_ENERGY)
 		);
 
 		return {
 			position,
-			energy: currentEnergy + projectedIncome - queuedHaulerCapacity,
+			energy: currentEnergy + projectedIncome - queuedHaulerCapacity - queuedBuilderCapacity - oldHaulerCapacity,
 		};
 	}
 
@@ -145,6 +155,8 @@ export default class RelayHaulerRole extends Role {
 		const sourceRoom = creep.memory.sourceRoom;
 		if (!Game.rooms[sourceRoom]) return;
 
+		if (this.pickupNearbyEnergy(creep)) return;
+
 		const hasTarget = creep.heapMemory.deliveryTarget && creep.isInRoom();
 		if (creep.pos.roomName === sourceRoom || hasTarget) {
 			const target = this.getDeliveryTarget(creep); 
@@ -157,6 +169,9 @@ export default class RelayHaulerRole extends Role {
 
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
+			if (creep.hasArrived()) {
+				creep.clearCachedPath();
+			}
 		}
 		else {
 			creep.moveToRange(Game.rooms[sourceRoom].getStorageLocation(), 1);
@@ -166,7 +181,12 @@ export default class RelayHaulerRole extends Role {
 	getDeliveryTarget(creep: RelayHaulerCreep) {
 		if (creep.heapMemory.deliveryTarget) {
 			const target = Game.getObjectById(creep.heapMemory.deliveryTarget);
-			if (target) return target;
+			if (target) {
+				return target;
+			}
+			else {
+				delete creep.heapMemory.deliveryTarget;
+			}
 		}
 
 		const target = Game.rooms[creep.memory.sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
@@ -177,6 +197,8 @@ export default class RelayHaulerRole extends Role {
 	}
 
 	storeResources(creep: RelayHaulerCreep, target?: AnyStoreStructure) {
+		this.transferEnergyToNearbyTargets(creep);
+
 		if (!creep.room.storage && !creep.room.terminal) {
 			if (!creep.heapMemory.order || !creep.room.destinationDispatcher.validateTask(creep.heapMemory.order, {creep})) {
 				creep.heapMemory.order = creep.room.destinationDispatcher.getTask({
@@ -204,6 +226,26 @@ export default class RelayHaulerRole extends Role {
 		});
 	}
 
+	transferEnergyToNearbyTargets(creep: RelayHaulerCreep) {
+		const structures = creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
+			filter: (structure: AnyStoreStructure) => ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_POWER_SPAWN] as string[]).includes(structure.structureType) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+		});
+
+		if (structures.length) {
+			creep.transfer(_.sample(structures), RESOURCE_ENERGY);
+			return;
+		}
+
+		const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+			filter: creep => ['builder', 'builder.remote', 'upgrader'].includes(creep.memory.role) && creep.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+		});
+
+		if (structures.length) {
+			creep.transfer(_.sample(structures), RESOURCE_ENERGY);
+			return;
+		}
+	}
+
 	dropResources(creep: RelayHaulerCreep) {
 		const storageLocation = creep.room.getStorageLocation();
 		if (!storageLocation) {
@@ -226,6 +268,7 @@ export default class RelayHaulerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performPickup(creep: RelayHaulerCreep) {
+		creep.say('p0');
 		const sourcePosition = decodePosition(creep.memory.source);
 		if (!sourcePosition) {
 			creep.say('newtar');
@@ -233,8 +276,9 @@ export default class RelayHaulerRole extends Role {
 			return;
 		}
 
-		//@todo Pick up energy / resources directly next to the creep.
+		// Pick up energy / resources directly next to the creep.
 		// From drops, tombstones or ruins.
+		if (this.pickupNearbyEnergy(creep)) {creep.say('ene');return;}
 
 		if (creep.hasCachedPath()) {
 			creep.say('follow');
@@ -242,7 +286,7 @@ export default class RelayHaulerRole extends Role {
 			if (creep.hasArrived()) {
 				creep.clearCachedPath();
 			}
-			else if (creep.pos.getRangeTo(sourcePosition) <= 3) {
+			else if (creep.pos.roomName === sourcePosition.roomName && creep.pos.getRangeTo(sourcePosition) <= 3) {
 				creep.clearCachedPath();
 			}
 			else {
@@ -257,8 +301,6 @@ export default class RelayHaulerRole extends Role {
 			return;
 		}
 
-		if (this.pickupNearbyEnergy(creep)) {creep.say('ene');return;}
-
 		// Get energy from target container.
 		if (!creep.operation) {
 			// @todo Operation has probably ended. Return home.
@@ -270,10 +312,21 @@ export default class RelayHaulerRole extends Role {
 		const container = creep.operation.getContainer(creep.memory.source);
 		if (container) {
 			creep.say('container');
+
+			const hasHarvester = _.filter(creep.room.creepsByRole['harvester.remote'], (harvester: RemoteHarvesterCreep) => harvester.memory.source === creep.memory.source).length > 0;
+			if (!hasHarvester && container.store.getUsedCapacity(RESOURCE_ENERGY) < 20) {
+				this.startDelivering(creep);
+				return;
+			}
+
 			creep.whenInRange(1, container, () => {
 				const relevantAmountReached = (container.store.energy || 0) >= Math.min(creep.store.getCapacity() / 2, creep.store.getFreeCapacity());
 				if (relevantAmountReached) {
 					creep.withdraw(container, RESOURCE_ENERGY);
+				}
+				if (!hasHarvester) {
+					creep.withdraw(container, RESOURCE_ENERGY);
+					this.startDelivering(creep);
 				}
 			});
 		}
@@ -293,24 +346,35 @@ export default class RelayHaulerRole extends Role {
 	 *   True if a pickup was made this tick.
 	 */
 	pickupNearbyEnergy(creep: RelayHaulerCreep) {
+		if (creep.store.getFreeCapacity() === 0) return false;
+
 		// @todo Allow hauler to pick up other resources as well, but respect that
 		// when delivering.
 		// @todo Allow picking up from tombstones and ruins.
 		// Check if energy is on the ground nearby and pick that up.
-		const resource = this.getNearbyEnergyResource(creep);
-		if (!resource) return false;
+		const target = this.getNearbyEnergyTarget(creep);
+		if (target) {
+			creep.whenInRange(1, target, () => {
+				if (target instanceof Resource) {
+					creep.pickup(target);
+				}
+				else {
+					creep.withdraw(target, RESOURCE_ENERGY);
+				}
+			});
+			return true;
+		}
 
-		creep.whenInRange(1, resource, () => {
-			creep.pickup(resource);
-		});
-		return true;
+		return false;
 	}
 
-	getNearbyEnergyResource(creep: RelayHaulerCreep) {
+	getNearbyEnergyTarget(creep: RelayHaulerCreep) {
 		if (creep.heapMemory.energyPickupTarget) {
-			const resource = Game.getObjectById(creep.heapMemory.energyPickupTarget);
+			const target = Game.getObjectById(creep.heapMemory.energyPickupTarget);
 
-			if (resource && resource.pos.roomName === creep.pos.roomName) return resource;
+			if (target && target.pos.roomName === creep.pos.roomName && ((target instanceof Resource) || target.store.getUsedCapacity(RESOURCE_ENERGY) >= 20)) {
+				return target;
+			}
 
 			delete creep.heapMemory.energyPickupTarget;
 		}
@@ -320,9 +384,29 @@ export default class RelayHaulerRole extends Role {
 			filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= 20,
 		});
 
-		if (!resources.length) return null;
+		if (resources.length) {
+			creep.heapMemory.energyPickupTarget = resources[0].id;
+			return resources[0];
+		}
 
-		creep.heapMemory.energyPickupTarget = resources[0].id;
-		return resources[0];
+		const tombstone = creep.pos.findInRange(FIND_TOMBSTONES, 3, {
+			filter: tombstone => tombstone.store.getUsedCapacity(RESOURCE_ENERGY) >= 20,
+		});
+
+		if (tombstone.length) {
+			creep.heapMemory.energyPickupTarget = tombstone[0].id;
+			return tombstone[0];
+		}
+
+		const ruin = creep.pos.findInRange(FIND_RUINS, 3, {
+			filter: ruin => ruin.store.getUsedCapacity(RESOURCE_ENERGY) >= 20,
+		});
+
+		if (ruin.length) {
+			creep.heapMemory.energyPickupTarget = ruin[0].id;
+			return ruin[0];
+		}
+
+		return null;
 	}
 }

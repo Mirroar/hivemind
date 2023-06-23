@@ -24,6 +24,8 @@ import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
+const energyCache: Record<string, number> = {};
+
 /**
  * This kind of operation handles all remote mining.
  *
@@ -412,13 +414,14 @@ export default class RemoteMiningOperation extends Operation {
 		let total = container?.store?.energy || 0;
 
 		const position = decodePosition(sourceLocation);
-		if (!Game.rooms[position.roomName]) return total;
+		if (!Game.rooms[position.roomName]) return energyCache[sourceLocation] || total;
 		for (const resource of position.findInRange(FIND_DROPPED_RESOURCES, 1)) {
 			if (resource.resourceType !== RESOURCE_ENERGY) continue;
 
 			total =+ resource.amount;
 		}
 
+		energyCache[sourceLocation] = total;
 		return total;
 	}
 

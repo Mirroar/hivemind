@@ -113,6 +113,8 @@ export default class MineBuilderRole extends Role {
 	scoreHarvestPosition(creep: MineBuilderCreep, position: RoomPosition) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
+		if (operation.isUnderAttack()) return {position, work: -1000};
+
 		const path = operation.getPaths()[targetPos];
 
 		const hasBuilder = _.filter(Game.creepsByRole['builder.mines'], (c: MineBuilderCreep) => c.memory.source === targetPos).length > 0;

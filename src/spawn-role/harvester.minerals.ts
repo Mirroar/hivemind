@@ -31,7 +31,7 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 
 		const options: MineralHarvesterSpawnOption[] = [];
 		for (const mineral of minerals) {
-			const mineralHarvesters = mineral.harvesters;
+			const mineralHarvesters = _.filter(mineral.harvesters, creep => creep.spawning || creep.ticksToLive > this.getCreepBody(room).length * CREEP_SPAWN_TIME);
 			const maxHarvesters = room.isStripmine() ? Math.min(3, mineral.getNumHarvestSpots()) : 1;
 			if (_.size(mineralHarvesters) >= maxHarvesters) continue;
 

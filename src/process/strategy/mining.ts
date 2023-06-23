@@ -5,6 +5,7 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import ReactorManager from 'warmind.local/reactor-manager';
 import RemoteMiningOperation from 'operation/remote-mining';
+import settings from 'settings-manager';
 import stats from 'utils/stats';
 
 declare global {
@@ -78,6 +79,9 @@ export default class RemoteMiningProcess extends Process {
 			if (room.controller.level >= 7) roomNeeds += exploitFlags.length * 3;
 			if (container.get<ReactorManager>('ReactorManager').getSpawnRoom() === room.name) roomNeeds += 2;
 			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
+
+			// Allow more remotes when using new method, since it spawns stuff more dynamically.
+			if (settings.get('newRemoteMiningRoomFilter') && settings.get('newRemoteMiningRoomFilter')(room.name)) roomNeeds--;
 
 			// Increase spawn capacity if there's a power creep that can help.
 			const powerCreep = _.find(Game.powerCreeps, creep => {
