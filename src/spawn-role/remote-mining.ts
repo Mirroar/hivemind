@@ -141,7 +141,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	addBuilderSpawnOptions(room: Room, options: RemoteMiningSpawnOption[]) {
 		if (options.length > 0) return;
-		if (!room.storage || room.terminal) return;
+		if (!room.storage && !room.terminal) return;
 
 		const currentlyNeededWorkParts = this.getNeededWorkParts(room);
 		const currentBuilders = _.filter(Game.creepsByRole['builder.mines'], creep => creep.memory.sourceRoom === room.name);
@@ -384,11 +384,11 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	}
 
 	getBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.35, [CARRY]: 0.35, [WORK]: 0.3};
+		return {[MOVE]: 0.35, [CARRY]: 0.45, [WORK]: 0.2};
 	}
 
 	getNoRoadsBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.5, [CARRY]: 0.3, [WORK]: 0.2};
+		return {[MOVE]: 0.5, [CARRY]: 0.35, [WORK]: 0.15};
 	}
 
 	/**

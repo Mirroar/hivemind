@@ -92,7 +92,7 @@ export default class RelayHaulerRole extends Role {
 	scoreHarvestPosition(creep: RelayHaulerCreep, position: RoomPosition) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
-		if (operation.isUnderAttack()) return {position, energy: -1000};
+		if (!operation || operation.isUnderAttack()) return {position, energy: -1000};
 
 		const path = operation.getPaths()[targetPos];
 
@@ -103,7 +103,7 @@ export default class RelayHaulerRole extends Role {
 		).ticksToLive;
 		const projectedIncomeDuration = Math.min(maxHarvesterLifetime, path.travelTime);
 		const sourceMaxEnergy = operation.canReserveFrom(creep.memory.sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
-		const projectedIncome = projectedIncomeDuration * sourceMaxEnergy / ENERGY_REGEN_TIME;
+		const projectedIncome = operation.hasContainer(targetPos) ? projectedIncomeDuration * sourceMaxEnergy / ENERGY_REGEN_TIME : 0;
 
 		const queuedHaulerCapacity = _.sum(
 			_.filter(Game.creepsByRole['hauler.relay'], (creep: RelayHaulerCreep) => creep.memory.source === targetPos && !creep.memory.delivering),
@@ -154,6 +154,15 @@ export default class RelayHaulerRole extends Role {
 	performDeliver(creep: RelayHaulerCreep) {
 		const sourceRoom = creep.memory.sourceRoom;
 		if (!Game.rooms[sourceRoom]) return;
+
+		// Transfer energy to nearby mine builders.
+		const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+			filter: creep => ['builder', 'builder.remote', 'builder.mines', 'upgrader'].includes(creep.memory.role) && creep.store.getFreeCapacity(RESOURCE_ENERGY) > creep.store.getCapacity() / 3,
+		});
+		if (creeps.length) {
+			creep.transfer(_.sample(creeps), RESOURCE_ENERGY);
+			return;
+		}
 
 		if (this.pickupNearbyEnergy(creep)) return;
 
@@ -237,11 +246,11 @@ export default class RelayHaulerRole extends Role {
 		}
 
 		const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-			filter: creep => ['builder', 'builder.remote', 'upgrader'].includes(creep.memory.role) && creep.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
+			filter: creep => ['builder', 'builder.remote', 'builder.mines', 'upgrader'].includes(creep.memory.role) && creep.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
 		});
 
-		if (structures.length) {
-			creep.transfer(_.sample(structures), RESOURCE_ENERGY);
+		if (creeps.length) {
+			creep.transfer(_.sample(creeps), RESOURCE_ENERGY);
 			return;
 		}
 	}

@@ -113,7 +113,7 @@ export default class MineBuilderRole extends Role {
 	scoreHarvestPosition(creep: MineBuilderCreep, position: RoomPosition) {
 		const targetPos = encodePosition(position);
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
-		if (operation.isUnderAttack()) return {position, work: -1000};
+		if (!operation || operation.isUnderAttack()) return {position, work: -1000};
 
 		const path = operation.getPaths()[targetPos];
 
@@ -164,7 +164,14 @@ export default class MineBuilderRole extends Role {
 			}
 		}
 
+		if (this.pickupNearbyEnergy(creep)) return;
+
 		if (creep.room.name === creep.memory.sourceRoom) {
+			if (creep.store.getFreeCapacity() === 0) {
+				this.setReturning(creep, false);
+				return;
+			}
+
 			const target = creep.room.getBestStorageSource(RESOURCE_ENERGY);
 
 			if (target) {
@@ -249,6 +256,8 @@ export default class MineBuilderRole extends Role {
 	 *   True if a pickup was made this tick.
 	 */
 	pickupNearbyEnergy(creep: MineBuilderCreep) {
+		if (creep.store.getFreeCapacity(RESOURCE_ENERGY) < 20) return false;
+
 		// @todo Allow hauler to pick up other resources as well, but respect that
 		// when returning.
 		// Check if energy is on the ground nearby and pick that up.

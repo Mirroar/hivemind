@@ -244,7 +244,7 @@ export default class RemoteMiningOperation extends Operation {
 
 	estimateRequiredWorkPartsForMaintenance(sourceLocation: string) {
 		return cache.inHeap('neededWorkParts:' + sourceLocation, 500, () => {
-			let total = 1;
+			let total = 0.7;
 
 			const path = this.getPaths()[sourceLocation];
 			for (const position of path.path || []) {
@@ -303,7 +303,7 @@ export default class RemoteMiningOperation extends Operation {
 
 		const sites = position.lookFor(LOOK_STRUCTURES);
 		const site = _.filter(sites, site => site.structureType === structureType)[0];
-		if (site) return (site.hitsMax - site.hits) * REPAIR_POWER;
+		if (site) return site.hitsMax * REPAIR_POWER;
 
 		return CONSTRUCTION_COST[structureType] * REPAIR_POWER;
 	}

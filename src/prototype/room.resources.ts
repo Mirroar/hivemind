@@ -486,7 +486,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 
 		// Rooms we are funneling should pull extra energy.
 		const funnelManager = container.get<FunnelManager>('FunnelManager');
-		if (funnelManager.isFunnelingTo(this.name)) return [500_000, 250_000, 100_000];
+		if (funnelManager.isFunnelingTo(this.name)) return [500_000, 300_000, 150_000];
 
 		return [200_000, 50_000, 20_000];
 	}
