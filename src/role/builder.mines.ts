@@ -39,6 +39,7 @@ export default class MineBuilderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep: MineBuilderCreep) {
+		// @todo Take from haulers when next to them. Also take from harvesters when building container so they don't have to.
 		if (!hivemind.segmentMemory.isReady()) return;
 
 		if (creep.heapMemory.suicideSpawn) {

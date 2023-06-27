@@ -29,6 +29,9 @@ export default class TransporterSpawnRole extends SpawnRole {
 				size: transporterSize,
 			};
 
+			const hasHaulers =
+				_.filter(Game.creepsByRole['hauler'], creep => creep.memory.sourceRoom === room.name).length +
+				_.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
 			if (transporterCount >= maxTransporters / 2) {
 				option.priority--;
 				option.priority--;
@@ -37,7 +40,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 				option.priority--;
 				option.weight = 0;
 			}
-			else if (room.storage || room.terminal) {
+			else if (room.storage || room.terminal || !hasHaulers) {
 				option.force = true;
 				option.weight = 1;
 			}

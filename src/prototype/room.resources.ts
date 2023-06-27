@@ -344,13 +344,13 @@ Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
 };
 
 function getRemoteHarvestSourceEvaluation(operation: RemoteMiningOperation, location: string) {
-	const paths = operation.getPaths();
+	const filteredPaths = _.filter(operation.getPaths(), path => path.path);
 
 	return {
 		location,
-		sourceCount: _.size(paths),
-		distance: paths[location].path.length,
-		averageDistance: _.sum(paths, path => path.path.length) / _.size(paths),
+		sourceCount: _.size(filteredPaths),
+		distance: operation.getPaths()[location].path.length,
+		averageDistance: _.sum(filteredPaths, path => path.path.length) / _.size(filteredPaths),
 	};
 }
 
