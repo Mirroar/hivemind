@@ -62,12 +62,9 @@ export default class ScoutRole extends Role {
 		if (creep.memory.portalTarget) {
 			const portalPosition = decodePosition(creep.memory.portalTarget);
 			if (creep.pos.roomName === portalPosition.roomName) {
-				if (creep.pos.getRangeTo(portalPosition) > 1) {
-					creep.moveToRange(portalPosition, 1);
-				}
-				else {
+				creep.whenInRange(1, portalPosition, () => {
 					creep.moveTo(portalPosition);
-				}
+				});
 			}
 			else {
 				creep.moveToRoom(portalPosition.roomName);
@@ -78,10 +75,7 @@ export default class ScoutRole extends Role {
 
 		if (!creep.memory.scoutTarget) {
 			// Just stand around somewhere.
-			const target = new RoomPosition(25, 25, creep.pos.roomName);
-			if (creep.pos.getRangeTo(target) > 3) {
-				creep.moveToRange(target, 3);
-			}
+			creep.whenInRange(3, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 
 			return;
 		}
@@ -94,10 +88,7 @@ export default class ScoutRole extends Role {
 
 		if (!creep.memory.scoutTarget) {
 			// Just stand around somewhere.
-			const target = new RoomPosition(25, 25, creep.pos.roomName);
-			if (creep.pos.getRangeTo(target) > 3) {
-				creep.moveToRange(target, 3);
-			}
+			creep.whenInRange(3, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 
 			return;
 		}

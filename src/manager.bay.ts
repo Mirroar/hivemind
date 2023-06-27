@@ -4,6 +4,7 @@ STRUCTURE_LINK STRUCTURE_CONTAINER */
 
 import cache from 'utils/cache';
 import {encodePosition} from 'utils/serialization';
+import {handleMapArea} from 'utils/map';
 
 declare global {
 	interface Room {
@@ -62,7 +63,7 @@ export default class Bay {
 			this.extensions.push(extension);
 
 			if (extension instanceof StructureExtension || extension instanceof StructureSpawn) {
-				this.energy += extension.energy;
+				this.energy += extension.store.getUsedCapacity(RESOURCE_ENERGY);
 				this.energyCapacity += extension.store.getCapacity(RESOURCE_ENERGY);
 			}
 		}
@@ -117,7 +118,7 @@ export default class Bay {
 	 * Checks if this bay needs to be filled with more energy.
 	 *
 	 * @return {boolean}
-	 *   True if more energy is neeeded.
+	 *   True if more energy is needed.
 	 */
 	needsRefill(): boolean {
 		return this.energy < this.energyCapacity;
@@ -128,16 +129,42 @@ export default class Bay {
 	 *
 	 * @param {Creep} creep
 	 *   A creep with carry parts and energy in store.
+	 * @return {boolean}
+	 *   True if more energy is needed.
 	 */
 	refillFrom(creep: Creep) {
-		const needsRefill = _.filter(this.extensions, (extension: AnyStoreStructure) => {
+		const needsRefill = this.getStructuresNeedingRefill();
+		if (needsRefill.length === 0) return false;
+
+		const target = _.min(needsRefill, extension => (bayStructures as string[]).indexOf(extension.structureType));
+		const targetCapacity = target.store.getFreeCapacity(RESOURCE_ENERGY);
+		const amount = Math.min(creep.store.getUsedCapacity(RESOURCE_ENERGY), targetCapacity);
+		const isLastTransfer = amount >= this.energyCapacity - this.energy || amount === creep.store.getUsedCapacity(RESOURCE_ENERGY);
+		if (creep.transfer(target, RESOURCE_ENERGY) === OK && isLastTransfer) return false;
+
+		return true;
+	}
+
+	getStructuresNeedingRefill() {
+		return _.filter(this.extensions, (extension: AnyBayStructure) => {
 			if (extension.store) return extension.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
 
 			return false;
 		});
+	}
 
-		const target = _.min(needsRefill, extension => (bayStructures as string[]).indexOf(extension.structureType));
+	getExitPosition(): RoomPosition {
+		const coords = cache.inHeap('exitCoords:' + this.name, 500, () => {
+			let exitCoords;
+			const room = Game.rooms[this.pos.roomName];
+			handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+				const position = new RoomPosition(x, y, this.pos.roomName);
+				if (room?.roomPlanner?.isPlannedLocation(position, 'road')) exitCoords = {x: position.x, y: position.y};
+			});
 
-		creep.transfer(target, RESOURCE_ENERGY);
+			return exitCoords;
+		});
+
+		return new RoomPosition(coords.x, coords.y, this.pos.roomName);
 	}
 }

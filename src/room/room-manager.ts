@@ -464,8 +464,7 @@ export default class RoomManager {
 			const hasExtractor = _.filter(structures, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0 ||
 				_.filter(constructionSites, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0;
 
-			let scoreFactor = mineral && mineral.mineralType === RESOURCE_THORIUM ? 2 : 1;
-
+			let scoreFactor = mineral && mineral.mineralType === RESOURCE_THORIUM ? 5 : 1;
 			if (mineral && !mineral.room.isStripmine() && mineral.mineralAmount < 500) {
 				scoreFactor = 0;
 			}

@@ -57,7 +57,25 @@ export default class BayDestination implements TaskProvider<BayDestinationTask, 
 		const creep = context.creep;
 		const target = _.find(creep.room.bays, bay => bay.name === task.name);
 		creep.whenInRange(0, target.pos, () => {
-			target.refillFrom(creep);
+			if (!target.refillFrom(creep)) {
+				delete creep.memory.order;
+
+				const exitPosition = target.getExitPosition();
+				if (exitPosition) creep.move(creep.pos.getDirectionTo(exitPosition));
+			}
 		});
+
+		if (creep.pos.getRangeTo(target.pos) > 0) {
+			// See if we can refill some of the bay's structures while en route.
+			for (const structure of target.extensions) {
+				if (structure.store.getFreeCapacity(RESOURCE_ENERGY) === 0) continue;
+				if (structure.structureType === STRUCTURE_CONTAINER) continue;
+				if (structure.structureType === STRUCTURE_LINK) continue;
+				if (structure.pos.getRangeTo(creep.pos) > 1) continue;
+
+				creep.transfer(structure, RESOURCE_ENERGY);
+				return;
+			}
+		}
 	}
 }

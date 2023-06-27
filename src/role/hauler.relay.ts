@@ -259,11 +259,14 @@ export default class RelayHaulerRole extends Role {
 		const storageLocation = creep.room.getStorageLocation();
 		if (!storageLocation) {
 			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-			if (creep.drop(RESOURCE_ENERGY) === OK) creep.operation?.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			if (creep.drop(RESOURCE_ENERGY) === OK) {
+				creep.operation?.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			}
+
 			return;
 		}
 
-		creep.whenInRange(1, storageLocation, () => {
+		creep.whenInRange(0, storageLocation, () => {
 			if (creep.drop(RESOURCE_ENERGY) === OK) {
 				creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
 			}
@@ -356,6 +359,7 @@ export default class RelayHaulerRole extends Role {
 	 */
 	pickupNearbyEnergy(creep: RelayHaulerCreep) {
 		if (creep.store.getFreeCapacity() === 0) return false;
+		if (creep.room.isMine()) return false;
 
 		// @todo Allow hauler to pick up other resources as well, but respect that
 		// when delivering.
