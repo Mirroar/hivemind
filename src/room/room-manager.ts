@@ -423,7 +423,6 @@ export default class RoomManager {
 		let missingExtractors = 0;
 		let missingThoriumExtractor = false;
 		for (const mineral of sortedMinerals) {
-			console.log(missingExtractors, JSON.stringify(mineral));
 			// Build extractor only on minerals that have resources left.
 			if (mineral.score > 0) {
 				if (mineral.hasExtractor) {

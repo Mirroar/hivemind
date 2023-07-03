@@ -206,6 +206,19 @@ export default class RoomIntel {
 			}
 		}
 
+		if (!room.controller) {
+			const invaderCores: StructureInvaderCore[] = room.find(FIND_STRUCTURES, {
+				filter: structure => structure.structureType === STRUCTURE_INVADER_CORE,
+			});
+
+			if (invaderCores.length > 0 && invaderCores[0].level) {
+				this.memory.owner = invaderCores[0].owner.username;
+				this.memory.rcl = invaderCores[0].level;
+				this.memory.ticksToDowngrade = 0;
+				this.memory.ticksToNeutral = 0;
+			}
+		}
+
 		this.memory.reservation = room.controller ? room.controller.reservation : {
 			username: null,
 			ticksToEnd: 0,
