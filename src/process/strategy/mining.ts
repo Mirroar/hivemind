@@ -77,7 +77,7 @@ export default class RemoteMiningProcess extends Process {
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;
 			if (room.controller.level >= 7) roomNeeds += exploitFlags.length * 3;
-			if (container.get<ReactorManager>('ReactorManager').getSpawnRoom() === room.name) roomNeeds += 2;
+			if (container.get<ReactorManager>('ReactorManager').isSpawnRoom(room.name)) roomNeeds += 2;
 			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
 
 			// Allow more remotes when using new method, since it spawns stuff more dynamically.

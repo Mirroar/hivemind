@@ -398,7 +398,15 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 	}
 	else {
 		// Get closer to the path.
-		if (this.moveTo(target) === ERR_NO_PATH) {
+		if (this.moveTo(target, {
+			visualizePathStyle: {
+				fill: 'transparent',
+				stroke: '#fff',
+				lineStyle: 'dashed',
+				strokeWidth: .1,
+				opacity: .5
+			},
+		}) === ERR_NO_PATH) {
 			// Check if a path position is nearby, and blocked by a creep.
 			this.manageBlockingCreeps();
 		}
@@ -777,7 +785,7 @@ Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, 
 	}, false, pfOptions);
 
 	if (result && result.path) {
-		this.setCachedPath(serializePositionPath(result.path));
+		this.setCachedPath(serializePositionPath([this.pos, ...result.path]));
 	}
 	else {
 		return false;

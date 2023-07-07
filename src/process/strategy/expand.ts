@@ -220,7 +220,7 @@ export default class ExpandProcess extends Process {
 	}
 
 	manageStripmines(roomName: string) {
-		const maxMines = Math.floor(Game.myRooms.length / 3);
+		const maxMines = Math.floor((Game.myRooms.length + 1) / 3);
 		const totalMines = _.filter(Game.myRooms, room => room.isStripmine()).length;
 
 		if (totalMines < maxMines) {

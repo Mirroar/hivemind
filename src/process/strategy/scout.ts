@@ -47,7 +47,7 @@ const preserveExpansionReasons = false;
 
 export default class ScoutProcess extends Process {
 	pathManager: PathManager;
-	observers;
+	observers: StructureObserver[];
 	mineralCount;
 
 	/**
@@ -77,6 +77,7 @@ export default class ScoutProcess extends Process {
 	 * This will happen in cycles to reduce cpu usage for a single tick.
 	 */
 	run() {
+		hivemind.log('strategy').info('Running scout process...');
 		// @todo Clean old entries from Memory.strategy._expansionScoreCache.
 
 		Memory.strategy.roomList = this.generateScoutTargets();
@@ -179,6 +180,7 @@ export default class ScoutProcess extends Process {
 					if (!observer.hasScouted) {
 						observer.observeRoom(roomName);
 						observer.hasScouted = true;
+						hivemind.log('intel', observer.pos.roomName).info('Observing', roomName);
 					}
 					else {
 						if (!Memory.rooms[info.observerRoom].observeTargets) {
@@ -342,7 +344,7 @@ export default class ScoutProcess extends Process {
 		result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
 		// Season 5: Amount of thorium is important for gathering score.
-		result.addScore((roomIntel.getMineralAmounts()[RESOURCE_THORIUM] || -100_000) / 100_000, 'thorium');
+		result.addScore((roomIntel.getMineralAmounts()[RESOURCE_THORIUM] || -10_000) / 10_000, 'thorium');
 
 		this.setExpansionScoreCache(roomName, result);
 
@@ -440,7 +442,7 @@ export default class ScoutProcess extends Process {
 		const roomList = Memory.strategy.roomList || {};
 
 		const openList = this.getScoutOrigins();
-		const closedList = {};
+		const closedList: Record<string, boolean> = {};
 
 		this.findObservers();
 
@@ -535,10 +537,12 @@ export default class ScoutProcess extends Process {
 	findObservers() {
 		this.observers = [];
 		for (const room of Game.myRooms) {
-			if (!room.observer) return;
+			if (!room.observer) continue;
 
 			this.observers.push(room.observer);
 		}
+
+		hivemind.log('strategy').info('Found Observers:', this.observers);
 	}
 
 	/**
@@ -601,8 +605,8 @@ export default class ScoutProcess extends Process {
 	 * @return {StructureObserver}
 	 *   The closest available observer.
 	 */
-	getClosestObserver(roomName) {
-		let bestObserver = null;
+	getClosestObserver(roomName: string) {
+		let bestObserver: StructureObserver = null;
 		for (const observer of this.observers) {
 			const roomDist = Game.map.getRoomLinearDistance(observer.room.name, roomName);
 			if (roomDist > OBSERVER_RANGE) continue;

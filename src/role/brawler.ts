@@ -402,7 +402,11 @@ export default class BrawlerRole extends Role {
 			// @todo For some reason, using goTo instead of moveTo here results in
 			// a lot of "trying to follow non-existing path" errors moving across rooms.
 			// Maybe because it clashes with other movement further down this method.
-			if (targetPosition.roomName === creep.pos.roomName) creep.moveTo(targetPosition, {maxRooms: 1});
+			const options: MoveToOpts = {maxRooms: 1};
+			if (this.isPositionBlocked(targetPosition)) {
+				options.range = 1;
+			}
+			if (targetPosition.roomName === creep.pos.roomName) creep.moveTo(targetPosition, options);
 		}
 
 		if (creep.memory.order) {
@@ -433,6 +437,21 @@ export default class BrawlerRole extends Role {
 			reusePath: 50,
 			maxRooms: 1,
 		});
+	}
+
+	isPositionBlocked(position: RoomPosition): boolean {
+		const room = Game.rooms[position.roomName];
+		if (!room) return false;
+
+		const terrain = new Room.Terrain(room.name);
+		if (terrain && terrain.get(position.x, position.y) === TERRAIN_MASK_WALL) return true;
+
+		const structures = position.lookFor(LOOK_STRUCTURES);
+		for (const structure of structures) {
+			if (OBSTACLE_OBJECT_TYPES[structure.structureType]) return true;
+		}
+
+		return false;
 	}
 
 	moveToEngageTarget(creep: BrawlerCreep, target: RoomObject | null) {
@@ -720,7 +739,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// If there's nothing to do, move back to spawn room center.
-		creep.moveTo(25, 25);
+		creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 5);
 	}
 
 	/**
