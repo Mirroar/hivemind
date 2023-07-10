@@ -122,6 +122,8 @@ export default class CreepsProcess extends Process {
 			if (creep._hasMoveIntent) return;
 
 			const blockedCreep = creep._blockingCreepMovement;
+			if (blockedCreep instanceof Creep && blockedCreep.fatigue) return;
+
 			if (creep.pos.getRangeTo(blockedCreep) === 1) {
 				const alternatePosition = this.getAlternateCreepPosition(creep);
 				if (alternatePosition) {
@@ -173,10 +175,6 @@ export default class CreepsProcess extends Process {
 				return null;
 			}
 
-			creep.room.visual.line(x, y, creep.pos.x, creep.pos.y, {
-				color: '#00ff00',
-			});
-
 			alternatePosition = pos;
 			return false;
 		});
@@ -196,6 +194,12 @@ export default class CreepsProcess extends Process {
 				}
 				delete blockingCreep._hasMoveIntent;
 			}
+		}
+
+		if (alternatePosition) {
+			creep.room.visual.line(alternatePosition.x, alternatePosition.y, creep.pos.x, creep.pos.y, {
+				color: '#00ff00',
+			});
 		}
 
 		return alternatePosition;

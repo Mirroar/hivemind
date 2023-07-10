@@ -3,6 +3,7 @@ PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
 FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
 PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
@@ -47,6 +48,7 @@ export default class OperatorRole extends Role {
 			this.chooseOrder();
 		}
 
+		this.interruptOrderIfNecessary();
 		this.performOrder();
 		this.generateOps();
 	}
@@ -91,6 +93,27 @@ export default class OperatorRole extends Role {
 	 * Chooses a new order for the current creep.
 	 */
 	chooseOrder() {
+		const options = this.getAllOptions();
+		this.creep.memory.order = utilities.getBestOption(options);
+	}
+
+	interruptOrderIfNecessary() {
+		cache.inHeap('interruptOrderIfNecessary:' + this.creep.name, 10, () => {
+			const options = this.getAllOptions();
+			const bestOrder = utilities.getBestOption(options);
+
+			if (bestOrder.canInterrupt) {
+				const targetId: Id<RoomObject & _HasId> = this.creep.memory.order?.target;
+				if (!targetId || (Game.getObjectById(targetId)?.pos?.getRangeTo(this.creep) || 100) > 5) {
+					this.creep.memory.order = bestOrder;
+				}
+			}
+
+			return true;
+		});
+	}
+
+	getAllOptions() {
 		const options = [];
 
 		this.addRenewOptions(options);
@@ -106,7 +129,7 @@ export default class OperatorRole extends Role {
 		this.addDepositOpsOptions(options);
 		this.addRetrieveOpsOptions(options);
 
-		this.creep.memory.order = utilities.getBestOption(options);
+		return options;
 	}
 
 	/**
@@ -196,14 +219,17 @@ export default class OperatorRole extends Role {
 	addRegenMineralOptions(options) {
 		if (!this.creep.powers[PWR_REGEN_MINERAL]) return;
 		if (this.creep.powers[PWR_REGEN_MINERAL].level < 1) return;
-		if (this.creep.powers[PWR_REGEN_MINERAL].cooldown > 0) return;
 
 		for (const mineral of this.creep.room.minerals) {
 			if (mineral.ticksToRegeneration && mineral.ticksToRegeneration > 0) return;
 
+			const distance = this.creep.pos.getRangeTo(mineral);
+			const maxCooldown = mineral.mineralType === RESOURCE_THORIUM ? distance : 0;
+			if (this.creep.powers[PWR_REGEN_MINERAL].cooldown > maxCooldown) return;
+
 			const activeEffect = _.first(_.filter(mineral.effects, effect => effect.effect === PWR_REGEN_MINERAL));
 			const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
-			if (ticksRemaining > POWER_INFO[PWR_REGEN_MINERAL].duration / 5) return;
+			if (ticksRemaining > maxCooldown + POWER_INFO[PWR_REGEN_MINERAL].duration / 5) return;
 
 			options.push({
 				type: 'usePower',
@@ -211,6 +237,7 @@ export default class OperatorRole extends Role {
 				target: mineral.id,
 				priority: mineral.mineralType === RESOURCE_THORIUM ? 4 : 3,
 				weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_REGEN_MINERAL].duration),
+				canInterrupt: mineral.mineralType === RESOURCE_THORIUM,
 			});
 		}
 	}

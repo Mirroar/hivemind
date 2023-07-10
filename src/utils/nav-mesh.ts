@@ -465,10 +465,11 @@ export default class NavMesh {
 					// Allow pathing through source keeper rooms since we can safely avoid them.
 					costMultiplier *= 2;
 				}
-				else if (!Memory.rooms[nextRoom]?.enemies?.safe) {
-					// Avoid rooms with enemies in them if possible.
-					costMultiplier *= 2;
-				}
+			}
+
+			if (Memory.rooms[nextRoom]?.enemies && !Memory.rooms[nextRoom]?.enemies?.safe && !options.allowDanger) {
+				// Avoid rooms with enemies in them if possible.
+				costMultiplier *= 2;
 			}
 
 			availableExits = [];

@@ -132,12 +132,10 @@ export default class PowerHarvesterRole extends Role {
 				creep.whenInRange(1, damagedCreep, () => {});
 
 				if (creep.heal(damagedCreep) === OK) {
-					let healPower: number = HEAL_POWER;
-					if (creep.pos.getRangeTo(damagedCreep) > 1) {
-						healPower = RANGED_HEAL_POWER;
-					}
-
-					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (creep.getActiveBodyparts(HEAL) * healPower);
+					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (creep.getActiveBodyparts(HEAL) * HEAL_POWER);
+				}
+				else if (creep.rangedHeal(damagedCreep) === OK) {
+					damagedCreep.incHealing = (damagedCreep.incHealing || 0) + (creep.getActiveBodyparts(HEAL) * RANGED_HEAL_POWER);
 				}
 			}
 			else creep.whenInRange(5, powerBank, () => {});

@@ -111,6 +111,7 @@ export default class OwnedRoomProcess extends Process {
 				const target = this.room.memory.observeTargets.pop();
 				this.room.observer.observeRoom(target);
 				this.room.observer.hasScouted = true;
+				hivemind.log('intel', this.room.name).info('Observing', target);
 			}
 		});
 

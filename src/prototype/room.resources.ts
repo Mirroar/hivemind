@@ -473,9 +473,8 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 	if (resourceType === RESOURCE_THORIUM) {
 		const reactorManager = container.get<ReactorManager>('ReactorManager');
-		const spawnRoom = reactorManager.getSpawnRoom();
-		if (spawnRoom) {
-			if (spawnRoom === this.name) return [200_000, 100_000, 10_000];
+		if (reactorManager.hasActiveReactors()) {
+			if (reactorManager.isSpawnRoom(this.name)) return [200_000, 100_000, 10_000];
 			return [1, 0, 0];
 		}
 	}

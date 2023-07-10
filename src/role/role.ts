@@ -82,7 +82,7 @@ export default class Role {
 			}
 		}
 		else {
-			creep.moveTo(new RoomPosition(25, 25, creep.memory.singleRoom));
+			creep.whenInRange(10, new RoomPosition(25, 25, creep.memory.singleRoom), () => {});
 			return true;
 		}
 

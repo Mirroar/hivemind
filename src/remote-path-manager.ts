@@ -46,7 +46,7 @@ export default class RemotePathManager {
 
 			const result = PathFinder.search(sourcePosition, {pos: storagePos, range: 1}, {
 				plainCost: 2,
-				swampCost: 10,
+				swampCost: (room.storage || room.terminal) ? 3 : 10,
 				maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
 				roomCallback: roomName => this.getCostMatrix(roomName),
 			});

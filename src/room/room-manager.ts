@@ -36,6 +36,7 @@ interface ScoredExtractorPosition {
 	position: RoomPosition;
 	hasExtractor: boolean;
 	score: number;
+	mineralType?: MineralConstant;
 }
 
 export default class RoomManager {
@@ -420,15 +421,24 @@ export default class RoomManager {
 		const sortedMinerals = _.sortBy(this.scoreExtractorPositions(plannedLocations), p => -p.score);
 
 		let missingExtractors = 0;
+		let missingThoriumExtractor = false;
 		for (const mineral of sortedMinerals) {
-			console.log(missingExtractors, JSON.stringify(mineral));
 			// Build extractor only on minerals that have resources left.
 			if (mineral.score > 0) {
-				if (!mineral.hasExtractor) {
+				if (mineral.hasExtractor) {
+					const extractor = _.filter(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR)[0];
+					if (missingThoriumExtractor && extractor.destroy() === OK) {
+						missingExtractors--;
+						missingThoriumExtractor = false;
+						this.memory.runNextTick = true;
+					}
+				}
+				else {
 					const currentExtractors = _.size(this.structuresByType[STRUCTURE_EXTRACTOR]) + _.size(this.constructionSitesByType[STRUCTURE_EXTRACTOR]);
 
 					if (currentExtractors >= CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level]) {
 						missingExtractors++;
+						if (mineral.mineralType === RESOURCE_THORIUM) missingThoriumExtractor = true;
 					}
 					else {
 						this.tryBuild(mineral.position, STRUCTURE_EXTRACTOR);
@@ -473,6 +483,7 @@ export default class RoomManager {
 				position,
 				hasExtractor,
 				score: (mineral?.mineralAmount || -100) * scoreFactor,
+				mineralType: mineral?.mineralType,
 			})
 		}
 

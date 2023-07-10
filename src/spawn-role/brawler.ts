@@ -98,7 +98,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const reactorManager = container.get<ReactorManager>('ReactorManager');
 
 			options.push({
-				priority: reactorManager.getSpawnRoom() === room.name ? 5 : 3,
+				priority: reactorManager.isSpawnRoom(room.name) ? 5 : 3,
 				weight: 1,
 				targetPos,
 				pathTarget: encodePosition(pos),

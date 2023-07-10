@@ -296,7 +296,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 			}
 
 			if (this.moveTo(pos, options) === ERR_NO_PATH) {
-				// @todo This probably makes so sense because cachedPath.position is not correctly set here.
+				// @todo This probably makes no sense because cachedPath.position is not correctly set here.
 				// Instead, check if we're on the current position, and if not, update position and forceGoTo. Or fully recalculate path.
 				this.manageBlockingCreeps();
 			}
@@ -343,6 +343,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 	}
 
 	this.move(this.pos.getDirectionTo(next));
+	this.manageBlockingCreeps();
 };
 
 /**
@@ -397,7 +398,15 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 	}
 	else {
 		// Get closer to the path.
-		if (this.moveTo(target) === ERR_NO_PATH) {
+		if (this.moveTo(target, {
+			visualizePathStyle: {
+				fill: 'transparent',
+				stroke: '#fff',
+				lineStyle: 'dashed',
+				strokeWidth: .1,
+				opacity: .5
+			},
+		}) === ERR_NO_PATH) {
 			// Check if a path position is nearby, and blocked by a creep.
 			this.manageBlockingCreeps();
 		}
@@ -413,6 +422,7 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 	const path = this.getCachedPath();
 	if (typeof this.memory.cachedPath.position === 'undefined' || this.memory.cachedPath.position === null) {
 		for (const pos of path) {
+			// @todo Look for the _furthest_ position that is in range 1.
 			if (pos.getRangeTo(this.pos) > 1) continue;
 
 			const creep = pos.lookFor(LOOK_CREEPS)[0];
@@ -570,7 +580,7 @@ Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
  */
 Creep.prototype.canMoveOnto = function (this: Creep | PowerCreep, position) {
 	const creeps = position.lookFor(LOOK_CREEPS);
-	if (creeps.length > 0 && creeps[0].id !== this.id) return false;
+	if (creeps.length > 0 && creeps[0].id !== this.id && !creeps[0]._requestedMoveArea) return false;
 
 	const powerCreeps = position.lookFor(LOOK_POWER_CREEPS);
 	if (powerCreeps.length > 0 && powerCreeps[0].id !== this.id) return false;
@@ -775,7 +785,7 @@ Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, 
 	}, false, pfOptions);
 
 	if (result && result.path) {
-		this.setCachedPath(serializePositionPath(result.path));
+		this.setCachedPath(serializePositionPath([this.pos, ...result.path]));
 	}
 	else {
 		return false;
