@@ -208,7 +208,7 @@ export default class ExpandProcess extends Process {
 		const squad = new Squad('expand');
 		squad.setSpawn(roomInfo.spawnRoom);
 
-		// Sent to target room.
+		// Send to target room.
 		squad.setTarget(new RoomPosition(25, 25, roomInfo.roomName));
 		squad.clearUnits();
 		squad.setUnitCount('brawler', 1);
@@ -220,10 +220,11 @@ export default class ExpandProcess extends Process {
 	}
 
 	manageStripmines(roomName: string) {
-		const maxMines = Math.floor(Game.myRooms.length / 3);
-		const totalMines = _.filter(Game.myRooms, room => room.isStripmine()).length;
+		// const maxMines = Math.floor((Game.myRooms.length + 1) / 3);
+		// const totalMines = _.filter(Game.myRooms, room => room.isStripmine()).length;
 
-		if (totalMines < maxMines) {
+		// if (totalMines < maxMines) {
+		if (_.filter(Game.myRooms, room => !room.isStripmine()).length >= 4) {
 			Memory.rooms[roomName].isStripmine = true;
 		}
 	}

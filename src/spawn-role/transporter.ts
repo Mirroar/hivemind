@@ -1,5 +1,6 @@
 /* global MOVE CARRY */
 
+import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 
 interface TransporterSpawnOption extends SpawnOption {
@@ -105,7 +106,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 		if (room.controller.level < 4) return 2;
 
 		// Storage mostly takes place in containers, units will get their energy from there.
-		if (!room.storage) return 2;
+		if (!room.storage && !room.terminal) return 2;
 
 		const sourceCount = _.size(room.sources);
 		let maxTransporters = 2 + (2 * sourceCount); // @todo Find a good way to gauge needed number of transporters by measuring distances.
@@ -137,11 +138,24 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 */
 	getTransporterSize(room: Room): number {
 		const fullBayCapacity = Math.max(SPAWN_ENERGY_CAPACITY, EXTENSION_ENERGY_CAPACITY[room.controller.level]) + 6 * EXTENSION_ENERGY_CAPACITY[room.controller.level];
-		if (room.controller.level >= 7) return Math.max(24, fullBayCapacity / CARRY_CAPACITY);
-		if (room.controller.level >= 6) return 18;
-		if (room.controller.level >= 5) return 15;
 
-		return 12;
+		return Math.ceil(fullBayCapacity / CARRY_CAPACITY);
+	}
+
+	estimateNeededCarryParts(room: Room): number {
+		return cache.inHeap('estimatedCarryParts:' + room.name, 500, () => {
+			let total = 0;
+
+			// Path length to active bays, weighted by energy needs. Exclude harvester bays.
+
+			// Path to sources, exclude those with links if we have controller link
+
+			// Path length to active minerals
+
+			// Path length to labs
+
+			return total;
+		});
 	}
 
 	/**

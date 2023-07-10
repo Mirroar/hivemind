@@ -137,7 +137,7 @@ export default class HarvesterRole extends Role {
 			source = Game.getObjectById(creep.memory.fixedMineralSource);
 			let minAmount = 0;
 			if (source && source.mineralType === RESOURCE_THORIUM && !creep.room.isStripmine()) {
-				minAmount = creep.getActiveBodyparts(WORK) * 2;
+				minAmount = creep.getActiveBodyparts(WORK) * 10;
 			}
 
 			if (!source || source.mineralAmount <= minAmount) {

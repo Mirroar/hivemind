@@ -103,6 +103,9 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: MineralHarvesterSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
+		const mineral = Game.getObjectById(option.source);
+		if (mineral.mineralAmount < 2000) return {};
+
 		return this.generateCreepBoosts(room, body, WORK, 'harvest');
 	}
 }
