@@ -474,7 +474,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	if (resourceType === RESOURCE_THORIUM) {
 		const reactorManager = container.get<ReactorManager>('ReactorManager');
 		if (reactorManager.hasActiveReactors()) {
-			if (reactorManager.isSpawnRoom(this.name)) return [200_000, 100_000, 10_000];
+			if (reactorManager.isSpawnRoom(this.name)) return [50_000, 20_000, 10_000];
 			return [1, 0, 0];
 		}
 	}

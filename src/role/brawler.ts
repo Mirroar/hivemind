@@ -420,7 +420,12 @@ export default class BrawlerRole extends Role {
 			const squad = Game.squads[creep.memory.squadName];
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
-				creep.goTo(targetPos);
+				if (this.isPositionBlocked(targetPos)) {
+					creep.moveToRange(targetPos, 1);
+				}
+				else {
+					creep.goTo(targetPos);
+				}
 
 				if (creep.pos.roomName === targetPos.roomName) {
 					this.militaryRoomReached(creep);

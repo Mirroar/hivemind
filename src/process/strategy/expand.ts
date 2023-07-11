@@ -9,6 +9,7 @@ import NavMesh from 'utils/nav-mesh';
 import settings from 'settings-manager';
 import Squad from 'manager.squad';
 import stats from 'utils/stats';
+import {getUsername} from 'utils/account';
 
 interface ExpansionTarget extends RoomListEntry {
 	spawnRoom: string;
@@ -264,7 +265,7 @@ export default class ExpandProcess extends Process {
 				}
 			}
 			else {
-				if (room.controller.reservation && room.controller.reservation.ticksToEnd > 100) {
+				if (room.controller.reservation && room.controller.reservation.username !== getUsername() && room.controller.reservation.ticksToEnd > 100) {
 					squad.setUnitCount('singleClaim', 0);
 					squad.setUnitCount('claimer', Math.ceil(room.controller.reservation.ticksToEnd / 2000));
 				}
