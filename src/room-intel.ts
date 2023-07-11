@@ -899,6 +899,18 @@ export default class RoomIntel {
 				};
 			}
 
+			if (Memory.rooms[this.roomName]?.isStripmine) {
+				return {
+					directions: {
+						N: false,
+						E: false,
+						S: false,
+						W: false,
+					},
+					safeRooms: [],
+				};
+			}
+
 			const dirMap = {
 				[TOP]: 'N',
 				[RIGHT]: 'E',
@@ -993,6 +1005,7 @@ export default class RoomIntel {
 			// This is one of our own rooms, and as such is possibly safe.
 			if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return false;
 			if (roomName === this.roomName) return false;
+			if (Memory.rooms[roomName].isStripmine) return false;
 		}
 
 		return true;
