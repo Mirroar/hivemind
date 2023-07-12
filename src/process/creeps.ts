@@ -184,6 +184,7 @@ export default class CreepsProcess extends Process {
 				if (!blockingCreep.my) continue;
 				if (blockingCreep._hasMoveIntent) continue;
 				if (blockingCreep._blockingCreepMovement) continue;
+				if (blockingCreep instanceof Creep && blockingCreep.fatigue) continue;
 
 				blockingCreep._hasMoveIntent = true;
 				const chainedAlternatePosition = this.getAlternateCreepPosition(blockingCreep);

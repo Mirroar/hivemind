@@ -152,10 +152,10 @@ export default class RemoteHarvesterRole extends Role {
 
 			const container = creep.operation.getContainer(creep.memory.source);
 			const range = creep.pos.getRangeTo(container);
-			if (range === 1) {
+			if (range > 0) {
 				// Move onto container if it's not occupied by another creep.
 				if (container.pos.lookFor(LOOK_CREEPS).length === 0) {
-					creep.move(creep.pos.getDirectionTo(container.pos));
+					creep.whenInRange(0, container.pos, () => {});
 				}
 
 				// Transfer energy to container if we can't drop directly onto it.
