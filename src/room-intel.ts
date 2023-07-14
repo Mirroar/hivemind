@@ -1003,9 +1003,8 @@ export default class RoomIntel {
 
 		if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) {
 			// This is one of our own rooms, and as such is possibly safe.
-			if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating()) return false;
+			if ((Game.rooms[roomName].controller.level >= Math.min(5, this.getRcl() - 1)) && !Game.rooms[roomName].isEvacuating() && !Game.rooms[roomName].isStripmine()) return false;
 			if (roomName === this.roomName) return false;
-			if (Memory.rooms[roomName].isStripmine) return false;
 		}
 
 		return true;

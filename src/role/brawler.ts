@@ -787,6 +787,7 @@ export default class BrawlerRole extends Role {
 			if (hostile.owner && hivemind.relations.isAlly(hostile.owner.username)) continue;
 
 			if (creep.getActiveBodyparts(ATTACK) && creep.attack(hostile) === OK) {
+				creep.moveTo(hostile);
 				return true;
 			}
 

@@ -526,9 +526,25 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 		return [10_000, 5000, 500];
 	}
 
-	// @todo For boosts, try to have a minimum amount for all types. Later, make
+	// For boosts, try to have a minimum amount for all types. Later, make
 	// dependent on room military state and so on.
+	// @todo If there's no labs, we don't need boosts.
+	for (const bodyPart in BOOSTS) {
+		if (!BOOSTS[bodyPart][resourceType]) continue;
 
+		if (bodyPart === ATTACK || bodyPart === RANGED_ATTACK) {
+			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
+				return [5000, 3000, 1500];
+		}
+		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair) {
+			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
+				return [5000, 3000, 1500];
+		}
+
+		return [2500, 1500, 750];
+	}
+
+	// @todo If there's no labs or factory, we don't need minerals.
 	return [50_000, 30_000, 10_000];
 };
 

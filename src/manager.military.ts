@@ -8,7 +8,7 @@ import hivemind from 'hivemind';
 declare global {
 	interface Room {
 		assertMilitarySituation: () => void;
-		assertMilitaryCreepPower: (creep: Creep) => void;
+		assertMilitaryCreepPower: (creep: Creep | PowerCreep) => void;
 		assertMilitaryStructurePower: (structure: AnyStructure) => void;
 		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void;
 		getMilitaryAssertion: (x: number, y: number, type: string) => number;
@@ -19,14 +19,20 @@ declare global {
 		_sitRepBuilt: boolean;
 		sitRep: SitRep;
 		militaryObjects: {
-			creeps: Creep[];
+			creeps: Array<Creep | PowerCreep>;
 			structures: AnyStructure[];
-			myCreeps: Creep[];
+			myCreeps: Array<Creep | PowerCreep>;
 			myStructures: AnyStructure[];
 		};
 	}
 
 	interface Creep {
+		getMilitaryValue: () => number;
+
+		militaryPriority: number;
+	}
+
+	interface PowerCreep {
 		getMilitaryValue: () => number;
 
 		militaryPriority: number;
@@ -95,6 +101,17 @@ Room.prototype.assertMilitarySituation = function (this: Room) {
 		}
 	}
 
+	const powerCreeps = this.find(FIND_POWER_CREEPS);
+	for (const powerCreep of powerCreeps) {
+		if (powerCreep.my) {
+			// @todo Filter out civilian creeps to save on CPU.
+			this.militaryObjects.myCreeps.push(powerCreep);
+		}
+		else if (powerCreep.isDangerous() && !hivemind.relations.isAlly(powerCreep.owner.username)) {
+			this.militaryObjects.creeps.push(powerCreep);
+		}
+	}
+
 	// Parse military structures in the room.
 	const structures = this.find(FIND_STRUCTURES);
 	for (const structure of structures) {
@@ -124,10 +141,10 @@ Room.prototype.assertMilitarySituation = function (this: Room) {
  * @param {Creep} creep
  *   The creep to asses.
  */
-Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep) {
+Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep | PowerCreep) {
 	let hostile: boolean;
-	let targets: Creep[];
-	let allies: Creep[];
+	let targets: Array<Creep | PowerCreep>;
+	let allies: Array<Creep | PowerCreep>;
 	if (creep.my) {
 		hostile = false;
 		targets = this.militaryObjects.creeps;
@@ -144,6 +161,9 @@ Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep) {
 		targets = this.militaryObjects.myCreeps;
 		allies = this.militaryObjects.creeps;
 	}
+
+	// No need to do damage / healing calculations for power creeps.
+	if (!(creep instanceof Creep)) return;
 
 	// @todo Move boosted part calculation into a creep function.
 	// @todo Factor in which parts get damaged first.
@@ -170,7 +190,7 @@ Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep) {
 		totalParts[part.type] = (totalParts[part.type] || 0) + amount;
 	}
 
-	const assertAllTargets = (targets: Creep[], range: number, amount: number, type: string) => {
+	const assertAllTargets = (targets: Array<Creep | PowerCreep>, range: number, amount: number, type: string) => {
 		if (amount <= 0) return;
 
 		for (const target of targets) {
@@ -383,7 +403,7 @@ const bodyPartValues = {
  * @return {number}
  *   The creep's perceived military value.
  */
-Creep.prototype.getMilitaryValue = function () {
+Creep.prototype.getMilitaryValue = function (this: Creep) {
 	// @todo Factor boosts.
 
 	let value = 0;
@@ -396,6 +416,10 @@ Creep.prototype.getMilitaryValue = function () {
 
 	return value;
 };
+
+PowerCreep.prototype.getMilitaryValue = function (this: PowerCreep) {
+	return 10 + this.hits / this.hitsMax;
+}
 
 export default {
 

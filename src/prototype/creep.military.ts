@@ -11,6 +11,14 @@ declare global {
 		getHealCapacity: (range: number) => number;
 		getEffectiveDamage: (potentialDamage: number) => number;
 	}
+
+	interface PowerCreep {
+		isDangerous: () => boolean;
+		getEffectiveHealth: () => number;
+		getDamageCapacity: (range: number) => number;
+		getHealCapacity: (range: number) => number;
+		getEffectiveDamage: (potentialDamage: number) => number;
+	}
 }
 
 const stompingCreeps: Record<string, boolean> = {};
@@ -43,6 +51,12 @@ Creep.prototype.isDangerous = function (this: Creep) {
 	return false;
 };
 
+PowerCreep.prototype.isDangerous = function (this: PowerCreep) {
+	if (hivemind.relations.isAlly(this.owner.username)) return false;
+
+	return true;
+}
+
 Creep.prototype.getEffectiveHealth = function (this: Creep) {
 	// @todo Cache for one tick?
 	let total = 0;
@@ -62,6 +76,10 @@ Creep.prototype.getEffectiveHealth = function (this: Creep) {
 
 	return total;
 };
+
+PowerCreep.prototype.getEffectiveHealth = function (this: PowerCreep) {
+	return this.hits;
+}
 
 Creep.prototype.getDamageCapacity = function (this: Creep, range) {
 	// @todo Cache for one tick?
@@ -100,6 +118,10 @@ Creep.prototype.getDamageCapacity = function (this: Creep, range) {
 	return total;
 };
 
+PowerCreep.prototype.getDamageCapacity = function () {
+	return 0;
+}
+
 Creep.prototype.getHealCapacity = function (this: Creep, range) {
 	// @todo Cache for one tick?
 	let total = 0;
@@ -122,6 +144,10 @@ Creep.prototype.getHealCapacity = function (this: Creep, range) {
 
 	return total;
 };
+
+PowerCreep.prototype.getHealCapacity = function () {
+	return 0;
+}
 
 Creep.prototype.getEffectiveDamage = function (this: Creep, potentialDamage) {
 	let total = 0;
@@ -156,3 +182,7 @@ Creep.prototype.getEffectiveDamage = function (this: Creep, potentialDamage) {
 
 	return total;
 };
+
+PowerCreep.prototype.getEffectiveDamage = function () {
+	return 0;
+}

@@ -75,6 +75,17 @@ export default class RoomDefenseProcess extends Process {
 			});
 			if (damaged) {
 				tower.heal(damaged);
+				continue;
+			}
+
+			// Heal friendlies.
+			// @todo Don't check this for every tower in the room.
+			const damagedPCs = tower.pos.findClosestByRange(FIND_MY_POWER_CREEPS, {
+				filter: creep => creep.hits < creep.hitsMax,
+			});
+			if (damagedPCs) {
+				tower.heal(damagedPCs);
+				continue;
 			}
 
 			// Repair ramparts during a strong attack.
