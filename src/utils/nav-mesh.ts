@@ -458,12 +458,12 @@ export default class NavMesh {
 
 					costMultiplier *= 5;
 				}
-				else if (roomIntel.isClaimed()) {
+				else if (roomIntel.isClaimed() && roomIntel.getReservationStatus().username !== 'Invader') {
 					costMultiplier *= 1.5;
 				}
 				else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
 					// Allow pathing through source keeper rooms since we can safely avoid them.
-					costMultiplier *= 2;
+					costMultiplier *= 1.2;
 				}
 			}
 
