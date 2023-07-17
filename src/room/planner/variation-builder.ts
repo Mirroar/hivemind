@@ -42,7 +42,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.placeBays,
 			this.placeLabs,
 			this.placeHighLevelStructures,
-			// @todo Protect positions for mincut
 			this.placeRamparts,
 			this.placeQuadBreaker,
 			this.sealRoom,

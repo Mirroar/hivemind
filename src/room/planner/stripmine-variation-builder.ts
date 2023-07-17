@@ -28,11 +28,11 @@ export default class StripmineRoomVariationBuilder extends RoomVariationBuilder 
 			this.placeRoomCore,
 			this.placeHarvestBayStructures,
 			this.placeBays,
-			// @todo Protect positions for mincut
 			this.placeRamparts,
 			this.sealRoom,
 			this.placeTowers,
 			this.placeRoadsToRamps,
+			this.placeOnRamps,
 		];
 	}
 

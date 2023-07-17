@@ -124,10 +124,78 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.defense.isWallIntact()) return;
 		if (this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_SPAWN}).length === 0) return;
 
-		this.room.visual.text('I should safemode!', 25, 25);
+		this.room.visual.text('I might safemode soon!', 25, 25);
+		if (!this.isEnemyCloseToImportantStructures()) return;
 
-		if (this.room.controller.activateSafeMode() === OK) {
+		const result = this.room.controller.activateSafeMode();
+		if (result === OK) {
 			Game.notify('🛡 Activated safe mode in room ' + this.room.name + '. ' + this.room.controller.safeModeAvailable + ' remaining.');
+		}
+		else if (result === ERR_BUSY) {
+			this.abandonSafemodedRoomIfNecessary();
+		}
+	}
+
+	isEnemyCloseToImportantStructures(): boolean {
+		for (const structure of this.getImportantStructures()) {
+			for (const userName in this.room.enemyCreeps) {
+				if (hivemind.relations.isAlly(userName)) continue;
+
+				for (const creep of this.room.enemyCreeps[userName]) {
+					if (structure instanceof Structure && !creep.isDangerous()) continue;
+
+					// Max range is 1 more than actual creep range to allow for room unclaim before safemode.
+					const maxRange = creep.getActiveBodyparts(RANGED_ATTACK) > 0 ? 4 : 2;
+					if (structure.pos.getRangeTo(creep.pos) <= maxRange) return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	getImportantStructures() {
+		const importantStructures: Array<Structure | ConstructionSite> = this.room.find(FIND_MY_STRUCTURES, {filter: structure => {
+			return ([
+				STRUCTURE_FACTORY,
+				STRUCTURE_LAB,
+				STRUCTURE_NUKER,
+				STRUCTURE_POWER_SPAWN,
+				STRUCTURE_SPAWN,
+				STRUCTURE_STORAGE,
+				STRUCTURE_TERMINAL,
+			] as string[]).includes(structure.structureType);
+		}});
+		importantStructures.push(this.room.controller);
+		for (const constructionSite of this.room.find(FIND_MY_CONSTRUCTION_SITES, {filter: site => {
+			return ([
+				STRUCTURE_FACTORY,
+				STRUCTURE_LAB,
+				STRUCTURE_NUKER,
+				STRUCTURE_POWER_SPAWN,
+				STRUCTURE_SPAWN,
+				STRUCTURE_STORAGE,
+				STRUCTURE_TERMINAL,
+			] as string[]).includes(site.structureType);
+		}})) {
+			if (constructionSite.progress < 10_000) continue;
+
+			importantStructures.push(constructionSite);
+		}
+
+		return importantStructures;
+	}
+
+	abandonSafemodedRoomIfNecessary() {
+		if (this.room.controller.level < 6) return;
+
+		const maxLevelToAbandon = this.room.controller.level <= 6 ? 5 : 6;
+		for (const room of Game.myRooms) {
+			if (!room.controller.safeMode) continue;
+			if (room.controller.level > maxLevelToAbandon) continue;
+
+			room.controller.unclaim();
+			return;
 		}
 	}
 
