@@ -64,8 +64,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 */
 	addRampartDefenderSpawnOptions(room: Room, options: RoomDefenseSpawnOption[]) {
 		if (room.controller.level < 4) return;
-		if (!room.memory.enemies || room.memory.enemies.safe) return;
-		if (room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL) return;
+		if (!this.hasSignificantEnemies(room) && !this.isSafemodeRunningOut(room)) return;
 
 		const responseType = this.getDefenseCreepSize(room);
 
@@ -80,6 +79,14 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			responseType,
 			creepRole: 'guardian',
 		});
+	}
+
+	hasSignificantEnemies(room: Room) {
+		return room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL;
+	}
+
+	isSafemodeRunningOut(room: Room) {
+		return room.controller.safeMode && room.controller.safeMode < 300;
 	}
 
 	/**
