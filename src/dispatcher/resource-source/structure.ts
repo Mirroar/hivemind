@@ -23,6 +23,7 @@ export default class StructureSource<TaskType extends StructureSourceTask> imple
 	}
 
 	isValid(task: TaskType, context: ResourceSourceContext) {
+		if (!task.resourceType) return false;
 		const structure = Game.getObjectById(task.target);
 		if (!structure) return false;
 		if (structure.store.getUsedCapacity(task.resourceType) === 0) return false;

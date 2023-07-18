@@ -30,7 +30,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 			return 4;
 		}
 
-		if (room.terminal && room.storage && room.terminal.store.getFreeCapacity() > 5000 && room.terminal.store.energy < room.storage.store.energy * 0.05) {
+		if (room.terminal && room.storage && !this.terminalNeedsClearing() && room.terminal.store.energy < room.storage.store.energy * 0.05) {
 			// Take some energy out of storage to put into terminal from time to time.
 			return 2;
 		}
@@ -97,9 +97,8 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 
 		// Clear out overfull terminal.
 		const storageHasSpace = storage && storage.store.getFreeCapacity() >= 0 && !this.room.isClearingStorage();
-		const terminalNeedsClearing = terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || this.room.isClearingTerminal()) && !this.room.isClearingStorage();
 		const noSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
-		if ((terminalNeedsClearing && storageHasSpace) || noSpaceForEnergy) {
+		if ((this.terminalNeedsClearing() && storageHasSpace) || noSpaceForEnergy) {
 			// Find resource with highest count and take that.
 			let max = null;
 			let maxResourceType = null;
@@ -134,5 +133,10 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 
 			options.push(option);
 		}
+	}
+
+	terminalNeedsClearing() {
+		const terminal = this.room.terminal;
+		return terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || this.room.isClearingTerminal()) && !this.room.isClearingStorage();
 	}
 }

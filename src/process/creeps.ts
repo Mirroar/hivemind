@@ -2,7 +2,7 @@ import CreepManager from 'creep-manager';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
-import {getCostMatrix} from 'utils/cost-matrix';
+import {getCostMatrix, getDangerMatrix} from 'utils/cost-matrix';
 import {handleMapArea} from 'utils/map';
 
 import brawlerRole from 'role/brawler';
@@ -68,6 +68,7 @@ const creepRoles = {
 export default class CreepsProcess extends Process {
 	creepManager: CreepManager;
 	powerCreepManager: CreepManager;
+	dangerMatrix: CostMatrix;
 
 	/**
 	 * Runs logic for all creeps and power creeps.
@@ -124,6 +125,8 @@ export default class CreepsProcess extends Process {
 			const blockedCreep = creep._blockingCreepMovement;
 			if (blockedCreep instanceof Creep && blockedCreep.fatigue) return;
 
+			this.dangerMatrix = getDangerMatrix(creep.room.name);
+
 			if (creep.pos.getRangeTo(blockedCreep) === 1) {
 				const alternatePosition = this.getAlternateCreepPosition(creep);
 				if (alternatePosition) {
@@ -159,6 +162,7 @@ export default class CreepsProcess extends Process {
 		handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
 			if (costMatrix.get(x, y) >= 100) return null;
 			if (creep.room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) return null;
+			if (this.dangerMatrix.get(x, y) > 0) return null;
 
 			const pos = new RoomPosition(x, y, creep.room.name);
 			if (pos.getRangeTo(creep._requestedMoveArea.pos) > creep._requestedMoveArea.range) return null;

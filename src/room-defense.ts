@@ -1,9 +1,10 @@
 /* global STRUCTURE_RAMPART ATTACK RANGED_ATTACK HEAL CLAIM MOVE TOUGH CARRY
 FIND_STRUCTURES LOOK_STRUCTURES */
 
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
-import cache from 'utils/cache';
+import {getDangerMatrix} from 'utils/cost-matrix';
 
 declare global {
 	interface RoomMemory {
@@ -57,6 +58,29 @@ export default class RoomDefense {
 		if (!this.room.memory.defense) this.room.memory.defense = {};
 
 		this.memory = this.room.memory.defense;
+	}
+
+	drawDebug() {
+		const dangerMatrix = getDangerMatrix(this.roomName);
+		const visual = this.room.visual;
+		if (!visual) return;
+
+		for (let x = 0; x < 50; x++) {
+			for (let y = 0; y < 50; y++) {
+				if (dangerMatrix.get(x, y) === 1) {
+					visual.rect(x - 0.4, y - 0.4, 0.8, 0.8, {
+						fill: '#af6060',
+						opacity: 0.3,
+					});
+				}
+				if (dangerMatrix.get(x, y) === 2) {
+					visual.rect(x - 0.3, y - 0.3, 0.6, 0.6, {
+						fill: '#6060af',
+						opacity: 0.3,
+					});
+				}
+			}
+		}
 	}
 
 	/**

@@ -28,6 +28,10 @@ const cache = {
 		return cache.inObject(heapCache, cacheKey, maxAge, generateCallback);
 	},
 
+	fromHeap<T>(cacheKey: string, allowExpired?: boolean): T {
+		return cache.fromObject(heapCache, cacheKey, allowExpired);
+	},
+
 	/**
 	 * Caches arbitrary data in persistent memory for some time.
 	 *
@@ -43,6 +47,10 @@ const cache = {
 	 */
 	inMemory<T>(cacheKey: string, maxAge: number, generateCallback?: (oldValue?: CacheEntry<T>) => T): T {
 		return cache.inObject(Memory, cacheKey, maxAge, generateCallback);
+	},
+
+	fromMemory<T>(cacheKey: string, allowExpired?: boolean): T {
+		return cache.fromObject(Memory, cacheKey, allowExpired);
 	},
 
 	/**
@@ -72,6 +80,14 @@ const cache = {
 				created: Game.time,
 			};
 		}
+
+		return o._cache[cacheKey].data;
+	},
+
+	fromObject<T>(o: any, cacheKey: string, allowExpired?: boolean): T {
+		if (!o._cache) return null;
+		if (!o._cache[cacheKey]) return null;
+		if (!allowExpired && hivemind.hasIntervalPassed(o._cache[cacheKey].maxAge, o._cache[cacheKey].created)) return null;
 
 		return o._cache[cacheKey].data;
 	},

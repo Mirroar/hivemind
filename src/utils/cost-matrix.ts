@@ -176,19 +176,39 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMat
 		// Increase cost matrix value for the given tile.
 		let value = matrix.get(pos.x, pos.y);
 		if (value === 0) {
-			value = 1;
+			value = 2;
 			if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP) value = 5;
 		}
 
-		newMatrix.set(pos.x, pos.y, value + 10);
+		newMatrix.set(pos.x, pos.y, 5 * value + 25);
 		dangerMatrix.set(pos.x, pos.y, 1);
+		handleMapArea(pos.x, pos.y, (x, y) => {
+			// @todo No need to consider tiles at 3 range dangerous if there's
+			// no ranged creeps.
+			if (dangerMatrix.get(x, y) > 0) return;
+
+			const newPos = new RoomPosition(x, y, roomName);
+			if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
+
+			let value = matrix.get(x, y);
+			if (value === 0) {
+				value = 2;
+				if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) value = 5;
+			}
+
+			newMatrix.set(x, y, 5 * value + 25);
+			dangerMatrix.set(x, y, 2);
+		}, 3);
 
 		// Add available adjacent tiles.
 		handleMapArea(pos.x, pos.y, (x, y) => {
-			if (matrix.get(x, y) > 100) return;
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+			if (x === pos.x && y === pos.y) return;
 
 			const newPos = new RoomPosition(x, y, roomName);
+			if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
+
 			const newLocation = encodePosition(newPos);
 			if (closedList[newLocation]) return;
 			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
@@ -207,7 +227,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMat
 function getDangerMatrix(roomName: string): CostMatrix {
 	getCostMatrix(roomName);
 
-	return cache.inHeap('dangerMatrix:' + roomName, 20, () => new PathFinder.CostMatrix());
+	return cache.fromHeap('dangerMatrix:' + roomName, true) || new PathFinder.CostMatrix();
 }
 
 /**

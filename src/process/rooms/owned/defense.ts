@@ -29,6 +29,7 @@ export default class RoomDefenseProcess extends Process {
 		this.manageSafeMode();
 		this.manageDefense();
 		this.room.defense.openRampartsToFriendlies();
+		this.room.defense.drawDebug();
 
 		this.room.visual.text('Wall status:' + (this.room.defense.isWallIntact() ? 'intact' : 'broken'), 5, 4);
 		this.room.visual.text('Enemy strength: ' + this.room.defense.getEnemyStrength(), 5, 5);
