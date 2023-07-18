@@ -3,8 +3,6 @@ RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
 
 import cache from 'utils/cache';
 import container from 'utils/container';
-import FunnelManager from 'empire/funnel-manager';
-import ReactorManager from 'warmind.local/reactor-manager';
 import RemoteMiningOperation from 'operation/remote-mining';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
@@ -472,7 +470,7 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 	if (resourceType === RESOURCE_THORIUM) {
-		const reactorManager = container.get<ReactorManager>('ReactorManager');
+		const reactorManager = container.get('ReactorManager');
 		if (reactorManager.hasActiveReactors()) {
 			if (reactorManager.isSpawnRoom(this.name)) return [50_000, 20_000, 10_000];
 			return [1, 0, 0];
@@ -484,7 +482,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 		if (this.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [1_000_000, 100_000, 50_000];
 
 		// Rooms we are funneling should pull extra energy.
-		const funnelManager = container.get<FunnelManager>('FunnelManager');
+		const funnelManager = container.get('FunnelManager');
 		if (funnelManager.isFunnelingTo(this.name)) return [500_000, 300_000, 150_000];
 
 		return [200_000, 50_000, 20_000];

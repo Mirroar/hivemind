@@ -5,6 +5,17 @@ import ReclaimManager from './reclaim-manager';
 import SpawnManager from './spawn-manager';
 import {Container} from './utils/container';
 
+declare global {
+	interface DependencyInjectionContainer {
+		FunnelManager: FunnelManager;
+		NavMesh: NavMesh;
+		PlayerIntelManager: PlayerIntelManager;
+		ReclaimManager: ReclaimManager;
+		SpawnManager: SpawnManager;
+	}
+}
+
+
 export default function (container: Container) {
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('NavMesh', () => new NavMesh());

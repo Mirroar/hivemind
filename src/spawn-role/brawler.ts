@@ -5,7 +5,6 @@ import cache from 'utils/cache';
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
-import ReactorManager from 'warmind.local/reactor-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 
@@ -95,7 +94,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const isInvaderCore = totalEnemyData.damage === 0 && totalEnemyData.heal === 0;
 			if (!isInvaderCore && (operation.needsDismantler() || !operation.isProfitable())) continue;
 
-			const reactorManager = container.get<ReactorManager>('ReactorManager');
+			const reactorManager = container.get('ReactorManager');
 
 			options.push({
 				priority: reactorManager.isSpawnRoom(room.name) ? 5 : 3,

@@ -1,24 +1,34 @@
+declare global {
+	interface DependencyInjectionContainer {
+	}
+}
+
+type ContainerConstructors = {
+	[key in keyof DependencyInjectionContainer]: (c: Container) => DependencyInjectionContainer[key];
+}
+
 export class Container {
-	services: Map<string, unknown>;
-	constructors: Map<string, (c: Container) => unknown>;
+	services: DependencyInjectionContainer;
+	constructors: ContainerConstructors;
 
 	constructor() {
-		this.services = new Map();
-		this.constructors = new Map();
+		this.services = {} as DependencyInjectionContainer;
+		this.constructors = {} as ContainerConstructors;
 	}
 
-	get<T>(key: string): T {
-		if (this.services.has(key)) return this.services.get(key) as T;
-		if (!this.constructors.has(key)) throw 'Invalid service "' + key + '" requested';
+	get<T extends keyof DependencyInjectionContainer>(key: T): DependencyInjectionContainer[T] {
+		if (this.services[key]) return this.services[key];
+		if (!this.constructors[key]) throw 'Invalid service "' + key + '" requested';
 
-		const instance = this.constructors.get(key)(this);
-		this.services.set(key, instance);
-		return instance as T;
+		const instance = this.constructors[key](this) as DependencyInjectionContainer[T];
+		this.services[key] = instance;
+		return instance;
 	}
 
-	set<T>(key: string, dependency: (c: Container) => T) {
-		this.constructors.set(key, dependency);
-		this.services.delete(key);
+	set<T extends keyof DependencyInjectionContainer>(key: T, generator: (c: Container) => DependencyInjectionContainer[T]) {
+		// @todo Find out if we can get rid of this ugly typecast.
+		this.constructors[key] = generator as typeof this.constructors[T];
+		delete this.services[key];
 	}
 }
 

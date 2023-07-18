@@ -118,6 +118,8 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 				}
 			}
 
+			if (!maxResourceType) return;
+
 			const option: StorageSourceTask = {
 				priority: 1,
 				weight: 0,

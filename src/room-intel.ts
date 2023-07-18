@@ -73,6 +73,7 @@ export interface RoomIntelMemory {
 		owner?: string;
 		thorium: number;
 		ticksActive: number;
+		lastUpdate: number;
 	};
 	deposits?: DepositInfo[];
 	structures: {
@@ -413,6 +414,7 @@ export default class RoomIntel {
 			owner: reactor.owner?.username,
 			thorium: reactor.store.getUsedCapacity(RESOURCE_THORIUM),
 			ticksActive: reactor.continuousWork,
+			lastUpdate: Game.time,
 		};
 	}
 
@@ -740,7 +742,14 @@ export default class RoomIntel {
 		if (Game.rooms[this.roomName]) {
 			cache.inObject(Game.rooms[this.roomName], 'reactorInfo', 1, () => {
 				this.gatherReactorIntel();
-			})
+			});
+		}
+
+		if (this.memory.reactor.lastUpdate && this.memory.reactor.lastUpdate < Game.time) {
+			// Adjust thorium amount even if we don't have vision.
+			const timeDiff = Game.time - this.memory.reactor.lastUpdate;
+			this.memory.reactor.thorium = Math.max(0, this.memory.reactor.thorium - timeDiff);
+			this.memory.reactor.lastUpdate = Game.time;
 		}
 
 		return this.memory.reactor;

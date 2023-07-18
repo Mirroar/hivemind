@@ -8,7 +8,7 @@ export default class PlayerIntelProcess extends Process {
 	run() {
 		if (!hivemind.segmentMemory.isReady()) return;
 
-		const manager = container.get<PlayerIntelManager>('PlayerIntelManager');
+		const manager = container.get('PlayerIntelManager');
 		this.collectPlayerRooms(manager);
 	}
 

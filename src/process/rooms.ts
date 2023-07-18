@@ -1,5 +1,4 @@
 import container from 'utils/container';
-import FunnelManager from 'empire/funnel-manager';
 import HighwayRoomProcess from 'process/rooms/highway';
 import hivemind, {PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 import interShard from 'intershard';
@@ -81,7 +80,7 @@ export default class RoomsProcess extends Process {
 			if (!hivemind.hasIntervalPassed(500, lastFunnelCheck)) return;
 
 			lastFunnelCheck = Game.time;
-			const funnelManager = container.get<FunnelManager>('FunnelManager');
+			const funnelManager = container.get('FunnelManager');
 			funnelManager.manageTradeRoutes();
 		});
 	}

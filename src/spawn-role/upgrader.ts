@@ -3,7 +3,6 @@ CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 import balancer from 'excess-energy-balancer';
 import container from 'utils/container';
-import FunnelManager from 'empire/funnel-manager';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 
@@ -96,7 +95,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		if (room.controller.level >=6 && room.isStripmine()) return 0;
 
-		const funnelManager = container.get<FunnelManager>('FunnelManager');
+		const funnelManager = container.get('FunnelManager');
 		if (room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(room.name) && room.getEffectiveAvailableEnergy() < 100_000) return 0;
 
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;

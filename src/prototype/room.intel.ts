@@ -7,7 +7,6 @@ import Bay from 'manager.bay';
 import cache from 'utils/cache';
 import Exploit from 'manager.exploit';
 import FactoryManager from 'factory-manager';
-import ReclaimManager from 'reclaim-manager';
 import RoomDefense from 'room-defense';
 import utilities from 'utilities';
 import {getUsername} from 'utils/account';
@@ -360,11 +359,11 @@ Room.prototype.isMine = function (this: Room, allowReserved?: boolean) {
 };
 
 Room.prototype.needsReclaiming = function (this: Room) {
-	const reclaimManager = container.get<ReclaimManager>('ReclaimManager');
+	const reclaimManager = container.get('ReclaimManager');
 	return reclaimManager.roomNeedsReclaiming(this);
 }
 
 Room.prototype.isSafeForReclaiming = function (this: Room) {
-	const reclaimManager = container.get<ReclaimManager>('ReclaimManager');
+	const reclaimManager = container.get('ReclaimManager');
 	return reclaimManager.roomIsSafeForReclaiming(this);
 }
