@@ -695,10 +695,15 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 	placeRoadsToRamps(): StepResult {
 		for (const rampartGroup of this.getRampartGroups()) {
-			const roads = this.placementManager.findAccessRoad(this.roomCenterEntrances[0], rampartGroup);
+			const roads = this.placementManager.findAccessRoad(this.roomCenterEntrances[0], rampartGroup, true);
 
 			for (const road of roads) {
-				this.placementManager.planLocation(road, 'road', 1)
+				if (this.roomPlan.hasPosition('extension', road)) {
+					this.roomPlan.removePosition('extension', road);
+					this.placementManager.unblockPosition(road.x, road.y);
+				}
+
+				this.placementManager.planLocation(road, 'road', 1);
 			}
 		}
 

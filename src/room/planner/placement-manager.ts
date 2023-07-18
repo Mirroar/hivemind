@@ -105,6 +105,10 @@ export default class PlacementManager {
 		this.buildingMatrix.set(x, y, this.IMPASSABLE_POSITION);
 	}
 
+	unblockPosition(x: number, y: number) {
+		this.buildingMatrix.set(x, y, 0);
+	}
+
 	getWallDistance(x: number, y: number): number {
 		return this.wallDistanceMatrix.get(x, y);
 	}
@@ -306,9 +310,18 @@ export default class PlacementManager {
 	 * @return {RoomPosition[]}
 	 *   Positions that make up the newly created road.
 	 */
-	findAccessRoad(from: RoomPosition, to: RoomPosition | RoomPosition[]): RoomPosition[] {
+	findAccessRoad(from: RoomPosition, to: RoomPosition | RoomPosition[], breakExtensions?: boolean): RoomPosition[] {
 		const result = PathFinder.search(from, to, {
-			roomCallback: () => this.buildingMatrix,
+			roomCallback: () => {
+				if (!breakExtensions) return this.buildingMatrix;
+
+				const matrix = this.buildingMatrix.clone();
+				for (const pos of this.roomPlan.getPositions('extension')) {
+					matrix.set(pos.x, pos.y, 25);
+				}
+
+				return matrix;
+			},
 			maxRooms: 1,
 			plainCost: 2,
 			swampCost: 2, // Swamps are more expensive to build roads on, but once a road is on them, creeps travel at the same speed.
