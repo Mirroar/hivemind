@@ -190,9 +190,6 @@ export default class ScoutProcess extends Process {
 						Memory.rooms[info.observerRoom].observeTargets.push(roomName);
 					}
 				}
-				else if (Memory.rooms[info.observerRoom]) {
-					delete Memory.rooms[info.observerRoom].observeTargets;
-				}
 			}
 		}
 	}
@@ -477,7 +474,7 @@ export default class ScoutProcess extends Process {
 					roomList[nextRoom].observerRoom = observer.pos.roomName;
 				}
 			}
-			else if (!updated) {
+			else if (roomList[nextRoom]) {
 				const observer = this.getClosestObserver(nextRoom);
 				if (observer) {
 					roomList[nextRoom].observer = observer.id;

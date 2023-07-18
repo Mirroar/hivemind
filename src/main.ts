@@ -310,6 +310,10 @@ const main = {
 					delete Memory.rooms[roomName];
 					count++;
 				}
+
+				if (memory.observeTargets && !Game.rooms[roomName]?.observer) {
+					delete memory.observeTargets;
+				}
 			});
 
 			if (count > 0) {

@@ -239,6 +239,8 @@ export default class ResourcesProcess extends Process {
 	}
 
 	roomHasUncertainStorage(room: Room): boolean {
+		if (!room) return true;
+
 		return room.isEvacuating()
 			|| room.isClearingStorage()
 			|| room.isClearingTerminal();
