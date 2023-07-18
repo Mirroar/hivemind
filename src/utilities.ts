@@ -94,17 +94,6 @@ const utilities = {
 				// Work with roads and structures in a room.
 				const costs = getCostMatrix(roomName, options);
 
-				// Also try not to drive through bays.
-				if (Game.rooms[roomName] && Game.rooms[roomName].roomPlanner) {
-					_.each(Game.rooms[roomName].roomPlanner.getLocations('bay_center'), pos => {
-						if (costs.get(pos.x, pos.y) <= 20) {
-							costs.set(pos.x, pos.y, 20);
-						}
-					});
-				}
-
-				// @todo Try not to drive too close to sources / minerals / controllers.
-
 				return costs;
 			},
 		};

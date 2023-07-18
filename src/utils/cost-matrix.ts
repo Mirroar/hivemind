@@ -67,7 +67,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		matrix = cache.inHeap(
 			cacheKey,
 			20,
-			() => generateCombatCostMatrix(matrix, roomName),
+			() => generateCombatCostMatrix(matrix, roomName, options.singleRoom),
 		);
 	}
 
@@ -151,7 +151,7 @@ function generateQuadCostMatrix(matrix: CostMatrix, roomName: string): CostMatri
  * @return {PathFinder.CostMatrix}
  *   The modified cost matrix.
  */
-function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMatrix {
+function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDangerousTiles: boolean): CostMatrix {
 	const newMatrix = matrix.clone();
 	const terrain = new Room.Terrain(roomName);
 	const dangerMatrix = new PathFinder.CostMatrix();
@@ -180,7 +180,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMat
 			if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP) value = 5;
 		}
 
-		newMatrix.set(pos.x, pos.y, 5 * value + 25);
+		newMatrix.set(pos.x, pos.y, blockDangerousTiles ? 255 : 5 * value + 25);
 		dangerMatrix.set(pos.x, pos.y, 1);
 		handleMapArea(pos.x, pos.y, (x, y) => {
 			// @todo No need to consider tiles at 3 range dangerous if there's
@@ -198,7 +198,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string): CostMat
 				if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) value = 5;
 			}
 
-			newMatrix.set(x, y, 5 * value + 25);
+			newMatrix.set(x, y, blockDangerousTiles ? 255 : 5 * value + 25);
 			dangerMatrix.set(x, y, 2);
 		}, 3);
 

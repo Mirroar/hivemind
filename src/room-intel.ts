@@ -784,6 +784,15 @@ export default class RoomIntel {
 			}
 		}
 
+		// Also try not to drive through bays.
+		if (Game.rooms[this.roomName]?.isMine() && Game.rooms[this.roomName]?.roomPlanner) {
+			_.each(Game.rooms[this.roomName].roomPlanner.getLocations('bay_center'), pos => {
+				if (matrix.get(pos.x, pos.y) <= 20) {
+					matrix.set(pos.x, pos.y, 20);
+				}
+			});
+		}
+
 		const lairs = this.getStructures(STRUCTURE_KEEPER_LAIR);
 		if (lairs && _.size(lairs) > 0) {
 			const terrain = new Room.Terrain(this.roomName);
