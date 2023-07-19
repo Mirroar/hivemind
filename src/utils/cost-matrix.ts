@@ -70,6 +70,9 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 			() => generateCombatCostMatrix(matrix, roomName, options.singleRoom),
 		);
 	}
+	else {
+		cache.inHeap('dangerMatrix:' + roomName, 20, () => new PathFinder.CostMatrix());
+	}
 
 	return matrix;
 }

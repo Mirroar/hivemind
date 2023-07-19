@@ -51,12 +51,17 @@ export default class BuilderSpawnRole extends SpawnRole {
 			return 0;
 		}
 
+		const availableEnergy = room.getEffectiveAvailableEnergy();
+		if ((room.storage || room.terminal) && availableEnergy < 5000) {
+			// Wait for room economy to kick in a little.
+			return 0;
+		}
+
 		if (room.isEvacuating()) {
 			// Just spawn a small builder for keeping roads intact.
 			return 1;
 		}
 
-		const availableEnergy = room.getEffectiveAvailableEnergy();
 		if ((room.storage || room.terminal) && availableEnergy < 10_000) {
 			// Just spawn a small builder for keeping roads intact. Wait for
 			// harvesting to fill up storage.

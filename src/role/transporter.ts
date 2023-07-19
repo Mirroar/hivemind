@@ -433,7 +433,6 @@ export default class TransporterRole extends Role {
 		this.addContainerResourceOptions(options);
 		this.addHighLevelResourceOptions(options);
 		this.addEvacuatingRoomResourceOptions(options);
-		this.addLabResourceOptions(options);
 
 		return options;
 	}
@@ -737,131 +736,6 @@ export default class TransporterRole extends Role {
 		}
 
 		// @todo Destroy nuker once storage is empty so we can pick up contained resources.
-	}
-
-	/**
-	 * Adds options for picking up resources for lab management.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 */
-	addLabResourceOptions(options: TransporterSourceOrderOption[]) {
-		const room = this.creep.room;
-		const currentReaction = room.memory.currentReaction;
-		if (!room.memory.canPerformReactions) return;
-		if (room.isEvacuating()) return;
-
-		const labs = room.memory.labs.reactor;
-		for (const labID of labs) {
-			// Clear out reaction labs.
-			// @todo collect job so that transporter empties any labs that need
-			// it before doing another action.
-			const lab = Game.getObjectById<StructureLab>(labID);
-			if (!lab) continue;
-
-			const mineralAmount = lab.store[lab.mineralType];
-			const mineralCapacity = lab.store.getCapacity(lab.mineralType);
-			if (lab && mineralAmount > 0) {
-				if (room.boostManager.isLabUsedForBoosting(lab.id) && lab.mineralType === room.boostManager.getRequiredBoostType(lab.id)) continue;
-
-				const option = {
-					priority: 0,
-					weight: mineralAmount / mineralCapacity,
-					type: 'structure',
-					object: lab,
-					resourceType: lab.mineralType,
-				};
-
-				if (mineralAmount > mineralCapacity * 0.8) {
-					option.priority++;
-				}
-
-				if (mineralAmount > mineralCapacity * 0.9) {
-					option.priority++;
-				}
-
-				if (mineralAmount > mineralCapacity * 0.95) {
-					option.priority++;
-				}
-
-				if (currentReaction) {
-					// If we're doing a different reaction now, clean out faster!
-					if (REACTIONS[currentReaction[0]][currentReaction[1]] !== lab.mineralType) {
-						option.priority = 3;
-						option.weight = 0;
-					}
-				}
-
-				if (option.priority > 0) options.push(option);
-			}
-		}
-
-		if (!currentReaction) return;
-
-		// Clear out labs with wrong resources.
-		let lab = Game.getObjectById<StructureLab>(room.memory.labs.source1);
-		if (lab && lab.store[lab.mineralType] > 0 && lab.mineralType !== currentReaction[0]) {
-			const option = {
-				priority: 3,
-				weight: 0,
-				type: 'structure',
-				object: lab,
-				resourceType: lab.mineralType,
-			};
-
-			options.push(option);
-		}
-
-		lab = Game.getObjectById<StructureLab>(room.memory.labs.source2);
-		if (lab && lab.store[lab.mineralType] > 0 && lab.mineralType !== currentReaction[1]) {
-			const option = {
-				priority: 3,
-				weight: 0,
-				type: 'structure',
-				object: lab,
-				resourceType: lab.mineralType,
-			};
-
-			options.push(option);
-		}
-
-		// Get reaction resources.
-		this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(room.memory.labs.source1), currentReaction[0]);
-		this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(room.memory.labs.source2), currentReaction[1]);
-	}
-
-	/**
-	 * Adds options for getting reaction lab resources.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 * @param {StructureLab} lab
-	 *   The lab to fill.
-	 * @param {string} resourceType
-	 *   The type of resource that should be put in the lab.
-	 */
-	addSourceLabResourceOptions(options: TransporterSourceOrderOption[], lab: StructureLab, resourceType: ResourceConstant) {
-		if (!lab) return;
-		if (lab.mineralType && lab.mineralType !== resourceType) return;
-		if (lab.store[lab.mineralType] > lab.store.getCapacity(lab.mineralType) * 0.5) return;
-
-		const source = this.creep.room.getBestStorageSource(resourceType);
-		if (!source) return;
-		if ((source.store[resourceType] || 0) === 0) return;
-
-		const option = {
-			priority: 3,
-			weight: 1 - (lab.store[lab.mineralType] / lab.store.getCapacity(lab.mineralType)),
-			type: 'structure',
-			object: source,
-			resourceType,
-		};
-
-		if (lab.store[lab.mineralType] > lab.store.getCapacity(lab.mineralType) * 0.2) {
-			option.priority--;
-		}
-
-		options.push(option);
 	}
 
 	/**

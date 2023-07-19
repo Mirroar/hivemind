@@ -77,6 +77,11 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			// Only spawn if there are enemies.
 			if (!operation || !operation.isUnderAttack()) continue;
 
+			// Only spawn if we're actually using that source.
+			const sourceLocation = encodePosition(pos);
+			const harvesters = _.filter(Game.creepsByRole['harvester.remote'] || {}, (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
+			if (harvesters.length === 0) continue;
+
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
 			// in a different way.
@@ -100,7 +105,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 				priority: reactorManager.isSpawnRoom(room.name) ? 5 : 3,
 				weight: 1,
 				targetPos,
-				pathTarget: encodePosition(pos),
+				pathTarget: sourceLocation,
 				responseType,
 				operation: operation.name,
 			});

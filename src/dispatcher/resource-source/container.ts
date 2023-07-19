@@ -21,7 +21,6 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 	getTasks(context: ResourceSourceContext) {
 		const options: ContainerSourceTask[] = [];
 
-		// @todo
 		// @todo Allow builders to take energy out of upgrader container at low prio.
 		this.addContainerEnergySourceOptions(options, context);
 
@@ -30,9 +29,10 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 
 	private addContainerEnergySourceOptions(options: ContainerSourceTask[], context: ResourceSourceContext) {
 		const creep = context.creep;
+		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;
 
 		// Look for energy in Containers.
-		const targets = creep.room.find<StructureContainer>(FIND_STRUCTURES, {
+		const targets = this.room.find<StructureContainer>(FIND_STRUCTURES, {
 			filter: structure => (structure.structureType === STRUCTURE_CONTAINER)
 				&& structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1,
 		});
@@ -40,7 +40,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 		// Prefer containers used as harvester dropoff.
 		for (const target of targets) {
 			// Don't use the controller container as a normal source if we're upgrading.
-			if (target.id === target.room.memory.controllerContainer && (creep.room.creepsByRole.upgrader || creep.room.creepsByRole.builder) && creep.memory.role === 'transporter') continue;
+			if (target.id === target.room.memory.controllerContainer && (this.room.creepsByRole.upgrader || this.room.creepsByRole.builder) && creep.memory.role === 'transporter') continue;
 
 			const option: ContainerSourceTask = {
 				priority: 1,
@@ -57,7 +57,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity()) {
 					// This container is filling up, prioritize emptying it when we aren't
 					// busy filling extensions.
-					if (creep.room.energyAvailable >= creep.room.energyCapacityAvailable || !creep.room.storage || creep.memory.role !== 'transporter') option.priority += 2;
+					if (this.room.energyAvailable >= this.room.energyCapacityAvailable || !this.room.storage || creep.memory.role !== 'transporter') option.priority += 2;
 				}
 
 				break;
@@ -76,7 +76,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				break;
 			}
 
-			option.priority -= creep.room.getCreepsWithOrder('container', target.id).length * 3;
+			option.priority -= this.room.getCreepsWithOrder('container', target.id).length * 3;
 
 			options.push(option);
 		}
