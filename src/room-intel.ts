@@ -745,7 +745,7 @@ export default class RoomIntel {
 			});
 		}
 
-		if (this.memory.reactor.lastUpdate && this.memory.reactor.lastUpdate < Game.time) {
+		if (this.memory.reactor?.lastUpdate && this.memory.reactor.lastUpdate < Game.time) {
 			// Adjust thorium amount even if we don't have vision.
 			const timeDiff = Game.time - this.memory.reactor.lastUpdate;
 			this.memory.reactor.thorium = Math.max(0, this.memory.reactor.thorium - timeDiff);
