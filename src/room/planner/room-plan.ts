@@ -72,6 +72,8 @@ export default class RoomPlan {
 	}
 
 	removePosition(type: string, pos: RoomPosition) {
+		if (!this.positionsByType[type]) return;
+
 		delete this.positionsByType[type][serializeCoords(pos.x, pos.y)];
 	}
 

@@ -700,6 +700,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			for (const road of roads) {
 				if (this.roomPlan.hasPosition('extension', road)) {
 					this.roomPlan.removePosition('extension', road);
+					this.roomPlan.removePosition('extension.bay', road);
+					for (let i = 0; i < 10; i++) {
+						this.roomPlan.removePosition('extension.bay.' + i, road);
+					}
 					this.placementManager.unblockPosition(road.x, road.y);
 				}
 
