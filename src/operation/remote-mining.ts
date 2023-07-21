@@ -445,7 +445,7 @@ export default class RemoteMiningOperation extends Operation {
 		const paths = this.getPaths();
 		const multiplier = this.hasContainer(sourceLocation) ? 1 : 1.5;
 
-		return paths[sourceLocation] && paths[sourceLocation].accessible ? paths[sourceLocation].requiredWorkParts * multiplier : 0;
+		return (paths[sourceLocation] && paths[sourceLocation].accessible) ? paths[sourceLocation].requiredWorkParts * multiplier : 0;
 	}
 
 	/**

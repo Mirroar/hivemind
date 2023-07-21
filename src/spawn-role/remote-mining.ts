@@ -279,10 +279,10 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			// @todo Consider established when roads are fully built.
 			isEstablished: operation.hasContainer(targetPos),
 			// Use less work parts if room is not reserved yet.
-			size: operation.getHarvesterSize(targetPos),
+			size: operation.getHarvesterSize(targetPos) || 0,
 		};
 
-		const creepSpawnTime = this.getCreepBody(room, option).length * CREEP_SPAWN_TIME;
+		const creepSpawnTime = this.getCreepBody(room, option)?.length * CREEP_SPAWN_TIME || 0;
 		const harvesters = _.filter(
 			Game.creepsByRole['harvester.remote'] || {},
 			(creep: RemoteHarvesterCreep) => {

@@ -532,14 +532,14 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 
 		if (bodyPart === ATTACK || bodyPart === RANGED_ATTACK) {
 			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
-				return [10000, 3000, 1500];
+				return [10000, 5000, 1500];
 		}
 		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair) {
 			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
-				return [10000, 3000, 1500];
+				return [10000, 5000, 1500];
 		}
 
-		return [5000, 1500, 750];
+		return [10000, 5000, 750];
 	}
 
 	// @todo If there's no labs or factory, we don't need minerals.
