@@ -427,6 +427,7 @@ export default class RoomManager {
 			if (mineral.score > 0) {
 				if (mineral.hasExtractor) {
 					const extractor = _.filter(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR)[0];
+					if (!extractor) continue;
 					if (missingThoriumExtractor && extractor.destroy() === OK) {
 						missingExtractors--;
 						missingThoriumExtractor = false;

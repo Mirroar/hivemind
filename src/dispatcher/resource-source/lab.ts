@@ -24,8 +24,11 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		this.addLabResourceOptions(options, context);
 
 		// Get reaction resources.
-		this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(this.room.memory.labs.source1), this.room.memory.currentReaction[0], context);
-		this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(this.room.memory.labs.source2), this.room.memory.currentReaction[1], context);
+		const roomMemory = this.room.memory;
+		if (roomMemory?.labs && roomMemory?.currentReaction) {
+			this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source1), roomMemory.currentReaction[0], context);
+			this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source2), roomMemory.currentReaction[1], context);
+		}
 
 		return options;
 	}
@@ -151,5 +154,32 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		}
 
 		options.push(option);
+	}
+
+	isValid(task: TaskType, context: ResourceSourceContext) {
+		if (!task.resourceType) return false;
+		const structure = Game.getObjectById(task.target);
+		if (!structure) return false;
+		if (structure.store.getUsedCapacity(task.resourceType) === 0) return false;
+		if (context.creep.store.getFreeCapacity(task.resourceType) === 0) return false;
+		if (!this.isSafePosition(context.creep, structure.pos)) return false;
+
+		return true;
+	}
+
+	execute(task: TaskType, context: ResourceSourceContext) {
+		const creep = context.creep;
+		const target = Game.getObjectById(task.target);
+
+		creep.whenInRange(1, target, () => {
+			const resourceType = task.resourceType;
+
+			if (task.amount)
+				creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity()));
+			else
+				creep.withdraw(target, resourceType);
+
+			delete creep.memory.order;
+		});
 	}
 }
