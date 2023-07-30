@@ -37,7 +37,6 @@
 		"rollup-plugin-typescript2": "^0.30.0",
 		"source-map": "~0.6.1",
 		"ts-node": "^10.2.1",
-		"typed-screeps": "github:screepers/typed-screeps#season-5",
 		"typescript": "^4.3.5",
 		"xo": "~0.43.0"
 	},
@@ -106,5 +105,8 @@
 				"typescript": {}
 			}
 		}
+	},
+	"dependencies": {
+		"@types/screeps": "^3.3.3"
 	}
 }
