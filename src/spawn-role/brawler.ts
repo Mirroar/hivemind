@@ -99,10 +99,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const isInvaderCore = totalEnemyData.damage === 0 && totalEnemyData.heal === 0;
 			if (!isInvaderCore && (operation.needsDismantler() || !operation.isProfitable())) continue;
 
-			const reactorManager = container.get('ReactorManager');
-
 			options.push({
-				priority: reactorManager.isSpawnRoom(room.name) ? 5 : 3,
+				priority: 3,
 				weight: 1,
 				targetPos,
 				pathTarget: sourceLocation,

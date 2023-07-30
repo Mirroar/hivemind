@@ -156,7 +156,7 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		options.push(option);
 	}
 
-	isValid(task: TaskType, context: ResourceSourceContext) {
+	isValid(task: LabSourceTask, context: ResourceSourceContext) {
 		if (!task.resourceType) return false;
 		const structure = Game.getObjectById(task.target);
 		if (!structure) return false;
@@ -167,7 +167,7 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		return true;
 	}
 
-	execute(task: TaskType, context: ResourceSourceContext) {
+	execute(task: LabSourceTask, context: ResourceSourceContext) {
 		const creep = context.creep;
 		const target = Game.getObjectById(task.target);
 

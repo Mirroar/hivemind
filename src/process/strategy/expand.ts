@@ -221,11 +221,10 @@ export default class ExpandProcess extends Process {
 	}
 
 	manageStripmines(roomName: string) {
-		// const maxMines = Math.floor((Game.myRooms.length + 1) / 3);
-		// const totalMines = _.filter(Game.myRooms, room => room.isStripmine()).length;
+		const maxMines = 0; // Math.floor((Game.myRooms.length + 1) / 3);
+		const totalMines = _.filter(Game.myRooms, room => room.isStripmine()).length;
 
-		// if (totalMines < maxMines) {
-		if (_.filter(Game.myRooms, room => !room.isStripmine()).length >= 4) {
+		if (totalMines < maxMines) {
 			Memory.rooms[roomName].isStripmine = true;
 		}
 	}
@@ -594,7 +593,7 @@ export default class ExpandProcess extends Process {
 		for (const room of Game.myRooms) {
 			if (!room.isStripmine()) continue;
 			if (!room.terminal) continue;
-			if (_.filter(room.minerals, mineral => mineral.mineralAmount > 0 && mineral.mineralType === RESOURCE_THORIUM).length > 0) continue;
+			if (_.filter(room.minerals, mineral => mineral.mineralAmount > 0).length > 0) continue;
 
 			room.setEvacuating(true);
 			this.memory.evacuatingRoom = {

@@ -404,7 +404,7 @@ export default class RoomIntel {
 	gatherReactorIntel() {
 		delete this.memory.reactor;
 
-		const reactor = Game.rooms[this.roomName].find(FIND_REACTORS)[0];
+		/*const reactor = Game.rooms[this.roomName].find(FIND_REACTORS)[0];
 		if (!reactor) return;
 
 		this.memory.reactor = {
@@ -415,7 +415,7 @@ export default class RoomIntel {
 			thorium: reactor.store.getUsedCapacity(RESOURCE_THORIUM),
 			ticksActive: reactor.continuousWork,
 			lastUpdate: Game.time,
-		};
+		};*/
 	}
 
 	/**

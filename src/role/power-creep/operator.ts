@@ -224,7 +224,7 @@ export default class OperatorRole extends Role {
 			if (mineral.ticksToRegeneration && mineral.ticksToRegeneration > 0) return;
 
 			const distance = this.creep.pos.getRangeTo(mineral);
-			const maxCooldown = mineral.mineralType === RESOURCE_THORIUM ? distance : 0;
+			const maxCooldown = distance;
 			if (this.creep.powers[PWR_REGEN_MINERAL].cooldown > maxCooldown) return;
 
 			const activeEffect = _.first(_.filter(mineral.effects, effect => effect.effect === PWR_REGEN_MINERAL));
@@ -235,9 +235,9 @@ export default class OperatorRole extends Role {
 				type: 'usePower',
 				power: PWR_REGEN_MINERAL,
 				target: mineral.id,
-				priority: mineral.mineralType === RESOURCE_THORIUM ? 4 : 3,
+				priority: 3,
 				weight: 1 - (5 * ticksRemaining / POWER_INFO[PWR_REGEN_MINERAL].duration),
-				canInterrupt: mineral.mineralType === RESOURCE_THORIUM,
+				canInterrupt: false,
 			});
 		}
 	}

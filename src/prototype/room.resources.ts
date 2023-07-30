@@ -469,14 +469,6 @@ Room.prototype.determineResourceLevel = function (this: Room, amount: number, re
 };
 
 Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
-	if (resourceType === RESOURCE_THORIUM) {
-		const reactorManager = container.get('ReactorManager');
-		if (reactorManager.hasActiveReactors()) {
-			if (reactorManager.isSpawnRoom(this.name)) return [50_000, 20_000, 10_000];
-			return [1, 0, 0];
-		}
-	}
-
 	if (resourceType === RESOURCE_ENERGY) {
 		// Defending rooms need energy to defend.
 		if (this.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [1_000_000, 100_000, 50_000];

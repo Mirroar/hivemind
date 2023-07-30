@@ -340,9 +340,6 @@ export default class ScoutProcess extends Process {
 		// Having few swamp tiles is good (less cost for road maintenance, easier setup).
 		result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
-		// Season 5: Amount of thorium is important for gathering score.
-		result.addScore((roomIntel.getMineralAmounts()[RESOURCE_THORIUM] || -10_000) / 10_000, 'thorium');
-
 		this.setExpansionScoreCache(roomName, result);
 
 		return result;

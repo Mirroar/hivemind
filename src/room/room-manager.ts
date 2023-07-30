@@ -439,7 +439,7 @@ export default class RoomManager {
 
 					if (currentExtractors >= CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level]) {
 						missingExtractors++;
-						if (mineral.mineralType === RESOURCE_THORIUM) missingThoriumExtractor = true;
+						// if (mineral.mineralType === RESOURCE_THORIUM) missingThoriumExtractor = true;
 					}
 					else {
 						this.tryBuild(mineral.position, STRUCTURE_EXTRACTOR);
@@ -475,7 +475,7 @@ export default class RoomManager {
 			const hasExtractor = _.filter(structures, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0 ||
 				_.filter(constructionSites, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0;
 
-			let scoreFactor = mineral && mineral.mineralType === RESOURCE_THORIUM ? 5 : 1;
+			let scoreFactor = 1; // mineral && mineral.mineralType === RESOURCE_THORIUM ? 5 : 1;
 			if (mineral && !mineral.room.isStripmine() && mineral.mineralAmount < 500) {
 				scoreFactor = 0;
 			}

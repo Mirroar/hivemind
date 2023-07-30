@@ -624,7 +624,6 @@ export default class TransporterRole extends Role {
 					if (
 						container.id === mineral.getNearbyContainer()?.id &&
 						resourceType === mineral.mineralType &&
-						resourceType !== RESOURCE_THORIUM &&
 						container.store[resourceType] < CONTAINER_CAPACITY / 2
 					) {
 						isEmptyMineralContainer = true;

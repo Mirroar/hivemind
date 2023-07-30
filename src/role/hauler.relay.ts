@@ -333,8 +333,14 @@ export default class RelayHaulerRole extends Role {
 		if (container) {
 			creep.say('container');
 
-			const hasHarvester = _.filter(creep.room.creepsByRole['harvester.remote'], (harvester: RemoteHarvesterCreep) => harvester.memory.source === creep.memory.source).length > 0;
-			if (!hasHarvester && container.store.getUsedCapacity(RESOURCE_ENERGY) < 20) {
+			const hasActiveHarvester = _.filter(creep.room.creepsByRole['harvester.remote'], (harvester: RemoteHarvesterCreep) => {
+				if (harvester.memory.source !== creep.memory.source) return false;
+				if (harvester.pos.roomName !== container.pos.roomName) return false;
+				if (harvester.pos.getRangeTo(container.pos) > 3) return false;
+
+				return true;
+			}).length > 0;
+			if (!hasActiveHarvester && container.store.getUsedCapacity(RESOURCE_ENERGY) < 20) {
 				this.startDelivering(creep);
 				return;
 			}
@@ -344,7 +350,7 @@ export default class RelayHaulerRole extends Role {
 				if (relevantAmountReached) {
 					creep.withdraw(container, RESOURCE_ENERGY);
 				}
-				if (!hasHarvester) {
+				if (!hasActiveHarvester) {
 					creep.withdraw(container, RESOURCE_ENERGY);
 					this.startDelivering(creep);
 				}
