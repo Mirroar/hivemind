@@ -22,6 +22,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): ReclaimSpawnOption[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
+		if (room.getEffectiveAvailableEnergy() < 10_000) return [];
 
 		const options: ReclaimSpawnOption[] = [];
 		this.room = room;

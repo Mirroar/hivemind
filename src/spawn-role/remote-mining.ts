@@ -56,11 +56,11 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		// @todo Reduce needed carry parts to account for higher throughput with relays.
 		const maximumNeededCarryParts = this.getMaximumCarryParts(room);
 		const maxHaulerSize = this.getMaximumHaulerSize(room, maximumNeededCarryParts);
-		const haulerSpawnTime = this.generateCreepBodyFromWeights(
+		const haulerSpawnTime = (this.generateCreepBodyFromWeights(
 			(room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
 			room.energyCapacityAvailable,
 			{[CARRY]: maxHaulerSize},
-		).length * CREEP_SPAWN_TIME;
+		)?.length || 0) * CREEP_SPAWN_TIME;
 
 		const currentlyNeededCarryParts = this.getNeededCarryParts(room);
 		const currentHaulers = _.filter(Game.creepsByRole['hauler.relay'], creep =>

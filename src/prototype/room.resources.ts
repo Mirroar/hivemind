@@ -527,7 +527,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	// For boosts, try to have a minimum amount for all types. Later, make
 	// dependent on room military state and so on.
 	// @todo If there's no labs, we don't need boosts.
-	for (const bodyPart in BOOSTS) {
+	/*for (const bodyPart in BOOSTS) {
 		if (!BOOSTS[bodyPart][resourceType]) continue;
 
 		if (bodyPart === ATTACK || bodyPart === RANGED_ATTACK) {
@@ -540,7 +540,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 		}
 
 		return [10000, 5000, 750];
-	}
+	}*/
 
 	// @todo If there's no labs or factory, we don't need minerals.
 	return [50_000, 30_000, 10_000];
@@ -648,7 +648,7 @@ Room.prototype.getBestStorageSource = function (this: Room, resourceType: Resour
 	else if (this.storage && this.storage.store[resourceType]) {
 		return this.storage;
 	}
-	else if (this.terminal && this.terminal.store[resourceType] && this.memory.fillTerminal !== resourceType) {
+	else if (this.terminal && this.terminal.store[resourceType] && (!this.memory.fillTerminal || this.memory.fillTerminal !== resourceType)) {
 		return this.terminal;
 	}
 

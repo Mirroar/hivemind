@@ -106,7 +106,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 		if (room.controller.level < 4) return 2;
 
 		// Storage mostly takes place in containers, units will get their energy from there.
-		if (!room.storage && !room.terminal) return 2;
+		if (!room.storage && !room.terminal) return room.getEffectiveAvailableEnergy() > 1000 ? 2 : 1;
 
 		const sourceCount = _.size(room.sources);
 		let maxTransporters = 2 + (2 * sourceCount); // @todo Find a good way to gauge needed number of transporters by measuring distances.

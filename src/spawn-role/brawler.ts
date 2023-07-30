@@ -245,16 +245,18 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	}
 
 	getReclaimSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
+		if (room.getEffectiveAvailableEnergy() < 10_000) return;
+
 		for (const targetRoom of Game.myRooms) {
 			if (room.name === targetRoom.name) continue;
 			if (!this.canReclaimRoom(targetRoom, room)) continue;
 
-			options.push({
+			/*options.push({
 				priority: 4,
 				weight: 0,
 				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
 				responseType: RESPONSE_BLINKY,
-			});
+			});*/
 		}
 	}
 
