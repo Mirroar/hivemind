@@ -36,8 +36,6 @@ declare global {
 		harvestActive?: boolean;
 		range: number;
 		expansionReasons?: unknown;
-		observer?: Id<StructureObserver>;
-		observerRoom?: string;
 		safePath?: boolean;
 		origin: string;
 	}
@@ -161,12 +159,13 @@ export default class ScoutProcess extends Process {
 		}
 		// @todo For higher ranges (7-10), only scout if we have memory to spare.
 
-		if (info.observer && info.range <= 6 && (/^[EW]\d*0[NS]\d+$/.test(roomName) || /^[EW]\d+[NS]\d*0$/.test(roomName)) && timeSinceLastScan > hivemind.settings.get('highwayScoutInterval')) {
+		const observer = this.getClosestObserver(roomName);
+		if (info.range <= 6 && (/^[EW]\d*0[NS]\d+$/.test(roomName) || /^[EW]\d+[NS]\d*0$/.test(roomName)) && timeSinceLastScan > hivemind.settings.get('highwayScoutInterval') && observer) {
 			// Corridor rooms get scouted more often to look for power banks.
 			info.scoutPriority = 2;
 		}
 
-		if (info.scoutPriority > 0 && info.observer && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
+		if (info.scoutPriority > 0 && observer && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
 			// Only observe if last Scan was longer ago than intel manager delay,
 			// so we don't get stuck scanning the same room for some reason.
 			if (timeSinceLastScan > hivemind.settings.get('roomIntelCacheDuration')) {
@@ -175,20 +174,17 @@ export default class ScoutProcess extends Process {
 
 				// Let observer scout one room per run at maximum.
 				// @todo Move this to structure management so we can scan one open room per tick.
-				const observer = Game.getObjectById<StructureObserver>(info.observer);
-				if (observer) {
-					if (!observer.hasScouted) {
-						observer.observeRoom(roomName);
-						observer.hasScouted = true;
-						hivemind.log('intel', observer.pos.roomName).info('Observing', roomName);
+				if (!observer.hasScouted) {
+					observer.observeRoom(roomName);
+					observer.hasScouted = true;
+					hivemind.log('intel', observer.pos.roomName).info('Observing', roomName);
+				}
+				else {
+					if (!Memory.rooms[observer.pos.roomName].observeTargets) {
+						Memory.rooms[observer.pos.roomName].observeTargets = [];
 					}
-					else {
-						if (!Memory.rooms[info.observerRoom].observeTargets) {
-							Memory.rooms[info.observerRoom].observeTargets = [];
-						}
 
-						Memory.rooms[info.observerRoom].observeTargets.push(roomName);
-					}
+					Memory.rooms[observer.pos.roomName].observeTargets.push(roomName);
 				}
 			}
 		}
@@ -454,8 +450,6 @@ export default class ScoutProcess extends Process {
 
 			// Add current room as a candidate for scouting.
 			if (!roomList[nextRoom] || roomList[nextRoom].range > info.range || !Game.rooms[roomList[nextRoom].origin] || !Game.rooms[roomList[nextRoom].origin].isMine()) {
-				const observer = this.getClosestObserver(nextRoom);
-
 				roomList[nextRoom] = {
 					roomName: nextRoom,
 					range: info.range,
@@ -465,22 +459,6 @@ export default class ScoutProcess extends Process {
 					expansionScore: 0,
 					scoutPriority: 0,
 				};
-
-				if (observer) {
-					roomList[nextRoom].observer = observer.id;
-					roomList[nextRoom].observerRoom = observer.pos.roomName;
-				}
-			}
-			else if (roomList[nextRoom]) {
-				const observer = this.getClosestObserver(nextRoom);
-				if (observer) {
-					roomList[nextRoom].observer = observer.id;
-					roomList[nextRoom].observerRoom = observer.pos.roomName;
-				}
-				else {
-					delete roomList[nextRoom].observer;
-					delete roomList[nextRoom].observerRoom;
-				}
 			}
 		}
 
