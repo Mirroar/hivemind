@@ -150,6 +150,10 @@ export default class RoomManager {
 		}
 	}
 
+	canCreateConstructionSites() {
+		return this.newStructures + this.roomConstructionSites.length < 5;
+	}
+
 	/**
 	 * Removes structures that might prevent the room's construction.
 	 */
@@ -253,6 +257,8 @@ export default class RoomManager {
 			this.manageExtensions();
 		}
 
+		if (!this.canCreateConstructionSites()) return;
+
 		// Make sure towers are built in the right place, remove otherwise.
 		this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
 		const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level];
@@ -261,6 +267,8 @@ export default class RoomManager {
 		}
 
 		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
+
+		if (!this.canCreateConstructionSites()) return;
 
 		// Make sure all current spawns have been built.
 		const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
@@ -299,10 +307,14 @@ export default class RoomManager {
 			this.manageExtensions();
 		}
 
+		if (!this.canCreateConstructionSites()) return;
+
 		// At level 2, we can start building containers at sources and controller.
 		this.removeUnplannedStructures('container', STRUCTURE_CONTAINER);
 		this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
 		this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER);
+
+		if (!this.canCreateConstructionSites()) return;
 
 		// Build storage ASAP.
 		if (this.hasMisplacedStorage() && this.room.storage.store.getUsedCapacity() < 5000) {
@@ -310,6 +322,8 @@ export default class RoomManager {
 		}
 
 		this.buildPlannedStructures('storage', STRUCTURE_STORAGE);
+
+		if (!this.canCreateConstructionSites()) return;
 
 		// Also build terminal when available.
 		if (this.hasMisplacedTerminal() && this.room.terminal.store.getUsedCapacity() < 5000) {
@@ -326,7 +340,11 @@ export default class RoomManager {
 			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
 		}
 
+		if (!this.canCreateConstructionSites()) return;
+
 		this.manageLinks();
+
+		if (!this.canCreateConstructionSites()) return;
 
 		// Build extractor and related container if available.
 		if (CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level] > 0) {
@@ -338,6 +356,8 @@ export default class RoomManager {
 
 		// Make sure all requested ramparts are built.
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
+
+		if (!this.canCreateConstructionSites()) return;
 
 		// Slate all unmanaged walls and ramparts for deconstruction.
 		this.memory.dismantle = {};
@@ -377,6 +397,8 @@ export default class RoomManager {
 	}
 
 	manageExtensions() {
+		if (!this.canCreateConstructionSites()) return;
+
 		// Make sure extensions are built in the right place, remove otherwise.
 		this.removeUnplannedStructures('extension', STRUCTURE_EXTENSION, 1);
 		if (this.room.controller.level >= 3) {
@@ -731,6 +753,8 @@ export default class RoomManager {
 			this.buildPlannedStructures('wall.quad', STRUCTURE_WALL);
 		}
 
+		if (!this.canCreateConstructionSites()) return;
+
 		if (hivemind.settings.get('constructLabs')) {
 			// Make sure labs are built in the right place, remove otherwise.
 			this.removeUnplannedStructures('lab', STRUCTURE_LAB, 1);
@@ -747,11 +771,15 @@ export default class RoomManager {
 			}
 		}
 
+		if (!this.canCreateConstructionSites()) return;
+
 		if (hivemind.settings.get('constructNukers')) {
 			// Make sure all current nukers have been built.
 			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('nuker', STRUCTURE_NUKER, 1);
 			this.buildPlannedStructures('nuker', STRUCTURE_NUKER);
 		}
+
+		if (!this.canCreateConstructionSites()) return;
 
 		if (hivemind.settings.get('constructPowerSpawns')) {
 			// Make sure all current power spawns have been built.
@@ -759,11 +787,15 @@ export default class RoomManager {
 			this.buildPlannedStructures('powerSpawn', STRUCTURE_POWER_SPAWN);
 		}
 
+		if (!this.canCreateConstructionSites()) return;
+
 		if (hivemind.settings.get('constructObservers')) {
 			// Make sure all current observers have been built.
 			if (_.size(this.roomConstructionSites) === 0) this.removeUnplannedStructures('observer', STRUCTURE_OBSERVER, 1);
 			this.buildPlannedStructures('observer', STRUCTURE_OBSERVER);
 		}
+
+		if (!this.canCreateConstructionSites()) return;
 
 		if (hivemind.settings.get('constructFactories')) {
 			// Make sure all current factories have been built.
