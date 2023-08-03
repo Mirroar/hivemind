@@ -2,6 +2,7 @@
 LOOK_CONSTRUCTION_SITES ERR_NO_PATH LOOK_STRUCTURES LOOK_POWER_CREEPS */
 
 import cache from 'utils/cache';
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import settings from 'settings-manager';
@@ -34,12 +35,6 @@ declare global {
 		moveUsingNavMesh: (targetPos: RoomPosition, options?: GoToOptions) => OK | ERR_NO_PATH;
 		getNavMeshMoveTarget: () => string | null;
 		stopNavMeshMove: () => void;
-		_blockingCreepMovement: Creep | PowerCreep;
-		_hasMoveIntent: boolean;
-		_requestedMoveArea?: {
-			pos: RoomPosition;
-			range: number;
-		}
 	}
 
 	interface PowerCreep {
@@ -65,12 +60,6 @@ declare global {
 		moveUsingNavMesh: (targetPos: RoomPosition, options?: GoToOptions) => OK | ERR_NO_PATH;
 		getNavMeshMoveTarget: () => string | null;
 		stopNavMeshMove: () => void;
-		_blockingCreepMovement: Creep | PowerCreep;
-		_hasMoveIntent: boolean;
-		_requestedMoveArea?: {
-			pos: RoomPosition;
-			range: number;
-		}
 	}
 
 	interface CachedPath {
@@ -152,10 +141,7 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 		target = target.pos;
 	}
 
-	this._requestedMoveArea = {
-		pos: target,
-		range,
-	}
+	container.get('TrafficManager').setPreferredArea(this, target, range);
 
 	const visual = this.room.visual;
 	if (visual && this.pos.getRangeTo(target) <= range) {
@@ -269,7 +255,7 @@ Creep.prototype.hasArrived = function (this: Creep | PowerCreep) {
 Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 	drawCreepMovement(this);
 
-	this._hasMoveIntent = true;
+	container.get('TrafficManager').setMoving(this);
 	this.heapMemory._moveBlocked = false;
 	if (!this.memory.cachedPath || !this.memory.cachedPath.path || _.size(this.memory.cachedPath.path) === 0) {
 		this.clearCachedPath();
@@ -305,9 +291,9 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 				// Due to push-behavior we sometimes try to move onto another creep.
 				// That creep needs to be pushed away.
 				const creep = pos.lookFor(LOOK_CREEPS)[0];
-				if (creep) creep._blockingCreepMovement = this;
+				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
 				const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
-				if (powerCreep) powerCreep._blockingCreepMovement = this;
+				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
 			}
 
 			return;
@@ -427,13 +413,13 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 
 			const creep = pos.lookFor(LOOK_CREEPS)[0];
 			if (creep) {
-				creep._blockingCreepMovement = this;
+				container.get('TrafficManager').setBlockingCreep(this, creep);
 				return;
 			}
 
 			const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
 			if (powerCreep) {
-				powerCreep._blockingCreepMovement = this;
+				container.get('TrafficManager').setBlockingCreep(this, powerCreep);
 				return;
 			}
 		}
@@ -446,9 +432,9 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on current target tile.
 		const creep = pos.lookFor(LOOK_CREEPS)[0];
-		if (creep) creep._blockingCreepMovement = this;
+		if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
 		const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
-		if (powerCreep) powerCreep._blockingCreepMovement = this;
+		if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
 		return;
 	}
 
@@ -457,9 +443,9 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on next target tile.
 		const creep = pos.lookFor(LOOK_CREEPS)[0];
-		if (creep) creep._blockingCreepMovement = this;
+		if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
 		const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
-		if (powerCreep) powerCreep._blockingCreepMovement = this;
+		if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
 	}
 };
 
@@ -580,10 +566,10 @@ Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
  */
 Creep.prototype.canMoveOnto = function (this: Creep | PowerCreep, position) {
 	const creeps = position.lookFor(LOOK_CREEPS);
-	if (creeps.length > 0 && creeps[0].id !== this.id && !creeps[0]._requestedMoveArea) return false;
+	if (creeps.length > 0 && creeps[0].id !== this.id && !isMovingCreep(creeps[0])) return false;
 
 	const powerCreeps = position.lookFor(LOOK_POWER_CREEPS);
-	if (powerCreeps.length > 0 && powerCreeps[0].id !== this.id) return false;
+	if (powerCreeps.length > 0 && powerCreeps[0].id !== this.id && !isMovingCreep(powerCreeps[0])) return false;
 
 	const structures = position.lookFor(LOOK_STRUCTURES);
 	for (const structure of structures) {
@@ -597,6 +583,12 @@ Creep.prototype.canMoveOnto = function (this: Creep | PowerCreep, position) {
 
 	return true;
 };
+
+function isMovingCreep(creep: Creep | PowerCreep): boolean {
+	if (!creep.my) return false;
+
+	return container.get('TrafficManager').hasAlternatePosition(creep);
+}
 
 function drawCreepMovement(creep: Creep | PowerCreep) {
 	if (!RoomVisual) return;
@@ -669,7 +661,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 	if (!target) return false;
 	if (!options) options = {};
 
-	this._hasMoveIntent = true;
+	container.get('TrafficManager').setMoving(this);
 	if (!this.memory.go || this.memory.go.lastAccess < Game.time - 10) {
 		// Reset pathfinder memory.
 		this.memory.go = {
