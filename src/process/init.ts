@@ -7,7 +7,6 @@ import RoomManager from 'room/room-manager';
 import RoomPlanner from 'room/planner/room-planner';
 import Squad from 'manager.squad';
 
-import Operation from 'operation/operation';
 import MiningOperation from 'operation/remote-mining';
 import RoomOperation from 'operation/room';
 
@@ -24,7 +23,6 @@ declare global {
 }
 
 const operationClasses = {
-	default: Operation,
 	mining: MiningOperation,
 	room: RoomOperation,
 };
@@ -39,10 +37,7 @@ export default class InitProcess extends Process {
 		Game.creepsByRole = {};
 		Game.exploitTemp = {};
 		Game.operations = {};
-		Game.operationsByType = {
-			mining: {},
-			room: {},
-		};
+		Game.operationsByType = {};
 
 		// Add data to global Game object.
 		_.each(Memory.squads, (data, squadName) => {

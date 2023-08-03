@@ -14,13 +14,14 @@ declare global {
 		operation?: string;
 	}
 
+	interface TypedOperationsList {
+		mining: Record<string, RemoteMiningOperation>;
+		room: Record<string, RoomOperation>;
+	}
+
 	interface Game {
 		operations: Record<string, Operation>;
-		operationsByType: {
-			mining: Record<string, RemoteMiningOperation>;
-			room: Record<string, RoomOperation>;
-			[key: string]: Record<string, Operation>;
-		};
+		operationsByType: Partial<TypedOperationsList>;
 	}
 
 	interface OperationMemory {
