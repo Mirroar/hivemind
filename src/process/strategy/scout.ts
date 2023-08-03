@@ -152,7 +152,12 @@ export default class ScoutProcess extends Process {
 				// Check if we could reasonably expand to this room.
 				const expansionInfo = this.calculateExpansionScore(roomName);
 				info.expansionScore = expansionInfo.score;
-				info.expansionReasons = expansionInfo.reasons;
+				if (preserveExpansionReasons) {
+					info.expansionReasons = expansionInfo.reasons;
+				}
+				else {
+					delete info.expansionReasons;
+				}
 			}
 		}
 		// @todo For higher ranges (7-10), only scout if we have memory to spare.
