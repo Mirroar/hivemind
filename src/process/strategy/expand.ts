@@ -12,6 +12,7 @@ import stats from 'utils/stats';
 import {getUsername} from 'utils/account';
 
 interface ExpansionTarget extends RoomListEntry {
+	roomName: string;
 	spawnRoom: string;
 }
 
@@ -130,7 +131,7 @@ export default class ExpandProcess extends Process {
 		const startTime = Game.cpu.getUsed();
 		if (this.memory.inProgress) {
 			bestTarget = this.memory.inProgress.bestTarget;
-			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget);
+			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget.roomName, bestTarget);
 		}
 		else {
 			this.memory.inProgress = {
@@ -139,7 +140,8 @@ export default class ExpandProcess extends Process {
 			};
 		}
 
-		for (const info of _.values<RoomListEntry>(Memory.strategy.roomList)) {
+		for (const roomName in Memory.strategy.roomList) {
+			const info = Memory.strategy.roomList[roomName];
 			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than 30 cpu trying to find a target each tick.
 				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
@@ -147,20 +149,20 @@ export default class ExpandProcess extends Process {
 				return;
 			}
 
-			if (this.memory.inProgress.rooms[info.roomName]) continue;
+			if (this.memory.inProgress.rooms[roomName]) continue;
 
-			this.memory.inProgress.rooms[info.roomName] = true;
+			this.memory.inProgress.rooms[roomName] = true;
 			if (!info.expansionScore || info.expansionScore <= 0) continue;
 
-			const modifiedExpansionScore = this.getModifiedExpansionScore(info);
+			const modifiedExpansionScore = this.getModifiedExpansionScore(roomName, info);
 			if (bestTarget && modifiedBestExpansionScore >= modifiedExpansionScore) continue;
-			if (Game.rooms[info.roomName] && Game.rooms[info.roomName].isMine()) continue;
+			if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
 
 			// Don't try to expand to a room that can't be reached safely.
-			const bestSpawn = this.findClosestSpawn(info.roomName);
+			const bestSpawn = this.findClosestSpawn(roomName);
 			if (!bestSpawn) continue;
 
-			bestTarget = {...info, spawnRoom: bestSpawn};
+			bestTarget = {...info, spawnRoom: bestSpawn, roomName};
 			modifiedBestExpansionScore = modifiedExpansionScore;
 			this.memory.inProgress.bestTarget = bestTarget;
 		}
@@ -177,11 +179,11 @@ export default class ExpandProcess extends Process {
 	 * This takes into account failed expansion attempts in close proximity to
 	 * the target room.
 	 */
-	getModifiedExpansionScore(info: RoomListEntry): number {
+	getModifiedExpansionScore(roomName: string, info: RoomListEntry): number {
 		let score = info.expansionScore || 0;
 
 		for (const failedAttempt of this.memory.failedExpansions || []) {
-			const distance = Game.map.getRoomLinearDistance(info.roomName, failedAttempt.roomName);
+			const distance = Game.map.getRoomLinearDistance(roomName, failedAttempt.roomName);
 			let multiplier = 1;
 			const elapsedTicks = Game.time - failedAttempt.time;
 			if (elapsedTicks > 1_000_000) continue;

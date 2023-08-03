@@ -29,6 +29,10 @@ declare global {
 	}
 }
 
+interface ScoutTarget extends RoomListEntry {
+	roomName: string;
+}
+
 const accessibilityCache = {};
 
 export default class ScoutRole extends Role {
@@ -145,8 +149,8 @@ export default class ScoutRole extends Role {
 	getBestScoutOption(creep: ScoutCreep) {
 		const candidates = _.sortByAll(
 			this.getScoutableRoomsForCreep(creep),
-			info => -info.scoutPriority,
-			info => {
+			(info: ScoutTarget) => -info.scoutPriority,
+			(info: ScoutTarget) => {
 				const roomIntel = getRoomIntel(info.roomName);
 				return roomIntel.getLastScoutAttempt() - info.range * 50;
 			},
@@ -163,8 +167,8 @@ export default class ScoutRole extends Role {
 		return null;
 	}
 
-	getScoutableRoomsForCreep(creep: ScoutCreep) {
-		return _.filter<any>(this.getScoutableRoomsByOrigin(creep.memory.origin), info => {
+	getScoutableRoomsForCreep(creep: ScoutCreep): ScoutTarget[] {
+		return _.filter(this.getScoutableRoomsByOrigin(creep.memory.origin), (info: ScoutTarget) => {
 			if (info.roomName === creep.pos.roomName) return false;
 			if (creep.memory.invalidScoutTargets && creep.memory.invalidScoutTargets.includes(info.roomName)) return false;
 
@@ -172,8 +176,8 @@ export default class ScoutRole extends Role {
 		});
 	}
 
-	getScoutableRoomsByOrigin(origin: string) {
-		return cache.inHeap('scoutableRooms:' + origin, 200, () => _.filter<any>(this.getScoutableRooms(), info => {
+	getScoutableRoomsByOrigin(origin: string): ScoutTarget[] {
+		return cache.inHeap('scoutableRooms:' + origin, 200, () => _.filter(this.getScoutableRooms(), (info: ScoutTarget) => {
 			if (info.origin !== origin) return false;
 
 			return true;
@@ -181,12 +185,19 @@ export default class ScoutRole extends Role {
 	}
 
 	getScoutableRooms() {
-		return cache.inHeap('scoutableRooms', 200, () => _.filter<any>(Memory.strategy.roomList, info => {
-			if (!info.roomName) return false;
-			if (info.scoutPriority <= 0) return false;
+		return cache.inHeap('scoutableRooms', 200, () => _.filter(
+			_.map(
+				Memory.strategy.roomList,
+				(info: RoomListEntry, roomName: string) => {
+					return {...info, roomName};
+				}
+			),
+			(info: ScoutTarget) => {
+				if (info.scoutPriority <= 0) return false;
 
-			return true;
-		}));
+				return true;
+			}
+		));
 	}
 
 	hasRoomPath(creep: Creep, destination: string): boolean {

@@ -29,7 +29,6 @@ declare global {
 	}
 
 	interface RoomListEntry {
-		roomName: string;
 		scoutPriority: number;
 		expansionScore: number;
 		harvestPriority: number;
@@ -121,7 +120,6 @@ export default class ScoutProcess extends Process {
 		const roomIntel = getRoomIntel(roomName);
 		const info = Memory.strategy.roomList[roomName];
 
-		info.roomName = roomName;
 		info.scoutPriority = 0;
 		info.expansionScore = 0;
 		info.harvestPriority = 0;
@@ -451,7 +449,6 @@ export default class ScoutProcess extends Process {
 			// Add current room as a candidate for scouting.
 			if (!roomList[nextRoom] || roomList[nextRoom].range > info.range || !Game.rooms[roomList[nextRoom].origin] || !Game.rooms[roomList[nextRoom].origin].isMine()) {
 				roomList[nextRoom] = {
-					roomName: nextRoom,
 					range: info.range,
 					origin: info.origin,
 					safePath: info.safePath,
@@ -514,7 +511,7 @@ export default class ScoutProcess extends Process {
 			this.observers.push(room.observer);
 		}
 
-		hivemind.log('strategy').info('Found Observers:', this.observers);
+		hivemind.log('strategy').debug('Found Observers:', this.observers);
 	}
 
 	/**

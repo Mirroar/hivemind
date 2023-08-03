@@ -335,7 +335,7 @@ Room.prototype.needsScout = function (this: Room) {
 	if (!Memory.strategy) return false;
 
 	const room = this;
-	return _.any(Memory.strategy.roomList, (info: any) => info.origin === room.name && info.scoutPriority >= 1);
+	return _.any(Memory.strategy.roomList, (info: RoomListEntry) => info.origin === room.name && info.scoutPriority >= 1);
 };
 
 /**

@@ -17,6 +17,10 @@ declare global {
 	}
 }
 
+interface HarvestRoomInfo extends RoomListEntry {
+	roomName: string;
+}
+
 export default class RemoteMiningProcess extends Process {
 	/**
 	 * Manages which and how many rooms may be remotely mined.
@@ -103,15 +107,15 @@ export default class RemoteMiningProcess extends Process {
 		// Create ordered list of best harvest rooms.
 		// @todo At this point we should carry duplicate for rooms that could have
 		// multiple origins.
-		const harvestRooms = [];
-		_.each(memory.roomList, info => {
+		const harvestRooms: HarvestRoomInfo[] = [];
+		_.each(memory.roomList, (info: RoomListEntry, roomName: string) => {
 			// Ignore rooms that are not profitable to harvest from.
 			if (!info.harvestPriority || info.harvestPriority <= 0.1) return;
 
 			// Ignore rooms we can not reach safely.
 			if (!info.safePath) return;
 
-			harvestRooms.push(info);
+			harvestRooms.push({...info, roomName});
 		});
 
 		const sortedRooms = _.sortBy(harvestRooms, info => -info.harvestPriority);
