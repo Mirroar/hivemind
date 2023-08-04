@@ -3,21 +3,23 @@ import {handleMapArea} from 'utils/map';
 
 declare global {
 	interface Creep {
-		_blockingCreepMovement: Creep | PowerCreep;
-		_hasMoveIntent: boolean;
+		_blockingCreepMovement?: Creep | PowerCreep;
+		_hasMoveIntent?: boolean;
 		_requestedMoveArea?: {
 			pos: RoomPosition;
 			range: number;
-		}
+		};
+		_alternatePositions?: RoomPosition[];
 	}
 
 	interface PowerCreep {
-		_blockingCreepMovement: Creep | PowerCreep;
-		_hasMoveIntent: boolean;
+		_blockingCreepMovement?: Creep | PowerCreep;
+		_hasMoveIntent?: boolean;
 		_requestedMoveArea?: {
 			pos: RoomPosition;
 			range: number;
-		}
+		};
+		_alternatePositions?: RoomPosition[];
 	}
 }
 
@@ -31,8 +33,12 @@ export default class TrafficManager {
 		}
 	}
 
+	setAlternatePositions(creep: Creep | PowerCreep, positions: RoomPosition[]) {
+		creep._alternatePositions = positions;
+	}
+
 	hasAlternatePosition(creep: Creep | PowerCreep) {
-		return Boolean(creep._requestedMoveArea);
+		return Boolean(creep._requestedMoveArea) || Boolean(creep._alternatePositions);
 	}
 
 	setMoving(creep: Creep | PowerCreep) {
@@ -81,7 +87,7 @@ export default class TrafficManager {
 	}
 
 	getAlternateCreepPosition(creep: Creep | PowerCreep): RoomPosition | null {
-		if (!creep._requestedMoveArea) return null;
+		if (!creep._requestedMoveArea && !creep._alternatePositions) return null;
 
 		let alternatePosition: RoomPosition;
 		const costMatrix = getCostMatrix(creep.room.name, {
@@ -98,7 +104,7 @@ export default class TrafficManager {
 			if (this.dangerMatrix.get(x, y) > 0) return null;
 
 			const pos = new RoomPosition(x, y, creep.room.name);
-			if (pos.getRangeTo(creep._requestedMoveArea.pos) > creep._requestedMoveArea.range) return null;
+			if (!this.isAvailableAlternatePosition(creep, pos)) return null;
 
 			const blockingCreep = pos.lookFor(LOOK_CREEPS);
 			if (blockingCreep.length > 0) {
@@ -141,5 +147,17 @@ export default class TrafficManager {
 		}
 
 		return alternatePosition;
+	}
+
+	isAvailableAlternatePosition(creep: Creep | PowerCreep, position: RoomPosition): boolean {
+		if (creep._requestedMoveArea && position.getRangeTo(creep._requestedMoveArea.pos) <= creep._requestedMoveArea.range) return true;
+
+		if (creep._alternatePositions) {
+			for (const alternatePosition of creep._alternatePositions) {
+				if (position.isEqualTo(alternatePosition)) return true;
+			}
+		}
+
+		return false;
 	}
 }
