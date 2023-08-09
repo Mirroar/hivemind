@@ -23,6 +23,20 @@ export default class PlayerIntelManager {
 		return this.intelCache[userName];
 	}
 
+	getAll(): PlayerIntel[] {
+		if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate player intel.');
+
+		const result = [];
+		hivemind.segmentMemory.each('u-intel:', key => {
+			const userName = key.substr(8);
+			const intel = this.get(userName);
+
+			result.push(intel);
+		});
+
+		return result;
+	}
+
 	updateOwnedRoom(userName: string, roomName: string) {
 		const playerIntel = this.get(userName);
 
