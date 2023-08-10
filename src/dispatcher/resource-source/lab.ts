@@ -87,6 +87,10 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 					}
 				}
 
+				option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
+				option.priority -= this.room.getCreepsWithOrder('getEnergy', lab.id).length * 2;
+				option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
+
 				if (option.priority > 0) options.push(option);
 			}
 		}
@@ -104,6 +108,10 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 				resourceType: lab.mineralType,
 			};
 
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
+			option.priority -= this.room.getCreepsWithOrder('getEnergy', lab.id).length * 2;
+			option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
+
 			options.push(option);
 		}
 
@@ -116,6 +124,10 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 				target: lab.id,
 				resourceType: lab.mineralType,
 			};
+
+			option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
+			option.priority -= this.room.getCreepsWithOrder('getEnergy', lab.id).length * 2;
+			option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
 
 			options.push(option);
 		}
