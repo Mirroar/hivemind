@@ -138,24 +138,15 @@ export default class InterShardProcess extends Process {
 			this._shardData[shardName].creeps = shardMemory.info.ownedCreeps;
 			this._shardData[shardName].neededCpu = 3 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
 
-			if (shardMemory.info.interShardExpansion) {
+			if (shardMemory.info.interShardExpansion && this.isAdjacentShardFuntional(shardName)) {
 				// Allow for more CPU while creating out first intershard room.
 				this._shardData[shardName].neededCpu += 3;
 			}
 		}
-		else {
-			_.each(this._shardData, (data, compareShard) => {
-				if (compareShard === 'total') return;
-
-				const compareMemory = compareShard === Game.shard.name ? interShard.getLocalMemory() : interShard.getRemoteMemory(compareShard);
-				if (!compareMemory.info) return;
-				if (!compareMemory.portals || !compareMemory.portals[shardName]) return;
-				if ((compareMemory.info.maxRoomLevel || 0) < minRoomLevelToIntershardScout) return;
-
-				// If we have at least one high-level room, assign a little CPU to unexplored
-				// adjacent shards for scouting.
-				this._shardData[shardName].neededCpu = 0.5;
-			});
+		else if (this.isAdjacentShardFuntional(shardName)) {
+			// If we have at least one high-level room, assign a little CPU to unexplored
+			// adjacent shards for scouting.
+			this._shardData[shardName].neededCpu = 0.5;
 		}
 
 		this._shardData.total.neededCpu += this._shardData[shardName].neededCpu;
@@ -163,6 +154,23 @@ export default class InterShardProcess extends Process {
 		_.each(shardMemory.portals, (portals, otherShardName) => {
 			this.addShardData(otherShardName);
 		});
+	}
+
+	isAdjacentShardFuntional(shardName: string) {
+		let isFunctional = false;
+		_.each(this._shardData, (data, compareShard) => {
+			if (compareShard === 'total') return null;
+
+			const compareMemory = compareShard === Game.shard.name ? interShard.getLocalMemory() : interShard.getRemoteMemory(compareShard);
+			if (!compareMemory.info) return null;
+			if (!compareMemory.portals || !compareMemory.portals[shardName]) return null;
+			if ((compareMemory.info.maxRoomLevel || 0) < minRoomLevelToIntershardScout) return null;
+
+			isFunctional = true;
+			return false;
+		});
+
+		return isFunctional;
 	}
 
 	/**

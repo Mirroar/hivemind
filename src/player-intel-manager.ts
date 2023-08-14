@@ -1,25 +1,8 @@
 import PlayerIntel from './player-intel';
 import hivemind from './hivemind';
 
-const memoryKey = 'player-intel-manager';
-
-interface PlayerIntelManagerMemory {
-};
-
 export default class PlayerIntelManager {
 	intelCache: Record<string, PlayerIntel> = {};
-	memory: PlayerIntelManagerMemory;
-
-	constructor() {
-		if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to manage player intel.');
-
-		if (!hivemind.segmentMemory.has(memoryKey)) {
-			hivemind.segmentMemory.set(memoryKey, {
-			});
-		}
-
-		this.memory = hivemind.segmentMemory.get<PlayerIntelManagerMemory>(memoryKey);
-	}
 
 	/**
 	 * Factory method for player intel objects.
@@ -38,6 +21,20 @@ export default class PlayerIntelManager {
 		}
 
 		return this.intelCache[userName];
+	}
+
+	getAll(): PlayerIntel[] {
+		if (!hivemind.segmentMemory.isReady()) throw new Error('Memory is not ready to generate player intel.');
+
+		const result = [];
+		hivemind.segmentMemory.each('u-intel:', key => {
+			const userName = key.substr(8);
+			const intel = this.get(userName);
+
+			result.push(intel);
+		});
+
+		return result;
 	}
 
 	updateOwnedRoom(userName: string, roomName: string) {
