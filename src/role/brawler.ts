@@ -472,7 +472,7 @@ export default class BrawlerRole extends Role {
 			const ignore = (!creep.room.controller?.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			creep.moveTo(target, {
 				reusePath: 0,
-				ignoreDestructibleStructures: ignore,
+				ignoreDestructibleStructures: false,
 				maxRooms: 1,
 			});
 
@@ -485,7 +485,7 @@ export default class BrawlerRole extends Role {
 			if (creep.pos.getRangeTo(target.pos) >= 3) {
 				creep.moveTo(target, {
 					reusePath: 0,
-					ignoreDestructibleStructures: ignore,
+					ignoreDestructibleStructures: false,
 					maxRooms: 1,
 					range: 2,
 				});

@@ -70,6 +70,8 @@ export default class AlliesProcess extends Process {
 
 	makeDefenseRequests() {
 		for (const roomName in (Memory.requests.defense || {})) {
+			if (!Game.rooms[roomName]) continue;
+
 			const request = Memory.requests.defense[roomName];
 			if (Game.time - request.lastSeen < 10) {
 				simpleAllies.requestHelp(roomName, request.priority);

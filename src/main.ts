@@ -397,6 +397,9 @@ const main = {
 	 *
 	 */
 	showDebug() {
+		const reportManager = container.get('ReportManager');
+		reportManager.visualizeCurrentReport();
+
 		if ((Memory.hivemind.showProcessDebug || 0) > 0) {
 			Memory.hivemind.showProcessDebug--;
 			hivemind.drawProcessDebug();
