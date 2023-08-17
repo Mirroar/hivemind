@@ -1,3 +1,4 @@
+import HelpReport from './report/help';
 import FunnelManager from './empire/funnel-manager';
 import NavMesh from './utils/nav-mesh';
 import PlayerIntelManager from './player-intel-manager';
@@ -10,6 +11,7 @@ import {Container} from './utils/container';
 
 declare global {
 	interface DependencyInjectionContainer {
+		HelpReport: HelpReport;
 		FunnelManager: FunnelManager;
 		NavMesh: NavMesh;
 		PlayerIntelManager: PlayerIntelManager;
@@ -22,6 +24,7 @@ declare global {
 }
 
 export default function (container: Container) {
+	container.set('HelpReport', () => new HelpReport());
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('NavMesh', () => new NavMesh());
 	container.set('PlayerIntelManager', () => new PlayerIntelManager());

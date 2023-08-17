@@ -27,9 +27,8 @@ export default class ReportManager {
 			align: 'left',
 		});
 	}
-
 }
 
-global['report'] = function(reportType?: ReportType) {
+global['report'] = function(reportType: ReportType = 'HelpReport') {
 	container.get('ReportManager').setCurrentReport(reportType);
 }

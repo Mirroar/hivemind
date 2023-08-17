@@ -211,4 +211,8 @@ export default class ResourcesReport {
 		});
 	}
 
+	help() {
+		return 'Get a visual representation of the amount of boosts and their components for the whole shard.';
+	}
+
 }
