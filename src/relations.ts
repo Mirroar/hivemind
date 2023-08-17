@@ -49,6 +49,8 @@ export default class Relations {
 	isEnemy(username: string): boolean {
 		if (settings.get('treatNonAlliesAsEnemies')) return !this.isAlly(username);
 
+		if (username === 'Invader' || username === 'Source Keeper' || username === SYSTEM_USERNAME) return true;
+
 		return this.enemies.includes(username);
 	}
 }
