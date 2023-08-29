@@ -56,8 +56,10 @@ export default class TrafficManager {
 	}
 
 	manageTraffic() {
+		const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
+
 		// Move blocking creeps if necessary.
-		_.each(Game.creeps, creep => {
+		_.each([..._.values<Creep>(Game.creeps), ...powerCreeps], creep => {
 			if (!creep._blockingCreepMovement) return;
 			if (creep._hasMoveIntent) return;
 
