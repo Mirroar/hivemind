@@ -655,6 +655,7 @@ export default class TransporterRole extends Role {
 	 */
 	addHighLevelResourceOptions(options: TransporterSourceOrderOption[]) {
 		const room = this.creep.room;
+		if (room.isEvacuating()) return;
 
 		// Take ghodium if nuker needs it.
 		if (room.nuker && room.nuker.store.getFreeCapacity(RESOURCE_GHODIUM) > 0) {

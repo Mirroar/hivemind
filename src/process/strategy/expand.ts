@@ -141,6 +141,12 @@ export default class ExpandProcess extends Process {
 		}
 
 		for (const roomName in Memory.strategy.roomList) {
+			const roomFilter = settings.get('expansionRoomFilter');
+			if (roomFilter && !roomFilter(roomName)) {
+				this.memory.inProgress.rooms[roomName] = true;
+				continue;
+			}
+
 			const info = Memory.strategy.roomList[roomName];
 			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than 30 cpu trying to find a target each tick.
@@ -636,12 +642,20 @@ export default class ExpandProcess extends Process {
 
 		// Destroy nuker for some extra resources.
 		// Make sure terminal is somewhat empty beforehand.
-		if (room.terminal && room.terminal.store.getUsedCapacity() > 100_000) return;
-		if (room.nuker) room.nuker.destroy();
+		if (room.nuker && room.terminal && room.terminal.store.getFreeCapacity() > room.nuker.store.getUsedCapacity(RESOURCE_ENERGY)) {
+			room.nuker.destroy();
+			return;
+		}
 
 		// Terminal needs to be mostly empty and contain mostly energy.
 		if (room.terminal && room.terminal.store.getUsedCapacity() > 10_000) return;
-		if (room.terminal && room.terminal.store.getUsedCapacity() > 0 && room.terminal.store.energy / room.terminal.store.getUsedCapacity() < 0.8) return;
+		if (room.terminal && room.terminal.store.getUsedCapacity() > 0 && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) / room.terminal.store.getUsedCapacity() < 0.8) return;
+
+		const filledRuins = room.find(FIND_RUINS, {filter: ruin => ruin.store.getUsedCapacity() > 100});
+		if (filledRuins?.length > 0) return;
+
+		const droppedResources = room.find(FIND_DROPPED_RESOURCES, {filter: resource => resource.amount > 100});
+		if (droppedResources?.length > 0) return;
 
 		// Alright, this is it, flipping the switch!
 		room.controller.unclaim();

@@ -19,6 +19,8 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 	}
 
 	getTasks(context: ResourceSourceContext) {
+		if (this.room.isEvacuating()) return [];
+
 		const options: LabSourceTask[] = [];
 
 		this.addLabResourceOptions(options, context);
@@ -43,7 +45,6 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		const room = this.room;
 		const currentReaction = room.memory.currentReaction;
 		if (!room.memory.canPerformReactions) return;
-		if (room.isEvacuating()) return;
 
 		const labs = room.memory.labs.reactor;
 		for (const labID of labs) {

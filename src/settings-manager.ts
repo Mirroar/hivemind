@@ -19,6 +19,7 @@ declare global {
 		enableDepositMining: boolean;
 		enablePowerMining: boolean;
 		enableTradeManagement: boolean;
+		expansionRoomFilter?: (roomName: string) => boolean;
 		expansionScoreBonusHighwayExit: number;
 		expansionScoreCacheDuration: number;
 		highwayScoutInterval: number;

@@ -69,7 +69,6 @@ export default class FactoryManager {
 
 	getRequestedComponents(): Partial<Record<FactoryComponentConstant, number>> {
 		const neededResources = {};
-		if (this.room.isEvacuating()) return neededResources;
 
 		const jobs = this.getJobs();
 		const numberJobs = _.size(jobs);
@@ -93,6 +92,8 @@ export default class FactoryManager {
 			const result: Partial<Record<FactoryProductConstant, Recipe>> = {};
 			let resourceType: FactoryProductConstant;
 			for (resourceType in COMMODITIES) {
+				if (this.room.isEvacuating() && resourceType !== RESOURCE_ENERGY) continue;
+
 				const recipe: Recipe = COMMODITIES[resourceType];
 
 				if (this.isRecipeAvailable(resourceType, recipe)) result[resourceType] = recipe;
