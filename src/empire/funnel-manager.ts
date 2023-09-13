@@ -54,7 +54,7 @@ export default class FunnelManager {
 	}
 
 	manageTradeRoutes() {
-		const funnelTargets = _.filter(Game.myRooms, room => room.storage && room.controller.level < 6);
+		const funnelTargets = _.filter(Game.myRooms, room => room.storage && room.controller.level < 6 && room.storage.store.getUsedCapacity() < room.storage.store.getCapacity() / 2);
 		const funnelTradeRoutes = this.getRequestedFunnelTradeRoutes(funnelTargets);
 
 		this.createAndUpdateTraderoutes(funnelTradeRoutes);
@@ -64,7 +64,7 @@ export default class FunnelManager {
 	getRequestedFunnelTradeRoutes(funnelTargets: Room[]): TraderouteInfo[] {
 		const tradeRoutes: TraderouteInfo[] = [];
 		for (const room of funnelTargets) {
-			const sourceRooms = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
+			const sourceRooms = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && sourceRoom.getEffectiveAvailableEnergy() > 30000 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
 			for (const sourceRoom of sourceRooms) {
 				tradeRoutes.push({
 					source: sourceRoom.name,
