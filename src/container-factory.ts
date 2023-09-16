@@ -5,7 +5,7 @@ import PlayerIntelManager from './player-intel-manager';
 import ReclaimManager from './reclaim-manager';
 import ReportManager from './report/report-manager';
 import ResourcesReport from './report/resources';
-import RolesReport from './report/resources';
+import RolesReport from './report/roles';
 import SpawnManager from './spawn-manager';
 import TrafficManager from './creep/traffic-manager';
 import {Container} from './utils/container';
