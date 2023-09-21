@@ -7,6 +7,7 @@ import Relations from 'relations';
 import SegmentedMemory from 'utils/segmented-memory';
 import settings, {SettingsManager} from 'settings-manager';
 import stats from 'utils/stats';
+import {timeCall} from 'utils/cpu';
 
 const PROCESS_PRIORITY_LOW = 1;
 const PROCESS_PRIORITY_DEFAULT = 2;
@@ -236,12 +237,12 @@ class Hivemind {
 	timeProcess(id: string, stats, callback: () => void) {
 		const previousRunTime = stats.lastRun;
 		stats.lastRun = Game.time;
-		const cpuBefore = Game.cpu.getUsed();
-		stats.parentId = this.parentProcessId;
-		this.parentProcessId = id;
-		callback();
-		this.parentProcessId = stats.parentId;
-		const cpuUsage = Game.cpu.getUsed() - cpuBefore;
+		const cpuUsage = timeCall('process:' + id, () => {
+			stats.parentId = this.parentProcessId;
+			this.parentProcessId = id;
+			callback();
+			this.parentProcessId = stats.parentId;
+		});
 
 		this.memory.process[id].cpu = ((this.memory.process[id].cpu || cpuUsage) * 0.99) + (cpuUsage * 0.01);
 		if (previousRunTime === Game.time) {

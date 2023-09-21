@@ -1,5 +1,6 @@
 import hivemind from 'hivemind';
 import {getThrottleOffset, throttle} from 'utils/throttle';
+import {timeCall} from 'utils/cpu';
 
 declare global {
 	interface CreepMemory {
@@ -55,19 +56,19 @@ export default class CreepManager {
 	 * @param {Role} role
 	 *   The role to register.
 	 */
-	registerCreepRole = function (roleId, role) {
+	registerCreepRole(roleId, role) {
 		this.roles[roleId] = role;
 		this.prepareStatMemory(roleId);
-	};
+	}
 
 	/**
 	 * Runs cleanup tasks at the beginning of a tick.
 	 */
-	onTickStart = function () {
+	onTickStart() {
 		this.performance = {};
 		this.prepareStatMemory('total');
 		_.each(_.keys(this.roles), roleId => this.prepareStatMemory(roleId));
-	};
+	}
 
 	/**
 	 * Prepares memory for storing creep CPU statistics.
@@ -75,14 +76,14 @@ export default class CreepManager {
 	 * @param {String} roleId
 	 *   Identifier of the role, or 'total'.
 	 */
-	prepareStatMemory = function (roleId) {
+	prepareStatMemory(roleId) {
 		this.performance[roleId] = {
 			run: 0,
 			throttled: 0,
 			total: 0,
 			average: 0,
 		};
-	};
+	}
 
 	/**
 	 * Decides whether a creep's logic should run during this tick.
@@ -93,7 +94,7 @@ export default class CreepManager {
 	 * @return {boolean}
 	 *   True if the creep's logic should not be executed this tick.
 	 */
-	throttleCreep = function (creep: Creep) {
+	throttleCreep(creep: Creep) {
 		const role = this.roles[creep.memory.role];
 
 		// Do not throttle creeps at room borders, so they don't accidentaly
@@ -105,7 +106,7 @@ export default class CreepManager {
 
 		if (!creep.heapMemory._tO) creep.heapMemory._tO = getThrottleOffset();
 		return throttle(creep.heapMemory._tO, role.stopAt, role.throttleAt);
-	};
+	}
 
 	/**
 	 * Runs logic for a creep according to its role.
@@ -113,7 +114,7 @@ export default class CreepManager {
 	 * @param {Creep} creep
 	 *   The creep in question.
 	 */
-	runCreepLogic = function (creep) {
+	runCreepLogic(creep) {
 		if (creep.spawning) return;
 		if (!this.canManageCreep(creep)) return;
 
@@ -125,21 +126,20 @@ export default class CreepManager {
 			return;
 		}
 
-		const startTime = Game.cpu.getUsed();
-
 		this.performance.total.run++;
 		this.performance[roleId].run++;
 
-		let shouldRun = true;
-		if (this.roles[roleId].preRun) {
-			shouldRun = this.roles[roleId].preRun(creep);
-		}
+		const totalTime = timeCall('creepRole:' + roleId, () => {
+			let shouldRun = true;
+			if (this.roles[roleId].preRun) {
+				shouldRun = this.roles[roleId].preRun(creep);
+			}
 
-		if (shouldRun !== false) {
-			this.roles[roleId].run(creep);
-		}
+			if (shouldRun !== false) {
+				this.roles[roleId].run(creep);
+			}
+		});
 
-		const totalTime = Game.cpu.getUsed() - startTime;
 		if (totalTime >= 5) {
 			hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick!');
 		}
@@ -148,7 +148,7 @@ export default class CreepManager {
 		if (creep.memory.operation && Game.operations[creep.memory.operation]) {
 			Game.operations[creep.memory.operation].addCpuCost(totalTime);
 		}
-	};
+	}
 
 	/**
 	 * Decides whether this creep manager can handle a given creep.
@@ -159,13 +159,13 @@ export default class CreepManager {
 	 * @return {boolean}
 	 *   True if this creep manager could run logic for this creep.
 	 */
-	canManageCreep = function (creep) {
+	canManageCreep(creep) {
 		if (creep.memory.role && this.roles[creep.memory.role]) {
 			return true;
 		}
 
 		return false;
-	};
+	}
 
 	/**
 	 * Stores CPU statistics for a creep after running logic.
@@ -175,7 +175,7 @@ export default class CreepManager {
 	 * @param {Number} totalTime
 	 *   Total CPU time spent running this creep's logic.
 	 */
-	recordCreepCpuStats = function (roleId, totalTime) {
+	recordCreepCpuStats(roleId, totalTime) {
 		_.each([this.performance.total, this.performance[roleId]], memory => {
 			memory.total += totalTime;
 
@@ -187,7 +187,7 @@ export default class CreepManager {
 				memory.max = totalTime;
 			}
 		});
-	};
+	}
 
 	/**
 	 * Runs logic for all creeps in a list.
@@ -195,16 +195,16 @@ export default class CreepManager {
 	 * @param {Array|Object} creeps
 	 *   List of all the creeps to handle.
 	 */
-	manageCreeps = function (creeps) {
+	manageCreeps(creeps) {
 		_.each(creeps, creep => {
 			this.runCreepLogic(creep);
 		});
-	};
+	}
 
 	/**
 	 * Reports statistics like throttled creeps.
 	 */
-	report = function () {
+	report() {
 		if (this.performance.total.throttled) {
 			const total = this.performance.total.throttled + this.performance.total.run;
 			hivemind.log('creeps').debug(this.performance.total.throttled, 'of', total, 'creeps have been throttled due to bucket this tick.');
@@ -242,5 +242,5 @@ export default class CreepManager {
 			memory.creeps.roles[roleId].throttled += perf.throttled;
 			memory.creeps.roles[roleId].cpu += perf.total;
 		}
-	};
+	}
 }

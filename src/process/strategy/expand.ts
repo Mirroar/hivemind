@@ -149,7 +149,8 @@ export default class ExpandProcess extends Process {
 
 			const info = Memory.strategy.roomList[roomName];
 			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
-				// Don't spend more than 30 cpu trying to find a target each tick.
+				// Don't spend more than configured cpu amount trying to find
+				// a target each tick.
 				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
 				hivemind.log('strategy').debug('Current best target:', bestTarget ? bestTarget.roomName : 'N/A', '@', bestTarget ? modifiedBestExpansionScore : 'N/A');
 				return;
