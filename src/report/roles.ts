@@ -1,5 +1,6 @@
 import cache from 'utils/cache';
 import {drawTable} from 'utils/room-visuals';
+import {getCallStats} from 'utils/cpu';
 
 declare global {
 	interface ReportClasses {
@@ -24,10 +25,13 @@ export default class RolesReport {
 	}
 
 	getRoleData(): string[][] {
-		const roleData: string[][] = [];
-
-		roleData.push(['Role', 'Count', 'CPU Avg', 'Max CPU']);
-		roleData.push(['testRole', '42', '0.52', '13.37']);
+		const roleData: string[][] = [['Role', 'Creep Count', 'Total Calls', 'CPU Avg', 'Max CPU']];
+		let cpuData = getCallStats('creepRole:');
+		for (const key in cpuData) {
+			const record = cpuData[key];
+			const roleName = key.substr(10);
+			roleData.push([roleName, _.size(Game.creepsByRole[roleName]).toString(), record.count.toString(), record.average.toPrecision(3), record.maximum.toPrecision(3)]);
+		}
 
 		return roleData;
 	}
