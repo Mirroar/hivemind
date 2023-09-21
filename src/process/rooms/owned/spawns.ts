@@ -27,6 +27,7 @@ import scoutSpawnRole from 'spawn-role/scout';
 import squadSpawnRole from 'spawn-role/squad';
 import transporterSpawnRole from 'spawn-role/transporter';
 import upgraderSpawnRole from 'spawn-role/upgrader';
+import {drawTable} from 'utils/room-visuals';
 
 declare global {
 	interface StructureSpawn {
@@ -188,22 +189,19 @@ export default class ManageSpawnsProcess extends Process {
 		if (!settings.get('visualizeSpawnQueue')) return;
 		if (!this.room.visual) return;
 
-		this.room.visual.text('Spawn Queue:', 49, 1, {
-			align: 'right',
-		});
-
+		const tableData: string[][] = [['Spawn Queue', 'Priority']];
 		const queue = _.sortBy(this.spawnManager.getAllSpawnOptions(this.room), option => -(option.priority + (0.01 * option.weight)));
 		let offset = 0;
 		for (const option of queue) {
-			this.visualizeSpawnQueueLine(option, offset++);
+			tableData.push([option.role, option.priority + '/' + option.weight.toPrecision(2)])
 		}
-	}
 
-	visualizeSpawnQueueLine(option: SpawnOption, yOffset: number) {
-		const text = option.role + ' (' + option.priority + '/' + option.weight.toPrecision(2) + ')';
+		if (tableData.length === 1) return;
 
-		this.room.visual.text(text, 49, 2 + yOffset, {
-			align: 'right',
-		});
+		drawTable({
+			data: tableData,
+			top: 1,
+			left: 40,
+		}, this.room.visual);
 	}
 }

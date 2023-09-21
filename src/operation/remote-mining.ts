@@ -19,6 +19,7 @@ import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import PathManager from 'remote-path-manager';
 import {decodePosition, encodePosition} from 'utils/serialization';
+import {drawTable} from 'utils/room-visuals';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
@@ -561,6 +562,7 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	drawReport(targetPos: string) {
+		// @todo Update this report for new hauler pools.
 		const requiredCarryParts = this.getHaulerSize(targetPos);
 
 		// Determine how many haulers to spawn for this route.
@@ -579,16 +581,24 @@ export default class RemoteMiningOperation extends Operation {
 		const maxHaulers = Math.ceil(requiredCarryParts / maxCarryParts);
 		const adjustedCarryParts = Math.ceil(requiredCarryParts / maxHaulers);
 
-		const position = decodePosition(targetPos);
-		const visual = new RoomVisual(position.roomName);
-		visual.text('Requested carry parts: ' + requiredCarryParts, position.x, position.y, {align: 'left'});
-		visual.text('Max parts per hauler: ' + maxCarryParts, position.x, position.y + 1, {align: 'left'});
-		visual.text('Calculated hauler size: ' + adjustedCarryParts, position.x, position.y + 2, {align: 'left'});
-		visual.text('Calculated hauler count: ' + maxHaulers, position.x, position.y + 3, {align: 'left'});
-
 		const activeHaulers = _.filter(Game.creepsByRole.hauler, (creep: HaulerCreep) => creep.memory.source === targetPos);
 		const activeCarryParts = _.sum(activeHaulers, creep => creep.getActiveBodyparts(CARRY));
-		visual.text('Active haulers: ' + activeHaulers.length, position.x, position.y + 4.2, {align: 'left'});
-		visual.text('Active carry parts: ' + activeCarryParts, position.x, position.y + 5.2, {align: 'left'});
+
+		const position = decodePosition(targetPos);
+		const visual = new RoomVisual(position.roomName);
+		const data: string[][] = [
+			['Requested carry parts', requiredCarryParts.toString()],
+			['Max parts per hauler', maxCarryParts.toString()],
+			['Calculated hauler size', adjustedCarryParts.toString()],
+			['Calculated hauler count', maxHaulers.toString()],
+			['Active haulers', activeHaulers.toString()],
+			['Active carry parts', activeCarryParts.toString()],
+		];
+
+		drawTable({
+			data,
+			top: position.y,
+			left: position.x,
+		}, visual);
 	}
 }

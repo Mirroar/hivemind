@@ -1,4 +1,5 @@
 import container from 'utils/container';
+import {drawTable} from 'utils/room-visuals';
 
 declare global {
 	interface ReportClasses {
@@ -17,19 +18,22 @@ export default class HelpReport {
 			align: 'left',
 		});
 
-		visual.text('report(null)', 1, 45, {align: 'left'});
-		visual.text('Stop showing reports.', 10, 45, {align: 'left'});
-
-		let row = 0;
+		const tableData = [
+			['Command', 'Info'],
+			['report(null)', 'Stop showing reports.'],
+		];
 		for (const reportName of reports) {
 			const label = 'report("' + reportName + '")';
 			const description = container.get(reportName).help();
 
-			visual.text(label, 1, 44 - row, {align: 'left'});
-			visual.text(description, 10, 44 - row, {align: 'left'});
-
-			row++;
+			tableData.push([label, description]);
 		}
+
+		drawTable({
+			data: tableData,
+			top: 10,
+			left: 1,
+		}, visual);
 	}
 
 	help() {

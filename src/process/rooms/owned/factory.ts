@@ -1,5 +1,6 @@
 import Process from 'process/process';
 import settings from 'settings-manager';
+import {drawTable} from 'utils/room-visuals';
 
 export default class ManageFactoryProcess extends Process {
 	room: Room;
@@ -21,28 +22,37 @@ export default class ManageFactoryProcess extends Process {
 	 */
 	run() {
 		if (!this.room.factory || !this.room.factoryManager) return;
-		if (this.room.factory.cooldown > 0) return;
 
+		let data: string[][] = [['Status', 'Factory product']];
 		const jobs = this.room.factoryManager.getJobs();
-		let count = 0;
+		let hasProduced = false;
 		let product: FactoryProductConstant;
 		for (product in jobs) {
-			count++;
-			this.room.visual.text(product, 40, 1 + count, {align: 'left'});
 			if (!this.room.factoryManager.hasAllComponents(product)) {
-				this.room.visual.text('Missing components', 39, 1 + count, {align: 'right'});
-				continue;
-			}
-			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) {
-				this.room.visual.text('Finished', 39, 1 + count, {align: 'right'});
+				data.push(['Missing components', product]);
 				continue;
 			}
 
-			this.room.visual.text('OK', 39, 1 + count, {align: 'right'});
+			if (!this.room.factoryManager.isRecipeAvailable(product, jobs[product])) {
+				data.push(['Production finished', product]);
+				continue;
+			}
+
+			data.push(['Producing', product]);
+			if (hasProduced) continue;
+			if (this.room.factory.cooldown) continue;
+
 			if (this.room.factory.produce(product as CommodityConstant) === OK) {
 				if (settings.get('notifyFactoryProduction')) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
-				break;
 			}
 		}
+
+		if (data.length === 1) return;
+
+		drawTable({
+			data,
+			top: 1,
+			left: 25,
+		}, this.room.visual);
 	}
 }
