@@ -1,5 +1,3 @@
-/* global OK */
-
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition} from 'utils/serialization';

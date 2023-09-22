@@ -25,7 +25,7 @@ declare global {
 	}
 }
 
-export default function (container: Container) {
+function containerFactory(container: Container) {
 	container.set('HelpReport', () => new HelpReport());
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('NavMesh', () => new NavMesh());
@@ -37,3 +37,5 @@ export default function (container: Container) {
 	container.set('SpawnManager', () => new SpawnManager());
 	container.set('TrafficManager', () => new TrafficManager());
 }
+
+export default containerFactory;

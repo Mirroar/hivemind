@@ -31,7 +31,7 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 		return Boolean(this.providers[type]);
 	}
 
-	getProvidersByPriority(context: ContextType): TaskProvider<TaskType, ContextType>[] {
+	getProvidersByPriority(context: ContextType): Array<TaskProvider<TaskType, ContextType>> {
 		return _.sortBy(this.providers, provider => -provider.getHighestPriority(context));
 	}
 
