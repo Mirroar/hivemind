@@ -5,6 +5,7 @@ STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
+import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
@@ -74,6 +75,8 @@ declare global {
 	}
 
 	interface TransporterCreepHeapMemory extends CreepHeapMemory {
+		energyTakenFrom?: Id<AnyStoreStructure>,
+		idlingFor?: number,
 	}
 }
 
@@ -83,6 +86,10 @@ function isResourceDestinationOrder(room: Room, order: TransporterOrder): order 
 	}
 
 	return false;
+}
+
+function isStructureDestinationOrder(order: ResourceDestinationTask): order is StructureDestinationTask {
+	return 'target' in order;
 }
 
 function isBayDestinationOrder(order: ResourceDestinationTask): order is BayDestinationTask {
@@ -95,6 +102,10 @@ function isResourceSourceOrder(room: Room, order: TransporterOrder): order is Re
 	}
 
 	return false;
+}
+
+function isStructureSourceOrder(order: ResourceSourceTask): order is StructureSourceTask {
+	return 'target' in order;
 }
 
 function isCollectOrder(order: TransporterOrder): order is TransporterGetEnergyOrder {
@@ -128,6 +139,12 @@ export default class TransporterRole extends Role {
 					this.setTransporterState(creep.memory.delivering);
 				}
 			}
+		}
+
+		if ((creep.heapMemory.idlingFor || 0) > 0) {
+			creep.heapMemory.idlingFor--;
+			creep.whenInRange(1, creep, () => {});
+			return;
 		}
 
 		if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9 && !creep.memory.delivering) {
@@ -250,6 +267,20 @@ export default class TransporterRole extends Role {
 		if (!creep.memory.order) return false;
 
 		if (isResourceDestinationOrder(creep.room, creep.memory.order)) {
+			if (
+				creep.memory.order.resourceType === RESOURCE_ENERGY &&
+				creep.heapMemory.energyTakenFrom &&
+				isStructureDestinationOrder(creep.memory.order) &&
+				creep.heapMemory.energyTakenFrom === creep.memory.order.target
+			) {
+				// We're looping, taking energy and putting it right back.
+				// Instead, we should wait for a while until new tasks show up.
+				delete creep.memory.order;
+				delete creep.heapMemory.energyTakenFrom;
+				creep.heapMemory.idlingFor = 20;
+				return false;
+			}
+
 			return creep.room.destinationDispatcher.validateTask(creep.memory.order, {creep});
 		}
 
@@ -277,12 +308,22 @@ export default class TransporterRole extends Role {
 	 * @param {Function} calculateSourceCallback
 	 *   Optional callback to use when a new source target needs to be chosen.
 	 */
-	performGetResources(calculateSourceCallback?: () => void) {
+	performGetResources(sourceCallback?: () => void) {
 		const creep = this.creep;
-		if (!calculateSourceCallback) {
-			calculateSourceCallback = () => {
+		if (!sourceCallback) {
+			sourceCallback = () => {
 				this.calculateSource();
 			};
+		}
+
+		const calculateSourceCallback = () => {
+			delete creep.heapMemory.energyTakenFrom;
+			sourceCallback();
+
+			const newOrder = creep.memory.order;
+			if (newOrder && isResourceSourceOrder(creep.room, newOrder) && isStructureSourceOrder(newOrder) && newOrder.resourceType === RESOURCE_ENERGY) {
+				creep.heapMemory.energyTakenFrom = newOrder.target;
+			}
 		}
 
 		if (!this.ensureValidResourceSource(creep.memory.order, calculateSourceCallback)) {
@@ -338,7 +379,8 @@ export default class TransporterRole extends Role {
 
 			if (orderDone) {
 				delete creep.memory.order;
-				calculateSourceCallback();
+				// @todo We may calculate a new order based on the projected contents of this creep's score.
+				// calculateSourceCallback();
 			}
 		});
 	}
@@ -418,14 +460,14 @@ export default class TransporterRole extends Role {
 		const terminal = creep.room.terminal;
 		const storage = creep.room.storage;
 
-		const task = creep.room.sourceDispatcher.getTask({
-			creep,
-			resourceType: (terminal || storage) ? null : RESOURCE_ENERGY,
-		});
-		if (task) options.push(task);
-
 		// Don't pick up anything that's not energy if there's no place to store.
 		if (!terminal && !storage) return options;
+
+		const dispatcherTask = creep.room.sourceDispatcher.getTask({
+			creep,
+			resourceType: null,
+		});
+		if (dispatcherTask) options.push(dispatcherTask);
 
 		this.addObjectResourceOptions(options, FIND_DROPPED_RESOURCES, 'resource');
 		this.addObjectResourceOptions(options, FIND_TOMBSTONES, 'tombstone');
@@ -674,7 +716,7 @@ export default class TransporterRole extends Role {
 		}
 
 		// Take power if power spawn needs it.
-		if (room.powerSpawn && room.powerSpawn.store[RESOURCE_POWER] < room.powerSpawn.store.getCapacity(RESOURCE_POWER) * 0.1) {
+		if (room.powerSpawn && room.powerSpawn.store[RESOURCE_POWER] < room.powerSpawn.store.getCapacity(RESOURCE_POWER) * 0.1 && balancer.maySpendEnergyOnPowerProcessing()) {
 			const target = room.getBestStorageSource(RESOURCE_POWER);
 			if (target && target.store[RESOURCE_POWER] > 0) {
 				// @todo Limit amount since power spawn can only hold 100 power at a time.

@@ -6,15 +6,19 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 
 	getTask(context: ContextType): TaskType {
 		const options: TaskType[] = [];
+		let highestPriority = -10;
 
-		_.each(this.providers, provider => {
-			// @todo Get options by provider priority.
-			const providerOptions = provider.getTasks(context);
+		for (const provider of this.getProvidersByPriority(context)) {
+			if (provider.getHighestPriority(context) < highestPriority) break;
 
-			for (const option of providerOptions) {
-				if (provider.isValid(option, context)) options.push(option);
+			for (const option of provider.getTasks(context)) {
+				if (option.priority < highestPriority) continue;
+				if (!provider.isValid(option, context)) continue;
+
+				options.push(option);
+				if (highestPriority < option.priority) highestPriority = option.priority;
 			}
-		});
+		}
 
 		return utilities.getBestOption(options);
 	}
@@ -25,6 +29,10 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 
 	hasProvider(type: string): boolean {
 		return Boolean(this.providers[type]);
+	}
+
+	getProvidersByPriority(context: ContextType): TaskProvider<TaskType, ContextType>[] {
+		return _.sortBy(this.providers, provider => -provider.getHighestPriority(context));
 	}
 
 	validateTask(task: TaskType, context: ContextType) {
