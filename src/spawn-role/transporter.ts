@@ -30,9 +30,9 @@ export default class TransporterSpawnRole extends SpawnRole {
 				size: transporterSize,
 			};
 
-			const hasHaulers =
-				_.filter(Game.creepsByRole['hauler'], creep => creep.memory.sourceRoom === room.name).length +
-				_.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
+			const hasHaulers
+				= _.filter(Game.creepsByRole.hauler, creep => creep.memory.sourceRoom === room.name).length
+				+ _.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
 			if (transporterCount >= maxTransporters / 2) {
 				option.priority--;
 				option.priority--;
@@ -144,7 +144,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 
 	estimateNeededCarryParts(room: Room): number {
 		return cache.inHeap('estimatedCarryParts:' + room.name, 500, () => {
-			let total = 0;
+			const total = 0;
 
 			// Path length to active bays, weighted by energy needs. Exclude harvester bays.
 

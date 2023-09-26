@@ -42,7 +42,7 @@ export class ErrorMapper {
 		}
 
 		// eslint-disable-next-line no-useless-escape
-		const re = /^\s+at\s+(.+?\s+)?\(?([0-z._\-\\\/]+):(\d+):(\d+)\)?$/gm;
+		const re = /^\s+at\s+(.+?\s+)?\(?([0-z._\-\\/]+):(\d+):(\d+)\)?$/gm;
 		let match: RegExpExecArray | null;
 		let outStack = error.toString();
 
@@ -56,17 +56,18 @@ export class ErrorMapper {
 				if (pos.line != null) {
 					if (pos.name) {
 						outStack += `\n    at ${pos.name} (${pos.source}:${pos.line}:${pos.column})`;
-					} else {
-						if (match[1]) {
-							// no original source file name known - use file name from given trace
-							outStack += `\n    at ${match[1]} (${pos.source}:${pos.line}:${pos.column})`;
-						} else {
-							// no original source file name known or in given trace - omit name
-							outStack += `\n    at ${pos.source}:${pos.line}:${pos.column}`;
-						}
 					}
-				} else {
-					// no known position
+					else if (match[1]) {
+						// No original source file name known - use file name from given trace
+						outStack += `\n    at ${match[1]} (${pos.source}:${pos.line}:${pos.column})`;
+					}
+					else {
+						// No original source file name known or in given trace - omit name
+						outStack += `\n    at ${pos.source}:${pos.line}:${pos.column}`;
+					}
+				}
+				else {
+					// No known position
 					outStack += '\n' + match[0];
 					continue;
 				}

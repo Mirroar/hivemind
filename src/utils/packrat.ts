@@ -8,8 +8,8 @@ declare global {
 		interface Global {
 			packId: <T extends _HasId>(id: Id<T>) => string;
 			unpackId: <T extends _HasId>(packedId: string) => Id<T>;
-			packIdList: <T extends _HasId>(ids: Id<T>[]) => string;
-			unpackIdList: <T extends _HasId>(packedIds: string) => Id<T>[];
+			packIdList: <T extends _HasId>(ids: Array<Id<T>>) => string;
+			unpackIdList: <T extends _HasId>(packedIds: string) => Array<Id<T>>;
 			packCoord: (coord: Coord) => string;
 			unpackCoord: (char: string) => Coord;
 			unpackCoordAsPos: (char: string, roomName: string) => RoomPosition;
@@ -27,7 +27,7 @@ declare global {
 }
 
 /**
- * screeps-packrat
+ * Screeps-packrat
  * ---------------
  * Lightning-fast and memory-efficient serialization of Screeps IDs, Coords, and RoomPositions
  * Code written by Muon as part of Overmind Screeps AI. Feel free to adapt as desired.
@@ -64,7 +64,7 @@ declare global {
  *    can be expected for smaller lists.
  */
 
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, '__esModule', {value: true});
 
 const PERMACACHE: {
 	_packedRoomNames?: Record<string, string>;
@@ -75,11 +75,12 @@ const PERMACACHE: {
  * Convert a hex string to a Uint16Array.
  */
 function hexToUint16Array(hex: string): Uint16Array {
-	const len = Math.ceil(hex.length / 4); // four hex chars for each 16-bit value
-	const array = new Uint16Array(len);
+	const length = Math.ceil(hex.length / 4); // Four hex chars for each 16-bit value
+	const array = new Uint16Array(length);
 	for (let i = 0; i < hex.length; i += 4) {
-		array[i >>> 2] = parseInt(hex.substr(i, 4), 16);
+		array[i >>> 2] = Number.parseInt(hex.substr(i, 4), 16);
 	}
+
 	return array;
 }
 
@@ -91,11 +92,12 @@ function hexToUint16Array(hex: string): Uint16Array {
 function uint16ArrayToHex(array: Uint16Array): string {
 	const hex = [];
 	let current;
-	for (let i = 0; i < array.length; ++i) {
-		current = array[i];
+	for (const element of array) {
+		current = element;
 		hex.push((current >>> 8).toString(16));
 		hex.push((current & 0xFF).toString(16));
 	}
+
 	return hex.join('');
 }
 
@@ -105,12 +107,12 @@ function uint16ArrayToHex(array: Uint16Array): string {
  * Benchmarking: average of 500ns to execute on shard2 public server, reduce stringified size by 75%
  */
 function packId<T extends _HasId>(id: Id<T>): string {
-	return String.fromCharCode(parseInt(id.substr(0, 4), 16)) +
-		   String.fromCharCode(parseInt(id.substr(4, 4), 16)) +
-		   String.fromCharCode(parseInt(id.substr(8, 4), 16)) +
-		   String.fromCharCode(parseInt(id.substr(12, 4), 16)) +
-		   String.fromCharCode(parseInt(id.substr(16, 4), 16)) +
-		   String.fromCharCode(parseInt(id.substr(20, 4), 16));
+	return String.fromCharCode(Number.parseInt(id.slice(0, 4), 16))
+		   + String.fromCharCode(Number.parseInt(id.slice(4, 8), 16))
+		   + String.fromCharCode(Number.parseInt(id.slice(8, 12), 16))
+		   + String.fromCharCode(Number.parseInt(id.slice(12, 16), 16))
+		   + String.fromCharCode(Number.parseInt(id.slice(16, 20), 16))
+		   + String.fromCharCode(Number.parseInt(id.slice(20, 24), 16));
 }
 
 /**
@@ -126,9 +128,9 @@ function unpackId<T extends _HasId>(packedId: string): Id<T> {
 		id += (current >>> 8).toString(16).padStart(2, '0'); // String.padStart() requires es2017+ target
 		id += (current & 0xFF).toString(16).padStart(2, '0');
 	}
+
 	return id as Id<T>;
 }
-
 
 /**
  * Packs a list of ids as a utf-16 string. This is better than having a list of packed coords, as it avoids
@@ -136,12 +138,13 @@ function unpackId<T extends _HasId>(packedId: string): Id<T> {
  *
  * Benchmarking: average of 500ns per id to execute on shard2 public server, reduce stringified size by 81%
  */
-function packIdList<T extends _HasId>(ids: Id<T>[]): string {
-	let str = '';
-	for (let i = 0; i < ids.length; ++i) {
-		str += packId(ids[i]);
+function packIdList<T extends _HasId>(ids: Array<Id<T>>): string {
+	let string = '';
+	for (const id of ids) {
+		string += packId(id);
 	}
-	return str;
+
+	return string;
 }
 
 /**
@@ -149,11 +152,12 @@ function packIdList<T extends _HasId>(ids: Id<T>[]): string {
  *
  * Benchmarking: average of 1.2us per id to execute on shard2 public server.
  */
-function unpackIdList<T extends _HasId>(packedIds: string): Id<T>[] {
-	const ids: Id<T>[] = [];
+function unpackIdList<T extends _HasId>(packedIds: string): Array<Id<T>> {
+	const ids: Array<Id<T>> = [];
 	for (let i = 0; i < packedIds.length; i += 6) {
 		ids.push(unpackId(packedIds.substr(i, 6)));
 	}
+
 	return ids;
 }
 
@@ -176,8 +180,8 @@ function packCoord(coord: Coord): string {
 function unpackCoord(char: string): Coord {
 	const xShiftedSixOrY = char.charCodeAt(0) - 65;
 	return {
-		x: (xShiftedSixOrY & 0b111111000000) >>> 6,
-		y: (xShiftedSixOrY & 0b000000111111),
+		x: (xShiftedSixOrY & 0b1111_1100_0000) >>> 6,
+		y: (xShiftedSixOrY & 0b0000_0011_1111),
 	};
 }
 
@@ -198,11 +202,12 @@ function unpackCoordAsPos(packedCoord: string, roomName: string): RoomPosition {
  * Benchmarking: average of 120ns per coord to execute on shard2 public server, reduce stringified size by 94%
  */
 function packCoordList(coords: Coord[]): string {
-	let str = '';
-	for (let i = 0; i < coords.length; ++i) {
-		str += String.fromCharCode(((coords[i].x << 6) | coords[i].y) + 65);
+	let string = '';
+	for (const coord of coords) {
+		string += String.fromCharCode(((coord.x << 6) | coord.y) + 65);
 	}
-	return str;
+
+	return string;
 }
 
 /**
@@ -216,10 +221,11 @@ function unpackCoordList(chars: string): Coord[] {
 	for (let i = 0; i < chars.length; ++i) {
 		xShiftedSixOrY = chars.charCodeAt(i) - 65;
 		coords.push({
-			x: (xShiftedSixOrY & 0b111111000000) >>> 6,
-			y: (xShiftedSixOrY & 0b000000111111),
+			x: (xShiftedSixOrY & 0b1111_1100_0000) >>> 6,
+			y: (xShiftedSixOrY & 0b0000_0011_1111),
 		});
 	}
+
 	return coords;
 }
 
@@ -231,11 +237,12 @@ function unpackCoordList(chars: string): Coord[] {
 function unpackCoordListAsPosList(packedCoords: string, roomName: string): RoomPosition[] {
 	const positions = [];
 	let coord;
-	for (let i = 0; i < packedCoords.length; ++i) {
+	for (const packedCoord of packedCoords) {
 		// Each coord is saved as a single character; unpack each and insert the room name to get the positions list
-		coord = unpackCoord(packedCoords[i]);
+		coord = unpackCoord(packedCoord);
 		positions.push(new RoomPosition(coord.x, coord.y, roomName));
 	}
+
 	return positions;
 }
 
@@ -255,27 +262,22 @@ function packRoomName(roomName: string): string {
 		const y = Number(match[4]);
 		let quadrant;
 		if (xDir == 'W') {
-			if (yDir == 'N') {
-				quadrant = 0;
-			}
-			else {
-				quadrant = 1;
-			}
+			quadrant = yDir == 'N' ? 0 : 1;
+		}
+		else if (yDir == 'N') {
+			quadrant = 2;
 		}
 		else {
-			if (yDir == 'N') {
-				quadrant = 2;
-			}
-			else {
-				quadrant = 3;
-			}
+			quadrant = 3;
 		}
-		// y is 6 bits, x is 6 bits, quadrant is 2 bits
-		const num = (quadrant << 13 | ((x * 90) + y)) + 65;
-		const char = String.fromCharCode(num);
+
+		// Y is 6 bits, x is 6 bits, quadrant is 2 bits
+		const number = (quadrant << 13 | ((x * 90) + y)) + 65;
+		const char = String.fromCharCode(number);
 		PERMACACHE._packedRoomNames[roomName] = char;
 		PERMACACHE._unpackedRoomNames[char] = roomName;
 	}
+
 	return PERMACACHE._packedRoomNames[roomName];
 }
 
@@ -284,10 +286,10 @@ function packRoomName(roomName: string): string {
  */
 function unpackRoomName(char: string): string {
 	if (PERMACACHE._unpackedRoomNames[char] === undefined) {
-		const num = char.charCodeAt(0) - 65;
-		const coords = (num & 0b001111111111111);
-		const { q, x, y } = {
-			q: (num & 0b110000000000000) >>> 13,
+		const number = char.charCodeAt(0) - 65;
+		const coords = (number & 0b001_1111_1111_1111);
+		const {q, x, y} = {
+			q: (number & 0b110_0000_0000_0000) >>> 13,
 			x: Math.floor(coords / 90),
 			y: coords % 90,
 		};
@@ -308,9 +310,11 @@ function unpackRoomName(char: string): string {
 			default:
 				roomName = 'ERROR';
 		}
+
 		PERMACACHE._packedRoomNames[roomName] = char;
 		PERMACACHE._unpackedRoomNames[char] = roomName;
 	}
+
 	return PERMACACHE._unpackedRoomNames[char];
 }
 
@@ -331,7 +335,7 @@ function packPos(pos: RoomPosition): string {
  * Benchmarking: average of 600ns to execute on shard2 public server.
  */
 function unpackPos(chars: string): RoomPosition {
-	const { x, y } = unpackCoord(chars[0]);
+	const {x, y} = unpackCoord(chars[0]);
 	return new RoomPosition(x, y, unpackRoomName(chars[1]));
 }
 
@@ -342,11 +346,12 @@ function unpackPos(chars: string): RoomPosition {
  * Benchmarking: average of 150ns per position to execute on shard2 public server, reduce stringified size by 95%
  */
 function packPosList(posList: RoomPosition[]): string {
-	let str = '';
-	for (let i = 0; i < posList.length; ++i) {
-		str += packPos(posList[i]);
+	let string = '';
+	for (const element of posList) {
+		string += packPos(element);
 	}
-	return str;
+
+	return string;
 }
 
 /**
@@ -359,6 +364,7 @@ function unpackPosList(chars: string): RoomPosition[] {
 	for (let i = 0; i < chars.length; i += 2) {
 		posList.push(unpackPos(chars.substr(i, 2)));
 	}
+
 	return posList;
 }
 
@@ -380,7 +386,7 @@ export {
 	unpackPosList,
 	packRoomName,
 	unpackRoomName,
-}
+};
 
 // Useful to register these functions on global to use with console
 global.packId = packId;

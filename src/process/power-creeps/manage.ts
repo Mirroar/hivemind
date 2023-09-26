@@ -53,10 +53,10 @@ export default class ManagePowerCreepsProcess extends Process {
 		return _.filter(Game.powerCreeps, (creepToUpgrade: PowerCreep) => {
 			const currentLevels = this.getFactoryLevelDistribution();
 			const currentFactoryLevel = (creepToUpgrade.powers[PWR_OPERATE_FACTORY] || {}).level || 0;
-			const skipForFactory =
-				hivemind.settings.get('prioritizeFactoryLevels') &&
-				!currentLevels[POWER_INFO[PWR_OPERATE_FACTORY].level.length] &&
-				currentFactoryLevel === this.getDesiredFactoryLevel(creepToUpgrade);
+			const skipForFactory
+				= hivemind.settings.get('prioritizeFactoryLevels')
+				&& !currentLevels[POWER_INFO[PWR_OPERATE_FACTORY].level.length]
+				&& currentFactoryLevel === this.getDesiredFactoryLevel(creepToUpgrade);
 			if (skipForFactory) {
 				return false;
 			}
@@ -81,10 +81,8 @@ export default class ManagePowerCreepsProcess extends Process {
 			const requiredLevel = info.level[currentLevel];
 			if (creep.level < requiredLevel) continue;
 
-			if (powerOption === PWR_OPERATE_FACTORY) {
-				// Special handling for OPERATE_FACTORY.
-				if (currentLevel >= this.getDesiredFactoryLevel(creep)) continue;
-			}
+			if (powerOption === PWR_OPERATE_FACTORY // Special handling for OPERATE_FACTORY.
+				&& currentLevel >= this.getDesiredFactoryLevel(creep)) continue;
 
 			const result = creep.upgrade(powerOption);
 			hivemind.log('creeps').info('Upgrading power', powerNames[powerOption], 'of power creep', creep.name, ':', result);

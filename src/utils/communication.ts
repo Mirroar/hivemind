@@ -50,7 +50,7 @@ interface AttackRequest {
 export type Request = ResourceRequest | DefenseRequest | HateRequest | AttackRequest | FunnelRequest;
 type RequestCallback = (request: Request) => void;
 
-const RequestTypeStr = {
+const RequestTypeString = {
 	[RequestType.RESOURCE]: 'RESOURCE',
 	[RequestType.DEFENSE]: 'DEFENSE',
 	[RequestType.ATTACK]: 'ATTACK',
@@ -59,13 +59,13 @@ const RequestTypeStr = {
 	[RequestType.FUNNEL]: 'FUNNEL',
 };
 
-var allyRequests: Request[];
-var requestArray: Request[] = [];
-var simpleAllies = {
+let allyRequests: Request[];
+let requestArray: Request[] = [];
+const simpleAllies = {
 	checkAllies(callback: RequestCallback) {
-		let allies = [...ALLIES];
+		const allies = [...ALLIES];
 		if (allies.length === 0) return;
-		let currentAllyName = allies[Game.time % ALLIES.length];
+		const currentAllyName = allies[Game.time % ALLIES.length];
 
 		if (allyRequests === undefined) {
 			if (RawMemory.foreignSegment && RawMemory.foreignSegment.username === currentAllyName) {
@@ -76,42 +76,57 @@ var simpleAllies = {
 					console.log('failed to parse', currentAllyName, 'request segment');
 					allyRequests = null;
 				}
+
 				if (allyRequests && _.isArray(allyRequests) && allyRequests.length > 0 && logIncomingRequests) {
-					let requestListStr = currentAllyName + ':<br/>';
-					for (let r of allyRequests) {
-						requestListStr += RequestTypeStr[r.requestType] + ' - ';
-						if (r.requestType === RequestType.RESOURCE)
-							requestListStr += 'resourceType: ' + r.resourceType + ', maxAmount: ' + r.maxAmount + ', room: ' + r.roomName + ', priority: ' + r.priority + '<br/>';
-						else if (r.requestType === RequestType.DEFENSE)
-							requestListStr += 'room: ' + r.roomName + ', priority: ' + r.priority + '<br/>';
-						else if (r.requestType === RequestType.ATTACK)
-							requestListStr += 'room: ' + r.roomName + ', priority: ' + r.priority + ', playerName: ' + r.playerName + '<br/>';
-						//else if (r.requestType === RequestType.EXECUTE)
-						//  requestListStr += 'priority: ' + r.priority + '<br/>';
-						else if (r.requestType === RequestType.HATE)
-							requestListStr += 'playerName: ' + r.playerName + ', priority: ' + r.priority + '<br/>';
+					let requestListString = currentAllyName + ':<br/>';
+					for (const r of allyRequests) {
+						requestListString += RequestTypeString[r.requestType] + ' - ';
+						switch (r.requestType) {
+							case RequestType.RESOURCE: {
+								requestListString += 'resourceType: ' + r.resourceType + ', maxAmount: ' + r.maxAmount + ', room: ' + r.roomName + ', priority: ' + r.priority + '<br/>';
+								break;
+							}
+
+							case RequestType.DEFENSE: {
+								requestListString += 'room: ' + r.roomName + ', priority: ' + r.priority + '<br/>';
+								break;
+							}
+
+							case RequestType.ATTACK: {
+								requestListString += 'room: ' + r.roomName + ', priority: ' + r.priority + ', playerName: ' + r.playerName + '<br/>';
+								break;
+							}
+
+							case RequestType.HATE: {
+								requestListString += 'playerName: ' + r.playerName + ', priority: ' + r.priority + '<br/>';
+								// No default
+							}
+
+								break;
+						}
 					}
-					console.log(requestListStr);
+
+					console.log(requestListString);
 				}
 				else if (logIncomingRequests) {
-					let requestStr = currentAllyName + ':<br/>';
-					requestStr += RawMemory.foreignSegment.data;
-					console.log(requestStr);
+					let requestString = currentAllyName + ':<br/>';
+					requestString += RawMemory.foreignSegment.data;
+					console.log(requestString);
 				}
 			}
 			else {
 				allyRequests = null;
-				//console.log("Simple allies either has no segment or has the wrong name?");
+				// Console.log("Simple allies either has no segment or has the wrong name?");
 			}
 		}
 
 		if (allyRequests) {
-			for (let request of allyRequests) {
+			for (const request of allyRequests) {
 				callback(request);
 			}
 		}
 
-		let nextAllyName = allies[(Game.time + 1) % ALLIES.length];
+		const nextAllyName = allies[(Game.time + 1) % ALLIES.length];
 		RawMemory.setActiveForeignSegment(nextAllyName, swcSegmentId);
 	},
 
@@ -133,7 +148,7 @@ var simpleAllies = {
 	requestHelp(roomName: string, priority?: number) {
 		requestArray.push({
 			requestType: RequestType.DEFENSE,
-			roomName: roomName,
+			roomName,
 			priority: priority || 0,
 		});
 	},
@@ -141,12 +156,12 @@ var simpleAllies = {
 	requestResource(roomName: string, resourceType: ResourceConstant, priority?: number) {
 		requestArray.push({
 			requestType: RequestType.RESOURCE,
-			resourceType: resourceType,
-			roomName: roomName,
+			resourceType,
+			roomName,
 			priority: priority || 0,
 			maxAmount: 5000,
 		});
-	}
+	},
 };
 
-export { simpleAllies };
+export {simpleAllies};

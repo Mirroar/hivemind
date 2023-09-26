@@ -40,10 +40,12 @@ export default class StructureSource<TaskType extends StructureSourceTask> imple
 		creep.whenInRange(1, target, () => {
 			const resourceType = task.resourceType;
 
-			if (task.amount)
+			if (task.amount) {
 				creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity()));
-			else
+			}
+			else {
 				creep.withdraw(target, resourceType);
+			}
 
 			delete creep.memory.order;
 		});

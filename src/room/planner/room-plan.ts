@@ -2,16 +2,10 @@ import {packCoordList, unpackCoordListAsPosList} from 'utils/packrat';
 import {serializeCoords} from 'utils/serialization';
 
 declare global {
-	type SerializedPlan = {
-		[type: string]: string;
-	};
+	type SerializedPlan = Record<string, string>;
 }
 
-type PositionCache = {
-	[type: string]: {
-		[coords: number]: RoomPosition;
-	};
-};
+type PositionCache = Record<string, Record<number, RoomPosition>>;
 
 const structureSymbols = {
 	container: '⊔',
@@ -32,7 +26,9 @@ const structureSymbols = {
 };
 
 export default class RoomPlan {
-	public readonly MAX_ROOM_LEVEL = 8;
+	public get MAX_ROOM_LEVEL() {
+		return 8;
+	}
 
 	public readonly roomName: string;
 	protected positionsByType: PositionCache;
@@ -50,11 +46,9 @@ export default class RoomPlan {
 	}
 
 	unserialize(input: SerializedPlan) {
-		this.positionsByType = _.mapValues(input, function (posList: string): {[coords: number]: RoomPosition} {
+		this.positionsByType = _.mapValues(input, function (posList: string): Record<number, RoomPosition> {
 			const positions = unpackCoordListAsPosList(posList, this.roomName);
-			const cache: {
-				[coords: number]: RoomPosition;
-			} = {};
+			const cache: Record<number, RoomPosition> = {};
 
 			for (const pos of positions) {
 				const coord = serializeCoords(pos.x, pos.y);

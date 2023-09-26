@@ -322,10 +322,8 @@ export default class BuilderRole extends Role {
 			}
 
 			// For many decaying structures, we don't care if they're "almost" full.
-			if (target.structureType === STRUCTURE_ROAD || target.structureType === STRUCTURE_RAMPART || target.structureType === STRUCTURE_CONTAINER) {
-				if (target.hits / (option.maxHealth || target.hitsMax) > 0.9) {
-					continue;
-				}
+			if ((target.structureType === STRUCTURE_ROAD || target.structureType === STRUCTURE_RAMPART || target.structureType === STRUCTURE_CONTAINER) && target.hits / (option.maxHealth || target.hitsMax) > 0.9) {
+				continue;
 			}
 
 			if (target.hits >= (option.maxHealth || target.hitsMax)) continue;
@@ -358,11 +356,9 @@ export default class BuilderRole extends Role {
 				return;
 			}
 		}
-		else if (target.structureType === STRUCTURE_RAMPART) {
-			if (creep.room.roomPlanner && !creep.room.roomPlanner.isPlannedLocation(target.pos, 'rampart')) {
-				option.priority = -1;
-				return;
-			}
+		else if (target.structureType === STRUCTURE_RAMPART && creep.room.roomPlanner && !creep.room.roomPlanner.isPlannedLocation(target.pos, 'rampart')) {
+			option.priority = -1;
+			return;
 		}
 
 		// Walls and ramparts get repaired up to a certain health level.
@@ -370,9 +366,11 @@ export default class BuilderRole extends Role {
 		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall.quad')) {
 			maxHealth /= 10;
 		}
+
 		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'rampart.ramp')) {
 			maxHealth /= 10;
 		}
+
 		if (creep.room.roomPlanner && creep.room.roomPlanner.isPlannedLocation(target.pos, 'wall.blocker')) {
 			maxHealth = 10_000;
 		}

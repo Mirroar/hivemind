@@ -80,12 +80,10 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 					option.priority++;
 				}
 
-				if (currentReaction) {
-					// If we're doing a different reaction now, clean out faster!
-					if (REACTIONS[currentReaction[0]][currentReaction[1]] !== lab.mineralType) {
-						option.priority = 3;
-						option.weight = 0;
-					}
+				if (currentReaction // If we're doing a different reaction now, clean out faster!
+					&& REACTIONS[currentReaction[0]][currentReaction[1]] !== lab.mineralType) {
+					option.priority = 3;
+					option.weight = 0;
 				}
 
 				option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
@@ -187,10 +185,12 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		creep.whenInRange(1, target, () => {
 			const resourceType = task.resourceType;
 
-			if (task.amount)
+			if (task.amount) {
 				creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity()));
-			else
+			}
+			else {
 				creep.withdraw(target, resourceType);
+			}
 
 			delete creep.memory.order;
 		});

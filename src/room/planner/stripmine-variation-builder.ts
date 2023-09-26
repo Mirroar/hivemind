@@ -35,5 +35,4 @@ export default class StripmineRoomVariationBuilder extends RoomVariationBuilder 
 			this.placeOnRamps,
 		];
 	}
-
 }

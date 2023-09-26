@@ -43,6 +43,12 @@ declare global {
 	interface StrategyMemory {
 		expand?: ExpandProcessMemory;
 	}
+
+	namespace NodeJS {
+		interface Global {
+			ExpandProcess: typeof ExpandProcess;
+		}
+	}
 }
 
 let lastCleanup = 0;
@@ -97,10 +103,10 @@ export default class ExpandProcess extends Process {
 		const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
 		const longTermCpuUsage = stats.getStat('cpu_total', 10_000) ? stats.getStat('cpu_total', 10_000) / Game.cpu.limit : shortTermCpuUsage;
 
-		const canExpand = hasFreeControlLevels &&
-			mayHaveMoreRooms &&
-			shortTermCpuUsage < cpuLimit &&
-			longTermCpuUsage < cpuLimit;
+		const canExpand = hasFreeControlLevels
+			&& mayHaveMoreRooms
+			&& shortTermCpuUsage < cpuLimit
+			&& longTermCpuUsage < cpuLimit;
 
 		Memory.hivemind.canExpand = false;
 		if (!this.memory.currentTarget && canExpand) {
@@ -602,7 +608,7 @@ export default class ExpandProcess extends Process {
 		for (const room of Game.myRooms) {
 			if (!room.isStripmine()) continue;
 			if (!room.terminal) continue;
-			if (_.filter(room.minerals, mineral => mineral.mineralAmount > 0).length > 0) continue;
+			if (_.some(room.minerals, mineral => mineral.mineralAmount > 0)) continue;
 
 			room.setEvacuating(true);
 			this.memory.evacuatingRoom = {
@@ -677,7 +683,6 @@ export default class ExpandProcess extends Process {
 
 			this.memory.failedExpansions.splice(i, 1);
 		}
-
 	}
 }
-global['ExpandProcess'] = ExpandProcess;
+global.ExpandProcess = ExpandProcess;

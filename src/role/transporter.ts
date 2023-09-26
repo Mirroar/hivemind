@@ -17,7 +17,7 @@ type TransporterDropOrderOption = {
 	weight: number;
 	type: 'drop';
 	resourceType: ResourceConstant;
-}
+};
 
 type TransporterStructureOrderOption = {
 	priority: number;
@@ -25,7 +25,7 @@ type TransporterStructureOrderOption = {
 	type: 'structure';
 	object: AnyStoreStructure;
 	resourceType: ResourceConstant;
-}
+};
 
 type TransporterTombstoneOrderOption = {
 	priority: number;
@@ -33,7 +33,7 @@ type TransporterTombstoneOrderOption = {
 	type: 'tombstone';
 	object: Ruin | Tombstone;
 	resourceType: ResourceConstant;
-}
+};
 
 type TransporterPickupOrderOption = {
 	priority: number;
@@ -41,15 +41,15 @@ type TransporterPickupOrderOption = {
 	type: 'resource';
 	object: Resource;
 	resourceType: ResourceConstant;
-}
+};
 
 type TransporterPositionOrderOption = {
 	priority: number;
 	weight: number;
-	type: 'position',
-	object: RoomPosition,
-	resourceType: ResourceConstant,
-}
+	type: 'position';
+	object: RoomPosition;
+	resourceType: ResourceConstant;
+};
 
 type TransporterSourceOrderOption = ResourceSourceTask | TransporterStructureOrderOption | TransporterPickupOrderOption | TransporterTombstoneOrderOption;
 
@@ -57,7 +57,7 @@ type TransporterGetEnergyOrder = {
 	type: 'getEnergy' | 'getResource';
 	target: Id<AnyStoreStructure | Resource | Ruin | Tombstone>;
 	resourceType: ResourceConstant;
-}
+};
 
 type TransporterOrder = TransporterGetEnergyOrder | ResourceSourceTask | ResourceDestinationTask;
 
@@ -75,8 +75,8 @@ declare global {
 	}
 
 	interface TransporterCreepHeapMemory extends CreepHeapMemory {
-		energyTakenFrom?: Id<AnyStoreStructure>,
-		idlingFor?: number,
+		energyTakenFrom?: Id<AnyStoreStructure>;
+		idlingFor?: number;
 	}
 }
 
@@ -132,12 +132,10 @@ export default class TransporterRole extends Role {
 	run(creep: TransporterCreep) {
 		this.creep = creep;
 
-		if (creep.memory.singleRoom) {
-			if (creep.memory.order && 'target' in creep.memory.order) {
-				const target = Game.getObjectById<RoomObject & _HasId>(creep.memory.order.target);
-				if (target && target.pos && target.pos.roomName !== creep.memory.singleRoom) {
-					this.setTransporterState(creep.memory.delivering);
-				}
+		if (creep.memory.singleRoom && creep.memory.order && 'target' in creep.memory.order) {
+			const target = Game.getObjectById<RoomObject & _HasId>(creep.memory.order.target);
+			if (target && target.pos && target.pos.roomName !== creep.memory.singleRoom) {
+				this.setTransporterState(creep.memory.delivering);
 			}
 		}
 
@@ -150,11 +148,9 @@ export default class TransporterRole extends Role {
 		if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9 && !creep.memory.delivering) {
 			this.setTransporterState(true);
 		}
-		else if (creep.store.getUsedCapacity() <= creep.store.getCapacity() * 0.1 && creep.memory.delivering) {
-			// Don't switch state if we're currently filling a bay.
-			if (!creep.memory.order || !isResourceDestinationOrder(creep.room, creep.memory.order) || !isBayDestinationOrder(creep.memory.order)) {
-				this.setTransporterState(false);
-			}
+		else if (creep.store.getUsedCapacity() <= creep.store.getCapacity() * 0.1 && creep.memory.delivering // Don't switch state if we're currently filling a bay.
+			&& (!creep.memory.order || !isResourceDestinationOrder(creep.room, creep.memory.order) || !isBayDestinationOrder(creep.memory.order))) {
+			this.setTransporterState(false);
 		}
 
 		if (this.bayUnstuck()) return;
@@ -268,10 +264,10 @@ export default class TransporterRole extends Role {
 
 		if (isResourceDestinationOrder(creep.room, creep.memory.order)) {
 			if (
-				creep.memory.order.resourceType === RESOURCE_ENERGY &&
-				creep.heapMemory.energyTakenFrom &&
-				isStructureDestinationOrder(creep.memory.order) &&
-				creep.heapMemory.energyTakenFrom === creep.memory.order.target
+				creep.memory.order.resourceType === RESOURCE_ENERGY
+				&& creep.heapMemory.energyTakenFrom
+				&& isStructureDestinationOrder(creep.memory.order)
+				&& creep.heapMemory.energyTakenFrom === creep.memory.order.target
 			) {
 				// We're looping, taking energy and putting it right back.
 				// Instead, we should wait for a while until new tasks show up.
@@ -324,7 +320,7 @@ export default class TransporterRole extends Role {
 			if (newOrder && isResourceSourceOrder(creep.room, newOrder) && isStructureSourceOrder(newOrder) && newOrder.resourceType === RESOURCE_ENERGY) {
 				creep.heapMemory.energyTakenFrom = newOrder.target;
 			}
-		}
+		};
 
 		if (!this.ensureValidResourceSource(creep.memory.order, calculateSourceCallback)) {
 			delete creep.memory.order;
@@ -353,8 +349,8 @@ export default class TransporterRole extends Role {
 			if (target instanceof Resource) {
 				orderDone = creep.pickup(target) === OK;
 				if (
-					orderDone &&
-					creep.store.getFreeCapacity() > target.amount
+					orderDone
+					&& creep.store.getFreeCapacity() > target.amount
 				) {
 					const containers = _.filter(target.pos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_CONTAINER) as StructureContainer[];
 					if (containers.length > 0 && (containers[0].store.getUsedCapacity(target.resourceType) || 0) > 0) {
@@ -370,11 +366,11 @@ export default class TransporterRole extends Role {
 					}
 				}
 			}
+			else if ('amount' in creep.memory.order) {
+				orderDone = creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity())) === OK;
+			}
 			else {
-				if ('amount' in creep.memory.order)
-					orderDone = creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity())) === OK;
-				else
-					orderDone = creep.withdraw(target, resourceType) === OK;
+				orderDone = creep.withdraw(target, resourceType) === OK;
 			}
 
 			if (orderDone) {
@@ -401,6 +397,7 @@ export default class TransporterRole extends Role {
 			calculateSourceCallback();
 			order = creep.memory.order;
 		}
+
 		if (!order) return false;
 
 		if (isResourceSourceOrder(creep.room, order)) {
@@ -536,7 +533,7 @@ export default class TransporterRole extends Role {
 				if ((store[RESOURCE_ENERGY] || 0) < 20) return false;
 				if (!this.isSafePosition(creep, target.pos)) return false;
 
-				// const result = PathFinder.search(creep.pos, target.pos);
+				// Const result = PathFinder.search(creep.pos, target.pos);
 				// if (result.incomplete) return false;
 
 				return true;
@@ -664,14 +661,15 @@ export default class TransporterRole extends Role {
 				let isEmptyMineralContainer = false;
 				for (const mineral of room.minerals) {
 					if (
-						container.id === mineral.getNearbyContainer()?.id &&
-						resourceType === mineral.mineralType &&
-						container.store[resourceType] < CONTAINER_CAPACITY / 2
+						container.id === mineral.getNearbyContainer()?.id
+						&& resourceType === mineral.mineralType
+						&& container.store[resourceType] < CONTAINER_CAPACITY / 2
 					) {
 						isEmptyMineralContainer = true;
 						break;
 					}
 				}
+
 				if (isEmptyMineralContainer) continue;
 
 				const option: TransporterStructureOrderOption = {

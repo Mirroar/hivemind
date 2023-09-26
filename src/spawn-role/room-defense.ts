@@ -229,13 +229,13 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			// @todo Only use boosts if walls have some damage on them.
 			return this.generateCreepBoosts(room, body, WORK, 'repair', this.getMaxEnemyBoostLevel(room));
 		}
-		else if (option.creepRole === 'guardian') {
+
+		if (option.creepRole === 'guardian') {
 			if (body.includes(ATTACK)) {
 				return this.generateCreepBoosts(room, body, ATTACK, 'attack', this.getMaxEnemyBoostLevel(room));
 			}
-			else {
-				return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack', this.getMaxEnemyBoostLevel(room));
-			}
+
+			return this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack', this.getMaxEnemyBoostLevel(room));
 		}
 
 		return null;

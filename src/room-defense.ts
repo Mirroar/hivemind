@@ -44,7 +44,7 @@ export {
 	ENEMY_STRENGTH_NORMAL,
 	ENEMY_STRENGTH_STRONG,
 	ENEMY_STRENGTH_DEADLY,
-}
+};
 
 export default class RoomDefense {
 	roomName: string;
@@ -73,6 +73,7 @@ export default class RoomDefense {
 						opacity: 0.3,
 					});
 				}
+
 				if (dangerMatrix.get(x, y) === 2) {
 					visual.rect(x - 0.3, y - 0.3, 0.6, 0.6, {
 						fill: '#6060af',
@@ -109,6 +110,7 @@ export default class RoomDefense {
 				if (ramps.length === 0) {
 					return 0;
 				}
+
 				if (!minHits || ramps[0].hits < minHits) {
 					minHits = ramps[0].hits;
 				}
@@ -160,28 +162,30 @@ export default class RoomDefense {
 						if (attackParts.includes(part.type)) {
 							attackStrength += partPower * boostPower;
 						}
+
 						if (part.type === HEAL) {
 							healStrength += partPower * boostPower;
 						}
+
 						totalStrength += partPower * boostPower;
 					}
 				}
-			};
+			}
 
-			let towerStrength = TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length / 2;
+			const towerStrength = TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length / 2;
 
 			// Active defense is calculated as having 2 creeps
 			// with 50% attack and move parts.
-			let defensiveCreepStrength = 2 * ATTACK_POWER * Math.min(MAX_CREEP_SIZE / 2, Math.floor(this.room.energyCapacityAvailable / (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])));
+			const defensiveCreepStrength = 2 * ATTACK_POWER * Math.min(MAX_CREEP_SIZE / 2, Math.floor(this.room.energyCapacityAvailable / (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])));
 
 			// @todo Factor in if we can use boosts on defense creeps.
-			let defenseBoostPower = 1;
+			const defenseBoostPower = 1;
 
 			// If the enemy can take down a piece of wall in < 3000 ticks, that's a problem.
-			let normalDamageThreshold = this.getLowestWallStrength() / 3000;
+			const normalDamageThreshold = this.getLowestWallStrength() / 3000;
 
 			// If the enemy can take down a piece of wall in < 1000 ticks, that's a big problem.
-			let highDamageThreshold = this.getLowestWallStrength() / 1000;
+			const highDamageThreshold = this.getLowestWallStrength() / 1000;
 
 			if (attackStrength === 0) return ENEMY_STRENGTH_NONE;
 			if (invaderOnly || (healStrength < towerStrength && attackStrength < highDamageThreshold)) return ENEMY_STRENGTH_WEAK;

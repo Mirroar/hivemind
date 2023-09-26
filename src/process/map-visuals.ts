@@ -125,6 +125,7 @@ export default class MapVisualsProcess extends Process {
 			else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
 				color = '#ff8000';
 			}
+
 			const style = {
 				color,
 				opacity: 1,

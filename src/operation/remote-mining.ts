@@ -2,17 +2,6 @@
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
-declare global {
-	interface RemoteMiningOperationMemory extends OperationMemory {
-		type: 'mining';
-		status: {
-			[sourceLocation: string]: {
-				containerId?: Id<StructureContainer>;
-			}
-		}
-	}
-}
-
 import cache from 'utils/cache';
 import HaulerRole from 'spawn-role/hauler';
 import hivemind from 'hivemind';
@@ -24,6 +13,15 @@ import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
 import {packPosList, unpackPosList} from 'utils/packrat';
+
+declare global {
+	interface RemoteMiningOperationMemory extends OperationMemory {
+		type: 'mining';
+		status: Record<string, {
+			containerId?: Id<StructureContainer>;
+		}>;
+	}
+}
 
 const energyCache: Record<string, number> = {};
 
@@ -67,9 +65,7 @@ export default class RemoteMiningOperation extends Operation {
 		if (!hivemind.segmentMemory.isReady()) return {};
 
 		return cache.inHeap('sourceRooms:' + this.name, 1000, () => {
-			const result: {
-				[roomName: string]: string[],
-			} = {};
+			const result: Record<string, string[]> = {};
 			const paths = this.getPaths();
 
 			_.each(paths, (info, sourceLocation) => {
@@ -130,16 +126,14 @@ export default class RemoteMiningOperation extends Operation {
 			if (!hivemind.segmentMemory.isReady()) return {};
 
 			const positions = this.getSourcePositions();
-			const result: {
-				[sourceLocation: string]: {
-					accessible: boolean;
-					path?: RoomPosition[];
-					sourceRoom?: string;
-					travelTime?: number;
-					requiredCarryParts?: number;
-					requiredWorkParts?: number;
-				}
-			} = {};
+			const result: Record<string, {
+				accessible: boolean;
+				path?: RoomPosition[];
+				sourceRoom?: string;
+				travelTime?: number;
+				requiredCarryParts?: number;
+				requiredWorkParts?: number;
+			}> = {};
 			for (const sourcePos of positions) {
 				const sourceLocation = encodePosition(sourcePos);
 				if (!this.memory.status[sourceLocation]) this.memory.status[sourceLocation] = {};
@@ -299,11 +293,11 @@ export default class RemoteMiningOperation extends Operation {
 		}
 
 		const structures = position.lookFor(LOOK_STRUCTURES);
-		const structure = _.filter(structures, structure => structure.structureType === structureType)[0];
+		const structure = _.find(structures, structure => structure.structureType === structureType);
 		if (structure) return structure.hitsMax - structure.hits;
 
 		const sites = position.lookFor(LOOK_STRUCTURES);
-		const site = _.filter(sites, site => site.structureType === structureType)[0];
+		const site = _.find(sites, site => site.structureType === structureType);
 		if (site) return site.hitsMax * REPAIR_POWER;
 
 		return CONSTRUCTION_COST[structureType] * REPAIR_POWER;
@@ -419,7 +413,7 @@ export default class RemoteMiningOperation extends Operation {
 		for (const resource of position.findInRange(FIND_DROPPED_RESOURCES, 1)) {
 			if (resource.resourceType !== RESOURCE_ENERGY) continue;
 
-			total =+ resource.amount;
+			total = Number(resource.amount);
 		}
 
 		energyCache[sourceLocation] = total;
@@ -485,7 +479,7 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	hasActiveHarvesters(sourceLocation?: string): boolean {
-		if (sourceLocation) return _.filter(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation).length > 0;
+		if (sourceLocation) return _.some(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
 
 		for (const pos of this.getSourcePositions()) {
 			if (this.hasActiveHarvesters(encodePosition(pos))) return true;

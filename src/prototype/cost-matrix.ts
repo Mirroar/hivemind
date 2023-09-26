@@ -13,7 +13,7 @@ PathFinder.CostMatrix.prototype.render = function (this: CostMatrix, roomName?: 
 
 	let output = '<table style="display: inline-block">';
 	for (let y = 0; y < 50; y++) {
-		output += '<tr style="height: 2px">'
+		output += '<tr style="height: 2px">';
 		for (let x = 0; x < 50; x++) {
 			let value = this.get(x, y);
 			if (value === 0 && roomName) {

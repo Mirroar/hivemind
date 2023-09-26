@@ -34,7 +34,7 @@ export default class RoomPlanScorer {
 		score += 0.1 * this.getPlannedAmount(plan, STRUCTURE_SPAWN);
 		score += 0.2 * this.getPlannedAmount(plan, STRUCTURE_TERMINAL);
 		score += 0.2 * this.getPlannedAmount(plan, STRUCTURE_TOWER);
-		score += 1 * this.getPlannedAmount(plan, STRUCTURE_STORAGE);
+		score += Number(this.getPlannedAmount(plan, STRUCTURE_STORAGE));
 
 		return score;
 	}
@@ -110,11 +110,11 @@ export default class RoomPlanScorer {
 		// Travel time from spawn to harvest positions.
 		const spawnGoals = _.map(
 			plan.getPositions(STRUCTURE_SPAWN),
-			spawnPosition => {return {pos: spawnPosition, range: 1};}
+			spawnPosition => ({pos: spawnPosition, range: 1}),
 		);
 		total -= 0.003 * _.sum(_.map(
 			plan.getPositions('harvester'),
-			harvestPosition => this.getPathLength(harvestPosition, spawnGoals, matrix)
+			harvestPosition => this.getPathLength(harvestPosition, spawnGoals, matrix),
 		));
 
 		// Travel time from spawn to upgrader position.
@@ -136,13 +136,13 @@ export default class RoomPlanScorer {
 		// Refill travel time from storage to towers.
 		total -= 0.001 * _.sum(_.map(
 			plan.getPositions('tower'),
-			towerPosition => this.getPathLength(towerPosition, roomCenter, matrix)
+			towerPosition => this.getPathLength(towerPosition, roomCenter, matrix),
 		));
 
 		return total;
 	}
 
-	getPathLength(from: RoomPosition, to: RoomPosition | {pos: RoomPosition, range: number} | {pos: RoomPosition, range: number}[], matrix: CostMatrix): number {
+	getPathLength(from: RoomPosition, to: RoomPosition | {pos: RoomPosition; range: number} | Array<{pos: RoomPosition; range: number}>, matrix: CostMatrix): number {
 		const result = PathFinder.search(from, to, {
 			roomCallback: () => matrix,
 			plainCost: 2,

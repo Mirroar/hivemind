@@ -48,10 +48,12 @@ export default class TradeProcess extends Process {
 				// Buy energy for rooms under attack so we can hold out longer.
 				for (const room of Game.myRooms) {
 					if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
-						if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500)
+						if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500) {
 							this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
-						else
+						}
+						else {
 							this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
+						}
 					}
 				}
 			}
@@ -101,10 +103,10 @@ export default class TradeProcess extends Process {
 				if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > STORAGE_CAPACITY / 10) return;
 
 				// @todo Force creating a buy order for every affected room.
-				const temp = {
+				const temporary = {
 					[roomName]: roomState,
 				};
-				this.tryBuyResources(RESOURCE_ENERGY, temp, true);
+				this.tryBuyResources(RESOURCE_ENERGY, temporary, true);
 			});
 		}
 
@@ -165,6 +167,7 @@ export default class TradeProcess extends Process {
 			for (const mineralType of roomData.mineralTypes) {
 				total.sources[mineralType] = (total.sources[mineralType] || 0) + 1;
 			}
+
 			rooms[room.name] = roomData;
 		}
 

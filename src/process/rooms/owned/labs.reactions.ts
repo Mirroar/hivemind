@@ -46,7 +46,7 @@ export default class ReactionsProcess extends Process {
 			_.each(REACTIONS[resourceType], (targetType, resourceType2) => {
 				const amount2 = roomData.totalResources[resourceType2] || 0;
 				const resultAmount = roomData.totalResources[targetType] || 0;
-				// if (resultAmount > 10_000) return;
+				// If (resultAmount > 10_000) return;
 				if (amount2 <= 0) return;
 
 				// Also prioritize reactions whose product we don't have much of.

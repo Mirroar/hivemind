@@ -17,12 +17,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	exitCenters: ExitCoords;
 	roomCenter: RoomPosition;
 	roomCenterEntrances: RoomPosition[];
-	protected sourceInfo: {
-		[id: string]: {
-			harvestPosition: RoomPosition;
-		};
-	};
-	protected steps: (() => StepResult)[];
+	protected sourceInfo: Record<string, {
+		harvestPosition: RoomPosition;
+	}>;
+
+	protected steps: Array<() => StepResult>;
 
 	safetyMatrix: CostMatrix;
 
@@ -135,16 +134,16 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		handleMapArea(source.x, source.y, (x, y) => {
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
-			let numFreeTiles = 0;
+			let numberFreeTiles = 0;
 			handleMapArea(x, y, (x2, y2) => {
 				if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
 				if (!this.placementManager.isBuildableTile(x2, y2)) return;
 
-				numFreeTiles++;
+				numberFreeTiles++;
 			});
 
-			if (!bestPos || bestPos.numFreeTiles < numFreeTiles) {
-				bestPos = {x, y, numFreeTiles};
+			if (!bestPos || bestPos.numFreeTiles < numberFreeTiles) {
+				bestPos = {x, y, numFreeTiles: numberFreeTiles};
 			}
 		});
 
@@ -264,7 +263,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 1, this.roomCenter.y, this.roomName), 'link.storage');
 
 		return 'ok';
-	};
+	}
 
 	/**
 	 * Places parking spot for helper creep.
@@ -282,7 +281,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		this.placementManager.filterOpenList(encodePosition(nextPos));
 
 		return 'ok';
-	};
+	}
 
 	/**
 	 * Places extension bays.
@@ -308,7 +307,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		}
 
 		return 'ok';
-	};
+	}
 
 	/**
 	 * Finds best position to place a new bay at.
@@ -357,7 +356,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		if (maxExtensions < 4) return null;
 
 		return bestPos;
-	};
+	}
 
 	/**
 	 * Places labs in big compounds.
@@ -385,7 +384,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					[x + dx, y + 2 * dy],
 					[x + 2 * dx, y + 2 * dy],
 					[x + 2 * dx, y + dy],
-					[x + 2 * dx, y ],
+					[x + 2 * dx, y],
 				];
 				if (!this.canFitLabStamp(nextPos, dx, dy, availableTiles)) continue;
 
@@ -558,7 +557,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				this.markTilesInRangeOfUnsafeTile(x, y);
 			}
 		}
-	};
+	}
 
 	/**
 	 * Removes any walls that can not be reached from the given list of coordinates.
@@ -603,7 +602,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 			this.checkForAdjacentWallsToPrune(nextPos, walls, openList, closedList);
 		}
-	};
+	}
 
 	/**
 	 * Checks tiles adjacent to this one.
@@ -648,7 +647,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				openList[posName] = true;
 			}
 		});
-	};
+	}
 
 	/**
 	 * Mark tiles that can be reached by ranged creeps outside our walls as unsafe.
@@ -704,6 +703,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					for (let i = 0; i < 10; i++) {
 						this.roomPlan.removePosition('extension.bay.' + i, road);
 					}
+
 					this.placementManager.unblockPosition(road.x, road.y);
 				}
 
@@ -715,12 +715,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	}
 
 	getRampartGroups(): RoomPosition[][] {
-		const allRamparts = _.map(this.roomPlan.getPositions('rampart'), pos => {
-			return {
-				pos,
-				isUsed: false,
-			};
-		});
+		const allRamparts = _.map(this.roomPlan.getPositions('rampart'), pos => ({
+			pos,
+			isUsed: false,
+		}));
 
 		const rampartGroups: RoomPosition[][] = [];
 		for (const rampart of allRamparts) {

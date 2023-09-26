@@ -2,6 +2,12 @@ declare global {
 	interface Memory {
 		tradeRoutes: Record<string, TradeRouteMemory>;
 	}
+
+	namespace NodeJS {
+		interface Global {
+			TradeRoute: typeof TradeRoute;
+		}
+	}
 }
 
 type TradeRouteMemory = {
@@ -82,4 +88,4 @@ export default class TradeRoute {
 		return this.memory.travelLength && (Game.time - this.memory.travelLengthCalculated < 10_000);
 	}
 }
-global['TradeRoute'] = TradeRoute;
+global.TradeRoute = TradeRoute;

@@ -63,9 +63,7 @@ export default class HaulerRole extends Role {
 		if (creep.memory.delivering) {
 			// Repair / build roads on the way home.
 
-			if (creep.operation && Game.cpu.bucket > 3000) {
-				if (this.performBuildRoad(creep)) return;
-			}
+			if (creep.operation && Game.cpu.bucket > 3000 && this.performBuildRoad(creep)) return;
 
 			this.performHaulerDeliver(creep);
 			return;
@@ -126,9 +124,9 @@ export default class HaulerRole extends Role {
 			const isDying = path && creep.ticksToLive <= path.length;
 
 			if (
-				creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.9 &&
-				container.store.getUsedCapacity() > container.store.getCapacity() * 0.1 &&
-				!isDying
+				creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.9
+				&& container.store.getUsedCapacity() > container.store.getCapacity() * 0.1
+				&& !isDying
 			) {
 				// If we're close to source container, make sure we fill up before
 				// returning home.
@@ -443,12 +441,10 @@ export default class HaulerRole extends Role {
 			// Create construction site in remote rooms.
 			if (!tileHasRoad && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.7) {
 				const sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
-				const numSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
-				if (sites.length === 0 && numSites < 5) {
-					if (position.createConstructionSite(STRUCTURE_ROAD) === OK) {
-						// Stay here to build the new construction site.
-						return true;
-					}
+				const numberSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
+				if (sites.length === 0 && numberSites < 5 && position.createConstructionSite(STRUCTURE_ROAD) === OK) {
+					// Stay here to build the new construction site.
+					return true;
 				}
 			}
 		}

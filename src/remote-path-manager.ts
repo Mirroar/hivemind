@@ -109,6 +109,6 @@ export default class RemotePathManager {
 			}
 
 			return matrix;
-		})
+		});
 	}
 }

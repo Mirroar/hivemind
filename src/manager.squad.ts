@@ -14,10 +14,16 @@ declare global {
 	}
 
 	type SquadMemory = {
-		composition: Partial<Record<SquadUnitType, number>>,
-		fullySpawned: boolean,
-		spawnRoom?: string,
-		targetPos?: string,
+		composition: Partial<Record<SquadUnitType, number>>;
+		fullySpawned: boolean;
+		spawnRoom?: string;
+		targetPos?: string;
+	};
+
+	namespace NodeJS {
+		interface Global {
+			Squad: typeof Squad;
+		}
 	}
 }
 
@@ -195,4 +201,4 @@ export default class Squad {
 	}
 }
 
-global['Squad'] = Squad;
+global.Squad = Squad;

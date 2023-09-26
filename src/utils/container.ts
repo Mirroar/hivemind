@@ -1,11 +1,17 @@
 declare global {
 	interface DependencyInjectionContainer {
 	}
+
+	namespace NodeJS {
+		interface Global {
+			container: typeof container;
+		}
+	}
 }
 
 type ContainerConstructors = {
 	[key in keyof DependencyInjectionContainer]: (c: Container) => DependencyInjectionContainer[key];
-}
+};
 
 export class Container {
 	services: DependencyInjectionContainer;
@@ -32,5 +38,6 @@ export class Container {
 	}
 }
 
-global['container'] = new Container();
-export default global['container'] as Container;
+const container = new Container();
+global.container = container;
+export default container;

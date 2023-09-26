@@ -10,9 +10,7 @@ declare global {
 }
 
 export default class VariationGenerator {
-	protected variations: {
-		[kes: string]: VariationInfo;
-	}
+	protected variations: Record<string, VariationInfo>;
 	protected variationKeys: string[];
 
 	constructor(protected readonly roomName: string, protected wallDistanceMatrix: CostMatrix, protected exitDistanceMatrix: CostMatrix) {}
@@ -26,7 +24,7 @@ export default class VariationGenerator {
 		this.variationKeys = _.keys(this.variations);
 	}
 
-	varyBy(originalVariations: {[key: string]: VariationInfo}, callback: (variation: VariationInfo) => {[key: string]: VariationInfo}): {[key: string]: VariationInfo} {
+	varyBy(originalVariations: Record<string, VariationInfo>, callback: (variation: VariationInfo) => Record<string, VariationInfo>): Record<string, VariationInfo> {
 		if (!originalVariations) return callback({});
 
 		const variations = {};
@@ -41,7 +39,7 @@ export default class VariationGenerator {
 		return variations;
 	}
 
-	varyRoomCenter(baseVariation: VariationInfo): {[key: string]: VariationInfo} {
+	varyRoomCenter(baseVariation: VariationInfo): Record<string, VariationInfo> {
 		const potentialCorePositions = this.collectPotentialCorePositions();
 
 		const weightedCenterVariation = {
@@ -51,7 +49,7 @@ export default class VariationGenerator {
 
 		if (!weightedCenterVariation.roomCenter) return {};
 
-		const variations = {'weighted': weightedCenterVariation};
+		const variations = {weighted: weightedCenterVariation};
 		this.addGridCorePositions(variations, baseVariation, potentialCorePositions);
 
 		return variations;
@@ -104,6 +102,7 @@ export default class VariationGenerator {
 				cy += pos.y;
 			}
 		}
+
 		// Also include source and mineral positions when determining room center.
 		for (const mineral of roomIntel.getMineralPositions()) {
 			count++;
@@ -130,14 +129,12 @@ export default class VariationGenerator {
 		return roomCenter;
 	}
 
-	addGridCorePositions(variations: {[key: string]: VariationInfo}, baseVariation: VariationInfo, potentialCorePositions: RoomPosition[]) {
+	addGridCorePositions(variations: Record<string, VariationInfo>, baseVariation: VariationInfo, potentialCorePositions: RoomPosition[]) {
 		const subdivisionCount = 3;
-		const bestOptions: {
-			[subDivision: string]: {
-				distance: number;
-				position: RoomPosition;
-			};
-		} = {};
+		const bestOptions: Record<string, {
+			distance: number;
+			position: RoomPosition;
+		}> = {};
 
 		for (const position of potentialCorePositions) {
 			const subDivision = Math.floor(position.x * subdivisionCount / 50) + 'x' + Math.floor(position.y * subdivisionCount / 50);
@@ -146,7 +143,7 @@ export default class VariationGenerator {
 				bestOptions[subDivision] = {
 					distance: this.wallDistanceMatrix.get(position.x, position.y),
 					position,
-				}
+				};
 			}
 		}
 
@@ -154,20 +151,20 @@ export default class VariationGenerator {
 			variations[subDivision] = {
 				...baseVariation,
 				roomCenter: bestOptions[subDivision].position,
-			}
+			};
 		}
 	}
 
-	varySourceSpawns(baseVariation: VariationInfo): {[key: string]: VariationInfo} {
+	varySourceSpawns(baseVariation: VariationInfo): Record<string, VariationInfo> {
 		const roomIntel = getRoomIntel(this.roomName);
 		const sources = roomIntel.getSourcePositions();
 
-		let currentVariations: {[key: string]: VariationInfo} = {
+		let currentVariations: Record<string, VariationInfo> = {
 			'': {...baseVariation, sourcesWithSpawn: []},
 		};
 
 		for (const source of sources) {
-			const modifiedVariations: {[key: string]: VariationInfo} = {};
+			const modifiedVariations: Record<string, VariationInfo> = {};
 			for (const key in currentVariations) {
 				const withNewSource = [...currentVariations[key].sourcesWithSpawn];
 				withNewSource.push(source.id);

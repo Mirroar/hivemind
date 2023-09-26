@@ -17,16 +17,16 @@ export default class BuilderSpawnRole extends SpawnRole {
 	getSpawnOptions(room: Room): BuilderSpawnOption[] {
 		const maxWorkParts = this.getNeededWorkParts(room);
 
-		let numWorkParts = 0;
+		let numberWorkParts = 0;
 		_.each(room.creepsByRole.builder, creep => {
-			numWorkParts += creep.getActiveBodyparts(WORK) || 0;
+			numberWorkParts += creep.getActiveBodyparts(WORK) || 0;
 		});
 
 		const availableEnergy = room.getEffectiveAvailableEnergy();
 		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
 		const needsBuildings = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
 
-		if (numWorkParts >= maxWorkParts) return [];
+		if (numberWorkParts >= maxWorkParts) return [];
 
 		return [{
 			priority: (needsStrongerRamparts || needsBuildings) ? 4 : 3,
@@ -45,10 +45,10 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   The number of work parts needed.
 	 */
 	getNeededWorkParts(room: Room): number {
-		const numConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
+		const numberConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
 		const hasStorage = room.storage || room.terminal;
 
-		if (numConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500 && hasStorage) {
+		if (numberConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500 && hasStorage) {
 			return 0;
 		}
 
@@ -114,7 +114,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		if (room.controller.level > 3) {
 			// Spawn more builders depending on total size of current construction sites.
 			// @todo Use hitpoints of construction sites vs number of work parts as a guide.
-			maxWorkParts += numConstructionSites / 2;
+			maxWorkParts += numberConstructionSites / 2;
 		}
 
 		return maxWorkParts;

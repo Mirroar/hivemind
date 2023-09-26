@@ -88,7 +88,7 @@ Room.prototype.getStorageLimit = function (this: Room) {
 
 	if (total === 0) {
 		// Assume 10000 storage for dropping stuff on the ground.
-		total += 10000;
+		total += 10_000;
 	}
 
 	return total;
@@ -135,9 +135,9 @@ Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: st
 		total += this.terminal.store[resourceType];
 	}
 
-	/*if (this.factory && this.factory.store[resourceType]) {
+	/* If (this.factory && this.factory.store[resourceType]) {
 		total += this.factory.store[resourceType];
-	}*/
+	} */
 
 	// Add resources in transporters to prevent fluctuation from transporters
 	// moving stuff around.
@@ -504,11 +504,33 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	// current factory level.
 	if (
 		([
-			RESOURCE_COMPOSITE, RESOURCE_CRYSTAL, RESOURCE_LIQUID,
-			RESOURCE_WIRE, RESOURCE_SWITCH, RESOURCE_TRANSISTOR, RESOURCE_MICROCHIP, RESOURCE_CIRCUIT, RESOURCE_DEVICE,
-			RESOURCE_CELL, RESOURCE_PHLEGM, RESOURCE_TISSUE, RESOURCE_MUSCLE, RESOURCE_ORGANOID, RESOURCE_ORGANISM,
-			RESOURCE_ALLOY, RESOURCE_TUBE, RESOURCE_FIXTURES, RESOURCE_FRAME, RESOURCE_HYDRAULICS, RESOURCE_MACHINE,
-			RESOURCE_CONDENSATE, RESOURCE_CONCENTRATE, RESOURCE_EXTRACT, RESOURCE_SPIRIT, RESOURCE_EMANATION, RESOURCE_ESSENCE,
+			RESOURCE_COMPOSITE,
+			RESOURCE_CRYSTAL,
+			RESOURCE_LIQUID,
+			RESOURCE_WIRE,
+			RESOURCE_SWITCH,
+			RESOURCE_TRANSISTOR,
+			RESOURCE_MICROCHIP,
+			RESOURCE_CIRCUIT,
+			RESOURCE_DEVICE,
+			RESOURCE_CELL,
+			RESOURCE_PHLEGM,
+			RESOURCE_TISSUE,
+			RESOURCE_MUSCLE,
+			RESOURCE_ORGANOID,
+			RESOURCE_ORGANISM,
+			RESOURCE_ALLOY,
+			RESOURCE_TUBE,
+			RESOURCE_FIXTURES,
+			RESOURCE_FRAME,
+			RESOURCE_HYDRAULICS,
+			RESOURCE_MACHINE,
+			RESOURCE_CONDENSATE,
+			RESOURCE_CONCENTRATE,
+			RESOURCE_EXTRACT,
+			RESOURCE_SPIRIT,
+			RESOURCE_EMANATION,
+			RESOURCE_ESSENCE,
 		] as string[]).includes(resourceType)
 	) {
 		if (!this.factory) return [1, 0, 0];
@@ -519,7 +541,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	// For boosts, try to have a minimum amount for all types. Later, make
 	// dependent on room military state and so on.
 	// @todo If there's no labs, we don't need boosts.
-	/*for (const bodyPart in BOOSTS) {
+	/* for (const bodyPart in BOOSTS) {
 		if (!BOOSTS[bodyPart][resourceType]) continue;
 
 		if (bodyPart === ATTACK || bodyPart === RANGED_ATTACK) {
@@ -532,7 +554,7 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 		}
 
 		return [10000, 5000, 750];
-	}*/
+	} */
 
 	// @todo If there's no labs or factory, we don't need minerals.
 	return [50_000, 30_000, 10_000];
@@ -627,10 +649,8 @@ Room.prototype.getBestStorageSource = function (this: Room, resourceType: Resour
 		const specialSource = this.getBestCircumstancialStorageSource(resourceType);
 		if (specialSource) return specialSource;
 
-		if ((this.storage.store[resourceType] || 0) / this.storage.store.getCapacity() < (this.terminal.store[resourceType]) / this.terminal.store.getCapacity()) {
-			if (this.memory.fillTerminal !== resourceType) {
-				return this.terminal;
-			}
+		if ((this.storage.store[resourceType] || 0) / this.storage.store.getCapacity() < (this.terminal.store[resourceType]) / this.terminal.store.getCapacity() && this.memory.fillTerminal !== resourceType) {
+			return this.terminal;
 		}
 
 		if ((this.storage.store[resourceType] || 0) > 0) {

@@ -64,8 +64,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 		const currentlyNeededCarryParts = this.getNeededCarryParts(room);
 		const currentHaulers = _.filter(Game.creepsByRole['hauler.relay'], creep =>
-			creep.memory.sourceRoom === room.name &&
-			(creep.spawning || creep.ticksToLive > haulerSpawnTime)
+			creep.memory.sourceRoom === room.name
+			&& (creep.spawning || creep.ticksToLive > haulerSpawnTime),
 		);
 		const currentCarryParts = _.sum(_.map(currentHaulers, creep => creep.getActiveBodyparts(CARRY)));
 
@@ -224,8 +224,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			const claimers = _.filter(
 				Game.creepsByRole.claimer || {},
 				(creep: ClaimerCreep) =>
-					creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos) &&
-					(creep.spawning || creep.ticksToLive > pathLength + claimerSpawnTime)
+					creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos)
+					&& (creep.spawning || creep.ticksToLive > pathLength + claimerSpawnTime),
 			);
 			if (_.size(claimers) > 0) continue;
 

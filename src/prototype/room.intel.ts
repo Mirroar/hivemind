@@ -13,20 +13,10 @@ import {getUsername} from 'utils/account';
 
 declare global {
 	interface Room {
-		creeps: {
-			[creepName: string]: Creep;
-		};
-		powerCreeps: {
-			[creepName: string]: PowerCreep;
-		}
-		creepsByRole: {
-			[roleName: string]: {
-				[creepName: string]: Creep;
-			};
-		};
-		enemyCreeps: {
-			[key: string]: Creep[];
-		};
+		creeps: Record<string, Creep>;
+		powerCreeps: Record<string, PowerCreep>;
+		creepsByRole: Record<string, Record<string, Creep>>;
+		enemyCreeps: Record<string, Creep[]>;
 		exploits: Record<string, Exploit>;
 		defense: RoomDefense;
 		sources: Source[];
@@ -64,9 +54,7 @@ Object.defineProperty(Room.prototype, 'enemyCreeps', {
 	 *   All enemy creeps in this room.
 	 */
 	get(this: Room) {
-		return cache.inObject(this, 'enemyCreeps', 1, () => {
-			return _.groupBy(this.find(FIND_HOSTILE_CREEPS), 'owner.username');
-		});
+		return cache.inObject(this, 'enemyCreeps', 1, () => _.groupBy(this.find(FIND_HOSTILE_CREEPS), 'owner.username'));
 	},
 	enumerable: false,
 	configurable: true,
@@ -105,9 +93,7 @@ Object.defineProperty(Room.prototype, 'defense', {
 	 *   The room's defense manager.
 	 */
 	get(this: Room) {
-		return cache.inObject(this, 'roomDefense', 1, () => {
-			return new RoomDefense(this.name);
-		});
+		return cache.inObject(this, 'roomDefense', 1, () => new RoomDefense(this.name));
 	},
 	enumerable: false,
 	configurable: true,
@@ -255,8 +241,8 @@ Room.prototype.updateControllerContainer = function (this: Room) {
 		const containerPositions: RoomPosition[] = this.roomPlanner.getLocations('container.controller');
 		if (containerPositions.length > 0) {
 			const structures = this.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_CONTAINER &&
-				_.filter(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
+				filter: structure => structure.structureType === STRUCTURE_CONTAINER
+				&& _.some(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
 			});
 			this.memory.controllerContainer = structures.length > 0 && structures[0].id;
 			if (!this.memory.controllerContainer) delete this.memory.controllerContainer;
@@ -282,8 +268,8 @@ Room.prototype.updateControllerLink = function (this: Room) {
 		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.controller');
 		if (linkPositions.length > 0) {
 			const structures = this.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_LINK &&
-				_.filter(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
+				filter: structure => structure.structureType === STRUCTURE_LINK
+				&& _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
 			});
 			this.memory.controllerLink = structures.length > 0 && structures[0].id;
 			if (!this.memory.controllerLink) delete this.memory.controllerLink;
@@ -311,8 +297,8 @@ Room.prototype.updateStorageLink = function (this: Room) {
 		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.storage');
 		if (linkPositions.length > 0) {
 			const structures = this.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_LINK &&
-				_.filter(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y).length > 0,
+				filter: structure => structure.structureType === STRUCTURE_LINK
+				&& _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
 			});
 			this.memory.storageLink = structures.length > 0 && structures[0].id;
 			return;
@@ -361,9 +347,9 @@ Room.prototype.isMine = function (this: Room, allowReserved?: boolean) {
 Room.prototype.needsReclaiming = function (this: Room) {
 	const reclaimManager = container.get('ReclaimManager');
 	return reclaimManager.roomNeedsReclaiming(this);
-}
+};
 
 Room.prototype.isSafeForReclaiming = function (this: Room) {
 	const reclaimManager = container.get('ReclaimManager');
 	return reclaimManager.roomIsSafeForReclaiming(this);
-}
+};

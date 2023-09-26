@@ -1,18 +1,18 @@
 
 declare global {
-  interface Memory {
-    throttleInfo: {
-      bucket: {
-        normal: number;
-        warning: number;
-        critical: number;
-      };
-    };
-  }
+	interface Memory {
+		throttleInfo: {
+			bucket: {
+				normal: number;
+				warning: number;
+				critical: number;
+			};
+		};
+	}
 
-  interface CreepHeapMemory {
-    _tO?: number;
-  }
+	interface CreepHeapMemory {
+		_tO?: number;
+	}
 }
 
 const throttleNumbers = [];
@@ -32,22 +32,22 @@ let throttleOffset = 0;
  *   True if the operation is allowed to run.
  */
 function throttle(offset: number, minBucket?: number, maxBucket?: number) {
-  initThrottleMemory();
+	initThrottleMemory();
 
-  if (!offset) offset = 0;
-  if (typeof minBucket !== 'number') minBucket = Memory.throttleInfo.bucket.critical;
-  if (typeof maxBucket !== 'number') maxBucket = Memory.throttleInfo.bucket.normal;
+	if (!offset) offset = 0;
+	if (typeof minBucket !== 'number') minBucket = Memory.throttleInfo.bucket.critical;
+	if (typeof maxBucket !== 'number') maxBucket = Memory.throttleInfo.bucket.normal;
 
-  const bucket = Game.cpu.bucket;
-  if (bucket >= maxBucket) return false;
-  if (bucket < minBucket) return true;
+	const bucket = Game.cpu.bucket;
+	if (bucket >= maxBucket) return false;
+	if (bucket < minBucket) return true;
 
-  const tick = (Game.time + offset) % throttleNumbers.length;
-  const ratio = (bucket - minBucket) / (maxBucket - minBucket);
+	const tick = (Game.time + offset) % throttleNumbers.length;
+	const ratio = (bucket - minBucket) / (maxBucket - minBucket);
 
-  if (ratio >= throttleNumbers[tick]) return false;
+	if (ratio >= throttleNumbers[tick]) return false;
 
-  return true;
+	return true;
 }
 
 /**
@@ -57,33 +57,33 @@ function throttle(offset: number, minBucket?: number, maxBucket?: number) {
  *   Offset to store for a throttled operation.
  */
 function getThrottleOffset(): number {
-  return throttleOffset++;
+	return throttleOffset++;
 }
 
 /**
  * Initializes memory with general throttling information.
  */
 function initThrottleMemory(): void {
-  if (!Memory.throttleInfo) {
-    Memory.throttleInfo = {
-      bucket: {
-        normal: 8000,
-        warning: 5000,
-        critical: 2000,
-      },
-    };
-  }
+	if (!Memory.throttleInfo) {
+		Memory.throttleInfo = {
+			bucket: {
+				normal: 8000,
+				warning: 5000,
+				critical: 2000,
+			},
+		};
+	}
 
-  if (throttleNumbers.length === 0) {
-    const sequence = generateEvenSequence(8, 2);
-    const max = sequence[0];
+	if (throttleNumbers.length === 0) {
+		const sequence = generateEvenSequence(8, 2);
+		const max = sequence[0];
 
-    _.each(sequence, (number, index) => {
-      throttleNumbers[index] = 1 - (number / max);
-    });
+		_.each(sequence, (number, index) => {
+			throttleNumbers[index] = 1 - (number / max);
+		});
 
-    throttleNumbers[0] = 1;
-  }
+		throttleNumbers[0] = 1;
+	}
 }
 
 /**
@@ -98,46 +98,46 @@ function initThrottleMemory(): void {
  *   The generated sequence, containing all numbers from 1 to base^power.
  */
 function generateEvenSequence(power: number, base: number): number[] {
-  const numbers: number[] = [];
-  const digits: number[] = [];
-  for (let i = 0; i < power; i++) {
-    digits[i] = 0;
-  }
+	const numbers: number[] = [];
+	const digits: number[] = [];
+	for (let i = 0; i < power; i++) {
+		digits[i] = 0;
+	}
 
-  function increase(digit: number) {
-    if (digit >= power) return;
+	function increase(digit: number) {
+		if (digit >= power) return;
 
-    digits[digit]++;
-    if (digits[digit] >= base) {
-      digits[digit] = 0;
-      increase(digit + 1);
-    }
-  }
+		digits[digit]++;
+		if (digits[digit] >= base) {
+			digits[digit] = 0;
+			increase(digit + 1);
+		}
+	}
 
-  function getNumber() {
-    let sum = 0;
-    for (let i = 0; i < power; i++) {
-      sum *= base;
-      sum += digits[i];
-    }
+	function getNumber() {
+		let sum = 0;
+		for (let i = 0; i < power; i++) {
+			sum *= base;
+			sum += digits[i];
+		}
 
-    return sum;
-  }
+		return sum;
+	}
 
-  increase(0);
-  let number = getNumber();
-  const max = number * base;
-  numbers.push(max);
-  while (number !== 0) {
-    numbers.push(number);
-    increase(0);
-    number = getNumber();
-  }
+	increase(0);
+	let number = getNumber();
+	const max = number * base;
+	numbers.push(max);
+	while (number !== 0) {
+		numbers.push(number);
+		increase(0);
+		number = getNumber();
+	}
 
-  return numbers;
+	return numbers;
 }
 
 export {
-  throttle,
-  getThrottleOffset,
-}
+	throttle,
+	getThrottleOffset,
+};

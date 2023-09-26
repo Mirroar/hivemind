@@ -188,11 +188,11 @@ export default class SpawnRole {
 		if (!room.boostManager.canSpawnBoostedCreeps()) return {};
 
 		const availableBoosts = room.boostManager.getAvailableBoosts(boostType);
-		const numAffectedParts = _.countBy(body)[partType] || 0;
+		const numberAffectedParts = _.countBy(body)[partType] || 0;
 		let bestBoost: ResourceConstant;
 		let resourceType: ResourceConstant;
 		for (resourceType in availableBoosts) {
-			if (availableBoosts[resourceType].available < numAffectedParts) continue;
+			if (availableBoosts[resourceType].available < numberAffectedParts) continue;
 			if (maxTier && resourceType.length > maxTier) continue;
 
 			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {

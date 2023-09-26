@@ -14,7 +14,13 @@ declare global {
 
 	interface WeightedOption {
 		priority: number;
-		weight: number
+		weight: number;
+	}
+
+	namespace NodeJS {
+		interface Global {
+			utilities: typeof utilities;
+		}
 	}
 }
 
@@ -66,7 +72,7 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?:boolean, allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string} = {}) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?: boolean; allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string} = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
@@ -74,10 +80,8 @@ const utilities = {
 
 			roomCallback: roomName => {
 				// If a room is considered inaccessible, don't look for paths through it.
-				if (!(allowDanger || addOptions.allowDanger) && hivemind.segmentMemory.isReady() && getRoomIntel(roomName).isOwned()) {
-					if (!addOptions.whiteListRooms || addOptions.whiteListRooms.indexOf(roomName) === -1) {
-						return false;
-					}
+				if (!(allowDanger || addOptions.allowDanger) && hivemind.segmentMemory.isReady() && getRoomIntel(roomName).isOwned() && (!addOptions.whiteListRooms || !addOptions.whiteListRooms.includes(roomName))) {
+					return false;
 				}
 
 				const options = {
@@ -87,6 +91,7 @@ const utilities = {
 				if (addOptions.singleRoom && addOptions.singleRoom === roomName) {
 					options.singleRoom = true;
 				}
+
 				if (addOptions.isQuad) {
 					options.isQuad = true;
 				}
@@ -191,4 +196,4 @@ const utilities = {
 };
 
 export default utilities;
-global['utilities'] = utilities;
+global.utilities = utilities;

@@ -29,10 +29,10 @@ export default class MuleSpawnRole extends SpawnRole {
 			const minAmount = resourceType === RESOURCE_ENERGY ? 5000 : 1000;
 			if (storedAmount < minAmount) return;
 
-			const numMules = _.filter(Game.creepsByRole.mule || [], (creep: MuleCreep) => creep.memory.origin === room.name && creep.memory.route === routeName).length;
+			const numberMules = _.filter(Game.creepsByRole.mule || [], (creep: MuleCreep) => creep.memory.origin === room.name && creep.memory.route === routeName).length;
 			// @todo Allow more mules at low priority if a lot of resources need
 			// delivering.
-			if (numMules > 0) return;
+			if (numberMules > 0) return;
 
 			options.push({
 				priority: 2,
@@ -95,4 +95,4 @@ export default class MuleSpawnRole extends SpawnRole {
 
 		return this.generateCreepBoosts(room, body, CARRY, 'capacity');
 	}
-};
+}

@@ -67,7 +67,9 @@ export default class CreepManager {
 	onTickStart() {
 		this.performance = {};
 		this.prepareStatMemory('total');
-		_.each(_.keys(this.roles), roleId => this.prepareStatMemory(roleId));
+		_.each(_.keys(this.roles), roleId => {
+			this.prepareStatMemory(roleId);
+		});
 	}
 
 	/**
@@ -135,7 +137,7 @@ export default class CreepManager {
 				shouldRun = this.roles[roleId].preRun(creep);
 			}
 
-			if (shouldRun !== false) {
+			if (shouldRun) {
 				this.roles[roleId].run(creep);
 			}
 		});

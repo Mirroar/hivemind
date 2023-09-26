@@ -9,7 +9,6 @@ declare global {
 }
 
 export default class RolesReport {
-
 	visualize() {
 		const visual = new RoomVisual();
 
@@ -26,10 +25,10 @@ export default class RolesReport {
 
 	getRoleData(): string[][] {
 		const roleData: string[][] = [['Role', 'Creep Count', 'Total Calls', 'CPU Avg', 'Max CPU']];
-		let cpuData = getCallStats('creepRole:');
+		const cpuData = getCallStats('creepRole:');
 		for (const key in cpuData) {
 			const record = cpuData[key];
-			const roleName = key.substr(10);
+			const roleName = key.slice(10);
 			roleData.push([roleName, _.size(Game.creepsByRole[roleName]).toString(), record.count.toString(), record.average.toPrecision(3), record.maximum.toPrecision(3)]);
 		}
 
@@ -39,5 +38,4 @@ export default class RolesReport {
 	help() {
 		return 'Get a listing of creeps per role on the shard, with stats for CPU usage.';
 	}
-
 }

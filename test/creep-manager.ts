@@ -31,7 +31,7 @@ const getMockCreep = function (role: string, options?: any) {
 };
 
 test.beforeEach(() => {
-	let _timeUsed = 0;
+	const _timeUsed = 0;
 
 	global.Game = {
 		cpu: {
@@ -59,7 +59,9 @@ test('role management', t => {
 
 test('running logic by role', t => {
 	const manager = new CreepManager();
-	manager.registerCreepRole('test', {run: creep => t.is(creep.name, 'foo', 'Run function should only be called for creeps with supported roles.')});
+	manager.registerCreepRole('test', {run: creep => {
+		t.is(creep.name, 'foo', 'Run function should only be called for creeps with supported roles.');
+	}});
 
 	t.plan(1);
 
@@ -72,8 +74,14 @@ test('running logic by role', t => {
 
 test('preRun hooks', t => {
 	const manager = new CreepManager();
-	manager.registerCreepRole('test', {run: () => t.pass(), preRun: () => t.pass('preRun hook should be called.')});
-	manager.registerCreepRole('shouldNotRun', {run: () => t.fail('Don\'t call run function when preRun returns false.'), preRun: () => false});
+	manager.registerCreepRole('test', {run: () => {
+		t.pass();
+	}, preRun: () => {
+		t.pass('preRun hook should be called.');
+	}});
+	manager.registerCreepRole('shouldNotRun', {run: () => {
+		t.fail('Don\'t call run function when preRun returns false.');
+	}, preRun: () => false});
 
 	t.plan(2);
 
@@ -96,8 +104,12 @@ test('changing roles', t => {
 
 test('throttling', t => {
 	const manager = new CreepManager();
-	manager.registerCreepRole('low_priority', {throttleAt: 9500, stopAt: 8000, run: () => t.pass('Run function should always be called for creeps on exit tiles.')});
-	manager.registerCreepRole('high_priority', {throttleAt: 8000, stopAt: 500, run: () => t.pass('Run function should only be called if enough bucket available.')});
+	manager.registerCreepRole('low_priority', {throttleAt: 9500, stopAt: 8000, run: () => {
+		t.pass('Run function should always be called for creeps on exit tiles.');
+	}});
+	manager.registerCreepRole('high_priority', {throttleAt: 8000, stopAt: 500, run: () => {
+		t.pass('Run function should only be called if enough bucket available.');
+	}});
 
 	t.plan(3);
 

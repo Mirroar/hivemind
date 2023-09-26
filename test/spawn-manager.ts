@@ -101,7 +101,9 @@ test('spawn conditions', t => {
 test('optimization', t => {
 	const manager = new SpawnManager();
 	manager.registerSpawnRole('test', {
-		getSpawnOptions: () => t.fail('Options get checked even though all spawns are busy.'),
+		getSpawnOptions: () => {
+			t.fail('Options get checked even though all spawns are busy.');
+		},
 	});
 
 	const room = {};

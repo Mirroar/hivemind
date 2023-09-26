@@ -20,8 +20,8 @@ export default class FunnelManager {
 			const hasEnoughRCL7 = (roomsAtLevel[7]?.length || 0) > 2;
 
 			if (
-				(hasEnoughRCL7 && !hasRCL8) ||
-				(!hasRCL6 && hasRCL7)
+				(hasEnoughRCL7 && !hasRCL8)
+				|| (!hasRCL6 && hasRCL7)
 			) {
 				// Funnel to best RCL 7 room.
 				funneledRooms.push(_.max(roomsAtLevel[7], room => Memory.strategy.roomList[room.name]?.expansionScore).name);
@@ -64,7 +64,7 @@ export default class FunnelManager {
 	getRequestedFunnelTradeRoutes(funnelTargets: Room[]): TraderouteInfo[] {
 		const tradeRoutes: TraderouteInfo[] = [];
 		for (const room of funnelTargets) {
-			const sourceRooms = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && sourceRoom.getEffectiveAvailableEnergy() > 30000 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
+			const sourceRooms = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && sourceRoom.getEffectiveAvailableEnergy() > 30_000 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
 			for (const sourceRoom of sourceRooms) {
 				tradeRoutes.push({
 					source: sourceRoom.name,

@@ -53,7 +53,8 @@ const balancer = {
 			// We spent more energy on power than planned.
 			Memory.energyBalace.powerEnergy -= Memory.energyBalace.gplEnergy * ratio / (1 - ratio);
 			Memory.energyBalace.gplEnergy = 0;
-		} else {
+		}
+		else {
 			// We spent more energy on GPL than planned.
 			Memory.energyBalace.gplEnergy -= Memory.energyBalace.powerEnergy * (1 - ratio) / ratio;
 			Memory.energyBalace.powerEnergy = 0;
@@ -74,6 +75,6 @@ const balancer = {
 
 		return ratio >= 1 || Memory.energyBalace.powerEnergy < 10_000;
 	},
-}
+};
 
 export default balancer;

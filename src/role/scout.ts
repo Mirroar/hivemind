@@ -188,15 +188,13 @@ export default class ScoutRole extends Role {
 		return cache.inHeap('scoutableRooms', 200, () => _.filter(
 			_.map(
 				Memory.strategy.roomList,
-				(info: RoomListEntry, roomName: string) => {
-					return {...info, roomName};
-				}
+				(info: RoomListEntry, roomName: string) => ({...info, roomName}),
 			),
 			(info: ScoutTarget) => {
 				if (info.scoutPriority <= 0) return false;
 
 				return true;
-			}
+			},
 		));
 	}
 
@@ -217,15 +215,15 @@ export default class ScoutRole extends Role {
 		if (history.length > 20) creep.heapMemory.roomHistory = history.slice(-10);
 
 		if (
-			history.length >= 10 &&
-			history[history.length - 1] === history[history.length - 3] &&
-			history[history.length - 2] === history[history.length - 4] &&
-			history[history.length - 3] === history[history.length - 5] &&
-			history[history.length - 4] === history[history.length - 6] &&
-			history[history.length - 5] === history[history.length - 7] &&
-			history[history.length - 6] === history[history.length - 8] &&
-			history[history.length - 7] === history[history.length - 9] &&
-			history[history.length - 8] === history[history.length - 10]
+			history.length >= 10
+			&& history[history.length - 1] === history[history.length - 3]
+			&& history[history.length - 2] === history[history.length - 4]
+			&& history[history.length - 3] === history[history.length - 5]
+			&& history[history.length - 4] === history[history.length - 6]
+			&& history[history.length - 5] === history[history.length - 7]
+			&& history[history.length - 6] === history[history.length - 8]
+			&& history[history.length - 7] === history[history.length - 9]
+			&& history[history.length - 8] === history[history.length - 10]
 		) {
 			delete creep.heapMemory.roomHistory;
 			return true;

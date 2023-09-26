@@ -46,7 +46,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 						priority: 4,
 						weight: 0,
 						target: id,
-						resourceType: resourceType,
+						resourceType,
 					});
 				}
 			}

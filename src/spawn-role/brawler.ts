@@ -167,17 +167,17 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 		// If damage and heal suffices, use single melee / heal creep.
 		const brawlerBody = this.getBrawlerCreepBody(room);
-		const numBrawlerAttack = _.filter(brawlerBody, p => p === ATTACK).length;
-		const numBrawlerHeal = _.filter(brawlerBody, p => p === HEAL).length;
-		if (!isRangedEnemy && enemyPower < (numBrawlerAttack * ATTACK_POWER) + (numBrawlerHeal * HEAL_POWER * 5)) {
+		const numberBrawlerAttack = _.filter(brawlerBody, p => p === ATTACK).length;
+		const numberBrawlerHeal = _.filter(brawlerBody, p => p === HEAL).length;
+		if (!isRangedEnemy && enemyPower < (numberBrawlerAttack * ATTACK_POWER) + (numberBrawlerHeal * HEAL_POWER * 5)) {
 			return RESPONSE_FULL_BRAWLER;
 		}
 
 		// If damage and heal suffices, use single range / heal creep.
 		const blinkyBody = this.getBlinkyCreepBody(room);
-		const numBlinkyRanged = _.filter(blinkyBody, p => p === RANGED_ATTACK).length;
-		const numBlinkyHeal = _.filter(blinkyBody, p => p === HEAL).length;
-		if (enemyPower < (numBlinkyRanged * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
+		const numberBlinkyRanged = _.filter(blinkyBody, p => p === RANGED_ATTACK).length;
+		const numberBlinkyHeal = _.filter(blinkyBody, p => p === HEAL).length;
+		if (enemyPower < (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * 5)) {
 			return RESPONSE_BLINKY;
 		}
 
@@ -185,31 +185,31 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		const attackBody = this.getAttackCreepBody(room);
 		const rangedBody = this.getRangedCreepBody(room);
 		const healBody = this.getHealCreepBody(room);
-		const numTrainAttack = _.filter(attackBody, p => p === ATTACK).length;
-		const numTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
-		const numTrainHeal = _.filter(healBody, p => p === HEAL).length;
+		const numberTrainAttack = _.filter(attackBody, p => p === ATTACK).length;
+		const numberTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
+		const numberTrainHeal = _.filter(healBody, p => p === HEAL).length;
 
-		if (!isRangedEnemy && enemyPower < (numTrainAttack * ATTACK_POWER) + (numTrainHeal * HEAL_POWER * 5)) {
+		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * 5)) {
 			return RESPONSE_ATTACK_HEAL_TRAIN;
 		}
 
-		if (!isRangedEnemy && enemyPower < (numTrainAttack * ATTACK_POWER) + (numBlinkyRanged * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
+		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * 5)) {
 			return RESPONSE_ATTACK_BLINKY_TRAIN;
 		}
 
-		if (enemyPower < ((numTrainRanged + numBlinkyRanged) * RANGED_ATTACK_POWER) + (numBlinkyHeal * HEAL_POWER * 5)) {
+		if (enemyPower < ((numberTrainRanged + numberBlinkyRanged) * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * 5)) {
 			return RESPONSE_RANGED_BLINKY_TRAIN;
 		}
 
-		if (enemyPower < (2 * numBlinkyRanged * RANGED_ATTACK_POWER) + (2 * numBlinkyHeal * HEAL_POWER * 5)) {
+		if (enemyPower < (2 * numberBlinkyRanged * RANGED_ATTACK_POWER) + (2 * numberBlinkyHeal * HEAL_POWER * 5)) {
 			return RESPONSE_BLINKY_BLINKY_TRAIN;
 		}
 
-		if (enemyPower < (numTrainRanged * RANGED_ATTACK_POWER) + (numTrainHeal * HEAL_POWER * 5)) {
+		if (enemyPower < (numberTrainRanged * RANGED_ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * 5)) {
 			return RESPONSE_RANGED_HEAL_TRAIN;
 		}
 
-		if (enemyPower < (numBlinkyRanged * RANGED_ATTACK_POWER) + ((numTrainHeal + numBlinkyHeal) * HEAL_POWER * 5)) {
+		if (enemyPower < (numberBlinkyRanged * RANGED_ATTACK_POWER) + ((numberTrainHeal + numberBlinkyHeal) * HEAL_POWER * 5)) {
 			return RESPONSE_BLINKY_HEAL_TRAIN;
 		}
 
@@ -249,12 +249,12 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (room.name === targetRoom.name) continue;
 			if (!this.canReclaimRoom(targetRoom, room)) continue;
 
-			/*options.push({
+			/* Options.push({
 				priority: 4,
 				weight: 0,
 				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
 				responseType: RESPONSE_BLINKY,
-			});*/
+			}); */
 		}
 	}
 

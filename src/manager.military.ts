@@ -40,26 +40,10 @@ declare global {
 }
 
 interface SitRep {
-	damage: {
-		[x: number]: {
-			[y: number]: number,
-		}
-	},
-	healing: {
-		[x: number]: {
-			[y: number]: number,
-		}
-	},
-	myDamage: {
-		[x: number]: {
-			[y: number]: number,
-		}
-	},
-	myHealing: {
-		[x: number]: {
-			[y: number]: number,
-		}
-	},
+	damage: Record<number, Record<number, number>>;
+	healing: Record<number, Record<number, number>>;
+	myDamage: Record<number, Record<number, number>>;
+	myHealing: Record<number, Record<number, number>>;
 }
 
 /**
@@ -419,7 +403,7 @@ Creep.prototype.getMilitaryValue = function (this: Creep) {
 
 PowerCreep.prototype.getMilitaryValue = function (this: PowerCreep) {
 	return 10 + this.hits / this.hitsMax;
-}
+};
 
 export default {
 

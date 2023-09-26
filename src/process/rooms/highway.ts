@@ -5,19 +5,17 @@ import {isCrossroads} from 'utils/room-name';
 
 declare global {
 	interface StrategyMemory {
-		caravans?: {
-			[id: string]: {
-				creeps: Id<Creep>[];
-				dir: TOP | BOTTOM | LEFT | RIGHT;
-				firstSeen: number;
-				expires: number;
-				rooms: {
-					name: string;
-					time: number;
-				}[];
-				contents: Partial<Record<ResourceConstant, number>>;
-			};
-		};
+		caravans?: Record<string, {
+			creeps: Array<Id<Creep>>;
+			dir: TOP | BOTTOM | LEFT | RIGHT;
+			firstSeen: number;
+			expires: number;
+			rooms: Array<{
+				name: string;
+				time: number;
+			}>;
+			contents: Partial<Record<ResourceConstant, number>>;
+		}>;
 	}
 }
 

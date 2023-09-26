@@ -4,21 +4,15 @@ import {Request, RequestType, simpleAllies} from 'utils/communication';
 declare global {
 	interface Memory {
 		requests: {
-			trade: {
-				[resourceType: string]: {
-					[roomName: string]: {
-						amount: number;
-						lastSeen: number;
-						priority: number;
-					}
-				}
-			};
-			defense: {
-				[roomName: string]: {
-					lastSeen: number;
-					priority: number;
-				}
-			}
+			trade: Record<string, Record<string, {
+				amount: number;
+				lastSeen: number;
+				priority: number;
+			}>>;
+			defense: Record<string, {
+				lastSeen: number;
+				priority: number;
+			}>;
 		};
 	}
 }
@@ -62,7 +56,7 @@ export default class AlliesProcess extends Process {
 			for (const resourceType of [RESOURCE_ENERGY, RESOURCE_OXYGEN, RESOURCE_HYDROGEN, RESOURCE_ZYNTHIUM, RESOURCE_KEANIUM, RESOURCE_LEMERGIUM, RESOURCE_UTRIUM]) {
 				const amount = room.getCurrentResourceAmount(resourceType);
 				if (amount < 5000) {
-					simpleAllies.requestResource(room.name, resourceType, (5000 - amount) / 20000);
+					simpleAllies.requestResource(room.name, resourceType, (5000 - amount) / 20_000);
 				}
 			}
 		}

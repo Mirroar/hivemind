@@ -54,7 +54,9 @@ const roomCorners = [
  *
  * @todo Check if bounds parameter makes any sense.
  */
-function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 49}) {
+function generateRoomTerrainArray(roomName: string, bounds?: MinCutRect) {
+	if (!bounds) bounds = {x1: 0, y1: 0, x2: 49, y2: 49};
+
 	// Create two dimensional array of room tiles.
 	const roomArray = Array.from({length: 50}).fill(0).map(() => Array.from({length: 50}).fill(UNWALKABLE)) as number[][];
 
@@ -75,16 +77,17 @@ function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 
 	// Mark tiles near exits as sinks - walls / ramparts may not be built there.
 	for (let y = 1; y < 49; y++) {
 		if (
-			roomArray[0][y - 1] === EXIT ||
-			roomArray[0][y] === EXIT ||
-			roomArray[0][y + 1] === EXIT
+			roomArray[0][y - 1] === EXIT
+			|| roomArray[0][y] === EXIT
+			|| roomArray[0][y + 1] === EXIT
 		) {
 			roomArray[1][y] = TO_EXIT;
 		}
+
 		if (
-			roomArray[49][y - 1] === EXIT ||
-			roomArray[49][y] === EXIT ||
-			roomArray[49][y + 1] === EXIT
+			roomArray[49][y - 1] === EXIT
+			|| roomArray[49][y] === EXIT
+			|| roomArray[49][y + 1] === EXIT
 		) {
 			roomArray[48][y] = TO_EXIT;
 		}
@@ -92,16 +95,17 @@ function generateRoomTerrainArray(roomName, bounds = {x1: 0, y1: 0, x2: 49, y2: 
 
 	for (let x = 1; x < 49; x++) {
 		if (
-			roomArray[x - 1][0] === EXIT ||
-			roomArray[x][0] === EXIT ||
-			roomArray[x + 1][0] === EXIT
+			roomArray[x - 1][0] === EXIT
+			|| roomArray[x][0] === EXIT
+			|| roomArray[x + 1][0] === EXIT
 		) {
 			roomArray[x][1] = TO_EXIT;
 		}
+
 		if (
-			roomArray[x - 1][49] === EXIT ||
-			roomArray[x][49] === EXIT ||
-			roomArray[x + 1][49] === EXIT
+			roomArray[x - 1][49] === EXIT
+			|| roomArray[x][49] === EXIT
+			|| roomArray[x + 1][49] === EXIT
 		) {
 			roomArray[x][48] = TO_EXIT;
 		}
@@ -132,38 +136,21 @@ let protectedExitTiles: Record<string, boolean>;
 function addProtectedExitsToRoomArray(roomArray: number[][], bounds: MinCutRect) {
 	protectedExitTiles = {};
 
-	if (bounds.protectTopExits) {
-		for (let x = 1; x < 49; x++) {
-			protectExitTile(roomArray, x, 1);
-		}
-	}
-
-	if (bounds.protectBottomExits) {
-		for (let x = 1; x < 49; x++) {
-			protectExitTile(roomArray, x, 48);
-		}
-	}
-
-	if (bounds.protectLeftExits) {
-		for (let y = 1; y < 49; y++) {
-			protectExitTile(roomArray, 1, y);
-		}
-	}
-
-	if (bounds.protectRightExits) {
-		for (let y = 1; y < 49; y++) {
-			protectExitTile(roomArray, 48, y);
-		}
+	for (let i = 1; i < 49; i++) {
+		if (bounds.protectTopExits) protectExitTile(roomArray, i, 1);
+		if (bounds.protectBottomExits) protectExitTile(roomArray, i, 48);
+		if (bounds.protectLeftExits) protectExitTile(roomArray, 1, i);
+		if (bounds.protectRightExits) protectExitTile(roomArray, 48, i);
 	}
 }
 
-function protectExitTile(roomArray, x: number, y: number) {
+function protectExitTile(roomArray: number[][], x: number, y: number) {
 	if (roomArray[x][y] !== TO_EXIT) return;
 
 	roomArray[x][y] = PROTECTED;
-	protectedExitTiles[x + ',' + y] = true;
+	protectedExitTiles[x + (50 * y)] = true;
 	for (const [dx, dy] of surroundingTiles) {
-		if (roomArray[x + dx][ y + dy] !== NORMAL) continue;
+		if (roomArray[x + dx][y + dy] !== NORMAL) continue;
 		roomArray[x + dx][y + dy] = PROTECTED;
 	}
 }
@@ -173,7 +160,7 @@ function protectExitTile(roomArray, x: number, y: number) {
  *
  * @example shard0/E45S62.
  */
-function modifyProblematicProtectedExits(roomArray) {
+function modifyProblematicProtectedExits(roomArray: number[][]) {
 	for (const corner of roomCorners) {
 		let hasProtectedTile = false;
 		let hasForbiddenTile = false;
@@ -189,7 +176,7 @@ function modifyProblematicProtectedExits(roomArray) {
 	}
 }
 
-function floodFillUnprotectedExit(roomArray, corner) {
+function floodFillUnprotectedExit(roomArray: number[][], corner: number[][]) {
 	const queue = [];
 	for (const [x, y] of corner) {
 		if (roomArray[x][y] === PROTECTED) queue.push([x, y]);
@@ -198,7 +185,7 @@ function floodFillUnprotectedExit(roomArray, corner) {
 	while (queue.length > 0) {
 		const [x, y] = queue.splice(0, 1)[0];
 		if (roomArray[x][y] === PROTECTED) {
-			roomArray[x][y] = protectedExitTiles[x + ',' + y] ? TO_EXIT : NORMAL;
+			roomArray[x][y] = protectedExitTiles[x + (50 * y)] ? TO_EXIT : NORMAL;
 			for (const [dx, dy] of surroundingTiles) {
 				if (roomArray[x + dx][y + dy] === PROTECTED) {
 					queue.push([x + dx, y + dy]);
@@ -323,11 +310,9 @@ class Graph {
 			const u = queue.splice(0, 1)[0];
 			for (let i = 0; i < this.edges[u].length; i++) {
 				const edge = this.edges[u][i];
-				if (edge.f < edge.c) {
-					if (this.level[edge.v] < 1) {
-						this.level[edge.v] = 1;
-						queue.push(edge.v);
-					}
+				if (edge.f < edge.c && this.level[edge.v] < 1) {
+					this.level[edge.v] = 1;
+					queue.push(edge.v);
 				}
 
 				if (edge.f === edge.c && edge.c > 0) {

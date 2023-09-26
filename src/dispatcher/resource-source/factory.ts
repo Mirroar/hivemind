@@ -66,9 +66,7 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 
 		for (const resourceType of getResourcesIn(this.room.factory.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
-			if (neededResources[resourceType]) {
-				if (this.room.factory.store.getUsedCapacity(resourceType) <= neededResources[resourceType] * 1.5) continue;
-			}
+			if (neededResources[resourceType] && this.room.factory.store.getUsedCapacity(resourceType) <= neededResources[resourceType] * 1.5) continue;
 			const storedAmount = this.room.factory.store.getUsedCapacity(resourceType);
 			const extraAmount = storedAmount - (neededResources[resourceType] || 0);
 

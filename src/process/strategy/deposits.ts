@@ -14,10 +14,10 @@ declare global {
 	}
 
 	interface DepositTargetRoom {
-		spawnRooms?: {
+		spawnRooms?: Array<{
 			room: string;
 			distance: number;
-		}[];
+		}>;
 		isActive?: boolean;
 		scouted?: boolean;
 	}

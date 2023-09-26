@@ -21,7 +21,7 @@ declare global {
 		maxAttackers?: number;
 		neededDps?: number;
 		dps?: number;
-		spawnRooms?: Record<string, {room: string, distance: number}>;
+		spawnRooms?: Record<string, {room: string; distance: number}>;
 	}
 }
 
@@ -105,9 +105,9 @@ export default class PowerMiningProcess extends Process {
 
 			const dps = info.hits / timeRemaining;
 			const partsPerDPS = 2 / ATTACK_POWER;
-			const numCreeps = Math.ceil(dps * partsPerDPS / MAX_CREEP_SIZE);
+			const numberCreeps = Math.ceil(dps * partsPerDPS / MAX_CREEP_SIZE);
 
-			if (numCreeps > Math.min(5, info.freeTiles)) {
+			if (numberCreeps > Math.min(5, info.freeTiles)) {
 				// We can't attack with enough creeps.
 				delete memory.rooms[roomName];
 				return;
@@ -128,16 +128,16 @@ export default class PowerMiningProcess extends Process {
 
 				const neededDps = info.hits / (timeRemaining - travelTime);
 				// @todo Needed Dps multiplier is this high because currently creeps can only attack every 2 ticks.
-				const numCreeps = Math.ceil(neededDps * 1.2 * partsPerDPS / MAX_CREEP_SIZE);
+				const numberCreeps = Math.ceil(neededDps * 1.2 * partsPerDPS / MAX_CREEP_SIZE);
 
-				if (numCreeps > Math.min(6, info.freeTiles)) {
+				if (numberCreeps > Math.min(6, info.freeTiles)) {
 					// Would need too many creeps at this distance.
 					break;
 				}
 
 				neededRooms[spawnInfo.room] = spawnInfo;
 
-				if (maxAttackers >= numCreeps) {
+				if (maxAttackers >= numberCreeps) {
 					// Alright, we can spawn enough creeps!
 					finalDps = neededDps;
 					failed = false;

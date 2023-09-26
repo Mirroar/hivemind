@@ -32,9 +32,7 @@ declare global {
 		currentTick: number;
 		statTicks: number;
 		age: number;
-		stats: {
-			[resourceType: string]: number,
-		}
+		stats: Record<string, number>;
 	}
 
 	interface DefaultOperationMemory extends OperationMemory {

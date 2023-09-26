@@ -62,18 +62,12 @@ export default class ResourcesProcess extends Process {
 					hivemind.log('trade').info('Preparing', tradeVolume, best.resourceType, 'for transport from', best.source, 'to', best.target);
 					room.prepareForTrading(best.resourceType);
 				}
+
 				sentSuccessfully = false;
 			}
 
 			// Use multiple routes as long as no room is involved multiple times.
-			if (sentSuccessfully) {
-				// Remove any trades involving the rooms sending and receiving.
-				routes = _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
-			}
-			else {
-				// Remove any trades for this resource type and source room.
-				routes = _.filter(routes, (option: any) => option.source !== best.source || option.resourceType !== best.resourceType);
-			}
+			routes = sentSuccessfully ? _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target) : _.filter(routes, (option: any) => option.source !== best.source || option.resourceType !== best.resourceType);
 			best = utilities.getBestOption(routes);
 		}
 	}
@@ -164,13 +158,13 @@ export default class ResourcesProcess extends Process {
 			}
 
 			const tier = this.getResourceTier(resourceType);
-			const shouldReceiveResources =
-				roomState.state[resourceType] === 'excessive' && info.priority >= 0.05 ||
-				roomState.state[resourceType] === 'high' && (info.priority >= 0.5 || tier > 1) ||
-				roomState.state[resourceType] === 'medium' && (info.priority >= 0.8) ||
-				roomState.state[resourceType] === 'medium' && (info.priority >= 0.5 && tier > 1) ||
-				roomState.state[resourceType] === 'low' && (info.priority >= 0.8 && tier > 1) ||
-				roomState.state[resourceType] === 'low' && (info.priority >= 0.5 && tier > 4);
+			const shouldReceiveResources
+				= roomState.state[resourceType] === 'excessive' && info.priority >= 0.05
+				|| roomState.state[resourceType] === 'high' && (info.priority >= 0.5 || tier > 1)
+				|| roomState.state[resourceType] === 'medium' && (info.priority >= 0.8)
+				|| roomState.state[resourceType] === 'medium' && (info.priority >= 0.5 && tier > 1)
+				|| roomState.state[resourceType] === 'low' && (info.priority >= 0.8 && tier > 1)
+				|| roomState.state[resourceType] === 'low' && (info.priority >= 0.5 && tier > 4);
 			if (!shouldReceiveResources) continue;
 
 			// Make sure source room has enough energy to send resources.

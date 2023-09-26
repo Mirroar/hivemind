@@ -27,5 +27,4 @@ export default class ReclaimProcess extends Process {
 			this.manager.updateReclaimStatus(room);
 		}
 	}
-
 }

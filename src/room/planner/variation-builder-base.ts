@@ -90,6 +90,7 @@ export default class RoomVariationBuilderBase {
 					if (typeof options.id !== 'undefined') {
 						this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'extension.bay.' + options.id);
 					}
+
 					this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'extension.bay');
 				}
 			}
@@ -98,6 +99,7 @@ export default class RoomVariationBuilderBase {
 				if (options.source) {
 					this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'link.source');
 				}
+
 				linkPlaced = true;
 			}
 		});
@@ -122,7 +124,7 @@ export default class RoomVariationBuilderBase {
 
 		this.placementManager.planLocation(targetPos, 'link');
 		this.protectPosition(targetPos, 0);
-	};
+	}
 
 	/**
 	 * Finds a spot for a link near a given road.
@@ -149,7 +151,7 @@ export default class RoomVariationBuilderBase {
 		}
 
 		return targetPosition;
-	};
+	}
 
 	/**
 	 * Places a container near a given road.
@@ -169,7 +171,7 @@ export default class RoomVariationBuilderBase {
 		}
 
 		this.placementManager.planLocation(targetPos, 'container', 1);
-	};
+	}
 
 	/**
 	 * Finds a spot for a container near or on a given road.
@@ -190,7 +192,7 @@ export default class RoomVariationBuilderBase {
 		}
 
 		return this.findLinkPosition(sourceRoads);
-	};
+	}
 
 	/**
 	 * Adds a position to be protected by minCut.
@@ -202,6 +204,5 @@ export default class RoomVariationBuilderBase {
 		const y1 = Math.max(2, pos.y - distance);
 		const y2 = Math.min(47, pos.y + distance);
 		this.minCutBounds.push({x1, x2, y1, y2});
-	};
-
+	}
 }

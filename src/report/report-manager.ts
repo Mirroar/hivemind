@@ -4,6 +4,12 @@ declare global {
 	interface ReportClasses {}
 
 	type ReportType = keyof ReportClasses;
+
+	namespace NodeJS {
+		interface Global {
+			report: typeof report;
+		}
+	}
 }
 
 export default class ReportManager {
@@ -29,6 +35,8 @@ export default class ReportManager {
 	}
 }
 
-global['report'] = function(reportType: ReportType = 'HelpReport') {
+function report(reportType: ReportType = 'HelpReport') {
 	container.get('ReportManager').setCurrentReport(reportType);
 }
+
+global.report = report;

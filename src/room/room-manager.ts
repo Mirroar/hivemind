@@ -26,9 +26,9 @@ declare global {
 	}
 
 	interface RoomManagerMemory {
-		runNextTick: boolean,
-		hasMisplacedSpawn: boolean,
-		dismantle: {[structureId: string]: number},
+		runNextTick: boolean;
+		hasMisplacedSpawn: boolean;
+		dismantle: Record<string, number>;
 	}
 }
 
@@ -169,10 +169,10 @@ export default class RoomManager {
 		for (const lab of this.structuresByType[STRUCTURE_LAB] || []) {
 			if (this.roomPlanner.isPlannedLocation(lab.pos, 'lab')) continue;
 			if (
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'road') &&
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'spawn') &&
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'link') &&
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'extension')
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'road')
+				&& !this.roomPlanner.isPlannedLocation(lab.pos, 'spawn')
+				&& !this.roomPlanner.isPlannedLocation(lab.pos, 'link')
+				&& !this.roomPlanner.isPlannedLocation(lab.pos, 'extension')
 			) continue;
 
 			lab.destroy();
@@ -181,10 +181,10 @@ export default class RoomManager {
 		for (const lab of this.structuresByType[STRUCTURE_LINK] || []) {
 			if (this.roomPlanner.isPlannedLocation(lab.pos, 'link')) continue;
 			if (
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'road') &&
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'spawn') &&
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'link') &&
-				!this.roomPlanner.isPlannedLocation(lab.pos, 'extension')
+				!this.roomPlanner.isPlannedLocation(lab.pos, 'road')
+				&& !this.roomPlanner.isPlannedLocation(lab.pos, 'spawn')
+				&& !this.roomPlanner.isPlannedLocation(lab.pos, 'link')
+				&& !this.roomPlanner.isPlannedLocation(lab.pos, 'extension')
 			) continue;
 
 			lab.destroy();
@@ -193,11 +193,11 @@ export default class RoomManager {
 		// Remove unwanted walls that might block initial buildings.
 		for (const wall of this.structuresByType[STRUCTURE_WALL] || []) {
 			if (
-				this.roomPlanner.isPlannedLocation(wall.pos, 'road') ||
-				this.roomPlanner.isPlannedLocation(wall.pos, 'harvester') ||
-				this.roomPlanner.isPlannedLocation(wall.pos, 'spawn') ||
-				this.roomPlanner.isPlannedLocation(wall.pos, 'storage') ||
-				this.roomPlanner.isPlannedLocation(wall.pos, 'extension')
+				this.roomPlanner.isPlannedLocation(wall.pos, 'road')
+				|| this.roomPlanner.isPlannedLocation(wall.pos, 'harvester')
+				|| this.roomPlanner.isPlannedLocation(wall.pos, 'spawn')
+				|| this.roomPlanner.isPlannedLocation(wall.pos, 'storage')
+				|| this.roomPlanner.isPlannedLocation(wall.pos, 'extension')
 			) {
 				wall.destroy();
 			}
@@ -218,7 +218,7 @@ export default class RoomManager {
 		}
 	}
 
-	getOperationRoadPositions(): {[location: number]: RoomPosition} {
+	getOperationRoadPositions(): Record<number, RoomPosition> {
 		return cache.inHeap('opRoads:' + this.room.name, 100, () => {
 			const positions = {};
 
@@ -448,7 +448,7 @@ export default class RoomManager {
 			// Build extractor only on minerals that have resources left.
 			if (mineral.score > 0) {
 				if (mineral.hasExtractor) {
-					const extractor = _.filter(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR)[0];
+					const extractor = _.find(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR);
 					if (!extractor) continue;
 					if (missingThoriumExtractor && extractor.destroy() === OK) {
 						missingExtractors--;
@@ -461,12 +461,13 @@ export default class RoomManager {
 
 					if (currentExtractors >= CONTROLLER_STRUCTURES[STRUCTURE_EXTRACTOR][this.room.controller.level]) {
 						missingExtractors++;
-						// if (mineral.mineralType === RESOURCE_THORIUM) missingThoriumExtractor = true;
+						// If (mineral.mineralType === RESOURCE_THORIUM) missingThoriumExtractor = true;
 					}
 					else {
 						this.tryBuild(mineral.position, STRUCTURE_EXTRACTOR);
 					}
 				}
+
 				continue;
 			}
 
@@ -475,7 +476,7 @@ export default class RoomManager {
 			if (missingExtractors === 0) break;
 			if (!mineral.hasExtractor) continue;
 
-			const extractor = _.filter(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR)[0];
+			const extractor = _.find(mineral.position.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_EXTRACTOR);
 			if (!extractor) continue;
 
 			if (extractor.destroy() === OK) {
@@ -494,10 +495,10 @@ export default class RoomManager {
 			const structures = position.lookFor(LOOK_STRUCTURES);
 			const constructionSites = position.lookFor(LOOK_CONSTRUCTION_SITES);
 
-			const hasExtractor = _.filter(structures, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0 ||
-				_.filter(constructionSites, s => s.structureType === STRUCTURE_EXTRACTOR).length > 0;
+			const hasExtractor = _.some(structures, s => s.structureType === STRUCTURE_EXTRACTOR)
+				|| _.some(constructionSites, s => s.structureType === STRUCTURE_EXTRACTOR);
 
-			let scoreFactor = 1; // mineral && mineral.mineralType === RESOURCE_THORIUM ? 5 : 1;
+			let scoreFactor = 1; // Mineral && mineral.mineralType === RESOURCE_THORIUM ? 5 : 1;
 			if (mineral && !mineral.room.isStripmine() && mineral.mineralAmount < 500) {
 				scoreFactor = 0;
 			}
@@ -507,7 +508,7 @@ export default class RoomManager {
 				hasExtractor,
 				score: (mineral?.mineralAmount || -100) * scoreFactor,
 				mineralType: mineral?.mineralType,
-			})
+			});
 		}
 
 		return result;
@@ -802,13 +803,14 @@ export default class RoomManager {
 			if (_.size(this.roomConstructionSites) === 0) {
 				this.removeUnplannedStructures('factory', STRUCTURE_FACTORY, 1);
 				if (
-					this.room.factory && (this.room.factory.level || 0) > 0 &&
-					this.room.factoryManager && this.room.factoryManager.getFactoryLevel() > 0 &&
-					this.room.factory.level !== this.room.factoryManager.getFactoryLevel()
+					this.room.factory && (this.room.factory.level || 0) > 0
+					&& this.room.factoryManager && this.room.factoryManager.getFactoryLevel() > 0
+					&& this.room.factory.level !== this.room.factoryManager.getFactoryLevel()
 				) {
 					this.room.factory.destroy();
 				}
 			}
+
 			this.buildPlannedStructures('factory', STRUCTURE_FACTORY);
 		}
 	}

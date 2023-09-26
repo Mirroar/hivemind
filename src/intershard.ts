@@ -6,6 +6,12 @@ declare global {
 	interface Memory {
 		interShardReplacement: any;
 	}
+
+	namespace NodeJS {
+		interface Global {
+			interShard: typeof interShard;
+		}
+	}
 }
 
 const interShard = {
@@ -87,4 +93,4 @@ const interShard = {
 };
 
 export default interShard;
-global['interShard'] = interShard;
+global.interShard = interShard;

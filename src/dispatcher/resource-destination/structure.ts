@@ -36,10 +36,12 @@ export default class StructureDestination<TaskType extends StructureDestinationT
 		const target = Game.getObjectById(task.target);
 
 		creep.whenInRange(1, target, () => {
-			if (task.amount)
+			if (task.amount) {
 				creep.transfer(target, task.resourceType, Math.min(task.amount, creep.store.getUsedCapacity(task.resourceType), target.store.getFreeCapacity(task.resourceType)));
-			else
+			}
+			else {
 				creep.transfer(target, task.resourceType);
+			}
 
 			delete creep.memory.order;
 		});

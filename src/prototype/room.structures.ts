@@ -211,7 +211,7 @@ function getBaysByPriority(room: Room): Bay[] {
 		for (const source of room.sources) {
 			if (source.pos.getRangeTo(bay.pos) > 1) continue;
 
-			let missingEnergy = Math.max(0, source.energy + bay.energyCapacity - (source.getNearbyContainer()?.store[RESOURCE_ENERGY] || 0));
+			const missingEnergy = Math.max(0, source.energy + bay.energyCapacity - (source.getNearbyContainer()?.store[RESOURCE_ENERGY] || 0));
 			priority = missingEnergy / bay.energyCapacity;
 			break;
 		}

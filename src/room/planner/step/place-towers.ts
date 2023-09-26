@@ -4,8 +4,8 @@ import {encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
 interface ScoredTowerPosition {
-	pos: RoomPosition,
-	score: number,
+	pos: RoomPosition;
+	score: number;
 }
 
 export default class placeTowersStep {
@@ -24,14 +24,14 @@ export default class placeTowersStep {
 
 		const positions = this.findTowerPositions();
 		const ramparts = this.findRampartPositions();
-		// const buildingMatrix = this.placementManager.getBuildingMatrix();
+		// Const buildingMatrix = this.placementManager.getBuildingMatrix();
 		while (this.roomPlan.canPlaceMore('tower')) {
 			const newTowers = [];
 
 			this.scoreRampartPositions(ramparts);
 			this.scoreTowerPositions(positions, ramparts);
-			while(newTowers.length < this.roomPlan.remainingStructureCount('tower')) {
-				let info = _.max(positions, 'score');
+			while (newTowers.length < this.roomPlan.remainingStructureCount('tower')) {
+				const info = _.max(positions, 'score');
 				if (!info || typeof info === 'number' || info.score < 0) break;
 
 				info.score = -1;
@@ -68,7 +68,7 @@ export default class placeTowersStep {
 		}
 
 		return 'ok';
-	};
+	}
 
 	/**
 	 * Finds all positions where we might place towers within rampart protection.
@@ -153,6 +153,7 @@ export default class placeTowersStep {
 			for (const pos of this.roomPlan.getPositions('tower')) {
 				rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
 			}
+
 			for (const pos of this.roomPlan.getPositions('tower_placeholder')) {
 				rampartScore *= 1 - 0.8 * this.getTowerEffectScore(pos, info.pos.x, info.pos.y);
 			}

@@ -155,8 +155,8 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 				fill: 'transparent',
 				stroke: color,
 				lineStyle: 'dashed',
-				strokeWidth: .2,
-			}
+				strokeWidth: 0.2,
+			},
 		);
 	}
 
@@ -275,8 +275,8 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 					fill: 'transparent',
 					stroke: '#f00',
 					lineStyle: 'dashed',
-					strokeWidth: .2,
-					opacity: .1
+					strokeWidth: 0.2,
+					opacity: 0.1,
 				};
 				this.say('S:' + pos.x + 'x' + pos.y);
 			}
@@ -302,9 +302,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 		this.memory.cachedPath.position = this.memory.cachedPath.forceGoTo;
 		delete this.memory.cachedPath.forceGoTo;
 	}
-	else if (!this.memory.cachedPath.position) {
-		if (this.getOntoCachedPath()) return;
-	}
+	else if (!this.memory.cachedPath.position && this.getOntoCachedPath()) return;
 
 	// Make sure we don't have a string on our hands...
 	this.memory.cachedPath.position = Number(this.memory.cachedPath.position);
@@ -389,8 +387,8 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 				fill: 'transparent',
 				stroke: '#fff',
 				lineStyle: 'dashed',
-				strokeWidth: .1,
-				opacity: .5
+				strokeWidth: 0.1,
+				opacity: 0.5,
 			},
 		}) === ERR_NO_PATH) {
 			// Check if a path position is nearby, and blocked by a creep.
@@ -601,8 +599,8 @@ function drawCreepMovement(creep: Creep | PowerCreep) {
 	if (!pathPosition && target) {
 		creep.room.visual.line(creep.pos, target, {
 			color,
-			width: .05,
-			opacity: .5,
+			width: 0.05,
+			opacity: 0.5,
 		});
 		return;
 	}
@@ -621,8 +619,8 @@ function drawCreepMovement(creep: Creep | PowerCreep) {
 		fill: 'transparent',
 		stroke: color,
 		lineStyle: 'dashed',
-		strokeWidth: .15,
-		opacity: .3,
+		strokeWidth: 0.15,
+		opacity: 0.3,
 	});
 
 	if (!target) return;
@@ -631,17 +629,15 @@ function drawCreepMovement(creep: Creep | PowerCreep) {
 	if (lineStartPos.roomName !== target.roomName) return;
 
 	creep.room.visual.line(lineStartPos, target, {
-		color: color,
-		width: .15,
-		opacity: .3,
+		color,
+		width: 0.15,
+		opacity: 0.3,
 	});
 }
 
 function getVisualizationColor(creep: Creep | PowerCreep) {
-	const hue: number = cache.inHeap('creepColor:' + creep.name, 10000, (oldValue) => {
-		return oldValue?.data ?? Math.floor(Math.random() * 360);
-	});
-	return 'hsl(' + hue + ', 50%, 50%)'
+	const hue: number = cache.inHeap('creepColor:' + creep.name, 10_000, oldValue => oldValue?.data ?? Math.floor(Math.random() * 360));
+	return 'hsl(' + hue + ', 50%, 50%)';
 }
 
 /**
@@ -675,11 +671,9 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 
 	const range = options.range || 0;
 	const targetPos = encodePosition(target);
-	if (!this.memory.go.target || this.memory.go.target !== targetPos || !this.hasCachedPath()) {
-		if (!this.calculateGoToPath(target, options)) {
-			hivemind.log('creeps', this.room.name).error('No path from', this.pos, 'to', target, 'found!');
-			return false;
-		}
+	if ((!this.memory.go.target || this.memory.go.target !== targetPos || !this.hasCachedPath()) && !this.calculateGoToPath(target, options)) {
+		hivemind.log('creeps', this.room.name).error('No path from', this.pos, 'to', target, 'found!');
+		return false;
 	}
 
 	this.memory.go.lastAccess = Game.time;
@@ -726,7 +720,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 						// @todo Try not to drive too close to sources / minerals / controllers.
 
 						return costs;
-					}
+					},
 				});
 				if (result === ERR_NO_PATH) return false;
 			}

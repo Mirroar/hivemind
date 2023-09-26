@@ -11,6 +11,15 @@ interface CostMatrixOptions {
 	ignoreMilitary?: boolean;
 }
 
+declare global {
+	namespace NodeJS {
+		interface Global {
+			getCostMatrix: typeof getCostMatrix;
+			getDangerMatrix: typeof getDangerMatrix;
+		}
+	}
+}
+
 /**
  * Gets the pathfinding cost matrix for a room.
  *
@@ -122,16 +131,16 @@ function generateQuadCostMatrix(matrix: CostMatrix, roomName: string): CostMatri
 
 			let max = Math.max(matrix.get(x, y), matrix.get(x + 1, y), matrix.get(x, y + 1), matrix.get(x + 1, y + 1));
 			if (max < 255 && (
-				terrain.get(x + 1, y) === TERRAIN_MASK_WALL ||
-				terrain.get(x, y + 1) === TERRAIN_MASK_WALL ||
-				terrain.get(x + 1, y + 1) === TERRAIN_MASK_WALL
+				terrain.get(x + 1, y) === TERRAIN_MASK_WALL
+				|| terrain.get(x, y + 1) === TERRAIN_MASK_WALL
+				|| terrain.get(x + 1, y + 1) === TERRAIN_MASK_WALL
 			)) {
 				max = 255;
 			}
 			else if (max < 5 && (
-				terrain.get(x + 1, y) === TERRAIN_MASK_SWAMP ||
-				terrain.get(x, y + 1) === TERRAIN_MASK_SWAMP ||
-				terrain.get(x + 1, y + 1) === TERRAIN_MASK_SWAMP
+				terrain.get(x + 1, y) === TERRAIN_MASK_SWAMP
+				|| terrain.get(x, y + 1) === TERRAIN_MASK_SWAMP
+				|| terrain.get(x + 1, y + 1) === TERRAIN_MASK_SWAMP
 			)) {
 				max = 5;
 			}
@@ -161,7 +170,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 
 	// We flood fill from enemies and make all tiles they can reach more
 	// difficult to travel through.
-	const closedList: {[location: string]: boolean} = {};
+	const closedList: Record<string, boolean> = {};
 	const openList: RoomPosition[] = [];
 
 	for (const username in Game.rooms[roomName].enemyCreeps) {
@@ -342,5 +351,5 @@ export {
 	markBuildings,
 };
 
-global['getCostMatrix'] = getCostMatrix;
-global['getDangerMatrix'] = getDangerMatrix;
+global.getCostMatrix = getCostMatrix;
+global.getDangerMatrix = getDangerMatrix;

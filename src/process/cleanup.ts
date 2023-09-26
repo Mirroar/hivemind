@@ -2,14 +2,11 @@ import Process from 'process/process';
 import hivemind from 'hivemind';
 
 export default class CleanupProcess extends Process {
-
 	memory: {
-		constructionSites: {
-			[id: string]: {
-				progress: number;
-				time: number;
-			}
-		}
+		constructionSites: Record<string, {
+			progress: number;
+			time: number;
+		}>;
 	};
 
 	/**
@@ -24,9 +21,12 @@ export default class CleanupProcess extends Process {
 	constructor(parameters: ProcessParameters) {
 		super(parameters);
 
-		if (!hivemind.segmentMemory.has('process:cleanup')) hivemind.segmentMemory.set('process:cleanup', {
-			constructionSites: {},
-		});
+		if (!hivemind.segmentMemory.has('process:cleanup')) {
+			hivemind.segmentMemory.set('process:cleanup', {
+				constructionSites: {},
+			});
+		}
+
 		this.memory = hivemind.segmentMemory.get('process:cleanup');
 	}
 
@@ -67,7 +67,7 @@ export default class CleanupProcess extends Process {
 			this.memory.constructionSites[site.id] = {
 				progress: site.progress,
 				time: lastProgressTime,
-			}
+			};
 		}
 	}
 
@@ -78,7 +78,7 @@ export default class CleanupProcess extends Process {
 		let ttl = site.progress;
 		if (site.room) {
 			ttl += 2000;
-			if (site.room.isMine()) ttl += 20000;
+			if (site.room.isMine()) ttl += 20_000;
 		}
 
 		return ttl;

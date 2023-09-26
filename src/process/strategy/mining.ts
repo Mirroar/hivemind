@@ -182,11 +182,9 @@ export default class RemoteMiningProcess extends Process {
 				memory.remoteHarvesting.currentCount++;
 			}
 		}
-		else if (shortTermBucket <= 8000) {
-			// Bucket has seen some usage recently.
-			if (memory.remoteHarvesting.currentCount > 0) {
-				memory.remoteHarvesting.currentCount--;
-			}
+		else if (shortTermBucket <= 8000 // Bucket has seen some usage recently.
+			&& memory.remoteHarvesting.currentCount > 0) {
+			memory.remoteHarvesting.currentCount--;
 		}
 	}
 

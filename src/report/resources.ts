@@ -149,7 +149,6 @@ const resourcesToReport: ResourceRow[] = [
 ];
 
 export default class ResourcesReport {
-
 	visualize() {
 		const visual = new RoomVisual();
 
@@ -163,8 +162,7 @@ export default class ResourcesReport {
 		if (maxResources === 0) return;
 		const scale = (maxX - minX) / maxResources;
 
-		for (let i = 0; i < resourcesToReport.length; i++) {
-			const resourceRow = resourcesToReport[i];
+		for (const [i, resourceRow] of resourcesToReport.entries()) {
 			const y = i + 30;
 
 			visual.text(resourceRow.label, 1, y + 0.3, {align: 'left'});
@@ -194,9 +192,7 @@ export default class ResourcesReport {
 	}
 
 	getHighestResourceAmountOfRow(): number {
-		return _.max(_.map(resourcesToReport, resourceRow => {
-			return _.sum(resourceRow.resources, resourceInfo => this.getResourceAmount(resourceInfo.resourceType) / (resourceInfo.scale ?? 1));
-		}));
+		return _.max(_.map(resourcesToReport, resourceRow => _.sum(resourceRow.resources, resourceInfo => this.getResourceAmount(resourceInfo.resourceType) / (resourceInfo.scale ?? 1))));
 	}
 
 	getResourceAmount(resourceType: ResourceConstant) {
@@ -214,5 +210,4 @@ export default class ResourcesReport {
 	help() {
 		return 'Get a visual representation of the amount of boosts and their components for the whole shard.';
 	}
-
 }

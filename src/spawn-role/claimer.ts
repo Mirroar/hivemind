@@ -41,8 +41,8 @@ export default class ClaimerSpawnRole extends SpawnRole {
 			const claimers = _.filter(
 				Game.creepsByRole.claimer || {},
 				(creep: ClaimerCreep) =>
-					creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos) &&
-					creep.ticksToLive > pathLength + claimerSpawnTime
+					creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos)
+					&& creep.ticksToLive > pathLength + claimerSpawnTime,
 			);
 			if (_.size(claimers) > 0) continue;
 
@@ -61,7 +61,6 @@ export default class ClaimerSpawnRole extends SpawnRole {
 				weight: 1 - offset * 0.8,
 				targetPos: pos,
 			});
-
 		}
 
 		return options;

@@ -1,13 +1,11 @@
 import cache from 'utils/cache';
 
 declare global {
-	type ExitCoords = {
-		[dir: string]: RoomPosition[];
-	}
+	type ExitCoords = Record<string, RoomPosition[]>;
 }
 
 function getExitCenters(roomName: string): ExitCoords {
-	return cache.inHeap('exitCenters:' + roomName, 10000, () => {
+	return cache.inHeap('exitCenters:' + roomName, 10_000, () => {
 		const exitCoords = getExitCoordsByDirection(roomName);
 		return findExitCenters(roomName, exitCoords);
 	});
@@ -46,33 +44,33 @@ function findExitCenters(roomName: string, exitCoords: ExitCoords): ExitCoords {
 		exitCenters[dir] = [];
 
 		let startPos = null;
-		let prevPos = null;
+		let previousPos = null;
 		for (const pos of exitCoords[dir]) {
 			if (!startPos) {
 				startPos = pos;
 			}
 
-			if (prevPos && pos.getRangeTo(prevPos) > 1) {
+			if (previousPos && pos.getRangeTo(previousPos) > 1) {
 				// New exit block started.
-				const middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), roomName);
+				const middlePos = new RoomPosition(Math.ceil((previousPos.x + startPos.x) / 2), Math.ceil((previousPos.y + startPos.y) / 2), roomName);
 				exitCenters[dir].push(middlePos);
 
 				startPos = pos;
 			}
 
-			prevPos = pos;
+			previousPos = pos;
 		}
 
 		if (startPos) {
 			// Finish last wall run.
-			const middlePos = new RoomPosition(Math.ceil((prevPos.x + startPos.x) / 2), Math.ceil((prevPos.y + startPos.y) / 2), roomName);
+			const middlePos = new RoomPosition(Math.ceil((previousPos.x + startPos.x) / 2), Math.ceil((previousPos.y + startPos.y) / 2), roomName);
 			exitCenters[dir].push(middlePos);
 		}
 	}
 
 	return exitCenters;
-};
+}
 
 export {
 	getExitCenters,
-}
+};

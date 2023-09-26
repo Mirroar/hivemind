@@ -71,7 +71,7 @@ export default class UpgraderRole extends Role {
 				// Get harvest position from room planner.
 				return _.sample(creep.room.roomPlanner.getLocations('upgrader.0'));
 			});
-			if (upgraderPosition) creep.goTo(upgraderPosition)
+			if (upgraderPosition) creep.goTo(upgraderPosition);
 			else creep.moveToRange(controller, 3);
 		}
 		else {
@@ -94,19 +94,15 @@ export default class UpgraderRole extends Role {
 			let withdrawn = false;
 			if (creep.room.memory.controllerLink) {
 				const controllerLink = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
-				if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1) {
-					if (creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
-						withdrawn = true;
-					}
+				if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1 && creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
+					withdrawn = true;
 				}
 			}
 
 			if (!withdrawn && creep.room.memory.controllerContainer) {
 				const controllerContainer = Game.getObjectById<StructureContainer>(creep.room.memory.controllerContainer);
-				if (controllerContainer && controllerContainer.store.energy > 50 && creep.pos.getRangeTo(controllerContainer) <= 1) {
-					if (creep.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
-						withdrawn = true;
-					}
+				if (controllerContainer && controllerContainer.store.energy > 50 && creep.pos.getRangeTo(controllerContainer) <= 1 && creep.withdraw(controllerContainer, RESOURCE_ENERGY) === OK) {
+					withdrawn = true;
 				}
 			}
 		}

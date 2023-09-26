@@ -45,13 +45,13 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 		return options;
 	}
 
-	addOptionForDeposit(depositInfo: DepositInfo, strategyInfo: DepositTargetRoom, depositRoomName: string, spawnRoomInfo: {room: string; distance: number;}, options: DepositHarvesterSpawnOption[]) {
+	addOptionForDeposit(depositInfo: DepositInfo, strategyInfo: DepositTargetRoom, depositRoomName: string, spawnRoomInfo: {room: string; distance: number}, options: DepositHarvesterSpawnOption[]) {
 		const targetPos = encodePosition(new RoomPosition(depositInfo.x, depositInfo.y, depositRoomName));
 		const activeDepositHarvesters = _.filter(Game.creepsByRole['harvester.deposit'] || [], (creep: DepositHarvesterCreep) => {
 			if (creep.memory.targetPos !== targetPos) return false;
 
 			const travelTime = this.getTravelTime(creep.memory.origin, creep.memory.targetPos) || spawnRoomInfo.distance * 50;
-			// if ((creep.ticksToLive || CREEP_LIFE_TIME) < (CREEP_SPAWN_TIME * creep.body.length) + travelTime) return false;
+			// If ((creep.ticksToLive || CREEP_LIFE_TIME) < (CREEP_SPAWN_TIME * creep.body.length) + travelTime) return false;
 
 			return true;
 		});
@@ -114,7 +114,7 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 			role: 'harvester.deposit',
 			origin: option.origin,
 			targetPos: option.targetPos,
-			// disableNotifications: true,
+			// DisableNotifications: true,
 		};
 	}
 }

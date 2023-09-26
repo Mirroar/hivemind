@@ -3,37 +3,41 @@ import {encodePosition, decodePosition} from 'utils/serialization';
 import {handleMapArea} from 'utils/map';
 
 export default class PlacementManager {
-	public readonly ROAD_POSITION = 1;
-	public readonly DISCOURAGED_POSITION = 5;
-	public readonly IMPASSABLE_POSITION = 255;
-	public readonly ROAD_THROUGH_WALL_COST = 30;
+	public get ROAD_POSITION() {
+		return 1;
+	}
+
+	public get DISCOURAGED_POSITION() {
+		return 5;
+	}
+
+	public get IMPASSABLE_POSITION() {
+		return 255;
+	}
+
+	public get ROAD_THROUGH_WALL_COST() {
+		return 30;
+	}
 
 	protected terrain: RoomTerrain;
-	protected openList: {
-		[location: string]: {
-			range: number;
-			path: {
-				[location: string]: boolean;
-			};
-		};
-	};
-	protected closedList: {
-		[location: string]: boolean;
-	};
+	protected openList: Record<string, {
+		range: number;
+		path: Record<string, boolean>;
+	}>;
+
+	protected closedList: Record<string, boolean>;
+
 	protected currentBuildSpot: {
 		pos: RoomPosition;
 		info: {
 			range: number;
-			path: {
-				[location: string]: boolean;
-			};
+			path: Record<string, boolean>;
 		};
 	};
+
 	protected origin: RoomPosition;
 	protected originEntrances: RoomPosition[];
-	protected costMatrixBackup: {
-		[location: string]: number,
-	} = {};
+	protected costMatrixBackup: Record<string, number> = {};
 
 	constructor(
 		protected roomPlan: RoomPlan,
@@ -384,6 +388,7 @@ export default class PlacementManager {
 		for (const position of this.roomPlan.getPositions(locationType + '_placeholder')) {
 			delete this.costMatrixBackup[encodePosition(position)];
 		}
+
 		this.roomPlan.removeAllPositions(locationType + '_placeholder');
 	}
 }

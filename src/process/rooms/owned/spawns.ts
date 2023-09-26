@@ -50,30 +50,30 @@ type HistorySegment = {
 };
 
 const spawnClasses = {
-	'brawler': brawlerSpawnRole,
-	'builder': builderSpawnRole,
+	brawler: brawlerSpawnRole,
+	builder: builderSpawnRole,
 	'caravan-trader': caravanTraderSpawnRole,
-	'claimer': claimerSpawnRole,
-	'dismantler': dismantlerSpawnRole,
-	'exploit': exploitSpawnRole,
-	'gatherer': gathererSpawnRole,
-	'gift': giftSpawnRole,
-	'harvester': harvesterSpawnRole,
+	claimer: claimerSpawnRole,
+	dismantler: dismantlerSpawnRole,
+	exploit: exploitSpawnRole,
+	gatherer: gathererSpawnRole,
+	gift: giftSpawnRole,
+	harvester: harvesterSpawnRole,
 	'harvester.deposit': depositHarvesterSpawnRole,
 	'harvester.minerals': mineralHarvesterSpawnRole,
 	'harvester.power': powerHarvesterSpawnRole,
 	'harvester.remote': remoteHarvesterSpawnRole,
-	'hauler': haulerSpawnRole,
+	hauler: haulerSpawnRole,
 	'hauler.power': powerHaulerSpawnRole,
-	'helper': helperSpawnRole,
-	'mule': muleSpawnRole,
-	'reclaim': reclaimSpawnRole,
+	helper: helperSpawnRole,
+	mule: muleSpawnRole,
+	reclaim: reclaimSpawnRole,
 	'remote-mine': remoteMiningSpawnRole,
 	'room-defense': roomDefenseSpawnRole,
-	'scout': scoutSpawnRole,
-	'squad': squadSpawnRole,
-	'transporter': transporterSpawnRole,
-	'upgrader': upgraderSpawnRole,
+	scout: scoutSpawnRole,
+	squad: squadSpawnRole,
+	transporter: transporterSpawnRole,
+	upgrader: upgraderSpawnRole,
 };
 const historyChunkLength = 200;
 const maxHistoryChunks = 10;
@@ -191,9 +191,9 @@ export default class ManageSpawnsProcess extends Process {
 
 		const tableData: string[][] = [['Spawn Queue', 'Priority']];
 		const queue = _.sortBy(this.spawnManager.getAllSpawnOptions(this.room), option => -(option.priority + (0.01 * option.weight)));
-		let offset = 0;
+		const offset = 0;
 		for (const option of queue) {
-			tableData.push([option.role, option.priority + '/' + option.weight.toPrecision(2)])
+			tableData.push([option.role, option.priority + '/' + option.weight.toPrecision(2)]);
 		}
 
 		if (tableData.length === 1) return;

@@ -133,7 +133,7 @@ export default class BrawlerRole extends Role {
 			return;
 		}
 
-		let action: "attack" | "heal" | "claim" = 'heal';
+		let action: 'attack' | 'heal' | 'claim' = 'heal';
 		if (best.type === 'hostilecreep' || best.type === 'hostilestructure') {
 			action = 'attack';
 		}
@@ -181,15 +181,13 @@ export default class BrawlerRole extends Role {
 		}
 
 		// Attack / Reserve controllers.
-		if (creep.getActiveBodyparts(CLAIM) >= 5) {
-			if (creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
-				options.push({
-					priority: 5,
-					weight: 0,
-					type: 'controller',
-					object: creep.room.controller,
-				});
-			}
+		if (creep.getActiveBodyparts(CLAIM) >= 5 && creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
+			options.push({
+				priority: 5,
+				weight: 0,
+				type: 'controller',
+				object: creep.room.controller,
+			});
 		}
 
 		if (creep.getActiveBodyparts(CLAIM) > 0 && creep.room.controller && !creep.room.controller.owner) {
@@ -339,9 +337,7 @@ export default class BrawlerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	performMilitaryMove(creep: BrawlerCreep) {
-		if (creep.isPartOfTrain()) {
-			if (this.performTrainMove(creep) !== OK) return;
-		}
+		if (creep.isPartOfTrain() && this.performTrainMove(creep) !== OK) return;
 
 		if (creep.memory.fillWithEnergy) {
 			if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
@@ -406,6 +402,7 @@ export default class BrawlerRole extends Role {
 			if (this.isPositionBlocked(targetPosition)) {
 				options.range = 1;
 			}
+
 			if (targetPosition.roomName === creep.pos.roomName) creep.moveTo(targetPosition, options);
 		}
 
@@ -664,12 +661,7 @@ export default class BrawlerRole extends Role {
 			let time = otherLair.ticksToSpawn || 0;
 
 			if (id !== id2) {
-				if (exploit.memory.lairs[id].paths[id2].path) {
-					time = Math.max(time, exploit.memory.lairs[id].paths[id2].path.length);
-				}
-				else {
-					time = Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
-				}
+				time = exploit.memory.lairs[id].paths[id2].path ? Math.max(time, exploit.memory.lairs[id].paths[id2].path.length) : Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
 			}
 
 			console.log('time to ' + id2 + ': ' + time);
@@ -881,10 +873,8 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.order) {
 			const target = Game.getObjectById<Creep>(creep.memory.order.target);
 
-			if (target && (target.my || hivemind.relations.isAlly(target?.owner?.username))) {
-				if (creep.heal(target) === OK) {
-					return true;
-				}
+			if (target && (target.my || hivemind.relations.isAlly(target?.owner?.username)) && creep.heal(target) === OK) {
+				return true;
 			}
 		}
 

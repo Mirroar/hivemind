@@ -1,13 +1,5 @@
 /* global FIND_STRUCTURES POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
 
-declare global {
-	interface Memory {
-		roomStats: {
-			[roomName: string]: Record<string, number>;
-		};
-	}
-}
-
 import balancer from 'excess-energy-balancer';
 import ManageFactoryProcess from 'process/rooms/owned/factory';
 import ManageLabsProcess from 'process/rooms/owned/labs';
@@ -20,6 +12,12 @@ import RoomSongsProcess from 'process/rooms/owned/songs';
 import RoomOperation from 'operation/room';
 import hivemind, {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
 import {timeCall} from 'utils/cpu';
+
+declare global {
+	interface Memory {
+		roomStats: Record<string, Record<string, number>>;
+	}
+}
 
 export default class OwnedRoomProcess extends Process {
 	room: Room;
@@ -95,9 +93,7 @@ export default class OwnedRoomProcess extends Process {
 			hivemind.runSubProcess('rooms_power', () => {
 				// Process power in power spawns.
 				const powerSpawn = this.room.powerSpawn;
-				if (powerSpawn && powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO) {
-					if (powerSpawn.processPower() === OK) balancer.recordPowerEnergy(POWER_SPAWN_ENERGY_RATIO);
-				}
+				if (powerSpawn && powerSpawn.my && powerSpawn.power > 0 && powerSpawn.energy >= POWER_SPAWN_ENERGY_RATIO && powerSpawn.processPower() === OK) balancer.recordPowerEnergy(POWER_SPAWN_ENERGY_RATIO);
 			});
 
 			hivemind.runSubProcess('rooms_factory', () => {

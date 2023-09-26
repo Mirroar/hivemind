@@ -28,7 +28,7 @@ export default class PlayerIntelManager {
 
 		const result = [];
 		hivemind.segmentMemory.each('u-intel:', key => {
-			const userName = key.substr(8);
+			const userName = key.slice(8);
 			const intel = this.get(userName);
 
 			result.push(intel);

@@ -23,9 +23,7 @@ declare global {
 	interface StrategyMemory {
 		roomList?: Record<string, RoomListEntry>;
 		roomListProgress?: string[]; // @todo Move to heap.
-		_expansionScoreCache?: {
-			[roomName: string]: [number, number] | [number, number, Record<string, number>];
-		};
+		_expansionScoreCache?: Record<string, [number, number] | [number, number, Record<string, number>]>;
 	}
 
 	interface RoomListEntry {
@@ -97,9 +95,9 @@ export default class ScoutProcess extends Process {
 
 			if (Game.cpu.getUsed() - startTime > maxCpuUsage) {
 				allDone = false;
-				const numRooms = _.size(Memory.strategy.roomList);
-				const progress = Memory.strategy.roomListProgress.length / numRooms;
-				hivemind.log('strategy').debug('Terminated room prioritization after checking', checkedCount, 'of', numRooms, 'rooms (', (progress * 100).toPrecision(3) + '%', 'done).');
+				const numberRooms = _.size(Memory.strategy.roomList);
+				const progress = Memory.strategy.roomListProgress.length / numberRooms;
+				hivemind.log('strategy').debug('Terminated room prioritization after checking', checkedCount, 'of', numberRooms, 'rooms (', (progress * 100).toPrecision(3) + '%', 'done).');
 				break;
 			}
 		}
@@ -168,27 +166,25 @@ export default class ScoutProcess extends Process {
 			info.scoutPriority = 2;
 		}
 
-		if (info.scoutPriority > 0 && observer && info.range <= (Memory.hivemind.maxScoutDistance || 7)) {
-			// Only observe if last Scan was longer ago than intel manager delay,
+		if (info.scoutPriority > 0 && observer && info.range <= (Memory.hivemind.maxScoutDistance || 7) // Only observe if last Scan was longer ago than intel manager delay,
 			// so we don't get stuck scanning the same room for some reason.
-			if (timeSinceLastScan > hivemind.settings.get('roomIntelCacheDuration')) {
-				// No need to manually scout rooms in range of an observer.
-				info.scoutPriority = 0.5;
+			&& timeSinceLastScan > hivemind.settings.get('roomIntelCacheDuration')) {
+			// No need to manually scout rooms in range of an observer.
+			info.scoutPriority = 0.5;
 
-				// Let observer scout one room per run at maximum.
-				// @todo Move this to structure management so we can scan one open room per tick.
-				if (!observer.hasScouted) {
-					observer.observeRoom(roomName);
-					observer.hasScouted = true;
-					hivemind.log('intel', observer.pos.roomName).info('Observing', roomName);
+			// Let observer scout one room per run at maximum.
+			// @todo Move this to structure management so we can scan one open room per tick.
+			if (!observer.hasScouted) {
+				observer.observeRoom(roomName);
+				observer.hasScouted = true;
+				hivemind.log('intel', observer.pos.roomName).info('Observing', roomName);
+			}
+			else {
+				if (!Memory.rooms[observer.pos.roomName].observeTargets) {
+					Memory.rooms[observer.pos.roomName].observeTargets = [];
 				}
-				else {
-					if (!Memory.rooms[observer.pos.roomName].observeTargets) {
-						Memory.rooms[observer.pos.roomName].observeTargets = [];
-					}
 
-					Memory.rooms[observer.pos.roomName].observeTargets.push(roomName);
-				}
+				Memory.rooms[observer.pos.roomName].observeTargets.push(roomName);
 			}
 		}
 	}
@@ -398,7 +394,7 @@ export default class ScoutProcess extends Process {
 	 * @return {number}
 	 *   Harvest score for this room.
 	 */
-	getHarvestRoomScore(roomName: string, forOwnedRoom: boolean = false) {
+	getHarvestRoomScore(roomName: string, forOwnedRoom = false) {
 		const roomIntel = getRoomIntel(roomName);
 
 		// We don't care about rooms without controllers.

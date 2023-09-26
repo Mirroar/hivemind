@@ -240,12 +240,12 @@ export default class HelperRole extends Role {
 		for (const lab of boostLabs) {
 			const resourceType = boostManager.getRequiredBoostType(lab.id);
 
-			let diff = boostManager.getRequiredBoostAmount(lab.id) - creep.store.getUsedCapacity(resourceType) - lab.store.getUsedCapacity(resourceType);
+			const diff = boostManager.getRequiredBoostAmount(lab.id) - creep.store.getUsedCapacity(resourceType) - lab.store.getUsedCapacity(resourceType);
 			if (diff <= 0) continue;
 
 			const target = creep.room.getBestStorageSource(resourceType);
 			if (!target) continue;
-			let amount = Math.min(diff, creep.store.getFreeCapacity(resourceType), target.store.getUsedCapacity(resourceType), lab.store.getFreeCapacity(resourceType) - creep.store.getUsedCapacity(resourceType));
+			const amount = Math.min(diff, creep.store.getFreeCapacity(resourceType), target.store.getUsedCapacity(resourceType), lab.store.getFreeCapacity(resourceType) - creep.store.getUsedCapacity(resourceType));
 			if (amount > 0) {
 				creep.whenInRange(1, target, () => {
 					creep.withdraw(target, resourceType, amount);

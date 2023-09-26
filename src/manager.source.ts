@@ -80,7 +80,7 @@ Object.defineProperty(Mineral.prototype, 'harvesters', {
  * @return {number}
  *   Maximum number of harvesters on this source.
  */
-const getNumHarvestSpots = function (this: Source | Mineral) {
+const getNumberHarvestSpots = function (this: Source | Mineral) {
 	return cache.inHeap('numFreeSquares:' + this.id, 5000, () => {
 		const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
 		const adjacentTerrain = [];
@@ -103,7 +103,7 @@ const getNumHarvestSpots = function (this: Source | Mineral) {
  *   Maximum number of harvesters on this source.
  */
 Source.prototype.getNumHarvestSpots = function (this: Source) {
-	return getNumHarvestSpots.call(this);
+	return getNumberHarvestSpots.call(this);
 };
 
 /**
@@ -113,7 +113,7 @@ Source.prototype.getNumHarvestSpots = function (this: Source) {
  *   Maximum number of harvesters on this mineral.
  */
 Mineral.prototype.getNumHarvestSpots = function (this: Mineral) {
-	return getNumHarvestSpots.call(this);
+	return getNumberHarvestSpots.call(this);
 };
 
 /**

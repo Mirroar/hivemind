@@ -9,9 +9,7 @@ type HeapMemory = {
 	plan: RoomPlan;
 };
 
-const generatorCache: {
-	[roomName: string]: HeapMemory;
-} = {};
+const generatorCache: Record<string, HeapMemory> = {};
 
 export default class RoomPlanGenerator {
 	roomName: string;
@@ -22,12 +20,10 @@ export default class RoomPlanGenerator {
 	exitMatrix: CostMatrix;
 	variationBuilder: RoomVariationBuilder;
 	scorer: RoomPlanScorer;
-	results: {
-		[variation: string]: {
-			plan: RoomPlan;
-			score: {[key: string]: number};
-		}
-	};
+	results: Record<string, {
+		plan: RoomPlan;
+		score: Record<string, number>;
+	}>;
 
 	constructor(roomName: string, version: number) {
 		this.roomName = roomName;
@@ -57,12 +53,7 @@ export default class RoomPlanGenerator {
 		this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
 		const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
 
-		if (Memory.rooms[this.roomName].isStripmine) {
-			this.variationBuilder = new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
-		}
-		else {
-			this.variationBuilder = new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
-		}
+		this.variationBuilder = Memory.rooms[this.roomName].isStripmine ? new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix) : new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
 	}
 
 	generateVariation() {
@@ -128,6 +119,7 @@ export default class RoomPlanGenerator {
 			for (const key of keys) {
 				output += '<td>' + score[key].toPrecision(3) + '</td>';
 			}
+
 			output += '</tr>';
 		}
 

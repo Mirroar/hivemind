@@ -16,9 +16,7 @@ import {packCoord, packCoordList, unpackCoordList, unpackCoordListAsPosList} fro
 
 declare global {
 	interface RoomMemory {
-		abandonedResources?: Record<string, {
-			[resourceType: string]: number;
-		}>;
+		abandonedResources?: Record<string, Record<string, number>>;
 	}
 
 	interface DepositInfo {
@@ -29,6 +27,12 @@ declare global {
 		decays: number;
 		cooldown: number;
 		freeTiles: number;
+	}
+
+	namespace NodeJS {
+		interface Global {
+			getRoomIntel: typeof getRoomIntel;
+		}
 	}
 }
 
@@ -51,7 +55,7 @@ export interface RoomIntelMemory {
 		free: number;
 	}>;
 	// @todo Deprecated, remove later! Use `minerals` instead.
-	mineralInfo: {};
+	mineralInfo: Record<string, unknown>;
 	minerals: Array<{
 		x: number;
 		y: number;
@@ -68,14 +72,12 @@ export interface RoomIntelMemory {
 	};
 	deposits?: DepositInfo[];
 	structures: {
-		[T in StructureConstant]?: {
-			[id: string]: {
-				x: number;
-				y: number;
-				hits: number;
-				hitsMax: number;
-			};
-		};
+		[T in StructureConstant]?: Record<string, {
+			x: number;
+			y: number;
+			hits: number;
+			hitsMax: number;
+		}>;
 	};
 	terrain: {
 		exit: number;
@@ -96,16 +98,11 @@ export interface RoomIntelMemory {
 export default class RoomIntel {
 	roomName: string;
 	memory: RoomIntelMemory;
-	newStatus: {
-		[direction: string]: boolean;
-	};
+	newStatus: Record<string, boolean>;
+
 	otherSafeRooms: string[];
 	otherUnsafeRooms: string[];
-	joinedDirs: {
-		[direction: string]: {
-			[direction: string]: boolean;
-		};
-	};
+	joinedDirs: Record<string, Record<string, boolean>>;
 
 	constructor(roomName) {
 		this.roomName = roomName;
@@ -156,14 +153,14 @@ export default class RoomIntel {
 		const ruins = room.find(FIND_RUINS);
 		this.gatherAbandonedResourcesIntel(structures, ruins);
 
-
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
 		let constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
 		if (room.controller && !room.controller.my && room.controller.owner && hivemind.relations.isAlly(room.controller.owner.username)) {
 			constructionSites = _.groupBy(room.find(FIND_CONSTRUCTION_SITES, {
-				filter: site => site.my || hivemind.relations.isAlly(site.owner.username)
+				filter: site => site.my || hivemind.relations.isAlly(site.owner.username),
 			}), 'structureType');
 		}
+
 		this.generateCostMatrix(structures, constructionSites);
 
 		// Update nav mesh for this room.
@@ -305,10 +302,10 @@ export default class RoomIntel {
 
 		// Find out how many access points there are around this power bank.
 		const terrain = new Room.Terrain(this.roomName);
-		let numFreeTiles = 0;
+		let numberFreeTiles = 0;
 		handleMapArea(powerBank.pos.x, powerBank.pos.y, (x, y) => {
 			if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
-				numFreeTiles++;
+				numberFreeTiles++;
 			}
 		});
 
@@ -316,7 +313,7 @@ export default class RoomIntel {
 			amount: powerBank.power,
 			hits: powerBank.hits,
 			decays: Game.time + (powerBank.ticksToDecay || POWER_BANK_DECAY),
-			freeTiles: numFreeTiles,
+			freeTiles: numberFreeTiles,
 			pos: packCoord({x: powerBank.pos.x, y: powerBank.pos.y}),
 		};
 
@@ -355,10 +352,10 @@ export default class RoomIntel {
 			hivemind.log('intel', this.roomName).info('Deposit containing', deposit.depositType, 'found!');
 
 			// Find out how many access points there are around this power bank.
-			let numFreeTiles = 0;
+			let numberFreeTiles = 0;
 			handleMapArea(deposit.pos.x, deposit.pos.y, (x, y) => {
 				if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
-					numFreeTiles++;
+					numberFreeTiles++;
 				}
 			});
 
@@ -369,7 +366,7 @@ export default class RoomIntel {
 				type: deposit.depositType,
 				decays: Game.time + deposit.ticksToDecay,
 				cooldown: deposit.lastCooldown || 0,
-				freeTiles: numFreeTiles,
+				freeTiles: numberFreeTiles,
 			});
 
 			// Also store room in strategy memory for easy access.
@@ -417,7 +414,7 @@ export default class RoomIntel {
 	 * @param {string} structureType
 	 *   The type of structure to gather intel on.
 	 */
-	gatherStructureIntel(structures: {[structureType: string]: Structure[]}, structureType: StructureConstant) {
+	gatherStructureIntel(structures: Record<string, Structure[]>, structureType: StructureConstant) {
 		if (!this.memory.structures) this.memory.structures = {};
 		this.memory.structures[structureType] = {};
 		for (const structure of structures[structureType] || []) {
@@ -438,7 +435,7 @@ export default class RoomIntel {
 	 * @param {object[]} ruins
 	 *   An array of Ruin objects.
 	 */
-	gatherAbandonedResourcesIntel(structures: {[structureType: string]: Structure[]}, ruins: Ruin[]) {
+	gatherAbandonedResourcesIntel(structures: Record<string, Structure[]>, ruins: Ruin[]) {
 		// Find origin room.
 		if (!Memory.strategy) return;
 		if (!Memory.strategy.roomList) return;
@@ -822,7 +819,7 @@ export default class RoomIntel {
 	 *   An object keyed by structure id. The stored objects contain the properties
 	 *   x, y, hits and hitsMax.
 	 */
-	getStructures(structureType: StructureConstant): {[structureId: string]: {x: number, y: number, hits: number, hitsMax: number}} {
+	getStructures(structureType: StructureConstant): Record<string, {x: number; y: number; hits: number; hitsMax: number}> {
 		if (!this.memory.structures || !this.memory.structures[structureType]) return {};
 		return this.memory.structures[structureType];
 	}
@@ -859,7 +856,7 @@ export default class RoomIntel {
 	 *     whether that exit direction is considered safe.
 	 *   - safeRooms: An array of room names that are considered safe and nearby.
 	 */
-	calculateAdjacentRoomSafety(options?: {safe?: string[], unsafe?: string[]}): {directions: {[dir: string]: boolean}; safeRooms: string[]} {
+	calculateAdjacentRoomSafety(options?: {safe?: string[]; unsafe?: string[]}): {directions: Record<string, boolean>; safeRooms: string[]} {
 		return cache.inHeap('adjacentSafety:' + this.roomName, 100, () => {
 			if (!this.memory.exits) {
 				return {
@@ -961,7 +958,7 @@ export default class RoomIntel {
 	 * @param {object} base
 	 *   Information about the room this operation is base on.
 	 */
-	addAdjacentRoomToCheck(roomName: string, openList: Record<string, {range: number, origin: string, room: string}>, base: {range: number, dir: string}) {
+	addAdjacentRoomToCheck(roomName: string, openList: Record<string, {range: number; origin: string; room: string}>, base: {range: number; dir: string}) {
 		if (!this.isPotentiallyUnsafeRoom(roomName)) return;
 
 		openList[roomName] = {
@@ -994,7 +991,7 @@ export default class RoomIntel {
 	 * @param {object} closedList
 	 *   List of rooms that have been checked.
 	 */
-	handleAdjacentRoom(roomData: {range: number, origin: string, room: string}, openList: Record<string, {range: number, origin: string, room: string}>, closedList: Record<string, {range: number, origin: string, room: string}>) {
+	handleAdjacentRoom(roomData: {range: number; origin: string; room: string}, openList: Record<string, {range: number; origin: string; room: string}>, closedList: Record<string, {range: number; origin: string; room: string}>) {
 		const roomIntel = getRoomIntel(roomData.room);
 		if (roomIntel.getAge() > 100_000) {
 			// Room has no intel, declare it as unsafe.
@@ -1085,4 +1082,4 @@ export {
 	getRoomsWithIntel,
 };
 
-global['getRoomIntel'] = getRoomIntel;
+global.getRoomIntel = getRoomIntel;

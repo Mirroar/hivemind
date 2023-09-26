@@ -23,9 +23,9 @@ export default class ManageFactoryProcess extends Process {
 	run() {
 		if (!this.room.factory || !this.room.factoryManager) return;
 
-		let data: string[][] = [['Status', 'Factory product']];
+		const data: string[][] = [['Status', 'Factory product']];
 		const jobs = this.room.factoryManager.getJobs();
-		let hasProduced = false;
+		const hasProduced = false;
 		let product: FactoryProductConstant;
 		for (product in jobs) {
 			if (!this.room.factoryManager.hasAllComponents(product)) {
@@ -42,9 +42,7 @@ export default class ManageFactoryProcess extends Process {
 			if (hasProduced) continue;
 			if (this.room.factory.cooldown) continue;
 
-			if (this.room.factory.produce(product as CommodityConstant) === OK) {
-				if (settings.get('notifyFactoryProduction')) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
-			}
+			if (this.room.factory.produce(product as CommodityConstant) === OK && settings.get('notifyFactoryProduction')) Game.notify('Produced ' + product + ' in ' + this.room.name + '.');
 		}
 
 		if (data.length === 1) return;

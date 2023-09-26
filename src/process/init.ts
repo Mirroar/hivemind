@@ -12,11 +12,7 @@ import RoomOperation from 'operation/room';
 
 declare global {
 	interface Game {
-		creepsByRole: {
-			[key: string]: {
-				[key: string]: Creep,
-			},
-		},
+		creepsByRole: Record<string, Record<string, Creep>>;
 		exploits: Record<string, Exploit>;
 		myRooms: Room[];
 	}

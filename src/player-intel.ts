@@ -2,8 +2,8 @@ import hivemind from 'hivemind';
 import {getRoomIntel} from 'room-intel';
 
 type CreepIntel = {
-	body: Partial<Record<BodyPartConstant, number>>,
-	boosts?: Partial<Record<ResourceConstant, number>>,
+	body: Partial<Record<BodyPartConstant, number>>;
+	boosts?: Partial<Record<ResourceConstant, number>>;
 	pos: {
 		x: number;
 		y: number;

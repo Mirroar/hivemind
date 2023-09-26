@@ -41,10 +41,10 @@ function generateCallStats(key: string) {
 		average: sum / callTimes[key].length,
 		maximum,
 		count: callTimes[key].length,
-	}
+	};
 }
 
 export {
 	timeCall,
 	getCallStats,
-}
+};

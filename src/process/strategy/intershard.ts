@@ -216,8 +216,10 @@ export default class InterShardProcess extends Process {
 	}
 
 	failIntershardExpansion() {
-		if (!Memory.strategy.expand.failedExpansions)
+		if (!Memory.strategy.expand.failedExpansions) {
 			Memory.strategy.expand.failedExpansions = [];
+		}
+
 		Memory.strategy.expand.failedExpansions.push({
 			roomName: this.memory.info.interShardExpansion.room,
 			time: Game.time,
@@ -331,7 +333,7 @@ export default class InterShardProcess extends Process {
 	 * @return {string}
 	 *   Name of the room to spawn from.
 	 */
-	findClosestSpawn(targetRoom: string): {name: string, range: number} | null {
+	findClosestSpawn(targetRoom: string): {name: string; range: number} | null {
 		let bestRoom = null;
 		let bestLength = 0;
 		for (const room of Game.myRooms) {
@@ -352,7 +354,7 @@ export default class InterShardProcess extends Process {
 		return bestRoom && {
 			name: bestRoom.name,
 			range: bestLength,
-		}
+		};
 	}
 
 	manageReclaiming() {
@@ -366,7 +368,7 @@ export default class InterShardProcess extends Process {
 				name: room.name,
 				safe: room.isSafeForReclaiming(),
 				rcl: room.controller.level,
-				portalRoom: this.findClosestPortalToRoom(room.name)
+				portalRoom: this.findClosestPortalToRoom(room.name),
 			});
 
 			const squad = new Squad('intershardReclaim:' + room.name);
@@ -394,10 +396,10 @@ export default class InterShardProcess extends Process {
 					const portalPosition = decodePosition(portalLocation);
 					if (Game.map.getRoomLinearDistance(portalPosition.roomName, roomName) > 10) return;
 
-					// console.log('Checking if we can reach ' + roomName + ' from portal at ' + portalPosition + '...');
+					// Console.log('Checking if we can reach ' + roomName + ' from portal at ' + portalPosition + '...');
 
 					const path = this.navMesh.findPath(portalPosition, new RoomPosition(25, 25, roomName), {maxPathLength: 700});
-					// console.log(path.incomplete ? 'incomplete' : path.path.length);
+					// Console.log(path.incomplete ? 'incomplete' : path.path.length);
 					if (!path || path.incomplete) return;
 
 					if (bestPortal && bestPortal.range <= path.path.length) return;

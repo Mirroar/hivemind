@@ -27,7 +27,7 @@ function drawTable(table: TableDefinition, visual: RoomVisual) {
 		for (let col = 0; col < table.data[row].length; col++) {
 			visual.text(table.data[row][col], currentX + left, row + top, {
 				align: 'left',
-			})
+			});
 			currentX += columnWidths[col];
 		}
 	}
@@ -45,4 +45,4 @@ function getColumnWidths(tableData: string[][]): number[] {
 
 export {
 	drawTable,
-}
+};

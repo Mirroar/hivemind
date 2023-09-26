@@ -1,31 +1,5 @@
 /* global RawMemory */
 
-declare global {
-	interface RawMemory {
-		_parsed: boolean,
-	}
-
-	namespace NodeJS {
-		interface Global {
-			Memory: Memory,
-			hivemind: typeof hivemind,
-		}
-	}
-
-	const _: typeof _;
-}
-
-interface DeprecatedRoomMemory extends RoomMemory {
-	bays: unknown;
-	minerals: unknown;
-	remoteHarvesting: unknown;
-	roomPlan: unknown;
-	sources: unknown;
-	spawns: unknown;
-	structureCache: unknown;
-	inactiveStructures: unknown;
-}
-
 // Make sure game object prototypes are enhanced.
 import {ErrorMapper} from 'utils/ErrorMapper';
 
@@ -35,26 +9,18 @@ import './prototype/creep';
 import './prototype/room';
 import './prototype/structure';
 
-console.log('new global reset');
-
 // Create kernel object.
 import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
 import hivemind from 'hivemind';
-global.hivemind = hivemind;
 import SegmentedMemory from 'utils/segmented-memory';
-hivemind.setSegmentedMemory(new SegmentedMemory());
-hivemind.logGlobalReset();
 
 import container from 'utils/container';
 import containerSetup from 'container-factory';
-containerSetup(container);
 
 import balancer from 'excess-energy-balancer';
-balancer.init();
 
-import {getRoomIntel} from 'room-intel';
+import {getRoomIntel, RoomIntelMemory} from 'room-intel';
 import {PlayerIntelMemory} from 'player-intel';
-import {RoomIntelMemory} from 'room-intel';
 import {RoomPlannerMemory} from 'room/planner/room-planner';
 
 // Load top-level processes.
@@ -89,6 +55,42 @@ import cache from 'utils/cache';
 // Allow profiling of code.
 import {profiler, useProfiler} from 'utils/profiler';
 import stats from 'utils/stats';
+
+declare global {
+	interface RawMemory {
+		_parsed: boolean;
+	}
+
+	namespace NodeJS {
+		interface Global {
+			Memory: Memory;
+		}
+	}
+
+	const _: typeof _;
+}
+
+interface DeprecatedRoomMemory extends RoomMemory {
+	bays: unknown;
+	minerals: unknown;
+	remoteHarvesting: unknown;
+	roomPlan: unknown;
+	sources: unknown;
+	spawns: unknown;
+	structureCache: unknown;
+	inactiveStructures: unknown;
+}
+
+console.log('new global reset');
+
+global.hivemind = hivemind;
+
+hivemind.setSegmentedMemory(new SegmentedMemory());
+hivemind.logGlobalReset();
+
+containerSetup(container);
+
+balancer.init();
 
 // @todo Add a healer to defender squads, or spawn one when creeps are injured.
 

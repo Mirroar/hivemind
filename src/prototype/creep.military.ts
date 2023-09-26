@@ -55,7 +55,7 @@ PowerCreep.prototype.isDangerous = function (this: PowerCreep) {
 	if (hivemind.relations.isAlly(this.owner.username)) return false;
 
 	return true;
-}
+};
 
 Creep.prototype.getEffectiveHealth = function (this: Creep) {
 	// @todo Cache for one tick?
@@ -79,7 +79,7 @@ Creep.prototype.getEffectiveHealth = function (this: Creep) {
 
 PowerCreep.prototype.getEffectiveHealth = function (this: PowerCreep) {
 	return this.hits;
-}
+};
 
 Creep.prototype.getDamageCapacity = function (this: Creep, range) {
 	// @todo Cache for one tick?
@@ -120,7 +120,7 @@ Creep.prototype.getDamageCapacity = function (this: Creep, range) {
 
 PowerCreep.prototype.getDamageCapacity = function () {
 	return 0;
-}
+};
 
 Creep.prototype.getHealCapacity = function (this: Creep, range) {
 	// @todo Cache for one tick?
@@ -147,7 +147,7 @@ Creep.prototype.getHealCapacity = function (this: Creep, range) {
 
 PowerCreep.prototype.getHealCapacity = function () {
 	return 0;
-}
+};
 
 Creep.prototype.getEffectiveDamage = function (this: Creep, potentialDamage) {
 	let total = 0;
@@ -185,4 +185,4 @@ Creep.prototype.getEffectiveDamage = function (this: Creep, potentialDamage) {
 
 PowerCreep.prototype.getEffectiveDamage = function () {
 	return 0;
-}
+};

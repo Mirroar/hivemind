@@ -73,10 +73,9 @@ export default class ReclaimSpawnRole extends SpawnRole {
 				this.addIntershardSpawnOptionsFor(request, shardName, options);
 			}
 		}
-
 	}
 
-	addIntershardSpawnOptionsFor(request: {name: string, safe: boolean, rcl: number, portalRoom?: string}, shardName: string, options: ReclaimSpawnOption[]) {
+	addIntershardSpawnOptionsFor(request: {name: string; safe: boolean; rcl: number; portalRoom?: string}, shardName: string, options: ReclaimSpawnOption[]) {
 		if (!request.portalRoom) return;
 		if (request.rcl < 4) return;
 		if (!request.safe) return;
@@ -99,7 +98,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 		return cache.inHeap('portalRoomPos:' + this.room.name + ':' + roomName + ':' + shardName, 2 * CREEP_LIFE_TIME, () => {
 			let bestPortal;
 
-			console.log('Checking if we can spawn a reclaimer to ' + shardName + '/' + roomName)
+			console.log('Checking if we can spawn a reclaimer to ' + shardName + '/' + roomName);
 
 			const interShardMemory = interShard.getLocalMemory();
 			_.each(interShardMemory.portals[shardName], (portalInfo, portalLocation) => {

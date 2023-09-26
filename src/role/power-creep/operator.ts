@@ -533,7 +533,7 @@ export default class OperatorRole extends Role {
 				this.creep._powerUsed = true;
 				this.orderFinished();
 			}
-		}
+		};
 
 		if (target) {
 			this.creep.whenInRange(range, target, execute);

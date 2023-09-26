@@ -38,7 +38,7 @@ interface ExitInfo {
 }
 
 interface RegionInfo {
-	exits: number[],
+	exits: number[];
 	minX: number;
 	maxX: number;
 	minY: number;
@@ -356,7 +356,7 @@ export default class NavMesh {
 		});
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number, allowDanger?: boolean}): {path?: RoomPosition[]; length?: number; incomplete: boolean} {
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean}): {path?: RoomPosition[]; length?: number; incomplete: boolean} {
 		if (!options) options = {};
 
 		const startRoom = startPos.roomName;
@@ -529,10 +529,10 @@ export default class NavMesh {
 		// Find element id with lowest pathLength + heuristic.
 		let minId = null;
 		let minDist = 0;
-		for (let i = 0; i < openList.length; i++) {
-			if (minId === null || minDist > (openList[i].pathLength + openList[i].heuristic)) {
+		for (const [i, element] of openList.entries()) {
+			if (minId === null || minDist > (element.pathLength + element.heuristic)) {
 				minId = i;
-				minDist = openList[i].pathLength + openList[i].heuristic;
+				minDist = element.pathLength + element.heuristic;
 			}
 		}
 
@@ -548,7 +548,7 @@ export default class NavMesh {
 
 	getAdjacentRoom(roomName: string, exitId: number): string {
 		// @todo Use RoomIntel.getExits() or Game.map.describeExits() instead.
-		const parts = roomName.match(/(\w)(\d+)(\w)(\d+)/);
+		const parts = /(\w)(\d+)(\w)(\d+)/.exec(roomName);
 
 		const dir = Math.floor(exitId / 20);
 		switch (dir) {

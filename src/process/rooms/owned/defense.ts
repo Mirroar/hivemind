@@ -156,29 +156,25 @@ export default class RoomDefenseProcess extends Process {
 	}
 
 	getImportantStructures() {
-		const importantStructures: Array<Structure | ConstructionSite> = this.room.find(FIND_MY_STRUCTURES, {filter: structure => {
-			return ([
-				STRUCTURE_FACTORY,
-				STRUCTURE_LAB,
-				STRUCTURE_NUKER,
-				STRUCTURE_POWER_SPAWN,
-				STRUCTURE_SPAWN,
-				STRUCTURE_STORAGE,
-				STRUCTURE_TERMINAL,
-			] as string[]).includes(structure.structureType);
-		}});
+		const importantStructures: Array<Structure | ConstructionSite> = this.room.find(FIND_MY_STRUCTURES, {filter: structure => ([
+			STRUCTURE_FACTORY,
+			STRUCTURE_LAB,
+			STRUCTURE_NUKER,
+			STRUCTURE_POWER_SPAWN,
+			STRUCTURE_SPAWN,
+			STRUCTURE_STORAGE,
+			STRUCTURE_TERMINAL,
+		] as string[]).includes(structure.structureType)});
 		importantStructures.push(this.room.controller);
-		for (const constructionSite of this.room.find(FIND_MY_CONSTRUCTION_SITES, {filter: site => {
-			return ([
-				STRUCTURE_FACTORY,
-				STRUCTURE_LAB,
-				STRUCTURE_NUKER,
-				STRUCTURE_POWER_SPAWN,
-				STRUCTURE_SPAWN,
-				STRUCTURE_STORAGE,
-				STRUCTURE_TERMINAL,
-			] as string[]).includes(site.structureType);
-		}})) {
+		for (const constructionSite of this.room.find(FIND_MY_CONSTRUCTION_SITES, {filter: site => ([
+			STRUCTURE_FACTORY,
+			STRUCTURE_LAB,
+			STRUCTURE_NUKER,
+			STRUCTURE_POWER_SPAWN,
+			STRUCTURE_SPAWN,
+			STRUCTURE_STORAGE,
+			STRUCTURE_TERMINAL,
+		] as string[]).includes(site.structureType)})) {
 			if (constructionSite.progress < 10_000) continue;
 
 			importantStructures.push(constructionSite);
@@ -212,6 +208,6 @@ export default class RoomDefenseProcess extends Process {
 		Memory.requests.defense[this.room.name] = {
 			priority,
 			lastSeen: Game.time,
-		}
+		};
 	}
 }

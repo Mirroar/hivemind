@@ -30,7 +30,7 @@ export default class TrafficManager {
 		creep._requestedMoveArea = {
 			pos: center,
 			range,
-		}
+		};
 	}
 
 	setAlternatePositions(creep: Creep | PowerCreep, positions: RoomPosition[]) {
@@ -84,6 +84,7 @@ export default class TrafficManager {
 			else {
 				blockedCreep.moveTo(creep.pos, {range: 1});
 			}
+
 			creep._hasMoveIntent = true;
 		});
 	}
@@ -93,13 +94,13 @@ export default class TrafficManager {
 
 		let alternatePosition: RoomPosition;
 		const costMatrix = getCostMatrix(creep.room.name, {
-			singleRoom: !!creep.memory.singleRoom,
+			singleRoom: Boolean(creep.memory.singleRoom),
 		});
 
 		// @todo If none of the alternate positions are free, check if
 		// neighboring creeps can be pushed aside recursively.
 		// @todo Prefer moving onto roads / plains instead of swamps.
-		let blockingCreeps: Array<Creep | PowerCreep> = [];
+		const blockingCreeps: Array<Creep | PowerCreep> = [];
 		handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
 			if (costMatrix.get(x, y) >= 100) return null;
 			if (creep.room.getTerrain().get(x, y) === TERRAIN_MASK_WALL) return null;
@@ -138,6 +139,7 @@ export default class TrafficManager {
 					blockingCreep.move(blockingCreep.pos.getDirectionTo(chainedAlternatePosition));
 					return blockingCreep.pos;
 				}
+
 				delete blockingCreep._hasMoveIntent;
 			}
 		}

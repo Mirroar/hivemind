@@ -101,7 +101,7 @@ export default class MineBuilderRole extends Role {
 			scoredPositions.push(this.scoreHarvestPosition(creep, position));
 		}
 
-		if (!scoredPositions.length) return;
+		if (scoredPositions.length === 0) return;
 
 		const bestPosition = _.max(_.filter(scoredPositions, p => p.work > 0), 'work');
 
@@ -118,10 +118,10 @@ export default class MineBuilderRole extends Role {
 
 		const path = operation.getPaths()[targetPos];
 
-		const hasBuilder = _.filter(Game.creepsByRole['builder.mines'], (c: MineBuilderCreep) => c.memory.source === targetPos).length > 0;
+		const hasBuilder = _.some(Game.creepsByRole['builder.mines'], (c: MineBuilderCreep) => c.memory.source === targetPos);
 		if (hasBuilder) return {position, work: 0};
 
-		const hasHarvester = _.filter(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos).length > 0;
+		const hasHarvester = _.some(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos);
 		if (!hasHarvester) return {position, work: 0};
 
 		const neededWork = operation.getNeededWork(targetPos);
@@ -150,19 +150,17 @@ export default class MineBuilderRole extends Role {
 	performReturnHome(creep: MineBuilderCreep) {
 		// Refill at container if we emptied ourselves too much repairing it.
 		const container = creep.operation?.getContainer(creep.memory.source);
-		if (container && container.pos.roomName === creep.pos.roomName && creep.pos.getRangeTo(container) < 10) {
-			if (
-				creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.5 &&
-				container.store.getUsedCapacity(RESOURCE_ENERGY) > container.store.getCapacity() * 0.1
-			) {
-				// If we're close to source container, make sure we fill up before
-				// returning home.
-				creep.whenInRange(1, container, () => {
-					creep.withdraw(container, RESOURCE_ENERGY);
-				});
+		if (container && container.pos.roomName === creep.pos.roomName && creep.pos.getRangeTo(container) < 10
+				&& creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.5
+				&& container.store.getUsedCapacity(RESOURCE_ENERGY) > container.store.getCapacity() * 0.1
+		) {
+			// If we're close to source container, make sure we fill up before
+			// returning home.
+			creep.whenInRange(1, container, () => {
+				creep.withdraw(container, RESOURCE_ENERGY);
+			});
 
-				return;
-			}
+			return;
 		}
 
 		if (this.pickupNearbyEnergy(creep)) return;
@@ -193,9 +191,7 @@ export default class MineBuilderRole extends Role {
 			if (creep.hasArrived()) {
 				creep.clearCachedPath();
 			}
-			else {
-				return;
-			}
+			else {}
 		}
 		else {
 			creep.moveToRange(new RoomPosition(25, 25, creep.memory.sourceRoom), 20);
@@ -386,12 +382,10 @@ export default class MineBuilderRole extends Role {
 			// Create construction site in remote rooms.
 			if (!tileHasRoad && _.size(Game.constructionSites) < MAX_CONSTRUCTION_SITES * 0.7) {
 				const sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
-				const numSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
-				if (sites.length === 0 && numSites < 5) {
-					if (position.createConstructionSite(STRUCTURE_ROAD) === OK) {
-						// Stay here to build the new construction site.
-						return true;
-					}
+				const numberSites = _.filter(Game.constructionSites, site => site.pos.roomName === position.roomName).length;
+				if (sites.length === 0 && numberSites < 5 && position.createConstructionSite(STRUCTURE_ROAD) === OK) {
+					// Stay here to build the new construction site.
+					return true;
 				}
 			}
 		}

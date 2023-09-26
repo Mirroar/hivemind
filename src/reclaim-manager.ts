@@ -9,7 +9,6 @@ declare global {
 let lastReclaimCleanup = Game.time;
 
 export default class ReclaimManager {
-
 	public updateReclaimStatus(room: Room) {
 		if (this.needsToReclaim(room)) {
 			this.updateReclaimTimer(room);
@@ -31,7 +30,7 @@ export default class ReclaimManager {
 
 	private hasSpawn(room: Room): boolean {
 		return room.find(FIND_MY_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_SPAWN
+			filter: structure => structure.structureType === STRUCTURE_SPAWN,
 		}).length > 0;
 	}
 
@@ -62,10 +61,13 @@ export default class ReclaimManager {
 		if (!room.memory.isReclaimableSince) return false;
 		if (!room.roomManager) return false;
 		if (!room.roomManager.checkWallIntegrity()) return false;
-		if (room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_SPAWN }).length === 0)
+		if (room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_SPAWN}).length === 0) {
 			return false;
-		if (room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_TOWER }).length === 0)
+		}
+
+		if (room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length === 0) {
 			return false;
+		}
 
 		return true;
 	}
@@ -94,5 +96,4 @@ export default class ReclaimManager {
 		return Game.time - room.memory.isReclaimableSince > 2000
 			|| (room.controller?.safeMode ?? 0) > 2000;
 	}
-
 }

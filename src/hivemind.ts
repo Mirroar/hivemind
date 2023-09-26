@@ -16,9 +16,10 @@ const PROCESS_PRIORITY_ALWAYS = 10;
 
 declare global {
 	interface ProcessMemory {
-		lastRun: number;
-		lastCpu: number;
-		parentId: string;
+		cpu?: number;
+		lastRun?: number;
+		lastCpu?: number;
+		parentId?: string;
 	}
 
 	interface Memory {
@@ -26,13 +27,19 @@ declare global {
 	}
 
 	interface KernelMemory {
-		process: {},
+		process: Record<string, ProcessMemory>;
 		intelMigrated?: boolean;
 		roomPlannerMigrated?: boolean;
 		remoteMinersMigrated?: boolean;
 		canExpand?: boolean;
 		maxScoutDistance: number;
 		showProcessDebug?: number;
+	}
+
+	namespace NodeJS {
+		interface Global {
+			hivemind: typeof hivemind;
+		}
 	}
 }
 
@@ -69,7 +76,7 @@ class Hivemind {
 	// @todo hivemind.settings should be removed. Any module needing access to
 	// settings can import them directly.
 	settings: SettingsManager;
-	loggers: {}
+	loggers: Record<string, unknown>;
 	segmentMemory: SegmentedMemory;
 	hasGlobalReset: boolean;
 	currentProcess: ProcessInterface;
@@ -168,7 +175,7 @@ class Hivemind {
 	 *   - requireSegments: If true, the process may only run after segment memory
 	 *     has been fully loaded.
 	 */
-	runProcess<P extends ProcessParameters>(id: string, ProcessConstructor: {new (parameters: P): ProcessInterface}, options: P) {
+	runProcess<P extends ProcessParameters>(id: string, ProcessConstructor: new (parameters: P) => ProcessInterface, options: P) {
 		if (this.pullEmergengyBrake(id)) return;
 		if (options && options.requireSegments && !this.segmentMemory.isReady()) return;
 
@@ -181,7 +188,9 @@ class Hivemind {
 		if (this.isProcessAllowedToRun(stats, options) && process.shouldRun()) {
 			const previousProcess = this.currentProcess;
 			this.currentProcess = process;
-			this.timeProcess(id, stats, () => process.run());
+			this.timeProcess(id, stats, () => {
+				process.run();
+			});
 			this.currentProcess = previousProcess;
 		}
 	}

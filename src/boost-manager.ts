@@ -14,19 +14,19 @@ declare global {
 	}
 
 	type AvailableBoosts = Partial<Record<ResourceConstant, {
-		effect: number,
-		available: number,
+		effect: number;
+		available: number;
 	}>>;
 }
 
 type BoostManagerMemory = {
-	creeps: Record<string, Partial<Record<ResourceConstant, number>>>
-	labs: Record<Id<StructureLab>, ResourceConstant>
-}
+	creeps: Record<string, Partial<Record<ResourceConstant, number>>>;
+	labs: Record<Id<StructureLab>, ResourceConstant>;
+};
 
 type AvailableBoosts = Partial<Record<ResourceConstant, {
-	effect: number,
-	available: number,
+	effect: number;
+	available: number;
 }>>;
 
 export default class BoostManager {
@@ -235,9 +235,7 @@ export default class BoostManager {
 	}
 
 	public getAllLabs(): StructureLab[] {
-		return cache.inObject(this.room, 'labs', 1, () => {
-			return this.room.find<StructureLab>(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB && s.isOperational()});
-		});
+		return cache.inObject(this.room, 'labs', 1, () => this.room.find<StructureLab>(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB && s.isOperational()}));
 	}
 
 	private getLabsForBoosts(boosts: Partial<Record<ResourceConstant, number>>): StructureLab[] {
@@ -265,8 +263,9 @@ export default class BoostManager {
 				// Awesome, boost has been applied (in theory).
 				// Clear memory, to prevent trying to boost again.
 				delete this.memory.creeps[creep.name][resourceType];
-				if (_.keys(this.memory.creeps[creep.name]).length === 0)
+				if (_.keys(this.memory.creeps[creep.name]).length === 0) {
 					delete this.memory.creeps[creep.name];
+				}
 
 				// Unassign lab if no longer needed for boosting.
 				this.ensureLabIsStillNeededForBoosting(lab);
@@ -297,9 +296,7 @@ export default class BoostManager {
 			'availableBoosts',
 			1,
 			() => {
-				const boosts: {
-					[boostType: string]: AvailableBoosts,
-				} = {};
+				const boosts: Record<string, AvailableBoosts> = {};
 
 				const storage = this.room.storage || {store: {}};
 				const terminal = this.room.terminal || {store: {}};

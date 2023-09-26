@@ -54,11 +54,9 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				if (source.getNearbyContainer()?.id !== target.id) continue;
 
 				option.priority++;
-				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity()) {
-					// This container is filling up, prioritize emptying it when we aren't
+				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity() // This container is filling up, prioritize emptying it when we aren't
 					// busy filling extensions.
-					if (this.room.energyAvailable >= this.room.energyCapacityAvailable || !this.room.storage || creep.memory.role !== 'transporter') option.priority += 2;
-				}
+					&& (this.room.energyAvailable >= this.room.energyCapacityAvailable || !this.room.storage || creep.memory.role !== 'transporter')) option.priority += 2;
 
 				break;
 			}
