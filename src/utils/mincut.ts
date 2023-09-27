@@ -177,7 +177,7 @@ function modifyProblematicProtectedExits(roomArray: number[][]) {
 }
 
 function floodFillUnprotectedExit(roomArray: number[][], corner: number[][]) {
-	const queue = [];
+	const queue: number[][] = [];
 	for (const [x, y] of corner) {
 		if (roomArray[x][y] === PROTECTED) queue.push([x, y]);
 	}
@@ -200,17 +200,23 @@ function floodFillUnprotectedExit(roomArray: number[][], corner: number[][]) {
  */
 class Graph {
 	v: number;
-	level: any;
-	edges: any;
+	level: number[];
+	edges: Array<Array<{
+		v: number;
+		r: number;
+		c: number;
+		f: number;
+		u?: number;
+	}>>;
 
 	/**
 	 * @todo Documentation
 	 */
-	constructor(vertexCount) {
+	constructor(vertexCount: number) {
 		this.v = vertexCount;
-		this.level = new Array(vertexCount);
+		this.level = Array.from({length: vertexCount});
 		// Array: for every vertex an edge Array with {v, r, c, f} vertex_to, res_edge, capacity, flow
-		this.edges = new Array(vertexCount).fill(0).map(() => []);
+		this.edges = Array.from({length: vertexCount}).fill(0).map(() => []);
 	}
 
 	/**
@@ -298,13 +304,13 @@ class Graph {
 	/**
 	 * Breadth-first-search which uses the level array to mark the vertices reachable from s
 	 */
-	markReachableVertices(s) {
+	markReachableVertices(s: number) {
 		const edgesInCut = [];
 
 		this.level.fill(-1);
 		this.level[s] = 1;
 
-		const queue = [];
+		const queue: number[] = [];
 		queue.push(s);
 		while (queue.length > 0) {
 			const u = queue.splice(0, 1)[0];

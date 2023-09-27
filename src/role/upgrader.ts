@@ -6,6 +6,22 @@ import cache from 'utils/cache';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 
+declare global {
+	interface UpgraderCreep extends Creep {
+		memory: UpgraderCreepMemory;
+		heapMemory: UpgraderCreepHeapMemory;
+	}
+
+	interface UpgraderCreepMemory extends CreepMemory {
+		role: 'upgrader';
+		upgrading?: boolean;
+	}
+
+	interface UpgraderCreepHeapMemory extends CreepHeapMemory {
+		currentRcl?: number;
+	}
+}
+
 export default class UpgraderRole extends Role {
 	transporterRole: TransporterRole;
 
@@ -25,13 +41,19 @@ export default class UpgraderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: UpgraderCreep) {
 		if (!creep.heapMemory.currentRcl) {
 			creep.heapMemory.currentRcl = creep.room.controller.level;
 		}
-		else if (creep.heapMemory.currentRcl !== creep.room.controller.level && creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0) {
-			creep.memory.role = 'builder';
+		else if (
+			creep.heapMemory.currentRcl !== creep.room.controller.level
+			&& creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0
+			&& creep.room.controller.level < 5
+		) {
+			// In low level rooms, stop upgrading and build on RCL up.
 			delete creep.memory.upgrading;
+		const builderCreep = creep as unknown as BuilderCreep;
+			builderCreep.memory.role = 'builder';
 			return;
 		}
 
@@ -59,11 +81,11 @@ export default class UpgraderRole extends Role {
 	 * @param {boolean} allowRefilling
 	 *   Whether the creep may take energy from controller link or container.
 	 */
-	performUpgrade(creep, allowRefilling) {
+	performUpgrade(creep: UpgraderCreep, allowRefilling: boolean) {
 		// Upgrade controller.
 		const controller = creep.room.controller;
 		const distance = creep.pos.getRangeTo(controller);
-		const isOnlyUpgrader = creep.memory.role === 'upgrader' && creep.room.creepsByRole.upgrader.length === 1;
+		const isOnlyUpgrader = creep.memory.role === 'upgrader' && _.size(creep.room.creepsByRole.upgrader) === 1;
 		if (distance > 3 && isOnlyUpgrader) {
 			const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
 				if (!creep.room.roomPlanner) return null;
@@ -114,7 +136,7 @@ export default class UpgraderRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	performGetUpgraderEnergy(creep) {
+	performGetUpgraderEnergy(creep: UpgraderCreep) {
 		// Ideally, get energy from a link or container close to the controller.
 		if (creep.room.memory.controllerLink) {
 			const target = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
@@ -175,7 +197,7 @@ export default class UpgraderRole extends Role {
 
 		// If all else fails and we can't excpect resupply, look for energy ourselves.
 		if (!creep.room.memory.controllerLink && !creep.room.memory.controllerContainer) {
-			this.transporterRole.performGetEnergy(creep);
+			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 		}
 	}
 
@@ -187,7 +209,7 @@ export default class UpgraderRole extends Role {
 	 * @param {boolean} upgrading
 	 *   Whether the creep should be praising the controller.
 	 */
-	setUpgraderState(creep, upgrading) {
+	setUpgraderState(creep: UpgraderCreep, upgrading: boolean) {
 		creep.memory.upgrading = upgrading;
 	}
 }
