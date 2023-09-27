@@ -7,14 +7,55 @@ import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
+declare global {
+	interface ShardMemory {
+		info?: {
+			ownedRooms?: number;
+			ownedCreeps?: number;
+			maxRoomLevel?: number;
+			rooms?: {
+				bestExpansion?: {
+					name: string;
+					score: number;
+				};
+				bestRoom?: {
+					name: string;
+					score: number;
+				};
+				worstRoom?: {
+					name: string;
+					score: number;
+				};
+				reclaimable?: Array<{
+					name: string;
+					safe: boolean;
+					rcl: number;
+					portalRoom: string;
+				}>;
+			};
+			interShardExpansion?: {
+				room: string;
+				portalRoom: string;
+				start: number;
+			}
+		};
+		scouting?: Record<string, boolean>;
+	}
+}
+
+// @todo This should be a setting.
 const minRoomLevelToIntershardScout = 7;
 
 /**
  * Chooses rooms for expansion and sends creeps there.
  */
 export default class InterShardProcess extends Process {
-	memory;
-	_shardData;
+	memory: ShardMemory;
+	_shardData: Record<string, {
+		rooms?: number;
+		creeps?: number;
+		neededCpu: number;
+	}>;
 
 	navMesh: NavMesh;
 
@@ -121,7 +162,7 @@ export default class InterShardProcess extends Process {
 	 * @param {object|null} shardMemory
 	 *   The shard's memory object, if available.
 	 */
-	addShardData(shardName, shardMemory?: any) {
+	addShardData(shardName: string, shardMemory?: ShardMemory) {
 		// Only handle each shard once.
 		if (this._shardData[shardName]) return;
 
@@ -299,7 +340,7 @@ export default class InterShardProcess extends Process {
 	 * @return {RoomPosition}
 	 *   Position of the portal we should take to get to the target room.
 	 */
-	findClosestPortalToSpawnTo(roomName, targetShard) {
+	findClosestPortalToSpawnTo(roomName: string, targetShard: string) {
 		let bestPortal;
 		_.each(this.memory.portals, (portals, shardName) => {
 			if (shardName !== targetShard) return;

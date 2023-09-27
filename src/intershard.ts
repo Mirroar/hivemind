@@ -7,6 +7,12 @@ declare global {
 		interShardReplacement: any;
 	}
 
+	interface ShardMemory {
+		portals?: Record<string, Record<string, {
+			dest: string;
+		}>>;
+	}
+
 	namespace NodeJS {
 		interface Global {
 			interShard: typeof interShard;
@@ -15,14 +21,13 @@ declare global {
 }
 
 const interShard = {
-
 	/**
 	 * Gets the memory object for the current shard.
 	 *
 	 * @return {object}
 	 *   This shard's inter-shard memory.
 	 */
-	getLocalMemory() {
+	getLocalMemory(): ShardMemory {
 		if (typeof InterShardMemory === 'undefined') {
 			// Create mock intershard memory object.
 			if (!Memory.interShardReplacement) Memory.interShardReplacement = {};
@@ -62,7 +67,7 @@ const interShard = {
 	 * @return {object}
 	 *   The shard's inter-shard memory.
 	 */
-	getRemoteMemory(shardName) {
+	getRemoteMemory(shardName): ShardMemory {
 		if (typeof InterShardMemory === 'undefined') return {};
 
 		return JSON.parse(InterShardMemory.getRemote(shardName)) || {};
@@ -74,7 +79,9 @@ const interShard = {
 	 * @param {StructurePortal} portal
 	 *   The portal to register.
 	 */
-	registerPortal(portal) {
+	registerPortal(portal: StructurePortal) {
+		if (!('shard' in portal.destination)) return;
+
 		const memory = this.getLocalMemory();
 		const targetShard = portal.destination.shard;
 
