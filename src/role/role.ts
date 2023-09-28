@@ -34,6 +34,10 @@ export default class Role {
 		this.stopAt = 2000;
 	}
 
+	run(creep: Creep) {
+		throw new Error('Implementation missing.');
+	}
+
 	preRun(creep: Creep): boolean {
 		if (this.containSingleRoomCreep(creep)) return false;
 

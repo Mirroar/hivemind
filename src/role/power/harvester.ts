@@ -8,7 +8,22 @@ import Role from 'role/role';
 
 declare global {
 	interface Creep {
+		incHealing?: number;
+	}
+
+	interface PowerHarvesterCreep extends Creep {
+		memory: PowerHarvesterCreepMemory;
+		heapMemory: PowerHarvesterCreepHeapMemory;
 		_hasAttacked: boolean;
+	}
+
+	interface PowerHarvesterCreepMemory extends CreepMemory {
+		role: 'harvester.power';
+		isHealer: boolean;
+		targetRoom: string;
+	}
+
+	interface PowerHarvesterCreepHeapMemory extends CreepHeapMemory {
 	}
 }
 
@@ -27,7 +42,7 @@ export default class PowerHarvesterRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: PowerHarvesterCreep) {
 		this.attackNearby(creep);
 		this.chaseNearbyRanged(creep);
 		if (creep._hasAttacked) return;
@@ -36,7 +51,7 @@ export default class PowerHarvesterRole extends Role {
 		if (creep.interRoomTravel(targetPosition)) return;
 		if (creep.pos.roomName != targetPosition.roomName) return;
 
-		const powerBanks = creep.room.find(FIND_STRUCTURES, {
+		const powerBanks = creep.room.find<StructurePowerBank>(FIND_STRUCTURES, {
 			filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
 		});
 
@@ -76,7 +91,7 @@ export default class PowerHarvesterRole extends Role {
 		creep.whenInRange(5, center, () => {});
 	}
 
-	attackNearby(creep: Creep) {
+	attackNearby(creep: PowerHarvesterCreep) {
 		if (creep.memory.isHealer) return;
 
 		const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 1, {
@@ -95,7 +110,7 @@ export default class PowerHarvesterRole extends Role {
 		}
 	}
 
-	chaseNearbyRanged(creep: Creep) {
+	chaseNearbyRanged(creep: PowerHarvesterCreep) {
 		if (creep.memory.isHealer) return;
 		if (creep._hasAttacked) return;
 		if (creep.pos.roomName !== creep.memory.targetRoom) return;
@@ -121,7 +136,7 @@ export default class PowerHarvesterRole extends Role {
 	 * @param {StructurePowerBank} powerBank
 	 *   The power bank to attack.
 	 */
-	attackPowerBank(creep, powerBank) {
+	attackPowerBank(creep: PowerHarvesterCreep, powerBank: StructurePowerBank) {
 		if (creep.memory.isHealer) {
 			const damagedCreep = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
 				filter: otherCreep => otherCreep.memory.role === 'harvester.power' && (otherCreep.hits + (otherCreep.incHealing || 0)) < otherCreep.hitsMax,

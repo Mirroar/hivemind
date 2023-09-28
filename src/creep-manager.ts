@@ -1,4 +1,5 @@
 import hivemind from 'hivemind';
+import Role from 'role/role';
 import {getThrottleOffset, throttle} from 'utils/throttle';
 import {timeCall} from 'utils/cpu';
 
@@ -35,8 +36,15 @@ declare global {
 }
 
 export default class CreepManager {
-	roles;
-	performance;
+	roles: Record<string, Role>;
+	performance: Record<string, {
+		run: number;
+		throttled: number;
+		total: number;
+		average: number;
+		min?: number;
+		max?: number;
+	}>;
 
 	/**
 	 * Generally responsible for all creeps' logic.
@@ -56,7 +64,7 @@ export default class CreepManager {
 	 * @param {Role} role
 	 *   The role to register.
 	 */
-	registerCreepRole(roleId, role) {
+	registerCreepRole(roleId: string, role: Role) {
 		this.roles[roleId] = role;
 		this.prepareStatMemory(roleId);
 	}
@@ -78,7 +86,7 @@ export default class CreepManager {
 	 * @param {String} roleId
 	 *   Identifier of the role, or 'total'.
 	 */
-	prepareStatMemory(roleId) {
+	prepareStatMemory(roleId: string) {
 		this.performance[roleId] = {
 			run: 0,
 			throttled: 0,
@@ -96,7 +104,7 @@ export default class CreepManager {
 	 * @return {boolean}
 	 *   True if the creep's logic should not be executed this tick.
 	 */
-	throttleCreep(creep: Creep) {
+	throttleCreep(creep: Creep): boolean {
 		const role = this.roles[creep.memory.role];
 
 		// Do not throttle creeps at room borders, so they don't accidentaly
@@ -116,7 +124,7 @@ export default class CreepManager {
 	 * @param {Creep} creep
 	 *   The creep in question.
 	 */
-	runCreepLogic(creep) {
+	runCreepLogic(creep: Creep) {
 		if (creep.spawning) return;
 		if (!this.canManageCreep(creep)) return;
 
@@ -161,7 +169,7 @@ export default class CreepManager {
 	 * @return {boolean}
 	 *   True if this creep manager could run logic for this creep.
 	 */
-	canManageCreep(creep) {
+	canManageCreep(creep: Creep) {
 		if (creep.memory.role && this.roles[creep.memory.role]) {
 			return true;
 		}
@@ -177,7 +185,7 @@ export default class CreepManager {
 	 * @param {Number} totalTime
 	 *   Total CPU time spent running this creep's logic.
 	 */
-	recordCreepCpuStats(roleId, totalTime) {
+	recordCreepCpuStats(roleId: string, totalTime: number) {
 		_.each([this.performance.total, this.performance[roleId]], memory => {
 			memory.total += totalTime;
 
@@ -197,8 +205,8 @@ export default class CreepManager {
 	 * @param {Array|Object} creeps
 	 *   List of all the creeps to handle.
 	 */
-	manageCreeps(creeps) {
-		_.each(creeps, creep => {
+	manageCreeps(creeps: Creep[]) {
+		_.each(creeps, (creep: Creep) => {
 			this.runCreepLogic(creep);
 		});
 	}

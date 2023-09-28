@@ -622,7 +622,7 @@ export default class TradeProcess extends Process {
 	 *  - average: Adjusted average price of this resource.
 	 *  - stdDev: Adjusted standard deviation for this resource's price.
 	 */
-	getPriceData(resourceType: TradeResource): {total:  number; average: number; stdDev: number} {
+	getPriceData(resourceType: TradeResource): {total: number; average: number; stdDev: number} {
 		return cache.inHeap('price:' + resourceType, 5000, () => {
 			const history = Game.market.getHistory(resourceType);
 
