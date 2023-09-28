@@ -1,4 +1,4 @@
-function getResourcesIn(store: StoreDefinition | Record<string, number>): ResourceConstant[] {
+function getResourcesIn(store: StoreDefinition | Partial<Record<ResourceConstant, any>>): ResourceConstant[] {
 	return _.keys(store) as ResourceConstant[];
 }
 

@@ -10,15 +10,6 @@ import {decodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 
-interface RoomResourceState {
-	totalResources: Partial<Record<ResourceConstant, number>>;
-	state: Partial<Record<ResourceConstant, ResourceLevel>>;
-	canTrade: boolean;
-	isEvacuating: boolean;
-	mineralTypes: ResourceConstant[];
-	addResource: (resourceType: ResourceConstant, amount: number) => void;
-}
-
 declare global {
 	interface Room {
 		sourceDispatcher: ResourceSourceDispatcher;
@@ -49,6 +40,15 @@ declare global {
 	interface RoomMemory {
 		fillTerminal?: ResourceConstant;
 		fillTerminalAmount?: number;
+	}
+
+	interface RoomResourceState {
+		totalResources: Partial<Record<ResourceConstant, number>>;
+		state: Partial<Record<ResourceConstant, ResourceLevel>>;
+		canTrade: boolean;
+		isEvacuating: boolean;
+		mineralTypes: ResourceConstant[];
+		addResource: (resourceType: ResourceConstant, amount: number) => void;
 	}
 }
 

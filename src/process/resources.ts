@@ -4,6 +4,15 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
+import {getResourcesIn} from 'utils/store';
+
+interface TransportRouteOption {
+	priority: number;
+	weight: number;
+	resourceType: ResourceConstant;
+	source: string;
+	target: string;
+}
 
 /**
  * Sends resources between owned rooms when needed.
@@ -78,11 +87,11 @@ export default class ResourcesProcess extends Process {
 	 * @return {Array}
 	 *   An array of option objects with priorities.
 	 */
-	getAvailableTransportRoutes() {
+	getAvailableTransportRoutes(): TransportRouteOption[] {
 		const options = [];
 		const rooms = this.getResourceStates();
 
-		_.each(rooms, (roomState: any, roomName: string) => {
+		_.each(rooms, (roomState: RoomResourceState, roomName: string) => {
 			const room = Game.rooms[roomName];
 			if (!roomState.canTrade) return;
 
@@ -91,7 +100,7 @@ export default class ResourcesProcess extends Process {
 
 			if (room.terminal.cooldown) return;
 
-			for (const resourceType of _.keys(roomState.state)) {
+			for (const resourceType of getResourcesIn(roomState.state)) {
 				const resourceLevel = roomState.state[resourceType] || 'low';
 
 				this.addResourceRequestOptions(options, room, resourceType, roomState);
@@ -148,7 +157,7 @@ export default class ResourcesProcess extends Process {
 		return options;
 	}
 
-	addResourceRequestOptions(options: any[], room: Room, resourceType: string, roomState) {
+	addResourceRequestOptions(options: TransportRouteOption[], room: Room, resourceType: ResourceConstant, roomState: RoomResourceState) {
 		// Fullfill allies trade requests.
 		for (const roomName2 in Memory?.requests?.trade?.[resourceType] || {}) {
 			const info = Memory.requests.trade[resourceType][roomName2];
@@ -194,7 +203,7 @@ export default class ResourcesProcess extends Process {
 		}
 	}
 
-	getResourceTier(resourceType: string): number {
+	getResourceTier(resourceType: ResourceConstant): number {
 		if (resourceType === RESOURCE_ENERGY) return 0;
 		if (resourceType === RESOURCE_POWER) return 10;
 
@@ -212,7 +221,7 @@ export default class ResourcesProcess extends Process {
 	 * @return {object}
 	 *   Resource states, keyed by room name.
 	 */
-	getResourceStates() {
+	getResourceStates(): Record<string, RoomResourceState> {
 		const rooms = {};
 
 		// Collect room resource states.

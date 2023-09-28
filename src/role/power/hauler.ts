@@ -1,9 +1,28 @@
-/* global RoomPosition RESOURCE_POWER FIND_STRUCTURES OK ATTACK_POWER
+/* global RoomPosition RESOURCE_POWER FIND_STRUCTURES ATTACK_POWER
 STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES FIND_RUINS MAX_CREEP_SIZE
 FIND_TOMBSTONES */
 
-import hivemind from 'hivemind';
 import Role from 'role/role';
+import {getResourcesIn} from 'utils/store';
+
+declare global {
+	interface PowerHaulerCreep extends Creep {
+		memory: PowerHaulerCreepMemory;
+		heapMemory: PowerHaulerCreepHeapMemory;
+	}
+
+	interface PowerHaulerCreepMemory extends CreepMemory {
+		role: 'hauler.power';
+		delivering?: boolean;
+		isReturning?: boolean;
+		sourceRoom: string;
+		targetRoom: string;
+		pickupTarget?: Id<Resource | Ruin | Tombstone>;
+	}
+
+	interface PowerHaulerCreepHeapMemory extends CreepHeapMemory {
+	}
+}
 
 export default class PowerHaulerRole extends Role {
 	/**
@@ -12,7 +31,7 @@ export default class PowerHaulerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: PowerHaulerCreep) {
 		if (!creep.memory.isReturning && (creep.store.getFreeCapacity() === 0 || (creep.store.power || 0) > creep.store.getCapacity() / 10)) {
 			// Return home.
 			creep.memory.isReturning = true;
@@ -47,7 +66,7 @@ export default class PowerHaulerRole extends Role {
 				// Also drop anything that's not power, it can be picked up again once
 				// power is depleted.
 				if (creep.store.getUsedCapacity() > (creep.store[RESOURCE_POWER] || 0)) {
-					for (const resourceType of _.keys(creep.store)) {
+					for (const resourceType of getResourcesIn(creep.store)) {
 						if (resourceType === RESOURCE_POWER) continue;
 						if (!creep.store[resourceType]) continue;
 						creep.drop(resourceType);
@@ -75,7 +94,7 @@ export default class PowerHaulerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	returnHome(creep: Creep) {
+	returnHome(creep: PowerHaulerCreep) {
 		const targetPosition = new RoomPosition(25, 25, creep.memory.sourceRoom);
 		const isInTargetRoom = creep.pos.roomName === targetPosition.roomName;
 
@@ -116,7 +135,7 @@ export default class PowerHaulerRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	pickupPower(creep) {
+	pickupPower(creep: PowerHaulerCreep) {
 		const powerResources = creep.room.find(FIND_DROPPED_RESOURCES, {
 			filter: resource => resource.resourceType === RESOURCE_POWER,
 		});
@@ -152,7 +171,7 @@ export default class PowerHaulerRole extends Role {
 		creep.memory.isReturning = true;
 	}
 
-	pickupResources(creep, resourceType?: ResourceConstant) {
+	pickupResources(creep: PowerHaulerCreep, resourceType?: ResourceConstant) {
 		let target;
 		if (creep.memory.pickupTarget) {
 			target = Game.getObjectById(creep.memory.pickupTarget);
@@ -193,7 +212,7 @@ export default class PowerHaulerRole extends Role {
 				creep.pickup(target);
 			}
 			else {
-				creep.withdraw(target, resourceType || _.keys(target.store)[0]);
+				creep.withdraw(target, resourceType || getResourcesIn(target.store)[0]);
 			}
 		});
 

@@ -222,7 +222,7 @@ class Graph {
 	/**
 	 * Adds new edge from u to v.
 	 */
-	addEdge(u, v, c) {
+	addEdge(u: number, v: number, c: number) {
 		// Normal forward edge
 		this.edges[u].push({
 			v,
@@ -242,7 +242,7 @@ class Graph {
 	/**
 	 * Calculates Level Graph and if theres a path from s to t
 	 */
-	pathExistsBetween(s, t): boolean {
+	pathExistsBetween(s: number, t: number): boolean {
 		if (t >= this.v) return false;
 
 		// Reset old levels.
@@ -272,7 +272,7 @@ class Graph {
 
 	// DFS like: send flow at along path from s->t recursivly while increasing the level of the visited vertices by one
 	// u vertex, f flow on path, t =Sink , c Array, c[i] saves the count of edges explored from vertex i
-	accumulateFlow(u, f, t, c) {
+	accumulateFlow(u: number, f: number, t: number, c: number[]) {
 		// Abort recursion if sink has been reached.
 		if (u === t) return f;
 
@@ -343,7 +343,7 @@ class Graph {
 	/**
 	 * Calculates min-cut graph (Dinic Algorithm)
 	 */
-	calculateMinCut(s, t) {
+	calculateMinCut(s: number, t: number) {
 		if (s === t) return -1;
 
 		let totalFlow = 0;
@@ -363,7 +363,7 @@ class Graph {
 const minCutInterface = {
 	// Function to create Source, Sink, Tiles arrays: takes a rectangle-Array as input for Tiles that are to Protect
 	// rects have top-left/bot_right Coordinates {x1,y1,x2,y2}
-	createGraph(roomName, rect, bounds) {
+	createGraph(roomName: string, rect: MinCutRect[], bounds: MinCutRect) {
 		const roomTerrain = generateRoomTerrainArray(roomName, bounds);
 
 		// For all Rectangles, set edges as source (to protect area) and area as unused
@@ -443,7 +443,7 @@ const minCutInterface = {
 	/**
 	 * Removes unneccary cut-tiles if bounds are set to include some dead ends
 	 */
-	deleteTilesLeadingToDeadEnds(roomName, minCut) {
+	deleteTilesLeadingToDeadEnds(roomName: string, minCut: Array<{x: number; y: number;}>) {
 		// Get terrain and set all cut-tiles as unwalkable.
 		const roomTerrain = generateRoomTerrainArray(roomName);
 		for (const tile of minCut) {
@@ -494,7 +494,9 @@ const minCutInterface = {
 	},
 
 	// Calculates min cut tiles from room, rect[]
-	getCutTiles(roomName, rect, bounds = {x1: 0, y1: 0, x2: 49, y2: 49}, verbose = false) {
+	getCutTiles(roomName: string, rect: MinCutRect[], bounds?: MinCutRect, verbose = false) {
+		if (!bounds) bounds = {x1: 0, y1: 0, x2: 49, y2: 49};
+
 		const graph = minCutInterface.createGraph(roomName, rect, bounds);
 		if (!graph) return [];
 

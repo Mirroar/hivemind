@@ -3,6 +3,33 @@ STRUCTURE_STORAGE STRUCTURE_TERMINAL */
 
 import Role from 'role/role';
 import utilities from 'utilities';
+import {getResourcesIn} from 'utils/store';
+
+declare global {
+	interface GathererCreep extends Creep {
+		memory: GathererCreepMemory;
+		heapMemory: GathererCreepHeapMemory;
+	}
+
+	interface GathererCreepMemory extends CreepMemory {
+		role: 'gatherer';
+		delivering?: boolean;
+		targetRoom: string;
+		origin: string;
+		target: Id<GatherTarget>;
+	}
+
+	interface GathererCreepHeapMemory extends CreepHeapMemory {
+	}
+}
+
+type GatherTarget = Resource | Ruin | Tombstone | AnyStoreStructure;
+
+interface GatherOption {
+	priority: number;
+	weight: number;
+	target: Id<GatherTarget>;
+}
 
 /**
  * Gatherers collect resources from safe sources outside their spawn room.
@@ -23,7 +50,11 @@ export default class GathererRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: GathererCreep) {
+		if (creep.memory.delivering && creep.store.getUsedCapacity() === 0) {
+			creep.memory.delivering = false;
+		}
+
 		if (creep.memory.delivering) {
 			this.deliverResources(creep);
 			return;
@@ -38,7 +69,7 @@ export default class GathererRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	gatherResources(creep) {
+	gatherResources(creep: GathererCreep) {
 		// Switch to delivery mode if storage is full.
 		if (creep.store.getFreeCapacity() === 0) {
 			creep.memory.delivering = true;
@@ -67,14 +98,14 @@ export default class GathererRole extends Role {
 	 * @return {RoomObject}
 	 *   An object that has gatherable resources stored.
 	 */
-	getGatherTarget(creep) {
+	getGatherTarget(creep: GathererCreep) {
 		if (creep.memory.target) {
 			const target = Game.getObjectById(creep.memory.target);
 			if (target) return target;
 		}
 
 		// Decide what the most valuable target is.
-		const options = [];
+		const options: GatherOption[] = [];
 		this.addResourceOptions(creep, options);
 		this.addTombstoneOptions(creep, options);
 		this.addStructureOptions(creep, options);
@@ -99,11 +130,12 @@ export default class GathererRole extends Role {
 	 * @param {object} options
 	 *   List of prioritized options to add targets to.
 	 */
-	addResourceOptions(creep, options) {
+	addResourceOptions(creep: GathererCreep, options: GatherOption[]) {
 		const resources = creep.room.find(FIND_DROPPED_RESOURCES);
 		for (const resource of resources) {
 			if (!resource.amount) continue;
 
+			// @todo Resource type should have an influence on scoring.
 			options.push({
 				priority: resource.amount > 100 ? 3 : 2,
 				weight: resource.amount / 1000,
@@ -120,7 +152,7 @@ export default class GathererRole extends Role {
 	 * @param {object} options
 	 *   List of prioritized options to add targets to.
 	 */
-	addTombstoneOptions(creep, options) {
+	addTombstoneOptions(creep: GathererCreep, options: GatherOption[]) {
 		const tombs = creep.room.find(FIND_TOMBSTONES);
 		for (const tomb of tombs) {
 			if (tomb.store.getUsedCapacity() === 0) continue;
@@ -141,10 +173,10 @@ export default class GathererRole extends Role {
 	 * @param {object} options
 	 *   List of prioritized options to add targets to.
 	 */
-	addStructureOptions(creep, options) {
+	addStructureOptions(creep: GathererCreep, options: GatherOption[]) {
 		const structures = creep.room.find(FIND_STRUCTURES);
 		for (const structure of structures) {
-			if (!structure.store) continue;
+			if (!('store' in structure)) continue;
 			if (structure.store.getUsedCapacity() === 0) continue;
 
 			// @todo Ignore our own remote harvest containers.
@@ -166,7 +198,7 @@ export default class GathererRole extends Role {
 	 * @param {object} options
 	 *   List of prioritized options to add targets to.
 	 */
-	addRuinOptions(creep, options) {
+	addRuinOptions(creep: GathererCreep, options: GatherOption[]) {
 		const ruins = creep.room.find(FIND_RUINS);
 		for (const ruin of ruins) {
 			if (!ruin.store) continue;
@@ -188,28 +220,28 @@ export default class GathererRole extends Role {
 	 * @param {RoomObject} target
 	 *   An object that has gatherable resources stored.
 	 */
-	gatherFromTarget(creep, target) {
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.moveToRange(target, 1);
+	gatherFromTarget(creep: GathererCreep, target: GatherTarget) {
+		creep.whenInRange(1, target, () => {
 			// @todo If path to target is blocked, remember as invalid target.
 			// If everything is blocked, consider sending dismantlers, or not doing
 			// anything in the room.
-			return;
-		}
 
-		if (target.amount) {
-			creep.pickup(target);
-		}
+			if ('amount' in target) {
+				creep.pickup(target);
+				delete creep.memory.target;
+				return;
+			}
 
-		// @todo Withdraw as many resources as possible.
-		// @todo Start with most valuable resources?
-		_.each(target.store, (amount, resourceType) => {
-			if (!amount || amount === 0) return;
-			creep.withdraw(target, resourceType);
+			// @todo Withdraw as many resources as possible.
+			// @todo Start with most valuable resources?
+			for (const resourceType of getResourcesIn(target.store)) {
+				creep.withdraw(target, resourceType);
+				break;
+			}
+
+			// Decide on a new target next tick after withdrawing.
+			delete creep.memory.target;
 		});
-
-		// Decide on a new target next tick after withdrawing.
-		delete creep.memory.target;
 	}
 
 	/**
@@ -218,7 +250,7 @@ export default class GathererRole extends Role {
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
-	deliverResources(creep) {
+	deliverResources(creep: GathererCreep) {
 		if (creep.pos.roomName !== creep.memory.origin) {
 			// Move back to spawn room.
 			creep.moveToRoom(creep.memory.origin);
@@ -226,23 +258,16 @@ export default class GathererRole extends Role {
 		}
 
 		// Choose a resource and deliver it.
-		_.each(creep.store, (amount, resourceType) => {
-			if (!amount || amount === 0) return null;
+		for (const resourceType of getResourcesIn(creep.store)) {
+			const amount = creep.store.getUsedCapacity(resourceType);
 
 			const target = creep.room.getBestStorageTarget(amount, resourceType);
-			if (!target) return false;
+			if (!target) break;
 
-			if (creep.pos.getRangeTo(target) > 1) {
-				creep.moveToRange(target, 1);
-				return false;
-			}
-
-			creep.transfer(target, resourceType);
-			return false;
-		});
-
-		if (creep.store.getUsedCapacity() === 0) {
-			creep.memory.delivering = false;
+			creep.whenInRange(1, target, () => {
+				creep.transfer(target, resourceType);
+			});
+			break;
 		}
 	}
 }
