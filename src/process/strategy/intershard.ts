@@ -37,7 +37,7 @@ declare global {
 				room: string;
 				portalRoom: string;
 				start: number;
-			}
+			};
 		};
 		scouting?: Record<string, boolean>;
 	}

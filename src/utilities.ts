@@ -171,15 +171,17 @@ const utilities = {
 	},
 
 	/**
-	 * Generates lookup table for the ingredients used to crate a compound.
+	 * Generates lookup table for the ingredients used to create a compound.
 	 *
 	 * @return {Object}
 	 *   A list of recipe reaction components, keyed by the name of the created
 	 *   compound.
 	 */
-	getReactionRecipes() {
+	getReactionRecipes(): Partial<Record<ResourceConstant, ResourceConstant[]>> {
+		// @todo Include factory recipes, since this method is used to calculate
+		// the value of trade commodities.
 		return cache.inHeap('reverseReactions', 100_000, () => {
-			const recipes = {};
+			const recipes: Partial<Record<ResourceConstant, ResourceConstant[]>> = {};
 
 			_.each(REACTIONS, (reaction, resourceType) => {
 				_.each(reaction, (result, resourceType2) => {

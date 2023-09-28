@@ -52,7 +52,7 @@ export default class UpgraderRole extends Role {
 		) {
 			// In low level rooms, stop upgrading and build on RCL up.
 			delete creep.memory.upgrading;
-		const builderCreep = creep as unknown as BuilderCreep;
+			const builderCreep = creep as unknown as BuilderCreep;
 			builderCreep.memory.role = 'builder';
 			return;
 		}

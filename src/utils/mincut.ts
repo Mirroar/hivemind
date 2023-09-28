@@ -443,7 +443,7 @@ const minCutInterface = {
 	/**
 	 * Removes unneccary cut-tiles if bounds are set to include some dead ends
 	 */
-	deleteTilesLeadingToDeadEnds(roomName: string, minCut: Array<{x: number; y: number;}>) {
+	deleteTilesLeadingToDeadEnds(roomName: string, minCut: Array<{x: number; y: number}>) {
 		// Get terrain and set all cut-tiles as unwalkable.
 		const roomTerrain = generateRoomTerrainArray(roomName);
 		for (const tile of minCut) {

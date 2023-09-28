@@ -15,6 +15,21 @@ const creditReserve = 10_000;
 // Lookup for lab reaction recipes.
 const recipes = utilities.getReactionRecipes();
 
+type TradeResource = ResourceConstant | InterShardResourceConstant;
+
+interface ResourceStates {
+	rooms: Record<string, RoomResourceState>;
+	total: {
+		rooms: number;
+		resources: Partial<Record<ResourceConstant, number>>;
+		sources: Partial<Record<ResourceConstant, number>>;
+	};
+}
+
+function isIntershardResource(resourceType: TradeResource): resourceType is InterShardResourceConstant {
+	return (INTERSHARD_RESOURCES as string[]).includes(resourceType);
+}
+
 /**
  * Automatically trades resources on the open market.
  */
@@ -147,7 +162,7 @@ export default class TradeProcess extends Process {
 	 *   - rooms: An array of objects containing resource states for each room.
 	 *   - roral: Sum of all resource levels of each room.
 	 */
-	getRoomResourceStates() {
+	getRoomResourceStates(): ResourceStates {
 		const rooms = {};
 		const total = {
 			resources: {},
@@ -185,7 +200,7 @@ export default class TradeProcess extends Process {
 	 * @param {object} rooms
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
-	instaSellResources(resourceType, rooms) {
+	instaSellResources(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
 		// Find room with highest amount of this resource.
 		const roomName = this.getHighestResourceState(resourceType, rooms);
 		if (!roomName) return;
@@ -244,12 +259,10 @@ export default class TradeProcess extends Process {
 	 * @param {object} rooms
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
-	instaBuyResources(resourceType, rooms?: any, force?: boolean) {
-		const isIntershardResource = INTERSHARD_RESOURCES.includes(resourceType);
-
+	instaBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, force?: boolean) {
 		// Find room with lowest amount of this resource.
-		const roomName = isIntershardResource ? null : this.getLowestResourceState(resourceType, rooms);
-		if (!roomName && !isIntershardResource) return;
+		const roomName = isIntershardResource(resourceType) ? null : this.getLowestResourceState(resourceType, rooms);
+		if (!roomName && !isIntershardResource(resourceType)) return;
 
 		const room = Game.rooms[roomName];
 
@@ -263,7 +276,7 @@ export default class TradeProcess extends Process {
 		if (bestOrder.price > maxPrice && !force) return;
 
 		let amount = Math.min(force ? 10_000 : this.getMaxOrderAmount(resourceType), bestOrder.amount);
-		if (isIntershardResource) {
+		if (isIntershardResource(resourceType)) {
 			hivemind.log('trade', roomName).info('Buying', amount, resourceType, 'from', bestOrder.roomName, 'for', bestOrder.price, 'credits each.');
 		}
 		else {
@@ -304,9 +317,7 @@ export default class TradeProcess extends Process {
 	 * @param {boolean} ignoreOtherRooms
 	 *   If set, only check agains orders from rooms given by `rooms` parameter.
 	 */
-	tryBuyResources(resourceType, rooms?: any, ignoreOtherRooms?: boolean) {
-		const isIntershardResource = INTERSHARD_RESOURCES.includes(resourceType);
-
+	tryBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, ignoreOtherRooms?: boolean) {
 		if (_.some(Game.market.orders, order => {
 			if (order.type === ORDER_BUY && order.resourceType === resourceType) {
 				if (ignoreOtherRooms && !rooms[order.roomName]) {
@@ -322,8 +333,8 @@ export default class TradeProcess extends Process {
 		}
 
 		// Find room with lowest amount of this resource.
-		const roomName = isIntershardResource ? null : this.getLowestResourceState(resourceType, rooms);
-		if (!roomName && !isIntershardResource) return;
+		const roomName = isIntershardResource(resourceType) ? null : this.getLowestResourceState(resourceType, rooms);
+		if (!roomName && !isIntershardResource(resourceType)) return;
 
 		// Find comparable deals for buying this resource.
 		const bestBuyOrder = this.findBestBuyOrder(resourceType, roomName);
@@ -375,7 +386,7 @@ export default class TradeProcess extends Process {
 	 * @param {object} rooms
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
-	trySellResources(resourceType, rooms) {
+	trySellResources(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
 		if (_.some(Game.market.orders, order => order.type === ORDER_SELL && order.resourceType === resourceType)) {
 			return;
 		}
@@ -435,10 +446,10 @@ export default class TradeProcess extends Process {
 	 * @return {string}
 	 *   Name of the room with the lowest resource amount.
 	 */
-	getLowestResourceState(resourceType, rooms) {
+	getLowestResourceState(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
 		let minAmount;
 		let bestRoom;
-		_.each(rooms, (roomState, roomName) => {
+		_.each(rooms, (roomState: RoomResourceState, roomName: string) => {
 			if (!roomState.canTrade) return;
 			if (Game.rooms[roomName] && Game.rooms[roomName].isFullOn(resourceType)) return;
 			if (!minAmount || (roomState.totalResources[resourceType] || 0) < minAmount) {
@@ -461,10 +472,10 @@ export default class TradeProcess extends Process {
 	 * @return {string}
 	 *   Name of the room with the highest resource amount.
 	 */
-	getHighestResourceState(resourceType, rooms) {
+	getHighestResourceState(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
 		let maxAmount;
 		let bestRoom;
-		_.each(rooms, (roomState, roomName) => {
+		_.each(rooms, (roomState: RoomResourceState, roomName: string) => {
 			if (!roomState.canTrade) return;
 			if (!maxAmount || (roomState.totalResources[resourceType] || 0) > maxAmount) {
 				maxAmount = roomState.totalResources[resourceType];
@@ -486,15 +497,15 @@ export default class TradeProcess extends Process {
 	 * @return {object}
 	 *   The order as returned from Game.market.
 	 */
-	findBestBuyOrder(resourceType, roomName) {
+	findBestBuyOrder(resourceType: TradeResource, roomName: string): Order {
 		// Find best deal for selling this resource.
 		const orders = Game.market.getAllOrders(order => order.type === ORDER_BUY && order.resourceType === resourceType);
 
-		let maxScore;
-		let bestOrder;
+		let maxScore: number;
+		let bestOrder: Order;
 		_.each(orders, order => {
 			if (order.amount < 100) return;
-			const transactionCost = !INTERSHARD_RESOURCES.includes(resourceType) ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
+			const transactionCost = isIntershardResource(resourceType) ? 0 : Game.market.calcTransactionCost(1000, roomName, order.roomName);
 			const credits = 1000 * order.price;
 			const score = credits - (0.3 * transactionCost);
 
@@ -518,7 +529,7 @@ export default class TradeProcess extends Process {
 	 * @return {object}
 	 *   The order as returned from Game.market.
 	 */
-	findBestSellOrder(resourceType, roomName) {
+	findBestSellOrder(resourceType: TradeResource, roomName: string) {
 		// Find best deal for buying this resource.
 		const orders = Game.market.getAllOrders(order => order.type === ORDER_SELL && order.resourceType === resourceType);
 
@@ -526,7 +537,7 @@ export default class TradeProcess extends Process {
 		let bestOrder;
 		_.each(orders, order => {
 			if (order.amount < 100) return;
-			const transactionCost = !INTERSHARD_RESOURCES.includes(resourceType) ? Game.market.calcTransactionCost(1000, roomName, order.roomName) : 0;
+			const transactionCost = isIntershardResource(resourceType) ? 0 : Game.market.calcTransactionCost(1000, roomName, order.roomName);
 			const credits = 1000 * order.price;
 			const score = credits + (0.3 * transactionCost);
 
@@ -563,7 +574,7 @@ export default class TradeProcess extends Process {
 	 * @return {number}
 	 *   The general trade value we assign the given resource.
 	 */
-	getResourceTier(resourceType) {
+	getResourceTier(resourceType: ResourceConstant) {
 		if (resourceType === RESOURCE_ENERGY) return 0;
 		if (resourceType === RESOURCE_POWER) return 10;
 
@@ -587,7 +598,7 @@ export default class TradeProcess extends Process {
 	 * @return {Number}
 	 *   Maximum amount of this resource to trade in a single transaction.
 	 */
-	getMaxOrderAmount(resourceType) {
+	getMaxOrderAmount(resourceType: TradeResource): number {
 		const history = this.getPriceData(resourceType);
 		if (!history) return 0;
 
@@ -611,7 +622,7 @@ export default class TradeProcess extends Process {
 	 *  - average: Adjusted average price of this resource.
 	 *  - stdDev: Adjusted standard deviation for this resource's price.
 	 */
-	getPriceData(resourceType) {
+	getPriceData(resourceType: TradeResource): {total:  number; average: number; stdDev: number} {
 		return cache.inHeap('price:' + resourceType, 5000, () => {
 			const history = Game.market.getHistory(resourceType);
 
@@ -655,14 +666,14 @@ export default class TradeProcess extends Process {
 	 * @return {Number}
 	 *   Estimated worth of the given resource in credits.
 	 */
-	calculateWorth(resourceType) {
+	calculateWorth(resourceType: TradeResource): number {
 		return cache.inHeap('resourceWorth:' + resourceType, 5000, () => {
 			const history = this.getPriceData(resourceType);
 			if (!recipes[resourceType]) {
 				return history ? history.average : 0;
 			}
 
-			const reagentWorth = _.reduce(recipes[resourceType], (total, componentType) => {
+			const reagentWorth = _.reduce(recipes[resourceType], (total: number, componentType: ResourceConstant) => {
 				const componentWorth = this.calculateWorth(componentType);
 				const componentHistory = this.getPriceData(componentType);
 				return total + Math.max(componentWorth, componentHistory ? componentHistory.average : 0);
