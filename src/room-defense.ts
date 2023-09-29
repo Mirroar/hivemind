@@ -5,11 +5,20 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import {getDangerMatrix} from 'utils/cost-matrix';
+import {getResourcesIn} from 'utils/store';
 
 declare global {
 	interface RoomMemory {
-		defense?: any;
+		defense?: RoomDefenseMemory;
 	}
+}
+
+interface RoomDefenseMemory {
+	lastActivity?: number;
+	creepStatus?: Record<string, {
+		store: Partial<Record<ResourceConstant, number>>;
+		isThief?: boolean;
+	}>;
 }
 
 const ENEMY_STRENGTH_NONE = 0; // No enemies in the room.
@@ -18,7 +27,11 @@ const ENEMY_STRENGTH_NORMAL = 2; // Enemies are strong or numerous, but can prob
 const ENEMY_STRENGTH_STRONG = 3; // Enemies are strong or numerous, but can probably be handled with boosted active defense.
 const ENEMY_STRENGTH_DEADLY = 4; // Enemies are strong or numerous, and we need help from outside.
 
-const attackParts: BodyPartConstant[] = [ATTACK, RANGED_ATTACK, CLAIM, WORK];
+type EnemyStrength = typeof ENEMY_STRENGTH_NONE
+	| typeof ENEMY_STRENGTH_WEAK
+	| typeof ENEMY_STRENGTH_NORMAL
+	| typeof ENEMY_STRENGTH_STRONG
+	| typeof ENEMY_STRENGTH_DEADLY;
 
 const partStrength = {
 	[ATTACK]: ATTACK_POWER,
@@ -49,9 +62,9 @@ export {
 export default class RoomDefense {
 	roomName: string;
 	room: Room;
-	memory;
+	memory: RoomDefenseMemory;
 
-	constructor(roomName) {
+	constructor(roomName: string) {
 		this.roomName = roomName;
 		this.room = Game.rooms[roomName];
 
@@ -132,7 +145,7 @@ export default class RoomDefense {
 	 * 		boosted active defense.
 	 *   4: Enemies are strong or numerous, and we need help from outside.
 	 */
-	getEnemyStrength() {
+	getEnemyStrength(): EnemyStrength {
 		return cache.inObject(this.room, 'getEnemyStrength', 1, () => {
 			let attackStrength = 0;
 			let healStrength = 0;
@@ -159,7 +172,7 @@ export default class RoomDefense {
 							}
 						}
 
-						if (attackParts.includes(part.type)) {
+						if (([ATTACK, RANGED_ATTACK, CLAIM, WORK] as BodyPartConstant[]).includes(part.type)) {
 							attackStrength += partPower * boostPower;
 						}
 
@@ -240,12 +253,12 @@ export default class RoomDefense {
 
 		const ramparts = this.room.find<StructureRampart>(FIND_STRUCTURES, {filter: structure => structure.structureType === STRUCTURE_RAMPART});
 		_.each(ramparts, rampart => {
-			const newState = this.calculateRampartState(rampart, allowed, forbidden);
+			const newState = this.shouldRampartBePublic(rampart, allowed, forbidden);
 			if (rampart.isPublic !== newState) rampart.setPublic(newState);
 		});
 	}
 
-	recordCreepStatus(creep) {
+	recordCreepStatus(creep: Creep) {
 		// @todo Detect killed creeps as resources we've gained.
 
 		if (!this.memory.creepStatus[creep.id]) {
@@ -263,7 +276,8 @@ export default class RoomDefense {
 		if (memory.isThief) return;
 
 		// Detect if creep has gained resources.
-		_.each(creep.store, (amount, resourceType) => {
+		for (const resourceType of getResourcesIn(creep.store)) {
+			const amount = creep.store.getUsedCapacity(resourceType);
 			if (amount !== (memory.store[resourceType] || 0)) {
 				const creepGained = amount - (memory.store[resourceType] || 0);
 				// We lost any resource the creep gained.
@@ -273,17 +287,19 @@ export default class RoomDefense {
 			}
 
 			memory.store[resourceType] = amount;
-		});
-		_.each(memory.store, (amount, resourceType) => {
+		}
+
+		for (const resourceType of getResourcesIn(memory.store)) {
+			const amount = memory.store[resourceType];
 			if (!creep.store[resourceType]) {
 				// If the creep lost a resource, we gained as much.
 				this.calculatePlayerTrade(creep.owner.username, amount, resourceType);
 				delete memory.store[resourceType];
 			}
-		});
+		}
 	}
 
-	calculatePlayerTrade(username, amount, resourceType) {
+	calculatePlayerTrade(username: string, amount: number, resourceType: ResourceConstant) {
 		const opName = 'playerTrade:' + username;
 		const operation = Game.operations[opName] || new Operation(opName);
 
@@ -292,7 +308,7 @@ export default class RoomDefense {
 		hivemind.log('trade', this.roomName).notify('Trade with', username, ':', amount, resourceType);
 	}
 
-	isThief(creep) {
+	isThief(creep: Creep): boolean {
 		if (!this.memory.creepStatus) return false;
 		if (!this.memory.creepStatus[creep.id]) return false;
 		if (!this.memory.creepStatus[creep.id].isThief) return false;
@@ -305,7 +321,7 @@ export default class RoomDefense {
 	/**
 	 * Determines if a rampart should be opened or closed.
 	 */
-	calculateRampartState(rampart, allowed, forbidden) {
+	shouldRampartBePublic(rampart: StructureRampart, allowed: Creep[], forbidden: Creep[]): boolean {
 		if (allowed.length === 0) return false;
 		if (forbidden.length === 0) return true;
 
@@ -319,7 +335,7 @@ export default class RoomDefense {
 	/**
 	 * Checks if a creep is considered harmless.
 	 */
-	isUnarmedCreep(creep) {
+	isUnarmedCreep(creep: Creep): boolean {
 		for (const part of creep.body) {
 			if (part.type !== MOVE && part.type !== TOUGH && part.type !== CARRY) {
 				return false;
@@ -329,12 +345,12 @@ export default class RoomDefense {
 		return true;
 	}
 
-	isInRoom(creep) {
+	isInRoom(creep: Creep): boolean {
 		// @todo This is not correct when mincut ramparts are enabled.
 		return creep.pos.x > 1 && creep.pos.y > 1 && creep.pos.x < 48 && creep.pos.y < 48;
 	}
 
-	isWhitelisted(username) {
+	isWhitelisted(username: string): boolean {
 		return hivemind.relations.isAlly(username) || _.includes(hivemind.settings.get('rampartWhitelistedUsers'), username);
 	}
 }

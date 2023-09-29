@@ -4,23 +4,31 @@ import Process from 'process/process';
 
 declare global {
 	interface StrategyMemory {
-		reports?: {
-			nextReportTime: number;
-			data: {
-				time: number;
-				gcl: GlobalControlLevel;
-				gpl: GlobalPowerLevel;
-				power;
-				storedPower;
-				remoteHarvestCount: number;
-				cpu;
-			};
-		};
+		reports?: ReportMemory;
 	}
 }
 
+interface ReportMemory {
+	nextReportTime: number;
+	data: {
+		time: number;
+		gcl: GlobalControlLevel;
+		gpl: GlobalPowerLevel;
+		power;
+		storedPower;
+		remoteHarvestCount: number;
+		cpu: {
+			totalTicks?: number;
+			bucket?: number;
+			cpu?: number;
+			cpuTotal?: number;
+			globalResets?: number;
+		};
+	};
+}
+
 export default class ReportProcess extends Process {
-	memory;
+	memory: ReportMemory;
 
 	/**
 	 * Sends regular email reports about routine stats.
@@ -82,7 +90,7 @@ export default class ReportProcess extends Process {
 	 * @return {Date}
 	 *   The modified date object.
 	 */
-	normalizeDate(date) {
+	normalizeDate(date: Date): Date {
 		date.setMilliseconds(0);
 		date.setSeconds(0);
 		date.setMinutes(0);

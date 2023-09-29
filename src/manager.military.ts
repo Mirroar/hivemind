@@ -151,7 +151,7 @@ Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep | P
 
 	// @todo Move boosted part calculation into a creep function.
 	// @todo Factor in which parts get damaged first.
-	const totalParts = {};
+	const totalParts: Partial<Record<BodyPartConstant, number>> = {};
 	for (const part of creep.body) {
 		if (part.hits === 0) {
 			// Body part is disabled.
@@ -211,9 +211,9 @@ Room.prototype.assertMilitaryStructurePower = function (this: Room, structure: A
 	// we can't kill after all.
 	if (structure.my && structure.store[RESOURCE_ENERGY] < TOWER_ENERGY_COST * 10) return;
 
-	let hostile;
-	let targets;
-	let allies;
+	let hostile: boolean;
+	let targets: Array<Creep | PowerCreep>;
+	let allies: Array<Creep | PowerCreep>;
 	if (structure.my) {
 		hostile = false;
 		targets = this.militaryObjects.creeps;
@@ -312,7 +312,7 @@ Room.prototype.assertTargetPriorities = function (this: Room) {
  * @return {Creep}
  *   An enemy creep to shoot.
  */
-Room.prototype.getTowerTarget = function () {
+Room.prototype.getTowerTarget = function (this: Room) {
 	this.assertMilitarySituation();
 	let max = null;
 	for (const creep of this.militaryObjects.creeps) {
@@ -323,7 +323,7 @@ Room.prototype.getTowerTarget = function () {
 		max = creep;
 	}
 
-	if (max) this.visual.circle(max.pos.x, max.pos.y, 2, {fill: 'red'});
+	if (max) this.visual.circle(max.pos.x, max.pos.y, {radius: 2, fill: 'red'});
 
 	return max;
 };
@@ -331,38 +331,38 @@ Room.prototype.getTowerTarget = function () {
 /**
  * Uses RoomVisual to visualize military situation in a room.
  */
-Room.prototype.drawMilitarySituation = function () {
+Room.prototype.drawMilitarySituation = function (this: Room) {
 	const visual = this.visual;
-	_.each(this.sitRep.damage, (colData, x: number) => {
-		_.each(colData, (data, y: number) => {
-			visual.text(data, Number(x), Number(y) - 0.1, {
+	_.each(this.sitRep.damage, (colData, x: string) => {
+		_.each(colData, (data, y: string) => {
+			visual.text(data.toString(), Number(x), Number(y) - 0.1, {
 				color: 'red',
 				font: 0.5,
 			});
 		});
 	});
 
-	_.each(this.sitRep.healing, (colData, x: number) => {
-		_.each(colData, (data, y: number) => {
-			visual.text(data, Number(x), (Number(y)) + 0.4, {
+	_.each(this.sitRep.healing, (colData, x: string) => {
+		_.each(colData, (data, y: string) => {
+			visual.text(data.toString(), Number(x), (Number(y)) + 0.4, {
 				color: 'green',
 				font: 0.5,
 			});
 		});
 	});
 
-	_.each(this.sitRep.myDamage, (colData, x: number) => {
-		_.each(colData, (data, y: number) => {
-			visual.text(data, Number(x), Number(y) - 0.1, {
+	_.each(this.sitRep.myDamage, (colData, x: string) => {
+		_.each(colData, (data, y: string) => {
+			visual.text(data.toString(), Number(x), Number(y) - 0.1, {
 				color: 'red',
 				font: 0.5,
 			});
 		});
 	});
 
-	_.each(this.sitRep.myHealing, (colData, x: number) => {
-		_.each(colData, (data, y: number) => {
-			visual.text(data, Number(x), (Number(y)) + 0.4, {
+	_.each(this.sitRep.myHealing, (colData, x: string) => {
+		_.each(colData, (data, y: string) => {
+			visual.text(data.toString(), Number(x), (Number(y)) + 0.4, {
 				color: 'green',
 				font: 0.5,
 			});

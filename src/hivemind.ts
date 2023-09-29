@@ -1,5 +1,4 @@
-/* global RoomVisual PROCESS_PRIORITY_LOW PROCESS_PRIORITY_DEFAULT
-PROCESS_PRIORITY_HIGH PROCESS_PRIORITY_ALWAYS */
+/* global RoomVisual */
 
 import ProcessInterface from 'process/process-interface';
 import Logger from 'utils/debug';
@@ -165,7 +164,7 @@ class Hivemind {
 	 *   - interval: Set the minimum amount of ticks that should pass between runs
 	 *     of this process. Use 0 for processes that run multiple times in a single
 	 *     tick. (Default: 1)
-	 *   - priotiry: Use one of the PROCESS_PRIORITY_* constants to determine how
+	 *   - priority: Use one of the PROCESS_PRIORITY_* constants to determine how
 	 *     this process should be throttled when cpu resources run low.
 	 *     (Default: PROCESS_PRIORITY_DEFAULT)
 	 *   - throttleAt: Override at what amount of free bucket this process should
@@ -204,7 +203,7 @@ class Hivemind {
 	 *   Function to run as the sub process. Will be called with the current
 	 *   process as this-argument.
 	 */
-	runSubProcess(id, callback) {
+	runSubProcess(id: string, callback: () => void) {
 		if (this.pullEmergengyBrake(id)) return;
 
 		const stats = this.initializeProcessStats(id);
@@ -220,7 +219,7 @@ class Hivemind {
 	 * @return {boolean}
 	 *   True if running processes is forbidden.
 	 */
-	pullEmergengyBrake(id) {
+	pullEmergengyBrake(id: string) {
 		if (Game.cpu.getUsed() > Game.cpu.tickLimit * 0.85) {
 			if (!this.emergencyBrakeProcessId) {
 				this.emergencyBrakeProcessId = id;
@@ -243,7 +242,7 @@ class Hivemind {
 	 * @param {Function} callback
 	 *   Function to run while timing.
 	 */
-	timeProcess(id: string, stats, callback: () => void) {
+	timeProcess(id: string, stats: ProcessMemory, callback: () => void) {
 		const previousRunTime = stats.lastRun;
 		stats.lastRun = Game.time;
 		const cpuUsage = timeCall('process:' + id, () => {
@@ -271,7 +270,7 @@ class Hivemind {
 	 * @return {object}
 	 *   Memory object allocated for this process' stats.
 	 */
-	initializeProcessStats(id) {
+	initializeProcessStats(id: string) {
 		if (!this.memory.process[id]) {
 			this.memory.process[id] = {
 				lastRun: 0,
@@ -293,7 +292,7 @@ class Hivemind {
 	 * @return {boolean}
 	 *   Returns true if the process may run this tick.
 	 */
-	isProcessAllowedToRun(stats, options) {
+	isProcessAllowedToRun(stats: ProcessMemory, options: ProcessParameters): boolean {
 		// Initialize process timing parameters.
 		const interval = options.interval || 1;
 		const priority = options.priority || PROCESS_PRIORITY_DEFAULT;
@@ -348,7 +347,7 @@ class Hivemind {
 	 * @return {number}
 	 *   Multiplier of at least 1.
 	 */
-	getThrottleMultiplier(stopAt?: number, throttleAt?: number) {
+	getThrottleMultiplier(stopAt?: number, throttleAt?: number): number {
 		// Throttle process based on previous ticks' total cpu usage
 		let throttling = Math.max(this.cpuUsage, 1);
 
