@@ -97,8 +97,6 @@ export default class TrafficManager {
 			singleRoom: Boolean(creep.memory.singleRoom),
 		});
 
-		// @todo If none of the alternate positions are free, check if
-		// neighboring creeps can be pushed aside recursively.
 		// @todo Prefer moving onto roads / plains instead of swamps.
 		const blockingCreeps: Array<Creep | PowerCreep> = [];
 		handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
@@ -126,6 +124,11 @@ export default class TrafficManager {
 		});
 
 		if (!alternatePosition && blockingCreeps.length > 0) {
+			// If none of the alternate positions are free, check if
+			// neighboring creeps can be pushed aside recursively.
+			// @todo This should use BFS instead of DFS so we minimize the
+			// number of move operations we have to do.
+			// @todo Limit the depth of the search.
 			for (const blockingCreep of blockingCreeps) {
 				if (!blockingCreep.my) continue;
 				if (blockingCreep._hasMoveIntent) continue;
