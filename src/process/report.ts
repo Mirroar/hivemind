@@ -23,6 +23,13 @@ interface ReportMemory {
 			cpu?: number;
 			cpuTotal?: number;
 			globalResets?: number;
+			creeps?: {
+				roles: Record<string, {
+					total: number;
+					throttled: number;
+					cpu: number;
+				}>;
+			};
 		};
 	};
 }

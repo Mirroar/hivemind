@@ -10,6 +10,7 @@ declare global {
 	interface ShardMemory {
 		portals?: Record<string, Record<string, {
 			dest: string;
+			scouted?: number;
 		}>>;
 	}
 

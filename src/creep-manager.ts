@@ -205,7 +205,7 @@ export default class CreepManager {
 	 * @param {Array|Object} creeps
 	 *   List of all the creeps to handle.
 	 */
-	manageCreeps(creeps: Creep[]) {
+	manageCreeps(creeps: Array<Creep | PowerCreep> | Record<any, Creep | PowerCreep>) {
 		_.each(creeps, (creep: Creep) => {
 			this.runCreepLogic(creep);
 		});
@@ -227,7 +227,7 @@ export default class CreepManager {
 
 		if (!memory.creeps) {
 			memory.creeps = {
-				max: {},
+				//max: {},
 				roles: {},
 			};
 		}
