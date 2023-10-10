@@ -41,6 +41,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		if (!settings.get('newRemoteMiningRoomFilter') || !settings.get('newRemoteMiningRoomFilter')(room.name)) return [];
 		if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [];
 
+		// If we want to move a misplaced spawn, we need to stop spawning for a bit.
+		if (room.roomManager?.hasMisplacedSpawn()) return [];
+
 		const options: RemoteMiningSpawnOption[] = [];
 
 		this.addHaulerSpawnOptions(room, options);

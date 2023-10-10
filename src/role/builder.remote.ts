@@ -126,19 +126,19 @@ export default class RemoteBuilderRole extends Role {
 		const creep: Creep = this.creep;
 
 		// Try and prevent controller downgrades.
-		if (creep.room.isMine() && (creep.room.controller.level < 2 || creep.room.controller.ticksToDowngrade < 500)) {
+		if (creep.room.isMine() && !creep.room.controller.upgradeBlocked && (creep.room.controller.level < 2 || creep.room.controller.ticksToDowngrade < 500)) {
 			creep.memory.upgrading = true;
 			return;
 		}
 
 		// Recovering rooms need some RCL for defense.
-		if (creep.room.isMine() && creep.room.needsReclaiming() && creep.room.controller.level < 4) {
+		if (creep.room.isMine() && !creep.room.controller.upgradeBlocked && creep.room.needsReclaiming() && creep.room.controller.level < 4) {
 			creep.memory.upgrading = true;
 			return;
 		}
 
 		// Restore downgraded controllers.
-		if (creep.room.isMine() && creep.room.controller.progress > creep.room.controller.progressTotal && !creep.room.controller.upgradeBlocked) {
+		if (creep.room.isMine() && !creep.room.controller.upgradeBlocked && creep.room.controller.progress > creep.room.controller.progressTotal && !creep.room.controller.upgradeBlocked) {
 			const upgrading = _.size(creep.room.creepsByRole.upgrader)
 				+ _.size(_.filter(creep.room.creepsByRole['builder.remote'], creep => creep.memory.upgrading));
 
@@ -296,7 +296,7 @@ export default class RemoteBuilderRole extends Role {
 	 * Upgrades the room's controller.
 	 */
 	performControllerUpgrade() {
-		if (this.creep.room.controller.level === 0 || !this.creep.room.isMine()) {
+		if (this.creep.room.controller.level === 0 || !this.creep.room.isMine() || this.creep.room.controller.upgradeBlocked) {
 			this.creep.memory.upgrading = false;
 			return;
 		}

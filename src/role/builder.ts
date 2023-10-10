@@ -100,7 +100,7 @@ export default class BuilderRole extends Role {
 				const funnelManager = container.get('FunnelManager');
 				const isFunnelingElsewhere = creep.room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(creep.room.name) && creep.room.getEffectiveAvailableEnergy() < 100_000;
 				const isStripmine = creep.room.controller.level >= 6 && creep.room.isStripmine();
-				if (creep.room.controller?.level < 8 && !isFunnelingElsewhere && !isStripmine) {
+				if (creep.room.controller?.level < 8 && !isFunnelingElsewhere && !isStripmine && !creep.room.controller.upgradeBlocked) {
 					creep.memory.upgrading = true;
 					delete creep.memory.repairing;
 					this.performUpgrade(creep);
@@ -165,7 +165,13 @@ export default class BuilderRole extends Role {
 		const funnelManager = container.get('FunnelManager');
 		const isFunnelingElsewhere = creep.room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(creep.room.name) && creep.room.getEffectiveAvailableEnergy() < 100_000;
 		const isStripmine = creep.room.controller.level >= 6 && creep.room.isStripmine();
-		if (roomHasTooLittleEnergy || shouldNotUpgrade || isFunnelingElsewhere || isStripmine) {
+		if (
+			roomHasTooLittleEnergy
+			|| shouldNotUpgrade
+			|| isFunnelingElsewhere
+			|| isStripmine
+			|| creep.room.controller.upgradeBlocked
+		) {
 			// Prevent draining energy stores by recycling.
 			this.performRecycle(creep);
 			return;

@@ -314,6 +314,18 @@ export default class RoomManager {
 		this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
 		this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER);
 
+		// @todo We might be able to get away with not building ramparts as long as
+		// we still have a safemode remaining, it's not on cooldown, and no other
+		// room of ours is safemoded.
+		const currentSafemode = this.room.controller.safeMode ?? 0;
+		if (this.room.controller.level >= 3 && currentSafemode < 2000) {
+			// Make sure all requested main ramparts are built.
+			this.buildPlannedStructures('rampart', STRUCTURE_RAMPART, pos => !this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp'));
+
+			// Make sure all on-ramps are built as well.
+			this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
+		}
+
 		if (!this.canCreateConstructionSites()) return;
 
 		// Build storage ASAP.
@@ -353,9 +365,6 @@ export default class RoomManager {
 		}
 
 		if (this.room.controller.level < 4) return;
-
-		// Make sure all requested ramparts are built.
-		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 
 		if (!this.canCreateConstructionSites()) return;
 
@@ -521,13 +530,17 @@ export default class RoomManager {
 	 *   The type of location that should be checked.
 	 * @param {string} structureType
 	 *   The type of structure to place.
+	 * @param {Function} filterCallback
+	 *   If a callback is provided, structures are only constructed for positions
+	 *   where it returns true.
 	 *
 	 * @return {boolean}
 	 *   True if we can continue building.
 	 */
-	buildPlannedStructures(locationType: string, structureType: StructureConstant): boolean {
+	buildPlannedStructures(locationType: string, structureType: StructureConstant, filterCallback?: (pos: RoomPosition) => boolean): boolean {
 		let canBuildMore = true;
 		for (const pos of this.roomPlanner.getLocations(locationType)) {
+			if (filterCallback && !filterCallback(pos)) continue;
 			if (this.tryBuild(pos, structureType)) continue;
 
 			canBuildMore = false;
