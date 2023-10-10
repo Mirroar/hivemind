@@ -92,7 +92,10 @@ export default class BuilderRole extends Role {
 		}
 
 		if (creep.memory.repairing) {
-			if (!this.performRepair(creep)) {
+			if (
+				!this.performRepair(creep)
+				&& creep.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL
+			) {
 				creep.room.memory.noBuilderNeeded = Game.time;
 				const funnelManager = container.get('FunnelManager');
 				const isFunnelingElsewhere = creep.room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(creep.room.name) && creep.room.getEffectiveAvailableEnergy() < 100_000;
@@ -147,7 +150,10 @@ export default class BuilderRole extends Role {
 	}
 
 	performUpgrade(creep: BuilderCreep) {
-		if (creep.room.roomManager?.hasMisplacedSpawn()) {
+		if (
+			creep.room.roomManager?.hasMisplacedSpawn()
+			|| creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL
+		) {
 			delete creep.memory.upgrading;
 			delete creep.room.memory.noBuilderNeeded;
 			return;
@@ -185,18 +191,23 @@ export default class BuilderRole extends Role {
 	 *   True if an action was performed.
 	 */
 	performRepair(creep: BuilderCreep): boolean {
-		if (!creep.memory.order || !creep.memory.order.target) {
+		if (!creep.memory.order || !creep.memory.order.target || !Game.getObjectById(creep.memory.order.target)) {
 			this.calculateBuilderTarget(creep);
 		}
 
-		if (!creep.memory.order || !creep.memory.order.target) {
+		if (!creep.memory.order || !creep.memory.order.target || !Game.getObjectById(creep.memory.order.target)) {
 			return false;
 		}
 
-		const target = Game.getObjectById(creep.memory.order.target);
-		if (!target) {
+		if (
+			creep.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL
+			&& !([STRUCTURE_SPAWN, STRUCTURE_RAMPART, STRUCTURE_TOWER, STRUCTURE_WALL] as string[]).includes(Game.getObjectById(creep.memory.order.target).structureType)
+		) {
 			this.calculateBuilderTarget(creep);
-			return true;
+
+			if (!creep.memory.order || !creep.memory.order.target || !Game.getObjectById(creep.memory.order.target)) {
+				return false;
+			}
 		}
 
 		if (creep.memory.order.type === 'repair') {
@@ -227,7 +238,7 @@ export default class BuilderRole extends Role {
 		}
 
 		// Unknown order type, recalculate!
-		hivemind.log('creeps', creep.pos.roomName).info('Unknown order type detected on', creep.name);
+		hivemind.log('creeps', creep.pos.roomName).notify('Unknown order type detected on', creep.name);
 		this.calculateBuilderTarget(creep);
 		return true;
 	}

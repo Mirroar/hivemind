@@ -1,5 +1,6 @@
 /* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
 
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 
@@ -39,7 +40,27 @@ export default class GuardianRole extends Role {
 		if (!rampart) return;
 
 		creep.whenInRange(0, rampart, () => {});
+		this.setAlternatePositions(creep);
 		this.attackTargetsInRange(creep);
+	}
+
+	setAlternatePositions(creep: GuardianCreep) {
+		container.get('TrafficManager').setAlternatePositions(creep, this.getAdjacentRampartPositions(creep));
+	}
+
+	getAdjacentRampartPositions(creep: GuardianCreep): RoomPosition[] {
+		const closestRamparts = creep.pos.findInRange<StructureRampart>(FIND_MY_STRUCTURES, 1, {
+			filter: s => {
+				if (s.pos.isEqualTo(creep.pos)) return false;
+				if (s.structureType !== STRUCTURE_RAMPART) return false;
+				if (!creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart')) return false;
+				if (creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart.ramp')) return false;
+
+				return true;
+			},
+		});
+
+		return _.map(closestRamparts, s => s.pos);
 	}
 
 	getBestRampartToCover(creep: GuardianCreep): StructureRampart {
