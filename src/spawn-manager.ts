@@ -279,7 +279,7 @@ export default class SpawnManager {
 
 			spawn.heapMemory.blocked = (spawn.heapMemory.blocked || 0) + 1;
 			if (spawn.heapMemory.blocked >= 5) {
-				spawn.spawning.setDirections([TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT, LEFT, TOP_LEFT]);
+				spawn.spawning.setDirections(allDirections);
 				continue;
 			}
 
@@ -287,6 +287,9 @@ export default class SpawnManager {
 			const closeCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1);
 			for (const dir of spawn.spawning.directions || allDirections) {
 				if (_.some(closeCreeps, c => spawn.pos.getDirectionTo(c.pos) === dir)) continue;
+
+				// @todo Direction might be blocked by something else, like terrain,
+				// structures or power creeps.
 
 				allBlocked = false;
 			}

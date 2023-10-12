@@ -193,7 +193,7 @@ export default class HarvesterRole extends Role {
 		if (creep.store.getUsedCapacity() > creep.store.getCapacity() * (bay.needsRefill() ? 0.3 : 0.8)) bay.refillFrom(creep);
 		if (bay.needsRefill()) this.pickupEnergy(creep);
 
-		return true;
+		return bay.energyCapacity > 0;
 	}
 
 	/**
@@ -230,7 +230,7 @@ export default class HarvesterRole extends Role {
 
 		const targetContainer = source.getNearbyContainer();
 
-		if (!targetContainer && creep.store.energy > 0) {
+		if (!targetContainer && creep.store.energy > Math.max(creep.getActiveBodyparts(WORK) * BUILD_POWER, creep.store.getCapacity() - creep.getActiveBodyparts(WORK) * HARVEST_POWER)) {
 			// Check if there is a container construction site nearby and help build it.
 			const sites = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
 				filter: site => site.structureType === STRUCTURE_CONTAINER,
@@ -274,7 +274,6 @@ export default class HarvesterRole extends Role {
 		if (creep.room.controller.level < 6 && creep.store.energy > 0) {
 			const nearbyCreeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
 				filter: c => {
-					if (c.memory.role === 'harvester' && c.store.getUsedCapacity() < 10) return true;
 					if (['transporter', 'upgrader', 'builder', 'builder.remote'].includes(c.memory.role) && c.store.getFreeCapacity() > 0) return true;
 
 					return false;

@@ -51,8 +51,8 @@ export default class HarvesterSpawnRole extends SpawnRole {
 
 		const force = this.isSmallHarvesterNeeded(source.room);
 		options.push({
-			priority: (force ? 6 : 4),
-			weight: (50 - minSpawnDistance) / 50,
+			priority: (force ? 6 : (this.isEarlyGame(source.room) ? 5 : 4)),
+			weight: this.isEarlyGame(source.room) ? 1 : (50 - minSpawnDistance) / 50,
 			source: source.id,
 			preferClosestSpawn: source.pos,
 			size: this.getMaxWorkParts(source),
@@ -89,8 +89,8 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		const maxParts = this.getMaxWorkParts(source);
 		if (totalWorkParts < maxParts) {
 			options.push({
-				priority: 4,
-				weight: 1 - (totalWorkParts / maxParts),
+				priority: this.isEarlyGame(source.room) ? 5 : 4,
+				weight: this.isEarlyGame(source.room) ? 1 : 1 - (totalWorkParts / maxParts),
 				source: source.id,
 				preferClosestSpawn: source.pos,
 				size: maxParts,
@@ -210,5 +210,11 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			fixedSource: option.source,
 			operation: 'room:' + room.name,
 		};
+	}
+
+	isEarlyGame(room: Room): boolean {
+		if (room.storage || room.terminal) return false;
+
+		return true;
 	}
 }
