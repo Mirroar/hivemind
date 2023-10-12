@@ -1,5 +1,6 @@
 import localRelations from 'relations.local';
 import settings from 'settings-manager';
+import {getUsername} from 'utils/account';
 
 export default class Relations {
 	readonly allies: string[];
@@ -35,6 +36,8 @@ export default class Relations {
 	 * @return {boolean} true if the user is our ally.
 	 */
 	isAlly(username: string): boolean {
+		if (username === getUsername()) return true;
+
 		return username && this.allies.includes(username);
 	}
 
