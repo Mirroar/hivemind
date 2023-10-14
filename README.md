@@ -32,4 +32,22 @@ Nonetheless, nobody can stop you from using this code on the official servers.
 
 ### Capabilities
 
-TODO: Describe what the bot can do, and what it's not supposed to be able to do.
+#### This bot is able to:
+- Automatically scout, evaluate, mine and defend adjacent rooms for energy
+- Automatically expand into new rooms, provided there is enough GCL and CPU
+- Plan and manage all structures of a room
+- Harvest and process minerals to boost our creeps
+- Harvest and process commodities from highways
+- Harvest and process power from highways
+- Create, upgrade, spawn and manage operator power creeps to help with economy
+- Use the market to buy and sell resources
+
+#### This bot can not:
+- Auto-attack other players
+- Defend well against nukes
+
+#### Reasoning:
+
+There is a general dislike with "non coding players" (NCPs) in the screeps community. The term describes players that only download and run open-source bots without modification, thus noch actually "playing" the game, since much of the game is writing your own code.
+Because of this, open-source bots should not be too strong, so they can be killed by players that invested time into writing their own code. Otherwise the optimal way to play would be downloading these open-source bots, and soon most people would just use the same bot.
+If you want to have the ability to stand up against other strong players, you will need to write the code for that yourself.
