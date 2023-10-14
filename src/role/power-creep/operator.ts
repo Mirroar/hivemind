@@ -4,7 +4,6 @@ FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
 PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
 import cache from 'utils/cache';
-import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
@@ -16,9 +15,52 @@ declare global {
 
 	interface PowerCreepMemory {
 		newTargetRoom: string;
-		order;
+		order: OperatorOrder;
 	}
 }
+
+interface OperatorOrderInterface {
+	priority: number;
+	weight: number;
+	canInterrupt?: boolean;
+	type: string;
+}
+
+interface OperatorWaitOrder extends OperatorOrderInterface {
+	type: 'performWait';
+	timer: number;
+}
+
+interface OperatorEnablePowersOrder extends OperatorOrderInterface {
+	type: 'performEnablePowers';
+}
+
+interface OperatorRenewOrder extends OperatorOrderInterface {
+	type: 'performRenew';
+}
+
+interface OperatorUsePowerOrder extends OperatorOrderInterface {
+	type: 'usePower';
+	power: PowerConstant;
+	target?: Id<RoomObject & _HasId>;
+}
+
+interface OperatorDepositOpsOrder extends OperatorOrderInterface {
+	type: 'depositOps';
+	target?: Id<AnyStoreStructure>;
+}
+
+interface OperatorRetrieveOpsOrder extends OperatorOrderInterface {
+	type: 'retrieveOps';
+	target?: Id<AnyStoreStructure>;
+}
+
+type OperatorOrder = OperatorWaitOrder
+	| OperatorEnablePowersOrder
+	| OperatorRenewOrder
+	| OperatorUsePowerOrder
+	| OperatorDepositOpsOrder
+	| OperatorRetrieveOpsOrder;
 
 export default class OperatorRole extends Role {
 	creep: PowerCreep;
@@ -29,7 +71,7 @@ export default class OperatorRole extends Role {
 	 * @param {PowerCreep} creep
 	 *   The power creep to run logic for.
 	 */
-	run(creep) {
+	run(creep: PowerCreep) {
 		this.creep = creep;
 
 		if (this.creep.memory.newTargetRoom) {
@@ -81,10 +123,8 @@ export default class OperatorRole extends Role {
 	 * @return {boolean}
 	 *   True if the creep has an oder.
 	 */
-	hasOrder() {
-		if (this.creep.memory.order) {
-			return true;
-		}
+	hasOrder(): boolean {
+		if (this.creep.memory.order) return true;
 
 		return false;
 	}
@@ -102,19 +142,28 @@ export default class OperatorRole extends Role {
 			const options = this.getAllOptions();
 			const bestOrder = utilities.getBestOption(options);
 
-			if (bestOrder.canInterrupt) {
-				const targetId: Id<RoomObject & _HasId> = this.creep.memory.order?.target;
-				if (!targetId || (Game.getObjectById(targetId)?.pos?.getRangeTo(this.creep) || 100) > 5) {
-					this.creep.memory.order = bestOrder;
-				}
-			}
+			if (bestOrder.canInterrupt && this.mayCurrentOrderBeInterrupted()) this.creep.memory.order = bestOrder;
 
 			return true;
 		});
 	}
 
-	getAllOptions() {
-		const options = [];
+	mayCurrentOrderBeInterrupted(): boolean {
+		const order = this.creep.memory.order;
+		if (!order) return true;
+		if (order.type === 'performRenew') return false;
+		if (!('target' in order)) return true;
+
+		const targetId: Id<RoomObject & _HasId> = order?.target;
+		if (targetId && (Game.getObjectById(targetId)?.pos?.getRangeTo(this.creep) || 100) <= 5) {
+			return false;
+		}
+
+		return true;
+	}
+
+	getAllOptions(): OperatorOrder[] {
+		const options: OperatorOrder[] = [];
 
 		this.addRenewOptions(options);
 		this.addWaitOptions(options);
@@ -138,11 +187,11 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addRenewOptions(options) {
+	addRenewOptions(options: OperatorOrder[]) {
 		if (this.creep.ticksToLive > 500) return;
 		if (!this.creep.room.powerSpawn) return;
 
-		const option = {
+		const option: OperatorRenewOrder = {
 			type: 'performRenew',
 			priority: 4,
 			weight: 1,
@@ -159,7 +208,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addWaitOptions(options) {
+	addWaitOptions(options: OperatorOrder[]) {
 		options.push({
 			type: 'performWait',
 			priority: 1,
@@ -174,7 +223,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addEnableRoomOptions(options) {
+	addEnableRoomOptions(options: OperatorOrder[]) {
 		if (!this.creep.room.controller || this.creep.room.controller.isPowerEnabled) return;
 
 		options.push({
@@ -190,7 +239,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addRegenSourcesOptions(options) {
+	addRegenSourcesOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_REGEN_SOURCE]) return;
 		if (this.creep.powers[PWR_REGEN_SOURCE].level < 1) return;
 		if (this.creep.powers[PWR_REGEN_SOURCE].cooldown > 0) return;
@@ -216,7 +265,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addRegenMineralOptions(options) {
+	addRegenMineralOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_REGEN_MINERAL]) return;
 		if (this.creep.powers[PWR_REGEN_MINERAL].level < 1) return;
 
@@ -248,7 +297,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addOperateStorageOptions(options) {
+	addOperateStorageOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_OPERATE_STORAGE]) return;
 		if (this.creep.powers[PWR_OPERATE_STORAGE].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_STORAGE].cooldown > 0) return;
@@ -277,7 +326,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addOperateSpawnOptions(options) {
+	addOperateSpawnOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_OPERATE_SPAWN]) return;
 		if (this.creep.powers[PWR_OPERATE_SPAWN].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_SPAWN].cooldown > 0) return;
@@ -320,7 +369,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addOperateFactoryOptions(options) {
+	addOperateFactoryOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_OPERATE_FACTORY]) return;
 		const powerLevel = this.creep.powers[PWR_OPERATE_FACTORY].level;
 		if (powerLevel < 1) return;
@@ -353,7 +402,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addOperateExtensionOptions(options) {
+	addOperateExtensionOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_OPERATE_EXTENSION]) return;
 		if (this.creep.powers[PWR_OPERATE_EXTENSION].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_EXTENSION].cooldown > 0) return;
@@ -393,7 +442,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addOperateTowerOptions(options) {
+	addOperateTowerOptions(options: OperatorOrder[]) {
 		if (!this.creep.powers[PWR_OPERATE_TOWER]) return;
 		if (this.creep.powers[PWR_OPERATE_TOWER].level < 1) return;
 		if (this.creep.powers[PWR_OPERATE_TOWER].cooldown > 0) return;
@@ -426,7 +475,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addDepositOpsOptions(options) {
+	addDepositOpsOptions(options: OperatorOrder[]) {
 		if (!this.creep.store[RESOURCE_OPS]) return;
 		if (this.creep.store.getUsedCapacity() < this.creep.store.getCapacity() * 0.9) return;
 
@@ -447,7 +496,7 @@ export default class OperatorRole extends Role {
 	 * @param {Array} options
 	 *   A list of potential power creep orders.
 	 */
-	addRetrieveOpsOptions(options) {
+	addRetrieveOpsOptions(options: OperatorOrder[]) {
 		if ((this.creep.store[RESOURCE_OPS] || 0) > this.creep.store.getCapacity() * 0.1) return;
 
 		const storage = this.creep.room.getBestStorageSource(RESOURCE_OPS);
@@ -467,8 +516,9 @@ export default class OperatorRole extends Role {
 	performOrder() {
 		if (!this.hasOrder()) return;
 
-		if (this.creep.memory.order.target) {
-			const target = Game.getObjectById<RoomObject & _HasId>(this.creep.memory.order.target);
+		const order = this.creep.memory.order;
+		if ('target' in order) {
+			const target = Game.getObjectById<RoomObject & _HasId>(order.target);
 
 			if (!target || target.pos.roomName !== this.creep.pos.roomName) {
 				delete this.creep.memory.order;
@@ -476,7 +526,7 @@ export default class OperatorRole extends Role {
 			}
 		}
 
-		this[this.creep.memory.order.type]();
+		this[order.type]();
 	}
 
 	/**
@@ -485,6 +535,7 @@ export default class OperatorRole extends Role {
 	performRenew() {
 		const powerSpawn = this.creep.room.powerSpawn;
 
+		// @todo Move to another room with a power spawn or a nearby power bank.
 		if (!powerSpawn) return;
 
 		this.creep.whenInRange(1, powerSpawn, () => {
@@ -496,8 +547,9 @@ export default class OperatorRole extends Role {
 	 * Makes this creep wait around for a while.
 	 */
 	performWait() {
-		this.creep.memory.order.timer--;
-		if (this.creep.memory.order.timer <= 0) {
+		const order = this.creep.memory.order as OperatorWaitOrder;
+		order.timer--;
+		if (order.timer <= 0) {
 			this.orderFinished();
 		}
 
@@ -524,9 +576,11 @@ export default class OperatorRole extends Role {
 	 * Makes this creep use a power.
 	 */
 	usePower() {
-		const power = this.creep.memory.order.power;
-		const range = POWER_INFO[power].range || 1;
-		const target = this.creep.memory.order.target && Game.getObjectById<RoomObject & _HasId>(this.creep.memory.order.target);
+		const order = this.creep.memory.order as OperatorUsePowerOrder;
+		const power = order.power;
+		const powerInfo = POWER_INFO[power];
+		const range = 'range' in powerInfo ? powerInfo.range : 1;
+		const target = order.target && Game.getObjectById<RoomObject & _HasId>(order.target);
 
 		const execute = () => {
 			if (this.creep.usePower(power, target) === OK) {
@@ -547,7 +601,8 @@ export default class OperatorRole extends Role {
 	 *
 	 */
 	depositOps() {
-		const storage = Game.getObjectById<AnyStoreStructure>(this.creep.memory.order.target);
+		const order = this.creep.memory.order as OperatorDepositOpsOrder;
+		const storage = Game.getObjectById<AnyStoreStructure>(order.target);
 		if (!storage) {
 			this.orderFinished();
 			return;
@@ -568,7 +623,8 @@ export default class OperatorRole extends Role {
 	 *
 	 */
 	retrieveOps() {
-		const storage = Game.getObjectById<AnyStoreStructure>(this.creep.memory.order.target);
+		const order = this.creep.memory.order as OperatorRetrieveOpsOrder;
+		const storage = Game.getObjectById<AnyStoreStructure>(order.target);
 		if (!storage) {
 			this.orderFinished();
 			return;

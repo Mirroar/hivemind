@@ -34,14 +34,14 @@ export default class Role {
 		this.stopAt = 2000;
 	}
 
-	run(creep: Creep) {
+	run(creep: Creep | PowerCreep) {
 		throw new Error('Implementation missing.');
 	}
 
-	preRun(creep: Creep): boolean {
+	preRun(creep: Creep | PowerCreep): boolean {
 		if (this.containSingleRoomCreep(creep)) return false;
 
-		if (creep.room.boostManager?.overrideCreepLogic(creep)) {
+		if (creep instanceof Creep && creep.room.boostManager?.overrideCreepLogic(creep)) {
 			return false;
 		}
 
@@ -57,7 +57,7 @@ export default class Role {
 	 * @return {boolean}
 	 *   True if creep is busy getting back to its room.
 	 */
-	containSingleRoomCreep(creep: Creep): boolean {
+	containSingleRoomCreep(creep: Creep | PowerCreep): boolean {
 		if (!creep.memory.singleRoom) return false;
 
 		if (creep.pos.roomName === creep.memory.singleRoom) {
@@ -118,7 +118,7 @@ export default class Role {
 		}
 	}
 
-	isSafePosition(creep: Creep, pos: RoomPosition): boolean {
+	isSafePosition(creep: Creep | PowerCreep, pos: RoomPosition): boolean {
 		if (!creep.room.isMine()) return true;
 		if (creep.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return true;
 
