@@ -14,8 +14,7 @@
 		"url": "https://github.com/Mirroar/hivemind/issues"
 	},
 	"scripts": {
-		"test": "xo && ava",
-		"coverage": "nyc ava"
+		"test": "xo"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.15.0",
@@ -23,13 +22,11 @@
 		"@rollup/plugin-node-resolve": "^13.0.4",
 		"@types/lodash": "^3.10.6",
 		"@types/node": "^13.13.52",
-		"ava": "^1.4.1",
 		"eslint-import-resolver-typescript": "^2.7.1",
 		"grunt": "^1.4.1",
 		"grunt-screeps": "^1.5.0",
 		"grunt-ts": "^6.0.0-beta.22",
 		"lodash": "^3.0.0",
-		"nyc": "^13.3.0",
 		"prettier": "^2.3.2",
 		"rollup": "^2.56.2",
 		"rollup-plugin-clear": "^2.0.7",
