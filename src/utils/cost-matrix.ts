@@ -38,10 +38,16 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		options = {};
 	}
 
+	const roomHasBlockingConstructionSites = (Game.rooms[roomName]?.find(
+		FIND_MY_CONSTRUCTION_SITES,
+		{filter: site => (OBSTACLE_OBJECT_TYPES as string[]).includes(site.structureType)}
+	) || []).length > 0;
+	const cacheDuration = roomHasBlockingConstructionSites ? 20 : 500;
+
 	let cacheKey = 'costMatrix:' + roomName;
 	let matrix = hivemind.segmentMemory.isReady() ? cache.inHeap(
 		cacheKey,
-		500,
+		cacheDuration,
 		() => {
 			const roomIntel = getRoomIntel(roomName);
 			return roomIntel.getCostMatrix();
@@ -54,7 +60,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 
 		matrix = cache.inHeap(
 			cacheKey,
-			500,
+			cacheDuration,
 			() => generateSingleRoomCostMatrix(matrix, roomName),
 		);
 	}
@@ -64,7 +70,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 
 		matrix = cache.inHeap(
 			cacheKey,
-			500,
+			cacheDuration,
 			() => generateQuadCostMatrix(matrix, roomName),
 		);
 	}

@@ -57,9 +57,6 @@ export default class RemoteMiningProcess extends Process {
 
 		// Determine how much remote mining each room can handle.
 		for (const room of Game.myRooms) {
-			// Start remote mining as early as RCL 2, even in first room.
-			if (_.size(Game.spawns) === 1 && _.sample(Game.spawns).room.name === room.name && room.controller.level < 2) continue;
-
 			let spawnCount = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 			if (spawnCount === 0) {
 				if (room.controller.level > 3 && room.controller.level < 7) {

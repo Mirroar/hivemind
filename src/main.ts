@@ -162,7 +162,7 @@ const main = {
 
 		if (shardHasRooms) {
 			hivemind.runProcess('strategy.remote_mining', RemoteMiningProcess, {
-				interval: 100,
+				interval: _.size(Game.myRooms) === 1 ? 20 : 100,
 			});
 
 			hivemind.runProcess('player-intel', PlayerIntelProcess, {

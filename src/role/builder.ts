@@ -153,6 +153,7 @@ export default class BuilderRole extends Role {
 		if (
 			creep.room.roomManager?.hasMisplacedSpawn()
 			|| creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL
+			|| creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0
 		) {
 			delete creep.memory.upgrading;
 			delete creep.room.memory.noBuilderNeeded;

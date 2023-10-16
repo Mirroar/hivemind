@@ -52,7 +52,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 		const force = this.isSmallHarvesterNeeded(source.room);
 		options.push({
 			priority: (force ? 6 : (this.isEarlyGame(source.room) ? 5 : 4)),
-			weight: this.isEarlyGame(source.room) ? 1 : (50 - minSpawnDistance) / 50,
+			weight: (50 - minSpawnDistance) / 50,
 			source: source.id,
 			preferClosestSpawn: source.pos,
 			size: this.getMaxWorkParts(source),
@@ -86,11 +86,13 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			totalWorkParts += (creep.getActiveBodyparts(WORK) || 0) / 2;
 		}
 
+		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
+		const minSpawnDistance = _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)));
 		const maxParts = this.getMaxWorkParts(source);
 		if (totalWorkParts < maxParts) {
 			options.push({
 				priority: this.isEarlyGame(source.room) ? 5 : 4,
-				weight: this.isEarlyGame(source.room) ? 1 : 1 - (totalWorkParts / maxParts),
+				weight: 1 - (totalWorkParts / maxParts / 2) - ((50 - minSpawnDistance) / 100),
 				source: source.id,
 				preferClosestSpawn: source.pos,
 				size: maxParts,

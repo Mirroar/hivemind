@@ -46,6 +46,15 @@ export default class TransporterSpawnRole extends SpawnRole {
 				option.force = true;
 				option.weight = 1;
 			}
+			else if (!room.storage && !room.terminal) {
+				const spawns = _.filter(Game.spawns, spawn => spawn.room.name === room.name);
+				const sources = room.sources;
+				const minSpawnDistance = _.min(_.map(spawns, spawn => _.min(_.map(sources, source => spawn.pos.getRangeTo(source.pos)))));
+				if (minSpawnDistance < 5) {
+					option.priority--;
+					option.weight = 0;
+				}
+			}
 
 			options.push(option);
 		}

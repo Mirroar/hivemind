@@ -89,6 +89,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 			const targetPos = encodePosition(position);
 			if (!operation.hasActiveHarvesters(targetPos)) continue;
+			if (!operation.hasContainer(targetPos)) continue;
 
 			const paths = operation.getPaths();
 			total += paths[targetPos].requiredCarryParts;
@@ -308,8 +309,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		}
 
 		if (harvesters.length >= freeSpots) return;
+		const requestedSaturation = operation.hasContainer(targetPos) ? 0.9 : ((BUILD_POWER + HARVEST_POWER) / HARVEST_POWER);
 		const workParts = _.sum(harvesters, creep => creep.getActiveBodyparts(WORK));
-		if (workParts >= operation.getHarvesterSize(targetPos) * 0.5) return;
+		if (workParts >= operation.getHarvesterSize(targetPos) * requestedSaturation) return;
 
 		options.push(option);
 	}

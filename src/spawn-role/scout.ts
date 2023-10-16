@@ -38,9 +38,11 @@ export default class ScoutSpawnRole extends SpawnRole {
 		const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
 		if (_.size(roomScouts) >= hivemind.settings.get('maxScoutsPerRoom') || !room.needsScout()) return options;
 
+		const isEarlyGame = _.size(Game.myRooms) === 1 && !room.storage && !room.terminal;
+
 		options.push({
-			priority: hivemind.settings.get('scoutSpawnPriority'),
-			weight: 0,
+			priority: isEarlyGame ? 4 : hivemind.settings.get('scoutSpawnPriority'),
+			weight: isEarlyGame ? 1 : 0,
 		});
 
 		return options;
