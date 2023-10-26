@@ -6,6 +6,14 @@ type MovementMode = typeof MOVEMENT_TYPE_ROAD | typeof MOVEMENT_TYPE_PLAINS | ty
 type BodyWeights = Partial<Record<BodyPartConstant, number>>;
 type PartCounts = Partial<Record<BodyPartConstant, number>>;
 
+declare global {
+	namespace NodeJS {
+		interface Global {
+			BodyBuilder: typeof BodyBuilder;
+		}
+	}
+}
+
 export {
 	MOVEMENT_TYPE_ROAD,
 	MOVEMENT_TYPE_PLAINS,
@@ -17,31 +25,38 @@ export default class BodyBuilder {
 	maxSize: number;
 	energyLimit?: number;
 	weights: BodyWeights;
+	partLimits: PartCounts;
 
 	public constructor() {
 		this.moveMode = MOVEMENT_TYPE_PLAINS;
 		this.maxSize = MAX_CREEP_SIZE;
 		this.energyLimit = null;
 		this.weights = {};
+		this.partLimits = {};
 	}
 
-	public setMovementMode(mode: MovementMode): self {
+	public setMovementMode(mode: MovementMode): this {
 		this.moveMode = mode;
 		return this;
 	}
 
-	public setMaxSize(size?: number): self {
+	public setMaxSize(size?: number): this {
 		this.maxSize = size ?? MAX_CREEP_SIZE;
 		return this;
 	}
 
-	public setEnergyLimit(limit?: number): self {
+	public setEnergyLimit(limit?: number): this {
 		this.energyLimit = limit;
 		return this;
 	}
 
-	public setBodyWeights(weights: BodyWeights): self {
+	public setBodyWeights(weights: BodyWeights): this {
 		this.weights = this.normalizeWeights(weights);
+		return this;
+	}
+
+	public setPartLimit(partType: BodyPartConstant, limit: number): this {
+		this.partLimits[partType] = limit;
 		return this;
 	}
 
@@ -84,6 +99,8 @@ export default class BodyBuilder {
 
 		while (currentSize < this.maxSize) {
 			const nextPart = this.getNextBodyPart(partCounts);
+			if (this.partLimits[nextPart] && partCounts[nextPart] >= this.partLimits[nextPart]) break;
+
 			const neededMoves = this.getNextMovePartIncrement(partCounts, nextPart);
 
 			const partCost = BODYPART_COST[nextPart] + neededMoves * BODYPART_COST[MOVE];
@@ -103,9 +120,9 @@ export default class BodyBuilder {
 		const currentWeights = this.normalizeWeights(partCounts);
 
 		let fallbackPart: BodyPartConstant = null;
-		for (const partType in this.weights) {
-			if ((currentWeights[partType] || 0) < this.weights[partType]) return partType;
-			if (!fallbackPart) fallbackPart = partType;
+		for (const part of (_.keys(this.weights) as BodyPartConstant[])) {
+			if ((currentWeights[part] || 0) < this.weights[part]) return part;
+			if (!fallbackPart) fallbackPart = part;
 		}
 
 		return fallbackPart;
@@ -120,7 +137,7 @@ export default class BodyBuilder {
 
 	private getTotalGeneratedFatigue(partCounts: PartCounts, nextPart: BodyPartConstant): number {
 		let total = this.getGeneratedFatigue(nextPart);
-		for (const part in partCounts) {
+		for (const part of (_.keys(partCounts) as BodyPartConstant[])) {
 			total += partCounts[part] * this.getGeneratedFatigue(part);
 		}
 
@@ -136,6 +153,8 @@ export default class BodyBuilder {
 		if (this.moveMode === MOVEMENT_TYPE_ROAD) return 1;
 		if (this.moveMode === MOVEMENT_TYPE_PLAINS) return 2;
 		if (this.moveMode === MOVEMENT_TYPE_SWAMP) return 10;
+
+		return 2;
 	}
 
 	private getMovePartStrength(): number {
@@ -144,14 +163,68 @@ export default class BodyBuilder {
 	}
 
 	private generateSortedParts(partCounts: Partial<Record<BodyPartConstant, number>>): BodyPartConstant[] {
-		// @todo
-		// Interweave carry and move parts
-		// Have move parts in the middle for military creeps, else at the end
+		// @todo Create array of non-move parts in sensible order.
+		const body: BodyPartConstant[] = [];
+
+		// Start with tough parts.
+		// @todo Reevaluate this when including tough boosts.
+		while ((partCounts[TOUGH] || 0) > 0) {
+			body.push(TOUGH);
+			partCounts[TOUGH]--;
+		}
+
+		// Add non-military parts.
+		let done = false;
+		while (!done) {
+			done = true;
+			for (const part of (_.keys(partCounts) as BodyPartConstant[])) {
+				if (part === ATTACK || part === RANGED_ATTACK || part === HEAL || part === MOVE) continue;
+				if (partCounts[part] > 0) {
+					body.push(part);
+					partCounts[part]--;
+					done = false;
+				}
+			}
+		}
+
+		// Add military parts last to keep fighting effeciency.
+		const lastParts = [RANGED_ATTACK, ATTACK, HEAL];
+		for (const part of lastParts) {
+			for (let i = 0; i < partCounts[part] || 0; i++) {
+				body.push(part);
+			}
+		}
 
 		return this.interweaveMoveParts(body, partCounts[MOVE]);
 	}
 
-	private interweaveMoveParts(body: BodyPartConstant[]): BodyPartConstant[] {
-		// @todo
+	private interweaveMoveParts(body: BodyPartConstant[], moveParts: number): BodyPartConstant[] {
+		// @todo Have move parts in the middle for military creeps, else at the end.
+
+		const moveStrength = this.getMovePartStrength();
+		let totalFatigue = body.length * this.getGeneratedFatigue(body[0]);
+		let totalMovePower = moveParts * moveStrength;
+
+		const newBody: BodyPartConstant[] = [];
+		for (const part of body) {
+			while (totalMovePower - totalFatigue >= moveStrength) {
+				newBody.push(MOVE);
+				totalMovePower -= moveStrength;
+			}
+
+			newBody.push(part);
+
+			// Empty carry parts no longer generate fatigue.
+			if (part === CARRY) totalFatigue -= this.getGeneratedFatigue(part);
+		}
+
+		while (totalMovePower > 0) {
+			newBody.push(MOVE);
+			totalMovePower -= moveStrength;
+		}
+
+		return newBody;
 	}
 }
+
+global.BodyBuilder = BodyBuilder;
