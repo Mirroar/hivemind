@@ -40,7 +40,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 
 	const roomHasBlockingConstructionSites = (Game.rooms[roomName]?.find(
 		FIND_MY_CONSTRUCTION_SITES,
-		{filter: site => (OBSTACLE_OBJECT_TYPES as string[]).includes(site.structureType)}
+		{filter: site => !site.isWalkable()}
 	) || []).length > 0;
 	const cacheDuration = roomHasBlockingConstructionSites ? 20 : 500;
 

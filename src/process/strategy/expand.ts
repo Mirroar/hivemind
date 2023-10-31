@@ -1,6 +1,6 @@
 /* global PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
 TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
-OBSTACLE_OBJECT_TYPES STRUCTURE_RAMPART */
+STRUCTURE_RAMPART */
 
 import Process from 'process/process';
 import hivemind from 'hivemind';
@@ -441,7 +441,7 @@ export default class ExpandProcess extends Process {
 		}
 
 		const structures = room.find(FIND_STRUCTURES, {
-			filter: s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType) || (s.structureType === STRUCTURE_RAMPART && !s.my),
+			filter: s => !s.isWalkable(),
 		});
 		for (const structure of structures) {
 			matrix.set(structure.pos.x, structure.pos.y, 255);

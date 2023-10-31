@@ -450,7 +450,7 @@ export default class BrawlerRole extends Role {
 
 		const structures = position.lookFor(LOOK_STRUCTURES);
 		for (const structure of structures) {
-			if (OBSTACLE_OBJECT_TYPES[structure.structureType]) return true;
+			if (!structure.isWalkable()) return true;
 		}
 
 		return false;

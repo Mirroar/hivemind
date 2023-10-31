@@ -2,7 +2,7 @@
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
-LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK OBSTACLE_OBJECT_TYPES ORDER_SELL
+LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK ORDER_SELL
 FIND_TOMBSTONES FIND_RUINS */
 
 import balancer from 'excess-energy-balancer';
@@ -209,11 +209,11 @@ export default class TransporterRole extends Role {
 
 				// Check if there's a structure here already.
 				const structures = pos.lookFor(LOOK_STRUCTURES);
-				if (_.some(structures, structure => _.contains(OBSTACLE_OBJECT_TYPES, structure.structureType))) return;
+				if (_.some(structures, structure => !structure.isWalkable())) return;
 
 				// Check if there's a construction site here already.
 				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
-				if (_.some(sites, site => _.contains(OBSTACLE_OBJECT_TYPES, site.structureType))) return;
+				if (_.some(sites, site => !site.isWalkable())) return;
 
 				availableTiles.push(pos);
 			});

@@ -1,5 +1,5 @@
 /* global FIND_STRUCTURES STRUCTURE_EXTENSION STRUCTURE_SPAWN
-OBSTACLE_OBJECT_TYPES LOOK_STRUCTURES RESOURCE_ENERGY STRUCTURE_TOWER
+LOOK_STRUCTURES RESOURCE_ENERGY STRUCTURE_TOWER
 STRUCTURE_LINK STRUCTURE_CONTAINER */
 
 import cache from 'utils/cache';
@@ -74,7 +74,7 @@ export default class Bay {
 			// Do not add extensions to bay if center is blocked by a structure.
 			const posStructures = this.pos.lookFor(LOOK_STRUCTURES);
 			for (const structure of posStructures) {
-				if ((OBSTACLE_OBJECT_TYPES as string[]).includes(structure.structureType)) {
+				if (!structure.isWalkable()) {
 					return true;
 				}
 			}

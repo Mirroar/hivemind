@@ -1,5 +1,4 @@
-/* global RoomPosition LOOK_STRUCTURES OBSTACLE_OBJECT_TYPES
-STRUCTURE_RAMPART */
+/* global RoomPosition LOOK_STRUCTURES STRUCTURE_RAMPART */
 
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
@@ -73,7 +72,7 @@ export default class DismantlerRole extends Role {
 			if (pos.roomName === creep.pos.roomName) {
 				const structures = _.filter(
 					pos.lookFor(LOOK_STRUCTURES),
-					(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType) || (s.structureType === STRUCTURE_RAMPART && !s.my),
+					(s: AnyStructure) => !s.isWalkable(),
 				);
 
 				if (structures.length === 0) {
@@ -100,7 +99,7 @@ export default class DismantlerRole extends Role {
 
 		const structure = _.find(
 			target.lookFor(LOOK_STRUCTURES),
-			(s: AnyStructure) => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType) || (s.structureType === STRUCTURE_RAMPART && !s.my),
+			(s: AnyStructure) => !s.isWalkable(),
 		);
 
 		if (!creep.heapMemory.disabledNotifications.includes(structure.id)) {
