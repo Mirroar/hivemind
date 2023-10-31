@@ -1,6 +1,7 @@
 /* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
+import BodyBuilder from 'creep/body-builder';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
@@ -87,11 +88,11 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 	getCreepBody(room: Room, option: CaravanTraderSpawnOption): BodyPartConstant[] {
 		const availableResources = room.getCurrentResourceAmount(option.resourceType);
 
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [CARRY]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: Math.ceil(Math.min(1000, availableResources) / CARRY_CAPACITY)},
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setPartLimit(CARRY, Math.ceil(Math.min(1000, availableResources) / CARRY_CAPACITY))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

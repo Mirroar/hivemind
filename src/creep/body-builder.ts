@@ -1,8 +1,16 @@
-const MOVEMENT_TYPE_ROAD = 0;
-const MOVEMENT_TYPE_PLAINS = 1;
-const MOVEMENT_TYPE_SWAMP = 2;
+const MOVEMENT_MODE_ROAD = 0;
+const MOVEMENT_MODE_PLAINS = 1;
+const MOVEMENT_MODE_SWAMP = 2;
+const MOVEMENT_MODE_SLOW = 3;
+const MOVEMENT_MODE_MINIMAL = 4;
+const MOVEMENT_MODE_NONE = 5;
 
-type MovementMode = typeof MOVEMENT_TYPE_ROAD | typeof MOVEMENT_TYPE_PLAINS | typeof MOVEMENT_TYPE_SWAMP;
+type MovementMode = typeof MOVEMENT_MODE_ROAD
+	| typeof MOVEMENT_MODE_PLAINS
+	| typeof MOVEMENT_MODE_SWAMP
+	| typeof MOVEMENT_MODE_SLOW
+	| typeof MOVEMENT_MODE_MINIMAL
+	| typeof MOVEMENT_MODE_NONE;
 type BodyWeights = Partial<Record<BodyPartConstant, number>>;
 type PartCounts = Partial<Record<BodyPartConstant, number>>;
 
@@ -15,9 +23,12 @@ declare global {
 }
 
 export {
-	MOVEMENT_TYPE_ROAD,
-	MOVEMENT_TYPE_PLAINS,
-	MOVEMENT_TYPE_SWAMP,
+	MOVEMENT_MODE_ROAD,
+	MOVEMENT_MODE_PLAINS,
+	MOVEMENT_MODE_SWAMP,
+	MOVEMENT_MODE_SLOW,
+	MOVEMENT_MODE_MINIMAL,
+	MOVEMENT_MODE_NONE,
 }
 
 export default class BodyBuilder {
@@ -26,13 +37,15 @@ export default class BodyBuilder {
 	energyLimit?: number;
 	weights: BodyWeights;
 	partLimits: PartCounts;
+	moveBufferRatio: number;
 
 	public constructor() {
-		this.moveMode = MOVEMENT_TYPE_PLAINS;
+		this.moveMode = MOVEMENT_MODE_PLAINS;
 		this.maxSize = MAX_CREEP_SIZE;
 		this.energyLimit = null;
 		this.weights = {};
 		this.partLimits = {};
+		this.moveBufferRatio = 0;
 	}
 
 	public setMovementMode(mode: MovementMode): this {
@@ -50,13 +63,18 @@ export default class BodyBuilder {
 		return this;
 	}
 
-	public setBodyWeights(weights: BodyWeights): this {
+	public setWeights(weights: BodyWeights): this {
 		this.weights = this.normalizeWeights(weights);
 		return this;
 	}
 
 	public setPartLimit(partType: BodyPartConstant, limit: number): this {
 		this.partLimits[partType] = limit;
+		return this;
+	}
+
+	public setMoveBufferRatio(ratio: number) {
+		this.moveBufferRatio = ratio;
 		return this;
 	}
 
@@ -150,11 +168,24 @@ export default class BodyBuilder {
 		// @todo There might be cases where it makes sense to treat
 		// CARRY parts as empty most of the time.
 
-		if (this.moveMode === MOVEMENT_TYPE_ROAD) return 1;
-		if (this.moveMode === MOVEMENT_TYPE_PLAINS) return 2;
-		if (this.moveMode === MOVEMENT_TYPE_SWAMP) return 10;
+		switch (this.moveMode) {
+			case MOVEMENT_MODE_SWAMP:
+				return 10;
+			case MOVEMENT_MODE_PLAINS:
+				return 2;
+			case MOVEMENT_MODE_ROAD:
+				return 1;
+			case MOVEMENT_MODE_SLOW:
+				return 2 / 5;
+			case MOVEMENT_MODE_MINIMAL:
+				return 0.001;
+			case MOVEMENT_MODE_NONE:
+				return 0;
+			default:
+				const exhaustiveCheck: never = this.moveMode;
+				throw 'Invalid movement mode given.';
+		}
 
-		return 2;
 	}
 
 	private getMovePartStrength(): number {
@@ -199,20 +230,29 @@ export default class BodyBuilder {
 	}
 
 	private interweaveMoveParts(body: BodyPartConstant[], moveParts: number): BodyPartConstant[] {
-		// @todo Have move parts in the middle for military creeps, else at the end.
-
 		const moveStrength = this.getMovePartStrength();
-		let totalFatigue = body.length * this.getGeneratedFatigue(body[0]);
+		let totalFatigue = body.length * this.getGeneratedFatigue(WORK);
 		let totalMovePower = moveParts * moveStrength;
 
 		const newBody: BodyPartConstant[] = [];
+		let functionalPartCount = 0;
 		for (const part of body) {
 			while (totalMovePower - totalFatigue >= moveStrength) {
 				newBody.push(MOVE);
 				totalMovePower -= moveStrength;
 			}
 
+			if (1 - (functionalPartCount / body.length) <= this.moveBufferRatio) {
+				// Add all remaining move parts to act as armor before other
+				// parts get damaged.
+				while (totalMovePower > 0) {
+					newBody.push(MOVE);
+					totalMovePower -= moveStrength;
+				}
+			}
+
 			newBody.push(part);
+			functionalPartCount++;
 
 			// Empty carry parts no longer generate fatigue.
 			if (part === CARRY) totalFatigue -= this.getGeneratedFatigue(part);

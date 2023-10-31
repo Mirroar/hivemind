@@ -1,6 +1,7 @@
 /* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
+import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
@@ -92,11 +93,10 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [WORK]: 0.2, [CARRY]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
-	}
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 3, [WORK]: 2})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();	}
 
 	/**
 	 * Gets memory for a new creep.

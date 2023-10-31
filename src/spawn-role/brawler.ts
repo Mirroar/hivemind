@@ -1,6 +1,7 @@
 /* global RoomPosition MOVE ATTACK HEAL RANGED_ATTACK ATTACK_POWER
 RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
+import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import container from 'utils/container';
 import hivemind from 'hivemind';
@@ -249,6 +250,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (room.name === targetRoom.name) continue;
 			if (!this.canReclaimRoom(targetRoom, room)) continue;
 
+			// @todo Only send brawlers when the room to reclaim might be
+			// attacked.
 			/* Options.push({
 				priority: 4,
 				weight: 0,
@@ -326,41 +329,45 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	}
 
 	getBrawlerCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxAttackParts && {[ATTACK]: maxAttackParts},
-		);
+		return (new BodyBuilder())
+			.setWeights({[ATTACK]: 3,[HEAL]: 2})
+			.setPartLimit(ATTACK, maxAttackParts)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setMoveBufferRatio(0.4)
+			.build();
 	}
 
 	getBlinkyCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.35, [HEAL]: 0.15},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxAttackParts && {[RANGED_ATTACK]: maxAttackParts},
-		);
+		return (new BodyBuilder())
+			.setWeights({[RANGED_ATTACK]: 7,[HEAL]: 3})
+			.setPartLimit(RANGED_ATTACK, maxAttackParts)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setMoveBufferRatio(0.4)
+			.build();
 	}
 
-	getAttackCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxAttackParts && {[ATTACK]: maxAttackParts},
-		);
+	getAttackCreepBody(room: Room): BodyPartConstant[] {
+		return (new BodyBuilder())
+			.setWeights({[ATTACK]: 1})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setMoveBufferRatio(0.4)
+			.build();
 	}
 
 	getRangedCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[RANGED_ATTACK]: 1})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setMoveBufferRatio(0.4)
+			.build();
 	}
 
 	getHealCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [HEAL]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[HEAL]: 1})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setMoveBufferRatio(0.4)
+			.build();
 	}
 
 	/**

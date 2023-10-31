@@ -1,7 +1,9 @@
 /* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface PowerHaulerSpawnOption extends SpawnOption {
 	targetRoom: string;
@@ -58,11 +60,11 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		const moveRatio = hivemind.settings.get('powerHaulerMoveRatio');
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: moveRatio, [CARRY]: 1 - moveRatio},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

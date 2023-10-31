@@ -1,7 +1,9 @@
 /* global FIND_MY_CONSTRUCTION_SITES FIND_MY_STRUCTURES MOVE WORK CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface BuilderSpawnOption extends SpawnOption {
 	size: number;
@@ -148,13 +150,12 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
-		const maxParts = option.size && {[WORK]: option.size};
-
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			maxParts,
-		);
+		return (new BodyBuilder())
+			.setWeights({[WORK]: 4, [CARRY]: 3})
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setPartLimit(WORK, option.size)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

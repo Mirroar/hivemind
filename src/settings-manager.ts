@@ -13,7 +13,7 @@ declare global {
 		constructNukers: boolean;
 		constructObservers: boolean;
 		constructPowerSpawns: boolean;
-		constructWallsUnderRamparts: boolean;
+		constructRoadsUnderRamparts: boolean;
 		depositMineRoomFilter?: (roomName: string) => boolean;
 		dismantleUnwantedRamparts: boolean;
 		enableDepositMining: boolean;
@@ -50,7 +50,6 @@ declare global {
 		operatorNames: string[];
 		powerBankMinAmount: number;
 		powerCreepUpgradeCheckInterval: number;
-		powerHaulerMoveRatio: number;
 		powerMineCreepPriority: number;
 		powerMineRoomFilter?: (roomName: string) => boolean;
 		powerMiningCheckInterval: number;

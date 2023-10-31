@@ -1,6 +1,8 @@
 /* global MOVE CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_SLOW} from 'creep/body-builder';
 
 export default class GiftSpawnRole extends SpawnRole {
 	/**
@@ -33,10 +35,11 @@ export default class GiftSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.2, [CARRY]: 0.8},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setMovementMode(MOVEMENT_MODE_SLOW)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

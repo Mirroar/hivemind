@@ -489,7 +489,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			if (this.terrain.get(wallPosition.x, wallPosition.y) === TERRAIN_MASK_WALL) continue;
 
 			this.placementManager.planLocation(wallPosition, 'rampart', null);
-			if (settings.get('constructWallsUnderRamparts') || this.terrain.get(wallPosition.x, wallPosition.y) === TERRAIN_MASK_SWAMP) {
+			if (settings.get('constructRoadsUnderRamparts') || this.terrain.get(wallPosition.x, wallPosition.y) === TERRAIN_MASK_SWAMP) {
 				this.placementManager.planLocation(wallPosition, 'road', null);
 				this.placementManager.planLocation(wallPosition, 'road.rampart', null);
 			}

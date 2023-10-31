@@ -1,9 +1,11 @@
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
 
+import BodyBuilder from 'creep/body-builder';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_PLAINS} from 'creep/body-builder';
 
 interface HaulerSpawnOption extends SpawnOption {
 	targetPos: string;
@@ -51,11 +53,12 @@ export default class HaulerSpawnRole extends SpawnRole {
 
 		// Determine how many haulers to spawn for this route.
 		// If we cannot create big enough haulers (yet), create more of them!
-		const maximumBody = this.generateCreepBodyFromWeights(
-			this.getBodyWeights(),
-			room.energyCapacityAvailable,
-			{[CARRY]: requiredCarryParts},
-		);
+		const maximumBody = (new BodyBuilder())
+			.setWeights(this.getBodyWeights())
+			.setPartLimit(CARRY, requiredCarryParts)
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(room.energyCapacityAvailable)
+			.build();
 		const maxCarryPartsOnBiggestBody = _.countBy(maximumBody)[CARRY];
 		const maxCarryPartsToEmptyContainer = Math.ceil(0.9 * CONTAINER_CAPACITY / CARRY_CAPACITY);
 		const maxCarryParts = Math.min(maxCarryPartsOnBiggestBody, maxCarryPartsToEmptyContainer);
@@ -100,11 +103,14 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: HaulerSpawnOption): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && room.storage ? (option.builder ? this.getBuilderBodyWeights() : this.getBodyWeights()) : this.getNoRoadsBodyWeights(),
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: option.size},
-		);
+		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
+
+		return (new BodyBuilder())
+			.setWeights(option.builder ? this.getBuilderBodyWeights() : this.getBodyWeights())
+			.setPartLimit(CARRY, option.size)
+			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**
@@ -114,27 +120,17 @@ export default class HaulerSpawnRole extends SpawnRole {
 	 *   An object containing body part weights, keyed by type.
 	 */
 	getBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.35, [CARRY]: 0.65};
+		return {[CARRY]: 1};
 	}
 
 	/**
-	 * Determine body weights for haulers when no roads are being built.
-	 *
-	 * @return {object}
-	 *   An object containing body part weights, keyed by type.
-	 */
-	getNoRoadsBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.5, [CARRY]: 0.5};
-	}
-
-	/**
-	 * Determine body weights for haulers when no roads are being built.
+	 * Determine body weights for haulers that also maintain roads.
 	 *
 	 * @return {object}
 	 *   An object containing body part weights, keyed by type.
 	 */
 	getBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.35, [CARRY]: 0.5, [WORK]: 0.15};
+		return {[CARRY]: 10, [WORK]: 3};
 	}
 
 	/**

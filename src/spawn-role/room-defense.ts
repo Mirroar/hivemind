@@ -1,9 +1,11 @@
 /* global MOVE ATTACK WORK CARRY HEAL */
 
+import BodyBuilder from 'creep/body-builder';
 import hivemind from 'hivemind';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_PLAINS} from 'creep/body-builder';
 
 declare global {
 	interface RoomDefenseSpawnOption extends SpawnOption {
@@ -166,28 +168,29 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	}
 
 	getAttackCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			settings.get('constructWallsUnderRamparts')
-				? {[MOVE]: 0.35, [ATTACK]: 0.65}
-				: {[MOVE]: 0.5, [ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[ATTACK]: 1})
+			.setMoveBufferRatio(0.8)
+			.setMovementMode(settings.get('constructRoadsUnderRamparts') ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getRangedCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			settings.get('constructWallsUnderRamparts')
-				? {[MOVE]: 0.35, [RANGED_ATTACK]: 0.65}
-				: {[MOVE]: 0.5, [RANGED_ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[RANGED_ATTACK]: 1})
+			.setMoveBufferRatio(0.8)
+			.setMovementMode(settings.get('constructRoadsUnderRamparts') ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getRepairCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [WORK]: 0.35, [CARRY]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[WORK]: 1, [CARRY]: 1})
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

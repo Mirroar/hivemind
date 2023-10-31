@@ -2,6 +2,7 @@
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
+import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import HaulerRole from 'spawn-role/hauler';
 import hivemind from 'hivemind';
@@ -12,6 +13,7 @@ import {drawTable} from 'utils/room-visuals';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
+import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
 declare global {
@@ -563,11 +565,12 @@ export default class RemoteMiningOperation extends Operation {
 		const spawnRoom = Game.rooms[this.getSourceRoom(targetPos)];
 		if (!spawnRoom) return;
 
-		const maximumBody = this.haulerRole.generateCreepBodyFromWeights(
-			this.haulerRole.getBuilderBodyWeights(),
-			spawnRoom.energyCapacityAvailable,
-			{[CARRY]: requiredCarryParts},
-		);
+		const maximumBody = (new BodyBuilder())
+			.setWeights(this.haulerRole.getBodyWeights())
+			.setPartLimit(CARRY, requiredCarryParts)
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(spawnRoom.energyCapacityAvailable)
+			.build();
 		const maxCarryPartsOnBiggestBody = _.countBy(maximumBody)[CARRY];
 		const maxCarryPartsToEmptyContainer = Math.ceil(0.9 * CONTAINER_CAPACITY / CARRY_CAPACITY);
 		const maxCarryParts = Math.min(maxCarryPartsOnBiggestBody, maxCarryPartsToEmptyContainer);

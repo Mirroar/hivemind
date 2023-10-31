@@ -2,9 +2,11 @@
 CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 import balancer from 'excess-energy-balancer';
+import BodyBuilder from 'creep/body-builder';
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_SLOW} from 'creep/body-builder';
 
 interface UpgraderSpawnOption extends SpawnOption {
 	mini?: boolean;
@@ -123,21 +125,14 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: UpgraderSpawnOption): BodyPartConstant[] {
-		let bodyWeights = {[MOVE]: 0.35, [WORK]: 0.3, [CARRY]: 0.35};
-		if (room.memory.controllerContainer || room.memory.controllerLink) {
-			// If there is easy access to energy, we can save on move an carry parts.
-			bodyWeights = {[MOVE]: 0.2, [WORK]: 0.75, [CARRY]: 0.05};
-		}
-		else if (option.mini) {
-			// No need to get large amounts of progress if we just need the ticksToDowngrade to rise.
-			bodyWeights = {[MOVE]: 0.35, [WORK]: 0.15, [CARRY]: 0.5};
-		}
+		const hasEasyEnergyAccess = room.memory.controllerContainer || room.memory.controllerLink;
 
-		return this.generateCreepBodyFromWeights(
-			bodyWeights,
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[WORK]: option.mini ? 2 : CONTROLLER_MAX_UPGRADE_PER_TICK},
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1, [WORK]: hasEasyEnergyAccess ? 10 : 1})
+			.setPartLimit(WORK, option.mini ? 2 : CONTROLLER_MAX_UPGRADE_PER_TICK)
+			.setMovementMode(hasEasyEnergyAccess ? MOVEMENT_MODE_SLOW : MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),)
+			.build();
 	}
 
 	/**

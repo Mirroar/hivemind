@@ -1,7 +1,9 @@
 /* global MOVE CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface TransporterSpawnOption extends SpawnOption {
 	force: boolean;
@@ -180,11 +182,12 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: TransporterSpawnOption): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [CARRY]: 0.65},
-			Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[CARRY]: option.size ?? 8},
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setPartLimit(CARRY, option.size ?? 8)
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),)
+			.build();
 	}
 
 	/**

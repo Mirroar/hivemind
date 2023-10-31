@@ -1,7 +1,9 @@
 /* global FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR MOVE WORK CARRY
 CREEP_SPAWN_TIME */
 
+import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface MineralHarvesterSpawnOption extends SpawnOption {
 	source: Id<Mineral>;
@@ -64,10 +66,11 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.35, [WORK]: 0.6, [CARRY]: 0.05},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1, [WORK]: 10})
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

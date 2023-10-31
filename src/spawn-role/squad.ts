@@ -1,7 +1,9 @@
 /* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
 
+import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
+import {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
 
 const availableUnitTypes = [
 	'ranger',
@@ -103,42 +105,50 @@ export default class SquadSpawnRole extends SpawnRole {
 	}
 
 	getRangerCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [RANGED_ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[RANGED_ATTACK]: 3})
+			.setMoveBufferRatio(0.4)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getHealerCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.52, [HEAL]: 0.48},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[HEAL]: 1})
+			.setMoveBufferRatio(0.4)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getClaimerCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.52, [TOUGH]: 0.18, [CLAIM]: 0.3},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[CLAIM]: 3, [TOUGH]: 2})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
-	getSingleClaimCreepBody() {
-		return [MOVE, MOVE, MOVE, MOVE, MOVE, CLAIM];
+	getSingleClaimCreepBody(room: Room) {
+		return (new BodyBuilder())
+			.setWeights({[CLAIM]: 1})
+			.setPartLimit(CLAIM, 1)
+			.setMovementMode(MOVEMENT_MODE_SWAMP)
+			.setEnergyLimit(room.energyCapacityAvailable)
+			.build();
 	}
 
 	getBuilderCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 3, [WORK]: 2})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getAttackerCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [ATTACK]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[ATTACK]: 1})
+			.setMoveBufferRatio(0.4)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getTestCreepBody() {
@@ -146,17 +156,19 @@ export default class SquadSpawnRole extends SpawnRole {
 	}
 
 	getBlinkyCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.55, [RANGED_ATTACK]: 0.25, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[RANGED_ATTACK]: 3, [HEAL]: 2})
+			.setMoveBufferRatio(0.4)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getBrawlerCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [ATTACK]: 0.3, [HEAL]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[ATTACK]: 3, [HEAL]: 2})
+			.setMoveBufferRatio(0.4)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

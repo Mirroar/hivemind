@@ -1,5 +1,6 @@
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
+import BodyBuilder from 'creep/body-builder';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
@@ -78,11 +79,11 @@ export default class ClaimerSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [CLAIM]: 0.5},
-			room.energyCapacityAvailable,
-			{[CLAIM]: 5},
-		);
+		return (new BodyBuilder())
+			.setWeights({[CLAIM]: 1})
+			.setPartLimit(CLAIM, 5)
+			.setEnergyLimit(room.energyCapacityAvailable)
+			.build();
 	}
 
 	/**

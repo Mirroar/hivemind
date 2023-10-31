@@ -1,6 +1,8 @@
 /* global MOVE CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
+import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 export default class HelperSpawnRole extends SpawnRole {
 	/**
@@ -35,8 +37,17 @@ export default class HelperSpawnRole extends SpawnRole {
 	 * @return {string[]}
 	 *   A list of body parts the new creep should consist of.
 	 */
-	getCreepBody(): BodyPartConstant[] {
-		return [MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY];
+	getCreepBody(room: Room): BodyPartConstant[] {
+		// @todo Calculate size limit.
+		// We want to be able to spawn the helper quickly, but it needs to be
+		// able to carry enough boosts and energy to work quickly.
+
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setPartLimit(CARRY, 12)
+			.setMovementMode(MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

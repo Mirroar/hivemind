@@ -1,10 +1,12 @@
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
+import BodyBuilder from 'creep/body-builder';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
+import {MOVEMENT_MODE_PLAINS, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface BuilderSpawnOption extends SpawnOption {
 	unitType: 'builder';
@@ -59,11 +61,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		// @todo Reduce needed carry parts to account for higher throughput with relays.
 		const maximumNeededCarryParts = this.getMaximumCarryParts(room);
 		const maxHaulerSize = this.getMaximumHaulerSize(room, maximumNeededCarryParts);
-		const haulerSpawnTime = (this.generateCreepBodyFromWeights(
-			(room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
-			room.energyCapacityAvailable,
-			{[CARRY]: maxHaulerSize},
-		)?.length || 0) * CREEP_SPAWN_TIME;
+		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
+		const haulerBody = this.getMaximumHaulerBody(room, maxHaulerSize);
+		const haulerSpawnTime = (haulerBody?.length || 0) * CREEP_SPAWN_TIME;
 
 		const currentlyNeededCarryParts = this.getNeededCarryParts(room);
 		const currentHaulers = _.filter(Game.creepsByRole['hauler.relay'], creep =>
@@ -111,12 +111,19 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		return total;
 	}
 
+	getMaximumHaulerBody(room: Room, maximumCarryParts: number) {
+		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
+
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setPartLimit(CARRY, maximumCarryParts)
+			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(room.energyCapacityAvailable)
+			.build();
+	}
+
 	getMaximumHaulerSize(room: Room, maximumNeededCarryParts: number) {
-		const maximumBody = this.generateCreepBodyFromWeights(
-			(room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
-			room.energyCapacityAvailable,
-			{[CARRY]: maximumNeededCarryParts},
-		);
+		const maximumBody = this.getMaximumHaulerBody(room, maximumNeededCarryParts);
 		const maxCarryPartsOnBiggestBody = _.countBy(maximumBody)[CARRY];
 		const maxCarryPartsToEmptyContainer = Math.ceil(0.9 * CONTAINER_CAPACITY / CARRY_CAPACITY);
 		const maxCarryParts = Math.min(maxCarryPartsOnBiggestBody, maxCarryPartsToEmptyContainer);
@@ -190,11 +197,13 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	}
 
 	getMaximumBuilderSize(room: Room, maximumNeededWorkParts: number) {
-		const maximumBody = this.generateCreepBodyFromWeights(
-			room.storage ? this.getBuilderBodyWeights() : this.getNoRoadsBuilderBodyWeights(),
-			room.energyCapacityAvailable,
-			{[WORK]: maximumNeededWorkParts},
-		);
+		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
+		const maximumBody = (new BodyBuilder())
+			.setWeights({[CARRY]: 5, [WORK]: 2})
+			.setPartLimit(WORK, maximumNeededWorkParts)
+			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(room.energyCapacityAvailable)
+			.build();
 		const maxWorkParts = _.countBy(maximumBody)[WORK];
 		const maxBuilders = Math.ceil(maximumNeededWorkParts / maxWorkParts);
 		const adjustedWorkParts = Math.ceil(maximumNeededWorkParts / maxBuilders);
@@ -347,56 +356,42 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	}
 
 	getClaimerCreepBody(room: Room) {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [CLAIM]: 0.5},
-			room.energyCapacityAvailable,
-			{[CLAIM]: 5},
-		);
+		return (new BodyBuilder())
+			.setWeights({[CLAIM]: 1})
+			.setPartLimit(CLAIM, 5)
+			.setEnergyLimit(room.energyCapacityAvailable)
+			.build();
 	}
 
 	getHarvesterCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
-		// @todo Also use high number of work parts if road still needs to be built.
-		// @todo Use calculated max size like normal harvesters when established.
-		// Use less move parts if a road has already been established.
-		const bodyWeights = option.isEstablished ? {[MOVE]: 0.35, [WORK]: 0.65} : {[MOVE]: 0.5, [WORK]: 0.5, [CARRY]: 0.1};
-
-		return this.generateCreepBodyFromWeights(
-			bodyWeights,
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[WORK]: option.size},
-		);
+		return (new BodyBuilder())
+			.setWeights({[WORK]: 5, [CARRY]: option.isEstablished ? 0 : 1})
+			.setPartLimit(WORK, option.size)
+			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getHaulerCreepBody(room: Room, option: HaulerSpawnOption): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && (room.storage || room.terminal) ? this.getHaulerBodyWeights() : this.getNoRoadsHaulerBodyWeights(),
-			room.energyCapacityAvailable,
-			{[CARRY]: option.size},
-		);
-	}
+		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
 
-	getHaulerBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.35, [CARRY]: 0.65};
-	}
-
-	getNoRoadsHaulerBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.5, [CARRY]: 0.5};
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setPartLimit(CARRY, option.size)
+			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	getBuilderCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			room.controller.level > 3 && (room.storage || room.terminal) ? this.getBuilderBodyWeights() : this.getNoRoadsBuilderBodyWeights(),
-			room.energyCapacityAvailable,
-			{[WORK]: option.size},
-		);
-	}
+		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
 
-	getBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.35, [CARRY]: 0.45, [WORK]: 0.2};
-	}
-
-	getNoRoadsBuilderBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.5, [CARRY]: 0.35, [WORK]: 0.15};
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 5, [WORK]: 2})
+			.setPartLimit(WORK, option.size)
+			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

@@ -1,8 +1,10 @@
 /* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO MOVE WORK CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
 import {getDangerMatrix} from 'utils/cost-matrix';
 import {handleMapArea} from 'utils/map';
+import {MOVEMENT_MODE_MINIMAL, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface HarvesterSpawnOption extends SpawnOption {
 	source: Id<Source>;
@@ -178,20 +180,15 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
 		const source = Game.getObjectById(option.source);
-		const weights = {[MOVE]: 0.01, [WORK]: 0.79, [CARRY]: 0.2};
-		const hasSpawnAtSource = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {filter: s => s.structureType === STRUCTURE_SPAWN}).length > 0;
+		const hasSpawnAtSource = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {filter: s => s.structureType === STRUCTURE_SPAWN && s.isOperational()}).length > 0;
 		const hasFewExtensions = room.energyCapacityAvailable < SPAWN_ENERGY_CAPACITY * 2;
-		if (!hasSpawnAtSource && !hasFewExtensions) {
-			weights[MOVE] = 0.35;
-			weights[WORK] = 0.5;
-			weights[CARRY] = 0.15;
-		}
 
-		return this.generateCreepBodyFromWeights(
-			weights,
-			Math.max(option.force ? SPAWN_ENERGY_CAPACITY : room.energyCapacityAvailable, room.energyAvailable),
-			{[WORK]: option.size},
-		);
+		return (new BodyBuilder())
+			.setWeights({[WORK]: 4, [CARRY]: 1})
+			.setPartLimit(WORK, option.size)
+			.setMovementMode(hasSpawnAtSource || hasFewExtensions ? MOVEMENT_MODE_MINIMAL : MOVEMENT_MODE_ROAD)
+			.setEnergyLimit(Math.max(option.force ? SPAWN_ENERGY_CAPACITY : room.energyCapacityAvailable, room.energyAvailable))
+			.build();
 	}
 
 	/**

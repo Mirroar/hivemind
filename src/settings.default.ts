@@ -60,7 +60,6 @@ const settings: SettingsObject = {
 	powerMineRoomFilter: null,
 	powerBankMinAmount: POWER_BANK_CAPACITY_MAX / 4,
 	powerMineCreepPriority: 3,
-	powerHaulerMoveRatio: 0.35,
 	minEnergyForPowerHarvesting: 75_000,
 	minEnergyForPowerProcessing: 100_000,
 
@@ -140,7 +139,7 @@ const settings: SettingsObject = {
 	constructPowerSpawns: true,
 	constructObservers: true,
 	constructFactories: true,
-	constructWallsUnderRamparts: true,
+	constructRoadsUnderRamparts: true,
 	// Manages energy spending in high level rooms.
 	minEnergyToUpgradeAtRCL8: 50_000,
 	minEnergyForNuker: 50_000,

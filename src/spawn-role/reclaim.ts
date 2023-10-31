@@ -1,3 +1,4 @@
+import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
@@ -138,10 +139,10 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.52, [CARRY]: 0.28, [WORK]: 0.2},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 3, [WORK]: 2})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

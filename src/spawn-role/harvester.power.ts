@@ -1,6 +1,7 @@
 /* global RoomPosition CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE
 ATTACK POWER_BANK_HIT_BACK ATTACK_POWER HEAL_POWER MOVE HEAL */
 
+import BodyBuilder from 'creep/body-builder';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
@@ -118,19 +119,11 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room: Room, option: PowerHarvesterSpawnOption): BodyPartConstant[] {
 		const functionalPart = option.isHealer ? HEAL : ATTACK;
-		const body = this.generateCreepBodyFromWeights(
-			{[MOVE]: 0.5, [functionalPart]: 0.5},
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
 
-		// Move parts should come first to soak up damage.
-		_.sortBy(body, partType => {
-			if (partType === MOVE) return 0;
-
-			return 1;
-		});
-
-		return body;
+		return (new BodyBuilder())
+			.setWeights({[functionalPart]: 1})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

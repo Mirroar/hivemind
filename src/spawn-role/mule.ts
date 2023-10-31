@@ -1,5 +1,6 @@
 /* global hivemind MOVE CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
 import TradeRoute from 'trade-route';
 
@@ -56,20 +57,10 @@ export default class MuleSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			this.getBodyWeights(),
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable) * 0.7,
-		);
-	}
-
-	/**
-	 * Determine body weights for haulers.
-	 *
-	 * @return {object}
-	 *   An object containing body part weights, keyed by type.
-	 */
-	getBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.5, [CARRY]: 0.5};
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable) * 0.7)
+			.build();
 	}
 
 	/**

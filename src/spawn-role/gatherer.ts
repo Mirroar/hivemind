@@ -1,5 +1,6 @@
 /* global MOVE CARRY */
 
+import BodyBuilder from 'creep/body-builder';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 import {getRoomIntel} from 'room-intel';
@@ -57,20 +58,10 @@ export default class GathererSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room): BodyPartConstant[] {
-		return this.generateCreepBodyFromWeights(
-			this.getBodyWeights(),
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-		);
-	}
-
-	/**
-	 * Determine body weights for haulers.
-	 *
-	 * @return {object}
-	 *   An object containing body part weights, keyed by type.
-	 */
-	getBodyWeights(): Partial<Record<BodyPartConstant, number>> {
-		return {[MOVE]: 0.5, [CARRY]: 0.5};
+		return (new BodyBuilder())
+			.setWeights({[CARRY]: 1})
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**

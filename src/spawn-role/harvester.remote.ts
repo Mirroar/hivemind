@@ -1,10 +1,12 @@
 /* global MOVE WORK CARRY RESOURCE_ENERGY */
 
+import BodyBuilder from 'creep/body-builder';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
+import {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_PLAINS} from 'creep/body-builder';
 
 interface RemoteHarvesterSpawnOption extends SpawnOption {
 	targetPos: string;
@@ -97,16 +99,14 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: RemoteHarvesterSpawnOption): BodyPartConstant[] {
-		// @todo Also use high number of work parts if road still needs to be built.
-		// @todo Use calculated max size like normal harvesters when established.
-		// Use less move parts if a road has already been established.
-		const bodyWeights = option.isEstablished ? {[MOVE]: 0.35, [WORK]: 0.65} : {[MOVE]: 0.5, [WORK]: 0.5, [CARRY]: 0.1};
+		const bodyWeights = option.isEstablished ? {[WORK]: 1} : {[WORK]: 5, [CARRY]: 1};
 
-		return this.generateCreepBodyFromWeights(
-			bodyWeights,
-			Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable),
-			{[WORK]: option.size},
-		);
+		return (new BodyBuilder())
+			.setWeights(bodyWeights)
+			.setPartLimit(WORK, option.size)
+			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.build();
 	}
 
 	/**
