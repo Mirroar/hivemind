@@ -314,7 +314,7 @@ export default class MineBuilderRole extends Role {
 
 		this.actionTaken = false;
 
-		if (creep.memory.cachedPath) {
+		if (creep.hasCachedPath()) {
 			if (this.buildRoadOnCachedPath(creep)) return true;
 		}
 		else if (this.repairNearby(creep)) return true;
@@ -341,7 +341,8 @@ export default class MineBuilderRole extends Role {
 		if (creep.room.controller && creep.room.controller.owner && !creep.room.isMine()) return false;
 
 		const workParts = creep.getActiveBodyparts(WORK);
-		const pos = creep.memory.cachedPath.position;
+		// @todo Get rid of this direct memory access
+		const pos = creep.heapMemory.cachedPath.position;
 		const path = creep.getCachedPath();
 
 		for (let i = pos - 2; i <= pos + 2; i++) {

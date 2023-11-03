@@ -72,15 +72,8 @@ declare global {
 		forceGoTo?: number;
 	}
 
-	interface CreepMemory {
-		cachedPath?: CachedPath;
-	}
-
-	interface PowerCreepMemory {
-		cachedPath?: CachedPath;
-	}
-
 	interface CreepHeapMemory {
+		cachedPath?: CachedPath;
 		_decodedCachedPath?: RoomPosition[];
 		_moveBlocked?: boolean;
 		_mtrTarget?: string;
@@ -95,6 +88,7 @@ declare global {
 	}
 
 	interface PowerCreepHeapMemory {
+		cachedPath?: CachedPath;
 		_decodedCachedPath?: RoomPosition[];
 		_moveBlocked?: boolean;
 		_mtrTarget?: string;
@@ -198,7 +192,7 @@ Creep.prototype.setCachedPath = function (this: Creep | PowerCreep, path, revers
 	}
 
 	delete this.heapMemory._decodedCachedPath;
-	this.memory.cachedPath = {
+	this.heapMemory.cachedPath = {
 		path,
 		position: null,
 		arrived: false,
@@ -216,7 +210,7 @@ Creep.prototype.getCachedPath = function (this: Creep | PowerCreep) {
 	if (!this.hasCachedPath()) return null;
 
 	if (!this.heapMemory._decodedCachedPath) {
-		this.heapMemory._decodedCachedPath = deserializePositionPath(this.memory.cachedPath.path);
+		this.heapMemory._decodedCachedPath = deserializePositionPath(this.heapMemory.cachedPath.path);
 	}
 
 	return this.heapMemory._decodedCachedPath;
@@ -229,14 +223,14 @@ Creep.prototype.getCachedPath = function (this: Creep | PowerCreep) {
  *   True if the creep has a cached path.
  */
 Creep.prototype.hasCachedPath = function (this: Creep | PowerCreep) {
-	return typeof this.memory.cachedPath !== 'undefined';
+	return typeof this.heapMemory.cachedPath !== 'undefined';
 };
 
 /**
  * Clears a creep's stored path.
  */
 Creep.prototype.clearCachedPath = function (this: Creep | PowerCreep) {
-	delete this.memory.cachedPath;
+	delete this.heapMemory.cachedPath;
 	delete this.heapMemory._decodedCachedPath;
 };
 
@@ -247,7 +241,7 @@ Creep.prototype.clearCachedPath = function (this: Creep | PowerCreep) {
  *   True if the creep has arrived.
  */
 Creep.prototype.hasArrived = function (this: Creep | PowerCreep) {
-	return this.hasCachedPath() && this.memory.cachedPath.arrived;
+	return this.hasCachedPath() && this.heapMemory.cachedPath.arrived;
 };
 
 /**
@@ -259,7 +253,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 
 	container.get('TrafficManager').setMoving(this);
 	this.heapMemory._moveBlocked = false;
-	if (!this.memory.cachedPath || !this.memory.cachedPath.path || _.size(this.memory.cachedPath.path) === 0) {
+	if (!this.heapMemory.cachedPath || !this.heapMemory.cachedPath.path || _.size(this.heapMemory.cachedPath.path) === 0) {
 		this.clearCachedPath();
 		hivemind.log('creeps', this.room.name).error(this.name, 'Trying to follow non-existing path');
 		return;
@@ -267,8 +261,8 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 
 	const path = this.getCachedPath();
 
-	if (this.memory.cachedPath.forceGoTo) {
-		const pos = path[this.memory.cachedPath.forceGoTo];
+	if (this.heapMemory.cachedPath.forceGoTo) {
+		const pos = path[this.heapMemory.cachedPath.forceGoTo];
 
 		if (this.pos.getRangeTo(pos) > 0) {
 			const path = this.calculatePath(pos);
@@ -300,30 +294,30 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 			return;
 		}
 
-		this.memory.cachedPath.position = this.memory.cachedPath.forceGoTo;
-		delete this.memory.cachedPath.forceGoTo;
+		this.heapMemory.cachedPath.position = this.heapMemory.cachedPath.forceGoTo;
+		delete this.heapMemory.cachedPath.forceGoTo;
 	}
-	else if (!this.memory.cachedPath.position && this.getOntoCachedPath()) return;
+	else if (!this.heapMemory.cachedPath.position && this.getOntoCachedPath()) return;
 
 	// Make sure we don't have a string on our hands...
-	this.memory.cachedPath.position = Number(this.memory.cachedPath.position);
+	this.heapMemory.cachedPath.position = Number(this.heapMemory.cachedPath.position);
 
 	this.incrementCachedPathPosition();
-	if (this.memory.cachedPath.arrived) return;
+	if (this.heapMemory.cachedPath.arrived) return;
 
 	if (this.moveAroundObstacles()) return;
 
 	// Check if we've arrived at the end of our path.
-	if (this.memory.cachedPath.position >= path.length - 1) {
-		this.memory.cachedPath.arrived = true;
+	if (this.heapMemory.cachedPath.position >= path.length - 1) {
+		this.heapMemory.cachedPath.arrived = true;
 		return;
 	}
 
 	// Move towards next position.
-	const next = path[this.memory.cachedPath.position + 1];
+	const next = path[this.heapMemory.cachedPath.position + 1];
 	if (next.roomName !== this.pos.roomName) {
 		// Something went wrong, we must have gone off the path.
-		delete this.memory.cachedPath.position;
+		delete this.heapMemory.cachedPath.position;
 		return;
 	}
 
@@ -387,7 +381,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 		const path = this.getCachedPath();
 		for (const [i, element] of path.entries()) {
 			if (this.pos.x === element.x && this.pos.y === element.y && this.pos.roomName === element.roomName) {
-				this.memory.cachedPath.position = i;
+				this.heapMemory.cachedPath.position = i;
 				break;
 			}
 		}
@@ -425,7 +419,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 
 Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 	const path = this.getCachedPath();
-	if (typeof this.memory.cachedPath.position === 'undefined' || this.memory.cachedPath.position === null) {
+	if (typeof this.heapMemory.cachedPath.position === 'undefined' || this.heapMemory.cachedPath.position === null) {
 		for (const pos of path) {
 			// @todo Look for the _furthest_ position that is in range 1.
 			if (pos.getRangeTo(this.pos) > 1) continue;
@@ -446,7 +440,7 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 		return;
 	}
 
-	let pos = path[this.memory.cachedPath.position];
+	let pos = path[this.heapMemory.cachedPath.position];
 	if (!pos || pos.roomName !== this.pos.roomName) return;
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on current target tile.
@@ -457,7 +451,7 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 		return;
 	}
 
-	pos = path[this.memory.cachedPath.position + 1];
+	pos = path[this.heapMemory.cachedPath.position + 1];
 	if (!pos || pos.roomName !== this.pos.roomName) return;
 	if (this.pos.x !== pos.x || this.pos.y !== pos.y) {
 		// Push away creep on next target tile.
@@ -474,27 +468,27 @@ Creep.prototype.manageBlockingCreeps = function (this: Creep | PowerCreep) {
 Creep.prototype.incrementCachedPathPosition = function (this: Creep | PowerCreep) {
 	// Check if we've already moved onto the next position.
 	const path = this.getCachedPath();
-	const next = path[this.memory.cachedPath.position + 1];
+	const next = path[this.heapMemory.cachedPath.position + 1];
 	if (!next) {
 		// Out of range, so we're probably at the end of the path.
-		this.memory.cachedPath.arrived = true;
+		this.heapMemory.cachedPath.arrived = true;
 		return;
 	}
 
 	if (next.x === this.pos.x && next.y === this.pos.y) {
-		this.memory.cachedPath.position++;
+		this.heapMemory.cachedPath.position++;
 		return;
 	}
 
 	if (next.roomName !== this.pos.roomName) {
 		// We just changed rooms.
-		const afterNext = path[this.memory.cachedPath.position + 2];
+		const afterNext = path[this.heapMemory.cachedPath.position + 2];
 		if (afterNext && afterNext.roomName === this.pos.roomName && afterNext.getRangeTo(this.pos) <= 1) {
-			this.memory.cachedPath.position += 2;
+			this.heapMemory.cachedPath.position += 2;
 		}
 		else if (!afterNext) {
-			delete this.memory.cachedPath.forceGoTo;
-			delete this.memory.cachedPath.lastPositions;
+			delete this.heapMemory.cachedPath.forceGoTo;
+			delete this.heapMemory.cachedPath.lastPositions;
 		}
 	}
 };
@@ -511,24 +505,24 @@ Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
 	// Record recent positions the creep has been on.
 	// @todo Using Game.time here is unwise in case the creep is being throttled.
 	// @todo Push and slice an array instead.
-	if (!this.memory.cachedPath.lastPositions) {
-		this.memory.cachedPath.lastPositions = {};
+	if (!this.heapMemory.cachedPath.lastPositions) {
+		this.heapMemory.cachedPath.lastPositions = {};
 	}
 
 	if (!('fatigue' in this) || this.fatigue === 0) {
 		// If we're not fatigued, we're kind of stuck.
-		this.memory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = encodePosition(this.pos);
+		this.heapMemory.cachedPath.lastPositions[Game.time % REMEMBER_POSITION_COUNT] = encodePosition(this.pos);
 	}
 
 	// Go around obstacles if necessary.
-	if (this.memory.cachedPath.forceGoTo) return false;
+	if (this.heapMemory.cachedPath.forceGoTo) return false;
 
 	// Check if we've moved at all during the previous ticks.
 	let stuck = false;
-	if (_.size(this.memory.cachedPath.lastPositions) > REMEMBER_POSITION_COUNT / 2) {
+	if (_.size(this.heapMemory.cachedPath.lastPositions) > REMEMBER_POSITION_COUNT / 2) {
 		let last = null;
 		stuck = true;
-		_.each(this.memory.cachedPath.lastPositions, position => {
+		_.each(this.heapMemory.cachedPath.lastPositions, position => {
 			if (!last) last = position;
 			if (last !== position) {
 				// We have been on 2 different positions recently.
@@ -546,7 +540,7 @@ Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
 	this.manageBlockingCreeps();
 
 	// Try to find next free tile on the path.
-	let i = this.memory.cachedPath.position + 1;
+	let i = this.heapMemory.cachedPath.position + 1;
 
 	const path = this.getCachedPath();
 	while (i < path.length) {
@@ -564,12 +558,12 @@ Creep.prototype.moveAroundObstacles = function (this: Creep | PowerCreep) {
 
 	if (i >= path.length) {
 		// No free spots until end of path. Let normal pathfinder take over.
-		this.memory.cachedPath.arrived = true;
+		this.heapMemory.cachedPath.arrived = true;
 		return true;
 	}
 
-	this.memory.cachedPath.forceGoTo = i;
-	delete this.memory.cachedPath.lastPositions;
+	this.heapMemory.cachedPath.forceGoTo = i;
+	delete this.heapMemory.cachedPath.lastPositions;
 
 	return false;
 };
@@ -616,7 +610,7 @@ function drawCreepMovement(creep: Creep | PowerCreep) {
 	const target = creep.memory.go?.target ? decodePosition(creep.memory.go.target) : null;
 
 	const color = getVisualizationColor(creep);
-	const pathPosition = creep.memory.cachedPath?.position || creep.memory.cachedPath?.forceGoTo;
+	const pathPosition = creep.heapMemory.cachedPath?.position || creep.heapMemory.cachedPath?.forceGoTo;
 	if (!pathPosition && target) {
 		creep.room.visual.line(creep.pos, target, {
 			color,
