@@ -191,7 +191,7 @@ export default class RemoteMiningOperation extends Operation {
 	 */
 	isUnderAttack(): boolean {
 		const roomMemory = Memory.rooms[this.roomName];
-		if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) return true;
+		if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
 
 		// Check rooms en route as well.
 		return cache.inHeap('rmPathSafety:' + this.name, 10, () => {

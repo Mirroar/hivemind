@@ -12,6 +12,7 @@ declare global {
 	interface EnemyData {
 		parts: Record<string, number>;
 		lastSeen: number;
+		expires?: number;
 		safe: boolean;
 		damage: number;
 		heal: number;
@@ -48,6 +49,7 @@ export default class RoomIntelProcess extends Process {
 	findHostiles() {
 		const parts = {};
 		let lastSeen = this.room.memory.enemies ? this.room.memory.enemies.lastSeen : 0;
+		let expires = null;
 		let safe = true;
 		let healCapacity = 0;
 		let damageCapacity = 0;
@@ -62,6 +64,9 @@ export default class RoomIntelProcess extends Process {
 					lastSeen = Game.time;
 					healCapacity += creep.getHealCapacity(1);
 					damageCapacity += creep.getDamageCapacity(1);
+					if (!expires || expires < Game.time + creep.ticksToLive) {
+						expires = Game.time + creep.ticksToLive;
+					}
 				}
 
 				for (const part of creep.body) {
@@ -76,14 +81,23 @@ export default class RoomIntelProcess extends Process {
 
 		for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
 			if (structure.structureType === STRUCTURE_INVADER_CORE) {
-				safe = false;
+				safe = structure.level === 0 || (structure.ticksToDeploy ?? 0) > 1000;
 				lastSeen = Game.time;
+
+				for (const effect of structure.effects) {
+					if (effect.effect === EFFECT_COLLAPSE_TIMER) {
+						if (!expires || expires < Game.time + effect.ticksRemaining) {
+							expires = Game.time + effect.ticksRemaining;
+						}
+					}
+				}
 			}
 		}
 
 		this.room.memory.enemies = {
 			parts,
 			lastSeen,
+			expires,
 			safe,
 			damage: damageCapacity,
 			heal: healCapacity,
