@@ -73,7 +73,7 @@ export default class RelayHaulerRole extends Role {
 	}
 
 	determineTargetSource(creep: RelayHaulerCreep) {
-		const harvestPositions = creep.room.getRemoteHarvestSourcePositions();
+		const harvestPositions = Game.rooms[creep.memory.sourceRoom].getRemoteHarvestSourcePositions();
 		const scoredPositions = [];
 		for (const position of harvestPositions) {
 			scoredPositions.push(this.scoreHarvestPosition(creep, position));
@@ -192,7 +192,7 @@ export default class RelayHaulerRole extends Role {
 	getDeliveryTarget(creep: RelayHaulerCreep) {
 		if (creep.heapMemory.deliveryTarget) {
 			const target = Game.getObjectById(creep.heapMemory.deliveryTarget);
-			if (target) {
+			if (target && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
 				return target;
 			}
 
@@ -290,7 +290,7 @@ export default class RelayHaulerRole extends Role {
 		const sourcePosition = decodePosition(creep.memory.source);
 		if (!sourcePosition) {
 			creep.say('newtar');
-			this.startPickup(creep);
+			this.startDelivering(creep);
 			return;
 		}
 
@@ -354,13 +354,18 @@ export default class RelayHaulerRole extends Role {
 
 				if (!hasActiveHarvester) {
 					creep.withdraw(container, RESOURCE_ENERGY);
-					this.startDelivering(creep);
 				}
+
+				this.startDelivering(creep);
 			});
 		}
 		else if (creep.pos.getRangeTo(sourcePosition) > 2) {
 			// If all else fails, make sure we're close enough to our source.
-			creep.whenInRange(2, sourcePosition, () => {});
+			creep.whenInRange(2, sourcePosition, () => {
+				// We've reached the source and there's nothing left to pick up.
+				// Return home.
+				this.startDelivering(creep);
+			});
 		}
 	}
 

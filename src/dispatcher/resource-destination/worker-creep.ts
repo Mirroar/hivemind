@@ -37,6 +37,7 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 
 	private addRoleTasks(options: WorkerCreepDestinationTask[], role: string, weight: number, context: ResourceDestinationContext) {
 		for (const creep of _.values<Creep>(this.room.creepsByRole[role])) {
+			if (creep.spawning) continue;
 			if (creep.store.getFreeCapacity(RESOURCE_ENERGY) < creep.store.getCapacity(RESOURCE_ENERGY) / 3) continue;
 
 			options.push({
@@ -53,7 +54,8 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 	isValid(task: WorkerCreepDestinationTask, context: ResourceDestinationContext) {
 		const target = Game.getObjectById(task.target);
 		if (!target) return false;
-		if (target.store.getFreeCapacity(task.resourceType) === 0) return false;
+		if (target.spawning) return false;
+		if (target.store.getFreeCapacity(task.resourceType) < target.store.getCapacity(RESOURCE_ENERGY) / 5) return false;
 		if (target.room.name !== context.creep.room.name) return false;
 		if (!context.creep.store[task.resourceType]) return false;
 

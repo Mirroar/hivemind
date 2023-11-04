@@ -42,7 +42,7 @@ export default class SpawnDestination extends StructureDestination<SpawnDestinat
 
 			const deliveryAmount = Math.min(context.creep.store[RESOURCE_ENERGY] || 0, target.store.getFreeCapacity(RESOURCE_ENERGY));
 			option.weight += deliveryAmount / (context.creep.store.getCapacity()) + 1 - (context.creep.pos.getRangeTo(target) / 100);
-			option.priority -= this.room.getCreepsWithOrder(this.getType(), target.id).length * 3;
+			option.priority -= _.filter(this.room.getCreepsWithOrder(this.getType(), target.id), c => c.memory.role === 'transporter').length * 3;
 
 			options.push(option);
 		}

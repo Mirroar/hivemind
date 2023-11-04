@@ -3,6 +3,7 @@
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 import utilities from 'utilities';
+import {handleMapArea} from 'utils/map';
 
 declare global {
 	interface StructureSpawn {
@@ -114,7 +115,7 @@ export default class SpawnManager {
 	 *   The room's spawns.
 	 */
 	manageSpawns(room: Room, spawns: StructureSpawn[]) {
-		this.makeWayForSpawns(spawns);
+		this.makeWayForSpawns(room, spawns);
 
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
@@ -270,7 +271,8 @@ export default class SpawnManager {
 		});
 	}
 
-	makeWayForSpawns(spawns: StructureSpawn[]) {
+	makeWayForSpawns(room: Room, spawns: StructureSpawn[]) {
+		const terrain = new Room.Terrain(room.name);
 		for (const spawn of spawns) {
 			if (!spawn.spawning || spawn.spawning.remainingTime > 0) {
 				delete spawn.heapMemory.blocked;
@@ -280,23 +282,33 @@ export default class SpawnManager {
 			spawn.heapMemory.blocked = (spawn.heapMemory.blocked || 0) + 1;
 			if (spawn.heapMemory.blocked >= 5) {
 				spawn.spawning.setDirections(allDirections);
-				continue;
 			}
 
 			let allBlocked = true;
-			const closeCreeps = spawn.pos.findInRange(FIND_MY_CREEPS, 1);
-			for (const dir of spawn.spawning.directions || allDirections) {
-				if (_.some(closeCreeps, c => spawn.pos.getDirectionTo(c.pos) === dir)) continue;
+			const closeCreeps = spawn.pos.findInRange(FIND_CREEPS, 1);
+			const spawnDirections = spawn.spawning.directions || allDirections;
+			handleMapArea(spawn.pos.x, spawn.pos.y, (x, y) => {
+				if (x === spawn.pos.x && y === spawn.pos.y) return;
 
-				// @todo Direction might be blocked by something else, like terrain,
+				const position = new RoomPosition(x, y, spawn.room.name);
+				const dir = spawn.pos.getDirectionTo(position);
+				if (!spawnDirections.includes(dir)) return;
+				if (_.some(closeCreeps, c => position.isEqualTo(c.pos))) return;
+
+				// Direction might be blocked by something else, like terrain,
 				// structures or power creeps.
+				if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+				if (position.lookFor(LOOK_POWER_CREEPS).length > 0) return;
+				if (_.some(position.lookFor(LOOK_STRUCTURES), s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType))) return;
 
 				allBlocked = false;
-			}
+			});
 
 			if (!allBlocked) continue;
 
 			for (const creep of closeCreeps) {
+				if (!creep.my) continue;
+
 				creep.move(_.sample(allDirections));
 			}
 		}

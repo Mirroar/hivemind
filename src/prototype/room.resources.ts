@@ -190,6 +190,10 @@ Room.prototype.getStoredEnergy = function (this: Room) {
 			}
 		}
 
+		// Add controller container.
+		const container = this.memory.controllerContainer && Game.getObjectById<StructureContainer>(this.memory.controllerContainer);
+		if (container) total += container.store.getUsedCapacity(RESOURCE_ENERGY);
+
 		return total;
 	});
 };

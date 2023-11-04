@@ -150,7 +150,7 @@ export default class ScoutProcess extends Process {
 				info.scoutPriority = 1;
 			}
 
-			if (roomIntel.memory.lastScan > 0 && roomIntel.isClaimable() && (!roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader'))) {
+			if ((roomIntel.memory.lastScan || 0) > 0 && roomIntel.isClaimable() && (!roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader'))) {
 				info.harvestPriority = this.calculateHarvestScore(roomName);
 
 				// Check if we could reasonably expand to this room.

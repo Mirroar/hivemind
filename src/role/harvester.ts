@@ -230,7 +230,11 @@ export default class HarvesterRole extends Role {
 
 		const targetContainer = source.getNearbyContainer();
 
-		if (!targetContainer && creep.store.energy > Math.max(creep.getActiveBodyparts(WORK) * BUILD_POWER, creep.store.getCapacity() - creep.getActiveBodyparts(WORK) * HARVEST_POWER)) {
+		if (
+			!targetContainer
+			&& creep.store.energy > Math.max(creep.getActiveBodyparts(WORK) * BUILD_POWER, creep.store.getCapacity() - creep.getActiveBodyparts(WORK) * HARVEST_POWER)
+			&& _.filter(creep.room.creepsByRole.builder, c => c.store.getFreeCapacity() > 20).length === 0
+		) {
 			// Check if there is a container construction site nearby and help build it.
 			const sites = source.pos.findInRange(FIND_CONSTRUCTION_SITES, 3, {
 				filter: site => site.structureType === STRUCTURE_CONTAINER,

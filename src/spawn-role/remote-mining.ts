@@ -275,13 +275,16 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		const travelTime = path?.travelTime;
 		if (!travelTime) return;
 
+		const container = operation.getContainer(targetPos);
+		const isEstablished = operation.hasContainer(targetPos) && (container?.hits || CONTAINER_HITS) > CONTAINER_HITS / 2;
+
 		const option: HarvesterSpawnOption = {
 			unitType: 'harvester',
 			priority: 1,
 			weight: 1 - (travelTime / 100),
 			targetPos: position,
 			// @todo Consider established when roads are fully built.
-			isEstablished: operation.hasContainer(targetPos),
+			isEstablished,
 			// Use less work parts if room is not reserved yet.
 			size: operation.getHarvesterSize(targetPos) || 0,
 		};

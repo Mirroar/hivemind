@@ -32,7 +32,6 @@ const energyCache: Record<string, number> = {};
  *
  * @todo Defend roads toward target room.
  * @todo Remove obstacles blocking paths (like old structures).
- * @todo Use dedicated builder creeps instead of haulers for road maintenance.
  */
 export default class RemoteMiningOperation extends Operation {
 	protected memory: RemoteMiningOperationMemory;

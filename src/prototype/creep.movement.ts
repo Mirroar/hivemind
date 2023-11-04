@@ -28,6 +28,7 @@ declare global {
 		canMoveOnto: (position: RoomPosition) => boolean;
 		goTo: (target: RoomObject | RoomPosition, options?: GoToOptions) => boolean;
 		calculateGoToPath: (target: RoomPosition, options?: GoToOptions) => boolean;
+		calculatePath: (target: RoomPosition, options?: GoToOptions) => RoomPosition[];
 		moveToRoom: (roomName: string, allowDanger?: boolean) => boolean;
 		calculateRoomPath: (roomName: string, allowDanger?: boolean) => string[] | null;
 		isInRoom: () => boolean;
@@ -53,6 +54,7 @@ declare global {
 		canMoveOnto: (position: RoomPosition) => boolean;
 		goTo: (target: RoomObject | RoomPosition, options?: GoToOptions) => boolean;
 		calculateGoToPath: (target: RoomPosition, options?: GoToOptions) => boolean;
+		calculatePath: (target: RoomPosition, options?: GoToOptions) => RoomPosition[];
 		moveToRoom: (roomName: string, allowDanger?: boolean) => boolean;
 		calculateRoomPath: (roomName: string, allowDanger?: boolean) => string[] | null;
 		isInRoom: () => boolean;
@@ -269,32 +271,31 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 		const pos = path[this.memory.cachedPath.forceGoTo];
 
 		if (this.pos.getRangeTo(pos) > 0) {
-			const options: MoveToOpts = {};
+			const path = this.calculatePath(pos);
+			if (!path) {
+				this.say('no way!');
+				return;
+			}
+
 			if (settings.get('visualizeCreepMovement')) {
-				options.visualizePathStyle = {
+				this.room.visual.poly(path, {
 					fill: 'transparent',
 					stroke: '#f00',
 					lineStyle: 'dashed',
 					strokeWidth: 0.2,
 					opacity: 0.1,
-				};
+				});
 				this.say('S:' + pos.x + 'x' + pos.y);
 			}
 
-			if (this.moveTo(pos, options) === ERR_NO_PATH) {
-				// @todo This probably makes no sense because cachedPath.position is not correctly set here.
-				// Instead, check if we're on the current position, and if not, update position and forceGoTo. Or fully recalculate path.
-				this.manageBlockingCreeps();
-			}
+			this.move(this.pos.getDirectionTo(path[0]));
 
-			if (this.pos.getRangeTo(pos) === 1 && !this.canMoveOnto(pos)) {
-				// Due to push-behavior we sometimes try to move onto another creep.
-				// That creep needs to be pushed away.
-				const creep = pos.lookFor(LOOK_CREEPS)[0];
-				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
-				const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
-				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
-			}
+			// Due to push-behavior we sometimes try to move onto another creep.
+			// That creep needs to be pushed away.
+			const creep = path[0].lookFor(LOOK_CREEPS)[0];
+			if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+			if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
 
 			return;
 		}
@@ -357,11 +358,22 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 		if (this.pos.roomName === this.heapMemory._decodedCachedPath[0].roomName) {
 			this.say('Blocked');
 
-			// If a creep is blocking the next spot, tell it to move over if possible.
-			this.manageBlockingCreeps();
+			const path = this.calculatePath(this.heapMemory._decodedCachedPath[0]);
+			if (!path) {
+				this.say('no way!');
+				return true;
+			}
+
+			this.move(this.pos.getDirectionTo(path[0]));
+
+			const creep = path[0].lookFor(LOOK_CREEPS)[0];
+			if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+			if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
 		}
 		else {
 			this.say('Searching');
+			// @todo Use our pathfinder to get onto the cached path.
 			this.moveTo(this.heapMemory._decodedCachedPath[0]);
 		}
 
@@ -381,21 +393,30 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 		}
 	}
 	else {
-		// Get closer to the path.
-		if (this.moveTo(target, {
-			visualizePathStyle: {
+		const path = this.calculatePath(target);
+		if (!path) {
+			this.say('no way!');
+			return true;
+		}
+
+		if (settings.get('visualizeCreepMovement')) {
+			this.room.visual.poly(path, {
 				fill: 'transparent',
 				stroke: '#fff',
 				lineStyle: 'dashed',
 				strokeWidth: 0.1,
 				opacity: 0.5,
-			},
-		}) === ERR_NO_PATH) {
-			// Check if a path position is nearby, and blocked by a creep.
-			this.manageBlockingCreeps();
+			});
+			this.say('getonit');
 		}
 
-		this.say('getonit');
+		this.move(this.pos.getDirectionTo(path[0]));
+
+		const creep = path[0].lookFor(LOOK_CREEPS)[0];
+		if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+		const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+		if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+
 		return true;
 	}
 
@@ -687,6 +708,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target, options) {
 		if (this.heapMemory._moveBlocked) {
 			// Seems like we can't move on the target space for some reason right now.
 			// This should be rare, so we use the default pathfinder to get us the rest of the way there.
+			// @todo Fix
 			if (this.pos.getRangeTo(target) > range) {
 				const result = this.moveTo(target, {
 					plainCost: 2,
@@ -749,6 +771,22 @@ Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, 
 	const targetPos = encodePosition(target);
 	this.memory.go.target = targetPos;
 
+	const path = this.calculatePath(target, options);
+
+	if (path) {
+		this.setCachedPath(serializePositionPath([this.pos, ...path]));
+	}
+	else {
+		return false;
+	}
+
+	return true;
+};
+
+Creep.prototype.calculatePath = function (this: Creep | PowerCreep, target, options): RoomPosition[] {
+	if (!options) options = {};
+
+	// @todo Properly type this.
 	const pfOptions: any = {};
 	if (this.memory.singleRoom) {
 		if (this.pos.roomName === this.memory.singleRoom) {
@@ -770,15 +808,10 @@ Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, 
 		range: options.range || 0,
 	}, false, pfOptions);
 
-	if (result && result.path) {
-		this.setCachedPath(serializePositionPath([this.pos, ...result.path]));
-	}
-	else {
-		return false;
-	}
+	if (result) return result.path;
 
-	return true;
-};
+	return null;
+}
 
 /**
  * Makes this creep move to a certain room.
@@ -937,6 +970,7 @@ PowerCreep.prototype.moveAroundObstacles = Creep.prototype.moveAroundObstacles;
 PowerCreep.prototype.canMoveOnto = Creep.prototype.canMoveOnto;
 PowerCreep.prototype.goTo = Creep.prototype.goTo;
 PowerCreep.prototype.calculateGoToPath = Creep.prototype.calculateGoToPath;
+PowerCreep.prototype.calculatePath = Creep.prototype.calculatePath;
 PowerCreep.prototype.moveToRoom = Creep.prototype.moveToRoom;
 PowerCreep.prototype.calculateRoomPath = Creep.prototype.calculateRoomPath;
 PowerCreep.prototype.manageBlockingCreeps = Creep.prototype.manageBlockingCreeps;

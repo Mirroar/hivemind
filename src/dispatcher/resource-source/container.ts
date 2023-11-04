@@ -21,7 +21,6 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 	getTasks(context: ResourceSourceContext) {
 		const options: ContainerSourceTask[] = [];
 
-		// @todo Allow builders to take energy out of upgrader container at low prio.
 		this.addContainerEnergySourceOptions(options, context);
 
 		return options;
@@ -39,9 +38,6 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 
 		// Prefer containers used as harvester dropoff.
 		for (const target of targets) {
-			// Don't use the controller container as a normal source if we're upgrading.
-			if (target.id === target.room.memory.controllerContainer && (this.room.creepsByRole.upgrader || this.room.creepsByRole.builder) && creep.memory.role === 'transporter') continue;
-
 			const option: ContainerSourceTask = {
 				priority: 1,
 				weight: target.store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
@@ -49,6 +45,17 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				target: target.id,
 				resourceType: RESOURCE_ENERGY,
 			};
+
+			// Don't use the controller container as a normal source if we're upgrading.
+			if (
+				target.id === target.room.memory.controllerContainer
+				&& (this.room.creepsByRole.upgrader || this.room.creepsByRole.builder)
+				&& creep.memory.role === 'transporter'
+			) {
+				if (creep.room.energyAvailable === creep.room.energyCapacityAvailable) continue;
+				option.priority--;
+			}
+
 
 			for (const source of target.room.sources) {
 				if (source.getNearbyContainer()?.id !== target.id) continue;

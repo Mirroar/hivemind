@@ -56,7 +56,7 @@ export default class TrafficManager {
 	}
 
 	manageTraffic() {
-		const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
+		const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0 && creep.shard === Game.shard.name);
 
 		// Move blocking creeps if necessary.
 		_.each([..._.values<Creep>(Game.creeps), ...powerCreeps], creep => {

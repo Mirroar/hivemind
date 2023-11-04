@@ -465,7 +465,7 @@ export default class BuilderRole extends Role {
 				option.priority = 5;
 			}
 
-			if (([STRUCTURE_ROAD, STRUCTURE_RAMPART, STRUCTURE_WALL] as string[]).includes(target.structureType)) {
+			if (([STRUCTURE_ROAD, STRUCTURE_RAMPART, STRUCTURE_WALL, STRUCTURE_CONTAINER] as string[]).includes(target.structureType)) {
 				// Roads and defenses can be built after functional buildings are done.
 				option.weight--;
 			}

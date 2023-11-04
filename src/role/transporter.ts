@@ -236,6 +236,7 @@ export default class TransporterRole extends Role {
 		const creep = this.creep;
 
 		if (!this.ensureValidDeliveryTarget()) {
+			creep.whenInRange(1, creep, () => {});
 			delete creep.memory.order;
 			return;
 		}
@@ -324,6 +325,8 @@ export default class TransporterRole extends Role {
 
 		if (!this.ensureValidResourceSource(creep.memory.order, calculateSourceCallback)) {
 			delete creep.memory.order;
+			creep.whenInRange(1, creep, () => {});
+
 			if (creep.memory.role === 'transporter') {
 				if (creep.store.getUsedCapacity() > creep.store.getCapacity() * 0.1) {
 					// Deliver what we already have stored, if no more can be found for picking up.
