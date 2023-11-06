@@ -64,6 +64,7 @@ export default class RelayHaulerRole extends Role {
 	startPickup(creep: RelayHaulerCreep) {
 		delete creep.memory.delivering;
 		delete creep.heapMemory.deliveryTarget;
+		delete creep.heapMemory.energyPickupTarget;
 
 		this.determineTargetSource(creep);
 		const path = this.getPath(creep);
@@ -130,6 +131,7 @@ export default class RelayHaulerRole extends Role {
 
 		delete creep.memory.source;
 		delete creep.heapMemory.deliveryTarget;
+		delete creep.heapMemory.energyPickupTarget;
 
 		if (!path) return;
 
