@@ -149,12 +149,12 @@ export default class RemoteBuilderRole extends Role {
 		}
 
 		// Help by filling spawn with energy.
-		const spawns = creep.room.find<StructureSpawn>(FIND_STRUCTURES, {
-			filter: structure =>
-				structure.structureType === STRUCTURE_SPAWN
-				&& structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY) * 0.8
+		const spawns = _.filter(
+			creep.room.structuresByType[STRUCTURE_SPAWN],
+			structure =>
+				structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY) * 0.8
 				&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
-		});
+		);
 
 		if (spawns && spawns.length > 0) {
 			const maySwitchToRefill = (!creep.memory.repairTarget && !creep.memory.buildTarget) || creep.pos.getRangeTo(spawns[0].pos) < 5;
@@ -193,12 +193,12 @@ export default class RemoteBuilderRole extends Role {
 	}
 
 	supplyTowers() {
-		const towers = this.creep.room.find<StructureTower>(FIND_STRUCTURES, {
-			filter: structure =>
-				structure.structureType === STRUCTURE_TOWER
-				&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > structure.store.getCapacity(RESOURCE_ENERGY) * 0.5
+		const towers = _.filter(
+			this.creep.room.structuresByType[STRUCTURE_TOWER],
+			structure =>
+				structure.store.getFreeCapacity(RESOURCE_ENERGY) > structure.store.getCapacity(RESOURCE_ENERGY) * 0.5
 				&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
-		});
+		);
 		if (towers && towers.length > 0) {
 			this.creep.whenInRange(1, towers[0], () => this.creep.transfer(towers[0], RESOURCE_ENERGY));
 			return true;
@@ -216,12 +216,12 @@ export default class RemoteBuilderRole extends Role {
 	saveExpiringRamparts(minHits: number): boolean {
 		if (!this.creep.memory.repairTarget) {
 			// Make sure ramparts don't break.
-			const targets = this.creep.room.find(FIND_STRUCTURES, {
-				filter: structure =>
-					(structure.structureType === STRUCTURE_RAMPART || structure.structureType === STRUCTURE_SPAWN || structure.structureType === STRUCTURE_TOWER)
-					&& structure.hits < Math.min(minHits, structure.hitsMax)
+			const targets = _.filter(
+				[...this.creep.room.structuresByType[STRUCTURE_RAMPART], ...this.creep.room.structuresByType[STRUCTURE_SPAWN], ...this.creep.room.structuresByType[STRUCTURE_TOWER]],
+				structure =>
+					structure.hits < Math.min(minHits, structure.hitsMax)
 					&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
-			});
+			);
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;
 				this.creep.heapMemory.repairMinHits = minHits;
@@ -278,12 +278,11 @@ export default class RemoteBuilderRole extends Role {
 
 		if (this.creep.room.controller.level >= 6) {
 			// Make sure ramparts are of sufficient level.
-			const lowRamparts = this.creep.room.find(
-				FIND_STRUCTURES, {
-					filter: structure => structure.structureType === STRUCTURE_RAMPART && structure.hits < hivemind.settings.get('minWallIntegrity') && (
-						structure.my || hivemind.relations.isAlly(structure.owner.username)
-					),
-				},
+			const lowRamparts = _.filter(
+				this.creep.room.structuresByType[STRUCTURE_RAMPART],
+				structure =>
+					structure.hits < hivemind.settings.get('minWallIntegrity')
+					&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
 			);
 
 			if (lowRamparts.length > 0) {

@@ -77,8 +77,9 @@ Structure.prototype.isWalkable = function () {
 Structure.prototype.isOperational = function (this: Structure) {
 	const inactiveStructures = getInactiveStructures(this.room);
 
-	if (!inactiveStructures[this.id]) return true;
-	return false;
+	if (inactiveStructures[this.id]) return false;
+
+	return true;
 };
 
 function getInactiveStructures(room: Room): Partial<Record<Id<Structure>, boolean>> {
@@ -86,9 +87,8 @@ function getInactiveStructures(room: Room): Partial<Record<Id<Structure>, boolea
 	if (rcl >= 8) return {};
 
 	return cache.inHeap('inactiveStructures:' + room.name + ':' + rcl, 500, () => {
-		const groupedStructures: _.Dictionary<Structure[]> = _.groupBy(room.find(FIND_MY_STRUCTURES), 'structureType');
 		const inactiveStructures = {};
-		_.each(groupedStructures, (structures, structureType) => {
+		_.each(room.myStructuresByType, (structures, structureType) => {
 			// Check if more structures than allowed exist.
 			if (!CONTROLLER_STRUCTURES[structureType] || structures.length <= CONTROLLER_STRUCTURES[structureType][rcl]) return;
 

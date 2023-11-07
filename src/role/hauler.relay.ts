@@ -1,7 +1,6 @@
-/* global FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK
-ERR_NO_PATH ERR_NOT_IN_RANGE FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_ROAD
-FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES
-LOOK_CONSTRUCTION_SITES */
+/* global FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK LOOK_CONSTRUCTION_SITES
+ERR_NO_PATH ERR_NOT_IN_RANGE STRUCTURE_CONTAINER STRUCTURE_ROAD
+FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
@@ -239,9 +238,12 @@ export default class RelayHaulerRole extends Role {
 	}
 
 	transferEnergyToNearbyTargets(creep: RelayHaulerCreep) {
-		const structures = creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-			filter: (structure: AnyStoreStructure) => ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_POWER_SPAWN] as string[]).includes(structure.structureType) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-		});
+		const structures = _.filter(creep.room.myStructures,
+			(structure: AnyStoreStructure) =>
+				([STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_POWER_SPAWN] as string[]).includes(structure.structureType)
+				&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+				&& creep.pos.getRangeTo(structure.pos) <= 1,
+		);
 
 		if (structures.length > 0) {
 			creep.transfer(_.sample(structures), RESOURCE_ENERGY);

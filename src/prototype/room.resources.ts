@@ -1,5 +1,5 @@
 /* global Room RoomPosition RESOURCE_ENERGY LOOK_RESOURCES
-RESOURCE_POWER FIND_STRUCTURES STRUCTURE_LAB RESOURCES_ALL */
+RESOURCE_POWER STRUCTURE_LAB RESOURCES_ALL */
 
 import cache from 'utils/cache';
 import container from 'utils/container';
@@ -444,7 +444,7 @@ Room.prototype.getResourceState = function (this: Room) {
 
 		// Add resources in labs as well.
 		if (this.memory.labs && !roomData.isEvacuating) {
-			const labs = this.find<StructureLab>(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB});
+			const labs = this.myStructuresByType[STRUCTURE_LAB];
 
 			for (const lab of labs) {
 				if (lab.mineralType && lab.mineralAmount > 0) {

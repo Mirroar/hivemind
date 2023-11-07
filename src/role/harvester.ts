@@ -1,4 +1,4 @@
-/* global FIND_STRUCTURES STRUCTURE_LINK RESOURCE_ENERGY LOOK_CREEPS
+/* global STRUCTURE_LINK RESOURCE_ENERGY LOOK_CREEPS
 STRUCTURE_CONTAINER FIND_CONSTRUCTION_SITES LOOK_RESOURCES LOOK_STRUCTURES */
 
 // @todo Rewrite delivery part using transporter logic.
@@ -256,7 +256,12 @@ export default class HarvesterRole extends Role {
 			}
 			else {
 				// Check for other nearby links.
-				const links: StructureLink[] = source.pos.findInRange(FIND_STRUCTURES, 3, {filter: structure => structure.structureType === STRUCTURE_LINK && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0});
+				const links: StructureLink[] = _.filter(
+					creep.room.myStructuresByType[STRUCTURE_LINK],
+					structure =>
+						structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+						&& source.pos.getRangeTo(structure.pos) <= 3
+				);
 				if (links.length > 0) {
 					target = links[0];
 				}

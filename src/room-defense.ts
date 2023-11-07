@@ -1,5 +1,5 @@
 /* global STRUCTURE_RAMPART ATTACK RANGED_ATTACK HEAL CLAIM MOVE TOUGH CARRY
-FIND_STRUCTURES LOOK_STRUCTURES */
+LOOK_STRUCTURES */
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
@@ -185,7 +185,7 @@ export default class RoomDefense {
 				}
 			}
 
-			const towerStrength = TOWER_POWER_ATTACK * this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length / 2;
+			const towerStrength = TOWER_POWER_ATTACK * (this.room.myStructuresByType[STRUCTURE_TOWER] || []).length / 2;
 
 			// Active defense is calculated as having 2 creeps
 			// with 50% attack and move parts.
@@ -213,7 +213,7 @@ export default class RoomDefense {
 		if (_.size(this.room.enemyCreeps) === 0) {
 			if (this.memory.lastActivity && Game.time - this.memory.lastActivity > 10) {
 				// Close ramparts after last friendly leaves the room for a while.
-				const ramparts = this.room.find<StructureRampart>(FIND_STRUCTURES, {filter: structure => structure.structureType === STRUCTURE_RAMPART});
+				const ramparts = this.room.myStructuresByType[STRUCTURE_RAMPART];
 				_.each(ramparts, rampart => {
 					if (rampart.isPublic) rampart.setPublic(false);
 				});
@@ -251,7 +251,7 @@ export default class RoomDefense {
 			}
 		});
 
-		const ramparts = this.room.find<StructureRampart>(FIND_STRUCTURES, {filter: structure => structure.structureType === STRUCTURE_RAMPART});
+		const ramparts = this.room.myStructuresByType[STRUCTURE_RAMPART];
 		_.each(ramparts, rampart => {
 			const newState = this.shouldRampartBePublic(rampart, allowed, forbidden);
 			if (rampart.isPublic !== newState) rampart.setPublic(newState);

@@ -1,4 +1,4 @@
-/* global FIND_STRUCTURES FIND_RUINS FIND_DROPPED_RESOURCES FIND_TOMBSTONES
+/* global FIND_RUINS FIND_DROPPED_RESOURCES FIND_TOMBSTONES
 STRUCTURE_STORAGE STRUCTURE_TERMINAL */
 
 import Role from 'role/role';
@@ -174,8 +174,7 @@ export default class GathererRole extends Role {
 	 *   List of prioritized options to add targets to.
 	 */
 	addStructureOptions(creep: GathererCreep, options: GatherOption[]) {
-		const structures = creep.room.find(FIND_STRUCTURES);
-		for (const structure of structures) {
+		for (const structure of creep.room.structures as AnyStoreStructure[]) {
 			if (!('store' in structure)) continue;
 			if (structure.store.getUsedCapacity() === 0) continue;
 

@@ -1,5 +1,4 @@
-/* global FIND_MINERALS FIND_STRUCTURES STRUCTURE_EXTRACTOR MOVE WORK CARRY
-CREEP_SPAWN_TIME */
+/* global FIND_MINERALS STRUCTURE_EXTRACTOR MOVE WORK CARRY CREEP_SPAWN_TIME */
 
 import BodyBuilder from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
@@ -25,9 +24,9 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 		// @todo This could be done on script startup and partially kept in room memory.
 		const minerals = room.find(FIND_MINERALS, {
 			filter: mineral => {
-				const extractors = mineral.mineralAmount > 0 ? mineral.pos.findInRange(FIND_STRUCTURES, 0, {
-					filter: structure => structure.structureType === STRUCTURE_EXTRACTOR && structure.isOperational(),
-				}) : [];
+				const extractors = mineral.mineralAmount > 0 ? _.filter(room.myStructuresByType[STRUCTURE_EXTRACTOR],
+					structure => structure.isOperational() && mineral.pos.isEqualTo(structure.pos),
+				) : [];
 				return extractors.length > 0;
 			},
 		});

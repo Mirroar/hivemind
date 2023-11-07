@@ -1,6 +1,6 @@
 /* global RoomPosition OK POWER_INFO PWR_GENERATE_OPS PWR_REGEN_SOURCE
 PWR_OPERATE_STORAGE PWR_OPERATE_SPAWN RESOURCE_OPS STORAGE_CAPACITY
-FIND_MY_STRUCTURES STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
+STRUCTURE_SPAWN PWR_OPERATE_EXTENSION RESOURCE_ENERGY
 PWR_REGEN_MINERAL POWER_CREEP_LIFE_TIME PWR_OPERATE_TOWER */
 
 import cache from 'utils/cache';
@@ -334,8 +334,7 @@ export default class OperatorRole extends Role {
 
 		// @todo Make sure we're not waiting on energy.
 
-		const spawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
-			if (spawn.structureType !== STRUCTURE_SPAWN) return false;
+		const spawn = _.find(this.creep.room.myStructuresByType[STRUCTURE_SPAWN], spawn => {
 			const activeEffect = _.first(_.filter(spawn.effects, effect => effect.effect === PWR_OPERATE_SPAWN));
 			const ticksRemaining = activeEffect ? activeEffect.ticksRemaining : 0;
 			if (ticksRemaining > 50) return false;
@@ -411,9 +410,7 @@ export default class OperatorRole extends Role {
 		// Don't operate extensions if they're almost full anyways.
 		if (this.creep.room.energyAvailable > this.creep.room.energyCapacityAvailable * 0.8) return;
 
-		const spawn = _.find(this.creep.room.find(FIND_MY_STRUCTURES), spawn => {
-			if (spawn.structureType !== STRUCTURE_SPAWN) return false;
-
+		const spawn = _.find(this.creep.room.myStructuresByType[STRUCTURE_SPAWN], spawn => {
 			// Make sure the spawn actually needs support with spawning.
 			if ((spawn.heapMemory.options || 0) < 2) return false;
 
@@ -449,9 +446,7 @@ export default class OperatorRole extends Role {
 		if ((this.creep.store[RESOURCE_OPS] || 0) < POWER_INFO[PWR_OPERATE_TOWER].ops) return;
 		if (this.creep.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
 
-		const towers: StructureTower[] = this.creep.room.find<StructureTower>(FIND_MY_STRUCTURES, {
-			filter: s => s.structureType === STRUCTURE_TOWER,
-		});
+		const towers: StructureTower[] = this.creep.room.myStructuresByType[STRUCTURE_TOWER];
 		if (!towers || towers.length === 0) return;
 
 		for (const tower of towers) {

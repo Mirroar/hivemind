@@ -1,4 +1,4 @@
-/* global Creep Room FIND_CREEPS FIND_STRUCTURES BOOSTS ATTACK
+/* global Creep Room FIND_CREEPS BOOSTS ATTACK
 RANGED_ATTACK HEAL STRUCTURE_TOWER TOWER_POWER_HEAL TOWER_POWER_ATTACK
 ATTACK_POWER RANGED_ATTACK_POWER HEAL_POWER RANGED_HEAL_POWER
 CARRY CLAIM MOVE TOUGH WORK TOWER_ENERGY_COST */
@@ -9,20 +9,20 @@ declare global {
 	interface Room {
 		assertMilitarySituation: () => void;
 		assertMilitaryCreepPower: (creep: Creep | PowerCreep) => void;
-		assertMilitaryStructurePower: (structure: AnyStructure) => void;
+		assertMilitaryStructurePower: (structure: Structure) => void;
 		addMilitaryAssertion: (x: number, y: number, amount: number, type: string) => void;
 		getMilitaryAssertion: (x: number, y: number, type: string) => number;
 		assertTargetPriorities: () => void;
-		getTowerTarget: () => AnyCreep | null;
+		getTowerTarget: () => Creep | null;
 		drawMilitarySituation: () => void;
 
 		_sitRepBuilt: boolean;
 		sitRep: SitRep;
 		militaryObjects: {
 			creeps: Array<Creep | PowerCreep>;
-			structures: AnyStructure[];
+			structures: Structure[];
 			myCreeps: Array<Creep | PowerCreep>;
-			myStructures: AnyStructure[];
+			myStructures: Structure[];
 		};
 	}
 
@@ -97,8 +97,7 @@ Room.prototype.assertMilitarySituation = function (this: Room) {
 	}
 
 	// Parse military structures in the room.
-	const structures = this.find(FIND_STRUCTURES);
-	for (const structure of structures) {
+	for (const structure of this.structuresByType[STRUCTURE_TOWER]) {
 		this.assertMilitaryStructurePower(structure);
 	}
 
@@ -204,8 +203,7 @@ Room.prototype.assertMilitaryCreepPower = function (this: Room, creep: Creep | P
  * @param {Structure} structure
  *   The structure to asses.
  */
-Room.prototype.assertMilitaryStructurePower = function (this: Room, structure: AnyStructure) {
-	if (structure.structureType !== STRUCTURE_TOWER) return;
+Room.prototype.assertMilitaryStructurePower = function (this: Room, structure: StructureTower) {
 	if (structure.store[RESOURCE_ENERGY] < TOWER_ENERGY_COST) return;
 	// Don't count our towers if they're almost empty so we don't shoot at targets
 	// we can't kill after all.

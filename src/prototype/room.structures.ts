@@ -1,5 +1,4 @@
-/* global Room FIND_MY_STRUCTURES STRUCTURE_LINK CONTROLLER_STRUCTURES
-FIND_STRUCTURES */
+/* global Room STRUCTURE_LINK CONTROLLER_STRUCTURES FIND_STRUCTURES */
 
 import Bay from 'manager.bay';
 import cache from 'utils/cache';
@@ -7,6 +6,29 @@ import LinkNetwork from 'link-network';
 
 declare global {
 	interface Room {
+		structures: AnyStructure[];
+		structuresByType: {
+			[STRUCTURE_CONTAINER]: StructureContainer[];
+			[STRUCTURE_EXTENSION]: StructureExtension[];
+			[STRUCTURE_EXTRACTOR]: StructureExtractor[];
+			[STRUCTURE_LAB]: StructureLab[];
+			[STRUCTURE_LINK]: StructureLink[];
+			[STRUCTURE_RAMPART]: StructureRampart[];
+			[STRUCTURE_SPAWN]: StructureSpawn[];
+			[STRUCTURE_TOWER]: StructureTower[];
+			[STRUCTURE_WALL]: StructureWall[];
+		},
+		myStructures: AnyOwnedStructure[];
+		myStructuresByType: {
+			[STRUCTURE_EXTENSION]: StructureExtension[];
+			[STRUCTURE_EXTRACTOR]: StructureExtractor[];
+			[STRUCTURE_LAB]: StructureLab[];
+			[STRUCTURE_LINK]: StructureLink[];
+			[STRUCTURE_RAMPART]: StructureRampart[];
+			[STRUCTURE_SPAWN]: StructureSpawn[];
+			[STRUCTURE_TOWER]: StructureTower[];
+			[STRUCTURE_WALL]: StructureWall[];
+		},
 		addStructureReference: (structureType: StructureConstant) => void;
 		generateLinkNetwork: () => void;
 		isClearingTerminal: () => boolean;
@@ -27,13 +49,83 @@ declare global {
 	}
 }
 
+// Define quick access property room.structures.
+Object.defineProperty(Room.prototype, 'structures', {
+	get(this: Room) {
+		return cacheStructures(this).all;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.structuresByType.
+Object.defineProperty(Room.prototype, 'structuresByType', {
+	get(this: Room) {
+		return cacheStructures(this).byType;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.myStructures.
+Object.defineProperty(Room.prototype, 'myStructures', {
+	get(this: Room) {
+		return cacheStructures(this).mine;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+// Define quick access property room.myStructuresByType.
+Object.defineProperty(Room.prototype, 'myStructuresByType', {
+	get(this: Room) {
+		return cacheStructures(this).mineByType;
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+function cacheStructures(room: Room) {
+	return cache.inObject(room, 'allStructures', 1, () => {
+		const structures = room.find(FIND_STRUCTURES);
+		const myStructures = [];
+		const structuresByType = {};
+		const myStructuresByType = {};
+
+		for (const structure of structures) {
+			if (!structuresByType[structure.structureType]) {
+				structuresByType[structure.structureType] = [];
+			}
+
+			structuresByType[structure.structureType].push(structure);
+
+			if ('my' in structure && structure.my) {
+				myStructures.push(structure);
+				if (!myStructuresByType[structure.structureType]) {
+					myStructuresByType[structure.structureType] = [];
+				}
+
+				myStructuresByType[structure.structureType].push(structure);
+			}
+		}
+
+		return {
+			all: structures,
+			mine: myStructures,
+			byType: structuresByType,
+			mineByType: myStructuresByType,
+		};
+	});
+}
+
 /**
  * Creates and populates a room's link network.
  */
 Room.prototype.generateLinkNetwork = function (this: Room) {
-	const links = this.find(FIND_MY_STRUCTURES, {
-		filter: s => s.structureType === STRUCTURE_LINK && s.isOperational(),
-	});
+	const links = _.filter(
+		this.myStructuresByType[STRUCTURE_LINK],
+		s => s.isOperational(),
+	);
 
 	if (links.length <= 0) {
 		return;
@@ -84,7 +176,7 @@ Room.prototype.addStructureReference = function (this: Room, structureType: Stru
 		if (CONTROLLER_STRUCTURES[structureType][this.controller.level] === 0) return null;
 
 		// @todo Cache filtered find requests in room.
-		const structures = this.find(FIND_STRUCTURES, {filter: {structureType}});
+		const structures = this.structuresByType[structureType] || [];
 
 		if (structures.length > 0) {
 			return structures[0].id;
@@ -225,9 +317,10 @@ function getBaysByPriority(room: Room): Bay[] {
 function getUnmappedEnergyStructures(room: Room, map: Array<Id<Structure>>): Array<StructureSpawn | StructureExtension> {
 	const center = room.roomPlanner.getRoomCenter();
 	return _.sortBy(
-		room.find(FIND_MY_STRUCTURES, {
-			filter: s => ([STRUCTURE_SPAWN, STRUCTURE_EXTENSION] as string[]).includes(s.structureType) && !map.includes(s.id),
-		}),
+		_.filter(
+			[...room.myStructuresByType[STRUCTURE_SPAWN], ...room.myStructuresByType[STRUCTURE_EXTENSION]],
+			s => !map.includes(s.id),
+		),
 		s => s.pos.getRangeTo(center),
 	);
 }

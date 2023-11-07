@@ -180,7 +180,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
 		const source = Game.getObjectById(option.source);
-		const hasSpawnAtSource = source.pos.findInRange(FIND_MY_STRUCTURES, 2, {filter: s => s.structureType === STRUCTURE_SPAWN && s.isOperational()}).length > 0;
+		const hasSpawnAtSource = _.filter(room.myStructuresByType[STRUCTURE_SPAWN], s => source.pos.getRangeTo(s.pos) <= 2 && s.isOperational()).length > 0;
 		const hasFewExtensions = room.energyCapacityAvailable < SPAWN_ENERGY_CAPACITY * 2;
 
 		return (new BodyBuilder())

@@ -1,6 +1,5 @@
 /* global PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
-TERRAIN_MASK_WALL FIND_STRUCTURES STRUCTURE_ROAD FIND_CONSTRUCTION_SITES
-STRUCTURE_RAMPART */
+TERRAIN_MASK_WALL STRUCTURE_ROAD FIND_CONSTRUCTION_SITES STRUCTURE_RAMPART */
 
 import Process from 'process/process';
 import hivemind from 'hivemind';
@@ -425,11 +424,9 @@ export default class ExpandProcess extends Process {
 			}
 		}
 
-		const roads = room.find(FIND_STRUCTURES, {
-			filter: s => s.structureType === STRUCTURE_ROAD,
-		});
+		const roads = room.structuresByType[STRUCTURE_ROAD];
 		for (const road of roads) {
-			matrix.set(road.pos.x, road.pos.y, 255);
+			matrix.set(road.pos.x, road.pos.y, 1);
 		}
 
 		// Treat road sites as walkable so we don't calculate multiple tunnel paths.
@@ -437,13 +434,11 @@ export default class ExpandProcess extends Process {
 			filter: s => s.structureType === STRUCTURE_ROAD,
 		});
 		for (const site of roadSites) {
-			matrix.set(site.pos.x, site.pos.y, 255);
+			matrix.set(site.pos.x, site.pos.y, 1);
 		}
 
-		const structures = room.find(FIND_STRUCTURES, {
-			filter: s => !s.isWalkable(),
-		});
-		for (const structure of structures) {
+		const blockingStructures = _.filter(room.structures, s => !s.isWalkable());
+		for (const structure of blockingStructures) {
 			matrix.set(structure.pos.x, structure.pos.y, 255);
 		}
 
@@ -465,7 +460,7 @@ export default class ExpandProcess extends Process {
 			// us to build tunnels.
 			for (let x = 0; x < 50; x++) {
 				for (let y = 0; y < 50; y++) {
-					if (terrain.get(x, y) === TERRAIN_MASK_WALL) {
+					if (terrain.get(x, y) === TERRAIN_MASK_WALL && matrix.get(x, y) > 50) {
 						matrix.set(x, y, 50);
 					}
 				}

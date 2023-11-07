@@ -1,5 +1,4 @@
-/* global Room FIND_STRUCTURES FIND_MY_CONSTRUCTION_SITES
-STRUCTURE_KEEPER_LAIR */
+/* global Room FIND_MY_CONSTRUCTION_SITES STRUCTURE_KEEPER_LAIR */
 
 import hivemind from 'hivemind';
 import utilities from 'utilities';
@@ -31,7 +30,7 @@ Room.prototype.getCostMatrix = function () {
  */
 Room.prototype.generateCostMatrix = function (structures, constructionSites) {
 	if (!structures) {
-		structures = _.groupBy(this.find(FIND_STRUCTURES), 'structureType');
+		structures = this.structuresByType;
 	}
 
 	if (!constructionSites) {

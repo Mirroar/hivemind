@@ -1,5 +1,5 @@
-const callTimes = {};
-const firstTick = Game.time;
+let callTimes = {};
+let firstTick = Game.time;
 
 function timeCall<T>(key: string, callback: () => T): number {
 	const startTime = Game.cpu.getUsed();
@@ -11,6 +11,11 @@ function timeCall<T>(key: string, callback: () => T): number {
 }
 
 function recordCallStats(key: string, totalTime: number) {
+	if (firstTick < Game.time - 1000) {
+		firstTick = Game.time;
+		callTimes = {};
+	}
+
 	if (!callTimes[key]) callTimes[key] = [];
 
 	callTimes[key].push(totalTime);

@@ -23,9 +23,7 @@ export default class TowerDestination extends StructureDestination<TowerDestinat
 
 		const options: TowerDestinationTask[] = [];
 
-		const unfilledTowers = this.room.find<StructureTower>(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_TOWER) && structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY) * 0.8,
-		});
+		const unfilledTowers = _.filter(this.room.myStructuresByType[STRUCTURE_TOWER], structure => structure.store[RESOURCE_ENERGY] < structure.store.getCapacity(RESOURCE_ENERGY) * 0.8);
 
 		for (const tower of unfilledTowers) {
 			const option: TowerDestinationTask = {

@@ -1,7 +1,6 @@
-/* global RoomPosition FIND_STRUCTURES STRUCTURE_POWER_BANK OK
+/* global RoomPosition STRUCTURE_POWER_BANK OK POWER_BANK_HIT_BACK
 POWER_BANK_DECAY FIND_MY_CREEPS HEAL_POWER RANGED_HEAL_POWER HEAL
-FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK
-POWER_BANK_HIT_BACK */
+FIND_DROPPED_RESOURCES RESOURCE_POWER FIND_HOSTILE_CREEPS RANGED_ATTACK */
 
 import hivemind from 'hivemind';
 import Role from 'role/role';
@@ -51,9 +50,7 @@ export default class PowerHarvesterRole extends Role {
 		if (creep.interRoomTravel(targetPosition)) return;
 		if (creep.pos.roomName != targetPosition.roomName) return;
 
-		const powerBanks = creep.room.find<StructurePowerBank>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
-		});
+		const powerBanks = creep.room.structuresByType[STRUCTURE_POWER_BANK] || [];
 
 		// Update power bank health in memory.
 		if (Memory.strategy && Memory.strategy.power && Memory.strategy.power.rooms && Memory.strategy.power.rooms[creep.pos.roomName]) {

@@ -235,7 +235,7 @@ export default class BoostManager {
 	}
 
 	public getAllLabs(): StructureLab[] {
-		return cache.inObject(this.room, 'labs', 1, () => this.room.find<StructureLab>(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_LAB && s.isOperational()}));
+		return _.filter(this.room.myStructuresByType[STRUCTURE_LAB], s => s.isOperational());
 	}
 
 	private getLabsForBoosts(boosts: Partial<Record<ResourceConstant, number>>): StructureLab[] {

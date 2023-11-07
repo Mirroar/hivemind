@@ -297,11 +297,12 @@ export default class BuilderRole extends Role {
 	 *   An array of repair or build option objects to add to.
 	 */
 	addRepairOptions(creep: BuilderCreep, options) {
-		const targets = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => structure.hits < structure.hitsMax
+		const targets = _.filter(
+			creep.room.myStructures,
+			structure => structure.hits < structure.hitsMax
 				&& !structure.needsDismantling()
 				&& this.isSafePosition(creep, structure.pos),
-		});
+		);
 		for (const target of targets) {
 			const option = {
 				priority: 3,
@@ -312,7 +313,7 @@ export default class BuilderRole extends Role {
 			};
 
 			if (target.structureType === STRUCTURE_WALL || target.structureType === STRUCTURE_RAMPART) {
-				this.modifyRepairDefensesOption(creep, option, target);
+				this.modifyRepairDefensesOption(creep, option, target as (StructureWall | StructureRampart));
 			}
 			else {
 				if (target.hits / target.hitsMax > 0.9) {

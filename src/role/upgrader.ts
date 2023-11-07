@@ -1,4 +1,4 @@
-/* global RESOURCE_ENERGY OK FIND_STRUCTURES STRUCTURE_CONTAINER WORK
+/* global RESOURCE_ENERGY OK STRUCTURE_CONTAINER WORK
 UPGRADE_CONTROLLER_POWER */
 
 import balancer from 'excess-energy-balancer';
@@ -173,9 +173,13 @@ export default class UpgraderRole extends Role {
 		}
 
 		// Could also try to get energy from another nearby container.
-		const otherContainers = creep.room.controller.pos.findInRange(FIND_STRUCTURES, creep.room.controller.level < 4 ? 10 : 3, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.energy > CONTAINER_CAPACITY / 4 && structure.id !== creep.room.memory.controllerContainer,
-		});
+		const otherContainers = _.filter(
+			creep.room.structuresByType[STRUCTURE_CONTAINER],
+			structure => 
+				structure.store.energy > CONTAINER_CAPACITY / 4
+				&& structure.id !== creep.room.memory.controllerContainer
+				&& creep.room.controller.pos.getRangeTo(structure.pos) <= (creep.room.controller.level < 4 ? 10 : 3),
+		);
 		if (otherContainers.length > 0) {
 			creep.whenInRange(1, otherContainers[0], () => {
 				creep.withdraw(otherContainers[0], RESOURCE_ENERGY);

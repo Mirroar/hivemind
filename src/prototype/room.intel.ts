@@ -1,4 +1,4 @@
-/* global Room FIND_STRUCTURES STRUCTURE_CONTAINER FIND_HOSTILE_CREEPS
+/* global Room STRUCTURE_CONTAINER FIND_HOSTILE_CREEPS
 STRUCTURE_LINK STRUCTURE_NUKER STRUCTURE_OBSERVER LOOK_CREEPS
 STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 
@@ -240,19 +240,20 @@ Room.prototype.updateControllerContainer = function (this: Room) {
 	if (this.roomPlanner) {
 		const containerPositions: RoomPosition[] = this.roomPlanner.getLocations('container.controller');
 		if (containerPositions.length > 0) {
-			const structures = this.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_CONTAINER
-				&& _.some(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
-			});
+			const structures = _.filter(
+				this.structuresByType[STRUCTURE_CONTAINER], 
+				structure => _.some(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
+			);
 			this.memory.controllerContainer = structures.length > 0 && structures[0].id;
 			if (!this.memory.controllerContainer) delete this.memory.controllerContainer;
 			return;
 		}
 	}
 
-	const structures = this.find(FIND_STRUCTURES, {
-		filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.pos.getRangeTo(this.controller) <= 3,
-	});
+	const structures = _.filter(
+		this.structuresByType[STRUCTURE_CONTAINER],
+		structure => structure.pos.getRangeTo(this.controller) <= 3,
+	);
 	this.memory.controllerContainer = structures.length > 0 && structures[0].id;
 	if (!this.memory.controllerContainer) delete this.memory.controllerContainer;
 };
@@ -267,19 +268,20 @@ Room.prototype.updateControllerLink = function (this: Room) {
 	if (this.roomPlanner) {
 		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.controller');
 		if (linkPositions.length > 0) {
-			const structures = this.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_LINK
-				&& _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
-			});
+			const structures = _.filter(
+				this.myStructuresByType[STRUCTURE_LINK],
+				structure => _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
+			);
 			this.memory.controllerLink = structures.length > 0 && structures[0].id;
 			if (!this.memory.controllerLink) delete this.memory.controllerLink;
 			return;
 		}
 	}
 
-	const structures = this.find(FIND_STRUCTURES, {
-		filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(this.controller) <= 3,
-	});
+	const structures = _.filter(
+		this.myStructuresByType[STRUCTURE_LINK], 
+		structure => structure.pos.getRangeTo(this.controller) <= 3,
+	);
 	this.memory.controllerLink = structures.length > 0 && structures[0].id;
 	if (!this.memory.controllerLink) delete this.memory.controllerLink;
 };
@@ -296,18 +298,19 @@ Room.prototype.updateStorageLink = function (this: Room) {
 	if (this.roomPlanner) {
 		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.storage');
 		if (linkPositions.length > 0) {
-			const structures = this.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_LINK
-				&& _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
-			});
+			const structures = _.filter(
+				this.myStructuresByType[STRUCTURE_LINK], 
+				structure => _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
+			);
 			this.memory.storageLink = structures.length > 0 && structures[0].id;
 			return;
 		}
 	}
 
-	const structures = this.find(FIND_STRUCTURES, {
-		filter: structure => structure.structureType === STRUCTURE_LINK && structure.pos.getRangeTo(this.storage) <= 3,
-	});
+	const structures = _.filter(
+		this.myStructuresByType[STRUCTURE_LINK],
+		structure => structure.pos.getRangeTo(this.storage) <= 3,
+	);
 	this.memory.storageLink = structures.length > 0 && structures[0].id;
 };
 

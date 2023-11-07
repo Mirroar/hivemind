@@ -23,12 +23,13 @@ export default class SpawnDestination extends StructureDestination<SpawnDestinat
 
 		const options: SpawnDestinationTask[] = [];
 
-		const targets = this.room.find<StructureExtension | StructureSpawn>(FIND_STRUCTURES, {
-			filter: structure => (
-				(structure.structureType === STRUCTURE_EXTENSION && !structure.isBayExtension())
-					|| (structure.structureType === STRUCTURE_SPAWN && (!structure.isBaySpawn() || this.room.controller.level < 3)))
-					&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-		});
+		const targetSpawns = _.filter(this.room.myStructuresByType[STRUCTURE_SPAWN], structure => 
+			(!structure.isBaySpawn() || this.room.controller.level < 3)
+			&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+		const targetExtensions = _.filter(this.room.myStructuresByType[STRUCTURE_EXTENSION], structure => 
+			!structure.isBayExtension()
+			&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+		const targets = [...targetSpawns, ...targetExtensions];
 
 		for (const target of targets) {
 			const option: SpawnDestinationTask = {

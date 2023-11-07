@@ -1,4 +1,4 @@
-/* global FIND_HOSTILE_CREEPS FIND_MY_STRUCTURES STRUCTURE_RAMPART */
+/* global FIND_HOSTILE_CREEPS STRUCTURE_RAMPART */
 
 import container from 'utils/container';
 import hivemind from 'hivemind';
@@ -49,16 +49,16 @@ export default class GuardianRole extends Role {
 	}
 
 	getAdjacentRampartPositions(creep: GuardianCreep): RoomPosition[] {
-		const closestRamparts = creep.pos.findInRange<StructureRampart>(FIND_MY_STRUCTURES, 1, {
-			filter: s => {
-				if (s.pos.isEqualTo(creep.pos)) return false;
-				if (s.structureType !== STRUCTURE_RAMPART) return false;
+		const closestRamparts = _.filter(
+			creep.room.myStructuresByType[STRUCTURE_RAMPART],
+			s => {
+				if (s.pos.getRangeTo(creep.pos) !== 1) return false;
 				if (!creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart')) return false;
 				if (creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart.ramp')) return false;
 
 				return true;
 			},
-		});
+		);
 
 		return _.map(closestRamparts, s => s.pos);
 	}
@@ -71,19 +71,22 @@ export default class GuardianRole extends Role {
 
 		const ramparts: StructureRampart[] = [];
 		for (const target of targets) {
-			const closestRampart = target.pos.findClosestByRange<StructureRampart>(FIND_MY_STRUCTURES, {
-				filter: s => {
-					if (s.structureType !== STRUCTURE_RAMPART) return false;
-					if (!creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart')) return false;
-					if (creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart.ramp')) return false;
+			const closestRampart = _.min(
+				_.filter(
+					creep.room.myStructuresByType[STRUCTURE_RAMPART], 
+					s => {
+						if (!creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart')) return false;
+						if (creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart.ramp')) return false;
 
-					// Only target ramparts not occupied by another creep.
-					const occupyingCreeps = s.pos.lookFor(LOOK_CREEPS);
-					if (occupyingCreeps.length > 0 && occupyingCreeps[0].id !== creep.id) return false;
+						// Only target ramparts not occupied by another creep.
+						const occupyingCreeps = s.pos.lookFor(LOOK_CREEPS);
+						if (occupyingCreeps.length > 0 && occupyingCreeps[0].id !== creep.id) return false;
 
-					return true;
-				},
-			});
+						return true;
+					},
+				),
+				s => s.pos.getRangeTo(target.pos),
+			);
 			if (!ramparts.includes(closestRampart)) ramparts.push(closestRampart);
 		}
 

@@ -31,9 +31,7 @@ export default class ReactionsProcess extends Process {
 		// @todo Find labs not used for reactions, to do creep boosts.
 		this.room.memory.canPerformReactions = false;
 
-		const labs = this.room.find<StructureLab>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_LAB && structure.isOperational(),
-		});
+		const labs = _.filter(this.room.myStructuresByType[STRUCTURE_LAB], structure => structure.isOperational());
 		if (labs.length < 3) return;
 
 		// Find best 2 source labs for other labs to perform reactions.

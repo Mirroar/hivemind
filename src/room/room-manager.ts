@@ -3,7 +3,7 @@ STRUCTURE_CONTAINER STRUCTURE_TOWER STRUCTURE_EXTENSION STRUCTURE_RAMPART
 STRUCTURE_TERMINAL STRUCTURE_STORAGE STRUCTURE_EXTRACTOR STRUCTURE_LAB
 STRUCTURE_NUKER STRUCTURE_POWER_SPAWN STRUCTURE_OBSERVER LOOK_STRUCTURES
 LOOK_CONSTRUCTION_SITES CONSTRUCTION_COST CREEP_LIFE_TIME MAX_CONSTRUCTION_SITES
-FIND_STRUCTURES CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
+CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
 import cache from 'utils/cache';
@@ -99,8 +99,8 @@ export default class RoomManager {
 		delete this.memory.runNextTick;
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
 		this.constructionSitesByType = _.groupBy(this.roomConstructionSites, 'structureType');
-		this.roomStructures = this.room.find(FIND_STRUCTURES);
-		this.structuresByType = _.groupBy(this.roomStructures, 'structureType');
+		this.roomStructures = this.room.structures;
+		this.structuresByType = this.room.structuresByType;
 		this.newStructures = 0;
 
 		if (this.isRoomRecovering()) {
@@ -370,15 +370,17 @@ export default class RoomManager {
 
 		// Slate all unmanaged walls and ramparts for deconstruction.
 		this.memory.dismantle = {};
-		const unwantedDefenses = this.room.find(FIND_STRUCTURES, {
-			filter: structure => {
-				if (structure.structureType === STRUCTURE_WALL && !this.roomPlanner.isPlannedLocation(structure.pos, 'wall')) return true;
-				if (hivemind.settings.get('dismantleUnwantedRamparts') && structure.structureType === STRUCTURE_RAMPART && !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart')) return true;
-
-				return false;
-			},
-		});
 		if (!this.room.needsReclaiming()) {
+			const unwantedWalls = _.filter(
+				this.room.structuresByType[STRUCTURE_WALL],
+				structure => !this.roomPlanner.isPlannedLocation(structure.pos, 'wall'),
+			);
+			const unwantedRamparts = hivemind.settings.get('dismantleUnwantedRamparts') ? _.filter(
+				this.room.structuresByType[STRUCTURE_RAMPART],
+				structure => !this.roomPlanner.isPlannedLocation(structure.pos, 'wall'),
+			) : [];
+			const unwantedDefenses = [...unwantedWalls, ...unwantedRamparts];
+
 			for (const structure of unwantedDefenses) {
 				if (hivemind.settings.get('dismantleUnwantedRamparts')) {
 					this.memory.dismantle[structure.id] = 1;

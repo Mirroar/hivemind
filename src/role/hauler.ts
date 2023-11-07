@@ -1,7 +1,6 @@
-/* global FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK
-ERR_NO_PATH ERR_NOT_IN_RANGE FIND_STRUCTURES STRUCTURE_CONTAINER STRUCTURE_ROAD
-FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES
-LOOK_CONSTRUCTION_SITES */
+/* global FIND_DROPPED_RESOURCES RESOURCE_ENERGY OK LOOK_CONSTRUCTION_SITES
+ERR_NO_PATH ERR_NOT_IN_RANGE STRUCTURE_CONTAINER STRUCTURE_ROAD
+FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
@@ -455,17 +454,20 @@ export default class HaulerRole extends Role {
 
 	repairNearby(creep: HaulerCreep): boolean {
 		const workParts = creep.getActiveBodyparts(WORK);
-		const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_ROAD || structure.structureType === STRUCTURE_CONTAINER) && structure.hits < structure.hitsMax - (workParts * 100),
-		});
-		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3) {
-			if (creep.repair(needsRepair) === OK) {
+		const needsRepair = _.filter(
+			[...creep.room.structuresByType[STRUCTURE_ROAD], ...creep.room.structuresByType[STRUCTURE_CONTAINER]],
+			structure =>
+				structure.hits < structure.hitsMax - (workParts * 100)
+				&& creep.pos.getRangeTo(structure.pos) <= 3,
+		);
+		if (needsRepair.length > 0) {
+			if (creep.repair(needsRepair[0]) === OK) {
 				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
 				this.actionTaken = true;
 			}
 
 			// If structure is especially damaged, stay here to keep repairing.
-			if (needsRepair.hits < needsRepair.hitsMax - (workParts * 2 * 100)) {
+			if (needsRepair[0].hits < needsRepair[0].hitsMax - (workParts * 2 * 100)) {
 				return true;
 			}
 		}

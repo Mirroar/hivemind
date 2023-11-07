@@ -35,7 +35,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 			const hasHaulers
 				= _.filter(Game.creepsByRole.hauler, creep => creep.memory.sourceRoom === room.name).length
 				+ _.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
-			const hasExtensions = room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_EXTENSION}).length > 0;
+			const hasExtensions = (room.myStructuresByType[STRUCTURE_EXTENSION] || []).length > 0;
 			if (transporterCount >= maxTransporters / 2) {
 				option.priority--;
 				option.priority--;

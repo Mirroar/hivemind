@@ -2,8 +2,7 @@
 STRUCTURE_CONTAINER RESOURCE_POWER RESOURCE_GHODIUM STRUCTURE_LAB REACTIONS
 STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
-LOOK_CONSTRUCTION_SITES FIND_STRUCTURES OK ORDER_SELL
-FIND_TOMBSTONES FIND_RUINS */
+LOOK_CONSTRUCTION_SITES OK ORDER_SELL FIND_TOMBSTONES FIND_RUINS */
 
 import balancer from 'excess-energy-balancer';
 import hivemind from 'hivemind';
@@ -652,9 +651,10 @@ export default class TransporterRole extends Role {
 		if (!room.terminal && !room.storage) return;
 
 		// Take non-energy out of containers.
-		const containers = room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER && this.isSafePosition(this.creep, structure.pos),
-		});
+		const containers = _.filter(
+			room.structuresByType[STRUCTURE_CONTAINER],
+			structure => this.isSafePosition(this.creep, structure.pos),
+		);
 
 		for (const container of containers) {
 			for (const resourceType of getResourcesIn(container.store)) {
@@ -750,10 +750,7 @@ export default class TransporterRole extends Role {
 		if (!room.isEvacuating()) return;
 
 		// Take everything out of labs.
-		const labs = room.find<StructureLab>(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_LAB,
-		});
-
+		const labs = room.myStructuresByType[STRUCTURE_LAB] || [];
 		for (const lab of labs) {
 			if (room.boostManager.isLabUsedForBoosting(lab.id)) continue;
 

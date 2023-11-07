@@ -1,5 +1,5 @@
 /* global STRUCTURE_ROAD OK RESOURCE_ENERGY LOOK_CREEPS
-FIND_STRUCTURES STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
+STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
 FIND_MY_CONSTRUCTION_SITES */
 
 import RemoteMiningOperation from 'operation/remote-mining';
@@ -95,7 +95,7 @@ export default class RemoteHarvesterRole extends Role {
 
 		// Check if a container nearby is in need of repairs, since we can handle
 		// it with less intents than haulers do.
-		const workParts = creep.getActiveBodyparts(CARRY) && creep.getActiveBodyparts(WORK) || 0;
+		const workParts = creep.getActiveBodyparts(CARRY) ? creep.getActiveBodyparts(WORK) : 0;
 		const needsBuild = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
 			// It's important we build nearby roads as their sites may prevent the
 			// container construction site from being placed.
@@ -110,18 +110,7 @@ export default class RemoteHarvesterRole extends Role {
 			}
 		}
 
-		const needsRepair = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-			// @todo Only repair as a last resort. We will have dedicated repair
-			// creeps otherwise.
-			filter: structure => (structure.structureType === STRUCTURE_CONTAINER) && structure.hits <= structure.hitsMax - (workParts * REPAIR_POWER),
-		});
-		if (needsRepair && creep.pos.getRangeTo(needsRepair) <= 3 && creep.store.energy >= workParts && workParts > 0) {
-			const result = creep.repair(needsRepair);
-			if (result === OK) {
-				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
-				return;
-			}
-		}
+		if (this.repairNearbyContainer(creep)) return;
 
 		const sourcePosition = decodePosition(creep.memory.source);
 		const sources = creep.room.find(FIND_SOURCES, {
@@ -164,5 +153,29 @@ export default class RemoteHarvesterRole extends Role {
 				}
 			}
 		});
+	}
+
+	repairNearbyContainer(creep: RemoteHarvesterCreep): boolean {
+		const workParts = creep.getActiveBodyparts(CARRY) ? creep.getActiveBodyparts(WORK) : 0;
+		if (workParts === 0) return false;
+		if (creep.store.energy < workParts) return false;
+
+		const needsRepair = _.filter(
+			creep.room.structuresByType[STRUCTURE_CONTAINER],
+			// @todo Only repair as a last resort. We will have dedicated repair
+			// creeps otherwise.
+			structure =>
+				structure.hits <= structure.hitsMax - (workParts * REPAIR_POWER)
+				&& creep.pos.getRangeTo(structure.pos) <= 3,
+		);
+		if (needsRepair.length > 0) {
+			const result = creep.repair(needsRepair[0]);
+			if (result === OK) {
+				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

@@ -1,4 +1,4 @@
-/* global FIND_MY_CONSTRUCTION_SITES FIND_MY_STRUCTURES MOVE WORK CARRY */
+/* global FIND_MY_CONSTRUCTION_SITES MOVE WORK CARRY */
 
 import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
@@ -130,9 +130,11 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 */
 	getLowestRampartValue(room: Room): number {
 		return cache.inHeap('lowestRampart:' + room.name, 100, () => {
-			const ramparts = room.find(FIND_MY_STRUCTURES, {
-				filter: s => s.structureType === STRUCTURE_RAMPART && room.roomPlanner?.isPlannedLocation(s.pos, 'rampart') && !room.roomPlanner?.isPlannedLocation(s.pos, 'rampart.ramp'),
-			});
+			const ramparts = _.filter(
+				room.myStructuresByType[STRUCTURE_RAMPART],
+				s => room.roomPlanner?.isPlannedLocation(s.pos, 'rampart')
+					&& !room.roomPlanner?.isPlannedLocation(s.pos, 'rampart.ramp'),
+			);
 
 			return _.min(ramparts, 'hits').hits;
 		});

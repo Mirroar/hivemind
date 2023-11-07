@@ -29,9 +29,7 @@ export default class ReclaimManager {
 	}
 
 	private hasSpawn(room: Room): boolean {
-		return room.find(FIND_MY_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_SPAWN,
-		}).length > 0;
+		return room.myStructuresByType[STRUCTURE_SPAWN].length > 0;
 	}
 
 	private isExpansionTarget(room: Room): boolean {
@@ -46,7 +44,7 @@ export default class ReclaimManager {
 		if (!room.memory.isReclaimableSince) room.memory.isReclaimableSince = Game.time;
 
 		// Reset reclaim timer if we have no defense in the room.
-		if (room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length > 0) return;
+		if (room.myStructuresByType[STRUCTURE_TOWER].length > 0) return;
 		if ((room.controller.safeMode ?? 0) > 5000) return;
 
 		for (const username in room.enemyCreeps) {
@@ -61,11 +59,11 @@ export default class ReclaimManager {
 		if (!room.memory.isReclaimableSince) return false;
 		if (!room.roomManager) return false;
 		if (!room.roomManager.checkWallIntegrity()) return false;
-		if (room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_SPAWN}).length === 0) {
+		if (!this.hasSpawn(room)) {
 			return false;
 		}
 
-		if (room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length === 0) {
+		if (room.myStructuresByType[STRUCTURE_TOWER].length === 0) {
 			return false;
 		}
 

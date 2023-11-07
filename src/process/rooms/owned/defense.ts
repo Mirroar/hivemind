@@ -39,9 +39,7 @@ export default class RoomDefenseProcess extends Process {
 	 * Manages this room's towers.
 	 */
 	manageTowers() {
-		const towers = this.room.find<StructureTower>(FIND_MY_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_TOWER) && structure.energy > 0,
-		});
+		const towers = _.filter(this.room.myStructuresByType[STRUCTURE_TOWER], s => s.energy > 0);
 
 		if (towers.length === 0) return;
 
@@ -123,7 +121,7 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
 		if (this.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
-		if (this.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_SPAWN}).length === 0) return;
+		if (this.room.myStructuresByType[STRUCTURE_SPAWN].length === 0) return;
 
 		this.room.visual.text('I might safemode soon!', 25, 25);
 		if (!this.isEnemyCloseToImportantStructures()) return;
@@ -156,7 +154,7 @@ export default class RoomDefenseProcess extends Process {
 	}
 
 	getImportantStructures() {
-		const importantStructures: Array<Structure | ConstructionSite> = this.room.find(FIND_MY_STRUCTURES, {filter: structure => ([
+		const importantStructures: Array<Structure | ConstructionSite> = _.filter(this.room.myStructures, structure => ([
 			STRUCTURE_FACTORY,
 			STRUCTURE_LAB,
 			STRUCTURE_NUKER,
@@ -164,7 +162,7 @@ export default class RoomDefenseProcess extends Process {
 			STRUCTURE_SPAWN,
 			STRUCTURE_STORAGE,
 			STRUCTURE_TERMINAL,
-		] as string[]).includes(structure.structureType)});
+		] as string[]).includes(structure.structureType));
 		importantStructures.push(this.room.controller);
 		for (const constructionSite of this.room.find(FIND_MY_CONSTRUCTION_SITES, {filter: site => ([
 			STRUCTURE_FACTORY,

@@ -31,10 +31,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;
 
 		// Look for energy in Containers.
-		const targets = this.room.find<StructureContainer>(FIND_STRUCTURES, {
-			filter: structure => (structure.structureType === STRUCTURE_CONTAINER)
-				&& structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1,
-		});
+		const targets = _.filter(this.room.structuresByType[STRUCTURE_CONTAINER], structure => structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1);
 
 		// Prefer containers used as harvester dropoff.
 		for (const target of targets) {

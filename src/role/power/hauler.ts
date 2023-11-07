@@ -1,6 +1,5 @@
-/* global RoomPosition RESOURCE_POWER FIND_STRUCTURES ATTACK_POWER
-STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES FIND_RUINS MAX_CREEP_SIZE
-FIND_TOMBSTONES */
+/* global RoomPosition RESOURCE_POWER ATTACK_POWER FIND_TOMBSTONES
+STRUCTURE_POWER_BANK FIND_DROPPED_RESOURCES FIND_RUINS MAX_CREEP_SIZE */
 
 import Role from 'role/role';
 import {getResourcesIn} from 'utils/store';
@@ -53,10 +52,7 @@ export default class PowerHaulerRole extends Role {
 		if (creep.interRoomTravel(targetPosition)) return;
 		if (creep.pos.roomName !== targetPosition.roomName) return;
 
-		const powerBanks = creep.room.find(FIND_STRUCTURES, {
-			filter: structure => structure.structureType === STRUCTURE_POWER_BANK,
-		});
-
+		const powerBanks = creep.room.structuresByType[STRUCTURE_POWER_BANK] || [];
 		if (powerBanks.length > 0) {
 			const powerBank = powerBanks[0];
 			// Get close to power bank if it's close to being destoryed.

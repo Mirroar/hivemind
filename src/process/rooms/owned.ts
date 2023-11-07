@@ -1,4 +1,4 @@
-/* global FIND_STRUCTURES POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
+/* global POWER_SPAWN_ENERGY_RATIO STRUCTURE_TOWER */
 
 import balancer from 'excess-energy-balancer';
 import ManageFactoryProcess from 'process/rooms/owned/factory';
@@ -145,7 +145,7 @@ export default class OwnedRoomProcess extends Process {
 		const key = 'rcl' + this.room.controller.level;
 		if (!memory[key]) memory[key] = Game.time - memory.claimed;
 
-		if (!memory.tower && this.room.find(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER}).length > 0) {
+		if (!memory.tower && this.room.myStructuresByType[STRUCTURE_TOWER].length > 0) {
 			memory.tower = Game.time - memory.claimed;
 		}
 

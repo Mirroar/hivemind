@@ -1,4 +1,4 @@
-/* global PathFinder Room RoomPosition FIND_STRUCTURES
+/* global PathFinder Room RoomPosition
 STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
 TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY STRUCTURE_PORTAL
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
@@ -139,9 +139,7 @@ export default class RoomIntel {
 		this.gatherResourceIntel(room);
 		this.gatherTerrainIntel();
 
-		const structures: {
-			[T in StructureConstant]?: Array<Structure<T>>;
-		} = _.groupBy(room.find(FIND_STRUCTURES), 'structureType');
+		const structures = room.structuresByType;
 		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
 		this.gatherDepositIntel();
 		this.gatherPortalIntel(structures[STRUCTURE_PORTAL] as StructurePortal[]);
@@ -195,11 +193,9 @@ export default class RoomIntel {
 		}
 
 		if (!room.controller) {
-			const invaderCores: StructureInvaderCore[] = room.find(FIND_STRUCTURES, {
-				filter: structure => structure.structureType === STRUCTURE_INVADER_CORE,
-			});
+			const invaderCores = room.structuresByType[STRUCTURE_INVADER_CORE] as StructureInvaderCore[];
 
-			if (invaderCores.length > 0 && invaderCores[0].level) {
+			if (invaderCores && invaderCores.length > 0 && invaderCores[0].level) {
 				this.memory.owner = invaderCores[0].owner.username;
 				this.memory.rcl = invaderCores[0].level;
 				this.memory.ticksToDowngrade = 0;
