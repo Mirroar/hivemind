@@ -377,7 +377,7 @@ export default class RoomManager {
 			);
 			const unwantedRamparts = hivemind.settings.get('dismantleUnwantedRamparts') ? _.filter(
 				this.room.structuresByType[STRUCTURE_RAMPART],
-				structure => !this.roomPlanner.isPlannedLocation(structure.pos, 'wall'),
+				structure => !this.roomPlanner.isPlannedLocation(structure.pos, 'rampart'),
 			) : [];
 			const unwantedDefenses = [...unwantedWalls, ...unwantedRamparts];
 
