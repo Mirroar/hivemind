@@ -121,6 +121,7 @@ export default class HighwayRoomProcess extends Process {
 		while (!isCrossroads(roomName) || (roomName === this.room.name && skipFirstCrossroads)) {
 			const roomIntel = getRoomIntel(roomName);
 			const exits = roomIntel.getAge() < 10_000 ? roomIntel.getExits() : Game.map.describeExits(roomName);
+			if (!exits[direction]) break;
 
 			roomName = exits[direction];
 			rooms.push({

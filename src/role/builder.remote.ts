@@ -216,12 +216,25 @@ export default class RemoteBuilderRole extends Role {
 	saveExpiringRamparts(minHits: number): boolean {
 		if (!this.creep.memory.repairTarget) {
 			// Make sure ramparts don't break.
-			const targets = _.filter(
-				[...this.creep.room.structuresByType[STRUCTURE_RAMPART], ...this.creep.room.structuresByType[STRUCTURE_SPAWN], ...this.creep.room.structuresByType[STRUCTURE_TOWER]],
+			const ramparts = _.filter(
+				this.creep.room.structuresByType[STRUCTURE_RAMPART],
 				structure =>
 					structure.hits < Math.min(minHits, structure.hitsMax)
 					&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
 			);
+			const spawns = _.filter(
+				this.creep.room.structuresByType[STRUCTURE_SPAWN],
+				structure =>
+					structure.hits < structure.hitsMax
+					&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
+			);
+			const towers = _.filter(
+				this.creep.room.structuresByType[STRUCTURE_TOWER],
+				structure =>
+					structure.hits < structure.hitsMax
+					&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
+			);
+			const targets = [...ramparts, ...spawns, ...towers]
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;
 				this.creep.heapMemory.repairMinHits = minHits;

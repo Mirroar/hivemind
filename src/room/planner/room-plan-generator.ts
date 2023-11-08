@@ -53,7 +53,7 @@ export default class RoomPlanGenerator {
 		this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
 		const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
 
-		this.variationBuilder = Memory.rooms[this.roomName].isStripmine ? new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix) : new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
+		this.variationBuilder = Memory.rooms[this.roomName]?.isStripmine ? new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix) : new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
 	}
 
 	generateVariation() {
