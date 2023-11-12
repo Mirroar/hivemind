@@ -145,7 +145,7 @@ export default class OwnedRoomProcess extends Process {
 		const key = 'rcl' + this.room.controller.level;
 		if (!memory[key]) memory[key] = Game.time - memory.claimed;
 
-		if (!memory.tower && this.room.myStructuresByType[STRUCTURE_TOWER].length > 0) {
+		if (!memory.tower && (this.room.myStructuresByType[STRUCTURE_TOWER] || []).length > 0) {
 			memory.tower = Game.time - memory.claimed;
 		}
 

@@ -266,7 +266,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 
 		if (this.pos.getRangeTo(pos) > 0) {
 			const path = this.calculatePath(pos);
-			if (!path) {
+			if (!path || path.length === 0) {
 				this.say('no way!');
 				return;
 			}
@@ -353,7 +353,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 			this.say('Blocked');
 
 			const path = this.calculatePath(this.heapMemory._decodedCachedPath[0]);
-			if (!path) {
+			if (!path || path.length === 0) {
 				this.say('no way!');
 				return true;
 			}
@@ -388,7 +388,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 	}
 	else {
 		const path = this.calculatePath(target);
-		if (!path) {
+		if (!path || path.length === 0) {
 			this.say('no way!');
 			return true;
 		}

@@ -298,7 +298,7 @@ export default class BuilderRole extends Role {
 	 */
 	addRepairOptions(creep: BuilderCreep, options) {
 		const targets = _.filter(
-			creep.room.myStructures,
+			creep.room.structures,
 			structure => structure.hits < structure.hitsMax
 				&& !structure.needsDismantling()
 				&& this.isSafePosition(creep, structure.pos),

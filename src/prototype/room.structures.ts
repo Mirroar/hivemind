@@ -318,7 +318,7 @@ function getUnmappedEnergyStructures(room: Room, map: Array<Id<Structure>>): Arr
 	const center = room.roomPlanner.getRoomCenter();
 	return _.sortBy(
 		_.filter(
-			[...room.myStructuresByType[STRUCTURE_SPAWN], ...room.myStructuresByType[STRUCTURE_EXTENSION]],
+			[...(room.myStructuresByType[STRUCTURE_SPAWN] || []), ...(room.myStructuresByType[STRUCTURE_EXTENSION] || [])],
 			s => !map.includes(s.id),
 		),
 		s => s.pos.getRangeTo(center),
