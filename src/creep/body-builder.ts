@@ -112,6 +112,10 @@ export default class BodyBuilder {
 			currentCost += BODYPART_COST[partType];
 		}
 
+		partCounts[MOVE] = Math.ceil(this.getTotalGeneratedFatigue(partCounts, MOVE) / this.getMovePartStrength());
+		currentSize += partCounts[MOVE];
+		currentCost += partCounts[MOVE] * BODYPART_COST[MOVE];
+
 		if (currentSize > this.maxSize) return {};
 		if (this.energyLimit && currentCost > this.energyLimit) return {};
 
