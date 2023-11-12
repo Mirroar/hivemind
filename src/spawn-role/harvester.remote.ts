@@ -105,6 +105,7 @@ export default class RemoteHarvesterSpawnRole extends SpawnRole {
 			.setWeights(bodyWeights)
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setCarryContentLevel(0)
 			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
 			.build();
 	}

@@ -38,6 +38,7 @@ export default class BodyBuilder {
 	weights: BodyWeights;
 	partLimits: PartCounts;
 	moveBufferRatio: number;
+	carryContentLevel: number;
 
 	public constructor() {
 		this.moveMode = MOVEMENT_MODE_PLAINS;
@@ -46,6 +47,7 @@ export default class BodyBuilder {
 		this.weights = {};
 		this.partLimits = {};
 		this.moveBufferRatio = 0;
+		this.carryContentLevel = 1;
 	}
 
 	public setMovementMode(mode: MovementMode): this {
@@ -75,6 +77,11 @@ export default class BodyBuilder {
 
 	public setMoveBufferRatio(ratio: number) {
 		this.moveBufferRatio = ratio;
+		return this;
+	}
+
+	public setCarryContentLevel(level: number) {
+		this.carryContentLevel = level;
 		return this;
 	}
 
@@ -169,20 +176,21 @@ export default class BodyBuilder {
 	private getGeneratedFatigue(part: BodyPartConstant) {
 		if (part === MOVE) return 0;
 
-		// @todo There might be cases where it makes sense to treat
+		// There might be cases where it makes sense to treat
 		// CARRY parts as empty most of the time.
+		const multiplier = (part === CARRY ? this.carryContentLevel : 1);
 
 		switch (this.moveMode) {
 			case MOVEMENT_MODE_SWAMP:
-				return 10;
+				return 10 * multiplier;
 			case MOVEMENT_MODE_PLAINS:
-				return 2;
+				return 2 * multiplier;
 			case MOVEMENT_MODE_ROAD:
-				return 1;
+				return 1 * multiplier;
 			case MOVEMENT_MODE_SLOW:
-				return 2 / 5;
+				return 2 / 5 * multiplier;
 			case MOVEMENT_MODE_MINIMAL:
-				return 0.001;
+				return 0.001 * multiplier;
 			case MOVEMENT_MODE_NONE:
 				return 0;
 			default:
@@ -235,12 +243,14 @@ export default class BodyBuilder {
 
 	private interweaveMoveParts(body: BodyPartConstant[], moveParts: number): BodyPartConstant[] {
 		const moveStrength = this.getMovePartStrength();
-		let totalFatigue = body.length * this.getGeneratedFatigue(WORK);
+		let totalFatigue = _.sum(body, part => this.getGeneratedFatigue(part));
 		let totalMovePower = moveParts * moveStrength;
 
 		const newBody: BodyPartConstant[] = [];
 		let functionalPartCount = 0;
 		for (const part of body) {
+			console.log(totalFatigue, totalMovePower);
+
 			while (totalMovePower - totalFatigue >= moveStrength) {
 				newBody.push(MOVE);
 				totalMovePower -= moveStrength;
