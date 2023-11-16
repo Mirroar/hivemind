@@ -249,7 +249,7 @@ export default class BodyBuilder {
 		const newBody: BodyPartConstant[] = [];
 		let functionalPartCount = 0;
 		for (const part of body) {
-			console.log(totalFatigue, totalMovePower);
+			// console.log(totalFatigue, totalMovePower);
 
 			while (totalMovePower - totalFatigue >= moveStrength) {
 				newBody.push(MOVE);
