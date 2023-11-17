@@ -335,6 +335,20 @@ export default class ScoutProcess extends Process {
 		// Having few swamp tiles is good (less cost for road maintenance, easier setup).
 		result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
+		// Prefer rooms to be a certain range from each other.
+		const distancesToRoom = _.map(_.filter(Game.myRooms, room => room.name !== roomName), room => Game.map.getRoomLinearDistance(room.name, roomName));
+		if (distancesToRoom.length > 0) {
+			const distanceToNextRoom = _.min(distancesToRoom);
+			const minDist = hivemind.settings.get('expansionMinRoomDistance');
+			const maxDist = hivemind.settings.get('expansionMaxRoomDistance');
+			if (distanceToNextRoom < minDist) {
+				result.addScore((distanceToNextRoom - minDist), 'tooClose');
+			}
+			if (distanceToNextRoom > maxDist) {
+				result.addScore(-(distanceToNextRoom - maxDist), 'tooFar');
+			}
+		}
+
 		this.setExpansionScoreCache(roomName, result);
 
 		return result;
