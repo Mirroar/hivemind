@@ -342,7 +342,7 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.fillWithEnergy) {
 			if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
 				if (creep.room.getEffectiveAvailableEnergy() < 3000) {
-					creep.moveToRange(new RoomPosition(25, 25, creep.room.name), 5);
+					creep.whenInRange(5, new RoomPosition(25, 25, creep.room.name), () => {});
 					return;
 				}
 
@@ -418,7 +418,7 @@ export default class BrawlerRole extends Role {
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
 				if (this.isPositionBlocked(targetPos)) {
-					creep.moveToRange(targetPos, 1);
+					creep.whenInRange(1, targetPos, () => {});
 				}
 				else {
 					creep.goTo(targetPos);
@@ -459,7 +459,7 @@ export default class BrawlerRole extends Role {
 	moveToEngageTarget(creep: BrawlerCreep, target: RoomObject | null) {
 		if (!target) {
 			// @todo Still try to avoid other hostiles.
-			creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 10);
+			creep.whenInRange(10, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 
 			return;
 		}
@@ -522,7 +522,7 @@ export default class BrawlerRole extends Role {
 			// Stay inside of spawn room.
 			const roomCenter = new RoomPosition(25, 25, creep.pos.roomName);
 			if (creep.pos.getRangeTo(roomCenter) > 20) {
-				creep.moveToRange(roomCenter, 20);
+				creep.whenInRange(20, roomCenter, () => {});
 				return ERR_BUSY;
 			}
 
@@ -680,7 +680,7 @@ export default class BrawlerRole extends Role {
 				creep.moveTo(deserializePositionPath(exploit.memory.lairs[best].sourcePath.path)[1]);
 			}
 			else {
-				creep.moveToRange(lair, 1);
+				creep.whenInRange(1, lair, () => {});
 			}
 		}
 		else {
@@ -736,7 +736,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// If there's nothing to do, move back to spawn room center.
-		creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 5);
+		creep.whenInRange(5, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 	}
 
 	/**

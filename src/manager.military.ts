@@ -97,7 +97,7 @@ Room.prototype.assertMilitarySituation = function (this: Room) {
 	}
 
 	// Parse military structures in the room.
-	for (const structure of this.structuresByType[STRUCTURE_TOWER]) {
+	for (const structure of (this.structuresByType[STRUCTURE_TOWER] || [])) {
 		this.assertMilitaryStructurePower(structure);
 	}
 

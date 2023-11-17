@@ -103,7 +103,7 @@ export default class ManageSpawnsProcess extends Process {
 	 * Manages a room's spawns.
 	 */
 	run() {
-		const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.room.name && spawn.isOperational());
+		const roomSpawns = _.filter(this.room.myStructuresByType[STRUCTURE_SPAWN], spawn => spawn.isOperational());
 		this.visualizeSpawning(roomSpawns);
 		this.spawnManager.manageSpawns(this.room, roomSpawns);
 		this.visualizeSpawnQueue();

@@ -740,6 +740,13 @@ export default class RoomIntel {
 					matrix.set(pos.x, pos.y, 20);
 				}
 			});
+
+			// Also avoid blocking construction sites we may not have cached yet.
+			_.each(Game.rooms[this.roomName].find(FIND_MY_CONSTRUCTION_SITES), site => {
+				if (site.isWalkable()) return;
+
+				matrix.set(site.pos.x, site.pos.y, 0xFF);
+			});
 		}
 
 		const lairs = this.getStructures(STRUCTURE_KEEPER_LAIR);

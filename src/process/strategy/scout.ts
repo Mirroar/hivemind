@@ -23,14 +23,12 @@ declare global {
 	interface StrategyMemory {
 		roomList?: Record<string, RoomListEntry>;
 		roomListProgress?: string[]; // @todo Move to heap.
-		_expansionScoreCache?: Record<string, [number, number] | [number, number, Record<string, number>]>;
 	}
 
 	interface RoomListEntry {
 		scoutPriority?: number;
 		expansionScore?: number;
 		harvestPriority?: number;
-		harvestActive?: boolean;
 		range: number;
 		expansionReasons?: unknown;
 		safePath?: boolean;
@@ -45,6 +43,7 @@ interface ExpansionScore {
 }
 
 const preserveExpansionReasons = false;
+const expansionScoreCache: Record<string, [number, number] | [number, number, Record<string, number>]> = {};
 
 export default class ScoutProcess extends Process {
 	pathManager: PathManager;
@@ -67,7 +66,6 @@ export default class ScoutProcess extends Process {
 			Memory.strategy = {
 				roomList: {},
 				roomListProgress: [],
-				_expansionScoreCache: {},
 			};
 		}
 	}
@@ -79,7 +77,6 @@ export default class ScoutProcess extends Process {
 	 */
 	run() {
 		hivemind.log('strategy').info('Running scout process...');
-		// @todo Clean old entries from Memory.strategy._expansionScoreCache.
 
 		Memory.strategy.roomList = this.generateScoutTargets();
 		this.generateMineralStatus();
@@ -127,9 +124,6 @@ export default class ScoutProcess extends Process {
 		info.scoutPriority = 0;
 		info.expansionScore = 0;
 		info.harvestPriority = 0;
-
-		// Clean up old memory artifacts.
-		delete info.harvestActive;
 
 		const timeSinceLastScan = roomIntel.getAge();
 
@@ -355,14 +349,12 @@ export default class ScoutProcess extends Process {
 	 *   The result of the expansion score calculation.
 	 */
 	setExpansionScoreCache(roomName: string, result: ExpansionScore) {
-		if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
-
 		// Preserve expansion score reasons if needed.
 		if (preserveExpansionReasons) {
-			Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
+			expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
 		}
 		else {
-			Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time];
+			expansionScoreCache[roomName] = [result.score, Game.time];
 		}
 	}
 
@@ -379,13 +371,12 @@ export default class ScoutProcess extends Process {
 	 *   stale.
 	 */
 	getExpansionScoreFromCache(roomName: string, result: ExpansionScore) {
-		if (!Memory.strategy._expansionScoreCache) return false;
-		if (!Memory.strategy._expansionScoreCache[roomName]) return false;
-		if (hivemind.hasIntervalPassed(hivemind.settings.get('expansionScoreCacheDuration'), Memory.strategy._expansionScoreCache[roomName][1])) return false;
+		if (!expansionScoreCache[roomName]) return false;
+		if (hivemind.hasIntervalPassed(hivemind.settings.get('expansionScoreCacheDuration'), expansionScoreCache[roomName][1])) return false;
 
-		result.addScore(Memory.strategy._expansionScoreCache[roomName][0], 'fromCache');
-		if (Memory.strategy._expansionScoreCache[roomName][2]) {
-			result.reasons = Memory.strategy._expansionScoreCache[roomName][2];
+		result.addScore(expansionScoreCache[roomName][0], 'fromCache');
+		if (expansionScoreCache[roomName][2]) {
+			result.reasons = expansionScoreCache[roomName][2];
 		}
 
 		return true;

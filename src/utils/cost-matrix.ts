@@ -38,11 +38,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		options = {};
 	}
 
-	const roomHasBlockingConstructionSites = (Game.rooms[roomName]?.find(
-		FIND_MY_CONSTRUCTION_SITES,
-		{filter: site => !site.isWalkable()}
-	) || []).length > 0;
-	const cacheDuration = roomHasBlockingConstructionSites ? 20 : 500;
+	const cacheDuration = roomHasBlockingConstructionSites(roomName) ? 20 : 500;
 
 	let cacheKey = 'costMatrix:' + roomName;
 	let matrix = hivemind.segmentMemory.isReady() ? cache.inHeap(
@@ -90,6 +86,15 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 	}
 
 	return matrix;
+}
+
+function roomHasBlockingConstructionSites(roomName: string): boolean {
+	return cache.inHeap('roomHasBlockingConstructionSites:' + roomName, 20, () => {
+		return (Game.rooms[roomName]?.find(
+			FIND_MY_CONSTRUCTION_SITES,
+			{filter: site => !site.isWalkable()}
+		) || []).length > 0;
+	})
 }
 
 /**

@@ -358,12 +358,17 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 				return true;
 			}
 
-			this.move(this.pos.getDirectionTo(path[0]));
+			if (path[0].roomName === creep.pos.roomName) {
+				this.move(this.pos.getDirectionTo(path[0]));
 
-			const creep = path[0].lookFor(LOOK_CREEPS)[0];
-			if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
-			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
-			if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+				const creep = path[0].lookFor(LOOK_CREEPS)[0];
+				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+				const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+			}
+			else {
+				creep.moveTo(path[0]);
+			}
 		}
 		else {
 			this.say('Searching');

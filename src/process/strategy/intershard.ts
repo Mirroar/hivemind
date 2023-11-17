@@ -98,7 +98,7 @@ export default class InterShardProcess extends Process {
 		this.memory.info.rooms = {};
 		const roomStats = this.memory.info.rooms;
 		_.each(Memory.strategy.roomList, (info, roomName) => {
-			if (!info.expansionScore || info.expansionScore <= 0) return;
+			if (typeof info.expansionScore === 'undefined') return;
 
 			if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) {
 				// The following scores only apply to unowned rooms.
