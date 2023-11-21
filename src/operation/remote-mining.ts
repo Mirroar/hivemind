@@ -191,7 +191,7 @@ export default class RemoteMiningOperation extends Operation {
 	 */
 	isUnderAttack(): boolean {
 		const roomMemory = Memory.rooms[this.roomName];
-		if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
+		if (roomMemory?.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
 
 		// Check rooms en route as well.
 		return cache.inHeap('rmPathSafety:' + this.name, 10, () => {
@@ -205,12 +205,16 @@ export default class RemoteMiningOperation extends Operation {
 
 					checkedRooms[pos.roomName] = true;
 					const roomMemory = Memory.rooms[pos.roomName];
-					if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) return true;
+					if (roomMemory?.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
 				}
 			}
 
 			return false;
 		});
+	}
+
+	hasInvaderCore(): boolean {
+		return Memory.rooms[this.roomName]?.enemies?.hasInvaderCore;
 	}
 
 	getTotalEnemyData(): EnemyData {
@@ -220,13 +224,16 @@ export default class RemoteMiningOperation extends Operation {
 			heal: 0,
 			lastSeen: Game.time,
 			safe: false,
+			hasInvaderCore: false,
 		};
 
 		for (const roomName of this.getRoomsOnPath()) {
 			// @todo Now that we're spawning defense for every room on the path,
 			// make sure brawlers actually move to threatened rooms.
 			const roomMemory = Memory.rooms[roomName];
-			if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
+			if (!roomMemory?.enemies) continue;
+			if (roomMemory.enemies.hasInvaderCore) totalEnemyData.hasInvaderCore = true;
+			if (roomMemory.enemies.safe) continue;
 
 			totalEnemyData.damage += roomMemory.enemies.damage;
 			totalEnemyData.heal += roomMemory.enemies.heal;

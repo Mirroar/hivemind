@@ -248,7 +248,7 @@ export default class BrawlerRole extends Role {
 		});
 		if (!creep.room.controller?.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) {
 			// Outside of owned rooms, only attack invader cores.
-			structures = _.filter(structures, structure => structure.structureType === STRUCTURE_INVADER_CORE);
+			structures = creep.room.structuresByType[STRUCTURE_INVADER_CORE] || [];
 		}
 
 		// Attack structures under target flag (even if non-hostile, like walls).
