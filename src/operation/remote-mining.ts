@@ -26,6 +26,7 @@ declare global {
 }
 
 const energyCache: Record<string, number> = {};
+const cannotDismantleCache: Record<string, boolean> = {};
 
 /**
  * This kind of operation handles all remote mining.
@@ -472,6 +473,16 @@ export default class RemoteMiningOperation extends Operation {
 		return this.hasReservation() ? 2 : 1;
 	}
 
+	hasActiveHarvesters(sourceLocation?: string): boolean {
+		if (sourceLocation) return _.some(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
+
+		for (const pos of this.getSourcePositions()) {
+			if (this.hasActiveHarvesters(encodePosition(pos))) return true;
+		}
+
+		return false;
+	}
+
 	/**
 	 * Determines whether the source / room needs a dismantler.
 	 */
@@ -481,16 +492,6 @@ export default class RemoteMiningOperation extends Operation {
 
 		for (const pos of this.getSourcePositions()) {
 			if (this.needsDismantler(encodePosition(pos))) return true;
-		}
-
-		return false;
-	}
-
-	hasActiveHarvesters(sourceLocation?: string): boolean {
-		if (sourceLocation) return _.some(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
-
-		for (const pos of this.getSourcePositions()) {
-			if (this.hasActiveHarvesters(encodePosition(pos))) return true;
 		}
 
 		return false;
@@ -522,7 +523,14 @@ export default class RemoteMiningOperation extends Operation {
 				// Don't try to dismantle things in our own rooms.
 				if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
 
-				if (matrix.get(pos.x, pos.y) >= 100) {
+				if (matrix.get(pos.x, pos.y) >= 100 && !cannotDismantleCache[encodePosition(structure.pos)]) {
+					// Make sure this is a structure that can be dismantled, not an invader core.
+					if (Game.rooms[roomName]) {
+						for (const structure of Game.rooms[roomName].structuresByType[STRUCTURE_INVADER_CORE] || []) {
+							cannotDismantleCache[encodePosition(structure.pos)] = true;
+						}
+					}
+
 					// Blocked tile found on path. Add to dismantle targets.
 					blockedTiles.push(pos);
 				}
