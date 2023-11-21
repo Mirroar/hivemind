@@ -26,7 +26,7 @@ declare global {
 }
 
 const energyCache: Record<string, number> = {};
-const cannotDismantleCache: Record<string, boolean> = {};
+const cannotDismantlePositions: Record<string, boolean> = {};
 
 /**
  * This kind of operation handles all remote mining.
@@ -521,15 +521,17 @@ export default class RemoteMiningOperation extends Operation {
 				}
 
 				// Don't try to dismantle things in our own rooms.
-				if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
+				if (Game.rooms[roomName]?.isMine()) continue;
 
-				if (matrix.get(pos.x, pos.y) >= 100 && !cannotDismantleCache[encodePosition(structure.pos)]) {
+				if (matrix.get(pos.x, pos.y) >= 100) {
 					// Make sure this is a structure that can be dismantled, not an invader core.
 					if (Game.rooms[roomName]) {
 						for (const structure of Game.rooms[roomName].structuresByType[STRUCTURE_INVADER_CORE] || []) {
-							cannotDismantleCache[encodePosition(structure.pos)] = true;
+							cannotDismantlePositions[encodePosition(structure.pos)] = true;
 						}
 					}
+
+					if (cannotDismantlePositions[encodePosition(pos)]) continue;
 
 					// Blocked tile found on path. Add to dismantle targets.
 					blockedTiles.push(pos);
