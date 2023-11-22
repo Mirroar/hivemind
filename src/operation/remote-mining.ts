@@ -523,19 +523,19 @@ export default class RemoteMiningOperation extends Operation {
 				// Don't try to dismantle things in our own rooms.
 				if (Game.rooms[roomName]?.isMine()) continue;
 
-				if (matrix.get(pos.x, pos.y) >= 100) {
-					// Make sure this is a structure that can be dismantled, not an invader core.
-					if (Game.rooms[roomName]) {
-						for (const structure of Game.rooms[roomName].structuresByType[STRUCTURE_INVADER_CORE] || []) {
-							cannotDismantlePositions[encodePosition(structure.pos)] = true;
-						}
+				if (matrix.get(pos.x, pos.y) < 100) continue;
+
+				// Make sure this is a structure that can be dismantled, not an invader core.
+				if (Game.rooms[roomName]) {
+					for (const structure of Game.rooms[roomName].structuresByType[STRUCTURE_INVADER_CORE] || []) {
+						cannotDismantlePositions[encodePosition(structure.pos)] = true;
 					}
-
-					if (cannotDismantlePositions[encodePosition(pos)]) continue;
-
-					// Blocked tile found on path. Add to dismantle targets.
-					blockedTiles.push(pos);
 				}
+
+				if (cannotDismantlePositions[encodePosition(pos)]) continue;
+
+				// Blocked tile found on path. Add to dismantle targets.
+				blockedTiles.push(pos);
 			}
 
 			return packPosList(blockedTiles);
