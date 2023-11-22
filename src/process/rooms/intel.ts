@@ -105,6 +105,6 @@ export default class RoomIntelProcess extends Process {
 			hasInvaderCore,
 		};
 
-		if (this.room.memory.enemies.safe && _.size(this.room.memory.enemies.parts) === 0) delete this.room.memory.enemies;
+		if (this.room.memory.enemies.safe && !this.room.memory.enemies.hasInvaderCore && _.size(this.room.memory.enemies.parts) === 0) delete this.room.memory.enemies;
 	}
 }
