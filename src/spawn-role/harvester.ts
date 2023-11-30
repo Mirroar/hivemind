@@ -162,7 +162,8 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			}
 		});
 
-		const sizeFactor = source.room.controller.level < 7 ? 1 : 1.2;
+		const sizeFactor = (source.room.controller.level === 8 ? 2 :
+			(source.room.controller.level === 7 ? 1.2 : 1));
 
 		return sizeFactor * numberOfParts;
 	}

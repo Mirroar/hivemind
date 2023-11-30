@@ -38,7 +38,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		options = {};
 	}
 
-	const cacheDuration = roomHasBlockingConstructionSites(roomName) ? 20 : 500;
+	const cacheDuration = hivemind.segmentMemory.isReady() ? (roomHasBlockingConstructionSites(roomName) ? 20 : 500) : 1;
 
 	let cacheKey = 'costMatrix:' + roomName;
 	let matrix = hivemind.segmentMemory.isReady() ? cache.inHeap(
@@ -179,6 +179,12 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 	const terrain = new Room.Terrain(roomName);
 	const dangerMatrix = new PathFinder.CostMatrix();
 
+	// No need to consider enemies when the room is safemoded.
+	if (Game.rooms[roomName].controller.safeMode) {
+		cache.inHeap('dangerMatrix:' + roomName, 20, () => dangerMatrix);
+		return newMatrix;
+	}
+
 	// We flood fill from enemies and make all tiles they can reach more
 	// difficult to travel through.
 	const closedList: Record<string, boolean> = {};
@@ -187,6 +193,11 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 	for (const username in Game.rooms[roomName].enemyCreeps) {
 		if (hivemind.relations.isAlly(username)) continue;
 		for (const creep of Game.rooms[roomName].enemyCreeps[username]) {
+			// Ignore creeps inside our walls. If they're here already, we don't
+			// want all our creeps to stop moving because the inside of the
+			// base is suddenly dangerous.
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(creep.pos, 'safe')) continue;
+
 			const location = encodePosition(creep.pos);
 			closedList[location] = true;
 			openList.push(creep.pos);
@@ -213,6 +224,8 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 			const newPos = new RoomPosition(x, y, roomName);
 			if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
 			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'safe')) return;
+			dangerMatrix.set(x, y, 2);
 			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
 
 			let value = matrix.get(x, y);
@@ -222,7 +235,6 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 			}
 
 			newMatrix.set(x, y, blockDangerousTiles ? 255 : 5 * value + 25);
-			dangerMatrix.set(x, y, 2);
 		}, 3);
 
 		// Add available adjacent tiles.

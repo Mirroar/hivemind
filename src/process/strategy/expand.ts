@@ -23,10 +23,6 @@ type ExpandProcessMemory = {
 		supportingRooms: string[];
 		spawnRoom: string;
 	};
-	inProgress: {
-		rooms: Record<string, boolean>;
-		bestTarget: ExpansionTarget;
-	};
 	pathBlocked: number;
 	evacuatingRoom: {
 		name: string;
@@ -51,6 +47,12 @@ declare global {
 }
 
 let lastCleanup = 0;
+
+
+let expansionTargetScoringProgress: {
+	rooms: Record<string, boolean>;
+	bestTarget: ExpansionTarget;
+};
 
 export default class ExpandProcess extends Process {
 	memory: ExpandProcessMemory;
@@ -134,12 +136,12 @@ export default class ExpandProcess extends Process {
 		let bestTarget;
 		let modifiedBestExpansionScore: number;
 		const startTime = Game.cpu.getUsed();
-		if (this.memory.inProgress) {
-			bestTarget = this.memory.inProgress.bestTarget;
+		if (expansionTargetScoringProgress) {
+			bestTarget = expansionTargetScoringProgress.bestTarget;
 			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget.roomName, bestTarget);
 		}
 		else {
-			this.memory.inProgress = {
+			expansionTargetScoringProgress = {
 				rooms: {},
 				bestTarget: null,
 			};
@@ -148,7 +150,7 @@ export default class ExpandProcess extends Process {
 		for (const roomName in Memory.strategy.roomList) {
 			const roomFilter = settings.get('expansionRoomFilter');
 			if (roomFilter && !roomFilter(roomName)) {
-				this.memory.inProgress.rooms[roomName] = true;
+				expansionTargetScoringProgress.rooms[roomName] = true;
 				continue;
 			}
 
@@ -156,15 +158,15 @@ export default class ExpandProcess extends Process {
 			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than configured cpu amount trying to find
 				// a target each tick.
-				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
+				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(expansionTargetScoringProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
 				hivemind.log('strategy').debug('Current best target:', bestTarget ? bestTarget.roomName : 'N/A', '@', bestTarget ? modifiedBestExpansionScore : 'N/A');
 				return;
 			}
 
-			if (this.memory.inProgress.rooms[roomName]) continue;
+			if (expansionTargetScoringProgress.rooms[roomName]) continue;
 
-			this.memory.inProgress.rooms[roomName] = true;
-			if (!info.expansionScore || info.expansionScore <= 0) continue;
+			expansionTargetScoringProgress.rooms[roomName] = true;
+			if (typeof info.expansionScore === 'undefined' || info.expansionScore === 0) continue;
 
 			const modifiedExpansionScore = this.getModifiedExpansionScore(roomName, info);
 			if (bestTarget && modifiedBestExpansionScore >= modifiedExpansionScore) continue;
@@ -176,11 +178,11 @@ export default class ExpandProcess extends Process {
 
 			bestTarget = {...info, spawnRoom: bestSpawn, roomName};
 			modifiedBestExpansionScore = modifiedExpansionScore;
-			this.memory.inProgress.bestTarget = bestTarget;
+			expansionTargetScoringProgress.bestTarget = bestTarget;
 		}
 
 		if (bestTarget) {
-			delete this.memory.inProgress;
+			expansionTargetScoringProgress = null;
 			this.startExpansion(bestTarget);
 		}
 	}
@@ -544,7 +546,7 @@ export default class ExpandProcess extends Process {
 		for (const room of Game.myRooms) {
 			if (room.controller.level < 5) continue;
 			if (room.name === targetRoom) continue;
-			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 10) continue;
+			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 12) continue;
 
 			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500});
 			if (!path || path.incomplete) continue;

@@ -3,7 +3,7 @@
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import PathManager from 'remote-path-manager';
+import PathManager from 'empire/remote-path-manager';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 

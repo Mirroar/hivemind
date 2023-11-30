@@ -7,7 +7,7 @@ import cache from 'utils/cache';
 import HaulerRole from 'spawn-role/hauler';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
-import PathManager from 'remote-path-manager';
+import PathManager from 'empire/remote-path-manager';
 import {decodePosition, encodePosition} from 'utils/serialization';
 import {drawTable} from 'utils/room-visuals';
 import {getCostMatrix} from 'utils/cost-matrix';
@@ -225,7 +225,7 @@ export default class RemoteMiningOperation extends Operation {
 			heal: 0,
 			lastSeen: Game.time,
 			safe: false,
-			hasInvaderCore: false,
+			hasInvaderCore: this.hasInvaderCore(),
 		};
 
 		for (const roomName of this.getRoomsOnPath()) {
@@ -313,7 +313,7 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	getRoomsOnPath(sourceLocation?: string): string[] {
-		return cache.inHeap('rmPath:' + this.name, 1000, () => {
+		return cache.inHeap('rmPath:' + this.name + ':' + (sourceLocation ?? 'all'), 1000, () => {
 			const paths = this.getPaths();
 			const result: string[] = [];
 			const checkedRooms = {};
@@ -322,7 +322,6 @@ export default class RemoteMiningOperation extends Operation {
 
 				const path = paths[location];
 				for (const pos of path.path || []) {
-					if (pos.roomName === this.roomName) continue;
 					if (checkedRooms[pos.roomName]) continue;
 
 					checkedRooms[pos.roomName] = true;

@@ -121,7 +121,7 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
 		if (this.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
-		if (this.room.myStructuresByType[STRUCTURE_SPAWN].length === 0) return;
+		if ((this.room.myStructuresByType[STRUCTURE_SPAWN] || []).length === 0) return;
 
 		this.room.visual.text('I might safemode soon!', 25, 25);
 		if (!this.isEnemyCloseToImportantStructures()) return;
@@ -190,6 +190,7 @@ export default class RoomDefenseProcess extends Process {
 			if (room.controller.level > maxLevelToAbandon) continue;
 
 			room.controller.unclaim();
+			Game.notify('🛡 Unclaimed ' + room.name + ' to free up safe mode for room ' + this.room.name + '.');
 			return;
 		}
 	}
