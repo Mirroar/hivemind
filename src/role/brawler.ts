@@ -54,7 +54,6 @@ declare global {
 		};
 		target: string;
 
-		exploitTarget: Id<Creep>;
 		patrolPoint: Id<StructureKeeperLair>;
 	}
 
@@ -353,11 +352,6 @@ export default class BrawlerRole extends Role {
 			delete creep.memory.fillWithEnergy;
 		}
 
-		if (creep.memory.exploitName) {
-			this.performExploitMove(creep);
-			return;
-		}
-
 		let allowDanger = true;
 		if (creep.memory.squadName) {
 			this.performSquadMove(creep);
@@ -561,138 +555,6 @@ export default class BrawlerRole extends Role {
 		}
 
 		return OK;
-	}
-
-	/**
-	 * Performs creep movement as part of an exploit operation.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 *
-	 * @todo This should probably be done by having the exploit choose targets
-	 * and then using normal military creep movement to get there.
-	 */
-	performExploitMove(creep: BrawlerCreep) {
-		const exploit = Game.exploits[creep.memory.exploitName];
-		if (!exploit) return;
-
-		// If an enemy is close by, move to attack it.
-		const enemies = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
-			filter: enemy => enemy.isDangerous() && !hivemind.relations.isAlly(enemy.owner.username),
-		});
-		if (enemies.length > 0) {
-			creep.memory.exploitTarget = enemies[0].id;
-		}
-
-		if (creep.memory.exploitTarget) {
-			const target = Game.getObjectById(creep.memory.exploitTarget);
-
-			if (target) {
-				creep.moveTo(target);
-				return;
-			}
-
-			delete creep.memory.exploitTarget;
-		}
-
-		// Clear cached path if we've gotton close to goal.
-		if (creep.memory.patrolPoint && creep.hasCachedPath()) {
-			const lair = Game.getObjectById(creep.memory.patrolPoint);
-			if (creep.pos.getRangeTo(lair) <= 7) {
-				creep.clearCachedPath();
-			}
-		}
-
-		// Follow cached path when requested.
-		if (creep.hasCachedPath()) {
-			creep.followCachedPath();
-			if (creep.hasArrived()) {
-				creep.clearCachedPath();
-			}
-			else {
-				return;
-			}
-		}
-
-		if (creep.pos.roomName !== exploit.roomName && !creep.hasCachedPath() && exploit.memory.pathToRoom) {
-			// Follow cached path to target room.
-			creep.setCachedPath(exploit.memory.pathToRoom);
-			return;
-		}
-
-		// In-room movement.
-		this.performExploitPatrol(creep);
-	}
-
-	/**
-	 * Makes exploit creeps patrol along source keeper lairs.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 */
-	performExploitPatrol(creep: BrawlerCreep) {
-		const exploit = Game.exploits[creep.memory.exploitName];
-
-		// Start at closest patrol point to entrance
-		if (!creep.memory.patrolPoint) {
-			if (exploit.memory.closestLairToEntrance) {
-				creep.memory.patrolPoint = exploit.memory.closestLairToEntrance;
-			}
-			else if (exploit.memory.lairs) {
-				creep.memory.patrolPoint = _.sample(_.keys(exploit.memory.lairs)) as Id<StructureKeeperLair>;
-			}
-		}
-
-		if (!creep.memory.patrolPoint) return;
-
-		creep.memory.target = creep.memory.patrolPoint;
-		const lair = Game.getObjectById(creep.memory.patrolPoint);
-		if (!lair) return;
-
-		// Seems we have arrived at a patrol Point, and no enemies are immediately nearby.
-		// Find patrol point where we'll have the soonest fight.
-		let best = null;
-		let bestTime = null;
-
-		const id = creep.memory.patrolPoint;
-		for (const id2 of _.keys(exploit.memory.lairs)) {
-			const otherLair = Game.getObjectById<StructureKeeperLair>(id2);
-			if (!otherLair) continue;
-
-			let time = otherLair.ticksToSpawn || 0;
-
-			if (id !== id2) {
-				time = exploit.memory.lairs[id].paths[id2].path ? Math.max(time, exploit.memory.lairs[id].paths[id2].path.length) : Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
-			}
-
-			console.log('time to ' + id2 + ': ' + time);
-
-			if (!best || time < bestTime) {
-				best = id2;
-				bestTime = time;
-			}
-		}
-
-		if (!best) return;
-
-		if (best === creep.memory.patrolPoint) {
-			// We're at the correct control point. Move to intercept potentially spawning source keepers.
-			if (exploit.memory.lairs[best].sourcePath) {
-				creep.moveTo(deserializePositionPath(exploit.memory.lairs[best].sourcePath.path)[1]);
-			}
-			else {
-				creep.whenInRange(1, lair, () => {});
-			}
-		}
-		else {
-			creep.memory.patrolPoint = best;
-			if (exploit.memory.lairs[id].paths[best].path) {
-				creep.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
-			}
-			else {
-				creep.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
-			}
-		}
 	}
 
 	/**

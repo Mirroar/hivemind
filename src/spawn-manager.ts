@@ -29,7 +29,6 @@ declare global {
 
 const roleNameMap = {
 	builder: 'B',
-	'builder.exploit': 'BE',
 	'builder.remote': 'BR',
 	'builder.mines': 'BM',
 	claimer: 'C',
@@ -40,14 +39,11 @@ const roleNameMap = {
 	gift: ':) GIFT (: ',
 	harvester: 'H',
 	'harvester.deposit': 'HD',
-	'harvester.exploit': 'HE',
 	'harvester.remote': 'HR',
 	'harvester.power': 'HP',
 	mule: 'M',
-	pest: 'P',
 	scout: 'S',
 	transporter: 'T',
-	'hauler.exploit': 'TE',
 	'hauler.power': 'TP',
 	'hauler.relay': 'TRR',
 	hauler: 'TR',

@@ -72,11 +72,9 @@ export default class RemoteMiningProcess extends Process {
 
 			// @todo Actually calculate spawn usage for each.
 			let spawnCapacity = spawnCount * 5;
-			const exploitFlags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + room.name + ':'));
 			let roomNeeds = 1;
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;
-			if (room.controller.level >= 7) roomNeeds += exploitFlags.length * 3;
 			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
 
 			// Allow more remotes when using new method, since it spawns stuff more dynamically.

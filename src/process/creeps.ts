@@ -11,9 +11,6 @@ import caravanTraderRole from 'role/caravan-trader';
 import claimerRole from 'role/claimer';
 import depositHarvesterRole from 'role/harvester.deposit';
 import dismantlerRole from 'role/dismantler';
-import exploitBuilderRole from 'role/exploit/builder';
-import exploitHarvesterRole from 'role/exploit/harvester';
-import exploitHaulerRole from 'role/exploit/hauler';
 import gathererRole from 'role/gatherer';
 import giftRole from 'role/gift';
 import guardianRole from 'role/guardian';
@@ -39,7 +36,6 @@ import OperatorRole from 'role/power-creep/operator';
 const creepRoles = {
 	brawler: brawlerRole,
 	builder: builderRole,
-	'builder.exploit': exploitBuilderRole,
 	'builder.mines': mineBuilderRole,
 	'builder.remote': remoteBuilderRole,
 	'caravan-trader': caravanTraderRole,
@@ -50,11 +46,9 @@ const creepRoles = {
 	guardian: guardianRole,
 	harvester: harvesterRole,
 	'harvester.deposit': depositHarvesterRole,
-	'harvester.exploit': exploitHarvesterRole,
 	'harvester.power': poweHarvesterRole,
 	'harvester.remote': remoteHarvesterRole,
 	hauler: haulerRole,
-	'hauler.exploit': exploitHaulerRole,
 	'hauler.power': powerHaulerRole,
 	'hauler.relay': relayHaulerRole,
 	helper: helperRole,

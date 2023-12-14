@@ -2,7 +2,6 @@ import profiler from 'screeps-profiler';
 
 import Bay from 'manager.bay';
 import BoostManager from 'boost-manager';
-import Exploit from 'manager.exploit';
 import Logger from 'utils/debug';
 import RoomPlanner from 'room/planner/room-planner';
 import Squad from 'manager.squad';
@@ -19,7 +18,6 @@ if (useProfiler) {
 
 	profiler.registerClass(Bay, 'Bay');
 	profiler.registerClass(BoostManager, 'BoostManager');
-	profiler.registerClass(Exploit, 'Exploit');
 	profiler.registerClass(Logger, 'Logger');
 	profiler.registerClass(RoomPlanner, 'RoomPlanner');
 	profiler.registerClass(Squad, 'Squad');

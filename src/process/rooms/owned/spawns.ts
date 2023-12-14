@@ -9,7 +9,6 @@ import caravanTraderSpawnRole from 'spawn-role/caravan-trader';
 import claimerSpawnRole from 'spawn-role/claimer';
 import depositHarvesterSpawnRole from 'spawn-role/harvester.deposit';
 import dismantlerSpawnRole from 'spawn-role/dismantler';
-import exploitSpawnRole from 'spawn-role/exploit';
 import gathererSpawnRole from 'spawn-role/gatherer';
 import giftSpawnRole from 'spawn-role/gift';
 import harvesterSpawnRole from 'spawn-role/harvester';
@@ -55,7 +54,6 @@ const spawnClasses = {
 	'caravan-trader': caravanTraderSpawnRole,
 	claimer: claimerSpawnRole,
 	dismantler: dismantlerSpawnRole,
-	exploit: exploitSpawnRole,
 	gatherer: gathererSpawnRole,
 	gift: giftSpawnRole,
 	harvester: harvesterSpawnRole,

@@ -1,79 +1,12 @@
 /* global Room FIND_MY_CONSTRUCTION_SITES STRUCTURE_KEEPER_LAIR */
 
 import hivemind from 'hivemind';
-import utilities from 'utilities';
-import {getCostMatrix, markBuildings} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 
 declare global {
 	interface Room {
-		getCostMatrix: () => CostMatrix;
-		generateCostMatrix: (structures?: Record<string, Structure[]>, constructionSites?: Record<string, ConstructionSite[]>) => CostMatrix;
 		calculateRoomPath: (roomName: string, options?: {allowDanger?: boolean; maxPathLength?: number}) => string[] | null;
 	}
-}
-
-Room.prototype.getCostMatrix = function () {
-	return getCostMatrix(this.name);
-};
-
-/**
- * Generates a new CostMatrix for pathfinding in this room.
- *
- * @param {Array} structures
- *   An array of structures to navigate around.
- * @param {Array} constructionSites
- *   An array of construction sites to navigate around.
- *
- * @return {PathFinder.CostMatrix}
- *   A cost matrix representing this room.
- */
-Room.prototype.generateCostMatrix = function (structures, constructionSites) {
-	if (!structures) {
-		structures = this.structuresByType;
-	}
-
-	if (!constructionSites) {
-		constructionSites = _.groupBy(this.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
-	}
-
-	return createRoomCostMatrix(this.name, structures, constructionSites);
-};
-
-/**
- * Generates a new CostMatrix for pathfinding.
- *
- * @param {string} roomName
- *   Name of the room to generate a cost matrix for.
- * @param {object} structures
- *   Arrays of structures to navigate around, keyed by structure type.
- * @param {object} constructionSites
- *   Arrays of construction sites to navigate around, keyed by structure type.
- *
- * @return {PathFinder.CostMatrix}
- *   A cost matrix representing the given obstacles.
- */
-function createRoomCostMatrix(roomName, structures, constructionSites) {
-	const costs = new PathFinder.CostMatrix();
-
-	markBuildings(
-		roomName,
-		structures,
-		constructionSites,
-		structure => {
-			if (costs.get(structure.pos.x, structure.pos.y) === 0) {
-				costs.set(structure.pos.x, structure.pos.y, 1);
-			}
-		},
-		structure => {
-			costs.set(structure.pos.x, structure.pos.y, 0xFF);
-		},
-		(x, y) => {
-			costs.set(x, y, 0xFF);
-		},
-	);
-
-	return costs;
 }
 
 /**

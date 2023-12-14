@@ -10,7 +10,6 @@ declare global {
 		getNearbyContainer: () => StructureContainer | null;
 		getNearbyLink: () => StructureLink | null;
 		getNearbyLair: () => StructureKeeperLair | null;
-		isDangerous: () => boolean;
 	}
 
 	interface Mineral {
@@ -18,11 +17,6 @@ declare global {
 		getNumHarvestSpots: () => number;
 		getNearbyContainer: () => StructureContainer | null;
 		getNearbyLair: () => StructureKeeperLair | null;
-		isDangerous: () => boolean;
-	}
-
-	interface StructureKeeperLair {
-		isDangerous: () => boolean;
 	}
 }
 
@@ -238,56 +232,4 @@ Source.prototype.getNearbyLair = function (this: Source) {
  */
 Mineral.prototype.getNearbyLair = function (this: Mineral) {
 	return getNearbyLair.call(this);
-};
-
-/**
- * Checks if a keeper lair is considered dangerous.
- *
- * @return {boolean}
- *   True if a source keeper is spawned or about to spawn.
- */
-StructureKeeperLair.prototype.isDangerous = function (this: StructureKeeperLair) {
-	return !this.ticksToSpawn || this.ticksToSpawn < 20;
-};
-
-/**
- * Checks if being close to this source is currently dangerous.
- *
- * @return {boolean}
- *   True if an active keeper lair is nearby and we have no defenses.
- */
-const isDangerous = function (this: Source | Mineral) {
-	const lair = this.getNearbyLair();
-	if (!lair || !lair.isDangerous()) return false;
-
-	// It's still safe if a guardian with sufficient lifespan is nearby to take care of any source keepers.
-	if (this.room.creepsByRole.brawler) {
-		for (const guardian of _.values<GuardianCreep>(this.room.creepsByRole.brawler)) {
-			if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30 && guardian.memory.exploitUnitType === 'guardian') {
-				return false;
-			}
-		}
-	}
-
-	return true;
-};
-
-/**
- * Checks if being close to this source is currently dangerous.
- *
- * @return {boolean}
- *   True if an active keeper lair is nearby and we have no defenses.
- */
-Source.prototype.isDangerous = function (this: Source) {
-	return isDangerous.call(this);
-};
-
-/**
- * Checks if being close to this mineral is currently dangerous.
- *
- * @return {boolean}
- *   True if an active keeper lair is nearby and we have no defenses.
- */
-Mineral.prototype.isDangerous = function (this: Mineral) {
-	return isDangerous.call(this);
 };

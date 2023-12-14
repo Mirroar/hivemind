@@ -409,7 +409,6 @@ export default class ScoutProcess extends Process {
 		const roomIntel = getRoomIntel(roomName);
 
 		// We don't care about rooms without controllers.
-		// @todo Once automated, we might care for exploiting source keeper rooms.
 		if (!roomIntel.isClaimable()) return 0;
 
 		// Can't remote harvest from my own room.
