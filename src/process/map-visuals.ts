@@ -133,6 +133,10 @@ export default class MapVisualsProcess extends Process {
 				lineStyle: 'dotted' as const,
 			};
 
+			for (const portal of navInfo.portals || []) {
+				Game.map.visual.line(new RoomPosition(25, 25, portal.room), new RoomPosition(25, 25, roomName), {...style, color: '#8080ff', width: 1});
+			}
+
 			if (!navInfo.regions) {
 				// Single region, all exits are connected.
 				for (const exit of navInfo.exits) {

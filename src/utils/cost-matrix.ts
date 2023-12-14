@@ -9,6 +9,7 @@ interface CostMatrixOptions {
 	singleRoom?: boolean;
 	isQuad?: boolean;
 	ignoreMilitary?: boolean;
+	allowDanger?: boolean;
 }
 
 declare global {
@@ -71,7 +72,15 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		);
 	}
 
-	if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine() && Game.rooms[roomName].defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !options.ignoreMilitary) {
+	if (
+		matrix
+		&& !options.ignoreMilitary
+		&& !options.allowDanger
+		&& hivemind.segmentMemory.isReady()
+		&& Game.rooms[roomName]
+		&& Game.rooms[roomName].isMine()
+		&& Game.rooms[roomName].defense.getEnemyStrength() > ENEMY_STRENGTH_NONE
+	) {
 		// Discourage unprotected areas when enemies are in the room.
 		cacheKey += ':inCombat';
 

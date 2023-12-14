@@ -451,6 +451,7 @@ export default class BrawlerRole extends Role {
 		const structures = position.lookFor(LOOK_STRUCTURES);
 		for (const structure of structures) {
 			if (!structure.isWalkable()) return true;
+			if (structure.structureType === STRUCTURE_PORTAL) return true;
 		}
 
 		return false;
@@ -494,7 +495,7 @@ export default class BrawlerRole extends Role {
 			// @todo Adjust cost matrix to disincentivize tiles around hostiles.
 			// @todo Include friendly creeps in obstacle list to prevent blocking.
 			const result = PathFinder.search(creep.pos, {pos: target.pos, range: 2}, {
-				roomCallback: roomName => getCostMatrix(roomName),
+				roomCallback: roomName => getCostMatrix(roomName, {ignoreMilitary: true}),
 				flee: true,
 				maxRooms: 1,
 			});

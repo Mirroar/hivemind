@@ -79,6 +79,7 @@ export interface RoomIntelMemory {
 			hitsMax: number;
 		}>;
 	};
+	portals?: string[];
 	terrain: {
 		exit: number;
 		wall: number;
@@ -391,15 +392,26 @@ export default class RoomIntel {
 	 *   An array containing all power banks for the room.
 	 */
 	gatherPortalIntel(portals: StructurePortal[]) {
+		delete this.memory.portals;
+
+		const targetRooms = [];
 		for (const portal of portals || []) {
-			// Ignore unstable portals for now.
-			if (portal.ticksToDecay) continue;
-
 			// Ignore same-shard portals for now.
-			if (!('shard' in portal.destination)) continue;
+			if ('shard' in portal.destination) {
+				interShard.registerPortal(portal);
+				continue;
+			}
 
-			interShard.registerPortal(portal);
+			if (!targetRooms.includes(portal.destination.roomName)) targetRooms.push(portal.destination.roomName);
 		}
+
+		if (targetRooms.length > 0) {
+			this.memory.portals = targetRooms;
+		}
+	}
+
+	getRoomPortals(): string[] {
+		return this.memory.portals ?? [];
 	}
 
 	/**

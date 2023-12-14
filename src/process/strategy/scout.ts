@@ -256,7 +256,7 @@ export default class ScoutProcess extends Process {
 		const roomIntel = getRoomIntel(roomName);
 
 		// More sources is better.
-		result.addScore(roomIntel.getSourcePositions().length, 'numSources');
+		result.addScore((roomIntel.getSourcePositions().length * 2) - 2, 'numSources');
 
 		// Having a mineral source is good.
 		// We prefer rooms with minerals of which we have few / no sources.
@@ -455,11 +455,15 @@ export default class ScoutProcess extends Process {
 			this.addAdjacentRooms(nextRoom, openList, closedList);
 			const info = openList[nextRoom];
 			delete openList[nextRoom];
-			const updated = closedList[nextRoom];
 			closedList[nextRoom] = true;
 
 			// Add current room as a candidate for scouting.
-			if (!roomList[nextRoom] || roomList[nextRoom].range > info.range || !Game.rooms[roomList[nextRoom].origin] || !Game.rooms[roomList[nextRoom].origin].isMine()) {
+			if (
+				!roomList[nextRoom]
+				|| roomList[nextRoom].range > info.range
+				|| !Game.rooms[roomList[nextRoom].origin]
+				|| !Game.rooms[roomList[nextRoom].origin].isMine()
+			) {
 				roomList[nextRoom] = {
 					range: info.range,
 					origin: info.origin,
@@ -562,8 +566,8 @@ export default class ScoutProcess extends Process {
 		const info = openList[roomName];
 		if (info.range >= (Memory.hivemind.maxScoutDistance || 7)) return;
 
-		const exits = getRoomIntel(roomName).getExits();
-		for (const exit of _.values<string>(exits)) {
+		const roomIntel = getRoomIntel(roomName);
+		for (const exit of _.values<string>(roomIntel.getExits())) {
 			if (openList[exit] || closedList[exit]) continue;
 
 			const roomIntel = getRoomIntel(exit);
@@ -575,6 +579,21 @@ export default class ScoutProcess extends Process {
 			};
 			if (info.safePath && roomIsSafe) openList[exit].safePath = true;
 		}
+
+		for (const portal of roomIntel.getRoomPortals()) {
+			if (openList[portal] || closedList[portal]) continue;
+
+			const roomIntel = getRoomIntel(portal);
+			const roomIsSafe = !roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader');
+
+			openList[portal] = {
+				range: info.range + 1,
+				origin: info.origin,
+			};
+			if (info.safePath && roomIsSafe) openList[portal].safePath = true;
+		}
+
+		// @todo Also use same-shard portals as possible exits.
 	}
 
 	/**

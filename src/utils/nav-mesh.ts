@@ -22,6 +22,10 @@ interface NavMemory {
 			id: number;
 			center: number;
 		}>;
+		portals?: Array<{
+			room: string;
+			pos: number;
+		}>;
 		regions?: Array<{
 			exits: number[];
 			center: number;
@@ -54,6 +58,8 @@ interface NavMeshPathfindingEntry {
 	pathLength: number;
 	totalSteps: number;
 	heuristic: number;
+	portal: boolean;
+	targetRoom?: string;
 }
 
 export default class NavMesh {
@@ -81,13 +87,20 @@ export default class NavMesh {
 	generateForRoom(roomName: string) {
 		// Mesh doesn't need to be updated very often.
 		// @todo Allow forcing update for when we dismantle a structure.
-		if (this.memory.rooms[roomName] && this.memory.rooms[roomName].paths && !hivemind.hasIntervalPassed(10_000, this.memory.rooms[roomName].gen)) return;
+		if (
+			this.memory.rooms[roomName]
+			&& this.memory.rooms[roomName].paths
+			&& !hivemind.hasIntervalPassed(10_000, this.memory.rooms[roomName].gen)
+		) return;
 
 		this.terrain = new Room.Terrain(roomName);
-		this.costMatrix = getCostMatrix(roomName).clone();
+		this.costMatrix = getCostMatrix(roomName, {ignoreMilitary: true}).clone();
 		const exits = this.getExitInfo(roomName);
 		const regions = this.getRegions(exits);
 		const paths = this.getConnectingPaths(regions, roomName);
+		// @todo If we want to be really specific, we should have the portals
+		// separated by regions.
+		const portals = this.getPortals(roomName);
 
 		const exitMem: Array<{
 			id: number;
@@ -119,6 +132,7 @@ export default class NavMesh {
 			gen: Game.time,
 			exits: exitMem,
 			paths,
+			portals,
 		};
 
 		if (regions.length > 1) {
@@ -294,7 +308,7 @@ export default class NavMesh {
 
 	getConnectingPaths(regions: RegionInfo[], roomName: string): Record<number, Record<number, number>> {
 		const paths: Record<number, Record<number, number>> = {};
-		const costMatrix = getCostMatrix(roomName);
+		const costMatrix = getCostMatrix(roomName, {ignoreMilitary: true});
 
 		for (const region of regions) {
 			const centerXR = region.center % 50;
@@ -347,6 +361,47 @@ export default class NavMesh {
 		return paths;
 	}
 
+	getPortals(roomName: string) {
+		let portals: Record<string, {
+			targetRoom: string;
+			positions: RoomPosition[];
+			totalX: number;
+			totalY: number;
+		}> = {};
+
+		const room = Game.rooms[roomName];
+		for (const portal of room.structuresByType[STRUCTURE_PORTAL] || []) {
+			if ('shard' in portal.destination) continue;
+			if (!portals[portal.destination.roomName]) {
+				portals[portal.destination.roomName] = {
+					targetRoom: portal.destination.roomName,
+					positions: [portal.pos],
+					totalX: portal.pos.x,
+					totalY: portal.pos.y,
+				};
+				continue;
+			}
+
+			portals[portal.destination.roomName].positions.push(portal.pos);
+			portals[portal.destination.roomName].totalX += portal.pos.x;
+			portals[portal.destination.roomName].totalY += portal.pos.y;
+		}
+
+		if (_.size(portals) === 0) return undefined;
+
+		return _.map(portals, portal => {
+			const pos = _.min(portal.positions, pos => pos.getRangeTo(
+				Math.round(portal.totalX / portal.positions.length),
+				Math.round(portal.totalY / portal.positions.length),
+			));
+
+			return {
+				room: portal.targetRoom,
+				pos: pos.x + (50 * pos.y),
+			}
+		});
+	}
+
 	estimateTravelTime(startPos: RoomPosition, endPos: RoomPosition): number {
 		return cache.inHeap('travelTime:' + encodePosition(startPos) + ':' + encodePosition(endPos), 1000, () => {
 			const result = this.findPath(startPos, endPos);
@@ -356,7 +411,11 @@ export default class NavMesh {
 		});
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean}): {path?: RoomPosition[]; length?: number; incomplete: boolean} {
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean}): {
+		path?: RoomPosition[];
+		length?: number;
+		incomplete: boolean;
+	} {
 		if (!options) options = {};
 
 		const startRoom = startPos.roomName;
@@ -377,7 +436,7 @@ export default class NavMesh {
 
 		const roomMemory = this.memory.rooms[startRoom];
 		if (roomMemory.regions) {
-			const costMatrix = getCostMatrix(startRoom);
+			const costMatrix = getCostMatrix(startRoom, {ignoreMilitary: true});
 			for (const region of roomMemory.regions) {
 				// Check if we can reach region center.
 				const result = PathFinder.search(
@@ -409,25 +468,42 @@ export default class NavMesh {
 				pathLength: segmentLength,
 				totalSteps: segmentLength,
 				heuristic: (Game.map.getRoomLinearDistance(startRoom, endRoom) - 1) * 50,
+				portal: false,
 			};
 			openList.push(entry);
-			openListLookup[startRoom + '/' + exit.center] = true;
+			openListLookup[startRoom + '/' + entry.pos] = true;
+		}
+
+		for (const portal of roomMemory.portals || []) {
+			const entry: NavMeshPathfindingEntry = {
+				exitId: null,
+				pos: portal.pos,
+				roomName: startRoom,
+				parent: null,
+				pathLength: 25,
+				totalSteps: 25,
+				heuristic: (Game.map.getRoomLinearDistance(startRoom, endRoom) - 1) * 50,
+				portal: true,
+				targetRoom: portal.room,
+			};
+			openList.push(entry);
+			openListLookup[startRoom + '/' + entry.pos] = true;
 		}
 
 		while (openList.length > 0) {
 			const current = this.popBestCandidate(openList);
-			const nextRoom = this.getAdjacentRoom(current.roomName, current.exitId);
-			const correspondingExit = this.getCorrespondingExitId(current.exitId);
+			const nextRoom = current.portal ? current.targetRoom : this.getAdjacentRoom(current.roomName, current.exitId);
+			const correspondingExit = current.portal ? null : this.getCorrespondingExitId(current.exitId);
 			let costMultiplier = 1;
 			closedList[current.roomName + '/' + current.pos] = true;
 
-			if (current.roomName === endRoom) {
+			if (nextRoom === endRoom) {
 				// @todo There might be shorter paths to the actual endPosition.
 				// @todo Check if we came out in the correct region.
 
 				// Alright, we arrived! Get final path.
 				return {
-					path: this.pluckRoomPath(current),
+					path: [...this.pluckRoomPath(current), endPos],
 					length: current.totalSteps,
 					incomplete: false,
 				};
@@ -444,9 +520,16 @@ export default class NavMesh {
 				continue;
 			}
 
-			if (roomMemory.exits[correspondingExit]) {
+			if (current.portal) {
+				const portalBack = _.find(roomMemory.portals, p => p.room === current.roomName);
+				const exitPos = portalBack ? portalBack.pos : (25 + (50 * 25));
+				if (closedList[nextRoom + '/' + exitPos]) continue;
+
+				closedList[nextRoom + '/' + exitPos] = true;
+			}
+			else if (roomMemory.exits[correspondingExit]) {
 				const exitPos = roomMemory.exits[correspondingExit].center;
-				if (closedList[exitPos]) continue;
+				if (closedList[nextRoom + '/' + exitPos]) continue;
 
 				closedList[nextRoom + '/' + exitPos] = true;
 			}
@@ -473,6 +556,9 @@ export default class NavMesh {
 			}
 
 			availableExits = [];
+			if (current.portal) {
+				availableExits = roomMemory.exits;
+			}
 			if (roomMemory.regions) {
 				// Find region containing corresponding exit.
 				const region = _.find(roomMemory.regions, (region: any) => region.exits.includes(correspondingExit));
@@ -489,12 +575,14 @@ export default class NavMesh {
 				if (closedList[nextRoom + '/' + exit.center]) continue;
 				if (openListLookup[nextRoom + '/' + exit.center]) continue;
 
-				// If there's a weird path mismatch, skip.
-				const noPath1 = !roomMemory.paths[exit.id] || !roomMemory.paths[exit.id][correspondingExit];
-				const noPath2 = !roomMemory.paths[correspondingExit] || !roomMemory.paths[correspondingExit][exit.id];
-				if (noPath1 && noPath2) continue;
+				if (!current.portal) {
+					// If there's a weird path mismatch, skip.
+					const noPath1 = !roomMemory.paths[exit.id] || !roomMemory.paths[exit.id][correspondingExit];
+					const noPath2 = !roomMemory.paths[correspondingExit] || !roomMemory.paths[correspondingExit][exit.id];
+					if (noPath1 && noPath2) continue;
+				}
 
-				const segmentLength = (roomMemory.paths[exit.id] && roomMemory.paths[exit.id][correspondingExit]) || roomMemory.paths[correspondingExit][exit.id];
+				const segmentLength = current.portal ? 25 : (roomMemory.paths[exit.id] && roomMemory.paths[exit.id][correspondingExit]) || roomMemory.paths[correspondingExit][exit.id];
 				const item = {
 					exitId: exit.id,
 					pos: exit.center,
@@ -503,17 +591,45 @@ export default class NavMesh {
 					pathLength: current.pathLength + (costMultiplier * segmentLength),
 					totalSteps: current.totalSteps + segmentLength,
 					heuristic: (Game.map.getRoomLinearDistance(current.roomName, endRoom) - 1) * 50,
+					portal: false,
 				};
 
 				if (nextRoom === endRoom) {
 					item.pos = serializeCoords(endPos.x, endPos.y);
 					item.heuristic = 0;
-					item.pathLength = current.pathLength + roomMemory.paths[correspondingExit][0];
-					item.totalSteps = current.totalSteps + roomMemory.paths[correspondingExit][0];
+					item.pathLength = current.pathLength + (costMultiplier * (current.portal ? 25 : roomMemory.paths[correspondingExit][0]));
+					item.totalSteps = current.totalSteps + (current.portal ? 25 : roomMemory.paths[correspondingExit][0]);
 				}
 
 				openList.push(item);
 				openListLookup[nextRoom + '/' + exit.center] = true;
+				openListLookup[nextRoom + '/' + item.pos] = true;
+			}
+
+			for (const portal of roomMemory.portals || []) {
+				// Check if in closed list.
+				if (closedList[nextRoom + '/' + portal.pos]) continue;
+				if (openListLookup[nextRoom + '/' + portal.pos]) continue;
+
+				const item = {
+					exitId: null,
+					pos: portal.pos,
+					roomName: nextRoom,
+					parent: current,
+					pathLength: current.pathLength + (costMultiplier * 25),
+					totalSteps: current.totalSteps + 25,
+					heuristic: (Game.map.getRoomLinearDistance(current.roomName, endRoom) - 1) * 50,
+					portal: true,
+					targetRoom: portal.room,
+				};
+
+				if (nextRoom === endRoom) {
+					item.pos = serializeCoords(endPos.x, endPos.y);
+					item.heuristic = 0;
+				}
+
+				openList.push(item);
+				openListLookup[nextRoom + '/' + item.pos] = true;
 				openListLookup[nextRoom + '/' + item.pos] = true;
 			}
 		}

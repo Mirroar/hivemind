@@ -516,7 +516,7 @@ export default class RemoteMiningOperation extends Operation {
 				if (pos.roomName !== roomName) {
 					// Load cost matrix for the current room.
 					roomName = pos.roomName;
-					matrix = getCostMatrix(roomName);
+					matrix = getCostMatrix(roomName, {ignoreMilitary: true});
 				}
 
 				// Don't try to dismantle things in our own rooms.

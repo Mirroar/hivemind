@@ -1,6 +1,7 @@
 /* global PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
 TERRAIN_MASK_WALL STRUCTURE_ROAD FIND_CONSTRUCTION_SITES STRUCTURE_RAMPART */
 
+import cache from 'utils/cache';
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
@@ -48,7 +49,6 @@ declare global {
 
 let lastCleanup = 0;
 
-
 let expansionTargetScoringProgress: {
 	rooms: Record<string, boolean>;
 	bestTarget: ExpansionTarget;
@@ -78,8 +78,6 @@ export default class ExpandProcess extends Process {
 
 		this.memory = Memory.strategy.expand;
 		this.navMesh = new NavMesh();
-
-		// @todo Clean failed attempts memory of old attempts.
 	}
 
 	/**
@@ -309,7 +307,7 @@ export default class ExpandProcess extends Process {
 
 		// If a lot of time has passed after claiming, let the room fend for itself
 		// anyways, either it will be lost or fix itself.
-		if (this.memory.claimed && Game.time - this.memory.claimed > 50 * CREEP_LIFE_TIME) return true;
+		if (this.memory.claimed && Game.time - this.memory.claimed > 20 * CREEP_LIFE_TIME) return true;
 
 		// If we lose control of the room, there's been a problem.
 		const room = Game.rooms[this.memory.currentTarget.roomName];
@@ -370,11 +368,11 @@ export default class ExpandProcess extends Process {
 			if (_.size(activeSquads) >= 5) break;
 
 			if (room.controller.level < 4) continue;
+			if ((room.structuresByType[STRUCTURE_SPAWN] || []).length === 0) continue;
 			if (room.name === info.spawnRoom || room.name === info.roomName) continue;
-			if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) continue;
 			if (room.getEffectiveAvailableEnergy() < 50_000) continue;
 
-			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
+			const path = cache.inHeap('spawnAssistPath:' + info.roomName + ':' + room.name, 2000, () => this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700}));
 			if (!path || path.incomplete) continue;
 
 			const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
@@ -426,7 +424,7 @@ export default class ExpandProcess extends Process {
 			}
 		}
 
-		const roads = room.structuresByType[STRUCTURE_ROAD];
+		const roads = room.structuresByType[STRUCTURE_ROAD] || [];
 		for (const road of roads) {
 			matrix.set(road.pos.x, road.pos.y, 1);
 		}
@@ -546,9 +544,9 @@ export default class ExpandProcess extends Process {
 		for (const room of Game.myRooms) {
 			if (room.controller.level < 5) continue;
 			if (room.name === targetRoom) continue;
-			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 12) continue;
+			if ((room.structuresByType[STRUCTURE_SPAWN] || []).length === 0) continue;
 
-			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500});
+			const path = cache.inHeap('spawnPath:' + targetRoom + ':' + room.name, 1000, () => this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500}));
 			if (!path || path.incomplete) continue;
 
 			if (!bestRoom || bestLength > path.path.length) {
