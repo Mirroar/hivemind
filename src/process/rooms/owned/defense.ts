@@ -58,7 +58,7 @@ export default class RoomDefenseProcess extends Process {
 					}
 					else {
 						// @todo Only attack if we can be sure it's not tower drain.
-						if (!this.room.controller.safeMode) {
+						if ((this.room.controller.safeMode ?? 0) < 200 || target.pos.getRangeTo(25, 25) <= 20) {
 							tower.attack(target);
 						}
 					}

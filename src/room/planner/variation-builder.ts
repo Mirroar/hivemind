@@ -207,7 +207,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		// We want at least 3 spots for upgraders that can reach the controller.
 		let validSpots = 0;
 		handleMapArea(x, y, (x2, y2) => {
-			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+			if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
 			if (controllerPosition.getRangeTo(x2, y2) > 3) return;
 
 			validSpots++;

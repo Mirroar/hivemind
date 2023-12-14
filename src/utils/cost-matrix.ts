@@ -215,6 +215,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 
 	while (openList.length > 0) {
 		const pos = openList.pop();
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(pos, 'safe')) continue;
 
 		// Increase cost matrix value for the given tile.
 		let value = matrix.get(pos.x, pos.y);

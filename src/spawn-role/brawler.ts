@@ -262,12 +262,12 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			// @todo Only send brawlers when the room to reclaim might be
 			// attacked.
-			/* Options.push({
+			options.push({
 				priority: 4,
 				weight: 0,
 				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
 				responseType: RESPONSE_BLINKY,
-			}); */
+			});
 		}
 	}
 

@@ -1,3 +1,4 @@
+import CombatManager from './creep/combat-manager';
 import HelpReport from './report/help';
 import FunnelManager from './empire/funnel-manager';
 import NavMesh from './utils/nav-mesh';
@@ -13,6 +14,7 @@ import {Container} from './utils/container';
 
 declare global {
 	interface DependencyInjectionContainer {
+		CombatManager: CombatManager;
 		HelpReport: HelpReport;
 		FunnelManager: FunnelManager;
 		NavMesh: NavMesh;
@@ -28,6 +30,7 @@ declare global {
 }
 
 function containerFactory(container: Container) {
+	container.set('CombatManager', () => new CombatManager());
 	container.set('HelpReport', () => new HelpReport());
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('NavMesh', () => new NavMesh());

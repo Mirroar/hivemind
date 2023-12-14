@@ -84,6 +84,12 @@ export default class RoomPlanner {
 		}
 	}
 
+	reloadRoomPlan() {
+		const activeInfo = getRoomPlanFor(this.roomName);
+		this.activeRoomPlan = activeInfo && activeInfo.plan;
+		this.activeRoomPlanVersion = activeInfo ? activeInfo.version : 0;
+	}
+
 	/**
 	 * Allows this room planner to give commands in controlled rooms.
 	 */

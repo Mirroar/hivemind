@@ -45,10 +45,21 @@ export default class ReclaimManager {
 
 		// Reset reclaim timer if we have no defense in the room.
 		if ((room.myStructuresByType[STRUCTURE_TOWER] || []).length > 0) return;
-		if ((room.controller.safeMode ?? 0) > 5000) return;
+		if ((room.controller.safeMode ?? 0) > 3000) return;
 
 		for (const username in room.enemyCreeps) {
 			if (!hivemind.relations.isAlly(username)) {
+				const enemyData = room.memory.enemies;
+				// @todo Make sure this enemy data accounts for boosts.
+				const rangedEnemyPower = (enemyData?.parts?.[RANGED_ATTACK] || 0) * RANGED_ATTACK_POWER
+					+ (enemyData?.parts?.[HEAL] || 0) * 5 * HEAL_POWER;
+				// @todo Estimate what kind of defense creep our rooms could spawn.
+				const myPower = 10 * RANGED_ATTACK_POWER + 5 * 5 * HEAL_POWER;
+				// @todo Use `couldWinFightAgainst` helper function from combat manager.
+				if (rangedEnemyPower < myPower) continue;
+
+				// There is an enemy here that we can't defeat easily.
+				// Wait for a better opportunity.
 				room.memory.isReclaimableSince = Game.time;
 				break;
 			}

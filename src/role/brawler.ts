@@ -4,6 +4,7 @@ LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import PathManager from 'empire/remote-path-manager';
 import Role from 'role/role';
@@ -90,9 +91,14 @@ export default class BrawlerRole extends Role {
 
 		this.performMilitaryMove(creep);
 
-		if (!this.performMilitaryAttack(creep)) {
-			this.performMilitaryHeal(creep);
+		if (creep.memory.order) {
+			// Attack ordered target first.
+			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
+
+			if (target instanceof StructureController && !target.my && this.attackMilitaryTarget(creep, target)) return;
 		}
+
+		container.get('CombatManager').manageFighting(creep);
 	}
 
 	/**
@@ -180,7 +186,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// Attack / Reserve controllers.
-		if (creep.getActiveBodyparts(CLAIM) >= 5 && creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
+		if (creep.getActiveBodyparts(CLAIM) > 0 && creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
 			options.push({
 				priority: 5,
 				weight: 0,
@@ -389,15 +395,11 @@ export default class BrawlerRole extends Role {
 			const targetPosition = decodePosition(creep.memory.target);
 			if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return;
 
-			// @todo For some reason, using goTo instead of moveTo here results in
-			// a lot of "trying to follow non-existing path" errors moving across rooms.
-			// Maybe because it clashes with other movement further down this method.
-			const options: MoveToOpts = {maxRooms: 1};
-			if (this.isPositionBlocked(targetPosition)) {
-				options.range = 1;
+			if (enemiesNearby) {
+				// @todo We want to ideally move to `targetPosition`, so use that as target if possible.
+				container.get('CombatManager').performKitingFighting(creep, container.get('CombatManager').getMostValuableTarget(creep));
+				return;
 			}
-
-			if (targetPosition.roomName === creep.pos.roomName) creep.moveTo(targetPosition, options);
 		}
 
 		if (creep.memory.order) {
@@ -408,31 +410,23 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.squadName) {
+			// This only gets called for squad units in a room where no fighting
+			// needs to take place.
 			const squad = Game.squads[creep.memory.squadName];
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
-				if (this.isPositionBlocked(targetPos)) {
-					creep.whenInRange(1, targetPos, () => {});
-				}
-				else {
-					creep.goTo(targetPos);
-				}
-
-				if (creep.pos.roomName === targetPos.roomName) {
-					this.militaryRoomReached(creep);
-				}
-				else {
-					creep.memory.target = encodePosition(targetPos);
-				}
+				creep.whenInRange(this.isPositionBlocked(targetPos) ? 1 : 0, targetPos, () => {
+					const structures = targetPos.lookFor(LOOK_STRUCTURES);
+					if (_.some(structures, s => s.structureType === STRUCTURE_PORTAL)) {
+						creep.move(creep.pos.getDirectionTo(targetPos));
+					}
+				});
 
 				return;
 			}
 		}
 
-		creep.moveTo(25, 25, {
-			reusePath: 50,
-			maxRooms: 1,
-		});
+		creep.whenInRange(10, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 	}
 
 	isPositionBlocked(position: RoomPosition): boolean {
@@ -590,10 +584,9 @@ export default class BrawlerRole extends Role {
 			});
 
 			if (spawn) {
-				if (spawn.renewCreep(creep) !== OK) {
-					creep.moveTo(spawn);
-				}
-
+				creep.whenInRange(1, spawn, () => {
+					spawn.renewCreep(creep);
+				});
 				return;
 			}
 		}
