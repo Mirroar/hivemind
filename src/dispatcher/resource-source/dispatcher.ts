@@ -5,6 +5,8 @@ import LabSource from 'dispatcher/resource-source/lab';
 import LinkSource from 'dispatcher/resource-source/link';
 import StorageSource from 'dispatcher/resource-source/storage';
 import TerminalSource from 'dispatcher/resource-source/terminal';
+import GraveSource from "./grave";
+import DropSource from "./drop";
 
 declare global {
 	interface ResourceSourceTask extends Task {
@@ -14,7 +16,7 @@ declare global {
 
 	interface ResourceSourceContext {
 		resourceType?: ResourceConstant;
-		creep: Creep;
+		creep?: Creep;
 	}
 }
 
@@ -27,5 +29,7 @@ export default class ResourceSourceDispatcher extends Dispatcher<ResourceSourceT
 		this.addProvider(new LinkSource(room));
 		this.addProvider(new StorageSource(room));
 		this.addProvider(new TerminalSource(room));
+		this.addProvider(new DropSource(room));
+		this.addProvider(new GraveSource(room));
 	}
 }

@@ -3,7 +3,7 @@ import {getDangerMatrix} from 'utils/cost-matrix';
 
 declare global {
 	interface StructureSourceTask extends ResourceSourceTask {
-		target: Id<AnyStoreStructure>;
+		target: Id<AnyStoreStructure> | Id<Ruin | Tombstone>;
 	}
 }
 
