@@ -96,7 +96,7 @@ export default class CombatManager {
 		// @todo Add structures in range only if room is not owned by an ally.
 		// @todo Add power creeps
 		// @todo Use same filters here and in `getAllTargetsInRoom`.
-		for (const structure of creep.pos.findInRange(FIND_STRUCTURES, 3)) {
+		for (const structure of creep.pos.findInRange(FIND_STRUCTURES, maxRange)) {
 			if (!structure.hits) continue;
 			if ('owner' in structure && hivemind.relations.isAlly(structure.owner?.username)) continue;
 			if (!('owner' in structure) && (
@@ -292,10 +292,11 @@ export default class CombatManager {
 					continue;
 				}
 
-				const isEnemyMeleeCreep = enemy.getActiveBodyparts(ATTACK) > 0 && enemy.getActiveBodyparts(MOVE) > 0 && enemy.fatigue === 0;
+				const isEnemyMeleeCreep = enemy.getActiveBodyparts(ATTACK) > 0;
+				const mightMoveTowardsUs = enemy.getActiveBodyparts(MOVE) > 0 && enemy.fatigue === 0;
+				const enemyRange = (isEnemyMeleeCreep ? 1 : 3) + (mightMoveTowardsUs ? 1 : 0);
 				if (!willFight) {
-					if (!isEnemyMeleeCreep || distance <= 2) position.score -= 500;
-					position.score -= 2000;
+					if (distance <= enemyRange) position.score -= 2500;
 					continue;
 				}
 
@@ -308,12 +309,13 @@ export default class CombatManager {
 					if (distance === 1) position.score += 300;
 					continue;
 				}
-
-				// Don't get too close, but prefer range 2 for easier chasing
-				// unless we're fighting a melee creep that might move towards us.
-				if (distance < 2) position.score -= 500;
-				if (distance === 2) position.score += isEnemyMeleeCreep ? 300 : 1000;
-				if (distance === 3) position.score += isEnemyMeleeCreep ? 1000 : 300;
+				else {
+					// Don't get too close, but prefer range 2 for easier chasing
+					// unless we're fighting a melee creep that might move towards us.
+					if (distance < 2) position.score -= 500;
+					if (distance === 2) position.score += isEnemyMeleeCreep ? 300 : 1000;
+					if (distance === 3) position.score += isEnemyMeleeCreep ? 1000 : 300;
+				}
 			}
 		}
 	}
@@ -329,9 +331,9 @@ export default class CombatManager {
 		}
 
 		if (
-			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK) * 2
+			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK)
 			&& creep.getActiveBodyparts(ATTACK) * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER * 2
-			&& otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0
+			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER * 2 > otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
 		) return true;
 
 		return false;
