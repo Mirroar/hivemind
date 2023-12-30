@@ -29,7 +29,6 @@ declare global {
 
 const roleNameMap = {
 	builder: 'B',
-	'builder.exploit': 'BE',
 	'builder.remote': 'BR',
 	'builder.mines': 'BM',
 	claimer: 'C',
@@ -40,14 +39,11 @@ const roleNameMap = {
 	gift: ':) GIFT (: ',
 	harvester: 'H',
 	'harvester.deposit': 'HD',
-	'harvester.exploit': 'HE',
 	'harvester.remote': 'HR',
 	'harvester.power': 'HP',
 	mule: 'M',
-	pest: 'P',
 	scout: 'S',
 	transporter: 'T',
-	'hauler.exploit': 'TE',
 	'hauler.power': 'TP',
 	'hauler.relay': 'TRR',
 	hauler: 'TR',
@@ -58,12 +54,14 @@ const allDirections = [TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT,
 
 export default class SpawnManager {
 	roles: Record<string, SpawnRole>;
+	roomsWithIdleSpawns: Record<string, number>;
 
 	/**
 	 * Creates a new SpawnManager instance.
 	 */
 	constructor() {
 		this.roles = {};
+		this.roomsWithIdleSpawns = {};
 	}
 
 	/**
@@ -88,6 +86,8 @@ export default class SpawnManager {
 	 *   An array of possible spawn options for the current room.
 	 */
 	getAllSpawnOptions(room: Room): SpawnOption[] {
+		if ((this.roomsWithIdleSpawns[room.name] || -100) > Game.time) return [];
+
 		return cache.inObject(room, 'spawnQueue', 1, () => {
 			const options: SpawnOption[] = [];
 
@@ -101,6 +101,9 @@ export default class SpawnManager {
 					options.push(option);
 				});
 			});
+
+			// Don't check spawn options every tick when there's nothing to spawn at the moment.
+			if (options.length === 0) this.roomsWithIdleSpawns[room.name] = Game.time + 10;
 
 			return options;
 		});

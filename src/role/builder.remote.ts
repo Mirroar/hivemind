@@ -112,11 +112,12 @@ export default class RemoteBuilderRole extends Role {
 	 */
 	setBuilderState(building: boolean) {
 		this.creep.memory.building = building;
+		delete this.creep.heapMemory.repairMinHits;
 		delete this.creep.memory.buildTarget;
+		delete this.creep.memory.extraEnergyTarget;
 		delete this.creep.memory.repairTarget;
 		delete this.creep.memory.resourceTarget;
 		delete this.creep.memory.upgrading;
-		delete this.creep.heapMemory.repairMinHits;
 	}
 
 	/**
@@ -404,6 +405,10 @@ export default class RemoteBuilderRole extends Role {
 	 */
 	setExtraEnergyTarget(creep: RemoteBuilderCreep) {
 		if (!hivemind.segmentMemory.isReady()) return;
+		if (!creep.memory.extraEnergyTarget && creep.store.getFreeCapacity() < creep.store.getCapacity() / 3) {
+			this.setBuilderState(true);
+			return;
+		}
 
 		const mainIntel = getRoomIntel(creep.pos.roomName);
 		const possibleSources: RoomPosition[] = [];

@@ -1,3 +1,4 @@
+import CombatManager from './creep/combat-manager';
 import HelpReport from './report/help';
 import FunnelManager from './empire/funnel-manager';
 import NavMesh from './utils/nav-mesh';
@@ -7,11 +8,13 @@ import ReportManager from './report/report-manager';
 import ResourcesReport from './report/resources';
 import RolesReport from './report/roles';
 import SpawnManager from './spawn-manager';
+import TradeRouteManager from './empire/trade-route-manager';
 import TrafficManager from './creep/traffic-manager';
 import {Container} from './utils/container';
 
 declare global {
 	interface DependencyInjectionContainer {
+		CombatManager: CombatManager;
 		HelpReport: HelpReport;
 		FunnelManager: FunnelManager;
 		NavMesh: NavMesh;
@@ -21,11 +24,13 @@ declare global {
 		ResourcesReport: ResourcesReport;
 		RolesReport: RolesReport;
 		SpawnManager: SpawnManager;
+		TradeRouteManager: TradeRouteManager;
 		TrafficManager: TrafficManager;
 	}
 }
 
 function containerFactory(container: Container) {
+	container.set('CombatManager', () => new CombatManager());
 	container.set('HelpReport', () => new HelpReport());
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('NavMesh', () => new NavMesh());
@@ -35,6 +40,7 @@ function containerFactory(container: Container) {
 	container.set('ResourcesReport', () => new ResourcesReport());
 	container.set('RolesReport', () => new RolesReport());
 	container.set('SpawnManager', () => new SpawnManager());
+	container.set('TradeRouteManager', () => new TradeRouteManager());
 	container.set('TrafficManager', () => new TrafficManager());
 }
 

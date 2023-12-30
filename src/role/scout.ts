@@ -1,6 +1,7 @@
 /* global RoomPosition OK */
 
 import cache from 'utils/cache';
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import Role from 'role/role';
 import {encodePosition, decodePosition} from 'utils/serialization';
@@ -200,8 +201,8 @@ export default class ScoutRole extends Role {
 
 	hasRoomPath(creep: Creep, destination: string): boolean {
 		return cache.inObject(accessibilityCache, creep.pos.roomName + '/' + destination, 5000, () => {
-			const path = creep.calculateRoomPath(destination, true);
-			if (path) return true;
+			const path = container.get('NavMesh').findPath(creep.pos, new RoomPosition(25, 25, destination));
+			if (!path.incomplete) return true;
 
 			return false;
 		});

@@ -3,7 +3,7 @@
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import PathManager from 'remote-path-manager';
+import PathManager from 'empire/remote-path-manager';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
@@ -23,14 +23,12 @@ declare global {
 	interface StrategyMemory {
 		roomList?: Record<string, RoomListEntry>;
 		roomListProgress?: string[]; // @todo Move to heap.
-		_expansionScoreCache?: Record<string, [number, number] | [number, number, Record<string, number>]>;
 	}
 
 	interface RoomListEntry {
 		scoutPriority?: number;
 		expansionScore?: number;
 		harvestPriority?: number;
-		harvestActive?: boolean;
 		range: number;
 		expansionReasons?: unknown;
 		safePath?: boolean;
@@ -45,6 +43,7 @@ interface ExpansionScore {
 }
 
 const preserveExpansionReasons = false;
+const expansionScoreCache: Record<string, [number, number] | [number, number, Record<string, number>]> = {};
 
 export default class ScoutProcess extends Process {
 	pathManager: PathManager;
@@ -67,7 +66,6 @@ export default class ScoutProcess extends Process {
 			Memory.strategy = {
 				roomList: {},
 				roomListProgress: [],
-				_expansionScoreCache: {},
 			};
 		}
 	}
@@ -79,7 +77,6 @@ export default class ScoutProcess extends Process {
 	 */
 	run() {
 		hivemind.log('strategy').info('Running scout process...');
-		// @todo Clean old entries from Memory.strategy._expansionScoreCache.
 
 		Memory.strategy.roomList = this.generateScoutTargets();
 		this.generateMineralStatus();
@@ -127,9 +124,6 @@ export default class ScoutProcess extends Process {
 		info.scoutPriority = 0;
 		info.expansionScore = 0;
 		info.harvestPriority = 0;
-
-		// Clean up old memory artifacts.
-		delete info.harvestActive;
 
 		const timeSinceLastScan = roomIntel.getAge();
 
@@ -262,7 +256,7 @@ export default class ScoutProcess extends Process {
 		const roomIntel = getRoomIntel(roomName);
 
 		// More sources is better.
-		result.addScore(roomIntel.getSourcePositions().length, 'numSources');
+		result.addScore((roomIntel.getSourcePositions().length * 2) - 2, 'numSources');
 
 		// Having a mineral source is good.
 		// We prefer rooms with minerals of which we have few / no sources.
@@ -341,6 +335,20 @@ export default class ScoutProcess extends Process {
 		// Having few swamp tiles is good (less cost for road maintenance, easier setup).
 		result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
+		// Prefer rooms to be a certain range from each other.
+		const distancesToRoom = _.map(_.filter(Game.myRooms, room => room.name !== roomName), room => Game.map.getRoomLinearDistance(room.name, roomName));
+		if (distancesToRoom.length > 0) {
+			const distanceToNextRoom = _.min(distancesToRoom);
+			const minDist = hivemind.settings.get('expansionMinRoomDistance');
+			const maxDist = hivemind.settings.get('expansionMaxRoomDistance');
+			if (distanceToNextRoom < minDist) {
+				result.addScore((distanceToNextRoom - minDist), 'tooClose');
+			}
+			if (distanceToNextRoom > maxDist) {
+				result.addScore(-(distanceToNextRoom - maxDist), 'tooFar');
+			}
+		}
+
 		this.setExpansionScoreCache(roomName, result);
 
 		return result;
@@ -355,14 +363,12 @@ export default class ScoutProcess extends Process {
 	 *   The result of the expansion score calculation.
 	 */
 	setExpansionScoreCache(roomName: string, result: ExpansionScore) {
-		if (!Memory.strategy._expansionScoreCache) Memory.strategy._expansionScoreCache = {};
-
 		// Preserve expansion score reasons if needed.
 		if (preserveExpansionReasons) {
-			Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
+			expansionScoreCache[roomName] = [result.score, Game.time, result.reasons];
 		}
 		else {
-			Memory.strategy._expansionScoreCache[roomName] = [result.score, Game.time];
+			expansionScoreCache[roomName] = [result.score, Game.time];
 		}
 	}
 
@@ -379,13 +385,12 @@ export default class ScoutProcess extends Process {
 	 *   stale.
 	 */
 	getExpansionScoreFromCache(roomName: string, result: ExpansionScore) {
-		if (!Memory.strategy._expansionScoreCache) return false;
-		if (!Memory.strategy._expansionScoreCache[roomName]) return false;
-		if (hivemind.hasIntervalPassed(hivemind.settings.get('expansionScoreCacheDuration'), Memory.strategy._expansionScoreCache[roomName][1])) return false;
+		if (!expansionScoreCache[roomName]) return false;
+		if (hivemind.hasIntervalPassed(hivemind.settings.get('expansionScoreCacheDuration'), expansionScoreCache[roomName][1])) return false;
 
-		result.addScore(Memory.strategy._expansionScoreCache[roomName][0], 'fromCache');
-		if (Memory.strategy._expansionScoreCache[roomName][2]) {
-			result.reasons = Memory.strategy._expansionScoreCache[roomName][2];
+		result.addScore(expansionScoreCache[roomName][0], 'fromCache');
+		if (expansionScoreCache[roomName][2]) {
+			result.reasons = expansionScoreCache[roomName][2];
 		}
 
 		return true;
@@ -404,7 +409,6 @@ export default class ScoutProcess extends Process {
 		const roomIntel = getRoomIntel(roomName);
 
 		// We don't care about rooms without controllers.
-		// @todo Once automated, we might care for exploiting source keeper rooms.
 		if (!roomIntel.isClaimable()) return 0;
 
 		// Can't remote harvest from my own room.
@@ -450,11 +454,15 @@ export default class ScoutProcess extends Process {
 			this.addAdjacentRooms(nextRoom, openList, closedList);
 			const info = openList[nextRoom];
 			delete openList[nextRoom];
-			const updated = closedList[nextRoom];
 			closedList[nextRoom] = true;
 
 			// Add current room as a candidate for scouting.
-			if (!roomList[nextRoom] || roomList[nextRoom].range > info.range || !Game.rooms[roomList[nextRoom].origin] || !Game.rooms[roomList[nextRoom].origin].isMine()) {
+			if (
+				!roomList[nextRoom]
+				|| roomList[nextRoom].range > info.range
+				|| !Game.rooms[roomList[nextRoom].origin]
+				|| !Game.rooms[roomList[nextRoom].origin].isMine()
+			) {
 				roomList[nextRoom] = {
 					range: info.range,
 					origin: info.origin,
@@ -557,8 +565,8 @@ export default class ScoutProcess extends Process {
 		const info = openList[roomName];
 		if (info.range >= (Memory.hivemind.maxScoutDistance || 7)) return;
 
-		const exits = getRoomIntel(roomName).getExits();
-		for (const exit of _.values<string>(exits)) {
+		const roomIntel = getRoomIntel(roomName);
+		for (const exit of _.values<string>(roomIntel.getExits())) {
 			if (openList[exit] || closedList[exit]) continue;
 
 			const roomIntel = getRoomIntel(exit);
@@ -570,6 +578,21 @@ export default class ScoutProcess extends Process {
 			};
 			if (info.safePath && roomIsSafe) openList[exit].safePath = true;
 		}
+
+		for (const portal of roomIntel.getRoomPortals()) {
+			if (openList[portal] || closedList[portal]) continue;
+
+			const roomIntel = getRoomIntel(portal);
+			const roomIsSafe = !roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader');
+
+			openList[portal] = {
+				range: info.range + 1,
+				origin: info.origin,
+			};
+			if (info.safePath && roomIsSafe) openList[portal].safePath = true;
+		}
+
+		// @todo Also use same-shard portals as possible exits.
 	}
 
 	/**

@@ -18,10 +18,6 @@ declare global {
 	}
 
 	interface CreepHeapMemory {}
-
-	interface Game {
-		exploitTemp: Record<string, string[]>;
-	}
 }
 
 // @todo Periodically clear heap memory of deceased creeps.
@@ -144,15 +140,6 @@ Creep.prototype.enhanceData = function (this: Creep) {
 	}
 
 	room.creepsByRole[role][this.name] = this;
-
-	// Store creeps that are part of an exploit operation in the correct object.
-	if (this.memory.exploitName) {
-		if (!Game.exploitTemp[this.memory.exploitName]) {
-			Game.exploitTemp[this.memory.exploitName] = [];
-		}
-
-		Game.exploitTemp[this.memory.exploitName].push(this.id);
-	}
 
 	// Store creeps that are part of a squad in the correct object.
 	if (this.memory.squadName && Game.squads[this.memory.squadName]) {

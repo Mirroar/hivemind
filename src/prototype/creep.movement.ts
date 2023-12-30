@@ -282,14 +282,19 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 				this.say('S:' + pos.x + 'x' + pos.y);
 			}
 
-			this.move(this.pos.getDirectionTo(path[0]));
+			if (path[0].roomName === this.pos.roomName) {
+				this.move(this.pos.getDirectionTo(path[0]));
 
-			// Due to push-behavior we sometimes try to move onto another creep.
-			// That creep needs to be pushed away.
-			const creep = path[0].lookFor(LOOK_CREEPS)[0];
-			if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
-			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
-			if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+				// Due to push-behavior we sometimes try to move onto another creep.
+				// That creep needs to be pushed away.
+				const creep = path[0].lookFor(LOOK_CREEPS)[0];
+				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+				const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+			}
+			else {
+				this.moveTo(path[0]);
+			}
 
 			return;
 		}
@@ -358,12 +363,17 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 				return true;
 			}
 
-			this.move(this.pos.getDirectionTo(path[0]));
+			if (path[0].roomName === this.pos.roomName) {
+				this.move(this.pos.getDirectionTo(path[0]));
 
-			const creep = path[0].lookFor(LOOK_CREEPS)[0];
-			if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
-			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
-			if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+				const creep = path[0].lookFor(LOOK_CREEPS)[0];
+				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+				const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+			}
+			else {
+				this.moveTo(path[0]);
+			}
 		}
 		else {
 			this.say('Searching');
@@ -404,12 +414,17 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 			this.say('getonit');
 		}
 
-		this.move(this.pos.getDirectionTo(path[0]));
+		if (path[0].roomName === this.pos.roomName) {
+			this.move(this.pos.getDirectionTo(path[0]));
 
-		const creep = path[0].lookFor(LOOK_CREEPS)[0];
-		if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
-		const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
-		if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+			const creep = path[0].lookFor(LOOK_CREEPS)[0];
+			if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+			if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+		}
+		else {
+			this.moveTo(path[0]);
+		}
 
 		return true;
 	}
@@ -926,10 +941,21 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 
 	// If we reach a waypoint, increment path index.
 	if (this.pos.getRangeTo(nextPos) <= 1 && this.heapMemory._nmpi < this.heapMemory._nmp.path.length - 1) {
-		this.heapMemory._nmpi++;
-		const nextPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
-		const moveResult = this.moveToRange(nextPos, 1, options);
-		if (!moveResult) {
+		if (_.some(nextPos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_PORTAL)) {
+			// Step onto portals.
+			if (this.move(this.pos.getDirectionTo(nextPos)) === OK) {
+				this.heapMemory._nmpi++;
+			}
+
+			return OK;
+		}
+
+		const newPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi + 1]);
+		const moveResult = this.moveToRange(newPos, 1, options);
+		if (moveResult) {
+			this.heapMemory._nmpi++;
+		}
+		else {
 			// Couldn't get to next path target.
 			// @todo Recalculate route?
 			return ERR_NO_PATH;

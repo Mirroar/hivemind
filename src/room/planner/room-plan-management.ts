@@ -38,6 +38,7 @@ function setRoomPlanFor(roomName: string, plan: RoomPlan, version: number) {
 		version,
 	});
 	roomPlanCache.set(roomName, {plan, version});
+	Game.rooms[roomName]?.roomPlanner?.reloadRoomPlan();
 }
 
 export {

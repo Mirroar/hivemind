@@ -7,7 +7,7 @@ import cache from 'utils/cache';
 import HaulerRole from 'spawn-role/hauler';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
-import PathManager from 'remote-path-manager';
+import PathManager from 'empire/remote-path-manager';
 import {decodePosition, encodePosition} from 'utils/serialization';
 import {drawTable} from 'utils/room-visuals';
 import {getCostMatrix} from 'utils/cost-matrix';
@@ -26,6 +26,7 @@ declare global {
 }
 
 const energyCache: Record<string, number> = {};
+const cannotDismantlePositions: Record<string, boolean> = {};
 
 /**
  * This kind of operation handles all remote mining.
@@ -191,7 +192,7 @@ export default class RemoteMiningOperation extends Operation {
 	 */
 	isUnderAttack(): boolean {
 		const roomMemory = Memory.rooms[this.roomName];
-		if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
+		if (roomMemory?.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
 
 		// Check rooms en route as well.
 		return cache.inHeap('rmPathSafety:' + this.name, 10, () => {
@@ -205,12 +206,16 @@ export default class RemoteMiningOperation extends Operation {
 
 					checkedRooms[pos.roomName] = true;
 					const roomMemory = Memory.rooms[pos.roomName];
-					if (roomMemory && roomMemory.enemies && !roomMemory.enemies.safe) return true;
+					if (roomMemory?.enemies && !roomMemory.enemies.safe && roomMemory.enemies.expires > Game.time) return true;
 				}
 			}
 
 			return false;
 		});
+	}
+
+	hasInvaderCore(): boolean {
+		return Memory.rooms[this.roomName]?.enemies?.hasInvaderCore;
 	}
 
 	getTotalEnemyData(): EnemyData {
@@ -220,13 +225,16 @@ export default class RemoteMiningOperation extends Operation {
 			heal: 0,
 			lastSeen: Game.time,
 			safe: false,
+			hasInvaderCore: this.hasInvaderCore(),
 		};
 
 		for (const roomName of this.getRoomsOnPath()) {
 			// @todo Now that we're spawning defense for every room on the path,
 			// make sure brawlers actually move to threatened rooms.
 			const roomMemory = Memory.rooms[roomName];
-			if (!roomMemory || !roomMemory.enemies || roomMemory.enemies.safe) continue;
+			if (!roomMemory?.enemies) continue;
+			if (roomMemory.enemies.hasInvaderCore) totalEnemyData.hasInvaderCore = true;
+			if (roomMemory.enemies.safe) continue;
 
 			totalEnemyData.damage += roomMemory.enemies.damage;
 			totalEnemyData.heal += roomMemory.enemies.heal;
@@ -305,7 +313,7 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	getRoomsOnPath(sourceLocation?: string): string[] {
-		return cache.inHeap('rmPath:' + this.name, 1000, () => {
+		return cache.inHeap('rmPath:' + this.name + ':' + (sourceLocation ?? 'all'), 1000, () => {
 			const paths = this.getPaths();
 			const result: string[] = [];
 			const checkedRooms = {};
@@ -314,7 +322,6 @@ export default class RemoteMiningOperation extends Operation {
 
 				const path = paths[location];
 				for (const pos of path.path || []) {
-					if (pos.roomName === this.roomName) continue;
 					if (checkedRooms[pos.roomName]) continue;
 
 					checkedRooms[pos.roomName] = true;
@@ -465,6 +472,16 @@ export default class RemoteMiningOperation extends Operation {
 		return this.hasReservation() ? 2 : 1;
 	}
 
+	hasActiveHarvesters(sourceLocation?: string): boolean {
+		if (sourceLocation) return _.some(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
+
+		for (const pos of this.getSourcePositions()) {
+			if (this.hasActiveHarvesters(encodePosition(pos))) return true;
+		}
+
+		return false;
+	}
+
 	/**
 	 * Determines whether the source / room needs a dismantler.
 	 */
@@ -474,16 +491,6 @@ export default class RemoteMiningOperation extends Operation {
 
 		for (const pos of this.getSourcePositions()) {
 			if (this.needsDismantler(encodePosition(pos))) return true;
-		}
-
-		return false;
-	}
-
-	hasActiveHarvesters(sourceLocation?: string): boolean {
-		if (sourceLocation) return _.some(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
-
-		for (const pos of this.getSourcePositions()) {
-			if (this.hasActiveHarvesters(encodePosition(pos))) return true;
 		}
 
 		return false;
@@ -509,16 +516,25 @@ export default class RemoteMiningOperation extends Operation {
 				if (pos.roomName !== roomName) {
 					// Load cost matrix for the current room.
 					roomName = pos.roomName;
-					matrix = getCostMatrix(roomName);
+					matrix = getCostMatrix(roomName, {ignoreMilitary: true});
 				}
 
 				// Don't try to dismantle things in our own rooms.
-				if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
+				if (Game.rooms[roomName]?.isMine()) continue;
 
-				if (matrix.get(pos.x, pos.y) >= 100) {
-					// Blocked tile found on path. Add to dismantle targets.
-					blockedTiles.push(pos);
+				if (matrix.get(pos.x, pos.y) < 100) continue;
+
+				// Make sure this is a structure that can be dismantled, not an invader core.
+				if (Game.rooms[roomName]) {
+					for (const structure of Game.rooms[roomName].structuresByType[STRUCTURE_INVADER_CORE] || []) {
+						cannotDismantlePositions[encodePosition(structure.pos)] = true;
+					}
 				}
+
+				if (cannotDismantlePositions[encodePosition(pos)]) continue;
+
+				// Blocked tile found on path. Add to dismantle targets.
+				blockedTiles.push(pos);
 			}
 
 			return packPosList(blockedTiles);

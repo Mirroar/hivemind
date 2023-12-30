@@ -113,6 +113,8 @@ const settings: SettingsObject = {
 
 	// Expansion scoring:
 	expansionScoreBonusHighwayExit: 0,
+	expansionMinRoomDistance: 0,
+	expansionMaxRoomDistance: 3,
 
 	// Room planning:
 	minCutRampartDistance: 4,

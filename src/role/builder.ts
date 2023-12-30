@@ -94,7 +94,7 @@ export default class BuilderRole extends Role {
 		if (creep.memory.repairing) {
 			if (
 				!this.performRepair(creep)
-				&& creep.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL
+				&& (creep.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL || creep.room.controller?.safeMode)
 			) {
 				creep.room.memory.noBuilderNeeded = Game.time;
 				const funnelManager = container.get('FunnelManager');
@@ -152,7 +152,7 @@ export default class BuilderRole extends Role {
 	performUpgrade(creep: BuilderCreep) {
 		if (
 			creep.room.roomManager?.hasMisplacedSpawn()
-			|| creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL
+			|| (creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL && !creep.room.controller?.safeMode)
 			|| creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0
 		) {
 			delete creep.memory.upgrading;
@@ -208,6 +208,7 @@ export default class BuilderRole extends Role {
 
 		if (
 			creep.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL
+			&& !creep.room.controller?.safeMode
 			&& !([STRUCTURE_SPAWN, STRUCTURE_RAMPART, STRUCTURE_TOWER, STRUCTURE_WALL] as string[]).includes(Game.getObjectById(creep.memory.order.target).structureType)
 		) {
 			this.calculateBuilderTarget(creep);

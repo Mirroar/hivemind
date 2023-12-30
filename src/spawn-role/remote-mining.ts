@@ -368,6 +368,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setWeights({[WORK]: 5, [CARRY]: option.isEstablished ? 0 : 1})
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
+			.setCarryContentLevel(0)
 			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
 			.build();
 	}

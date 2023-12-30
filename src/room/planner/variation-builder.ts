@@ -174,6 +174,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 		// Store position where main upgrader can stay and upgrade.
 		this.placementManager.planLocation(controllerRoads[0], 'upgrader.0', 1);
+		this.protectPosition(controllerRoads[0], 1);
 
 		this.placeContainer(controllerRoads, 'controller');
 
@@ -190,6 +191,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		let best: RoomPosition[];
 		handleMapArea(controllerPosition.x, controllerPosition.y, (x, y) => {
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+			if (!this.isAcceptableUpgraderPosition(x, y, controllerPosition)) return;
 
 			const startPosition = new RoomPosition(x, y, this.roomName);
 			const path = this.placementManager.findAccessRoad(startPosition, this.roomCenterEntrances);
@@ -199,6 +201,19 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		}, 3);
 
 		return best;
+	}
+
+	isAcceptableUpgraderPosition(x: number, y: number, controllerPosition: RoomPosition): boolean {
+		// We want at least 3 spots for upgraders that can reach the controller.
+		let validSpots = 0;
+		handleMapArea(x, y, (x2, y2) => {
+			if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
+			if (controllerPosition.getRangeTo(x2, y2) > 3) return;
+
+			validSpots++;
+		});
+
+		return validSpots >= 3;
 	}
 
 	placeRoadNetwork(): StepResult {
@@ -677,7 +692,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					continue;
 				}
 
-				if (this.safetyMatrix.get(x, y) === TILE_IS_SAFE) continue;
+				if (this.safetyMatrix.get(x, y) === TILE_IS_SAFE) {
+					// Record safe status in room plan.
+					this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'safe', null);
+					continue;
+				}
 				if (this.safetyMatrix.get(x, y) === TILE_IS_ENDANGERED) continue;
 
 				this.placementManager.blockPosition(x, y);

@@ -1,0 +1,439 @@
+import hivemind from 'hivemind';
+import utilities from 'utilities';
+import {getResourcesIn} from 'utils/store';
+import {handleMapArea} from 'utils/map';
+
+type AttackTarget = Creep | Structure;
+
+interface ScoredPosition {
+	pos: RoomPosition,
+	score: number,
+}
+
+const rangedMassAttackDamage = {
+	0: RANGED_ATTACK_POWER,
+	1: RANGED_ATTACK_POWER,
+	2: RANGED_ATTACK_POWER * 0.4,
+	3: RANGED_ATTACK_POWER * 0.1,
+}
+
+const TILE_PLAINS = 1;
+const TILE_SWAMP = 2;
+const TILE_WALL = 3;
+
+export default class CombatManager {
+	tileCache: Record<number, number>;
+	tileCacheTime: number;
+
+	public manageFighting(creep: Creep) {
+		this.healNearbyTargets(creep);
+		this.attackNearbyTargets(creep);
+	}
+
+	private healNearbyTargets(creep: Creep) {
+		const healParts = creep.getActiveBodyparts(HEAL);
+		if (healParts === 0) return;
+
+		const targets = creep.pos.findInRange(FIND_CREEPS, 3, {
+			// @todo Allow full-health creeps when pre-healing makes sense.
+			filter: c => c.hits < c.hitsMax && (c.my || hivemind.relations.isAlly(c.owner.username)),
+		});
+
+		const target = _.max(targets, c => Math.min(
+			c.hitsMax - c.hits,
+			healParts * (c.id === creep.id ? HEAL_POWER : RANGED_HEAL_POWER),
+		));
+		// @todo Handle the fact that we can't melee attack and heal at the same time.
+		if (target) creep.heal(target);
+	}
+
+	private attackNearbyTargets(creep: Creep) {
+		const availableTargets = this.getNearbyTargets(creep);
+		if (availableTargets.length === 0) return;
+
+		const availableOwnedTargets = _.filter(availableTargets, target => ('owner' in target) && target?.owner?.username);
+
+		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
+			if (availableOwnedTargets.length >= 2 && this.determineMassAttackDamage(creep, availableOwnedTargets) > RANGED_ATTACK_POWER) {
+				// @todo Ideally, even involve score from `scoreTargets()`.
+				creep.rangedMassAttack();
+				return;
+			}
+
+			creep.rangedAttack(this.getMostValuableTarget(creep, availableTargets));
+			return;
+		}
+
+		if (creep.getActiveBodyparts(ATTACK) > 0) {
+			creep.attack(this.getMostValuableTarget(creep, availableTargets));
+		}
+	}
+
+	private determineMassAttackDamage(creep: Creep, targets: AttackTarget[]): number {
+		let total = 0;
+		for (const target of targets) {
+			total += rangedMassAttackDamage[creep.pos.getRangeTo(target.pos)];
+		}
+
+		return total;
+	}
+
+	private getNearbyTargets(creep: Creep): AttackTarget[] {
+		const availableTargets = [];
+		const maxRange = this.getMaxAttackRange(creep);
+
+		for (const enemyName in creep.room.enemyCreeps) {
+			if (hivemind.relations.isAlly(enemyName)) continue;
+
+			for (const target of creep.room.enemyCreeps[enemyName]) {
+				if (creep.pos.getRangeTo(target) > maxRange) continue;
+
+				availableTargets.push(target);
+			}
+		}
+
+		// @todo Add construction sites (that have build progress) to run over.
+		// @todo Add structures in range only if room is not owned by an ally.
+		// @todo Add power creeps
+		// @todo Use same filters here and in `getAllTargetsInRoom`.
+		for (const structure of creep.pos.findInRange(FIND_STRUCTURES, maxRange)) {
+			if (!structure.hits) continue;
+			if ('owner' in structure && hivemind.relations.isAlly(structure.owner?.username)) continue;
+			if (!('owner' in structure) && (
+				creep.room.isMine()
+				|| hivemind.relations.isAlly(creep.room.controller?.owner?.username)
+				|| hivemind.relations.isAlly(creep.room.controller?.reservation?.username)
+			)) continue;
+
+			availableTargets.push(structure);
+		}
+
+		return availableTargets;
+	}
+
+	public getMaxAttackRange(creep: Creep): number {
+		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) return 3;
+		if (creep.getActiveBodyparts(ATTACK) > 0) return 1;
+
+		return 0;
+	}
+
+	public performKitingFighting(creep: Creep, target: AttackTarget) {
+		let targetRange = this.getMaxAttackRange(creep);
+		if (target instanceof Creep) {
+			const isMeleeCreep = target.getActiveBodyparts(ATTACK) > 0;
+			if (!isMeleeCreep) targetRange -= 1;
+		}
+
+		const positions = this.getValidNeighboringPositions(creep.pos);
+		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
+
+		if (_.any(enemyCreeps, c => c.pos.getRangeTo(creep) <= 5)) {
+			const scoredPositions = this.scoreKitingPositions(creep, enemyCreeps, positions);
+			if (scoredPositions.length === 0) {
+				// We don't know what to do. Guess we resume chasing our target.
+				creep.whenInRange(targetRange, target, () => {});
+			}
+
+			const newPosition = _.max(scoredPositions, 'score');
+			if (!creep.pos.isEqualTo(newPosition)) creep.move(creep.pos.getDirectionTo(newPosition.pos));
+
+			return;
+		}
+
+		// No danger, just keep close to our target to kill it.
+		creep.whenInRange(targetRange, target, () => {});
+	}
+
+	private getValidNeighboringPositions(position: RoomPosition) {
+		const positions: RoomPosition[] = [];
+		handleMapArea(position.x, position.y, (x, y) => {
+			const newPosition = new RoomPosition(x, y, position.roomName);
+			if (this.isTileWall(newPosition)) return;
+
+			positions.push(newPosition);
+		});
+
+		return positions;
+	}
+
+	public getEnemyMilitaryCreeps(room: Room): Creep[] {
+		const creeps = [];
+		for (const userName in room.enemyCreeps) {
+			if (hivemind.relations.isAlly(userName)) continue;
+			for (const enemyCreep of room.enemyCreeps[userName]) {
+				// Ignore creeps that are not dangerous to us.
+				if (
+					enemyCreep.getActiveBodyparts(ATTACK) === 0
+					&& enemyCreep.getActiveBodyparts(RANGED_ATTACK) === 0
+				) continue;
+
+				creeps.push(enemyCreep);
+			}
+		}
+
+		return creeps;
+	}
+
+	private scoreKitingPositions(creep: Creep, enemyCreeps: Creep[], positions: RoomPosition[]): ScoredPosition[] {
+		const scored = _.map(positions, pos => {return {
+			pos,
+			score: 0,
+		}});
+
+		// @todo Avoid positions near walls that constrain our movement options.
+		// @todo Prefer positions where we can do a high amount of RMA damage.
+		this.addRoomCenterRangeScore(scored);
+		this.addTerrainScore(creep.room, scored);
+		this.addEnemyRangeScore(creep, enemyCreeps, scored);
+
+		return scored;
+	}
+
+	private addRoomCenterRangeScore(positions: ScoredPosition[]) {
+		for (const position of positions) {
+			const range = position.pos.getRangeTo(25, 25);
+			position.score -= range * (0.9 + (range / 10));
+			position.score -= Math.min(25 - position.pos.x, 25 - position.pos.y);
+		}
+	}
+
+	private addTerrainScore(room: Room, positions: ScoredPosition[]) {
+		for (const position of positions) {
+			if (this.isTileSwamp(position.pos)) position.score -= 100;
+			// @todo Check what room it at the other side of the exit to
+			// determine how bad leaving in that direction would be.
+			if (
+				position.pos.x === 0
+				|| position.pos.x === 49
+				|| position.pos.y === 0
+				|| position.pos.y === 49
+			) position.score -= 200;
+
+			handleMapArea(position.pos.x, position.pos.y, (x, y) => {
+				const pos = new RoomPosition(x, y, position.pos.roomName);
+				if (this.isTileWall(pos)) position.score -= 20;
+				if (this.isTileSwamp(pos)) position.score -= 10;
+				if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) position.score -= 20;
+			}, 2);
+		}
+	}
+
+	private isTileWall(pos: RoomPosition): boolean {
+		const encodedPos = pos.roomName + ':' + (pos.x + (50 * pos.y));
+		this.generateTileCache(pos, encodedPos);
+
+		return this.tileCache[encodedPos] === TILE_WALL;
+	}
+
+	private isTileSwamp(pos: RoomPosition): boolean {
+		const encodedPos = pos.roomName + ':' + (pos.x + (50 * pos.y));
+		this.generateTileCache(pos, encodedPos);
+
+		return this.tileCache[encodedPos] === TILE_SWAMP;
+	}
+
+	private isTilePlains(pos: RoomPosition): boolean {
+		const encodedPos = pos.roomName + ':' + (pos.x + (50 * pos.y));
+		this.generateTileCache(pos, encodedPos);
+
+		return this.tileCache[encodedPos] === TILE_PLAINS;
+	}
+
+	private generateTileCache(pos: RoomPosition, encodedPos: string) {
+		if (this.tileCacheTime !== Game.time) {
+			this.tileCache = {};
+			this.tileCacheTime = Game.time;
+		}
+
+		if (this.tileCache[encodedPos]) return;
+
+		const terrain = new Room.Terrain(pos.roomName);
+		const structures = pos.lookFor(LOOK_STRUCTURES);
+		if (terrain.get(pos.x, pos.y) & TERRAIN_MASK_WALL) {
+			if (!_.some(structures, s => s.structureType === STRUCTURE_ROAD)) {
+				this.tileCache[encodedPos] = TILE_WALL;
+				return;
+			}
+		}
+
+		if (_.any(structures, s => !s.isWalkable())) {
+			this.tileCache[encodedPos] = TILE_WALL;
+			return;
+		}
+
+		if (terrain.get(pos.x, pos.y) & TERRAIN_MASK_SWAMP) {
+			if (!_.some(structures, s => s.structureType === STRUCTURE_ROAD)) {
+				this.tileCache[encodedPos] = TILE_SWAMP;
+				return;
+			}
+		}
+
+		this.tileCache[encodedPos] = TILE_PLAINS;
+	}
+
+	private addEnemyRangeScore(creep: Creep, enemyCreeps: Creep[], positions: ScoredPosition[]) {
+		const maxRange = this.getMaxAttackRange(creep);
+		const isRangedCreep = maxRange > 1;
+
+		// @todo Corner positions are beneficial when we're fleeing, and
+		// problematic when we're chasing.
+
+		for (const enemy of enemyCreeps) {
+			// @todo for strong enemy creeps, we might actually prefer
+			// staying out of its range to getting into range (>=5).
+
+			for (const position of positions) {
+				const distance = position.pos.getRangeTo(enemy.pos);
+
+				const willFight = this.couldWinFightAgainst(creep, enemy);
+				if (distance > maxRange) {
+					position.score -= (willFight ? 10 : -50) * (distance - maxRange);
+					continue;
+				}
+
+				const isEnemyMeleeCreep = enemy.getActiveBodyparts(ATTACK) > 0;
+				const mightMoveTowardsUs = enemy.getActiveBodyparts(MOVE) > 0 && enemy.fatigue === 0;
+				const enemyRange = (isEnemyMeleeCreep ? 1 : 3) + (mightMoveTowardsUs ? 1 : 0);
+				if (!willFight) {
+					if (distance <= enemyRange) position.score -= 2500;
+					continue;
+				}
+
+				// @todo Instead of doing these range preferences, we should calculate the possible incoming damage for
+				// a tile and check whether we could heal against it.
+				if (!isRangedCreep) {
+					// Prefer moving onto the enemy tile, so we can keep
+					// chasing.
+					if (distance === 0) position.score += 1000;
+					if (distance === 1) position.score += 300;
+					continue;
+				}
+				else {
+					// Don't get too close, but prefer range 2 for easier chasing
+					// unless we're fighting a melee creep that might move towards us.
+					if (distance < 2) position.score -= 500;
+					if (distance === 2) position.score += isEnemyMeleeCreep ? 300 : 1000;
+					if (distance === 3) position.score += isEnemyMeleeCreep ? 1000 : 300;
+				}
+			}
+		}
+	}
+
+	public couldWinFightAgainst(creep: Creep, otherCreep: Creep): boolean {
+		if (
+			creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
+			&& otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0
+		) return true;
+
+		if (creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER * 2 + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER * 2) {
+			return true;
+		}
+
+		if (
+			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK)
+			&& creep.getActiveBodyparts(ATTACK) * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER * 2
+			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER * 2 > otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
+		) return true;
+
+		return false;
+	}
+
+	public getMostValuableTarget(creep: Creep, targets?: AttackTarget[]): AttackTarget | null {
+		if (!targets) targets = this.getAllTargetsInRoom(creep.room);
+
+		const scoredTargets = this.scoreTargets(creep, targets);
+
+		const bestTarget = utilities.getBestOption(scoredTargets);
+		return bestTarget?.object;
+	}
+
+	private getAllTargetsInRoom(room: Room): AttackTarget[] {
+		const allTargets = [];
+
+		// Attack harvest / transport creeps, ideally those with energy in them.
+		for (const enemyName in room.enemyCreeps) {
+			if (hivemind.relations.isAlly(enemyName)) continue;
+
+			for (const target of room.enemyCreeps[enemyName]) {
+				// @todo Avoid military creeps that are too strong for us.
+				allTargets.push(target);
+			}
+		}
+
+		// Attack containers, roads and other infrastructure.
+		for (const structure of room.structures) {
+			if (!structure.hits) continue;
+			if ('owner' in structure && hivemind.relations.isAlly(structure.owner?.username)) continue;
+			if (!('owner' in structure) && (
+				room.isMine()
+				|| hivemind.relations.isAlly(room.controller?.owner?.username)
+				|| hivemind.relations.isAlly(room.controller?.reservation?.username)
+			)) continue;
+
+			allTargets.push(structure);
+		}
+
+		// @todo Attack / stomp construction sites.
+		// @todo Attack power creeps.
+
+		return allTargets;
+	}
+
+	private scoreTargets(creep: Creep, targets: AttackTarget[]): Array<{
+		weight: number;
+		priority: number;
+		object: AttackTarget;
+	}> {
+		return _.map(targets, target => {
+			let priority = 0;
+			let weight = 0;
+			// @todo Containers and roads are only relevant targets if the room is
+			// owned / harvested by another player.
+			if ('structureType' in target) {
+				if (target.structureType === STRUCTURE_CONTAINER) priority = 2;
+				if (target.structureType === STRUCTURE_ROAD) priority = 1;
+				weight = 1 - (target.hits / target.hitsMax);
+			}
+			else {
+				// @todo Prioritize boosted creeps.
+				priority = 3;
+				// Prioritize killing damaged creeps.
+				weight = (1 - (target.hits / target.hitsMax)) * 2;
+				// Prioritize close creeps we can actually reach.
+				weight -= target.pos.getRangeTo(creep.pos) / 20;
+				// Prioritize creeps that still have a long TTL.
+				weight += target.ticksToLive / (target.getActiveBodyparts(CLAIM) > 0 ? CREEP_CLAIM_LIFE_TIME : CREEP_LIFE_TIME);
+				// Prioritize creeps with expensive body parts.
+				weight += this.getBodyValue(target) / BODYPART_COST[CLAIM];
+				// Prioritize creeps carrying expensive goods.
+				weight += this.getStoreValue(target) / CARRY_CAPACITY;
+			}
+
+			return {
+				priority,
+				weight,
+				object: target,
+			}
+		});
+	}
+
+	private getBodyValue(target: Creep): number {
+		let total = 0;
+		for (const part of target.body) {
+			total += BODYPART_COST[part.type];
+		}
+
+		return total / target.body.length;
+	}
+
+	private getStoreValue(target: Creep): number {
+		let total = 0;
+		for (const resourceType of getResourcesIn(target.store)) {
+			// @todo Weigh depending on resource type.
+			total += target.store.getUsedCapacity(resourceType);
+		}
+
+		return total / target.body.length;
+	}
+}

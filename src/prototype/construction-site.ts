@@ -15,6 +15,7 @@ declare global {
 ConstructionSite.prototype.isWalkable = function (this: ConstructionSite): boolean {
 	if (!this.my) return true;
 	if (_.includes(OBSTACLE_OBJECT_TYPES, this.structureType)) return false;
+
 	return true;
 };
 

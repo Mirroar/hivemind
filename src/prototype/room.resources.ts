@@ -444,7 +444,7 @@ Room.prototype.getResourceState = function (this: Room) {
 
 		// Add resources in labs as well.
 		if (this.memory.labs && !roomData.isEvacuating) {
-			const labs = this.myStructuresByType[STRUCTURE_LAB];
+			const labs = this.myStructuresByType[STRUCTURE_LAB] || [];
 
 			for (const lab of labs) {
 				if (lab.mineralType && lab.mineralAmount > 0) {

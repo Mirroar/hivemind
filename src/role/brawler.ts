@@ -4,8 +4,9 @@ LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
+import container from 'utils/container';
 import hivemind from 'hivemind';
-import PathManager from 'remote-path-manager';
+import PathManager from 'empire/remote-path-manager';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
@@ -54,7 +55,6 @@ declare global {
 		};
 		target: string;
 
-		exploitTarget: Id<Creep>;
 		patrolPoint: Id<StructureKeeperLair>;
 	}
 
@@ -91,9 +91,14 @@ export default class BrawlerRole extends Role {
 
 		this.performMilitaryMove(creep);
 
-		if (!this.performMilitaryAttack(creep)) {
-			this.performMilitaryHeal(creep);
+		if (creep.memory.order) {
+			// Attack ordered target first.
+			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
+
+			if (target instanceof StructureController && !target.my && this.attackMilitaryTarget(creep, target)) return;
 		}
+
+		container.get('CombatManager').manageFighting(creep);
 	}
 
 	/**
@@ -181,7 +186,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// Attack / Reserve controllers.
-		if (creep.getActiveBodyparts(CLAIM) >= 5 && creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
+		if (creep.getActiveBodyparts(CLAIM) > 0 && creep.room.controller && !creep.room.controller.my && creep.room.controller.owner) {
 			options.push({
 				priority: 5,
 				weight: 0,
@@ -248,7 +253,7 @@ export default class BrawlerRole extends Role {
 		});
 		if (!creep.room.controller?.owner || hivemind.relations.isAlly(creep.room.controller.owner.username)) {
 			// Outside of owned rooms, only attack invader cores.
-			structures = _.filter(structures, structure => structure.structureType === STRUCTURE_INVADER_CORE);
+			structures = creep.room.structuresByType[STRUCTURE_INVADER_CORE] || [];
 		}
 
 		// Attack structures under target flag (even if non-hostile, like walls).
@@ -342,7 +347,7 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.fillWithEnergy) {
 			if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
 				if (creep.room.getEffectiveAvailableEnergy() < 3000) {
-					creep.moveToRange(new RoomPosition(25, 25, creep.room.name), 5);
+					creep.whenInRange(5, new RoomPosition(25, 25, creep.room.name), () => {});
 					return;
 				}
 
@@ -351,11 +356,6 @@ export default class BrawlerRole extends Role {
 			}
 
 			delete creep.memory.fillWithEnergy;
-		}
-
-		if (creep.memory.exploitName) {
-			this.performExploitMove(creep);
-			return;
 		}
 
 		let allowDanger = true;
@@ -395,15 +395,11 @@ export default class BrawlerRole extends Role {
 			const targetPosition = decodePosition(creep.memory.target);
 			if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return;
 
-			// @todo For some reason, using goTo instead of moveTo here results in
-			// a lot of "trying to follow non-existing path" errors moving across rooms.
-			// Maybe because it clashes with other movement further down this method.
-			const options: MoveToOpts = {maxRooms: 1};
-			if (this.isPositionBlocked(targetPosition)) {
-				options.range = 1;
+			if (enemiesNearby) {
+				// @todo We want to ideally move to `targetPosition`, so use that as target if possible.
+				container.get('CombatManager').performKitingFighting(creep, container.get('CombatManager').getMostValuableTarget(creep));
+				return;
 			}
-
-			if (targetPosition.roomName === creep.pos.roomName) creep.moveTo(targetPosition, options);
 		}
 
 		if (creep.memory.order) {
@@ -414,31 +410,23 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.squadName) {
+			// This only gets called for squad units in a room where no fighting
+			// needs to take place.
 			const squad = Game.squads[creep.memory.squadName];
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
-				if (this.isPositionBlocked(targetPos)) {
-					creep.moveToRange(targetPos, 1);
-				}
-				else {
-					creep.goTo(targetPos);
-				}
-
-				if (creep.pos.roomName === targetPos.roomName) {
-					this.militaryRoomReached(creep);
-				}
-				else {
-					creep.memory.target = encodePosition(targetPos);
-				}
+				creep.whenInRange(this.isPositionBlocked(targetPos) ? 1 : 0, targetPos, () => {
+					const structures = targetPos.lookFor(LOOK_STRUCTURES);
+					if (_.some(structures, s => s.structureType === STRUCTURE_PORTAL)) {
+						creep.move(creep.pos.getDirectionTo(targetPos));
+					}
+				});
 
 				return;
 			}
 		}
 
-		creep.moveTo(25, 25, {
-			reusePath: 50,
-			maxRooms: 1,
-		});
+		creep.whenInRange(10, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 	}
 
 	isPositionBlocked(position: RoomPosition): boolean {
@@ -451,6 +439,7 @@ export default class BrawlerRole extends Role {
 		const structures = position.lookFor(LOOK_STRUCTURES);
 		for (const structure of structures) {
 			if (!structure.isWalkable()) return true;
+			if (structure.structureType === STRUCTURE_PORTAL) return true;
 		}
 
 		return false;
@@ -459,7 +448,7 @@ export default class BrawlerRole extends Role {
 	moveToEngageTarget(creep: BrawlerCreep, target: RoomObject | null) {
 		if (!target) {
 			// @todo Still try to avoid other hostiles.
-			creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 10);
+			creep.whenInRange(10, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 
 			return;
 		}
@@ -494,7 +483,7 @@ export default class BrawlerRole extends Role {
 			// @todo Adjust cost matrix to disincentivize tiles around hostiles.
 			// @todo Include friendly creeps in obstacle list to prevent blocking.
 			const result = PathFinder.search(creep.pos, {pos: target.pos, range: 2}, {
-				roomCallback: roomName => getCostMatrix(roomName),
+				roomCallback: roomName => getCostMatrix(roomName, {ignoreMilitary: true}),
 				flee: true,
 				maxRooms: 1,
 			});
@@ -522,7 +511,7 @@ export default class BrawlerRole extends Role {
 			// Stay inside of spawn room.
 			const roomCenter = new RoomPosition(25, 25, creep.pos.roomName);
 			if (creep.pos.getRangeTo(roomCenter) > 20) {
-				creep.moveToRange(roomCenter, 20);
+				creep.whenInRange(20, roomCenter, () => {});
 				return ERR_BUSY;
 			}
 
@@ -563,138 +552,6 @@ export default class BrawlerRole extends Role {
 	}
 
 	/**
-	 * Performs creep movement as part of an exploit operation.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 *
-	 * @todo This should probably be done by having the exploit choose targets
-	 * and then using normal military creep movement to get there.
-	 */
-	performExploitMove(creep: BrawlerCreep) {
-		const exploit = Game.exploits[creep.memory.exploitName];
-		if (!exploit) return;
-
-		// If an enemy is close by, move to attack it.
-		const enemies = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 10, {
-			filter: enemy => enemy.isDangerous() && !hivemind.relations.isAlly(enemy.owner.username),
-		});
-		if (enemies.length > 0) {
-			creep.memory.exploitTarget = enemies[0].id;
-		}
-
-		if (creep.memory.exploitTarget) {
-			const target = Game.getObjectById(creep.memory.exploitTarget);
-
-			if (target) {
-				creep.moveTo(target);
-				return;
-			}
-
-			delete creep.memory.exploitTarget;
-		}
-
-		// Clear cached path if we've gotton close to goal.
-		if (creep.memory.patrolPoint && creep.hasCachedPath()) {
-			const lair = Game.getObjectById(creep.memory.patrolPoint);
-			if (creep.pos.getRangeTo(lair) <= 7) {
-				creep.clearCachedPath();
-			}
-		}
-
-		// Follow cached path when requested.
-		if (creep.hasCachedPath()) {
-			creep.followCachedPath();
-			if (creep.hasArrived()) {
-				creep.clearCachedPath();
-			}
-			else {
-				return;
-			}
-		}
-
-		if (creep.pos.roomName !== exploit.roomName && !creep.hasCachedPath() && exploit.memory.pathToRoom) {
-			// Follow cached path to target room.
-			creep.setCachedPath(exploit.memory.pathToRoom);
-			return;
-		}
-
-		// In-room movement.
-		this.performExploitPatrol(creep);
-	}
-
-	/**
-	 * Makes exploit creeps patrol along source keeper lairs.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 */
-	performExploitPatrol(creep: BrawlerCreep) {
-		const exploit = Game.exploits[creep.memory.exploitName];
-
-		// Start at closest patrol point to entrance
-		if (!creep.memory.patrolPoint) {
-			if (exploit.memory.closestLairToEntrance) {
-				creep.memory.patrolPoint = exploit.memory.closestLairToEntrance;
-			}
-			else if (exploit.memory.lairs) {
-				creep.memory.patrolPoint = _.sample(_.keys(exploit.memory.lairs)) as Id<StructureKeeperLair>;
-			}
-		}
-
-		if (!creep.memory.patrolPoint) return;
-
-		creep.memory.target = creep.memory.patrolPoint;
-		const lair = Game.getObjectById(creep.memory.patrolPoint);
-		if (!lair) return;
-
-		// Seems we have arrived at a patrol Point, and no enemies are immediately nearby.
-		// Find patrol point where we'll have the soonest fight.
-		let best = null;
-		let bestTime = null;
-
-		const id = creep.memory.patrolPoint;
-		for (const id2 of _.keys(exploit.memory.lairs)) {
-			const otherLair = Game.getObjectById<StructureKeeperLair>(id2);
-			if (!otherLair) continue;
-
-			let time = otherLair.ticksToSpawn || 0;
-
-			if (id !== id2) {
-				time = exploit.memory.lairs[id].paths[id2].path ? Math.max(time, exploit.memory.lairs[id].paths[id2].path.length) : Math.max(time, exploit.memory.lairs[id2].paths[id].path.length);
-			}
-
-			console.log('time to ' + id2 + ': ' + time);
-
-			if (!best || time < bestTime) {
-				best = id2;
-				bestTime = time;
-			}
-		}
-
-		if (!best) return;
-
-		if (best === creep.memory.patrolPoint) {
-			// We're at the correct control point. Move to intercept potentially spawning source keepers.
-			if (exploit.memory.lairs[best].sourcePath) {
-				creep.moveTo(deserializePositionPath(exploit.memory.lairs[best].sourcePath.path)[1]);
-			}
-			else {
-				creep.moveToRange(lair, 1);
-			}
-		}
-		else {
-			creep.memory.patrolPoint = best;
-			if (exploit.memory.lairs[id].paths[best].path) {
-				creep.setCachedPath(exploit.memory.lairs[id].paths[best].path, false, 3);
-			}
-			else {
-				creep.setCachedPath(exploit.memory.lairs[best].paths[id].path, true, 3);
-			}
-		}
-	}
-
-	/**
 	 * Makes a creep move as part of a squad.
 	 *
 	 * @param {Creep} creep
@@ -727,16 +584,15 @@ export default class BrawlerRole extends Role {
 			});
 
 			if (spawn) {
-				if (spawn.renewCreep(creep) !== OK) {
-					creep.moveTo(spawn);
-				}
-
+				creep.whenInRange(1, spawn, () => {
+					spawn.renewCreep(creep);
+				});
 				return;
 			}
 		}
 
 		// If there's nothing to do, move back to spawn room center.
-		creep.moveToRange(new RoomPosition(25, 25, creep.pos.roomName), 5);
+		creep.whenInRange(5, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 	}
 
 	/**

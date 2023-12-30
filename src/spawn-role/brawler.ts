@@ -76,12 +76,13 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			// that has better spawn capacity or higher RCL.
 
 			// Only spawn if there are enemies.
-			if (!operation || !operation.isUnderAttack()) continue;
+			if (!operation) continue;
+			if (!operation.isUnderAttack() && !operation.hasInvaderCore()) continue;
 
 			// Only spawn if we're actually using that source.
 			const sourceLocation = encodePosition(pos);
 			const harvesters = _.filter(Game.creepsByRole['harvester.remote'] || {}, (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
-			if (harvesters.length === 0) continue;
+			if (harvesters.length === 0 && !operation.hasContainer(sourceLocation) && !operation.hasReservation()) continue;
 
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
@@ -97,8 +98,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			if (responseType === RESPONSE_NONE) continue;
 
-			const isInvaderCore = totalEnemyData.damage === 0 && totalEnemyData.heal === 0;
-			if (!isInvaderCore && (operation.needsDismantler() || !operation.isProfitable())) continue;
+			if (operation.isUnderAttack() && (operation.needsDismantler() || !operation.isProfitable())) continue;
 
 			options.push({
 				priority: 3,
@@ -134,7 +134,6 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (enemies.parts[ATTACK]) enemies.parts[ATTACK] *= 0.1;
 
 			const responseType = this.getDefenseCreepSize(room, enemies);
-
 			if (responseType === RESPONSE_NONE) return;
 
 			options.push({
@@ -148,29 +147,40 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 	getDefenseCreepSize(room: Room, enemyData: EnemyData): number {
 		// Default defense creep has 4 attack and 3 heal parts.
-		const defaultAttack = 4;
+		const defaultAttack = 5;
 		const defaultHeal = 3;
 
-		const enemyPower = enemyData.damage + (enemyData.heal * 5);
+		const defaultBlinkyAttack = 6;
+		const defaultBlinkyHeal = 2;
+
+		const meleeWithHealValue = 3;
+		const healValue = 5;
+
+		const enemyPower = enemyData.damage + (enemyData.heal * healValue);
 		const isRangedEnemy = (enemyData.parts[RANGED_ATTACK] || 0) > 0;
 
+		const smallDefenderPower = (defaultAttack * ATTACK_POWER) + (defaultHeal * HEAL_POWER * meleeWithHealValue);
+		const smallBlinkyPower = (defaultBlinkyAttack * RANGED_ATTACK_POWER) + (defaultBlinkyHeal * HEAL_POWER * healValue);
+
 		// Use a reasonable attacker for destroying invader cores.
-		if (enemyPower === 0) {
+		if (enemyData.hasInvaderCore && enemyPower < smallDefenderPower) {
 			return RESPONSE_ATTACKER;
 		}
 
 		// For small attackers that should be defeated easily, use simple brawler.
-		if (enemyPower < (defaultAttack * ATTACK_POWER) + (defaultHeal * HEAL_POWER * 5)) {
-			if (isRangedEnemy) return RESPONSE_MINI_BLINKY;
-
+		if (enemyPower < smallDefenderPower && !isRangedEnemy) {
 			return RESPONSE_MINI_BRAWLER;
+		}
+
+		if (enemyPower < smallBlinkyPower) {
+			return RESPONSE_MINI_BLINKY;
 		}
 
 		// If damage and heal suffices, use single melee / heal creep.
 		const brawlerBody = this.getBrawlerCreepBody(room);
 		const numberBrawlerAttack = _.filter(brawlerBody, p => p === ATTACK).length;
 		const numberBrawlerHeal = _.filter(brawlerBody, p => p === HEAL).length;
-		if (!isRangedEnemy && enemyPower < (numberBrawlerAttack * ATTACK_POWER) + (numberBrawlerHeal * HEAL_POWER * 5)) {
+		if (!isRangedEnemy && enemyPower < (numberBrawlerAttack * ATTACK_POWER) + (numberBrawlerHeal * HEAL_POWER * meleeWithHealValue)) {
 			return RESPONSE_FULL_BRAWLER;
 		}
 
@@ -178,7 +188,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		const blinkyBody = this.getBlinkyCreepBody(room);
 		const numberBlinkyRanged = _.filter(blinkyBody, p => p === RANGED_ATTACK).length;
 		const numberBlinkyHeal = _.filter(blinkyBody, p => p === HEAL).length;
-		if (enemyPower < (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * 5)) {
+		if (enemyPower < (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_BLINKY;
 		}
 
@@ -190,27 +200,27 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		const numberTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
 		const numberTrainHeal = _.filter(healBody, p => p === HEAL).length;
 
-		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * 5)) {
+		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_ATTACK_HEAL_TRAIN;
 		}
 
-		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * 5)) {
+		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_ATTACK_BLINKY_TRAIN;
 		}
 
-		if (enemyPower < ((numberTrainRanged + numberBlinkyRanged) * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * 5)) {
+		if (enemyPower < ((numberTrainRanged + numberBlinkyRanged) * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_RANGED_BLINKY_TRAIN;
 		}
 
-		if (enemyPower < (2 * numberBlinkyRanged * RANGED_ATTACK_POWER) + (2 * numberBlinkyHeal * HEAL_POWER * 5)) {
+		if (enemyPower < (2 * numberBlinkyRanged * RANGED_ATTACK_POWER) + (2 * numberBlinkyHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_BLINKY_BLINKY_TRAIN;
 		}
 
-		if (enemyPower < (numberTrainRanged * RANGED_ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * 5)) {
+		if (enemyPower < (numberTrainRanged * RANGED_ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_RANGED_HEAL_TRAIN;
 		}
 
-		if (enemyPower < (numberBlinkyRanged * RANGED_ATTACK_POWER) + ((numberTrainHeal + numberBlinkyHeal) * HEAL_POWER * 5)) {
+		if (enemyPower < (numberBlinkyRanged * RANGED_ATTACK_POWER) + ((numberTrainHeal + numberBlinkyHeal) * HEAL_POWER * healValue)) {
 			return RESPONSE_BLINKY_HEAL_TRAIN;
 		}
 
@@ -252,12 +262,12 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			// @todo Only send brawlers when the room to reclaim might be
 			// attacked.
-			/* Options.push({
+			options.push({
 				priority: 4,
 				weight: 0,
 				targetPos: encodePosition(targetRoom.roomPlanner.getRoomCenter()),
 				responseType: RESPONSE_BLINKY,
-			}); */
+			});
 		}
 	}
 
@@ -294,7 +304,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			switch (option.responseType) {
 				case RESPONSE_MINI_BRAWLER:
 				case RESPONSE_FULL_BRAWLER:
-					return this.getBrawlerCreepBody(room, option.responseType === RESPONSE_MINI_BRAWLER ? 4 : null);
+					return this.getBrawlerCreepBody(room, option.responseType === RESPONSE_MINI_BRAWLER ? 5 : null);
 
 				case RESPONSE_BLINKY:
 				case RESPONSE_MINI_BLINKY:
@@ -330,7 +340,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 	getBrawlerCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
 		return (new BodyBuilder())
-			.setWeights({[ATTACK]: 3,[HEAL]: 2})
+			.setWeights({[ATTACK]: 2,[HEAL]: 1})
 			.setPartLimit(ATTACK, maxAttackParts)
 			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
 			.setMoveBufferRatio(0.4)

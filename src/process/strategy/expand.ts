@@ -1,6 +1,7 @@
 /* global PathFinder Room RoomPosition CREEP_LIFE_TIME FIND_MY_CREEPS
 TERRAIN_MASK_WALL STRUCTURE_ROAD FIND_CONSTRUCTION_SITES STRUCTURE_RAMPART */
 
+import cache from 'utils/cache';
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
@@ -22,10 +23,6 @@ type ExpandProcessMemory = {
 		roomName: string;
 		supportingRooms: string[];
 		spawnRoom: string;
-	};
-	inProgress: {
-		rooms: Record<string, boolean>;
-		bestTarget: ExpansionTarget;
 	};
 	pathBlocked: number;
 	evacuatingRoom: {
@@ -52,6 +49,11 @@ declare global {
 
 let lastCleanup = 0;
 
+let expansionTargetScoringProgress: {
+	rooms: Record<string, boolean>;
+	bestTarget: ExpansionTarget;
+};
+
 export default class ExpandProcess extends Process {
 	memory: ExpandProcessMemory;
 	navMesh: NavMesh;
@@ -76,8 +78,6 @@ export default class ExpandProcess extends Process {
 
 		this.memory = Memory.strategy.expand;
 		this.navMesh = new NavMesh();
-
-		// @todo Clean failed attempts memory of old attempts.
 	}
 
 	/**
@@ -134,12 +134,12 @@ export default class ExpandProcess extends Process {
 		let bestTarget;
 		let modifiedBestExpansionScore: number;
 		const startTime = Game.cpu.getUsed();
-		if (this.memory.inProgress) {
-			bestTarget = this.memory.inProgress.bestTarget;
+		if (expansionTargetScoringProgress) {
+			bestTarget = expansionTargetScoringProgress.bestTarget;
 			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget.roomName, bestTarget);
 		}
 		else {
-			this.memory.inProgress = {
+			expansionTargetScoringProgress = {
 				rooms: {},
 				bestTarget: null,
 			};
@@ -148,7 +148,7 @@ export default class ExpandProcess extends Process {
 		for (const roomName in Memory.strategy.roomList) {
 			const roomFilter = settings.get('expansionRoomFilter');
 			if (roomFilter && !roomFilter(roomName)) {
-				this.memory.inProgress.rooms[roomName] = true;
+				expansionTargetScoringProgress.rooms[roomName] = true;
 				continue;
 			}
 
@@ -156,15 +156,15 @@ export default class ExpandProcess extends Process {
 			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than configured cpu amount trying to find
 				// a target each tick.
-				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(this.memory.inProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
+				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(expansionTargetScoringProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
 				hivemind.log('strategy').debug('Current best target:', bestTarget ? bestTarget.roomName : 'N/A', '@', bestTarget ? modifiedBestExpansionScore : 'N/A');
 				return;
 			}
 
-			if (this.memory.inProgress.rooms[roomName]) continue;
+			if (expansionTargetScoringProgress.rooms[roomName]) continue;
 
-			this.memory.inProgress.rooms[roomName] = true;
-			if (!info.expansionScore || info.expansionScore <= 0) continue;
+			expansionTargetScoringProgress.rooms[roomName] = true;
+			if (typeof info.expansionScore === 'undefined' || info.expansionScore === 0) continue;
 
 			const modifiedExpansionScore = this.getModifiedExpansionScore(roomName, info);
 			if (bestTarget && modifiedBestExpansionScore >= modifiedExpansionScore) continue;
@@ -176,11 +176,11 @@ export default class ExpandProcess extends Process {
 
 			bestTarget = {...info, spawnRoom: bestSpawn, roomName};
 			modifiedBestExpansionScore = modifiedExpansionScore;
-			this.memory.inProgress.bestTarget = bestTarget;
+			expansionTargetScoringProgress.bestTarget = bestTarget;
 		}
 
 		if (bestTarget) {
-			delete this.memory.inProgress;
+			expansionTargetScoringProgress = null;
 			this.startExpansion(bestTarget);
 		}
 	}
@@ -307,7 +307,7 @@ export default class ExpandProcess extends Process {
 
 		// If a lot of time has passed after claiming, let the room fend for itself
 		// anyways, either it will be lost or fix itself.
-		if (this.memory.claimed && Game.time - this.memory.claimed > 50 * CREEP_LIFE_TIME) return true;
+		if (this.memory.claimed && Game.time - this.memory.claimed > 20 * CREEP_LIFE_TIME) return true;
 
 		// If we lose control of the room, there's been a problem.
 		const room = Game.rooms[this.memory.currentTarget.roomName];
@@ -368,11 +368,11 @@ export default class ExpandProcess extends Process {
 			if (_.size(activeSquads) >= 5) break;
 
 			if (room.controller.level < 4) continue;
+			if ((room.structuresByType[STRUCTURE_SPAWN] || []).length === 0) continue;
 			if (room.name === info.spawnRoom || room.name === info.roomName) continue;
-			if (Game.map.getRoomLinearDistance(room.name, info.roomName) > 10) continue;
 			if (room.getEffectiveAvailableEnergy() < 50_000) continue;
 
-			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700});
+			const path = cache.inHeap('spawnAssistPath:' + info.roomName + ':' + room.name, 2000, () => this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700}));
 			if (!path || path.incomplete) continue;
 
 			const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
@@ -424,7 +424,7 @@ export default class ExpandProcess extends Process {
 			}
 		}
 
-		const roads = room.structuresByType[STRUCTURE_ROAD];
+		const roads = room.structuresByType[STRUCTURE_ROAD] || [];
 		for (const road of roads) {
 			matrix.set(road.pos.x, road.pos.y, 1);
 		}
@@ -544,9 +544,9 @@ export default class ExpandProcess extends Process {
 		for (const room of Game.myRooms) {
 			if (room.controller.level < 5) continue;
 			if (room.name === targetRoom) continue;
-			if (Game.map.getRoomLinearDistance(room.name, targetRoom) > 10) continue;
+			if ((room.structuresByType[STRUCTURE_SPAWN] || []).length === 0) continue;
 
-			const path = this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500});
+			const path = cache.inHeap('spawnPath:' + targetRoom + ':' + room.name, 1000, () => this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom), {maxPathLength: 500}));
 			if (!path || path.incomplete) continue;
 
 			if (!bestRoom || bestLength > path.path.length) {

@@ -13,7 +13,6 @@ declare global {
 		building?: boolean;
 		buildTarget?: any;
 		currentLair?: any;
-		exploitName?: any;
 		extraEnergyTarget?: any;
 		isHealer?: boolean;
 		isReturning?: boolean;

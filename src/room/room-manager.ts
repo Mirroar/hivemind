@@ -94,7 +94,7 @@ export default class RoomManager {
 	 */
 	runLogic() {
 		if (!this.roomPlanner || !this.roomPlanner.isPlanningFinished()) return;
-		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE) return;
+		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !this.room.controller?.safeMode) return;
 
 		delete this.memory.runNextTick;
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
@@ -127,12 +127,13 @@ export default class RoomManager {
 	buildRoomDefenseFirst() {
 		for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level]; i++) {
 			// Build ramparts at tower spots.
-			const position = this.roomPlanner.getLocations('tower.' + i)[0];
-			if (position) this.tryBuild(position, STRUCTURE_RAMPART);
-
-			// Build towers.
-			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_RAMPART, pos => this.roomPlanner.isPlannedLocation(pos, 'tower'));
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER, pos => this.roomPlanner.isPlannedLocation(pos, 'tower'));
 		}
+		// @todo We don't really want to build ramparts at spots where we
+		// can't build towers yet (if we're not at max RCL).
+		this.buildPlannedStructures('tower', STRUCTURE_RAMPART);
+		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
 
 		// Build normal ramparts.
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
@@ -263,7 +264,7 @@ export default class RoomManager {
 		this.removeUnplannedStructures('tower', STRUCTURE_TOWER, 1);
 		const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][this.room.controller.level];
 		for (let i = 0; i < maxTowers; i++) {
-			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER);
+			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER, pos => this.roomPlanner.isPlannedLocation(pos, 'tower'));
 		}
 
 		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
@@ -281,7 +282,7 @@ export default class RoomManager {
 		}
 		else if (roomSpawns.length + roomSpawnSites.length < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]) {
 			for (let i = 0; i < CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level]; i++) {
-				this.buildPlannedStructures('spawn.' + i, STRUCTURE_SPAWN);
+				this.buildPlannedStructures('spawn.' + i, STRUCTURE_SPAWN, pos => this.roomPlanner.isPlannedLocation(pos, 'spawn'));
 			}
 
 			this.buildPlannedStructures('spawn', STRUCTURE_SPAWN);
@@ -318,7 +319,7 @@ export default class RoomManager {
 		// we still have a safemode remaining, it's not on cooldown, and no other
 		// room of ours is safemoded.
 		const currentSafemode = this.room.controller.safeMode ?? 0;
-		if (this.room.controller.level >= 3 && currentSafemode < 2000) {
+		if (this.room.controller.level >= 3 && (currentSafemode < 2000 || this.room.controller.safeModeCooldown)) {
 			// Make sure all requested main ramparts are built.
 			this.buildPlannedStructures('rampart', STRUCTURE_RAMPART, pos => !this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp'));
 
@@ -415,16 +416,16 @@ export default class RoomManager {
 		if (this.room.controller.level >= 3) {
 			// We can now build extensions near energy sources, since harvesters are now
 			// big enough that one will be able to harvest all available energy.
-			this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION);
+			this.buildPlannedStructures('extension.harvester', STRUCTURE_EXTENSION, pos => this.roomPlanner.isPlannedLocation(pos, 'extension'));
 		}
 
 		// Otherwise, build extensions one bay at a time.
 		for (let i = 0; i < 10; i++) {
-			this.buildPlannedStructures('extension.bay.' + i, STRUCTURE_EXTENSION);
+			this.buildPlannedStructures('extension.bay.' + i, STRUCTURE_EXTENSION, pos => this.roomPlanner.isPlannedLocation(pos, 'extension'));
 		}
 
 		// Then, all extensions we might have missed.
-		this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION);
+		this.buildPlannedStructures('extension.bay', STRUCTURE_EXTENSION, pos => this.roomPlanner.isPlannedLocation(pos, 'extension'));
 		this.buildPlannedStructures('extension', STRUCTURE_EXTENSION);
 	}
 

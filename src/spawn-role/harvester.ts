@@ -83,11 +83,6 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			totalWorkParts += creep.getActiveBodyparts(WORK) || 0;
 		}
 
-		// Remote builders want access to sources as well, so spawn less harvesters.
-		for (const creep of _.values<Creep>(source.room.creepsByRole['builder.remote']) || []) {
-			totalWorkParts += (creep.getActiveBodyparts(WORK) || 0) / 2;
-		}
-
 		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
 		const minSpawnDistance = _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)));
 		const maxParts = this.getMaxWorkParts(source);
@@ -162,7 +157,8 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			}
 		});
 
-		const sizeFactor = source.room.controller.level < 7 ? 1 : 1.2;
+		const sizeFactor = (source.room.controller.level === 8 ? 2 :
+			(source.room.controller.level === 7 ? 1.2 : 1));
 
 		return sizeFactor * numberOfParts;
 	}

@@ -9,6 +9,7 @@ interface CostMatrixOptions {
 	singleRoom?: boolean;
 	isQuad?: boolean;
 	ignoreMilitary?: boolean;
+	allowDanger?: boolean;
 }
 
 declare global {
@@ -38,11 +39,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		options = {};
 	}
 
-	const roomHasBlockingConstructionSites = (Game.rooms[roomName]?.find(
-		FIND_MY_CONSTRUCTION_SITES,
-		{filter: site => !site.isWalkable()}
-	) || []).length > 0;
-	const cacheDuration = roomHasBlockingConstructionSites ? 20 : 500;
+	const cacheDuration = hivemind.segmentMemory.isReady() ? (roomHasBlockingConstructionSites(roomName) ? 20 : 500) : 1;
 
 	let cacheKey = 'costMatrix:' + roomName;
 	let matrix = hivemind.segmentMemory.isReady() ? cache.inHeap(
@@ -75,7 +72,15 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		);
 	}
 
-	if (matrix && hivemind.segmentMemory.isReady() && Game.rooms[roomName] && Game.rooms[roomName].isMine() && Game.rooms[roomName].defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !options.ignoreMilitary) {
+	if (
+		matrix
+		&& !options.ignoreMilitary
+		&& !options.allowDanger
+		&& hivemind.segmentMemory.isReady()
+		&& Game.rooms[roomName]
+		&& Game.rooms[roomName].isMine()
+		&& Game.rooms[roomName].defense.getEnemyStrength() > ENEMY_STRENGTH_NONE
+	) {
 		// Discourage unprotected areas when enemies are in the room.
 		cacheKey += ':inCombat';
 
@@ -90,6 +95,15 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 	}
 
 	return matrix;
+}
+
+function roomHasBlockingConstructionSites(roomName: string): boolean {
+	return cache.inHeap('roomHasBlockingConstructionSites:' + roomName, 20, () => {
+		return (Game.rooms[roomName]?.find(
+			FIND_MY_CONSTRUCTION_SITES,
+			{filter: site => !site.isWalkable()}
+		) || []).length > 0;
+	})
 }
 
 /**
@@ -174,6 +188,12 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 	const terrain = new Room.Terrain(roomName);
 	const dangerMatrix = new PathFinder.CostMatrix();
 
+	// No need to consider enemies when the room is safemoded.
+	if (Game.rooms[roomName].controller.safeMode) {
+		cache.inHeap('dangerMatrix:' + roomName, 20, () => dangerMatrix);
+		return newMatrix;
+	}
+
 	// We flood fill from enemies and make all tiles they can reach more
 	// difficult to travel through.
 	const closedList: Record<string, boolean> = {};
@@ -182,6 +202,11 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 	for (const username in Game.rooms[roomName].enemyCreeps) {
 		if (hivemind.relations.isAlly(username)) continue;
 		for (const creep of Game.rooms[roomName].enemyCreeps[username]) {
+			// Ignore creeps inside our walls. If they're here already, we don't
+			// want all our creeps to stop moving because the inside of the
+			// base is suddenly dangerous.
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(creep.pos, 'safe')) continue;
+
 			const location = encodePosition(creep.pos);
 			closedList[location] = true;
 			openList.push(creep.pos);
@@ -190,6 +215,7 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 
 	while (openList.length > 0) {
 		const pos = openList.pop();
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(pos, 'safe')) continue;
 
 		// Increase cost matrix value for the given tile.
 		let value = matrix.get(pos.x, pos.y);
@@ -208,6 +234,8 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 			const newPos = new RoomPosition(x, y, roomName);
 			if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
 			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'safe')) return;
+			dangerMatrix.set(x, y, 2);
 			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
 
 			let value = matrix.get(x, y);
@@ -217,7 +245,6 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 			}
 
 			newMatrix.set(x, y, blockDangerousTiles ? 255 : 5 * value + 25);
-			dangerMatrix.set(x, y, 2);
 		}, 3);
 
 		// Add available adjacent tiles.
@@ -294,7 +321,7 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 		// should not be marked inaccessible.
 		const roomIntel = getRoomIntel(roomName);
 		// @todo Make sure Game.exploits is set at this point and use that instead.
-		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0 && !Memory.exploits?.[roomName]) {
+		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
 			// Add area around keeper lairs as obstacles.
 			_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
 				handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {

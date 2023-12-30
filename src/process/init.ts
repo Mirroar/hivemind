@@ -1,7 +1,6 @@
 import Process from 'process/process';
 import BoostManager from 'boost-manager';
 import cache from 'utils/cache';
-import Exploit from 'manager.exploit';
 import hivemind from 'hivemind';
 import RoomManager from 'room/room-manager';
 import RoomPlanner from 'room/planner/room-planner';
@@ -13,7 +12,6 @@ import RoomOperation from 'operation/room';
 declare global {
 	interface Game {
 		creepsByRole: Record<string, Record<string, Creep>>;
-		exploits: Record<string, Exploit>;
 		myRooms: Room[];
 	}
 }
@@ -29,9 +27,7 @@ export default class InitProcess extends Process {
 	 */
 	run() {
 		Game.squads = {};
-		Game.exploits = {};
 		Game.creepsByRole = {};
-		Game.exploitTemp = {};
 		Game.operations = {};
 		Game.operationsByType = {};
 

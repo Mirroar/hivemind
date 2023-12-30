@@ -9,7 +9,6 @@ import caravanTraderSpawnRole from 'spawn-role/caravan-trader';
 import claimerSpawnRole from 'spawn-role/claimer';
 import depositHarvesterSpawnRole from 'spawn-role/harvester.deposit';
 import dismantlerSpawnRole from 'spawn-role/dismantler';
-import exploitSpawnRole from 'spawn-role/exploit';
 import gathererSpawnRole from 'spawn-role/gatherer';
 import giftSpawnRole from 'spawn-role/gift';
 import harvesterSpawnRole from 'spawn-role/harvester';
@@ -55,7 +54,6 @@ const spawnClasses = {
 	'caravan-trader': caravanTraderSpawnRole,
 	claimer: claimerSpawnRole,
 	dismantler: dismantlerSpawnRole,
-	exploit: exploitSpawnRole,
 	gatherer: gathererSpawnRole,
 	gift: giftSpawnRole,
 	harvester: harvesterSpawnRole,
@@ -103,7 +101,7 @@ export default class ManageSpawnsProcess extends Process {
 	 * Manages a room's spawns.
 	 */
 	run() {
-		const roomSpawns = _.filter(Game.spawns, spawn => spawn.pos.roomName === this.room.name && spawn.isOperational());
+		const roomSpawns = _.filter(this.room.myStructuresByType[STRUCTURE_SPAWN], spawn => spawn.isOperational());
 		this.visualizeSpawning(roomSpawns);
 		this.spawnManager.manageSpawns(this.room, roomSpawns);
 		this.visualizeSpawnQueue();

@@ -5,7 +5,6 @@ STRUCTURE_POWER_SPAWN FIND_SOURCES FIND_MINERALS */
 import container from 'utils/container';
 import Bay from 'manager.bay';
 import cache from 'utils/cache';
-import Exploit from 'manager.exploit';
 import FactoryManager from 'factory-manager';
 import RoomDefense from 'room-defense';
 import utilities from 'utilities';
@@ -17,7 +16,6 @@ declare global {
 		powerCreeps: Record<string, PowerCreep>;
 		creepsByRole: Record<string, Record<string, Creep>>;
 		enemyCreeps: Record<string, Creep[]>;
-		exploits: Record<string, Exploit>;
 		defense: RoomDefense;
 		sources: Source[];
 		minerals: Mineral[];
@@ -205,18 +203,6 @@ Room.prototype.enhanceData = function (this: Room) {
 					stroke: 'rgba(' + color + ', 1)',
 				});
 			}
-		}
-	}
-
-	// Register exploits.
-	this.exploits = {};
-	if (this.controller && this.controller.level >= 7) {
-		const flags = _.filter(Game.flags, flag => flag.name.startsWith('Exploit:' + this.name + ':'));
-		for (const flag of flags) {
-			utilities.bubbleWrap(() => {
-				this.exploits[flag.pos.roomName] = new Exploit(this, flag.name);
-				Game.exploits[flag.pos.roomName] = this.exploits[flag.pos.roomName];
-			});
 		}
 	}
 };

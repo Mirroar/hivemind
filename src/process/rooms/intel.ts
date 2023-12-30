@@ -16,6 +16,7 @@ declare global {
 		safe: boolean;
 		damage: number;
 		heal: number;
+		hasInvaderCore?: boolean;
 	}
 }
 
@@ -53,6 +54,7 @@ export default class RoomIntelProcess extends Process {
 		let safe = true;
 		let healCapacity = 0;
 		let damageCapacity = 0;
+		let hasInvaderCore = false;
 
 		_.each(this.room.enemyCreeps, (hostiles, owner) => {
 			if (hivemind.relations.isAlly(owner)) return;
@@ -79,16 +81,15 @@ export default class RoomIntelProcess extends Process {
 			this.room.assertMilitarySituation();
 		}
 
-		for (const structure of this.room.find(FIND_HOSTILE_STRUCTURES)) {
-			if (structure.structureType === STRUCTURE_INVADER_CORE) {
-				safe = structure.level === 0 || (structure.ticksToDeploy ?? 0) > 1000;
-				lastSeen = Game.time;
+		for (const structure of this.room.structuresByType[STRUCTURE_INVADER_CORE] || []) {
+			hasInvaderCore = true;
+			safe = safe && (structure.level === 0 || (structure.ticksToDeploy ?? 0) > 1000);
+			lastSeen = Game.time;
 
-				for (const effect of structure.effects) {
-					if (effect.effect === EFFECT_COLLAPSE_TIMER) {
-						if (!expires || expires < Game.time + effect.ticksRemaining) {
-							expires = Game.time + effect.ticksRemaining;
-						}
+			for (const effect of structure.effects) {
+				if (effect.effect === EFFECT_COLLAPSE_TIMER) {
+					if (!expires || expires < Game.time + effect.ticksRemaining) {
+						expires = Game.time + effect.ticksRemaining;
 					}
 				}
 			}
@@ -101,8 +102,9 @@ export default class RoomIntelProcess extends Process {
 			safe,
 			damage: damageCapacity,
 			heal: healCapacity,
+			hasInvaderCore,
 		};
 
-		if (this.room.memory.enemies.safe && _.size(this.room.memory.enemies.parts) === 0) delete this.room.memory.enemies;
+		if (this.room.memory.enemies.safe && !this.room.memory.enemies.hasInvaderCore && _.size(this.room.memory.enemies.parts) === 0) delete this.room.memory.enemies;
 	}
 }

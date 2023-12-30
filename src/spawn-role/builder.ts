@@ -75,7 +75,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 			const activeHarvesters = _.size(room.creepsByRole.harvester) + _.filter(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => creep.memory.sourceRoom === room.name).length;
 
 			// Don't overspawn builders if there's hardly any energy income.
-			if (activeHarvesters <= 1) return 1;
+			if (activeHarvesters < _.size(room.sources)) return 1;
 		}
 
 		let maxWorkParts = 5;

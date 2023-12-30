@@ -58,7 +58,7 @@ export default class RoomDefenseProcess extends Process {
 					}
 					else {
 						// @todo Only attack if we can be sure it's not tower drain.
-						if (!this.room.controller.safeMode) {
+						if ((this.room.controller.safeMode ?? 0) < 200 || target.pos.getRangeTo(25, 25) <= 20) {
 							tower.attack(target);
 						}
 					}
@@ -121,7 +121,7 @@ export default class RoomDefenseProcess extends Process {
 		if (this.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
 		if (this.room.defense.getEnemyStrength() < ENEMY_STRENGTH_NORMAL && Game.myRooms.length > 1) return;
 		if (this.room.defense.isWallIntact()) return;
-		if (this.room.myStructuresByType[STRUCTURE_SPAWN].length === 0) return;
+		if ((this.room.myStructuresByType[STRUCTURE_SPAWN] || []).length === 0) return;
 
 		this.room.visual.text('I might safemode soon!', 25, 25);
 		if (!this.isEnemyCloseToImportantStructures()) return;
@@ -190,6 +190,7 @@ export default class RoomDefenseProcess extends Process {
 			if (room.controller.level > maxLevelToAbandon) continue;
 
 			room.controller.unclaim();
+			Game.notify('🛡 Unclaimed ' + room.name + ' to free up safe mode for room ' + this.room.name + '.');
 			return;
 		}
 	}
