@@ -90,6 +90,8 @@ export default class DismantlerSpawnRole extends SpawnRole {
 
 			for (const sourceLocation of locations) {
 				if (!operation.needsDismantler(sourceLocation)) continue;
+				// Prevent continuous dismantler suicide. 
+				if (operation.isUnderAttack()) continue;
 
 				const dismantlerCount = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.source === sourceLocation).length;
 				if (dismantlerCount > 0) continue;
