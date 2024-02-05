@@ -1,167 +1,291 @@
 import hivemind from 'hivemind';
 
-const swcSegmentId = 90;
-const ALLIES = hivemind.relations.allies;
-const logIncomingRequests = false;
+export const allies = hivemind.relations.allies
+// This is the conventional segment used for team communication
+export const allySegmentID = 77
 
-export const enum RequestType {
-	RESOURCE = 0,
-	DEFENSE = 1,
-	ATTACK = 2,
-	EXECUTE = 3,
-	HATE = 4,
-	FUNNEL = 5,
-}
-interface ResourceRequest {
-	requestType: RequestType.RESOURCE;
-	resourceType: ResourceConstant;
-	maxAmount?: number;
-	roomName: string;
-	priority?: number;
+// This isn't in the docs for some reason, so we need to add it
+export const maxSegmentsOpen = 10
+
+export interface ResourceRequest {
+	/**
+	 * 0-1 where 1 is highest consideration
+	 */
+	priority: number
+	roomName: string
+	resourceType: ResourceConstant
+	/**
+	 * How much they want of the resource. If the responder sends only a portion of what you ask for, that's fine
+	 */
+	amount: number
+	/**
+	 * If the bot has no terminal, allies should instead haul the resources to us
+	 */
+	terminal?: boolean
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
 	timeout?: number;
 }
-interface FunnelRequest {
-	requestType: RequestType.FUNNEL;
-	goalType: number;
-	maxAmount?: number;
-	roomName: string;
-	priority?: number;
+
+export interface DefenseRequest {
+	roomName: string
+	/**
+	 * 0-1 where 1 is highest consideration
+	 */
+	priority: number
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
 	timeout?: number;
 }
-interface DefenseRequest {
-	requestType: RequestType.DEFENSE;
-	roomName: string;
-	priority?: number;
+
+export interface AttackRequest {
+	roomName: string
+	/**
+	 * 0-1 where 1 is highest consideration
+	 */
+	priority: number
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
 	timeout?: number;
 }
-interface HateRequest {
-	requestType: RequestType.HATE;
-	playerName: string;
-	priority?: number;
+
+export interface PlayerRequest {
+	playerName: string
+	/**
+	 * 0-1 where 1 is highest consideration. How much you think your team should hate the player. Should probably affect combat aggression and targetting
+	 */
+	hate?: number
+	/**
+	 * The last time this player has attacked you
+	 */
+	lastAttackedBy?: number
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
 	timeout?: number;
 }
-interface AttackRequest {
-	requestType: RequestType.ATTACK;
-	roomName: string;
-	playerName: string;
-	priority?: number;
+
+export type WorkRequestType = 'build' | 'repair'
+
+export interface WorkRequest {
+	roomName: string
+	/**
+	 * 0-1 where 1 is highest consideration
+	 */
+	priority: number
+	workType: WorkRequestType
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
 	timeout?: number;
 }
-export type Request = ResourceRequest | DefenseRequest | HateRequest | AttackRequest | FunnelRequest;
+
+export const enum FunnelGoal {
+	GCL = 0,
+	RCL7 = 1,
+	RCL8 = 2
+}
+
+export interface FunnelRequest {
+	/**
+	 * Amount of energy needed. Should be equal to energy that needs to be put into controller for achieving goal.
+	 */
+	maxAmount: number;
+	/**
+	 * What energy will be spent on. Room receiving energy should focus solely on achieving the goal.
+	 */
+	goalType: FunnelGoal;
+	/**
+	 * Room to which energy should be sent. If undefined resources can be sent to any of requesting player's rooms.
+	 */
+	roomName?: string;
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
+	timeout?: number;
+}
+
+export interface RoomRequest {
+	roomName: string
+	/**
+	 * The player who owns this room. If there is no owner, the room probably isn't worth making a request about
+	 */
+	playerName: string
+	/**
+	 * The last tick your scouted this room to acquire the data you are now sharing
+	 */
+	lastScout: number
+	rcl: number
+	/**
+	 * The amount of stored energy the room has. storage + terminal + factory should be sufficient
+	 */
+	energy: number
+	towers: number
+	avgRamprtHits: number
+	terminal: boolean
+	/**
+	 * Tick after which the request should be ignored. If your bot crashes, or stops updating requests for some other reason, this is a safety mechanism.
+	 */
+	timeout?: number;
+}
+
+export interface EconInfo {
+	/**
+	 * total credits the bot has. Should be 0 if there is no market on the server
+	 */
+	credits: number
+	/**
+	 * the maximum amount of energy the bot is willing to share with allies. Should never be more than the amount of energy the bot has in storing structures
+	 */
+	sharableEnergy: number
+	/**
+	 * The average energy income the bot has calculated over the last 100 ticks
+	 * Optional, as some bots might not be able to calculate this easily.
+	 */
+	energyIncome?: number
+	/**
+	 * The number of mineral nodes the bot has access to, probably used to inform expansion
+	 */
+	mineralNodes?: Partial<Record<MineralConstant, number>>
+}
+
 type RequestCallback = (request: Request) => void;
 
-const RequestTypeString = {
-	[RequestType.RESOURCE]: 'RESOURCE',
-	[RequestType.DEFENSE]: 'DEFENSE',
-	[RequestType.ATTACK]: 'ATTACK',
-	[RequestType.EXECUTE]: 'EXECUTE',
-	[RequestType.HATE]: 'HATE',
-	[RequestType.FUNNEL]: 'FUNNEL',
-};
+export interface AllyRequests {
+	resource: ResourceRequest[]
+	defense: DefenseRequest[]
+	attack: AttackRequest[]
+	player: PlayerRequest[]
+	work: WorkRequest[]
+	funnel: FunnelRequest[]
+	room: RoomRequest[]
+}
 
-let allyRequests: Request[];
-let requestArray: Request[] = [];
-const simpleAllies = {
-	checkAllies(callback: RequestCallback) {
-		const allies = [...ALLIES];
-		if (allies.length === 0) return;
-		const currentAllyName = allies[Game.time % ALLIES.length];
+/**
+ * Having data we pass into the segment being an object allows us to send additional information outside of requests
+ */
+export interface SimpleAlliesSegment {
+	requests?: AllyRequests
+	econ?: EconInfo
+}
 
-		if (allyRequests === undefined) {
-			if (RawMemory.foreignSegment && RawMemory.foreignSegment.username === currentAllyName) {
-				try {
-					allyRequests = JSON.parse(RawMemory.foreignSegment.data) as Request[];
-				}
-				catch {
-					console.log('failed to parse', currentAllyName, 'request segment');
-					allyRequests = null;
-				}
 
-				if (allyRequests && _.isArray(allyRequests) && allyRequests.length > 0 && logIncomingRequests) {
-					let requestListString = currentAllyName + ':<br/>';
-					for (const r of allyRequests) {
-						requestListString += RequestTypeString[r.requestType] + ' - ';
-						switch (r.requestType) {
-							case RequestType.RESOURCE: {
-								requestListString += 'resourceType: ' + r.resourceType + ', maxAmount: ' + r.maxAmount + ', room: ' + r.roomName + ', priority: ' + r.priority + '<br/>';
-								break;
-							}
+class SimpleAllies {
+	private myRequests: AllyRequests = {
+		resource: [],
+		defense: [],
+		attack: [],
+		player: [],
+		work: [],
+		funnel: [],
+		room: []
+	}
+	private myEconInfo?: EconInfo
+	allySegmentData: SimpleAlliesSegment = {}
+	currentAlly?: string
 
-							case RequestType.DEFENSE: {
-								requestListString += 'room: ' + r.roomName + ', priority: ' + r.priority + '<br/>';
-								break;
-							}
+	/**
+	 * To call before any requests are made or responded to. Configures some required values and gets ally requests
+	 */
+	initRun() {
+		// Reset the data of myRequests
+		this.myRequests = {
+			resource: [],
+			defense: [],
+			attack: [],
+			player: [],
+			work: [],
+			funnel: [],
+			room: [],
+		}
+		// reset econ info
+		this.myEconInfo = undefined
 
-							case RequestType.ATTACK: {
-								requestListString += 'room: ' + r.roomName + ', priority: ' + r.priority + ', playerName: ' + r.playerName + '<br/>';
-								break;
-							}
+		this.readAllySegment();
+	}
 
-							case RequestType.HATE: {
-								requestListString += 'playerName: ' + r.playerName + ', priority: ' + r.priority + '<br/>';
-								// No default
-							}
-
-								break;
-						}
-					}
-
-					console.log(requestListString);
-				}
-				else if (logIncomingRequests) {
-					let requestString = currentAllyName + ':<br/>';
-					requestString += RawMemory.foreignSegment.data;
-					console.log(requestString);
-				}
-			}
-			else {
-				allyRequests = null;
-				// Console.log("Simple allies either has no segment or has the wrong name?");
-			}
+	/**
+	 * Try to get segment data from our current ally. If successful, assign to the instane
+	 */
+	private readAllySegment() {
+		if (!allies.length) {
+			throw Error("Failed to find an ally for simpleAllies, you probably have none :(")
 		}
 
-		if (allyRequests) {
-			for (const request of allyRequests) {
-				callback(request);
-			}
+		this.currentAlly = allies[Game.time % allies.length]
+
+		// Make a request to read the data of the next ally in the list, for next tick
+		const nextAllyName = allies[(Game.time + 1) % allies.length]
+		RawMemory.setActiveForeignSegment(nextAllyName, allySegmentID)
+
+		// Maybe the code didn't run last tick, so we didn't set a new read segment
+		if (!RawMemory.foreignSegment) return
+		if (RawMemory.foreignSegment.username !== this.currentAlly) return
+
+		// Protect from errors as we try to get ally segment data
+		try {
+			this.allySegmentData = JSON.parse(RawMemory.foreignSegment.data)
+		} catch (err) {
+			console.log('Error in getting requests for simpleAllies', this.currentAlly)
+		}
+	}
+
+	/**
+	 * To call after requests have been made, to assign requests to the next ally
+	 */
+	endRun() {
+		// Make sure we don't have too many segments open
+		if (hivemind.segmentMemory.getSavedSegmentsThisTick() >= maxSegmentsOpen) {
+			return;
 		}
 
-		const nextAllyName = allies[(Game.time + 1) % ALLIES.length];
-		RawMemory.setActiveForeignSegment(nextAllyName, swcSegmentId);
-	},
+		const newSegmentData: SimpleAlliesSegment = {
+			requests: this.myRequests,
+			econ: this.myEconInfo
+		}
 
-	// Call before making any requests
-	startOfTick() {
-		requestArray = [];
-		allyRequests = undefined;
-	},
+		RawMemory.segments[allySegmentID] = JSON.stringify(newSegmentData)
+		RawMemory.setPublicSegments([allySegmentID])
+	}
 
-	// Call after making all your requests
-	endOfTick() {
-		if (hivemind.segmentMemory.getSavedSegmentsThisTick() >= 10) return;
+	// Request methods
 
-		RawMemory.segments[swcSegmentId] = JSON.stringify(requestArray);
-		RawMemory.setPublicSegments([swcSegmentId]);
-	},
+	requestResource(args: ResourceRequest) {
+		this.myRequests.resource.push(args)
+	}
 
-	// Priority is unbounded. It's up to you and your allies to sort out what you want it to mean
-	requestHelp(roomName: string, priority?: number) {
-		requestArray.push({
-			requestType: RequestType.DEFENSE,
-			roomName,
-			priority: priority || 0,
-		});
-	},
+	requestDefense(args: DefenseRequest) {
+		this.myRequests.defense.push(args)
+	}
 
-	requestResource(roomName: string, resourceType: ResourceConstant, priority?: number) {
-		requestArray.push({
-			requestType: RequestType.RESOURCE,
-			resourceType,
-			roomName,
-			priority: priority || 0,
-			maxAmount: 5000,
-		});
-	},
-};
+	requestAttack(args: AttackRequest) {
+		this.myRequests.attack.push(args)
+	}
 
-export {simpleAllies};
+	requestPlayer(args: PlayerRequest) {
+		this.myRequests.player.push(args)
+	}
+
+	requestWork(args: WorkRequest) {
+		this.myRequests.work.push(args)
+	}
+
+	requestFunnel(args: FunnelRequest) {
+		this.myRequests.funnel.push(args)
+	}
+
+	requestRoom(args: RoomRequest) {
+		this.myRequests.room.push(args)
+	}
+
+	//
+
+	setEconInfo(args: EconInfo) {
+		this.myEconInfo = args
+	}
+}
+
+export const simpleAllies = new SimpleAllies()
