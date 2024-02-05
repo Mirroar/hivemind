@@ -10,6 +10,7 @@ import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
+import {handleMapArea} from 'utils/map';
 
 declare global {
 	interface Creep {
@@ -930,12 +931,47 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 	}
 
 	const nextPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi]);
+
+	// Bugfix for weird cases where travelling through a portal didn't work,
+	// leading to extremely far move requests.
+	if (this.heapMemory._nmpi > 0 && Game.map.getRoomLinearDistance(nextPos.roomName, this.pos.roomName) > 3) {
+		const prevPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi - 1]);
+		if (Game.map.getRoomLinearDistance(prevPos.roomName, this.pos.roomName) <= 3) {
+			this.heapMemory._nmpi--;
+			return OK;
+		}
+	}
+
 	if (this.pos.roomName !== nextPos.roomName || this.pos.getRangeTo(nextPos) > 1) {
 		const moveResult = this.moveToRange(nextPos, 1, options);
 		if (!moveResult) {
 			// Couldn't get to next path target.
 			// @todo Recalculate route?
 			return ERR_NO_PATH;
+		}
+	}
+
+	if (Game.rooms[nextPos.roomName]) {
+		const portal = _.find(nextPos.lookFor(LOOK_STRUCTURES), s => s.structureType === STRUCTURE_PORTAL) as StructurePortal;
+		if (portal) {
+			// Step onto portals.
+			let portalUsed = false;
+			handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+				if (x === this.pos.x && y === this.pos.y) return null;
+
+				const portalHere = _.find(this.room.lookForAt(LOOK_STRUCTURES, x, y), s => s.structureType === STRUCTURE_PORTAL) as StructurePortal;
+				if (portalHere && portalHere.destination instanceof RoomPosition && portal.destination instanceof RoomPosition && portalHere.destination.roomName === portal.destination.roomName) {
+					if (this.move(this.pos.getDirectionTo(x, y)) === OK) {
+						this.heapMemory._nmpi++;
+						portalUsed = true;
+						return false;
+					}
+				}
+
+				return null;
+			});
+
+			if (portalUsed) return OK;
 		}
 	}
 
