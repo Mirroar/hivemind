@@ -147,6 +147,7 @@ export default class RoomPlan {
 	 */
 	createNavigationMatrix(): CostMatrix {
 		const matrix = new PathFinder.CostMatrix();
+		const terrain = new Room.Terrain(this.roomName);
 
 		for (const locationType of this.getPositionTypes()) {
 			if (
@@ -157,6 +158,15 @@ export default class RoomPlan {
 			for (const pos of this.getPositions(locationType)) {
 				if (locationType === 'road') {
 					if (matrix.get(pos.x, pos.y) === 0) {
+						// Only register tunnels as passable if they've already been built.
+						if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+							if (!Game.rooms[this.roomName]) continue;
+							if (_.filter(
+								Game.rooms[this.roomName].structuresByType[STRUCTURE_ROAD],
+								(road: StructureRoad) => road.pos.getRangeTo(pos) === 0,
+							).length === 0) continue;
+						}
+
 						matrix.set(pos.x, pos.y, 1);
 					}
 				}

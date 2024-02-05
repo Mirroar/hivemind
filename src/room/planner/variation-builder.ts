@@ -639,7 +639,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			if (x < 1 || x > 48 || y < 1 || y > 48) return;
 
 			// Ignore walls.
-			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL && !this.roomPlan.hasPosition('road', new RoomPosition(targetPos.x, targetPos.y, this.roomName))) return;
 
 			const posName = encodePosition(new RoomPosition(x, y, this.roomName));
 			if (openList[posName] || closedList[posName]) return;
@@ -790,6 +790,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		for (const rampart of this.roomPlan.getPositions('rampart')) {
 			handleMapArea(rampart.x, rampart.y, (x, y) => {
 				if (this.safetyMatrix.get(x, y) !== TILE_IS_UNSAFE) return;
+				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
 				this.safetyMatrix.set(x, y, TILE_IS_UNSAFE_NEAR_WALL);
 				if (this.placementManager.getExitDistance(x, y) < 3) return;
