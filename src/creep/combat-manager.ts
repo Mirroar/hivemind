@@ -128,7 +128,7 @@ export default class CombatManager {
 		const positions = this.getValidNeighboringPositions(creep.pos);
 		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
 
-		if (_.any(enemyCreeps, c => c.pos.getRangeTo(creep) <= 5)) {
+		if (this.hasEnemyCreepsInFightingRange(creep, enemyCreeps)) {
 			const scoredPositions = this.scoreKitingPositions(creep, enemyCreeps, positions);
 			if (scoredPositions.length === 0) {
 				// We don't know what to do. Guess we resume chasing our target.
@@ -143,6 +143,10 @@ export default class CombatManager {
 
 		// No danger, just keep close to our target to kill it.
 		creep.whenInRange(targetRange, target, () => {});
+	}
+
+	public hasEnemyCreepsInFightingRange(creep: Creep, enemyCreeps?: Creep[]): boolean {
+		return _.any(enemyCreeps ?? this.getEnemyMilitaryCreeps(creep.room), c => c.pos.getRangeTo(creep) <= 5);
 	}
 
 	private getValidNeighboringPositions(position: RoomPosition) {
@@ -181,10 +185,9 @@ export default class CombatManager {
 			score: 0,
 		}});
 
-		// @todo Avoid positions near walls that constrain our movement options.
 		// @todo Prefer positions where we can do a high amount of RMA damage.
 		this.addRoomCenterRangeScore(scored);
-		this.addTerrainScore(creep.room, scored);
+		this.addTerrainScore(creep, enemyCreeps, scored);
 		this.addEnemyRangeScore(creep, enemyCreeps, scored);
 
 		return scored;
@@ -198,7 +201,9 @@ export default class CombatManager {
 		}
 	}
 
-	private addTerrainScore(room: Room, positions: ScoredPosition[]) {
+	private addTerrainScore(creep: Creep, enemyCreeps: Creep[], positions: ScoredPosition[]) {
+		const isFleeing = _.some(enemyCreeps, c => !this.couldWinFightAgainst(creep, c));
+
 		for (const position of positions) {
 			if (this.isTileSwamp(position.pos)) position.score -= 100;
 			// @todo Check what room it at the other side of the exit to
@@ -208,13 +213,13 @@ export default class CombatManager {
 				|| position.pos.x === 49
 				|| position.pos.y === 0
 				|| position.pos.y === 49
-			) position.score -= 200;
+			) position.score += isFleeing ? 200 : -200;
 
 			handleMapArea(position.pos.x, position.pos.y, (x, y) => {
 				const pos = new RoomPosition(x, y, position.pos.roomName);
 				if (this.isTileWall(pos)) position.score -= 20;
 				if (this.isTileSwamp(pos)) position.score -= 10;
-				if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) position.score -= 20;
+				if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) position.score += isFleeing ? 20 : -20;
 			}, 2);
 		}
 	}
@@ -385,37 +390,40 @@ export default class CombatManager {
 		priority: number;
 		object: AttackTarget;
 	}> {
-		return _.map(targets, target => {
-			let priority = 0;
-			let weight = 0;
-			// @todo Containers and roads are only relevant targets if the room is
-			// owned / harvested by another player.
-			if ('structureType' in target) {
-				if (target.structureType === STRUCTURE_CONTAINER) priority = 2;
-				if (target.structureType === STRUCTURE_ROAD) priority = 1;
-				weight = 1 - (target.hits / target.hitsMax);
-			}
-			else {
-				// @todo Prioritize boosted creeps.
-				priority = 3;
-				// Prioritize killing damaged creeps.
-				weight = (1 - (target.hits / target.hitsMax)) * 2;
-				// Prioritize close creeps we can actually reach.
-				weight -= target.pos.getRangeTo(creep.pos) / 20;
-				// Prioritize creeps that still have a long TTL.
-				weight += target.ticksToLive / (target.getActiveBodyparts(CLAIM) > 0 ? CREEP_CLAIM_LIFE_TIME : CREEP_LIFE_TIME);
-				// Prioritize creeps with expensive body parts.
-				weight += this.getBodyValue(target) / BODYPART_COST[CLAIM];
-				// Prioritize creeps carrying expensive goods.
-				weight += this.getStoreValue(target) / CARRY_CAPACITY;
-			}
+		return _.map(
+			targets,
+			target => {
+				let priority = 0;
+				let weight = 0;
+				// @todo Containers and roads are only relevant targets if the room is
+				// owned / harvested by another player.
+				if ('structureType' in target) {
+					if (target.structureType === STRUCTURE_CONTAINER) priority = 2;
+					if (target.structureType === STRUCTURE_ROAD) priority = 1;
+					weight = 1 - (target.hits / target.hitsMax);
+				}
+				else {
+					// @todo Prioritize boosted creeps.
+					priority = 3 - (this.couldWinFightAgainst(creep, target) ? 0 : 1);
+					// Prioritize killing damaged creeps.
+					weight = (1 - (target.hits / target.hitsMax)) * 2;
+					// Prioritize close creeps we can actually reach.
+					weight -= target.pos.getRangeTo(creep.pos) / 20;
+					// Prioritize creeps that still have a long TTL.
+					weight += target.ticksToLive / (target.getActiveBodyparts(CLAIM) > 0 ? CREEP_CLAIM_LIFE_TIME : CREEP_LIFE_TIME);
+					// Prioritize creeps with expensive body parts.
+					weight += this.getBodyValue(target) / BODYPART_COST[CLAIM];
+					// Prioritize creeps carrying expensive goods.
+					weight += this.getStoreValue(target) / CARRY_CAPACITY;
+				}
 
-			return {
-				priority,
-				weight,
-				object: target,
+				return {
+					priority,
+					weight,
+					object: target,
+				}
 			}
-		});
+		);
 	}
 
 	private getBodyValue(target: Creep): number {
