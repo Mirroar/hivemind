@@ -372,6 +372,8 @@ export default class NavMesh {
 		const room = Game.rooms[roomName];
 		for (const portal of room.structuresByType[STRUCTURE_PORTAL] || []) {
 			if ('shard' in portal.destination) continue;
+			if (this.isPortalBlocked(room, portal.pos)) continue;
+
 			if (!portals[portal.destination.roomName]) {
 				portals[portal.destination.roomName] = {
 					targetRoom: portal.destination.roomName,
@@ -400,6 +402,20 @@ export default class NavMesh {
 				pos: pos.x + (50 * pos.y),
 			}
 		});
+	}
+
+	isPortalBlocked(room: Room, pos: RoomPosition): boolean {
+		let hasFreeSpace = false;
+		this.terrain
+
+		handleMapArea(pos.x, pos.y, (x, y) => {
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+			if (this.costMatrix.get(x, y) >= 100) return;
+
+			hasFreeSpace = true;
+		});
+
+		return hasFreeSpace;
 	}
 
 	estimateTravelTime(startPos: RoomPosition, endPos: RoomPosition): number {
@@ -674,8 +690,8 @@ export default class NavMesh {
 					return parts[1] + parts[2] + parts[3] + (Number.parseInt(parts[4], 10) + 1);
 				}
 
-				if (parts[4] === '1') {
-					return parts[1] + parts[2] + 'N1';
+				if (parts[4] === '0') {
+					return parts[1] + parts[2] + 'N0';
 				}
 
 				return parts[1] + parts[2] + parts[3] + (Number.parseInt(parts[4], 10) - 1);
@@ -686,8 +702,8 @@ export default class NavMesh {
 					return parts[1] + (Number.parseInt(parts[2], 10) + 1) + parts[3] + parts[4];
 				}
 
-				if (parts[2] === '1') {
-					return 'E1' + parts[3] + parts[4];
+				if (parts[2] === '0') {
+					return 'E0' + parts[3] + parts[4];
 				}
 
 				return parts[1] + (Number.parseInt(parts[2], 10) - 1) + parts[3] + parts[4];
@@ -698,8 +714,8 @@ export default class NavMesh {
 					return parts[1] + parts[2] + parts[3] + (Number.parseInt(parts[4], 10) + 1);
 				}
 
-				if (parts[4] === '1') {
-					return parts[1] + parts[2] + 'S1';
+				if (parts[4] === '0') {
+					return parts[1] + parts[2] + 'S0';
 				}
 
 				return parts[1] + parts[2] + parts[3] + (Number.parseInt(parts[4], 10) - 1);
@@ -710,8 +726,8 @@ export default class NavMesh {
 					return parts[1] + (Number.parseInt(parts[2], 10) + 1) + parts[3] + parts[4];
 				}
 
-				if (parts[2] === '1') {
-					return 'W1' + parts[3] + parts[4];
+				if (parts[2] === '0') {
+					return 'W0' + parts[3] + parts[4];
 				}
 
 				return parts[1] + (Number.parseInt(parts[2], 10) - 1) + parts[3] + parts[4];
