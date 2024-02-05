@@ -78,6 +78,11 @@ export default class MapVisualsProcess extends Process {
 			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
 		}
 
+		if (drawIntelStatus && info.scoutPriority > 0) {
+			Game.map.visual.text(info.scoutPriority.toPrecision(2), new RoomPosition(3, 23, roomName), {fontSize: 5});
+			Game.map.visual.line(new RoomPosition(25, 25, roomName), new RoomPosition(25, 25, info.origin), {opacity: 0.5, width: 1});
+		}
+
 		if (!info.expansionScore) return;
 		if (info.expansionScore < expansionScoreCutoff) return;
 
