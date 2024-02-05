@@ -1056,7 +1056,7 @@ export default class RoomIntel {
 	 *   Game tick when a scout attempt was last registered, or 0.
 	 */
 	getLastScoutAttempt(): number {
-		return this.memory.lastScout || 0;
+		return this.memory.lastScout || -100_000;
 	}
 }
 

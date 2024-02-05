@@ -153,7 +153,7 @@ export default class ScoutRole extends Role {
 			(info: ScoutTarget) => -info.scoutPriority,
 			(info: ScoutTarget) => {
 				const roomIntel = getRoomIntel(info.roomName);
-				return roomIntel.getLastScoutAttempt() - info.range * 50;
+				return roomIntel.getLastScoutAttempt() + info.range * 50;
 			},
 		);
 
