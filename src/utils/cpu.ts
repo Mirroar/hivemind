@@ -21,6 +21,10 @@ function recordCallStats(key: string, totalTime: number) {
 	callTimes[key].push(totalTime);
 }
 
+function getElapsedTicks() {
+	return Game.time - firstTick;
+}
+
 function getCallStats(prefix?: string) {
 	const stats = {};
 	for (const key in callTimes) {
@@ -52,4 +56,5 @@ function generateCallStats(key: string) {
 export {
 	timeCall,
 	getCallStats,
+	getElapsedTicks,
 };

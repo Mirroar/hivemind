@@ -10,7 +10,12 @@ declare global {
 export default class HelpReport {
 	visualize() {
 		// @todo Dynamically get list of available reports.
-		const reports: ReportType[] = ['HelpReport', 'ResourcesReport', 'RolesReport'];
+		const reports: ReportType[] = [
+			'HelpReport',
+			'ProcessReport',
+			'ResourcesReport',
+			'RolesReport',
+		];
 
 		const visual = new RoomVisual();
 

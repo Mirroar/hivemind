@@ -3,6 +3,7 @@ import HelpReport from './report/help';
 import FunnelManager from './empire/funnel-manager';
 import NavMesh from './utils/nav-mesh';
 import PlayerIntelManager from './player-intel-manager';
+import ProcessReport from './report/process';
 import ReclaimManager from './reclaim-manager';
 import ReportManager from './report/report-manager';
 import ResourcesReport from './report/resources';
@@ -19,6 +20,7 @@ declare global {
 		FunnelManager: FunnelManager;
 		NavMesh: NavMesh;
 		PlayerIntelManager: PlayerIntelManager;
+		ProcessReport: ProcessReport;
 		ReclaimManager: ReclaimManager;
 		ReportManager: ReportManager;
 		ResourcesReport: ResourcesReport;
@@ -35,6 +37,7 @@ function containerFactory(container: Container) {
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('NavMesh', () => new NavMesh());
 	container.set('PlayerIntelManager', () => new PlayerIntelManager());
+	container.set('ProcessReport', () => new ProcessReport());
 	container.set('ReclaimManager', () => new ReclaimManager());
 	container.set('ReportManager', () => new ReportManager());
 	container.set('ResourcesReport', () => new ResourcesReport());
