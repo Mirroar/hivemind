@@ -111,17 +111,24 @@ Mineral.prototype.getNumHarvestSpots = function (this: Mineral) {
 };
 
 /**
- * Finds a container in close proximity to this source, for dropping off energy.
+ * Finds a container in close proximity to this target, for dropping off resources.
  *
  * @return {StructureContainer}
  *   A container close to this source.
  */
 const getNearbyContainer = function (this: Source | Mineral) {
 	const containerId = cache.inHeap('container:' + this.id, 150, () => {
-		// @todo Could use old data and just check if object still exits.
 		// Check if there is a container nearby.
-		const structures = this.pos.findInRange(FIND_STRUCTURES, 3, {
-			filter: structure => structure.structureType === STRUCTURE_CONTAINER,
+		// @todo Could use old data and just check if object still exits.
+		const structures = _.filter(this.room.structuresByType[STRUCTURE_CONTAINER], s => {
+			if (s.pos.getRangeTo(this) > 5) return false;
+
+			if (!this.room.roomPlanner) return true;
+
+			let positionType = (this instanceof Source) ? 'container.source' : 'container.mineral';
+			if (this.room.roomPlanner.isPlannedLocation(s.pos, positionType)) return true;
+
+			return false;
 		});
 		if (structures.length > 0) {
 			const structure = this.pos.findClosestByRange(structures);
