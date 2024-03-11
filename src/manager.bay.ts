@@ -47,10 +47,18 @@ export default class Bay {
 			'bay-extensions:' + this.name,
 			250,
 			() => {
-				const extensions = this.pos.findInRange(FIND_STRUCTURES, 1, {
-					filter: structure => (bayStructures as string[]).includes(structure.structureType) && structure.isOperational(),
-				});
-				return _.map<AnyStructure, Id<AnyStructure>>(extensions, 'id');
+				const room = Game.rooms[this.pos.roomName];
+				let ids: Array<Id<AnyBayStructure>> = [];
+				for (const structureType of bayStructures) {
+					for (const structure of (room.structuresByType[structureType]) || []) {
+						if (structure.pos.getRangeTo(this.pos) > 1) continue;
+						if (!structure.isOperational()) continue;
+
+						ids.push(structure.id);
+					}
+				}
+
+				return ids;
 			},
 		);
 
