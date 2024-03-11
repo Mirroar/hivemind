@@ -11,14 +11,17 @@ export default class FunnelManager {
 
 	getRoomsToFunnel(): string[] {
 		return cache.inHeap('funneledRooms', 500, () => {
-			const funneledRooms = [];
+			const funneledRooms: string[] = [];
 			const roomsAtLevel = _.groupBy(this.getAvailableRoomsToFunnel(), room => room.controller.level);
 
 			const hasRCL8 = (roomsAtLevel[8]?.length || 0) > 0;
 			const hasRCL7 = (roomsAtLevel[7]?.length || 0) > 0;
 			const hasRCL6 = (roomsAtLevel[6]?.length || 0) > 0;
 			const hasEnoughRCL7 = (roomsAtLevel[7]?.length || 0) > 2;
+			const hasTooMuchEnergy = _.some(Game.myRooms, room => room.getEffectiveAvailableEnergy() > 300_000 && room.controller.level === 8);
 
+			// @todo Don't funnel to highest score room, prefer rooms that are
+			// close to upgrade already.
 			if (
 				(hasEnoughRCL7 && !hasRCL8)
 				|| (!hasRCL6 && hasRCL7)
@@ -29,6 +32,12 @@ export default class FunnelManager {
 			else if (hasRCL6) {
 				// Funnel to best RCL 6 room.
 				funneledRooms.push(_.max(roomsAtLevel[6], room => Memory.strategy.roomList[room.name]?.expansionScore).name);
+			}
+
+			if (hasTooMuchEnergy) {
+				for (const room of [...(roomsAtLevel[6] || []), ...(roomsAtLevel[7] || [])]) {
+					if (!funneledRooms.includes(room.name)) funneledRooms.push(room.name);
+				}
 			}
 
 			return funneledRooms;
