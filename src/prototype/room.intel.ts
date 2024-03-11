@@ -145,65 +145,94 @@ Object.defineProperty(Room.prototype, 'minerals', {
 	configurable: true,
 });
 
+const structuresToReference = [
+	STRUCTURE_NUKER,
+	STRUCTURE_OBSERVER,
+	STRUCTURE_POWER_SPAWN,
+	STRUCTURE_FACTORY,
+];
+
+for (const structureType of structuresToReference) {
+	Object.defineProperty(Room.prototype, structureType, {
+		get(this: Room) {
+			return getCachedStructureReference(this, structureType);
+		},
+		enumerable: false,
+		configurable: true,
+	});
+}
+
+function getCachedStructureReference<T extends typeof structuresToReference[number]>(room: Room, structureType: T): Structure<T> {
+	if (!room.controller) return null;
+
+	const cacheKey = room.name + ':' + structureType + ':id';
+	const structureId = cache.inHeap(cacheKey, 250, () => {
+		if (CONTROLLER_STRUCTURES[structureType][room.controller.level] === 0) return null;
+
+		const structures = room.structuresByType[structureType] || [];
+		if (structures.length > 0) {
+			return structures[0].id;
+		}
+
+		return null;
+	});
+
+	if (!structureId) return null;
+
+	const structure = Game.getObjectById<Structure<T>>(structureId);
+	if (!structure) {
+		cache.removeEntry(null, cacheKey);
+	}
+
+	return structure;
+};
+
+Object.defineProperty(Room.prototype, 'factoryManager', {
+	get(this: Room) {
+		return cache.inObject(this, 'factoryManager', 1, () => this.factory.isOperational() ? new FactoryManager(this.name) : null);
+	},
+	enumerable: false,
+	configurable: true,
+});
+
+Object.defineProperty(Room.prototype, 'bays', {
+	get(this: Room) {
+		return cache.inObject(this, 'bays', 1, () => {
+			if (!this.isMine()) return [];
+			if (!this.roomPlanner) return [];
+
+			const bays = [];
+			for (const pos of this.roomPlanner.getLocations('bay_center')) {
+				let hasHarvester = false;
+				if (this.roomPlanner.isPlannedLocation(pos, 'harvester')) {
+					// @todo Don't use pos.lookFor, instead filter this.creepsByRole.harvester.
+					const creeps = pos.lookFor(LOOK_CREEPS);
+					hasHarvester = creeps.length > 0 && creeps[0].my && creeps[0].memory.role === 'harvester';
+				}
+
+				const bay = new Bay(pos, hasHarvester);
+				bays.push(bay);
+			}
+
+			return bays;
+		});
+	},
+	enumerable: false,
+	configurable: true,
+});
+
 /**
  * Adds some additional data to room objects.
  */
 Room.prototype.enhanceData = function (this: Room) {
-	this.addStructureReference(STRUCTURE_NUKER);
-	this.addStructureReference(STRUCTURE_OBSERVER);
-	this.addStructureReference(STRUCTURE_POWER_SPAWN);
-	this.addStructureReference(STRUCTURE_FACTORY);
-
-	if (this.factory) {
-		if (this.factory.isOperational()) {
-			this.factoryManager = new FactoryManager(this.name);
-		}
-		else delete this.factory;
-	}
-
-	if (this.terminal && !this.terminal.isOperational()) {
-		delete this.terminal;
-	}
-
-	if (this.storage && !this.storage.isOperational()) {
-		delete this.storage;
-	}
+	if (this.factory && !this.factory.isOperational()) delete this.factory;
+	if (this.terminal && !this.terminal.isOperational()) delete this.terminal;
+	if (this.storage && !this.storage.isOperational()) delete this.storage;
 
 	// Prepare memory for creep cache (filled globally later).
 	if (!this.creeps) {
 		this.creeps = {};
 		this.creepsByRole = {};
-	}
-
-	// Register bays.
-	this.bays = [];
-	if (this.isMine() && this.roomPlanner) {
-		for (const pos of this.roomPlanner.getLocations('bay_center')) {
-			let hasHarvester = false;
-			if (this.roomPlanner.isPlannedLocation(pos, 'harvester')) {
-				// @todo Don't use pos.lookFor, instead filter this.creepsByRole.harvester.
-				const creeps = pos.lookFor(LOOK_CREEPS);
-				hasHarvester = creeps.length > 0 && creeps[0].my && creeps[0].memory.role === 'harvester';
-			}
-
-			const bay = new Bay(pos, hasHarvester);
-			this.bays.push(bay);
-
-			// Draw bay.
-			// @todo Move out of constructor into separate function, called in owned rooms
-			// process.
-			if (typeof RoomVisual !== 'undefined') {
-				const visual = this.visual;
-				let color = '255, 255, 128';
-				if (bay.isBlocked()) color = '255, 0, 0';
-				else if (bay.energyCapacity === 0) color = '128, 128, 128';
-				visual.rect(bay.pos.x - 1.4, bay.pos.y - 1.4, 2.8, 2.8, {
-					fill: 'rgba(' + color + ', 0.2)',
-					opacity: 0.5,
-					stroke: 'rgba(' + color + ', 1)',
-				});
-			}
-		}
 	}
 };
 

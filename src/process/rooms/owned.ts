@@ -45,6 +45,19 @@ export default class OwnedRoomProcess extends Process {
 			operation.setRoom(this.room.name);
 		}
 
+		// Draw bays.
+		for (const bay of this.room.bays || []) {
+			const visual = this.room.visual;
+			let color = '255, 255, 128';
+			if (bay.isBlocked()) color = '255, 0, 0';
+			else if (bay.energyCapacity === 0) color = '128, 128, 128';
+			visual.rect(bay.pos.x - 1.4, bay.pos.y - 1.4, 2.8, 2.8, {
+				fill: 'rgba(' + color + ', 0.2)',
+				opacity: 0.5,
+				stroke: 'rgba(' + color + ', 1)',
+			});
+		}
+
 		const totalTime = timeCall('operation:' + operationName, () => {
 			hivemind.runSubProcess('rooms_roomplanner', () => {
 				// RoomPlanner has its own 100 tick throttling, so we runLogic every tick.

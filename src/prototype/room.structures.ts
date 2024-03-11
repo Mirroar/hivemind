@@ -11,8 +11,12 @@ declare global {
 			[STRUCTURE_CONTAINER]: StructureContainer[];
 			[STRUCTURE_EXTENSION]: StructureExtension[];
 			[STRUCTURE_EXTRACTOR]: StructureExtractor[];
+			[STRUCTURE_FACTORY]: StructureFactory[];
 			[STRUCTURE_LAB]: StructureLab[];
 			[STRUCTURE_LINK]: StructureLink[];
+			[STRUCTURE_NUKER]: StructureNuker[];
+			[STRUCTURE_OBSERVER]: StructureObserver[];
+			[STRUCTURE_POWER_SPAWN]: StructurePowerSpawn[];
 			[STRUCTURE_RAMPART]: StructureRampart[];
 			[STRUCTURE_SPAWN]: StructureSpawn[];
 			[STRUCTURE_TOWER]: StructureTower[];
@@ -22,14 +26,17 @@ declare global {
 		myStructuresByType: {
 			[STRUCTURE_EXTENSION]: StructureExtension[];
 			[STRUCTURE_EXTRACTOR]: StructureExtractor[];
+			[STRUCTURE_FACTORY]: StructureFactory[];
 			[STRUCTURE_LAB]: StructureLab[];
 			[STRUCTURE_LINK]: StructureLink[];
+			[STRUCTURE_NUKER]: StructureNuker[];
+			[STRUCTURE_OBSERVER]: StructureObserver[];
+			[STRUCTURE_POWER_SPAWN]: StructurePowerSpawn[];
 			[STRUCTURE_RAMPART]: StructureRampart[];
 			[STRUCTURE_SPAWN]: StructureSpawn[];
 			[STRUCTURE_TOWER]: StructureTower[];
 			[STRUCTURE_WALL]: StructureWall[];
 		},
-		addStructureReference: (structureType: StructureConstant) => void;
 		generateLinkNetwork: () => void;
 		isClearingTerminal: () => boolean;
 		isClearingStorage: () => boolean;
@@ -159,38 +166,6 @@ Room.prototype.generateLinkNetwork = function (this: Room) {
 		else {
 			this.linkNetwork.addNeutralLink(link);
 		}
-	}
-};
-
-/**
- * Adds short reference to a structure to a room object.
- *
- * @param {string} structureType
- *   Type of structure for which to create a reference.
- */
-Room.prototype.addStructureReference = function (this: Room, structureType: StructureConstant) {
-	if (!this.controller) return;
-
-	const cacheKey = this.name + ':' + structureType + ':id';
-	const structureId = cache.inHeap(cacheKey, 250, () => {
-		if (CONTROLLER_STRUCTURES[structureType][this.controller.level] === 0) return null;
-
-		// @todo Cache filtered find requests in room.
-		const structures = this.structuresByType[structureType] || [];
-
-		if (structures.length > 0) {
-			return structures[0].id;
-		}
-
-		return null;
-	});
-
-	if (!structureId) return;
-
-	this[structureType] = Game.getObjectById(structureId);
-
-	if (!this[structureType]) {
-		cache.removeEntry(null, cacheKey);
 	}
 };
 
