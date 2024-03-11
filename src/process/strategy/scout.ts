@@ -412,7 +412,7 @@ export default class ScoutProcess extends Process {
 		if (!roomIntel.isClaimable()) return 0;
 
 		// Can't remote harvest from my own room.
-		if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) return 0;
+		if (Game.rooms[roomName]?.isMine()) return 0;
 
 		let sourceFactor = 0.25;
 

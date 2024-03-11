@@ -11,7 +11,7 @@ function timeCall<T>(key: string, callback: () => T): number {
 }
 
 function recordCallStats(key: string, totalTime: number) {
-	if (firstTick < Game.time - 1000) {
+	if (Game.time - firstTick > 1000) {
 		firstTick = Game.time;
 		callTimes = {};
 	}

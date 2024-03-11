@@ -185,8 +185,8 @@ export default class RoomPlanner {
 			if (newStatus.directions[dir] !== this.memory.adjacentSafe[dir]) {
 				// Status has changed, recalculate building positioning.
 				hivemind.log('room plan', this.roomName).debug('changed adjacent room status!');
-				Game.notify(
-					'🛡 Exit safety has changed for room ' + this.roomName + '!\n\n'
+				hivemind.log('room plan', this.roomName).notify(
+					'🛡 Exit safety has changed!\n\n'
 					+ 'N: ' + (this.memory.adjacentSafe.N ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.N ? 'safe' : 'not safe') + '\n'
 					+ 'E: ' + (this.memory.adjacentSafe.E ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.E ? 'safe' : 'not safe') + '\n'
 					+ 'S: ' + (this.memory.adjacentSafe.S ? 'safe' : 'not safe') + ' -> ' + (newStatus.directions.S ? 'safe' : 'not safe') + '\n'

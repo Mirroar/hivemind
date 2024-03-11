@@ -86,7 +86,7 @@ export default class RoomIntelProcess extends Process {
 			safe = safe && (structure.level === 0 || (structure.ticksToDeploy ?? 0) > 1000);
 			lastSeen = Game.time;
 
-			for (const effect of structure.effects) {
+			for (const effect of (structure.effects || [])) {
 				if (effect.effect === EFFECT_COLLAPSE_TIMER) {
 					if (!expires || expires < Game.time + effect.ticksRemaining) {
 						expires = Game.time + effect.ticksRemaining;

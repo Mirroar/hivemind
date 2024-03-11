@@ -15,7 +15,7 @@ declare global {
 }
 
 const maxActiveSegments = 10;
-const maxSegmentLength = 100 * 1000 - 5;
+const maxSegmentLength = 100 * 1000 - 10;
 
 export default class SegmentedMemory {
 	_isReady: boolean;

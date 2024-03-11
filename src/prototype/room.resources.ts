@@ -105,12 +105,12 @@ Room.prototype.getFreeStorage = function (this: Room) {
 	let limit = this.getStorageLimit();
 	if (this.storage && !this.isClearingStorage()) {
 		// Only count storage resources if we count it's free capacity.
-		limit -= this.storage.store.getUsedCapacity();
+		limit -= Math.min(this.storage.store.getCapacity(), this.storage.store.getUsedCapacity());
 	}
 
 	if (this.terminal && !this.isClearingTerminal()) {
 		// Only count terminal resources if we count it's free capacity.
-		limit -= this.terminal.store.getUsedCapacity();
+		limit -= Math.min(this.terminal.store.getCapacity(), this.terminal.store.getUsedCapacity());
 	}
 
 	return limit;

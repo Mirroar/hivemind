@@ -38,8 +38,6 @@ export default class OwnedRoomProcess extends Process {
 	 * Manages one of our rooms.
 	 */
 	run() {
-		const startTime = Game.cpu.getUsed();
-
 		const operationName = 'room:' + this.room.name;
 		let operation = Game.operationsByType.room[operationName];
 		if (!operation) {

@@ -15,8 +15,8 @@ declare global {
 }
 
 export default class RemotePathManager {
-	getPathFor(sourcePosition) {
-		if (!hivemind.segmentMemory.isReady()) return;
+	getPathFor(sourcePosition: RoomPosition): RoomPosition[] | null {
+		if (!hivemind.segmentMemory.isReady()) return null;
 
 		const key = 'remotePath:' + encodePosition(sourcePosition);
 		if (!hivemind.segmentMemory.has(key)) {

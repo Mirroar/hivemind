@@ -155,13 +155,13 @@ export interface EconInfo {
 type RequestCallback = (request: Request) => void;
 
 export interface AllyRequests {
-	resource: ResourceRequest[]
-	defense: DefenseRequest[]
-	attack: AttackRequest[]
-	player: PlayerRequest[]
-	work: WorkRequest[]
-	funnel: FunnelRequest[]
-	room: RoomRequest[]
+	resource: ResourceRequest[];
+	defense: DefenseRequest[];
+	attack: AttackRequest[];
+	player: PlayerRequest[];
+	work: WorkRequest[];
+	funnel: FunnelRequest[];
+	room: RoomRequest[];
 }
 
 /**
@@ -212,7 +212,8 @@ class SimpleAllies {
 	 */
 	private readAllySegment() {
 		if (!allies.length) {
-			throw Error("Failed to find an ally for simpleAllies, you probably have none :(")
+			// throw Error("Failed to find an ally for simpleAllies, you probably have none :(")
+			return;
 		}
 
 		this.currentAlly = allies[Game.time % allies.length]
@@ -280,8 +281,6 @@ class SimpleAllies {
 	requestRoom(args: RoomRequest) {
 		this.myRequests.room.push(args)
 	}
-
-	//
 
 	setEconInfo(args: EconInfo) {
 		this.myEconInfo = args
