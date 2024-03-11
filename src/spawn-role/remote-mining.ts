@@ -221,8 +221,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		for (const pos of reservePositions) {
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
 
-			// Don't spawn if enemies are in the room.
-			// @todo Or in any room on the route, actually.
+			// Don't spawn if enemies are in the room or on the route.
 			if (!operation || operation.needsDismantler()) continue;
 			if (operation.isUnderAttack()) {
 				const totalEnemyData = operation.getTotalEnemyData();
@@ -369,7 +368,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
 			.setCarryContentLevel(0)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 
@@ -380,7 +379,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setWeights({[CARRY]: 1})
 			.setPartLimit(CARRY, option.size)
 			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 
@@ -391,7 +390,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setWeights({[CARRY]: 5, [WORK]: 2})
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

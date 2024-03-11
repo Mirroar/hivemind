@@ -91,7 +91,7 @@ export default class CaravanTraderSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 1})
 			.setPartLimit(CARRY, Math.ceil(Math.min(1000, availableResources) / CARRY_CAPACITY))
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

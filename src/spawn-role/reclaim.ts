@@ -141,7 +141,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	getCreepBody(room: Room): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 3, [WORK]: 2})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

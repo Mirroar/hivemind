@@ -69,7 +69,7 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 			.setWeights({[CARRY]: 1, [WORK]: 10})
 			.setMovementMode(MOVEMENT_MODE_ROAD)
 			.setCarryContentLevel(0)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

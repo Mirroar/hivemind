@@ -60,7 +60,7 @@ export default class GathererSpawnRole extends SpawnRole {
 	getCreepBody(room: Room): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 1})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

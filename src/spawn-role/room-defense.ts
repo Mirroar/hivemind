@@ -133,8 +133,6 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			return RESPONSE_ATTACKER;
 		}
 
-		// @todo Decide if boosts should be used as well.
-
 		// If attacker too weak, don't spawn defense at all. Towers will handle it.
 		return RESPONSE_NONE;
 	}
@@ -172,7 +170,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			.setWeights({[ATTACK]: 1})
 			.setMoveBufferRatio(0.8)
 			.setMovementMode(settings.get('constructRoadsUnderRamparts') ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 
@@ -181,7 +179,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			.setWeights({[RANGED_ATTACK]: 1})
 			.setMoveBufferRatio(0.8)
 			.setMovementMode(settings.get('constructRoadsUnderRamparts') ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 
@@ -189,7 +187,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[WORK]: 1, [CARRY]: 1})
 			.setMovementMode(MOVEMENT_MODE_ROAD)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 
@@ -227,12 +225,11 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: RoomDefenseSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
-		// @todo Only use boosts if they'd make the difference between being able to damage the enemy or not.
 		if (option.creepRole === 'builder') {
-			// @todo Only use boosts if walls have some damage on them.
 			return this.generateCreepBoosts(room, body, WORK, 'repair', this.getMaxEnemyBoostLevel(room));
 		}
 
+		// @todo Only use boosts if they'd make the difference between being able to damage the enemy or not.
 		if (option.creepRole === 'guardian') {
 			if (body.includes(ATTACK)) {
 				return this.generateCreepBoosts(room, body, ATTACK, 'attack', this.getMaxEnemyBoostLevel(room));

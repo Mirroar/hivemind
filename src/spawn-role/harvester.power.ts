@@ -123,7 +123,7 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[functionalPart]: 1})
 			.setMoveBufferRatio(1)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

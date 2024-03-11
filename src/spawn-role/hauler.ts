@@ -109,7 +109,7 @@ export default class HaulerSpawnRole extends SpawnRole {
 			.setWeights(option.builder ? this.getBuilderBodyWeights() : this.getBodyWeights())
 			.setPartLimit(CARRY, option.size)
 			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 

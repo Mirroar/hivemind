@@ -41,8 +41,6 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	addInitialHarvester(source: Source, options: HarvesterSpawnOption[]) {
-		// @todo Spawn bigger harvesters in high level rooms with plenty of energy to save on CPU.
-
 		// Spawn new harvester before previous harvester dies.
 		const spawns = _.filter(Game.spawns, spawn => spawn.room.name === source.room.name);
 		const minSpawnDistance = _.min(_.map(spawns, spawn => spawn.pos.getRangeTo(source.pos)));
@@ -157,6 +155,8 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			}
 		});
 
+		// @todo Spawn bigger harvesters in high level rooms with plenty of
+		// energy to save on CPU, if needed.
 		const sizeFactor = (source.room.controller.level === 8 ? 2 :
 			(source.room.controller.level === 7 ? 1.2 : 1));
 
@@ -184,7 +184,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(hasSpawnAtSource || hasFewExtensions ? MOVEMENT_MODE_MINIMAL : MOVEMENT_MODE_ROAD)
 			.setCarryContentLevel(0)
-			.setEnergyLimit(Math.max(option.force ? SPAWN_ENERGY_CAPACITY : room.energyCapacityAvailable, room.energyAvailable))
+			.setEnergyLimit(Math.max(option.force ? SPAWN_ENERGY_CAPACITY : room.energyCapacityAvailable, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
 			.build();
 	}
 
