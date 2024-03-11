@@ -60,7 +60,7 @@ export default class TradeRouteManager {
 					const isLowEnough = resourceLevel2 === 'medium';
 					const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
 
-					if (!this.roomNeedsTerminalSpace(room) && !shouldReceiveResources) return;
+					if (!this.roomNeedsTerminalSpace(room) && !this.roomNeedsStorageSpace(room) && !shouldReceiveResources) return;
 
 					// Make sure target has space left.
 					if (room2.terminal.store.getFreeCapacity() < 5000) return;
@@ -184,5 +184,12 @@ export default class TradeRouteManager {
 		return room.isEvacuating()
 			|| room.isClearingStorage()
 			|| room.isClearingTerminal();
+	}
+
+	public roomNeedsStorageSpace(room: Room): boolean {
+		return room.terminal
+			&& room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.1
+			&& room.storage
+			&& room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.1;
 	}
 }
