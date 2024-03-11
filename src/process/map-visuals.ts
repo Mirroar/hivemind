@@ -1,8 +1,9 @@
 /* global RoomPosition */
 
-import Process from 'process/process';
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
+import Process from 'process/process';
+import RemotePathManager from 'empire/remote-path-manager';
 import {deserializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
@@ -10,7 +11,6 @@ import {getRoomIntel} from 'room-intel';
 const enableMapVisuals = true;
 const drawIntelStatus = false;
 const drawMiningStatus = true;
-const expansionScoreCutoff = 4;
 
 /**
  * Displays map visuals.
@@ -30,12 +30,15 @@ export default class MapVisualsProcess extends Process {
 			// contained in Memory.strategy.roomList.
 			_.each(Memory.strategy.roomList, (info, roomName) => {
 				if (typeof roomName !== 'string') return;
+
 				this.drawIntelStatus(roomName);
 				this.drawRoomStatus(roomName);
+				this.drawRemoteMinePaths(roomName);
 			});
 
 			_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy?.roomList?.[roomName]), (mem, roomName) => {
 				if (typeof roomName !== 'string') return;
+
 				this.drawIntelStatus(roomName);
 			});
 
@@ -54,7 +57,7 @@ export default class MapVisualsProcess extends Process {
 	 * @param {string} roomName
 	 *   Name of the room in question.
 	 */
-	drawIntelStatus(roomName) {
+	drawIntelStatus(roomName: string) {
 		if (!drawIntelStatus) return;
 		if (!hivemind.segmentMemory.isReady()) return;
 
@@ -71,7 +74,7 @@ export default class MapVisualsProcess extends Process {
 	 * @param {string} roomName
 	 *   Name of the room in question.
 	 */
-	drawRoomStatus(roomName) {
+	drawRoomStatus(roomName: string) {
 		const info = Memory.strategy.roomList[roomName];
 
 		if (drawMiningStatus && (Memory.strategy.remoteHarvesting?.rooms || []).includes(roomName)) {
@@ -84,9 +87,19 @@ export default class MapVisualsProcess extends Process {
 		}
 
 		if (!info.expansionScore) return;
-		if (info.expansionScore < expansionScoreCutoff) return;
+		if (info.expansionScore < this.getExpansionScoreCutoff()) return;
 
 		Game.map.visual.text(info.expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
+	}
+
+	getExpansionScoreCutoff(): number {
+		return cache.inHeap('expansionScoreCutoff', 5000, () => {
+			return _.max(_.map(Memory.strategy?.roomList ?? {}, (info, roomName) => {
+				if (Game.rooms[roomName]?.isMine()) return 0;
+
+				return info.expansionScore ?? 0;
+			})) - 0.5;
+		});
 	}
 
 	drawExpansionStatus() {
@@ -109,6 +122,27 @@ export default class MapVisualsProcess extends Process {
 
 			Game.map.visual.line(new RoomPosition(25, 25, targetMemory.spawnRoom), targetPosition, {opacity: 0.5});
 			Game.map.visual.text('🏴', targetPosition);
+		}
+	}
+
+	drawRemoteMinePaths(roomName: string) {
+		const info = Memory.strategy.roomList[roomName];
+		if ((info?.harvestPriority ?? 0) <= 0.1) return;
+
+		const remotePathManager = new RemotePathManager();
+		const intel = getRoomIntel(roomName);
+		for (const coords of intel.getSourcePositions()) {
+			const position = new RoomPosition(coords.x, coords.y, roomName);
+			const path = remotePathManager.getPathFor(position);
+			if (!path) {
+				Game.map.visual.text('?', position, {color: '#ff0000', fontSize: 5});
+				continue;
+			}
+
+			Game.map.visual.poly(path, {
+				opacity: 0.3,
+				stroke: '#00ffff',
+			});
 		}
 	}
 
