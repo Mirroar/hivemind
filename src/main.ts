@@ -51,10 +51,11 @@ import './manager.source';
 /* eslint-enable import/no-unassigned-import */
 
 import cache from 'utils/cache';
+import {clearHeapMemory} from 'prototype/creep';
 
 // Allow profiling of code.
-import {profiler, useProfiler} from 'utils/profiler';
 import stats from 'utils/stats';
+import {profiler, useProfiler} from 'utils/profiler';
 
 declare global {
 	interface RawMemory {
@@ -96,8 +97,6 @@ balancer.init();
 
 // @todo make unarmed creeps run from hostiles.
 
-// @todo Spawn creeps using "sequences" where more control is needed.
-
 const main = {
 
 	/**
@@ -105,7 +104,8 @@ const main = {
 	 */
 	loop() {
 		if (useProfiler) {
-			profiler.wrap(this.runTick);
+			profiler.wrap(() => this.runTick());
+			//this.runTick();
 		}
 		else {
 			this.runTick();
@@ -240,6 +240,8 @@ const main = {
 			// eslint-disable-next-line no-unused-expressions
 			Memory.rooms;
 			this.lastMemory = RawMemory._parsed;
+			clearHeapMemory();
+			hivemind.log('memory').debug('Force-parsed memory.');
 		}
 
 		this.lastTime = Game.time;

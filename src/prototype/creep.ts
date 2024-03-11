@@ -21,7 +21,11 @@ declare global {
 }
 
 // @todo Periodically clear heap memory of deceased creeps.
-const creepHeapMemory: Record<string, CreepHeapMemory | PowerCreepHeapMemory> = {};
+let creepHeapMemory: Record<string, CreepHeapMemory | PowerCreepHeapMemory> = {};
+
+function clearHeapMemory() {
+	creepHeapMemory = {};
+}
 
 // Define quick access property creep.heapMemory.
 Object.defineProperty(Creep.prototype, 'heapMemory', {
@@ -153,4 +157,6 @@ Creep.prototype.enhanceData = function (this: Creep) {
 	}
 };
 
-export {};
+export {
+	clearHeapMemory,
+};
