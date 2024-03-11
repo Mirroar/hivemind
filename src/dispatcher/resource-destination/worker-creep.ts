@@ -1,4 +1,5 @@
 import TaskProvider from 'dispatcher/task-provider';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 
 interface WorkerCreepDestinationTask extends ResourceDestinationTask {
 	type: 'workerCreep';
@@ -18,7 +19,7 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 
 	getTasks(context: ResourceDestinationContext) {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
-		if (this.room.storage || this.room.terminal) return [];
+		if (!this.shouldDeviverToCreeps()) return [];
 
 		const options: WorkerCreepDestinationTask[] = [];
 
@@ -29,10 +30,19 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 		};
 
 		for (const role in targetRoleWeights) {
+			if (role !== 'builder' && this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) continue;
+
 			this.addRoleTasks(options, role, targetRoleWeights[role], context);
 		}
 
 		return options;
+	}
+
+	private shouldDeviverToCreeps() {
+		if (!this.room.storage && !this.room.terminal) return true;
+		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return true;
+
+		return false;
 	}
 
 	private addRoleTasks(options: WorkerCreepDestinationTask[], role: string, weight: number, context: ResourceDestinationContext) {
