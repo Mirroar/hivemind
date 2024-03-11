@@ -129,7 +129,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 1, [WORK]: hasEasyEnergyAccess ? 10 : 1})
-			.setPartLimit(WORK, option.mini ? 2 : CONTROLLER_MAX_UPGRADE_PER_TICK)
+			.setPartLimit(WORK, option.mini ? 2 : room.controller.level === 8 ? CONTROLLER_MAX_UPGRADE_PER_TICK : MAX_CREEP_SIZE)
 			.setMovementMode(hasEasyEnergyAccess ? MOVEMENT_MODE_SLOW : MOVEMENT_MODE_ROAD)
 			.setCarryContentLevel(0)
 			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
