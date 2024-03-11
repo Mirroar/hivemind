@@ -145,6 +145,16 @@ export default class Bay {
 		if (needsRefill.length === 0) return false;
 
 		const target = _.min(needsRefill, extension => (bayStructures as string[]).indexOf(extension.structureType));
+
+		// Don't let harvesters refill containers they're on.
+		if (
+			target.structureType === STRUCTURE_CONTAINER
+			&& creep.memory.role === 'harvester'
+			&& creep.pos.isEqualTo(target.pos)
+		) {
+			return false;
+		}
+
 		const targetCapacity = target.store.getFreeCapacity(RESOURCE_ENERGY);
 		const amount = Math.min(creep.store.getUsedCapacity(RESOURCE_ENERGY), targetCapacity);
 		const isLastTransfer = amount >= this.energyCapacity - this.energy || amount === creep.store.getUsedCapacity(RESOURCE_ENERGY);
