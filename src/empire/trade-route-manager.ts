@@ -49,7 +49,12 @@ export default class TradeRouteManager {
 					const resourceLevel2 = roomState2.state[resourceType] || 'low';
 
 					if (!roomState2.canTrade) return;
-					if (this.roomNeedsTerminalSpace(room2)) return;
+
+					const isEvacuatingRoomWithLowEnergy = room2.isEvacuating()
+						&& resourceType === RESOURCE_ENERGY
+						&& room2.getEffectiveAvailableEnergy() < 5000
+						&& room2.terminal.store.getUsedCapacity() > 10000;
+					if (this.roomNeedsTerminalSpace(room2) && !isEvacuatingRoomWithLowEnergy) return;
 
 					const isLow = resourceLevel2 === 'low' || (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
 					const isLowEnough = resourceLevel2 === 'medium';
