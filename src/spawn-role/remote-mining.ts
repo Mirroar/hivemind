@@ -215,6 +215,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		if (options.length > 0) return;
 
 		// Only spawn claimers if they can have 2 or more claim parts.
+		// @todo We could even do it with 1 part if the controller has multiple
+		// spots around it.
 		if (room.energyCapacityAvailable < 2 * (BODYPART_COST[CLAIM] + BODYPART_COST[MOVE])) return;
 
 		const reservePositions = room.getRemoteReservePositions();
@@ -286,6 +288,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		const container = operation.getContainer(targetPos);
 		const isEstablished = operation.hasContainer(targetPos) && (container?.hits || CONTAINER_HITS) > CONTAINER_HITS / 2;
 
+		// @todo Allow larger harvesters if we need CPU and have spawn time to spare.
+		const sizeFactor = (room.controller.level === 8 ? 2 : (room.controller.level === 7 ? 1.2 : 1));
+
 		const option: HarvesterSpawnOption = {
 			unitType: 'harvester',
 			priority: 1,
@@ -293,8 +298,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			targetPos: position,
 			// @todo Consider established when roads are fully built.
 			isEstablished,
-			// Use less work parts if room is not reserved yet.
-			size: operation.getHarvesterSize(targetPos) || 0,
+			size: (operation.getHarvesterSize(targetPos) || 0) * sizeFactor,
 		};
 
 		const creepSpawnTime = this.getCreepBody(room, option)?.length * CREEP_SPAWN_TIME || 0;
@@ -364,8 +368,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getHarvesterCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
 		return (new BodyBuilder())
-			.setWeights({[WORK]: 5, [CARRY]: option.isEstablished ? 0 : 1})
-			.setPartLimit(WORK, option.size)
+			.setWeights({[WORK]: 20, [CARRY]: (option.isEstablished && room.controller.level < 7) ? 0 : 1})
+			.setPartLimit(WORK, option.size ? option.size + 1 : 0)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
 			.setCarryContentLevel(0)
 			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))

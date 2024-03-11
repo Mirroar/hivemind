@@ -162,6 +162,18 @@ export default class HarvesterRole extends Role {
 			}
 		}
 
+		// Move to container when creep's store is almost full.
+		const targetContainer = source.getNearbyContainer();
+		const harvestPower = (source instanceof Source) ? HARVEST_POWER : HARVEST_MINERAL_POWER;
+		if (
+			targetContainer
+			&& targetContainer.pos.getRangeTo(targetPos) > 1
+			&& creep.store.getFreeCapacity() < creep.getActiveBodyparts(WORK) * harvestPower
+		) {
+			targetPos = targetContainer.pos;
+			targetRange = 1;
+		}
+
 		creep.whenInRange(targetRange, targetPos, () => {
 			creep.harvest(source);
 
@@ -190,7 +202,7 @@ export default class HarvesterRole extends Role {
 		if (!bay) return false;
 		if (creep.pos.x !== bay.pos.x || creep.pos.y !== bay.pos.y) return false;
 
-		if (creep.store.getUsedCapacity() > creep.store.getCapacity() * (bay.needsRefill() ? 0.3 : 0.8)) bay.refillFrom(creep);
+		if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * (bay.needsRefill() ? 0.6 : 1)) bay.refillFrom(creep);
 		if (bay.needsRefill()) this.pickupEnergy(creep);
 
 		return bay.energyCapacity > 0;
@@ -226,7 +238,8 @@ export default class HarvesterRole extends Role {
 	 *   The source this harvester is assigned to.
 	 */
 	depositResources(creep: HarvesterCreep, source: Source | Mineral) {
-		if (creep.store.getFreeCapacity() > creep.store.getCapacity() * 0.5) return;
+		const harvestPower = (source instanceof Source) ? HARVEST_POWER : HARVEST_MINERAL_POWER;
+		if (creep.store.getFreeCapacity() >= creep.getActiveBodyparts(WORK) * harvestPower) return;
 
 		const targetContainer = source.getNearbyContainer();
 

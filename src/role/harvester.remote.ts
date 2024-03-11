@@ -118,11 +118,34 @@ export default class RemoteHarvesterRole extends Role {
 		});
 		const source = sources[0];
 
-		creep.whenInRange(1, source, () => {
+		let moveTarget: RoomObject = source;
+		let moveRange = 1;
+		if ((creep.operation instanceof RemoteMiningOperation)) {
+			const container = creep.operation.getContainer(creep.memory.source);
+			const creepsOnContainer = container && container.pos.lookFor(LOOK_CREEPS).length > 0;
+
+			// Move onto container when possible.
+			if (container && !creepsOnContainer) {
+				moveTarget = container;
+				moveRange = 0;
+			}
+
+			// Transfer energy to container if we can't drop directly onto it.
+			if (
+				container
+				&& creep.pos.getRangeTo(container.pos) === 1
+				&& creep.store.getFreeCapacity() < creep.getActiveBodyparts(WORK) * HARVEST_POWER
+				&& creepsOnContainer
+			) {
+				creep.transfer(container, RESOURCE_ENERGY);
+			}
+		}
+
+		creep.whenInRange(moveRange, moveTarget, () => {
 			// Wait if source is depleted.
 			if (source.energy <= 0) return;
 
-			creep.harvest(source);
+			if (this.mayHarvest(creep, source)) creep.harvest(source);
 
 			// Immediately deposit energy if a container is nearby.
 			if (!(creep.operation instanceof RemoteMiningOperation)) return;
@@ -138,21 +161,38 @@ export default class RemoteHarvesterRole extends Role {
 
 				return;
 			}
-
-			const container = creep.operation.getContainer(creep.memory.source);
-			const range = creep.pos.getRangeTo(container);
-			if (range > 0) {
-				// Move onto container if it's not occupied by another creep.
-				if (container.pos.lookFor(LOOK_CREEPS).length === 0) {
-					creep.whenInRange(0, container.pos, () => {});
-				}
-
-				// Transfer energy to container if we can't drop directly onto it.
-				if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.8) {
-					creep.transfer(container, RESOURCE_ENERGY);
-				}
-			}
 		});
+	}
+
+	mayHarvest(creep: RemoteHarvesterCreep, source: Source): boolean {
+		// Hit fully regenerated sources to start regeneration timer ASAP.
+		if (source.energy === source.energyCapacity) return true;
+
+		const harvestPower = creep.getActiveBodyparts(WORK) * HARVEST_POWER;
+
+		// Always harvest if we can carry the resource.
+		if (creep.store.getFreeCapacity() >= harvestPower) return true;
+
+		// If we don't have a container, always harvest as soon as possible.
+		if (!(creep.operation instanceof RemoteMiningOperation)) return true;
+		if (!creep.operation.hasContainer(creep.memory.source)) return true;
+
+		const container = creep.operation.getContainer(creep.memory.source);
+		if (!container) return true;
+
+		// If creep storage is full, only harvest when on container so we don't
+		// unnecessarily drop resources on the ground.
+		if (creep.pos.getRangeTo(container.pos) > 0) return false;
+
+		// Only harvest if container still has capacity.
+		if (container.store.getFreeCapacity() >= harvestPower) return true;
+
+		// Any additional resources will drop to the ground, so only harvest
+		// if we would otherwise lose energy to the regeneration timer.
+		const ticksToHarvestFully = Math.ceil(source.energy / harvestPower);
+		if (source.ticksToRegeneration <= ticksToHarvestFully) return true;
+
+		return false;
 	}
 
 	repairNearbyContainer(creep: RemoteHarvesterCreep): boolean {
@@ -162,8 +202,7 @@ export default class RemoteHarvesterRole extends Role {
 
 		const needsRepair = _.filter(
 			creep.room.structuresByType[STRUCTURE_CONTAINER],
-			// @todo Only repair as a last resort. We will have dedicated repair
-			// creeps otherwise.
+			// Repair if possible so we can save on dedicated builders.
 			structure =>
 				structure.hits <= structure.hitsMax - (workParts * REPAIR_POWER)
 				&& creep.pos.getRangeTo(structure.pos) <= 3,
