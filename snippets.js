@@ -38,7 +38,7 @@ JSON.stringify(_.map(Game.creeps.T_ju.getAvailableEnergySources(), option => {op
 _.each(Game.creepsByRole, (g, n) => console.log(_.size(g), n));
 
 // Force expansion to a certain room.
-p = new ExpandProcess({}, {}); r = Memory.strategy.roomList.E19N24; r.spawnRoom = 'E16N22'; p.startExpansion(r);
+p = new ExpandProcess(); r = Memory.strategy.roomList.E19N24; r.roomName = 'E19N24'; r.spawnRoom = 'E16N22'; p.startExpansion(r);
 
 // Force evacuation and abandonment of a certain room.
 const roomName = 'E43S53'; p = new ExpandProcess({}, {}); Game.rooms[roomName].setEvacuating(true); Memory.strategy.expand.evacuatingRoom = {name: roomName, cooldown: null};
