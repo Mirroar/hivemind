@@ -13,6 +13,23 @@ const TILE_IS_SAFE = 1;
 const TILE_IS_UNSAFE = 2;
 const TILE_IS_UNSAFE_NEAR_WALL = 3;
 
+const decorativeWallPattern = [
+	[1,0,0,0,0,0,0,0,0,0,0,0],
+	[1,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0],
+	[1,0,0,0,0,0,0,0,0,0,0,0],
+	[1,0,0,0,0,0,0,0,0,0,0,0],
+	[0,1,1,0,0,0,0,0,0,0,1,1],
+	[0,0,0,0,1,1,0,1,1,0,0,0],
+	[0,0,0,0,0,0,1,0,0,0,0,0],
+	[0,0,0,0,0,0,1,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,1,0,0,0,0,0],
+	[0,0,0,0,0,0,1,0,0,0,0,0],
+	[0,0,0,0,1,1,0,1,1,0,0,0],
+	[0,1,1,0,0,0,0,0,0,0,1,1],
+];
+
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	exitCenters: ExitCoords;
 	roomCenter: RoomPosition;
@@ -38,11 +55,12 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			this.placeRoomCore,
 			this.placeHarvestBayStructures,
 			this.placeHelperParkingLot,
-			this.placeBays,
 			this.placeLabs,
+			this.placeBays,
 			this.placeHighLevelStructures,
 			this.placeRamparts,
 			this.placeQuadBreaker,
+			this.placeDecorativeWalls,
 			this.sealRoom,
 			this.placeTowers,
 			this.placeRoadsToRamps,
@@ -387,7 +405,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 			const {x, y, roomName} = nextPos;
 
-			// @todo Use a stamper.
 			for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
 				const availableTiles = [
 					[x - dx, y + dy],
@@ -822,6 +839,28 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				this.placementManager.planLocation(pos, 'wall', null);
 				this.placementManager.planLocation(pos, 'wall.quad', null);
 			}, 3);
+		}
+
+		return 'ok';
+	}
+
+	placeDecorativeWalls(): StepResult {
+		const patternHeight = decorativeWallPattern.length;
+		const patternWidth = decorativeWallPattern[0].length;
+
+		for (let x = 1; x < 49; x++) {
+			for (let y = 1; y < 49; y++) {
+				if (!decorativeWallPattern[y % patternHeight][x % patternWidth]) continue;
+				if (this.safetyMatrix.get(x, y) !== TILE_IS_UNSAFE) continue;
+				if (this.placementManager.getExitDistance(x, y) < 3) continue;
+				if (this.placementManager.isBlockedTile(x, y)) continue;
+
+				const position = new RoomPosition(x, y, this.roomName);
+				if (this.roomPlan.hasPosition('road', position)) continue;
+
+				this.placementManager.planLocation(position, 'wall', null);
+				this.placementManager.planLocation(position, 'wall.deco', null);
+			}
 		}
 
 		return 'ok';
