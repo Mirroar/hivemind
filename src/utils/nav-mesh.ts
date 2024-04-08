@@ -614,7 +614,7 @@ export default class NavMesh {
 					parent: current,
 					pathLength: current.pathLength + (costMultiplier * segmentLength),
 					totalSteps: current.totalSteps + segmentLength,
-					heuristic: (Game.map.getRoomLinearDistance(current.roomName, endRoom) - 1) * 50,
+					heuristic: (Game.map.getRoomLinearDistance(nextRoom, endRoom) - 1) * 50,
 					portal: false,
 				};
 
@@ -642,7 +642,7 @@ export default class NavMesh {
 					parent: current,
 					pathLength: current.pathLength + (costMultiplier * 25),
 					totalSteps: current.totalSteps + 25,
-					heuristic: (Game.map.getRoomLinearDistance(current.roomName, endRoom) - 1) * 50,
+					heuristic: (Game.map.getRoomLinearDistance(nextRoom, endRoom) - 1) * 50,
 					portal: true,
 					targetRoom: portal.room,
 				};
