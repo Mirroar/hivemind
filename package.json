@@ -97,7 +97,6 @@
 			"Memory"
 		],
 		"ignores": [
-			"src/screeps-profiler.ts",
 			"snippets.js",
 			"mock/constants.ts"
 		],

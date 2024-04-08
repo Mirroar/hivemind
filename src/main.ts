@@ -55,7 +55,7 @@ import {clearHeapMemory} from 'prototype/creep';
 
 // Allow profiling of code.
 import stats from 'utils/stats';
-import {profiler, useProfiler} from 'utils/profiler';
+import * as Profiler from 'utils/Profiler';
 
 declare global {
 	interface RawMemory {
@@ -65,6 +65,7 @@ declare global {
 	namespace NodeJS {
 		interface Global {
 			Memory: Memory;
+			Profiler: Profiler;
 		}
 	}
 
@@ -84,6 +85,7 @@ interface DeprecatedRoomMemory extends RoomMemory {
 
 console.log('new global reset');
 
+global.Profiler = Profiler.init();
 global.hivemind = hivemind;
 
 hivemind.setSegmentedMemory(new SegmentedMemory());
@@ -100,22 +102,9 @@ balancer.init();
 const main = {
 
 	/**
-	 * Wrapper for main game loop to optionally use profiler.
-	 */
-	loop() {
-		if (useProfiler) {
-			profiler.wrap(() => this.runTick());
-			//this.runTick();
-		}
-		else {
-			this.runTick();
-		}
-	},
-
-	/**
 	 * Runs main game loop.
 	 */
-	runTick() {
+	loop() {
 		this.useMemoryFromHeap();
 
 		hivemind.segmentMemory.manage();
