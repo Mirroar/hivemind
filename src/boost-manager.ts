@@ -101,7 +101,7 @@ export default class BoostManager {
 		return _.sum(this.memory.creeps, (boosts, creepName) => {
 			if (Game.creeps[creepName]?.room?.name !== this.room.name) return 0;
 
-			return (boosts[resourceType] || 0) * LAB_BOOST_ENERGY;
+			return (boosts[resourceType] || 0);
 		});
 	}
 
