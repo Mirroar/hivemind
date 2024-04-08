@@ -3,29 +3,6 @@ import Process from 'process/process';
 import settings from 'settings-manager';
 import SpawnManager from 'spawn-manager';
 
-import brawlerSpawnRole from 'spawn-role/brawler';
-import builderSpawnRole from 'spawn-role/builder';
-import caravanTraderSpawnRole from 'spawn-role/caravan-trader';
-import claimerSpawnRole from 'spawn-role/claimer';
-import depositHarvesterSpawnRole from 'spawn-role/harvester.deposit';
-import dismantlerSpawnRole from 'spawn-role/dismantler';
-import gathererSpawnRole from 'spawn-role/gatherer';
-import giftSpawnRole from 'spawn-role/gift';
-import harvesterSpawnRole from 'spawn-role/harvester';
-import haulerSpawnRole from 'spawn-role/hauler';
-import helperSpawnRole from 'spawn-role/helper';
-import mineralHarvesterSpawnRole from 'spawn-role/harvester.minerals';
-import muleSpawnRole from 'spawn-role/mule';
-import powerHarvesterSpawnRole from 'spawn-role/harvester.power';
-import powerHaulerSpawnRole from 'spawn-role/hauler.power';
-import reclaimSpawnRole from 'spawn-role/reclaim';
-import remoteHarvesterSpawnRole from 'spawn-role/harvester.remote';
-import remoteMiningSpawnRole from 'spawn-role/remote-mining';
-import roomDefenseSpawnRole from 'spawn-role/room-defense';
-import scoutSpawnRole from 'spawn-role/scout';
-import squadSpawnRole from 'spawn-role/squad';
-import transporterSpawnRole from 'spawn-role/transporter';
-import upgraderSpawnRole from 'spawn-role/upgrader';
 import {drawTable} from 'utils/room-visuals';
 
 declare global {
@@ -48,31 +25,6 @@ type HistorySegment = {
 	waiting: number;
 };
 
-const spawnClasses = {
-	brawler: brawlerSpawnRole,
-	builder: builderSpawnRole,
-	'caravan-trader': caravanTraderSpawnRole,
-	claimer: claimerSpawnRole,
-	dismantler: dismantlerSpawnRole,
-	gatherer: gathererSpawnRole,
-	gift: giftSpawnRole,
-	harvester: harvesterSpawnRole,
-	'harvester.deposit': depositHarvesterSpawnRole,
-	'harvester.minerals': mineralHarvesterSpawnRole,
-	'harvester.power': powerHarvesterSpawnRole,
-	'harvester.remote': remoteHarvesterSpawnRole,
-	hauler: haulerSpawnRole,
-	'hauler.power': powerHaulerSpawnRole,
-	helper: helperSpawnRole,
-	mule: muleSpawnRole,
-	reclaim: reclaimSpawnRole,
-	'remote-mine': remoteMiningSpawnRole,
-	'room-defense': roomDefenseSpawnRole,
-	scout: scoutSpawnRole,
-	squad: squadSpawnRole,
-	transporter: transporterSpawnRole,
-	upgrader: upgraderSpawnRole,
-};
 const historyChunkLength = 200;
 const maxHistoryChunks = 10;
 
@@ -92,9 +44,6 @@ export default class ManageSpawnsProcess extends Process {
 		this.room = parameters.room;
 
 		this.spawnManager = container.get('SpawnManager');
-		for (const roleName in spawnClasses) {
-			this.spawnManager.registerSpawnRole(roleName, new spawnClasses[roleName]());
-		}
 	}
 
 	/**

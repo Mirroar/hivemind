@@ -1,6 +1,7 @@
 /* global BODYPART_COST OK */
 
 import cache from 'utils/cache';
+import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 import utilities from 'utilities';
 import {handleMapArea} from 'utils/map';
@@ -217,7 +218,10 @@ export default class SpawnManager {
 			energyStructures,
 		});
 
-		if (result !== OK) return false;
+		if (result !== OK) {
+			hivemind.log('creeps', room.name).error('Trying to spawn creep', creepName, 'failed with error code', result);
+			return false;
+		}
 
 		// Spawning successful.
 		Memory.creepCounter[memory.role]++;
