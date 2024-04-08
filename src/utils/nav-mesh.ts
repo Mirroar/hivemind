@@ -427,13 +427,14 @@ export default class NavMesh {
 		});
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean}): {
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean, maxCpu?: number}): {
 		path?: RoomPosition[];
 		length?: number;
 		incomplete: boolean;
 	} {
 		if (!options) options = {};
 
+		const startTime = Game.cpu.getUsed();
 		const startRoom = startPos.roomName;
 		const endRoom = endPos.roomName;
 		let availableExits: Array<{
@@ -507,6 +508,13 @@ export default class NavMesh {
 		}
 
 		while (openList.length > 0) {
+			if (Game.cpu.getUsed() - startTime > (options.maxCpu || 5)) {
+				// Used too much CPU for finding a path. abort.
+				return {
+					incomplete: true,
+				};
+			}
+
 			const current = this.popBestCandidate(openList);
 			const nextRoom = current.portal ? current.targetRoom : this.getAdjacentRoom(current.roomName, current.exitId);
 			const correspondingExit = current.portal ? null : this.getCorrespondingExitId(current.exitId);
