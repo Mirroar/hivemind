@@ -1,53 +1,113 @@
-# Hivemind - a screeps bot
+# Hivemind: An Advanced AI Bot for Screeps
+
+Welcome to Hivemind, an open-source AI bot designed to autonomously operate within the universe of the game [screeps](https://screeps.com). Hivemind is built for both private and official servers, serving as decent bot-opponents on your private servers, or as a solid base for developing your own screeps bot.
 
 [![Code Climate](https://codeclimate.com/github/Mirroar/hivemind/badges/gpa.svg)](https://codeclimate.com/github/Mirroar/hivemind)
 
-## General Info
+## Table of Contents
+- [Project Overview](#project-overview)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Features](#features)
+  - [Capabilities](#capabilities)
+  - [Limitations](#limitations)
+  - [Reasoning](#reasoning)
+- [Customization](#customization)
+- [Manual Interaction](#manual-interaction)
+- [Contributing](#contributing)
+- [License](#license)
+- [Troubleshooting](#troubleshooting)
 
-This is an open source bot for the game [screeps](https://screeps.com), intended to be used as a fully automated partner / opponent on private servers.
+## Project Overview
 
-Most of the code originated from an AI written on the official servers. It is intended to be used without interaction, but there are some things that can be triggered manually, and the bot can be customized through several settings.
+Hivemind was originally developed as a fully automated bot on the official screeps servers with the intention of serving as a capable sparring partner on private servers.
 
-### Build instructions
+It is intended to be used without interaction, but the bot's behaviour can be customized through an array of settings. There's also a limited pallette of commands for manual interaction.
 
-1. Install dependencies by running `npm i`.
-2. Run `rollup -c` to transpile the TypeScript code to JavaScript.
-3. Deploy the files in the `dist` directory to the game or as a bot on your private server.
+## Getting Started
 
-### Customization
+### Prerequisites
 
-You may create and edit `src/settings.local.ts` to override any of the settings in `src/settings.default.ts`. You may use `settings.local.example.ts` as an example for this.
+- Node.js (version 12 or higher)
+- A screeps account
+- An active screeps API key, if you want to push code directly
 
-Similarly, if you don't want to attack certain players' creeps, you may copy and adjust `relations.local.example.ts` to `src/relations.local.ts`.
+### Installation
 
-### Manual interaction
+#### Installing as a private server bot
 
-Take a look at `snippets.js` for common console commands you might want to use when running this bot.
+Your best bet for finding up-to-date information on setting up a private server with custom bots is checking the pinned messages in the `#servers` channel of the [official screeps discord](https://chat.screeps.com/). In general, once you have a private server set up, you should be able to add `screeps-bot-hivemind` as an npm dependency, add it to your server's configuration file, and then spawn in the bot using the screeps private server CLI.
 
-## Official servers
+#### Building from source
 
-If you're just starting out with screeps, you're probably better off trying to write your own AI instead of using a developed AI such as this one as a base. Much of the game's fun comes from figuring out solutions yourself and then watching your code run like a (more or less) well-oiled machine.
+1. **Clone the Repository**:
+   ```
+   git clone https://github.com/Mirroar/hivemind.git
+   cd hivemind
+   ```
+2. **Install Dependencies**:
+   ```
+   npm install
+   ```
+3. **Transpile TypeScript to JavaScript**:
+   ```
+   rollup -c
+   ```
+4. **Deploy**:
+   You can copy the files from the `dist` directory to the server using the screeps game client.
 
-Nonetheless, nobody can stop you from using this code on the official servers.
+   Alternatively, you can push the code using grunt (requires copying `Gruntfile.example.js` to `Gruntfile.js` and adding your account information):
+   ```
+   grunt screeps
+   ```
+
+## Features
 
 ### Capabilities
 
-#### This bot is able to:
-- Automatically scout, evaluate, mine and defend adjacent rooms for energy
-- Automatically expand into new rooms, provided there is enough GCL and CPU
-- Plan and manage all structures of a room
-- Harvest and process minerals to boost our creeps
-- Harvest and process commodities from highways
-- Harvest and process power from highways
-- Create, upgrade, spawn and manage operator power creeps to help with economy
-- Use the market to buy and sell resources
+- **Resource Management**: Automatically scout, mine, and defend energy sources.
+- **Expansion**: Capable of expanding into new suitable rooms.
+- **Construction**: Manages structure planning and building.
+- **Boosts**: Harvests, distributes and processes minerals into boosts.
+- **Commodities**: Harvests and processes commodities from highway rooms.
+- **Power**: Harvests and processes power from highways rooms.
+- **Power Creeps**: Creates, upgrades, spawns and manages operator power creeps to help with economy.
+- **Economy**: Dynamically trades resources on the market.
 
-#### This bot can not:
-- Auto-attack other players
-- Defend well against nukes
+### Limitations
 
-#### Reasoning:
+- **Combat**: Does not automatically attack other players' rooms.
+- **Defense**: No handling of incoming nukes.
 
-There is a general dislike with "non coding players" (NCPs) in the screeps community. The term describes players that only download and run open-source bots without modification, thus noch actually "playing" the game, since much of the game is writing your own code.
-Because of this, open-source bots should not be too strong, so they can be killed by players that invested time into writing their own code. Otherwise the optimal way to play would be downloading these open-source bots, and soon most people would just use the same bot.
-If you want to have the ability to stand up against other strong players, you will need to write the code for that yourself.
+### Reasoning
+
+If you're just starting out with screeps, you're probably better off trying to write your own bot instead of using a developed bot such as this one as a base. Much of the game's fun comes from figuring out solutions and then watching your code run like a (more or less) well-oiled machine.
+
+There is also a general dislike with "non coding players" (NCPs) in the screeps community. The term describes players that only download and run open-source bots without modification, thus not actually "playing" the game, since most of the game revolves around writing your own code.
+
+Because of this, Hivemind is released with limited combat capabilities, so it can be killed by players that invested time into writing their own code. Otherwise the optimal way to play would be downloading open-source bots like this one, and soon most people would just be using the same bot. Don't be surprised if players around you act agressively, especially if you're using an open-source bot.
+
+If you want to have the ability to stand up against other strong players, you will need to write better combat code yourself.
+
+### Customization
+
+To adjust the bot's behavior to your liking, you may copy `settings.local.example.ts` to `src/settings.local.ts` and override any of the settings from `src/settings.default.ts`.
+
+Customize diplomatic relations by copying `relations.local.example.ts` to `src/relations.local.ts` and adjusting it to your needs.
+
+## Manual interaction
+
+Take a look at `snippets.js` for common console commands you might want to use when running this bot.
+
+## Contributing
+
+Contributions are welcome! Please check out our [issues tracker](https://github.com/Mirroar/hivemind/issues) for more information on how you can contribute.
+
+## License
+
+Hivemind is released under the MIT License. See the LICENSE file for more details.
+
+## Troubleshooting
+
+If you encounter issues, feel free to create an issue or post your questions to the `#hivemind` channel in the [official screeps discord](https://chat.screeps.com/).
