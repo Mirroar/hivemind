@@ -26,12 +26,14 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room) {
-		const options: RoomDefenseSpawnOption[] = [];
-		this.addLowLevelRoomSpawnOptions(room, options);
-		this.addRampartDefenderSpawnOptions(room, options);
-		this.addEmergencyRepairSpawnOptions(room, options);
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			const options: RoomDefenseSpawnOption[] = [];
+			this.addLowLevelRoomSpawnOptions(room, options);
+			this.addRampartDefenderSpawnOptions(room, options);
+			this.addEmergencyRepairSpawnOptions(room, options);
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

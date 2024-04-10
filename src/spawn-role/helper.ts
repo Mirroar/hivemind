@@ -12,18 +12,20 @@ export default class HelperSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): SpawnOption[] {
-		const maxHelpers = 1;
-		const helperCount = _.size(room.creepsByRole.helper);
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			const maxHelpers = 1;
+			const helperCount = _.size(room.creepsByRole.helper);
 
-		// Make sure we actually need helpers.
-		if (helperCount < maxHelpers && room.boostManager.getBoostLabs().length > 0) {
-			return [{
-				priority: 5,
-				weight: 1.1,
-			}];
-		}
+			// Make sure we actually need helpers.
+			if (helperCount < maxHelpers && room.boostManager.getBoostLabs().length > 0) {
+				return [{
+					priority: 5,
+					weight: 1.1,
+				}];
+			}
 
-		return [];
+			return [];
+		});
 	}
 
 	/**

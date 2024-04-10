@@ -17,24 +17,27 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): BuilderSpawnOption[] {
-		const maxWorkParts = this.getNeededWorkParts(room);
+		return this.cacheEmptySpawnOptionsFor(room, 50, () => {
+			const maxWorkParts = this.getNeededWorkParts(room);
 
-		let numberWorkParts = 0;
-		_.each(room.creepsByRole.builder, creep => {
-			numberWorkParts += creep.getActiveBodyparts(WORK) || 0;
+			let numberWorkParts = 0;
+			_.each(room.creepsByRole.builder, creep => {
+				numberWorkParts += creep.getActiveBodyparts(WORK) || 0;
+			});
+
+			if (numberWorkParts >= maxWorkParts) return [];
+
+			const availableEnergy = room.getEffectiveAvailableEnergy();
+			// @todo Use target wall health to determine if we need stronger ramparts.
+			const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
+			const needsBuildings = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
+
+			return [{
+				priority: (needsStrongerRamparts || needsBuildings) ? 4 : 3,
+				weight: 0.5,
+				size: room.isEvacuating() ? 3 : null,
+			}];
 		});
-
-		const availableEnergy = room.getEffectiveAvailableEnergy();
-		const needsStrongerRamparts = room.terminal && this.getLowestRampartValue(room) < 3_000_000 && availableEnergy > 10_000;
-		const needsBuildings = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0;
-
-		if (numberWorkParts >= maxWorkParts) return [];
-
-		return [{
-			priority: (needsStrongerRamparts || needsBuildings) ? 4 : 3,
-			weight: 0.5,
-			size: room.isEvacuating() ? 3 : null,
-		}];
 	}
 
 	/**

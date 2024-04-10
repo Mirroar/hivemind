@@ -16,41 +16,43 @@ export default class MineralHarvesterSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): MineralHarvesterSpawnOption[] {
-		// Stop harvesting if we can't really store any more minerals.
-		if (room.isEvacuating()) return [];
-		if (room.getEffectiveAvailableEnergy() < 5000) return [];
+		return this.cacheEmptySpawnOptionsFor(room, 50, () => {
+			// Stop harvesting if we can't really store any more minerals.
+			if (room.isEvacuating()) return [];
+			if (room.getEffectiveAvailableEnergy() < 5000) return [];
 
-		// Find mineral sources with an extractor.
-		// @todo This could be done on script startup and partially kept in room memory.
-		const minerals = room.find(FIND_MINERALS, {
-			filter: mineral => {
-				const extractors = mineral.mineralAmount > 0 ? _.filter(room.myStructuresByType[STRUCTURE_EXTRACTOR],
-					structure => structure.isOperational() && mineral.pos.isEqualTo(structure.pos),
-				) : [];
-				return extractors.length > 0;
-			},
-		});
-
-		const options: MineralHarvesterSpawnOption[] = [];
-		for (const mineral of minerals) {
-			if (!mineral.getNearbyContainer()) continue;
-			if (room.isFullOnMinerals()) return [];
-
-			const mineralHarvesters = _.filter(mineral.harvesters, creep => creep.spawning || creep.ticksToLive > this.getCreepBody(room).length * CREEP_SPAWN_TIME);
-			const maxHarvesters = room.isStripmine() ? Math.min(3, mineral.getNumHarvestSpots()) : 1;
-			if (_.size(mineralHarvesters) >= maxHarvesters) continue;
-
-			const minAmount = 0;
-			if (mineral.mineralAmount <= minAmount) continue;
-
-			options.push({
-				priority: room.isStripmine() ? 4 : 3,
-				weight: 0.2,
-				source: mineral.id,
+			// Find mineral sources with an extractor.
+			// @todo This could be done on script startup and partially kept in room memory.
+			const minerals = room.find(FIND_MINERALS, {
+				filter: mineral => {
+					const extractors = mineral.mineralAmount > 0 ? _.filter(room.myStructuresByType[STRUCTURE_EXTRACTOR],
+						structure => structure.isOperational() && mineral.pos.isEqualTo(structure.pos),
+					) : [];
+					return extractors.length > 0;
+				},
 			});
-		}
 
-		return options;
+			const options: MineralHarvesterSpawnOption[] = [];
+			for (const mineral of minerals) {
+				if (!mineral.getNearbyContainer()) continue;
+				if (room.isFullOnMinerals()) return [];
+
+				const mineralHarvesters = _.filter(mineral.harvesters, creep => creep.spawning || creep.ticksToLive > this.getCreepBody(room).length * CREEP_SPAWN_TIME);
+				const maxHarvesters = room.isStripmine() ? Math.min(3, mineral.getNumHarvestSpots()) : 1;
+				if (_.size(mineralHarvesters) >= maxHarvesters) continue;
+
+				const minAmount = 0;
+				if (mineral.mineralAmount <= minAmount) continue;
+
+				options.push({
+					priority: room.isStripmine() ? 4 : 3,
+					weight: 0.2,
+					source: mineral.id,
+				});
+			}
+
+			return options;
+		});
 	}
 
 	/**

@@ -50,13 +50,15 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): BrawlerSpawnOption[] {
-		const options: BrawlerSpawnOption[] = [];
-		this.getRemoteDefenseSpawnOptions(room, options);
-		this.getPowerHarvestDefenseSpawnOptions(room, options);
-		this.getTrainPartSpawnOptions(room, options);
-		this.getReclaimSpawnOptions(room, options);
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			const options: BrawlerSpawnOption[] = [];
+			this.getRemoteDefenseSpawnOptions(room, options);
+			this.getPowerHarvestDefenseSpawnOptions(room, options);
+			this.getTrainPartSpawnOptions(room, options);
+			this.getReclaimSpawnOptions(room, options);
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

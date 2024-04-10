@@ -20,16 +20,18 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): HarvesterSpawnOption[] {
-		// Stop harvesting if we can't really store any more energy.
-		if (room.isFullOnEnergy() && !this.isSmallHarvesterNeeded(room)) return [];
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			// Stop harvesting if we can't really store any more energy.
+			if (room.isFullOnEnergy() && !this.isSmallHarvesterNeeded(room)) return [];
 
-		const options: HarvesterSpawnOption[] = [];
-		for (const source of room.sources) {
-			this.addInitialHarvester(source, options);
-			this.addAdditionalHarvesters(source, options);
-		}
+			const options: HarvesterSpawnOption[] = [];
+			for (const source of room.sources) {
+				this.addInitialHarvester(source, options);
+				this.addAdditionalHarvesters(source, options);
+			}
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

@@ -1,6 +1,8 @@
 /* global BODYPART_COST MAX_CREEP_SIZE TOUGH ATTACK RANGED_ATTACK HEAL */
 
 export default class SpawnRole {
+	private roomTimeouts: Record<string, number> = {};
+
 	/**
 	 * Adds spawn options for the given room.
 	 *
@@ -121,5 +123,26 @@ export default class SpawnRole {
 	 */
 	calculateBodyCost(body: BodyPartConstant[]): number {
 		return _.reduce(body, (sum, part) => sum + BODYPART_COST[part], 0);
+	}
+
+	cacheEmptySpawnOptionsFor<T extends SpawnOption>(room: Room, timeout: number, callback: () => T[]): T[] {
+		if (this.shouldNotCheckForAWhile(room)) return [];
+
+		const options = callback();
+		this.stopCheckingIfNothingToSpawn(room, timeout, options);
+
+		return options;
+	}
+
+	shouldNotCheckForAWhile(room: Room): boolean {
+		if ((this.roomTimeouts[room.name] || -1000) > Game.time) return true;
+
+		return false;
+	}
+
+	stopCheckingIfNothingToSpawn(room: Room, timeout: number, options: SpawnOption[]) {
+		if (options.length > 0) return;
+
+		this.roomTimeouts[room.name] = Game.time + timeout;
 	}
 }

@@ -20,26 +20,28 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room) {
-		const options: UpgraderSpawnOption[] = [];
-		const maxUpgraders = this.getUpgraderAmount(room);
-		const upgraderCount = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
-		if (upgraderCount < maxUpgraders) {
-			options.push({
-				priority: 3,
-				weight: 1,
-			});
-		}
+		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			const options: UpgraderSpawnOption[] = [];
+			const maxUpgraders = this.getUpgraderAmount(room);
+			const upgraderCount = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
+			if (upgraderCount < maxUpgraders) {
+				options.push({
+					priority: 3,
+					weight: 1,
+				});
+			}
 
-		if (maxUpgraders === 0 && upgraderCount === 0 && room.controller.progress > room.controller.progressTotal) {
-			// Spawn a mini upgrader to get ticksToDowngrade up so level gets raised.
-			options.push({
-				priority: 3,
-				weight: 1,
-				mini: true,
-			});
-		}
+			if (maxUpgraders === 0 && upgraderCount === 0 && room.controller.progress > room.controller.progressTotal) {
+				// Spawn a mini upgrader to get ticksToDowngrade up so level gets raised.
+				options.push({
+					priority: 3,
+					weight: 1,
+					mini: true,
+				});
+			}
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

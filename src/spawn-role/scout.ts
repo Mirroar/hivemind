@@ -27,25 +27,27 @@ export default class ScoutSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): ScoutSpawnOption[] {
-		const options: ScoutSpawnOption[] = [];
-		this.addIntershardSpawnOptions(room, options);
+		return this.cacheEmptySpawnOptionsFor(room, 50, () => {
+			const options: ScoutSpawnOption[] = [];
+			this.addIntershardSpawnOptions(room, options);
 
-		// Don't spawn scouts in quick succession.
-		// If they die immediately, they might be running into enemies right outside
-		// of the room.
-		if (room.memory.recentScout && Game.time - (room.memory.recentScout || -scoutSpawnThrottle) < scoutSpawnThrottle) return options;
+			// Don't spawn scouts in quick succession.
+			// If they die immediately, they might be running into enemies right outside
+			// of the room.
+			if (room.memory.recentScout && Game.time - (room.memory.recentScout || -scoutSpawnThrottle) < scoutSpawnThrottle) return options;
 
-		const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
-		if (_.size(roomScouts) >= hivemind.settings.get('maxScoutsPerRoom') || !room.needsScout()) return options;
+			const roomScouts = _.filter(Game.creepsByRole.scout, creep => creep.memory.origin === room.name);
+			if (_.size(roomScouts) >= hivemind.settings.get('maxScoutsPerRoom') || !room.needsScout()) return options;
 
-		const isEarlyGame = _.size(Game.myRooms) === 1 && !room.storage && !room.terminal;
+			const isEarlyGame = _.size(Game.myRooms) === 1 && !room.storage && !room.terminal;
 
-		options.push({
-			priority: isEarlyGame ? 4 : hivemind.settings.get('scoutSpawnPriority'),
-			weight: isEarlyGame ? 1 : 0,
+			options.push({
+				priority: isEarlyGame ? 4 : hivemind.settings.get('scoutSpawnPriority'),
+				weight: isEarlyGame ? 1 : 0,
+			});
+
+			return options;
 		});
-
-		return options;
 	}
 
 	/**

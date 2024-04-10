@@ -34,27 +34,29 @@ export default class SquadSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room) {
-		const options: SquadSpawnOption[] = [];
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			const options: SquadSpawnOption[] = [];
 
-		_.each(Game.squads, squad => {
-			if (squad.getSpawn() !== room.name) return;
+			_.each(Game.squads, squad => {
+				if (squad.getSpawn() !== room.name) return;
 
-			const availableEnergy = room.getEffectiveAvailableEnergy();
-			if (availableEnergy < 5000) return;
+				const availableEnergy = room.getEffectiveAvailableEnergy();
+				if (availableEnergy < 5000) return;
 
-			const spawnUnitType = this.needsSpawning(room, squad);
-			if (!spawnUnitType) return;
+				const spawnUnitType = this.needsSpawning(room, squad);
+				if (!spawnUnitType) return;
 
-			const roomHasReserves = availableEnergy > 10_000;
-			options.push({
-				priority: roomHasReserves ? 4 : 2,
-				weight: 1.1,
-				unitType: spawnUnitType,
-				squad: squad.name,
+				const roomHasReserves = availableEnergy > 10_000;
+				options.push({
+					priority: roomHasReserves ? 4 : 2,
+					weight: 1.1,
+					unitType: spawnUnitType,
+					squad: squad.name,
+				});
 			});
-		});
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

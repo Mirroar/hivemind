@@ -18,12 +18,14 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): DismantlerSpawnOption[] {
-		const options: DismantlerSpawnOption[] = [];
-		this.addManualDismantlers(room, options);
-		this.addRoomPlannerDismantlers(room, options);
-		this.addOperationDismantlers(room, options);
+		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			const options: DismantlerSpawnOption[] = [];
+			this.addManualDismantlers(room, options);
+			this.addRoomPlannerDismantlers(room, options);
+			this.addOperationDismantlers(room, options);
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

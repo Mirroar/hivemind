@@ -40,20 +40,22 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): RemoteMiningSpawnOption[] {
-		if (!settings.get('newRemoteMiningRoomFilter') || !settings.get('newRemoteMiningRoomFilter')(room.name)) return [];
-		if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [];
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			if (!settings.get('newRemoteMiningRoomFilter') || !settings.get('newRemoteMiningRoomFilter')(room.name)) return [];
+			if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [];
 
-		// If we want to move a misplaced spawn, we need to stop spawning for a bit.
-		if (room.roomManager?.hasMisplacedSpawn()) return [];
+			// If we want to move a misplaced spawn, we need to stop spawning for a bit.
+			if (room.roomManager?.hasMisplacedSpawn()) return [];
 
-		const options: RemoteMiningSpawnOption[] = [];
+			const options: RemoteMiningSpawnOption[] = [];
 
-		this.addHaulerSpawnOptions(room, options);
-		this.addBuilderSpawnOptions(room, options);
-		this.addClaimerSpawnOptions(room, options);
-		this.addHarvesterSpawnOptions(room, options);
+			this.addHaulerSpawnOptions(room, options);
+			this.addBuilderSpawnOptions(room, options);
+			this.addClaimerSpawnOptions(room, options);
+			this.addHarvesterSpawnOptions(room, options);
 
-		return options;
+			return options;
+		});
 	}
 
 	addHaulerSpawnOptions(room: Room, options: RemoteMiningSpawnOption[]) {

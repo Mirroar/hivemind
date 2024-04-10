@@ -20,17 +20,20 @@ export default class PowerHarvesterSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): PowerHarvesterSpawnOption[] {
 		if (!hivemind.settings.get('enablePowerMining')) return [];
-		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return [];
 
-		const options: PowerHarvesterSpawnOption[] = [];
-		_.each(Memory.strategy.power.rooms, (info, roomName) => {
-			if (!info.isActive) return;
-			if (!info.spawnRooms[room.name]) return;
+		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return [];
 
-			this.addOptionsForTarget(info, roomName, room, options);
+			const options: PowerHarvesterSpawnOption[] = [];
+			_.each(Memory.strategy.power.rooms, (info, roomName) => {
+				if (!info.isActive) return;
+				if (!info.spawnRooms[room.name]) return;
+
+				this.addOptionsForTarget(info, roomName, room, options);
+			});
+
+			return options;
 		});
-
-		return options;
 	}
 
 	addOptionsForTarget(info: PowerTargetRoom, roomName: string, sourceRoom: Room, options: PowerHarvesterSpawnOption[]) {

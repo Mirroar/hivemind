@@ -20,29 +20,31 @@ export default class MuleSpawnRole extends SpawnRole {
 	getSpawnOptions(room: Room): MuleSpawnOption[] {
 		if (!room.storage) return [];
 
-		const options: MuleSpawnOption[] = [];
-		_.each(Memory.tradeRoutes, (mem, routeName) => {
-			const tradeRoute = new TradeRoute(routeName);
-			if (!tradeRoute.isActive()) return;
-			if (tradeRoute.getOrigin() !== room.name) return;
-			const resourceType = tradeRoute.getResourceType();
-			const storedAmount = room.getCurrentResourceAmount(resourceType);
-			const minAmount = resourceType === RESOURCE_ENERGY ? 5000 : 1000;
-			if (storedAmount < minAmount) return;
+		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			const options: MuleSpawnOption[] = [];
+			_.each(Memory.tradeRoutes, (mem, routeName) => {
+				const tradeRoute = new TradeRoute(routeName);
+				if (!tradeRoute.isActive()) return;
+				if (tradeRoute.getOrigin() !== room.name) return;
+				const resourceType = tradeRoute.getResourceType();
+				const storedAmount = room.getCurrentResourceAmount(resourceType);
+				const minAmount = resourceType === RESOURCE_ENERGY ? 5000 : 1000;
+				if (storedAmount < minAmount) return;
 
-			const numberMules = _.filter(Game.creepsByRole.mule || [], (creep: MuleCreep) => creep.memory.origin === room.name && creep.memory.route === routeName).length;
-			// @todo Allow more mules at low priority if a lot of resources need
-			// delivering.
-			if (numberMules > 0) return;
+				const numberMules = _.filter(Game.creepsByRole.mule || [], (creep: MuleCreep) => creep.memory.origin === room.name && creep.memory.route === routeName).length;
+				// @todo Allow more mules at low priority if a lot of resources need
+				// delivering.
+				if (numberMules > 0) return;
 
-			options.push({
-				priority: 2,
-				weight: 1.2,
-				routeName,
+				options.push({
+					priority: 2,
+					weight: 1.2,
+					routeName,
+				});
 			});
-		});
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

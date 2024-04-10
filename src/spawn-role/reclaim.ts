@@ -23,18 +23,21 @@ export default class ReclaimSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): ReclaimSpawnOption[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
-		if (room.getEffectiveAvailableEnergy() < 10_000) return [];
 
-		const options: ReclaimSpawnOption[] = [];
-		this.room = room;
-		for (const targetRoom of Game.myRooms) {
-			if (room.name === targetRoom.name) continue;
-			this.addSpawnOptionsFor(targetRoom, options);
-		}
+		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			if (room.getEffectiveAvailableEnergy() < 10_000) return [];
 
-		this.addIntershardSpawnOptions(options);
+			const options: ReclaimSpawnOption[] = [];
+			this.room = room;
+			for (const targetRoom of Game.myRooms) {
+				if (room.name === targetRoom.name) continue;
+				this.addSpawnOptionsFor(targetRoom, options);
+			}
 
-		return options;
+			this.addIntershardSpawnOptions(options);
+
+			return options;
+		});
 	}
 
 	addSpawnOptionsFor(targetRoom: Room, options: ReclaimSpawnOption[]) {

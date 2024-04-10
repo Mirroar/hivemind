@@ -23,27 +23,30 @@ export default class DepositHarvesterSpawnRole extends SpawnRole {
 	 */
 	getSpawnOptions(room: Room): DepositHarvesterSpawnOption[] {
 		if (!hivemind.settings.get('enableDepositMining')) return [];
-		if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
-		if (!Memory.strategy || !Memory.strategy.deposits || !Memory.strategy.deposits.rooms) return [];
 
-		const options: DepositHarvesterSpawnOption[] = [];
-		_.each(Memory.strategy.deposits.rooms, (info, roomName) => {
-			if (!info.isActive) return;
+		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForDepositMining')) return [];
+			if (!Memory.strategy || !Memory.strategy.deposits || !Memory.strategy.deposits.rooms) return [];
 
-			const spawnRoomInfo = _.find(info.spawnRooms, spawnRoom => spawnRoom.room === room.name);
-			if (!spawnRoomInfo) return;
+			const options: DepositHarvesterSpawnOption[] = [];
+			_.each(Memory.strategy.deposits.rooms, (info, roomName) => {
+				if (!info.isActive) return;
 
-			const roomIntel = getRoomIntel(roomName);
-			const deposits = roomIntel.getDepositInfo();
-			if (!deposits || deposits.length === 0) return;
+				const spawnRoomInfo = _.find(info.spawnRooms, spawnRoom => spawnRoom.room === room.name);
+				if (!spawnRoomInfo) return;
 
-			// We're assigned to spawn creeps for this deposit mining operation!
-			for (const depositInfo of deposits) {
-				this.addOptionForDeposit(depositInfo, info, roomName, spawnRoomInfo, options);
-			}
+				const roomIntel = getRoomIntel(roomName);
+				const deposits = roomIntel.getDepositInfo();
+				if (!deposits || deposits.length === 0) return;
+
+				// We're assigned to spawn creeps for this deposit mining operation!
+				for (const depositInfo of deposits) {
+					this.addOptionForDeposit(depositInfo, info, roomName, spawnRoomInfo, options);
+				}
+			});
+
+			return options;
 		});
-
-		return options;
 	}
 
 	addOptionForDeposit(depositInfo: DepositInfo, strategyInfo: DepositTargetRoom, depositRoomName: string, spawnRoomInfo: {room: string; distance: number}, options: DepositHarvesterSpawnOption[]) {
