@@ -71,7 +71,7 @@ export default class Bay {
 			this.extensions.push(extension);
 
 			if (extension instanceof StructureExtension || extension instanceof StructureSpawn) {
-				this.energy += extension.store.getUsedCapacity(RESOURCE_ENERGY);
+				this.energy += Math.min(extension.store.getUsedCapacity(RESOURCE_ENERGY), extension.store.getCapacity(RESOURCE_ENERGY));
 				this.energyCapacity += extension.store.getCapacity(RESOURCE_ENERGY);
 			}
 		}
