@@ -39,6 +39,7 @@ export default class BodyBuilder {
 	partLimits: PartCounts;
 	moveBufferRatio: number;
 	carryContentLevel: number;
+	movePartBoost?: ResourceConstant;
 
 	public constructor() {
 		this.moveMode = MOVEMENT_MODE_PLAINS;
@@ -200,9 +201,16 @@ export default class BodyBuilder {
 
 	}
 
+	public setMovePartBoost(resourceType: ResourceConstant) {
+		this.movePartBoost = resourceType;
+
+		return this;
+	}
+
 	private getMovePartStrength(): number {
-		// @todo Adjust to implement move part boosting.
-		return 2;
+		if (!this.movePartBoost) return 2;
+
+		return 2 * (BOOSTS[MOVE][this.movePartBoost]?.fatigue ?? 1);
 	}
 
 	private generateSortedParts(partCounts: Partial<Record<BodyPartConstant, number>>): BodyPartConstant[] {
