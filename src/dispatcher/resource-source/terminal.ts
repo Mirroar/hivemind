@@ -22,11 +22,13 @@ export default class TerminalSource extends StructureSource<TerminalSourceTask> 
 	getTasks(context: ResourceSourceContext) {
 		if (!this.room.terminal) return [];
 
-		const options: TerminalSourceTask[] = [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
+			const options: TerminalSourceTask[] = [];
 
-		this.addTerminalOperationResourceOptions(options, context);
+			this.addTerminalOperationResourceOptions(options, context);
 
-		return options;
+			return options;
+		});
 	}
 
 	addTerminalOperationResourceOptions(options: TerminalSourceTask[], context: ResourceSourceContext) {

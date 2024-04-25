@@ -6,8 +6,10 @@ interface WorkerCreepDestinationTask extends ResourceDestinationTask {
 	target: Id<Creep>;
 }
 
-export default class WorkerCreepDestination implements TaskProvider<WorkerCreepDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class WorkerCreepDestination extends TaskProvider<WorkerCreepDestinationTask, ResourceDestinationContext> {
+	constructor(readonly room: Room) {
+		super();
+	}
 
 	getType(): 'workerCreep' {
 		return 'workerCreep';
@@ -19,23 +21,26 @@ export default class WorkerCreepDestination implements TaskProvider<WorkerCreepD
 
 	getTasks(context: ResourceDestinationContext) {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
-		if (!this.shouldDeviverToCreeps()) return [];
 
-		const options: WorkerCreepDestinationTask[] = [];
+		return this.cacheEmptyTaskListFor('', 25, () => {
+			if (!this.shouldDeviverToCreeps()) return [];
 
-		const targetRoleWeights = {
-			'builder.remote': 2,
-			builder: 1.5,
-			upgrader: 0.5,
-		};
+			const options: WorkerCreepDestinationTask[] = [];
 
-		for (const role in targetRoleWeights) {
-			if (role !== 'builder' && this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) continue;
+			const targetRoleWeights = {
+				'builder.remote': 2,
+				builder: 1.5,
+				upgrader: 0.5,
+			};
 
-			this.addRoleTasks(options, role, targetRoleWeights[role], context);
-		}
+			for (const role in targetRoleWeights) {
+				if (role !== 'builder' && this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) continue;
 
-		return options;
+				this.addRoleTasks(options, role, targetRoleWeights[role], context);
+			}
+
+			return options;
+		});
 	}
 
 	private shouldDeviverToCreeps() {

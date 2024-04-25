@@ -5,8 +5,10 @@ interface DropDestinationTask extends ResourceDestinationTask {
 	type: 'drop';
 }
 
-export default class DropDestination implements TaskProvider<DropDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class DropDestination extends TaskProvider<DropDestinationTask, ResourceDestinationContext> {
+	constructor(readonly room: Room) {
+		super();
+	}
 
 	getType(): 'drop' {
 		return 'drop';
@@ -17,11 +19,13 @@ export default class DropDestination implements TaskProvider<DropDestinationTask
 	}
 
 	getTasks(context: ResourceDestinationContext) {
-		const options: DropDestinationTask[] = [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 100, () => {
+			const options: DropDestinationTask[] = [];
 
-		this.addDropResourceTasks(context, options);
+			this.addDropResourceTasks(context, options);
 
-		return options;
+			return options;
+		});
 	}
 
 	addDropResourceTasks(context: ResourceDestinationContext, options: DropDestinationTask[]) {

@@ -22,14 +22,16 @@ export default class NukerDestination extends StructureDestination<NukerDestinat
 	getTasks(context: ResourceDestinationContext) {
 		if (this.room.isEvacuating()) return [];
 
-		const options: NukerDestinationTask[] = [];
-		this.addResourceTask(RESOURCE_GHODIUM, options, context);
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 100, () => {
+			const options: NukerDestinationTask[] = [];
+			this.addResourceTask(RESOURCE_GHODIUM, options, context);
 
-		if (this.room.getEffectiveAvailableEnergy() >= settings.get('minEnergyForNuker')) {
-			this.addResourceTask(RESOURCE_ENERGY, options, context);
-		}
+			if (this.room.getEffectiveAvailableEnergy() >= settings.get('minEnergyForNuker')) {
+				this.addResourceTask(RESOURCE_ENERGY, options, context);
+			}
 
-		return options;
+			return options;
+		});
 	}
 
 	addResourceTask(resourceType: RESOURCE_ENERGY | RESOURCE_GHODIUM, options: NukerDestinationTask[], context: ResourceDestinationContext) {

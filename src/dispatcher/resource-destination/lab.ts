@@ -22,12 +22,14 @@ export default class LabDestination extends StructureDestination<LabDestinationT
 		if (!this.room.memory.currentReaction) return [];
 		if (this.room.isEvacuating()) return [];
 
-		const options: LabDestinationTask[] = [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
+			const options: LabDestinationTask[] = [];
 
-		this.addLabTask(this.room.memory.currentReaction[0], this.room.memory.labs.source1, options, context);
-		this.addLabTask(this.room.memory.currentReaction[1], this.room.memory.labs.source2, options, context);
+			this.addLabTask(this.room.memory.currentReaction[0], this.room.memory.labs.source1, options, context);
+			this.addLabTask(this.room.memory.currentReaction[1], this.room.memory.labs.source2, options, context);
 
-		return options;
+			return options;
+		});
 	}
 
 	addLabTask(resourceType: ResourceConstant, labId: Id<StructureLab>, options: LabDestinationTask[], context: ResourceDestinationContext) {

@@ -22,12 +22,14 @@ export default class TerminalDestination extends StructureDestination<TerminalDe
 		if (!this.room.terminal) return [];
 		if (this.room.isClearingTerminal()) return [];
 
-		const options: TerminalDestinationTask[] = [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
+			const options: TerminalDestinationTask[] = [];
 
-		this.addTransferResourceDestination(options, context);
-		this.addResourcesForSaleDestination(options, context);
+			this.addTransferResourceDestination(options, context);
+			this.addResourcesForSaleDestination(options, context);
 
-		return options;
+			return options;
+		});
 	}
 
 	addTransferResourceDestination(options: TerminalDestinationTask[], context: ResourceDestinationContext) {

@@ -21,18 +21,20 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 	getTasks(context: ResourceSourceContext) {
 		if (this.room.isEvacuating()) return [];
 
-		const options: LabSourceTask[] = [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
+			const options: LabSourceTask[] = [];
 
-		this.addLabResourceOptions(options, context);
+			this.addLabResourceOptions(options, context);
 
-		// Get reaction resources.
-		const roomMemory = this.room.memory;
-		if (roomMemory?.labs && roomMemory?.currentReaction) {
-			this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source1), roomMemory.currentReaction[0], context);
-			this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source2), roomMemory.currentReaction[1], context);
-		}
+			// Get reaction resources.
+			const roomMemory = this.room.memory;
+			if (roomMemory?.labs && roomMemory?.currentReaction) {
+				this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source1), roomMemory.currentReaction[0], context);
+				this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source2), roomMemory.currentReaction[1], context);
+			}
 
-		return options;
+			return options;
+		});
 	}
 
 	/**

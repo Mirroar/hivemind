@@ -45,14 +45,13 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 
 			// Don't use the controller container as a normal source if we're upgrading.
 			if (
-				target.id === target.room.memory.controllerContainer
+				target.id === this.room.memory.controllerContainer
 				&& (this.room.creepsByRole.upgrader || this.room.creepsByRole.builder)
 				&& creep.memory.role === 'transporter'
 			) {
-				if (creep.room.energyAvailable === creep.room.energyCapacityAvailable) continue;
-				option.priority--;
+				if (this.room.energyAvailable === this.room.energyCapacityAvailable) continue;
+				continue;
 			}
-
 
 			for (const source of target.room.sources) {
 				if (source.getNearbyContainer()?.id !== target.id) continue;

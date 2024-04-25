@@ -21,15 +21,18 @@ export default class ContainerDestination extends StructureDestination<Container
 	}
 
 	getTasks(context: ResourceDestinationContext) {
-		const options: ContainerDestinationTask[] = [];
+		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
 
-		this.addControllerContainerTask(context, options);
+		return this.cacheEmptyTaskListFor('', 25, () => {
+			const options: ContainerDestinationTask[] = [];
 
-		return options;
+			this.addControllerContainerTask(context, options);
+
+			return options;
+		});
 	}
 
 	addControllerContainerTask(context: ResourceDestinationContext, options: ContainerDestinationTask[]) {
-		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;
 		if (!this.room.creepsByRole.upgrader && !this.room.creepsByRole.builder) return;
 
 		const container = Game.getObjectById<StructureContainer>(this.room.memory.controllerContainer);
@@ -38,7 +41,9 @@ export default class ContainerDestination extends StructureDestination<Container
 		// @todo Take into account boosts.
 		const upgraderWorkParts = _.sum(this.room.creepsByRole.upgrader, creep => creep.getActiveBodyparts(WORK));
 		const refillPathLength = cache.inHeap('ccRefillPathLength:' + this.room.name, 5000, () => {
-			const path = utilities.getPath(this.room.getStorageLocation(), container.pos, false, {singleRoom: this.room.name});
+			const storagePosition = this.room.getStorageLocation();
+			if (!storagePosition) return 1;
+			const path = utilities.getPath(storagePosition, container.pos, false, {singleRoom: this.room.name});
 
 			if (path.incomplete) return 1;
 			return path.path.length;

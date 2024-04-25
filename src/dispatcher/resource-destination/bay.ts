@@ -7,8 +7,10 @@ declare global {
 	}
 }
 
-export default class BayDestination implements TaskProvider<BayDestinationTask, ResourceDestinationContext> {
-	constructor(readonly room: Room) {}
+export default class BayDestination extends TaskProvider<BayDestinationTask, ResourceDestinationContext> {
+	constructor(readonly room: Room) {
+		super();
+	}
 
 	getType(): 'bay' {
 		return 'bay';
@@ -21,26 +23,28 @@ export default class BayDestination implements TaskProvider<BayDestinationTask, 
 	getTasks(context: ResourceDestinationContext) {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return [];
 
-		const options: BayDestinationTask[] = [];
+		return this.cacheEmptyTaskListFor('', 5, () => {
+			const options: BayDestinationTask[] = [];
 
-		for (const bay of this.room.bays) {
-			const option: BayDestinationTask = {
-				priority: 5,
-				weight: 0,
-				type: 'bay',
-				name: bay.name,
-				resourceType: RESOURCE_ENERGY,
-				amount: bay.energyCapacity - bay.energy,
-			};
+			for (const bay of this.room.bays) {
+				const option: BayDestinationTask = {
+					priority: 5,
+					weight: 0,
+					type: 'bay',
+					name: bay.name,
+					resourceType: RESOURCE_ENERGY,
+					amount: bay.energyCapacity - bay.energy,
+				};
 
-			const deliveryAmount = Math.min(context.creep.store[RESOURCE_ENERGY], bay.energyCapacity - bay.energy);
-			option.weight += deliveryAmount / context.creep.store.getCapacity() + 1 - (context.creep.pos.getRangeTo(bay) / 100);
-			option.priority -= this.room.getCreepsWithOrder(this.getType(), bay.name).length * 3;
+				const deliveryAmount = Math.min(context.creep.store[RESOURCE_ENERGY], bay.energyCapacity - bay.energy);
+				option.weight += deliveryAmount / context.creep.store.getCapacity() + 1 - (context.creep.pos.getRangeTo(bay) / 100);
+				option.priority -= this.room.getCreepsWithOrder(this.getType(), bay.name).length * 3;
 
-			options.push(option);
-		}
+				options.push(option);
+			}
 
-		return options;
+			return options;
+		});
 	}
 
 	isValid(task: BayDestinationTask, context: ResourceDestinationContext) {

@@ -24,13 +24,12 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return 0;
 		if (context.creep.memory.role !== 'transporter') return 5;
 
-		const room = context.creep.room;
-		if (room.energyAvailable < room.energyCapacityAvailable * 0.9) {
+		if (this.room.energyAvailable < this.room.energyCapacityAvailable * 0.9) {
 			// Spawning is important, so get energy when needed.
 			return 4;
 		}
 
-		if (room.terminal && room.storage && !this.terminalNeedsClearing() && room.terminal.store.energy < room.storage.store.energy * 0.05) {
+		if (this.room.terminal && this.room.storage && !this.terminalNeedsClearing() && this.room.terminal.store.energy < this.room.storage.store.energy * 0.05) {
 			// Take some energy out of storage to put into terminal from time to time.
 			return 2;
 		}
@@ -55,11 +54,11 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		const creep = context.creep;
 
 		// Energy can be gotten at the room's storage or terminal.
-		const storageTarget = creep.room.getBestStorageSource(RESOURCE_ENERGY);
+		const storageTarget = this.room.getBestStorageSource(RESOURCE_ENERGY);
 		if (!storageTarget) return;
 
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
-		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !creep.room.storage || storageTarget.id !== creep.room.storage.id) {
+		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !this.room.storage || storageTarget.id !== this.room.storage.id) {
 			options.push({
 				priority: this.getEnergyPickupPriority(context),
 				weight: 0,
@@ -111,6 +110,9 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 				// Do not take out resources that should be sent away.
 				if (resourceType === this.room.memory.fillTerminal) continue;
 
+				// Do not take out resources that would be put back right away.
+				if (this.room.getBestStorageTarget(context.creep.store.getFreeCapacity(), resourceType)?.id === terminal.id) continue;
+
 				if (!max || terminal.store[resourceType] > max) {
 					max = terminal.store[resourceType];
 					maxResourceType = resourceType;
@@ -137,6 +139,8 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 
 	terminalNeedsClearing() {
 		const terminal = this.room.terminal;
-		return terminal && (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || this.room.isClearingTerminal()) && !this.room.isClearingStorage();
+		return terminal
+			&& (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.8 || this.room.isClearingTerminal())
+			&& !this.room.isClearingStorage();
 	}
 }

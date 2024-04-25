@@ -22,16 +22,19 @@ export default class PowerSpawnDestination extends StructureDestination<PowerSpa
 
 	getTasks(context: ResourceDestinationContext) {
 		if (this.room.isEvacuating()) return [];
-		if (!balancer.maySpendEnergyOnPowerProcessing()) return [];
 
-		const options: PowerSpawnDestinationTask[] = [];
-		this.addResourceTask(RESOURCE_POWER, 0.9, options, context);
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
+			if (!balancer.maySpendEnergyOnPowerProcessing()) return [];
 
-		if (this.room.getEffectiveAvailableEnergy() >= settings.get('minEnergyForPowerProcessing')) {
-			this.addResourceTask(RESOURCE_ENERGY, 0.2, options, context);
-		}
+			const options: PowerSpawnDestinationTask[] = [];
+			this.addResourceTask(RESOURCE_POWER, 0.9, options, context);
 
-		return options;
+			if (this.room.getEffectiveAvailableEnergy() >= settings.get('minEnergyForPowerProcessing')) {
+				this.addResourceTask(RESOURCE_ENERGY, 0.2, options, context);
+			}
+
+			return options;
+		});
 	}
 
 	addResourceTask(resourceType: RESOURCE_ENERGY | RESOURCE_POWER, minFreeLevel: number, options: PowerSpawnDestinationTask[], context: ResourceDestinationContext) {

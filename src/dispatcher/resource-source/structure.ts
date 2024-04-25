@@ -7,8 +7,10 @@ declare global {
 	}
 }
 
-export default class StructureSource<TaskType extends StructureSourceTask> implements TaskProvider<TaskType, ResourceSourceContext> {
-	constructor(readonly room: Room) {}
+export default class StructureSource<TaskType extends StructureSourceTask> extends TaskProvider<TaskType, ResourceSourceContext> {
+	constructor(readonly room: Room) {
+		super();
+	}
 
 	getType() {
 		return 'structure';

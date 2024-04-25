@@ -22,12 +22,14 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 	getTasks(context: ResourceSourceContext) {
 		if (!this.room.factory) return [];
 
-		const options: FactorySourceTask[] = [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
+			const options: FactorySourceTask[] = [];
 
-		this.addNeededResourcesTasks(options, context);
-		this.addEmptyFactoryTasks(options, context);
+			this.addNeededResourcesTasks(options, context);
+			this.addEmptyFactoryTasks(options, context);
 
-		return options;
+			return options;
+		});
 	}
 
 	addNeededResourcesTasks(options: FactorySourceTask[], context: ResourceSourceContext) {

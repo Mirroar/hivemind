@@ -20,32 +20,35 @@ export default class FactoryDestination extends StructureDestination<FactoryDest
 
 	getTasks(context: ResourceDestinationContext) {
 		if (!this.room.factory) return [];
-		if (this.room.factory.store.getFreeCapacity() < 100) return [];
 
-		const options: FactoryDestinationTask[] = [];
-		const missingResources = this.room.factoryManager.getMissingComponents();
-		if (!missingResources) return [];
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 5, () => {
+			if (this.room.factory.store.getFreeCapacity() < 100) return [];
 
-		let resourceType: ResourceConstant;
-		for (resourceType in missingResources) {
-			if (context.resourceType && resourceType !== context.resourceType) continue;
+			const options: FactoryDestinationTask[] = [];
+			const missingResources = this.room.factoryManager.getMissingComponents();
+			if (!missingResources) return [];
 
-			// @todo Create only one task, but allow picking up multiple resource types when resolving.
-			const option: FactoryDestinationTask = {
-				type: this.getType(),
-				priority: 3,
-				weight: missingResources[resourceType] / 1000,
-				resourceType,
-				amount: missingResources[resourceType],
-				target: this.room.factory.id,
-			};
+			let resourceType: ResourceConstant;
+			for (resourceType in missingResources) {
+				if (context.resourceType && resourceType !== context.resourceType) continue;
 
-			if (option.amount < 100) option.priority--;
-			if (option.amount < 10) option.priority--;
+				// @todo Create only one task, but allow picking up multiple resource types when resolving.
+				const option: FactoryDestinationTask = {
+					type: this.getType(),
+					priority: 3,
+					weight: missingResources[resourceType] / 1000,
+					resourceType,
+					amount: missingResources[resourceType],
+					target: this.room.factory.id,
+				};
 
-			options.push(option);
-		}
+				if (option.amount < 100) option.priority--;
+				if (option.amount < 10) option.priority--;
 
-		return options;
+				options.push(option);
+			}
+
+			return options;
+		});
 	}
 }
