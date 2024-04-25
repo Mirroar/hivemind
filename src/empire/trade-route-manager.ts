@@ -28,11 +28,13 @@ export default class TradeRouteManager {
 			if (!roomState.canTrade) return;
 
 			// Do not try transferring from a room that is already preparing a transfer.
-			if (room.memory.fillTerminal && !this.roomNeedsTerminalSpace(room)) return;
+			if (room.memory.fillTerminal && !this.roomNeedsTerminalSpace(room) && !this.roomNeedsStorageSpace(room)) return;
 
 			if (room.terminal.cooldown) return;
 
 			for (const resourceType of getResourcesIn(roomState.state)) {
+				if (!roomState.totalResources[resourceType]) continue;
+
 				const resourceLevel = roomState.state[resourceType] || 'low';
 
 				this.addResourceRequestOptions(options, room, resourceType, roomState);
@@ -45,6 +47,8 @@ export default class TradeRouteManager {
 
 				// Look for other rooms that are low on this resource.
 				_.each(rooms, (roomState2: any, roomName2: string) => {
+					if (roomName === roomName2) return;
+
 					const room2 = Game.rooms[roomName2];
 					const resourceLevel2 = roomState2.state[resourceType] || 'low';
 
@@ -53,12 +57,14 @@ export default class TradeRouteManager {
 					const isEvacuatingRoomWithLowEnergy = room2.isEvacuating()
 						&& resourceType === RESOURCE_ENERGY
 						&& room2.getEffectiveAvailableEnergy() < 5000
-						&& room2.terminal.store.getUsedCapacity() > 10000;
+						&& room2.terminal.store.getUsedCapacity() > 10_000;
 					if (this.roomNeedsTerminalSpace(room2) && !isEvacuatingRoomWithLowEnergy) return;
 
-					const isLow = resourceLevel2 === 'low' || (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
+					const isLow = resourceLevel2 === 'low' 
+						|| (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
 					const isLowEnough = resourceLevel2 === 'medium';
-					const shouldReceiveResources = isLow || (roomState.state[resourceType] === 'excessive' && isLowEnough);
+					const shouldReceiveResources = isLow
+						|| (resourceLevel === 'excessive' && isLowEnough);
 
 					if (!this.roomNeedsTerminalSpace(room) && !this.roomNeedsStorageSpace(room) && !shouldReceiveResources) return;
 

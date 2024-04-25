@@ -559,9 +559,14 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 
 		return [10000, 5000, 750];
 	} */
+	const reaction = this.memory.currentReaction;
+	if (reaction && (resourceType === reaction[0] || resourceType === reaction[1])) {
+		// Make sure we request enough resources of this type to perform reactions.
+		return [50_000, 30_000, 10_000];
+	}
 
-	// @todo If there's no labs or factory, we don't need minerals.
-	return [50_000, 30_000, 10_000];
+	// Any other resources, we can store but don't need.
+	return [50_000, 0, 0];
 };
 
 function isCommodityNeededAtFactoryLevel(factoryLevel: number, resourceType: ResourceConstant): boolean {
@@ -612,7 +617,7 @@ Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType
 			return this.terminal;
 		}
 
-		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 5000 && terminalFree > 0) {
+		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 7000 && terminalFree > 0) {
 			// Make sure terminal has energy for transactions.
 			return this.terminal;
 		}
