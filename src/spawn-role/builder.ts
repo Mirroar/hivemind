@@ -3,6 +3,7 @@
 import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
+import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface BuilderSpawnOption extends SpawnOption {
@@ -196,7 +197,9 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   The boost compound to use keyed by body part type.
 	 */
 	getCreepBoosts(room: Room, option: BuilderSpawnOption, body: BodyPartConstant[]): Record<string, ResourceConstant> {
-		// @todo Only boost if ramparts need a lot of repairs.
+		// Only boost if ramparts need a lot of repairs.
+		if (room.defense.getEnemyStrength() <= ENEMY_STRENGTH_NORMAL) return {};
+
 		return this.generateCreepBoosts(room, body, WORK, 'repair');
 	}
 }
