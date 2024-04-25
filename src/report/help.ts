@@ -15,6 +15,7 @@ export default class HelpReport {
 			'ProcessReport',
 			'ResourcesReport',
 			'RolesReport',
+			'RoomsReport',
 		];
 
 		const visual = new RoomVisual();
