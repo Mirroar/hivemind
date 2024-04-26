@@ -88,12 +88,23 @@ export default class Bay {
 			}
 
 			// Bay is also considered blocked if one of it's extensions is overfull.
-			for (const structure of this.extensions) {
-				if (structure.store.getUsedCapacity(RESOURCE_ENERGY) > structure.store.getCapacity(RESOURCE_ENERGY)) {
-					return true;
-				}
-			}
-
+			const hasOverfullExtension = cache.inHeap(
+				'has-overfull-extensions:' + this.name,
+				250,
+				() => {
+					const room = Game.rooms[this.pos.roomName];
+					for (const structure of (room.structuresByType[STRUCTURE_EXTENSION]) || []) {
+						if (structure.pos.getRangeTo(this.pos) > 1) continue;
+						if (structure.store.getUsedCapacity(RESOURCE_ENERGY) > structure.store.getCapacity(RESOURCE_ENERGY)) {
+							return true;
+						}
+					}
+	
+					return false;
+				},
+			);
+			if (hasOverfullExtension) return true;
+	
 			// Do not add extensions to bay if another important structure is in the bay.
 			const importantStructures = this.pos.findInRange(FIND_STRUCTURES, 1, {
 				filter: structure => (problematicStructures as string[]).includes(structure.structureType) && structure.isOperational(),
