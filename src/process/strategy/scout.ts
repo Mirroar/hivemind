@@ -270,12 +270,25 @@ export default class ScoutProcess extends Process {
 		// Add score for harvest room sources.
 		const exits = roomIntel.getExits();
 		let hasHighwayExit = false;
+		const adjacentRoomInfluence: Record<string, number> = {};
 		for (const adjacentRoom of _.values<string>(exits)) {
-			result.addScore(this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
+			adjacentRoomInfluence[adjacentRoom] = 1;
 
 			if (adjacentRoom.endsWith('0') || adjacentRoom.slice(2).startsWith('0')) {
 				hasHighwayExit = true;
 			}
+
+			const adjacentIntel = getRoomIntel(adjacentRoom);
+			for (const range2Room of _.values<string>(adjacentIntel.getExits())) {
+				adjacentRoomInfluence[range2Room] = 0.5;
+			}
+		}
+
+		for (const adjacentRoom in adjacentRoomInfluence) {
+			if (adjacentRoom === roomName) continue;
+
+			const multiplier = adjacentRoomInfluence[adjacentRoom];
+			result.addScore(multiplier * this.getHarvestRoomScore(adjacentRoom), 'harvest' + adjacentRoom);
 		}
 
 		if (hasHighwayExit) {
