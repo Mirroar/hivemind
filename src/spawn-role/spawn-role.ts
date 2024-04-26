@@ -92,24 +92,33 @@ export default class SpawnRole {
 	generateCreepBoosts(room: Room, body: BodyPartConstant[], partType: BodyPartConstant, boostType: string, maxTier?: number): Partial<Record<string, ResourceConstant>> {
 		if (!room.boostManager.canSpawnBoostedCreeps()) return {};
 
-		const availableBoosts = room.boostManager.getAvailableBoosts(boostType);
 		const numberAffectedParts = _.countBy(body)[partType] || 0;
-		let bestBoost: ResourceConstant;
-		let resourceType: ResourceConstant;
-		for (resourceType in availableBoosts) {
-			if (availableBoosts[resourceType].available < numberAffectedParts) continue;
-			if (maxTier && resourceType.length > maxTier) continue;
-
-			if (!bestBoost || availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
-				bestBoost = resourceType;
-			}
-		}
+		const bestBoost = this.getBestBoost(room, numberAffectedParts, boostType, maxTier);
 
 		if (!bestBoost) return {};
 
 		return {
 			[partType]: bestBoost,
 		};
+	}
+
+	getBestBoost(room: Room, count: number, boostType: string, maxTier?: number): ResourceConstant {
+		let bestBoost: ResourceConstant;
+		const availableBoosts = room.boostManager.getAvailableBoosts(boostType);
+		let resourceType: ResourceConstant;
+		for (resourceType in availableBoosts) {
+			if (availableBoosts[resourceType].available < count) continue;
+			if (maxTier && resourceType.length > maxTier) continue;
+
+			if (!bestBoost || (boostType === 'damage' && availableBoosts[resourceType].effect < availableBoosts[bestBoost].effect)) {
+				bestBoost = resourceType;
+			}
+			else if (availableBoosts[resourceType].effect > availableBoosts[bestBoost].effect) {
+				bestBoost = resourceType;
+			}
+		}
+
+		return bestBoost;
 	}
 
 	/**
