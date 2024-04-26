@@ -753,31 +753,6 @@ export default class RoomIntel {
 			});
 		}
 
-		const lairs = this.getStructures(STRUCTURE_KEEPER_LAIR);
-		if (lairs && _.size(lairs) > 0) {
-			const terrain = new Room.Terrain(this.roomName);
-			_.each(lairs, lair => {
-				handleMapArea(lair.x, lair.y, (x, y) => {
-					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 255);
-				}, 3);
-			});
-
-			// Add area around sources as obstacles.
-			_.each(this.getSourcePositions(), sourceInfo => {
-				handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
-					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 255);
-				}, 4);
-			});
-
-			// Add area around mineral as obstacles.
-			const minerals = this.getMineralPositions();
-			for (const mineral of minerals) {
-				handleMapArea(mineral.x, mineral.y, (x, y) => {
-					if (terrain.get(x, y) !== TERRAIN_MASK_WALL && matrix.get(x, y) < 10) matrix.set(x, y, 255);
-				}, 4);
-			}
-		}
-
 		return matrix;
 	}
 
