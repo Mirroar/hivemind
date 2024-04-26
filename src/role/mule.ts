@@ -8,16 +8,20 @@ declare global {
 	interface MuleCreep extends Creep {
 		role: 'mule';
 		memory: MuleCreepMemory;
+		heapMemory: MuleCreepHeapMemory;
 	}
 
 	interface MuleCreepMemory extends CreepMemory {
 		delivering?: boolean;
 		route: string;
-		demiseReported?: boolean;
 		roomPath?: string[];
 		pathIndex?: number;
 		recordTravelLength?: number;
 		suicideSpawn?: Id<StructureSpawn>;
+	}
+
+	interface MuleCreepHeapMemory extends CreepHeapMemory {
+		demiseReported?: boolean;
 	}
 }
 
@@ -41,7 +45,7 @@ export default class MuleRole extends Role {
 		// @todo Make TradeRoute object available and reusable.
 		this.tradeRoute = new TradeRoute(creep.memory.route);
 
-		if (creep.memory.suicideSpawn) {
+		if (creep.heapMemory.suicideSpawn) {
 			this.performRecycle(creep);
 			return;
 		}
@@ -62,8 +66,8 @@ export default class MuleRole extends Role {
 
 	reportEarlyDemise(creep: MuleCreep) {
 		if (creep.ticksToLive > 10) return;
-		if (creep.memory.demiseReported) return;
-		creep.memory.demiseReported = true;
+		if (creep.heapMemory.demiseReported) return;
+		creep.heapMemory.demiseReported = true;
 
 		const storageContents = [];
 		_.each(creep.store, (amount, resourceType) => {
@@ -119,7 +123,6 @@ export default class MuleRole extends Role {
 		const originRoom = this.tradeRoute.getOrigin();
 		if (creep.pos.roomName !== originRoom) {
 			// Move back to spawn room.
-			// @todo Use reverse path from trade route.
 			this.followRoomPath(creep);
 			return;
 		}
@@ -186,6 +189,9 @@ export default class MuleRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	deliverResources(creep: MuleCreep) {
+		// @todo If delivering energy to one of our own rooms that doesn't have
+		// a storage, use transporter logic to drop off the energy, or even
+		// act as a temporary container until energy is used up.
 		const targetRoom = this.tradeRoute.getTarget();
 		if (creep.pos.roomName !== targetRoom) {
 			// Move back to spawn room.
