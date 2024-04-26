@@ -148,6 +148,7 @@ export default class ScoutRole extends Role {
 	}
 
 	getBestScoutOption(creep: ScoutCreep) {
+		const startTime = Game.cpu.getUsed();
 		const candidates = _.sortByAll(
 			this.getScoutableRoomsForCreep(creep),
 			(info: ScoutTarget) => -info.scoutPriority,
@@ -158,7 +159,18 @@ export default class ScoutRole extends Role {
 		);
 
 		for (const info of candidates) {
-			if (!this.hasRoomPath(creep, info.roomName)) continue;
+			if ((Game.cpu.getUsed() - startTime > 10)) {
+				return null;
+			}
+
+			if (!this.hasRoomPath(creep, info.roomName)) {
+				if (!creep.memory.invalidScoutTargets) {
+					creep.memory.invalidScoutTargets = [];
+				}
+
+				creep.memory.invalidScoutTargets.push(info.roomName);
+				continue;
+			}
 
 			const roomIntel = getRoomIntel(info.roomName);
 			const lastScout = roomIntel.getLastScoutAttempt();
