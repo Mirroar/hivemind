@@ -3,6 +3,7 @@
 import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
+import utilities from 'utilities';
 import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface TransporterSpawnOption extends SpawnOption {
@@ -18,50 +19,52 @@ export default class TransporterSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room) {
-		const options: TransporterSpawnOption[] = [];
+		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
+			const options: TransporterSpawnOption[] = [];
 
-		const transporterSize = this.getTransporterSize(room);
-		const maxTransporters = this.getTransporterAmount(room, transporterSize);
+			const transporterSize = this.getTransporterSize(room);
+			const maxTransporters = this.getTransporterAmount(room, transporterSize);
 
-		const transporterCount = _.size(room.creepsByRole.transporter);
-		if (transporterCount < maxTransporters) {
-			const option: TransporterSpawnOption = {
-				priority: (room.storage || room.terminal) ? 6 : 5,
-				weight: 0.5,
-				force: false,
-				size: transporterSize,
-			};
+			const transporterCount = _.size(room.creepsByRole.transporter);
+			if (transporterCount < maxTransporters) {
+				const option: TransporterSpawnOption = {
+					priority: (room.storage || room.terminal) ? 6 : 5,
+					weight: 0.5,
+					force: false,
+					size: transporterSize,
+				};
 
-			const hasHaulers
-				= _.filter(Game.creepsByRole.hauler, creep => creep.memory.sourceRoom === room.name).length
-				+ _.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
-			const hasExtensions = (room.myStructuresByType[STRUCTURE_EXTENSION] || []).length > 0;
-			if (transporterCount >= maxTransporters / 2) {
-				option.priority--;
-				option.priority--;
-			}
-			else if (transporterCount >= 1) {
-				option.priority--;
-				option.weight = 0;
-			}
-			else if (room.storage || room.terminal || (!hasHaulers && hasExtensions)) {
-				option.force = true;
-				option.weight = 1;
-			}
-			else if (!room.storage && !room.terminal) {
-				const spawns = _.filter(Game.spawns, spawn => spawn.room.name === room.name);
-				const sources = room.sources;
-				const minSpawnDistance = _.min(_.map(spawns, spawn => _.min(_.map(sources, source => spawn.pos.getRangeTo(source.pos)))));
-				if (minSpawnDistance < 5) {
+				const hasHaulers
+					= _.filter(Game.creepsByRole.hauler, creep => creep.memory.sourceRoom === room.name).length
+					+ _.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
+				const hasExtensions = (room.myStructuresByType[STRUCTURE_EXTENSION] || []).length > 0;
+				if (transporterCount >= maxTransporters / 2) {
+					option.priority--;
+					option.priority--;
+				}
+				else if (transporterCount >= 1) {
 					option.priority--;
 					option.weight = 0;
 				}
+				else if (room.storage || room.terminal || (!hasHaulers && hasExtensions)) {
+					option.force = true;
+					option.weight = 1;
+				}
+				else if (!room.storage && !room.terminal) {
+					const spawns = _.filter(Game.spawns, spawn => spawn.room.name === room.name);
+					const sources = room.sources;
+					const minSpawnDistance = _.min(_.map(spawns, spawn => _.min(_.map(sources, source => spawn.pos.getRangeTo(source.pos)))));
+					if (minSpawnDistance < 5) {
+						option.priority--;
+						option.weight = 0;
+					}
+				}
+
+				options.push(option);
 			}
 
-			options.push(option);
-		}
-
-		return options;
+			return options;
+		});
 	}
 
 	/**
@@ -100,6 +103,8 @@ export default class TransporterSpawnRole extends SpawnRole {
 			}
 		}
 
+		maxTransporters += this.getExtraUpgraderTransporters(room);
+
 		return maxTransporters;
 	}
 
@@ -137,6 +142,26 @@ export default class TransporterSpawnRole extends SpawnRole {
 		maxTransporters -= _.size(room.creepsByRole['builder.remote']);
 
 		return maxTransporters;
+	}
+
+	getExtraUpgraderTransporters(room: Room): number {
+		// Add extra transporters if there's a lot of upgrading happening.
+		// @todo Take into account boosts.
+		const upgraderWorkParts = _.sum(room.creepsByRole.upgrader, creep => creep.getActiveBodyparts(WORK));
+		const refillPathLength = cache.inHeap('ccRefillPathLength:' + room.name, 5000, () => {
+			const container = Game.getObjectById<StructureContainer>(room.memory.controllerContainer);
+			if (!container) return 1;
+
+			const path = utilities.getPath(room.getStorageLocation(), container.pos, false, {singleRoom: room.name});
+
+			if (path.incomplete) return 1;
+			return path.path.length;
+		});
+
+		// @todo We might want to reduce the factor because links can help out. But if we're doing a lot of upgrading,
+		// I'd rather have too many transporters, since we clearly have energy to spare.
+		const usedEnergyPerTrip = upgraderWorkParts * UPGRADE_CONTROLLER_POWER * refillPathLength * 1.8;
+		return Math.floor(usedEnergyPerTrip / CARRY_CAPACITY / this.getTransporterSize(room));
 	}
 
 	/**
