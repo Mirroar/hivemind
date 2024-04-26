@@ -185,19 +185,34 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 		const controllerRoads = this.findBestControllerRoad(controllerPosition);
 		for (const pos of controllerRoads) {
+			this.protectPosition(pos, 0);
+			if (pos.getRangeTo(controllerRoads[0]) === 0) continue;
+
 			this.placementManager.planLocation(pos, 'road', 1);
 			this.placementManager.planLocation(pos, 'road.controller', null);
-			this.protectPosition(pos, 0);
 		}
 
 		// Store position where main upgrader can stay and upgrade.
 		this.placementManager.planLocation(controllerRoads[0], 'upgrader.0', 1);
 		this.protectPosition(controllerRoads[0], 1);
 
-		this.placeContainer(controllerRoads, 'controller');
+		const containerPosition = this.placeContainer(controllerRoads, 'controller');
+		this.placementManager.planLocation(containerPosition, 'road', null);
+		this.placementManager.planLocation(containerPosition, 'road.controller', null);
 
 		// Place a link near controller, but off the calculated path.
-		this.placeLink(controllerRoads, 'controller');
+		this.placeControllerLink(controllerRoads[0], controllerPosition);
+
+		// Place roads on swamp tiles surrounding the container so upgraders
+		// don't navigate away from it.
+		handleMapArea(containerPosition.x, containerPosition.y, (x, y) => {
+			if (!this.placementManager.isBuildableTile(x, y, false, true)) return;
+			if (this.terrain.get(x, y) !== TERRAIN_MASK_SWAMP) return;
+
+			const position = new RoomPosition(x, y, this.roomName);
+			this.placementManager.planLocation(position, 'road', 1);
+			this.placementManager.planLocation(position, 'road.controller', null);
+		});
 
 		// Make sure no other paths get led through upgrader position.
 		this.placementManager.blockPosition(controllerRoads[0].x, controllerRoads[0].y);
@@ -206,22 +221,28 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	}
 
 	findBestControllerRoad(controllerPosition: RoomPosition): RoomPosition[] {
-		let best: RoomPosition[];
+		let best: {
+			path: RoomPosition[];
+			score: number;
+		};
 		handleMapArea(controllerPosition.x, controllerPosition.y, (x, y) => {
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-			if (!this.isAcceptableUpgraderPosition(x, y, controllerPosition)) return;
+
+			const availableSpots = this.getAvailableUpgraderSpotCount(x, y, controllerPosition);
+			if (availableSpots < 3) return;
 
 			const startPosition = new RoomPosition(x, y, this.roomName);
 			const path = this.placementManager.findAccessRoad(startPosition, this.roomCenterEntrances);
 			path.splice(0, 0, startPosition);
 
-			if (!best || best.length > path.length) best = path;
+			const score = path.length - (availableSpots * 1.1);
+			if (!best || best.score > score) best = {path, score};
 		}, 3);
 
-		return best;
+		return best?.path;
 	}
 
-	isAcceptableUpgraderPosition(x: number, y: number, controllerPosition: RoomPosition): boolean {
+	getAvailableUpgraderSpotCount(x: number, y: number, controllerPosition: RoomPosition): number {
 		// We want at least 3 spots for upgraders that can reach the controller.
 		let validSpots = 0;
 		handleMapArea(x, y, (x2, y2) => {
@@ -231,7 +252,44 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			validSpots++;
 		});
 
-		return validSpots >= 3;
+		return validSpots;
+	}
+
+	/**
+	 * Places the controller link near the main upgrade position.
+	 */
+	placeControllerLink(upgradePosition: RoomPosition, controllerPosition: RoomPosition) {
+		const targetPos = this.findControllerLinkPosition(upgradePosition, controllerPosition);
+
+		if (!targetPos) return;
+
+		this.placementManager.planLocation(targetPos, 'link.controller', null);
+		this.placementManager.planLocation(targetPos, 'link');
+		this.protectPosition(targetPos, 0);
+	}
+
+	/**
+	 * Finds the best spot for a controller link near the main upgrade position.
+	 */
+	findControllerLinkPosition(upgradePosition: RoomPosition, controllerPosition: RoomPosition): RoomPosition {
+		let best: {
+			pos: RoomPosition;
+			score: number;
+		};
+		handleMapArea(upgradePosition.x, upgradePosition.y, (x, y) => {
+			if (!this.placementManager.isBuildableTile(x, y, false, true)) return;
+
+			let score = this.getAvailableUpgraderSpotCount(x, y, controllerPosition) - 1;
+
+			// If multiple positions give the same amount of upgrader positions,
+			// prefer one that doesn't block the controller. That also gives us
+			// 1 extra spot to upgrade from.
+			if (controllerPosition.getRangeTo(x, y) > 3) score += 1.5;
+
+			if (!best || best.score < score) best = {pos: new RoomPosition(x, y, upgradePosition.roomName), score};
+		});
+
+		return best.pos;
 	}
 
 	placeRoadNetwork(): StepResult {
@@ -320,6 +378,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	 * Places extension bays.
 	 */
 	placeBays(): StepResult {
+		this.placementManager.startBuildingPlacement();
 		let count = 0;
 		while (this.roomPlan.canPlaceMore('extension')) {
 			const pos = this.findBayPosition();
@@ -327,8 +386,6 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 			this.placementManager.placeAccessRoad(pos);
 
-			// Make sure there is a road in the center of the bay.
-			this.placementManager.planLocation(pos, 'road', 1);
 			this.placementManager.planLocation(pos, 'bay_center', 1);
 
 			this.placeBayStructures(pos, {spawn: true, id: count++});
@@ -656,7 +713,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 			if (x < 1 || x > 48 || y < 1 || y > 48) return;
 
 			// Ignore walls.
-			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL && !this.roomPlan.hasPosition('road', new RoomPosition(targetPos.x, targetPos.y, this.roomName))) return;
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL && !this.roomPlan.hasPosition('road', new RoomPosition(x, y, this.roomName))) return;
 
 			const posName = encodePosition(new RoomPosition(x, y, this.roomName));
 			if (openList[posName] || closedList[posName]) return;
@@ -743,7 +800,12 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					this.placementManager.unblockPosition(road.x, road.y);
 				}
 
-				this.placementManager.planLocation(road, 'road', 1);
+				if (settings.get('constructRoadsUnderRamparts')) {
+					this.placementManager.planLocation(road, 'road', 1);
+				}
+				else {
+					this.placementManager.planLocation(road, 'road.toRampart', 1);
+				}
 			}
 		}
 
@@ -792,7 +854,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
 				const pos = new RoomPosition(x, y, this.roomName);
-				if (!this.roomPlan.hasPosition('road', pos)) return;
+				if (
+					!this.roomPlan.hasPosition('road', pos)
+					&& !this.roomPlan.hasPosition('road.toRampart', pos)
+				) return;
 				if (this.roomPlan.hasPosition('rampart', pos)) return;
 
 				this.placementManager.planLocation(pos, 'rampart', null);

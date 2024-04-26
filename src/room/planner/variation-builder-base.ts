@@ -50,10 +50,11 @@ export default class RoomVariationBuilderBase {
 	}
 
 	placeBayStructures(bayPosition: RoomPosition, options: {spawn?: boolean; source?: boolean; id?: number} = {}) {
+		const allowNearExit = options.source && !options.spawn;
 		if (this.roomPlan.canPlaceMore('spawn') && options.spawn) {
 			handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
 				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return true;
-				if (!this.placementManager.isBuildableTile(x, y)) return true;
+				if (!this.placementManager.isBuildableTile(x, y, false, allowNearExit)) return true;
 				if (x === bayPosition.x && y === bayPosition.y) return true;
 
 				// Only place spawn where a road tile is adjacent, so creeps can
@@ -78,7 +79,7 @@ export default class RoomVariationBuilderBase {
 		let linkPlaced = !this.roomPlan.canPlaceMore('link') || !options.source;
 		handleMapArea(bayPosition.x, bayPosition.y, (x, y) => {
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-			if (!this.placementManager.isBuildableTile(x, y)) return;
+			if (!this.placementManager.isBuildableTile(x, y, false, allowNearExit)) return;
 			if (x === bayPosition.x && y === bayPosition.y) return;
 
 			if (linkPlaced) {
@@ -139,7 +140,7 @@ export default class RoomVariationBuilderBase {
 		let targetPosition: RoomPosition;
 		for (const pos of _.slice(sourceRoads, 0, 3)) {
 			handleMapArea(pos.x, pos.y, (x, y) => {
-				if (this.placementManager.isBuildableTile(x, y)) {
+				if (this.placementManager.isBuildableTile(x, y, false, true)) {
 					targetPosition = new RoomPosition(x, y, pos.roomName);
 					return false;
 				}
@@ -164,13 +165,15 @@ export default class RoomVariationBuilderBase {
 	placeContainer(sourceRoads: RoomPosition[], containerType: string) {
 		const targetPos = this.findContainerPosition(sourceRoads);
 
-		if (!targetPos) return;
+		if (!targetPos) return null;
 
 		if (containerType) {
 			this.placementManager.planLocation(targetPos, 'container.' + containerType, null);
 		}
 
 		this.placementManager.planLocation(targetPos, 'container', 1);
+
+		return targetPos;
 	}
 
 	/**
@@ -183,11 +186,11 @@ export default class RoomVariationBuilderBase {
 	 *   A Position at which a container can be placed.
 	 */
 	findContainerPosition(sourceRoads: RoomPosition[]): RoomPosition {
-		if (sourceRoads[0] && this.placementManager.isBuildableTile(sourceRoads[0].x, sourceRoads[0].y, true)) {
+		if (sourceRoads[0] && this.placementManager.isBuildableTile(sourceRoads[0].x, sourceRoads[0].y, true, true)) {
 			return sourceRoads[0];
 		}
 
-		if (sourceRoads[1] && this.placementManager.isBuildableTile(sourceRoads[1].x, sourceRoads[1].y, true)) {
+		if (sourceRoads[1] && this.placementManager.isBuildableTile(sourceRoads[1].x, sourceRoads[1].y, true, true)) {
 			return sourceRoads[1];
 		}
 

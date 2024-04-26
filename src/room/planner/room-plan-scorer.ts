@@ -39,8 +39,8 @@ export default class RoomPlanScorer {
 		return score;
 	}
 
-	getPlannedAmount(plan: RoomPlan, structureType: StructureConstant) {
-		return Math.min(plan.getPositions(structureType).length, CONTROLLER_STRUCTURES[structureType][8]);
+	getPlannedAmount(plan: RoomPlan, structureType: string) {
+		return Math.min(plan.getPositions(structureType).length, CONTROLLER_STRUCTURES[structureType as StructureConstant]?.[8] ?? 2500);
 	}
 
 	getRequiredMaintenanceScore(plan: RoomPlan): number {
@@ -98,7 +98,7 @@ export default class RoomPlanScorer {
 			if (exitDistance < 6) total += (6 - exitDistance) * (6 - exitDistance);
 		}
 
-		return (-0.003 * total) - 0.001 * this.getPlannedAmount(plan, STRUCTURE_WALL);
+		return (-0.003 * total) - 0.001 * this.getPlannedAmount(plan, 'wall.quad');
 	}
 
 	getTravelDistancesScore(plan: RoomPlan): number {
@@ -118,9 +118,8 @@ export default class RoomPlanScorer {
 		));
 
 		// Travel time from spawn to upgrader position.
-		// @todo Use position from room planner once we switch to range 3 from
-		// controller.
-		total -= 0.002 * this.getPathLength(roomIntel.getControllerPosition(), spawnGoals, matrix);
+		const upgraderPosition = _.sample(plan.getPositions('container.controller')) || roomIntel.getControllerPosition();
+		total -= 0.002 * this.getPathLength(upgraderPosition, spawnGoals, matrix);
 
 		// Travel time from spawn to extractor.
 		for (const mineralInfo of roomIntel.getMineralPositions()) {
@@ -128,10 +127,29 @@ export default class RoomPlanScorer {
 			total -= 0.001 * this.getPathLength(mineralPosition, spawnGoals, matrix);
 		}
 
-		// @todo Refill travel time from storage to bays.
+		// Refill travel time from storage to bays.
 		const roomCenter = _.sample(plan.getPositions('center')) || _.sample(plan.getPositions(STRUCTURE_STORAGE));
+		total -= 0.005 * _.sum(_.map(
+			plan.getPositions('bay_center'),
+			bayPosition => this.getPathLength(bayPosition, roomCenter, matrix),
+		));
+
+		// Collection travel time from harvest position to storage.
+		total -= 0.001 * _.sum(_.map(
+			plan.getPositions('harvester'),
+			harvestPosition => this.getPathLength(harvestPosition, roomCenter, matrix),
+		));
 
 		// @todo Refill travel time from storage to spawns / extensions not in a bay.
+
+		// Refill travel time from storage to controller container.
+		total -= 0.01 * this.getPathLength(upgraderPosition, roomCenter, matrix);
+
+		// Refill/empty travel time from storage to labs.
+		total -= 0.001 * _.sum(_.map(
+			plan.getPositions('lab'),
+			harvestPosition => this.getPathLength(harvestPosition, roomCenter, matrix),
+		));
 
 		// Refill travel time from storage to towers.
 		total -= 0.001 * _.sum(_.map(

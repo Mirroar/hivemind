@@ -138,12 +138,12 @@ export default class PlacementManager {
 	 * @return {boolean}
 	 *   True if building on the given coordinates is allowed.
 	 */
-	isBuildableTile(x: number, y: number, allowRoads?: boolean): boolean {
+	isBuildableTile(x: number, y: number, allowRoads?: boolean, allowNearExit?: boolean): boolean {
 		// Only build on valid terrain.
 		if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return false;
 
 		// Don't build too close to exits.
-		if (this.exitDistanceMatrix.get(x, y) <= 5) return false;
+		if (this.exitDistanceMatrix.get(x, y) <= (allowNearExit ? 2 : 5)) return false;
 
 		const matrixValue = this.buildingMatrix.get(x, y);
 		// Can't build on other buildings.
