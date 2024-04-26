@@ -92,12 +92,13 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		if (room.controller.level >= 6 && room.isStripmine()) return 0;
 
+		const availableEnergy = room.getEffectiveAvailableEnergy();
 		const funnelManager = container.get('FunnelManager');
-		if (room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(room.name) && room.getEffectiveAvailableEnergy() < 100_000) return 0;
+		const isFunneling = room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(room.name);
+		if (isFunneling && availableEnergy < 100_000) return 0;
 
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
-		const availableEnergy = room.getEffectiveAvailableEnergy();
 		// RCL 8 rooms can't make use of more than 1 upgrader.
 		if (room.controller.level === 8) {
 			if (availableEnergy < hivemind.settings.get('minEnergyToUpgradeAtRCL8')) return 0;
@@ -110,9 +111,10 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		if (availableEnergy < (room.controller.level === 7 ? 25_000 : 10_000)) return 0;
 		if (availableEnergy < (room.controller.level === 7 ? 75_000 : 50_000)) return 1;
 		if (availableEnergy < 100_000) return 2;
+		if (availableEnergy < 125_000 && isFunneling) return 3;
+		if (availableEnergy < 150_000) return isFunneling ? 4 : 3;
 		// @todo Have maximum depend on number of work parts.
-		// @todo Make sure enough energy is brought by.
-		return 3;
+		return isFunneling ? 5 : 4;
 	}
 
 	/**
