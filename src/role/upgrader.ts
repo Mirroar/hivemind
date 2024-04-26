@@ -111,8 +111,9 @@ export default class UpgraderRole extends Role {
 		}
 
 		// Keep syphoning energy from link or controller to ideally never stop upgrading.
-		// @todo Do it when energy is less than 2 ticks of upgrading.
-		if (allowRefilling && creep.store.getUsedCapacity() < creep.store.getCapacity() * 0.5) {
+		// Do it when stored energy is less than 2 ticks worth of upgrading.
+		const workParts = creep.getActiveBodyparts(WORK);
+		if (allowRefilling && creep.store.getUsedCapacity() < workParts * 2) {
 			let withdrawn = false;
 			if (creep.room.memory.controllerLink) {
 				const controllerLink = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
