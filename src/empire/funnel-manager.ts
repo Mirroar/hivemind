@@ -7,38 +7,41 @@ interface TraderouteInfo {
 }
 
 export default class FunnelManager {
-	constructor() {}
-
 	getRoomsToFunnel(): string[] {
 		return cache.inHeap('funneledRooms', 500, () => {
 			const funneledRooms: string[] = [];
 			const roomsAtLevel = _.groupBy(this.getAvailableRoomsToFunnel(), room => room.controller.level);
 
-			const hasRCL8 = (roomsAtLevel[8]?.length || 0) > 0;
+			const hasEnoughRCL8 = (roomsAtLevel[8]?.length || 0) > 1 || true;
 			const hasRCL7 = (roomsAtLevel[7]?.length || 0) > 0;
 			const hasRCL6 = (roomsAtLevel[6]?.length || 0) > 0;
 			const hasEnoughRCL7 = (roomsAtLevel[7]?.length || 0) > 2;
 			const hasTooMuchEnergy = _.some(Game.myRooms, room => room.getEffectiveAvailableEnergy() > 300_000 && room.controller.level === 8);
 
-			// @todo Don't funnel to highest score room, prefer rooms that are
-			// close to upgrade already.
-			if (
-				(hasEnoughRCL7 && !hasRCL8)
-				|| (!hasRCL6 && hasRCL7)
-			) {
-				// Funnel to best RCL 7 room.
-				funneledRooms.push(_.max(roomsAtLevel[7], room => Memory.strategy.roomList[room.name]?.expansionScore).name);
-			}
-			else if (hasRCL6) {
-				// Funnel to best RCL 6 room.
-				funneledRooms.push(_.max(roomsAtLevel[6], room => Memory.strategy.roomList[room.name]?.expansionScore).name);
-			}
-
 			if (hasTooMuchEnergy) {
+				// All rooms < RCL8 may upgrade.
 				for (const room of [...(roomsAtLevel[6] || []), ...(roomsAtLevel[7] || [])]) {
 					if (!funneledRooms.includes(room.name)) funneledRooms.push(room.name);
 				}
+
+				return funneledRooms;
 			}
+
+			if (
+				(hasEnoughRCL7)
+				|| (!hasRCL6 && hasRCL7)
+			) {
+				// Funnel to best RCL 7 room.
+				funneledRooms.push(_.max(roomsAtLevel[7], room => this.getFunnelRoomScore(room)).name);
+			}
+			else if (hasRCL6) {
+				// Funnel to best RCL 6 or 7 room.
+				funneledRooms.push(_.max([
+					...(roomsAtLevel[6] ?? []),
+					...(roomsAtLevel[7] ?? []),
+				], room => this.getFunnelRoomScore(room)).name);
+			}
+
 
 			return funneledRooms;
 		});
@@ -52,6 +55,12 @@ export default class FunnelManager {
 
 			return true;
 		});
+	}
+
+	protected getFunnelRoomScore(room: Room) {
+		const energyNeededToUpgrade = Math.max(0, room.controller.progressTotal - room.controller.progress);
+
+		return Memory.strategy.roomList[room.name]?.expansionScore / (energyNeededToUpgrade + 1);
 	}
 
 	isFunneling() {
