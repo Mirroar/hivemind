@@ -187,7 +187,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(hasSpawnAtSource || hasFewExtensions ? MOVEMENT_MODE_MINIMAL : MOVEMENT_MODE_ROAD)
 			.setCarryContentLevel(0)
-			.setEnergyLimit(Math.max(option.force ? SPAWN_ENERGY_CAPACITY : room.energyCapacityAvailable, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(option.force ? SPAWN_ENERGY_CAPACITY : room.energyCapacityAvailable, room.energyAvailable)))
 			.build();
 	}
 

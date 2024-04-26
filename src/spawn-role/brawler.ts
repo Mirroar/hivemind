@@ -341,7 +341,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[ATTACK]: 2,[HEAL]: 1})
 			.setPartLimit(ATTACK, maxAttackParts)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)
 			.build();
 	}
@@ -350,7 +350,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[RANGED_ATTACK]: 7,[HEAL]: 3})
 			.setPartLimit(RANGED_ATTACK, maxAttackParts)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)
 			.build();
 	}
@@ -358,7 +358,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	getAttackCreepBody(room: Room): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[ATTACK]: 1})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)
 			.build();
 	}
@@ -366,7 +366,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	getRangedCreepBody(room: Room): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[RANGED_ATTACK]: 1})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)
 			.build();
 	}
@@ -374,7 +374,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	getHealCreepBody(room: Room): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[HEAL]: 1})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)
 			.build();
 	}

@@ -172,7 +172,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			.setWeights({[ATTACK]: 1})
 			.setMoveBufferRatio(0.8)
 			.setMovementMode(settings.get('constructRoadsUnderRamparts') ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -181,7 +181,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 			.setWeights({[RANGED_ATTACK]: 1})
 			.setMoveBufferRatio(0.8)
 			.setMovementMode(settings.get('constructRoadsUnderRamparts') ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -189,7 +189,7 @@ export default class RoomDefenseSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[WORK]: 1, [CARRY]: 1})
 			.setMovementMode(MOVEMENT_MODE_ROAD)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 

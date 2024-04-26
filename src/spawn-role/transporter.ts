@@ -211,7 +211,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 			.setWeights({[CARRY]: 1})
 			.setPartLimit(CARRY, option.size ?? 8)
 			.setMovementMode(MOVEMENT_MODE_ROAD)
-			.setEnergyLimit(Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable),)
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(option.force ? 250 : room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 

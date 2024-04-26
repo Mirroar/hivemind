@@ -66,7 +66,7 @@ export default class PowerHaulerSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 1})
 			.setMovementMode(MOVEMENT_MODE_ROAD)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 

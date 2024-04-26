@@ -220,6 +220,7 @@ export default class SpawnManager {
 
 		if (result !== OK) {
 			hivemind.log('creeps', room.name).error('Trying to spawn creep', creepName, 'failed with error code', result);
+			hivemind.log('creeps', room.name).error('Body cost:', _.sum(body, (part) => BODYPART_COST[part]), 'Energy Capacity', room.energyCapacityAvailable, 'Energy:', room.energyAvailable);
 			return false;
 		}
 

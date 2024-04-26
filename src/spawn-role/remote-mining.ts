@@ -475,7 +475,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setPartLimit(WORK, option.size ? option.size + 1 : 0)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
 			.setCarryContentLevel(0)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -486,7 +486,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setWeights({[CARRY]: 1})
 			.setPartLimit(CARRY, option.size)
 			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -497,7 +497,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setWeights({[CARRY]: 5, [WORK]: 2})
 			.setPartLimit(WORK, option.size)
 			.setMovementMode(hasRoads ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -506,7 +506,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			.setWeights({[ATTACK]: 4, [HEAL]: 1})
 			.setMovementMode(MOVEMENT_MODE_PLAINS)
 			.setMoveBufferRatio(1)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 

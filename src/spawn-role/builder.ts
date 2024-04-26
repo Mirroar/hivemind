@@ -160,7 +160,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 			.setWeights({[WORK]: 4, [CARRY]: 3})
 			.setMovementMode(MOVEMENT_MODE_ROAD)
 			.setPartLimit(WORK, option.size)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 

@@ -110,7 +110,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[RANGED_ATTACK]: 3})
 			.setMoveBufferRatio(0.4)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -118,14 +118,14 @@ export default class SquadSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[HEAL]: 1})
 			.setMoveBufferRatio(0.4)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
 	getClaimerCreepBody(room: Room) {
 		return (new BodyBuilder())
 			.setWeights({[CLAIM]: 3, [TOUGH]: 2})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -141,7 +141,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	getBuilderCreepBody(room: Room) {
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 3, [WORK]: 2})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -149,7 +149,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[ATTACK]: 1})
 			.setMoveBufferRatio(0.4)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -161,7 +161,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[RANGED_ATTACK]: 3, [HEAL]: 2})
 			.setMoveBufferRatio(0.4)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 
@@ -169,7 +169,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return (new BodyBuilder())
 			.setWeights({[ATTACK]: 3, [HEAL]: 2})
 			.setMoveBufferRatio(0.4)
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, Math.min(room.energyAvailable, room.energyCapacityAvailable)))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();
 	}
 

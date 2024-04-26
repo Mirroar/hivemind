@@ -61,7 +61,7 @@ export default class MuleSpawnRole extends SpawnRole {
 	getCreepBody(room: Room): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 1})
-			.setEnergyLimit(Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable) * 0.7)
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable) * 0.7))
 			.build();
 	}
 
