@@ -8,6 +8,7 @@ import hivemind from 'hivemind';
 import {ErrorMapper} from 'utils/ErrorMapper';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
+import {handleMapArea} from 'utils/map';
 
 declare global {
 	type TileCallback = (x: number, y: number) => boolean | void;
@@ -72,7 +73,7 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?: boolean; allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string} = {}) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?: boolean; allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string, avoidNearbyCreeps?: boolean} = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
@@ -85,19 +86,26 @@ const utilities = {
 				}
 
 				const options = {
-					singleRoom: false,
-					isQuad: false,
+					singleRoom: addOptions.singleRoom && addOptions.singleRoom === roomName,
+					isQuad: addOptions.isQuad,
 				};
-				if (addOptions.singleRoom && addOptions.singleRoom === roomName) {
-					options.singleRoom = true;
-				}
-
-				if (addOptions.isQuad) {
-					options.isQuad = true;
-				}
 
 				// Work with roads and structures in a room.
 				const costs = getCostMatrix(roomName, options);
+
+				if (addOptions.avoidNearbyCreeps && roomName === startPosition.roomName) {
+					const adjustedCosts = costs.clone();
+					const visual = new RoomVisual(roomName);
+					handleMapArea(startPosition.x, startPosition.y, (x, y) => {
+						const creeps = (new RoomPosition(x, y, roomName)).lookFor(LOOK_CREEPS);
+						if (creeps.length > 0) {
+							adjustedCosts.set(x, y, 255);
+							visual.circle(x, y, {radius: 0.3, fill: '#ff0000', opacity: 0.3});
+						}
+					}, 2);
+
+					return adjustedCosts;
+				}
 
 				return costs;
 			},

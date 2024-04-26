@@ -342,7 +342,7 @@ export default class MineBuilderRole extends Role {
 
 		const workParts = creep.getActiveBodyparts(WORK);
 		// @todo Get rid of this direct memory access
-		const pos = creep.heapMemory.cachedPath.position;
+		const pos = creep.memory.cachedPath.position;
 		const path = creep.getCachedPath();
 
 		for (let i = pos - 2; i <= pos + 2; i++) {
