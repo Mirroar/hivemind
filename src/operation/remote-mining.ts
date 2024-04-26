@@ -574,43 +574,5 @@ export default class RemoteMiningOperation extends Operation {
 		if (hivemind.settings.get('disableRoomVisuals')) return;
 
 		// @todo Update this report for new hauler pools.
-		const requiredCarryParts = this.getHaulerSize(targetPos);
-
-		// Determine how many haulers to spawn for this route.
-		// If we cannot create big enough haulers (yet), create more of them!
-		const spawnRoom = Game.rooms[this.getSourceRoom(targetPos)];
-		if (!spawnRoom) return;
-
-		const maximumBody = (new BodyBuilder())
-			.setWeights(this.haulerRole.getBodyWeights())
-			.setPartLimit(CARRY, requiredCarryParts)
-			.setMovementMode(MOVEMENT_MODE_ROAD)
-			.setEnergyLimit(spawnRoom.energyCapacityAvailable)
-			.build();
-		const maxCarryPartsOnBiggestBody = _.countBy(maximumBody)[CARRY];
-		const maxCarryPartsToEmptyContainer = Math.ceil(0.9 * CONTAINER_CAPACITY / CARRY_CAPACITY);
-		const maxCarryParts = Math.min(maxCarryPartsOnBiggestBody, maxCarryPartsToEmptyContainer);
-		const maxHaulers = Math.ceil(requiredCarryParts / maxCarryParts);
-		const adjustedCarryParts = Math.ceil(requiredCarryParts / maxHaulers);
-
-		const activeHaulers = _.filter(Game.creepsByRole.hauler, (creep: HaulerCreep) => creep.memory.source === targetPos);
-		const activeCarryParts = _.sum(activeHaulers, creep => creep.getActiveBodyparts(CARRY));
-
-		const position = decodePosition(targetPos);
-		const visual = new RoomVisual(position.roomName);
-		const data: string[][] = [
-			['Requested carry parts', requiredCarryParts.toString()],
-			['Max parts per hauler', maxCarryParts.toString()],
-			['Calculated hauler size', adjustedCarryParts.toString()],
-			['Calculated hauler count', maxHaulers.toString()],
-			['Active haulers', activeHaulers.toString()],
-			['Active carry parts', activeCarryParts.toString()],
-		];
-
-		drawTable({
-			data,
-			top: position.y,
-			left: position.x,
-		}, visual);
 	}
 }
