@@ -21,11 +21,20 @@ export default class ResourcesProcess extends Process {
 
 		while (best) {
 			const room = Game.rooms[best.source];
+
+			if (room.memory.fillTerminal && room.terminal.store.getFreeCapacity(room.memory.fillTerminal) < 5000) {
+				delete room.memory.fillTerminal;
+				delete room.memory.fillTerminalAmount;
+			}
+
 			const terminal = room.terminal;
 			const maxAmount = room.getCurrentResourceAmount(best.resourceType);
 			const tradeVolume = Math.ceil(Math.min(maxAmount, 5000));
 			let sentSuccessfully = true;
-			if (maxAmount === 0) {
+			if (best.source === best.target) {
+				sentSuccessfully = false;
+			}
+			else if (maxAmount === 0) {
 				sentSuccessfully = false;
 			}
 			else if (manager.roomHasUncertainStorage(Game.rooms[best.target])) {
@@ -61,7 +70,10 @@ export default class ResourcesProcess extends Process {
 				if (result !== OK) sentSuccessfully = false;
 			}
 			else {
-				if (!room.memory.fillTerminal) {
+				if (
+					!room.memory.fillTerminal
+					&& (room.terminal.store.getFreeCapacity(best.resourceType) - room.terminal.store.getUsedCapacity(best.resourceType)) > tradeVolume
+				) {
 					hivemind.log('trade').info('Preparing', tradeVolume, best.resourceType, 'for transport from', best.source, 'to', best.target);
 					room.prepareForTrading(best.resourceType);
 				}
