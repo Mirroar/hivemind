@@ -573,6 +573,8 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	drawReport(targetPos: string) {
+		if (hivemind.settings.get('disableRoomVisuals')) return;
+
 		// @todo Update this report for new hauler pools.
 		const requiredCarryParts = this.getHaulerSize(targetPos);
 

@@ -39,6 +39,9 @@ const settings: SettingsObject = {
 	visualizeCreepMovement: true,
 	visualizeSpawnQueue: true,
 
+	disableRoomVisuals: false,
+	disableMapVisuals: false,
+
 	// Remote mining:
 	// The maximum distance for rooms to be mined.
 	maxRemoteMineRoomDistance: 3,

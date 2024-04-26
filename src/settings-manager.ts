@@ -15,6 +15,8 @@ declare global {
 		constructPowerSpawns: boolean;
 		constructRoadsUnderRamparts: boolean;
 		depositMineRoomFilter?: (roomName: string) => boolean;
+		disableMapVisuals: boolean;
+		disableRoomVisuals: boolean;
 		dismantleUnwantedRamparts: boolean;
 		enableDepositMining: boolean;
 		enablePowerMining: boolean;

@@ -141,7 +141,7 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 	container.get('TrafficManager').setPreferredArea(this, target, range);
 
 	const visual = this.room.visual;
-	if (visual && this.pos.getRangeTo(target) <= range) {
+	if (visual && !settings.get('disableRoomVisuals') && this.pos.getRangeTo(target) <= range) {
 		const color = getVisualizationColor(this);
 		visual.rect(
 			target.x - range - 0.4,
@@ -272,7 +272,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 				return;
 			}
 
-			if (settings.get('visualizeCreepMovement')) {
+			if (settings.get('visualizeCreepMovement') && !settings.get('disableRoomVisuals')) {
 				this.room.visual.poly(path, {
 					fill: 'transparent',
 					stroke: '#f00',
@@ -622,6 +622,7 @@ function isMovingCreep(creep: Creep | PowerCreep): boolean {
 function drawCreepMovement(creep: Creep | PowerCreep) {
 	if (!RoomVisual) return;
 	if (!settings.get('visualizeCreepMovement')) return;
+	if (settings.get('disableRoomVisuals')) return;
 
 	const target = creep.memory.go?.target ? decodePosition(creep.memory.go.target) : null;
 

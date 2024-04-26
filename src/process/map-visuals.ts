@@ -8,7 +8,6 @@ import {deserializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
 // @todo Move constants to settings.
-const enableMapVisuals = true;
 const drawIntelStatus = false;
 const drawMiningStatus = true;
 
@@ -20,7 +19,7 @@ export default class MapVisualsProcess extends Process {
 	 * Creates map visuals for our empire.
 	 */
 	run() {
-		if (!enableMapVisuals || !Game.map.visual) return;
+		if (hivemind.settings.get('disableMapVisuals') || !Game.map.visual) return;
 
 		let drawn = false;
 		const visuals = cache.inHeap('map-visuals', 10, () => {
@@ -77,10 +76,6 @@ export default class MapVisualsProcess extends Process {
 	drawRoomStatus(roomName: string) {
 		const info = Memory.strategy.roomList[roomName];
 
-		if (drawMiningStatus && (Memory.strategy.remoteHarvesting?.rooms || []).includes(roomName)) {
-			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
-		}
-
 		if (drawIntelStatus && info.scoutPriority > 0) {
 			Game.map.visual.text(info.scoutPriority.toPrecision(2), new RoomPosition(3, 23, roomName), {fontSize: 5});
 			Game.map.visual.line(new RoomPosition(25, 25, roomName), new RoomPosition(25, 25, info.origin), {opacity: 0.5, width: 1});
@@ -128,6 +123,12 @@ export default class MapVisualsProcess extends Process {
 	drawRemoteMinePaths(roomName: string) {
 		const info = Memory.strategy.roomList[roomName];
 		if ((info?.harvestPriority ?? 0) <= 0.1) return;
+
+		if (drawMiningStatus && (Memory.strategy.remoteHarvesting?.rooms || []).includes(roomName)) {
+			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
+		}
+
+		Game.map.visual.text(info.harvestPriority.toPrecision(3), new RoomPosition(7, 3, roomName), {fontSize: 5, align: 'left'});
 
 		const remotePathManager = new RemotePathManager();
 		const intel = getRoomIntel(roomName);

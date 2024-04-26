@@ -76,7 +76,7 @@ export default class RoomDefense {
 	drawDebug() {
 		const dangerMatrix = getDangerMatrix(this.roomName);
 		const visual = this.room.visual;
-		if (!visual) return;
+		if (!visual || hivemind.settings.get('disableRoomVisuals')) return;
 
 		for (let x = 0; x < 50; x++) {
 			for (let y = 0; y < 50; y++) {

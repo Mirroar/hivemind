@@ -107,7 +107,7 @@ export default class ManageSpawnsProcess extends Process {
 	 *   An array containing the room's spawns.
 	 */
 	visualizeSpawning(spawns: StructureSpawn[]) {
-		if (!this.room.visual) return;
+		if (!this.room.visual || settings.get('disableRoomVisuals')) return;
 
 		for (const spawn of spawns) {
 			// Show spawn usage stats.
@@ -134,7 +134,7 @@ export default class ManageSpawnsProcess extends Process {
 
 	visualizeSpawnQueue() {
 		if (!settings.get('visualizeSpawnQueue')) return;
-		if (!this.room.visual) return;
+		if (!this.room.visual || settings.get('disableRoomVisuals')) return;
 
 		const tableData: string[][] = [['Spawn Queue', 'Priority']];
 		const queue = _.sortBy(this.spawnManager.getAllSpawnOptions(this.room), option => -(option.priority + (0.01 * option.weight)));

@@ -47,10 +47,12 @@ export default class ManageFactoryProcess extends Process {
 
 		if (data.length === 1) return;
 
-		drawTable({
-			data,
-			top: 1,
-			left: 25,
-		}, this.room.visual);
+		if (!settings.get('disableRoomVisuals')) {
+			drawTable({
+				data,
+				top: 1,
+				left: 25,
+			}, this.room.visual);
+		}
 	}
 }
