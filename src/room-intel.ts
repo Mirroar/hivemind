@@ -788,6 +788,8 @@ export default class RoomIntel {
 		if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return null;
 
 		const controller: {x: number; y: number} = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
+		if (!controller) return null;
+
 		return new RoomPosition(controller.x, controller.y, this.roomName);
 	}
 

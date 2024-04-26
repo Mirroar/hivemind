@@ -157,10 +157,11 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			}
 		});
 
-		// @todo Spawn bigger harvesters in high level rooms with plenty of
-		// energy to save on CPU, if needed.
+		// @todo Only spawn bigger harvesters in high level rooms when there's
+		// enough energy and we need to save CPU.
 		const sizeFactor = (source.room.controller.level === 8 ? 2 :
-			(source.room.controller.level === 7 ? 1.2 : 1));
+			(source.room.controller.level === 7 ? 1.8 : 
+			(source.room.controller.level === 6 ? 1.5 : 1.2)));
 
 		return sizeFactor * numberOfParts;
 	}

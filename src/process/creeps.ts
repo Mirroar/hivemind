@@ -11,11 +11,9 @@ import caravanTraderRole from 'role/caravan-trader';
 import claimerRole from 'role/claimer';
 import depositHarvesterRole from 'role/harvester.deposit';
 import dismantlerRole from 'role/dismantler';
-import gathererRole from 'role/gatherer';
 import giftRole from 'role/gift';
 import guardianRole from 'role/guardian';
 import harvesterRole from 'role/harvester';
-import haulerRole from 'role/hauler';
 import helperRole from 'role/helper';
 import mineBuilderRole from 'role/builder.mines';
 import muleRole from 'role/mule';
@@ -25,6 +23,7 @@ import relayHaulerRole from 'role/hauler.relay';
 import remoteBuilderRole from 'role/builder.remote';
 import remoteHarvesterRole from 'role/harvester.remote';
 import scoutRole from 'role/scout';
+import skKillerRole from 'role/sk-killer';
 import transporterRole from 'role/transporter';
 import unassignedRole from 'role/unassigned';
 import upgraderRole from 'role/upgrader';
@@ -41,19 +40,18 @@ const creepRoles = {
 	'caravan-trader': caravanTraderRole,
 	claimer: claimerRole,
 	dismantler: dismantlerRole,
-	gatherer: gathererRole,
 	gift: giftRole,
 	guardian: guardianRole,
 	harvester: harvesterRole,
 	'harvester.deposit': depositHarvesterRole,
 	'harvester.power': poweHarvesterRole,
 	'harvester.remote': remoteHarvesterRole,
-	hauler: haulerRole,
 	'hauler.power': powerHaulerRole,
 	'hauler.relay': relayHaulerRole,
 	helper: helperRole,
 	mule: muleRole,
 	scout: scoutRole,
+	skKiller: skKillerRole,
 	transporter: transporterRole,
 	unassigned: unassignedRole,
 	upgrader: upgraderRole,

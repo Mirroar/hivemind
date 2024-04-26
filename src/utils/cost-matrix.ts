@@ -320,21 +320,24 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 		// If we're running a (successful) exploit in this room, tiles
 		// should not be marked inaccessible.
 		const roomIntel = getRoomIntel(roomName);
-		// @todo Make sure Game.exploits is set at this point and use that instead.
 		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
-			// Add area around keeper lairs as obstacles.
-			_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
-				handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
-					sourceKeeperCallback(x, y);
-				}, 3);
-			});
+			if (!(Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) {
+				// Add area around keeper lairs as obstacles.
+				// @todo For SK rooms that we harvest, still consider the
+				// mineral SK lair as dangerous.
+				_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
+					handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
+						sourceKeeperCallback(x, y);
+					}, 3);
+				});
 
-			// Add area around sources as obstacles.
-			_.each(roomIntel.getSourcePositions(), sourceInfo => {
-				handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
-					sourceKeeperCallback(x, y);
-				}, 4);
-			});
+				// Add area around sources as obstacles.
+				_.each(roomIntel.getSourcePositions(), sourceInfo => {
+					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
+						sourceKeeperCallback(x, y);
+					}, 4);
+				});
+			}
 
 			// Add area around mineral as obstacles.
 			for (const mineralInfo of roomIntel.getMineralPositions()) {
@@ -352,9 +355,14 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 			if (!exits[dir]) continue;
 
 			const otherRoomName = exits[dir];
+			if ((Memory.strategy?.remoteHarvesting?.rooms || []).includes(otherRoomName)) continue;
+
 			const otherRoomIntel = getRoomIntel(otherRoomName);
 			if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
+			if (_.size(otherRoomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) === 0) continue;
 
+			// @todo Instead of reading cost matrix values, check distance to
+			// keeper lairs and sources.
 			const matrix = getCostMatrix(otherRoomName);
 			if (dir === TOP || dir === BOTTOM) {
 				const y = (dir === TOP ? 0 : 49);

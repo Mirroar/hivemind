@@ -9,6 +9,7 @@ import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
+import {getUsername} from 'utils/account';
 
 declare global {
 	interface RemoteBuilderCreep extends Creep {
@@ -362,7 +363,11 @@ export default class RemoteBuilderRole extends Role {
 
 			// Try get energy from a source.
 			const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-			if (source && creep.room.isMine()) {
+			if (source && (
+				creep.room.isMine()
+				|| !creep.room.controller?.reservation?.username
+				|| creep.room.controller?.reservation?.username === getUsername()
+			)) {
 				creep.memory.resourceTarget = source.id;
 			}
 			else {
@@ -386,18 +391,13 @@ export default class RemoteBuilderRole extends Role {
 			creep.memory.resourceTarget = null;
 		}
 
-		const result = creep.harvest(source);
-		if (result === ERR_NOT_IN_RANGE) {
-			const result = creep.moveToRange(source, 1);
-			if (!result) {
+		creep.whenInRange(1, source, () => {
+			const result = creep.harvest(source);
+			if (result === ERR_NOT_OWNER) {
 				creep.memory.resourceTarget = null;
 				this.setExtraEnergyTarget(creep);
 			}
-		}
-		else if (result === ERR_NOT_OWNER) {
-			creep.memory.resourceTarget = null;
-			this.setExtraEnergyTarget(creep);
-		}
+		});
 	}
 
 	/**

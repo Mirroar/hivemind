@@ -2,18 +2,14 @@
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
-import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
-import HaulerRole from 'spawn-role/hauler';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import PathManager from 'empire/remote-path-manager';
 import {decodePosition, encodePosition} from 'utils/serialization';
-import {drawTable} from 'utils/room-visuals';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
-import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import {packPosList, unpackPosList} from 'utils/packrat';
 
 declare global {
@@ -32,14 +28,10 @@ const cannotDismantlePositions: Record<string, boolean> = {};
  * This kind of operation handles all remote mining.
  *
  * It determines source rooms for spawning and delivering resources.
- *
- * @todo Defend roads toward target room.
- * @todo Remove obstacles blocking paths (like old structures).
  */
 export default class RemoteMiningOperation extends Operation {
 	protected memory: RemoteMiningOperationMemory;
 	protected pathManager: PathManager;
-	protected haulerRole: HaulerRole;
 
 	/**
 	 * Constructs a new RemoteMiningOperation instance.
@@ -48,7 +40,6 @@ export default class RemoteMiningOperation extends Operation {
 		super(name);
 		this.memory.type = 'mining';
 		this.pathManager = new PathManager();
-		this.haulerRole = new HaulerRole();
 
 		if (!this.memory.status) this.memory.status = {};
 	}
@@ -127,6 +118,7 @@ export default class RemoteMiningOperation extends Operation {
 		return cache.inObject(this, 'getPaths', 0, () => {
 			if (!hivemind.segmentMemory.isReady()) return {};
 
+			const roomIntel = getRoomIntel(this.roomName);
 			const positions = this.getSourcePositions();
 			const result: Record<string, {
 				accessible: boolean;
@@ -153,7 +145,9 @@ export default class RemoteMiningOperation extends Operation {
 
 					const sourceRoom = path[path.length - 1].roomName;
 					const travelTime = path.length;
-					const generatedEnergy = this.canReserveFrom(sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY;
+					const generatedEnergy = roomIntel.isClaimable()
+						? (this.canReserveFrom(sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY)
+						: SOURCE_ENERGY_KEEPER_CAPACITY;
 					const requiredWorkParts = generatedEnergy / ENERGY_REGEN_TIME / HARVEST_POWER;
 					const requiredCarryParts = Math.ceil(2 * travelTime * generatedEnergy / ENERGY_REGEN_TIME / CARRY_CAPACITY);
 					return {
@@ -344,7 +338,7 @@ export default class RemoteMiningOperation extends Operation {
 	 */
 	hasReservation(): boolean {
 		const room = Game.rooms[this.roomName];
-		if (room) return room.controller.reservation && room.controller.reservation.username === getUsername() && room.controller.reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
+		if (room) return room.controller?.reservation && room.controller.reservation.username === getUsername() && room.controller.reservation.ticksToEnd >= CONTROLLER_RESERVE_MAX * 0.1;
 
 		if (!hivemind.segmentMemory.isReady()) return false;
 		const roomIntel = getRoomIntel(this.roomName);
@@ -412,7 +406,6 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	getEnergyForPickup(sourceLocation: string): number {
-		// @todo Keep track of available energy even if we lose visibility of the room.
 		const container = this.getContainer(sourceLocation);
 		let total = container?.store?.energy || 0;
 
@@ -424,6 +417,7 @@ export default class RemoteMiningOperation extends Operation {
 			total = Number(resource.amount);
 		}
 
+		// Keep track of available energy even if we lose visibility of the room.
 		energyCache[sourceLocation] = total;
 		return total;
 	}
@@ -502,6 +496,10 @@ export default class RemoteMiningOperation extends Operation {
 	getDismantlePositions(sourceLocation: string): RoomPosition[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
 
+		// No dismantlers for SK rooms, they get confused easily...
+		const roomIntel = getRoomIntel(this.roomName);
+		if (!roomIntel.isClaimable()) return [];
+
 		const cached = cache.inHeap('blockedTiles:' + sourceLocation, 100, () => {
 			const blockedTiles = [];
 			const paths = this.getPaths();
@@ -511,7 +509,7 @@ export default class RemoteMiningOperation extends Operation {
 			let roomName;
 			let matrix;
 			// Check path from storage to source.
-			for (let i = path.length - 1; i >= 0; i--) {
+			for (let i = path.length - 1; i > 0; i--) {
 				const pos = path[i];
 				if (pos.roomName !== roomName) {
 					// Load cost matrix for the current room.

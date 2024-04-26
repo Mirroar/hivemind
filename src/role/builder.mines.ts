@@ -207,6 +207,22 @@ export default class MineBuilderRole extends Role {
 	performGoToSource(creep: MineBuilderCreep) {
 		const sourcePosition = decodePosition(creep.memory.source);
 
+		if (
+			creep.pos.roomName === sourcePosition.roomName
+			&& this.getSource(creep)?.isDangerous()
+			&& creep.pos.getRangeTo(sourcePosition) <= 10
+		) {
+			if (_.size(creep.room.creepsByRole.skKiller) > 0) {
+				// We wait for SK killer to clean up.
+				creep.whenInRange(6, sourcePosition, () => {});
+			}
+			else {
+				// Too dangerous, return home.
+				this.setReturning(creep, true);
+			}
+			return;
+		}
+
 		if (creep.hasCachedPath()) {
 			creep.followCachedPath();
 			this.performBuildRoad(creep);
@@ -241,6 +257,13 @@ export default class MineBuilderRole extends Role {
 		if (!actionTaken && !creep.room.isMine()) {
 			this.performBuildRoad(creep);
 		}
+	}
+
+	getSource(creep: MineBuilderCreep): Source {
+		const sourcePosition = decodePosition(creep.memory.source);
+		return creep.room.find(FIND_SOURCES, {
+			filter: source => source.pos.x === sourcePosition.x && source.pos.y === sourcePosition.y,
+		})[0];
 	}
 
 	/**

@@ -81,16 +81,12 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (!operation) continue;
 			if (!operation.isUnderAttack() && !operation.hasInvaderCore()) continue;
 
-			// Only spawn if we're actually using that source.
-			const sourceLocation = encodePosition(pos);
-			const harvesters = _.filter(Game.creepsByRole['harvester.remote'] || {}, (creep: RemoteHarvesterCreep) => creep.memory.source === sourceLocation);
-			if (harvesters.length === 0 && !operation.hasContainer(sourceLocation) && !operation.hasReservation()) continue;
-
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
 			// in a different way.
 			const targetPos = encodePosition(new RoomPosition(25, 25, pos.roomName));
-			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -1000) < 1000) continue;
+			const defenseTimeDiff = operation.isProfitable() ? 300 : 1500;
+			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -10_000) < defenseTimeDiff) continue;
 
 			const brawlers = _.filter(Game.creepsByRole.brawler || [], (creep: Creep) => creep.memory.operation === 'mine:' + pos.roomName);
 			if (_.size(brawlers) > 0) continue;
@@ -100,8 +96,9 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			if (responseType === RESPONSE_NONE) continue;
 
-			if (operation.isUnderAttack() && (operation.needsDismantler() || !operation.isProfitable())) continue;
+			if (operation.isUnderAttack() && operation.needsDismantler()) continue;
 
+			const sourceLocation = encodePosition(pos);
 			options.push({
 				priority: 3,
 				weight: 1,

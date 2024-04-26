@@ -12,15 +12,15 @@ export default class GiftSpawnRole extends SpawnRole {
 	 *   The room to add spawn options for.
 	 */
 	getSpawnOptions(room: Room): SpawnOption[] {
-		// @todo This is unlikely to happen exactly when a spawn is idle.
-		if (Game.time % 123 !== 67) return [];
-		if (room.getEffectiveAvailableEnergy() < 10_000) return [];
-		if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.05) return [];
+		return this.cacheEmptySpawnOptionsFor(room, 300, () => {
+			if (room.getEffectiveAvailableEnergy() < 10_000) return [];
+			if (!room.storage || room.getFreeStorage() > room.getStorageLimit() * 0.02) return [];
 
-		return [{
-			priority: 3,
-			weight: 0.5,
-		}];
+			return [{
+				priority: 3,
+				weight: 0.5,
+			}];
+		});
 	}
 
 	/**

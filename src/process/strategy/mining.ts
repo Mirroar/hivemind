@@ -17,10 +17,6 @@ declare global {
 	}
 }
 
-interface HarvestRoomInfo extends RoomListEntry {
-	roomName: string;
-}
-
 export default class RemoteMiningProcess extends Process {
 	/**
 	 * Manages which and how many rooms may be remotely mined.
@@ -37,7 +33,6 @@ export default class RemoteMiningProcess extends Process {
 		}
 
 		if (!Memory.strategy.remoteHarvesting) {
-			// Try starting with 2.
 			Memory.strategy.remoteHarvesting = {
 				currentCount: 20,
 				lastCheck: Game.time,
@@ -52,90 +47,10 @@ export default class RemoteMiningProcess extends Process {
 	 */
 	run() {
 		const memory = Memory.strategy;
-		const sourceRooms = {};
-		memory.remoteHarvesting.rooms = [];
+		const assignment = container.get('RemoteMinePrioritizer').getRoomsToMine(memory.remoteHarvesting.currentCount);
+		memory.remoteHarvesting.rooms = assignment.rooms;
 
-		// Determine how much remote mining each room can handle.
-		for (const room of Game.myRooms) {
-			let spawnCount = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
-			if (spawnCount === 0) {
-				if (room.controller.level > 3 && room.controller.level < 7) {
-					// It's possible we're only moving the room's only spawn to a different
-					// location. Treat room as having one spawn so we can resume when it
-					// has been rebuilt.
-					spawnCount = 1;
-				}
-				else {
-					continue;
-				}
-			}
-
-			// @todo Actually calculate spawn usage for each.
-			let spawnCapacity = spawnCount * 5;
-			let roomNeeds = 1;
-			if (room.controller.level >= 4) roomNeeds++;
-			if (room.controller.level >= 6) roomNeeds++;
-			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
-
-			// Allow more remotes when using new method, since it spawns stuff more dynamically.
-			if (settings.get('newRemoteMiningRoomFilter') && settings.get('newRemoteMiningRoomFilter')(room.name)) roomNeeds--;
-
-			// Increase spawn capacity if there's a power creep that can help.
-			const powerCreep = _.find(Game.powerCreeps, creep => {
-				if (!creep.shard) return false;
-				if (creep.shard !== Game.shard.name) return false;
-				if (creep.pos.roomName !== room.name) return false;
-
-				return true;
-			});
-			if (powerCreep) {
-				const operateSpawnLevel = (powerCreep.powers[PWR_OPERATE_SPAWN] || {}).level || 0;
-				if (operateSpawnLevel > 0) spawnCapacity /= POWER_INFO[PWR_OPERATE_SPAWN].effect[operateSpawnLevel - 1];
-			}
-
-			sourceRooms[room.name] = {
-				current: 0,
-				max: Math.floor(spawnCapacity - roomNeeds),
-			};
-		}
-
-		// Create ordered list of best harvest rooms.
-		// @todo At this point we should carry duplicate for rooms that could have
-		// multiple origins.
-		const harvestRooms: HarvestRoomInfo[] = [];
-		_.each(memory.roomList, (info: RoomListEntry, roomName: string) => {
-			// Ignore rooms that are not profitable to harvest from.
-			if (!info.harvestPriority || info.harvestPriority <= 0.1) return;
-
-			// Ignore rooms we can not reach safely.
-			if (!info.safePath) return;
-
-			harvestRooms.push({...info, roomName});
-		});
-
-		const sortedRooms = _.sortBy(harvestRooms, info => -info.harvestPriority);
-
-		// Decide which harvest rooms are active.
-		let availableHarvestRoomCount = 0;
-		for (const info of sortedRooms) {
-			if (!sourceRooms[info.origin]) continue;
-
-			if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
-			sourceRooms[info.origin].current++;
-
-			if (availableHarvestRoomCount < memory.remoteHarvesting.currentCount) {
-				// Disregard rooms the user doesn't want harvested.
-				const roomFilter = hivemind.settings.get('remoteMineRoomFilter');
-				if (roomFilter && !roomFilter(info.roomName)) continue;
-
-				// Harvest from this room.
-				memory.remoteHarvesting.rooms.push(info.roomName);
-			}
-
-			availableHarvestRoomCount++;
-		}
-
-		this.adjustRemoteMiningCount(availableHarvestRoomCount);
+		this.adjustRemoteMiningCount(assignment.maxRooms);
 		this.manageOperations();
 
 		// @todo Reduce remote harvesting if we want to expand.

@@ -6,6 +6,7 @@ import interShard from 'intershard';
 import PathManager from 'empire/remote-path-manager';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
+import {isHighway} from 'utils/room-name';
 
 declare global {
 	interface StructureObserver {
@@ -144,7 +145,7 @@ export default class ScoutProcess extends Process {
 				info.scoutPriority = 1;
 			}
 
-			if ((roomIntel.memory.lastScan || 0) > 0 && roomIntel.isClaimable() && (!roomIntel.isClaimed() || (roomIntel.memory.reservation && roomIntel.memory.reservation.username === 'Invader'))) {
+			if ((roomIntel.memory.lastScan || 0) > 0) {
 				info.harvestPriority = this.calculateHarvestScore(roomName);
 
 				// Check if we could reasonably expand to this room.
@@ -201,17 +202,27 @@ export default class ScoutProcess extends Process {
 	calculateHarvestScore(roomName: string) {
 		const info = Memory.strategy.roomList[roomName];
 
-		if (!info.safePath) return 0;
 		if (info.range === 0 || info.range > hivemind.settings.get('maxRemoteMineRoomDistance')) return 0;
 
-		let income = -2000; // Flat cost for room reservation
+		if (Game.map.getRoomStatus(roomName).status === 'closed') return 0;
+
+		let roomIntel = getRoomIntel(roomName);
+		// @todo Calculate cost for room reservation instead of this flat estimation.
+		let income = -2000;
+		let sourceCapacity: number = SOURCE_ENERGY_CAPACITY;
+		if (!roomIntel.isClaimable()) {
+			// SK rooms don't need reservation. Instead we spawn SK killers,
+			// which generate additional income for us.
+			sourceCapacity = SOURCE_ENERGY_KEEPER_CAPACITY;
+		}
+
 		let pathLength = 0;
-		const sourcePositions = getRoomIntel(roomName).getSourcePositions();
+		const sourcePositions = roomIntel.getSourcePositions();
 		for (const pos of sourcePositions) {
 			const path = this.pathManager.getPathFor(new RoomPosition(pos.x, pos.y, roomName));
 			if (!path) continue;
 
-			income += SOURCE_ENERGY_CAPACITY;
+			income += sourceCapacity;
 			pathLength += path.length;
 		}
 
@@ -254,6 +265,10 @@ export default class ScoutProcess extends Process {
 		}
 
 		const roomIntel = getRoomIntel(roomName);
+		if (!roomIntel.isClaimable()) {
+			this.setExpansionScoreCache(roomName, result);
+			return result;
+		}
 
 		// More sources is better.
 		result.addScore((roomIntel.getSourcePositions().length * 2) - 2, 'numSources');
@@ -421,13 +436,18 @@ export default class ScoutProcess extends Process {
 	getHarvestRoomScore(roomName: string, forOwnedRoom = false) {
 		const roomIntel = getRoomIntel(roomName);
 
-		// We don't care about rooms without controllers.
-		if (!roomIntel.isClaimable()) return 0;
+		// We can't harvest from highway rooms.
+		if (isHighway(roomName)) return 0;
 
-		// Can't remote harvest from my own room.
+		// Can't remote harvest from our own rooms.
 		if (Game.rooms[roomName]?.isMine()) return 0;
 
 		let sourceFactor = 0.25;
+
+		if (!roomIntel.isClaimable()) {
+			// Penalty for SK rooms since we can only havest them much later.
+			sourceFactor = 0.15;
+		}
 
 		// Score modifications related to other players should not be applied to
 		// our owned rooms. Else we might abandon rooms because another player

@@ -67,7 +67,11 @@ export default class RemoteHarvesterRole extends Role {
 		}
 
 		if (creep.hasCachedPath()) {
-			if (creep.hasArrived() || creep.pos.getRangeTo(sourcePosition) < 3) {
+			if (
+				creep.hasArrived()
+				|| creep.pos.getRangeTo(sourcePosition) < 3
+				|| (creep.pos.roomName === creep.operation.getRoom() && this.getSource(creep)?.isDangerous() && creep.pos.getRangeTo(sourcePosition) < 10)
+			) {
 				creep.clearCachedPath();
 			}
 			else {
@@ -101,22 +105,39 @@ export default class RemoteHarvesterRole extends Role {
 			// container construction site from being placed.
 			filter: site => (site.structureType === STRUCTURE_CONTAINER) || (site.structureType === STRUCTURE_ROAD),
 		});
-		if (needsBuild && creep.pos.getRangeTo(needsBuild) <= 3 && creep.store.energy >= workParts * 5 && workParts > 0) {
-			const result = creep.build(needsBuild);
-			if (result === OK) {
-				const buildCost = Math.min(creep.store.energy || 0, workParts * 5, needsBuild.progressTotal - needsBuild.progress);
-				creep.operation.addResourceCost(buildCost, RESOURCE_ENERGY);
-				return;
+		if (needsBuild && creep.pos.getRangeTo(needsBuild) <= 3) {
+			if (creep.store.energy >= Math.min(workParts * 5, creep.store.getCapacity()) && workParts > 0) {
+				const result = creep.build(needsBuild);
+				if (result === OK) {
+					return;
+				}
+			}
+			else {
+				const energy = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 1, {
+					filter: resource => resource.resourceType === RESOURCE_ENERGY,
+				});
+				if (energy.length > 0) creep.pickup(energy[0]);
 			}
 		}
 
 		if (this.repairNearbyContainer(creep)) return;
 
-		const sourcePosition = decodePosition(creep.memory.source);
-		const sources = creep.room.find(FIND_SOURCES, {
-			filter: source => source.pos.x === sourcePosition.x && source.pos.y === sourcePosition.y,
-		});
-		const source = sources[0];
+		const source = this.getSource(creep);
+
+		// Keep away from source keepers.
+		if (source.isDangerous()) {
+			if (creep.pos.getRangeTo(source) < 5) {
+				// @todo To save cpu, just move back along remote path.
+				creep.whenInRange(5, new RoomPosition(25, 25, creep.pos.roomName), () => {});
+				return;
+			}
+
+			creep.whenInRange(6, source, () => {});
+
+			// @todo We might consider repairing nearby infrastructure.
+
+			return;
+		}
 
 		let moveTarget: RoomObject = source;
 		let moveRange = 1;
@@ -164,6 +185,13 @@ export default class RemoteHarvesterRole extends Role {
 		});
 	}
 
+	getSource(creep: RemoteHarvesterCreep): Source {
+		const sourcePosition = decodePosition(creep.memory.source);
+		return creep.room.find(FIND_SOURCES, {
+			filter: source => source.pos.x === sourcePosition.x && source.pos.y === sourcePosition.y,
+		})[0];
+	}
+
 	mayHarvest(creep: RemoteHarvesterCreep, source: Source): boolean {
 		// Hit fully regenerated sources to start regeneration timer ASAP.
 		if (source.energy === source.energyCapacity) return true;
@@ -205,12 +233,12 @@ export default class RemoteHarvesterRole extends Role {
 			// Repair if possible so we can save on dedicated builders.
 			structure =>
 				structure.hits <= structure.hitsMax - (workParts * REPAIR_POWER)
-				&& creep.pos.getRangeTo(structure.pos) <= 3,
+				&& creep.pos.getRangeTo(structure.pos) <= 3
+				&& creep.operation.getContainerPosition(creep.memory.source).isEqualTo(structure.pos),
 		);
 		if (needsRepair.length > 0) {
 			const result = creep.repair(needsRepair[0]);
 			if (result === OK) {
-				creep.operation.addResourceCost(workParts, RESOURCE_ENERGY);
 				return true;
 			}
 		}

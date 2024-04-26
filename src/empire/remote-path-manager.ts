@@ -48,7 +48,7 @@ export default class RemotePathManager {
 				plainCost: 2,
 				swampCost: (room.storage || room.terminal) ? 3 : 10,
 				maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
-				roomCallback: roomName => this.getCostMatrix(roomName),
+				roomCallback: roomName => this.getCostMatrix(roomName, sourcePosition.roomName === roomName),
 			});
 
 			if (!result || result.incomplete || result.path.length >= minPathLength) continue;
@@ -64,8 +64,8 @@ export default class RemotePathManager {
 		return minPath;
 	}
 
-	getCostMatrix(roomName: string): CostMatrix | false {
-		return cache.inHeap('remotePathManagerCostMatrix:' + roomName, 1000, () => {
+	getCostMatrix(roomName: string, isTargetRoom: boolean): CostMatrix | false {
+		return cache.inHeap('remotePathManagerCostMatrix:' + roomName + (isTargetRoom ? ':t' : ''), 1000, () => {
 			const roomIntel = getRoomIntel(roomName);
 
 			// Don't path through rooms owned by other players.
@@ -83,7 +83,7 @@ export default class RemotePathManager {
 				if (matrix.get(road.x, road.y) === 0) matrix.set(road.x, road.y, 1);
 			}
 
-			if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+			if (!isTargetRoom && _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
 				// Disallow areas around source keeper sources.
 				_.each(roomIntel.getSourcePositions(), sourceInfo => {
 					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
