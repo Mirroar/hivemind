@@ -41,7 +41,6 @@ export interface RoomIntelMemory {
 	exits: Partial<Record<ExitKey, string>>;
 	rcl: number;
 	ticksToDowngrade: number;
-	ticksToNeutral: number;
 	hasController: boolean;
 	owner: string;
 	reservation: {
@@ -124,9 +123,9 @@ export default class RoomIntel {
 		if (!room) return;
 
 		const intel = this.memory;
+		const isNew = !intel.lastScan;
 		this.registerScoutAttempt();
 
-		// @todo Have process logic handle throttling of this task.
 		let lastScanThreshold = hivemind.settings.get('roomIntelCacheDuration');
 		if (Game.cpu.bucket < 5000) {
 			lastScanThreshold *= 5;
@@ -138,16 +137,19 @@ export default class RoomIntel {
 
 		this.gatherControllerIntel(room);
 		this.gatherResourceIntel(room);
-		this.gatherTerrainIntel();
 
 		const structures = room.structuresByType;
 		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
 		this.gatherDepositIntel();
 		this.gatherPortalIntel(structures[STRUCTURE_PORTAL] as StructurePortal[]);
-		this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
-		this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
 		this.gatherInvaderIntel(structures);
 		this.gatherExitIntel(room.name);
+
+		if (isNew) {
+			this.gatherTerrainIntel();
+			this.gatherStructureIntel(structures, STRUCTURE_KEEPER_LAIR);
+			this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
+		}
 
 		const ruins = room.find(FIND_RUINS);
 		this.gatherAbandonedResourcesIntel(structures, ruins);
@@ -160,15 +162,11 @@ export default class RoomIntel {
 			}), 'structureType');
 		}
 
-		this.generateCostMatrix(structures, constructionSites);
+		this.gatherPathfindingInfo(structures, constructionSites);
 
 		// Update nav mesh for this room.
 		const mesh = new NavMesh();
 		mesh.generateForRoom(this.roomName);
-
-		// @todo Check enemy structures.
-
-		// @todo Maybe even have a modified military CostMatrix that can consider moving through enemy structures.
 	}
 
 	/**
@@ -181,16 +179,11 @@ export default class RoomIntel {
 		this.memory.owner = null;
 		this.memory.rcl = 0;
 		this.memory.ticksToDowngrade = 0;
-		this.memory.ticksToNeutral = 0;
 		this.memory.hasController = typeof room.controller !== 'undefined';
 		if (room.controller && room.controller.owner) {
 			this.memory.owner = room.controller.owner.username;
 			this.memory.rcl = room.controller.level;
 			this.memory.ticksToDowngrade = room.controller.ticksToDowngrade;
-			this.memory.ticksToNeutral = this.memory.ticksToDowngrade;
-			for (let i = 1; i < this.memory.rcl; i++) {
-				this.memory.ticksToNeutral += CONTROLLER_DOWNGRADE[i];
-			}
 		}
 
 		if (!room.controller) {
@@ -200,7 +193,6 @@ export default class RoomIntel {
 				this.memory.owner = invaderCores[0].owner.username;
 				this.memory.rcl = invaderCores[0].level;
 				this.memory.ticksToDowngrade = 0;
-				this.memory.ticksToNeutral = 0;
 			}
 		}
 
@@ -535,7 +527,7 @@ export default class RoomIntel {
 	 * @param {object} constructionSites
 	 *   An object containing Arrays of construction sites, keyed by structure type.
 	 */
-	generateCostMatrix(structures, constructionSites) {
+	gatherPathfindingInfo(structures, constructionSites) {
 		const obstaclePositions = this.generateObstacleList(this.roomName, structures, constructionSites);
 		this.memory.costPositions = [
 			packCoordList(_.map(obstaclePositions.obstacles, deserializeCoords)),
