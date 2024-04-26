@@ -545,20 +545,23 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	// For boosts, try to have a minimum amount for all types. Later, make
 	// dependent on room military state and so on.
 	// @todo If there's no labs, we don't need boosts.
-	/* for (const bodyPart in BOOSTS) {
+	for (const bodyPart in BOOSTS) {
 		if (!BOOSTS[bodyPart][resourceType]) continue;
 
 		if (bodyPart === ATTACK || bodyPart === RANGED_ATTACK) {
 			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
-				return [10000, 5000, 1500];
+				return [15000, 7500, 2500];
 		}
 		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair) {
 			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
-				return [10000, 5000, 1500];
+				return [15000, 7500, 2500];
 		}
+		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].upgradeController) {
+			if (this.controller.level >= 8)
+				return [15000, 7500, 2500];
+		}
+	}
 
-		return [10000, 5000, 750];
-	} */
 	const reaction = this.memory.currentReaction;
 	if (reaction && (resourceType === reaction[0] || resourceType === reaction[1])) {
 		// Make sure we request enough resources of this type to perform reactions.
