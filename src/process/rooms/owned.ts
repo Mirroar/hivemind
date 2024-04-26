@@ -85,7 +85,7 @@ export default class OwnedRoomProcess extends Process {
 
 			hivemind.runSubProcess('rooms_links', () => {
 				hivemind.runProcess(this.room.name + '_links', ManageLinksProcess, {
-					interval: 10,
+					interval: 3,
 					room: this.room,
 				});
 			});
@@ -93,6 +93,7 @@ export default class OwnedRoomProcess extends Process {
 			hivemind.runSubProcess('rooms_labs', () => {
 				hivemind.runProcess(this.room.name + '_labs', ManageLabsProcess, {
 					room: this.room,
+					priority: PROCESS_PRIORITY_ALWAYS,
 				});
 			});
 
