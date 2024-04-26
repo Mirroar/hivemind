@@ -117,7 +117,7 @@ export default class UpgraderRole extends Role {
 			let withdrawn = false;
 			if (creep.room.memory.controllerLink) {
 				const controllerLink = Game.getObjectById<StructureLink>(creep.room.memory.controllerLink);
-				if (controllerLink && controllerLink.energy > 50 && creep.pos.getRangeTo(controllerLink) <= 1 && creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
+				if (controllerLink && controllerLink.store[RESOURCE_ENERGY] > 50 && creep.pos.getRangeTo(controllerLink) <= 1 && creep.withdraw(controllerLink, RESOURCE_ENERGY) === OK) {
 					withdrawn = true;
 				}
 			}

@@ -206,7 +206,7 @@ export default class BrawlerRole extends Role {
 
 		// @todo Run home for healing if no functional parts are left.
 		// @todo This should not be in a get function, but have it's own option type.
-		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName !== 'interShardSupport') {
+		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName.startsWith('expand')) {
 			this.performRecycle(creep);
 		}
 
@@ -380,7 +380,7 @@ export default class BrawlerRole extends Role {
 
 					_.each(hostiles, c => {
 						if (!c.isDangerous()) return null;
-						if (c.owner.username === SYSTEM_USERNAME || c.owner.username === 'Invader') return null;
+						if (c.owner.username === SYSTEM_USERNAME || c.owner.username === 'Invader' || c.owner.username === 'Source Keeper') return null;
 
 						enemiesNearby = true;
 						return false;
