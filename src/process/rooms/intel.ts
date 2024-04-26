@@ -62,6 +62,14 @@ export default class RoomIntelProcess extends Process {
 			// Count body parts for strength estimation.
 			for (const creep of hostiles) {
 				if (creep.isDangerous()) {
+					if (
+						creep.owner.username === 'Source Keeper'
+						&& _.min(_.map(this.room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.pos.getRangeTo(creep.pos))) <= 5
+					) {
+						// We ignore source keepers for total enemy strength.
+						continue;
+					}
+
 					safe = false;
 					lastSeen = Game.time;
 					healCapacity += creep.getHealCapacity(1);
