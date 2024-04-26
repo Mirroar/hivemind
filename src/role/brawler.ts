@@ -86,7 +86,7 @@ export default class BrawlerRole extends Role {
 			this.initBrawlerState(creep);
 		}
 
-		// Target is recalculated every turn for best results.
+		// Target is recalculated every tick for best results.
 		this.calculateMilitaryTarget(creep);
 
 		this.performMilitaryMove(creep);
@@ -98,7 +98,7 @@ export default class BrawlerRole extends Role {
 			if (target instanceof StructureController && !target.my && this.attackMilitaryTarget(creep, target)) return;
 		}
 
-		container.get('CombatManager').manageFighting(creep);
+		container.get('CombatManager').manageCombatActions(creep);
 	}
 
 	/**
@@ -367,8 +367,8 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (creep.memory.target) {
-			const targetPos = decodePosition(creep.memory.target);
-			if (targetPos && creep.pos.roomName === targetPos.roomName) {
+			const targetPosition = decodePosition(creep.memory.target);
+			if (targetPosition && creep.pos.roomName === targetPosition.roomName) {
 				this.militaryRoomReached(creep);
 			}
 
@@ -392,12 +392,11 @@ export default class BrawlerRole extends Role {
 				});
 			}
 
-			const targetPosition = decodePosition(creep.memory.target);
 			if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return;
 
 			if (enemiesNearby) {
 				// @todo We want to ideally move to `targetPosition`, so use that as target if possible.
-				container.get('CombatManager').performKitingFighting(creep, container.get('CombatManager').getMostValuableTarget(creep));
+				container.get('CombatManager').performKitingMovement(creep, container.get('CombatManager').getMostValuableTarget(creep));
 				return;
 			}
 		}
@@ -712,47 +711,6 @@ export default class BrawlerRole extends Role {
 			if (creep.getActiveBodyparts(RANGED_ATTACK) && creep.rangedAttack(target) === OK) {
 				return true;
 			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Makes a creep heal itself or nearby injured creeps.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 * @return {boolean}
-	 *   True if an action was ordered.
-	 */
-	performMilitaryHeal(creep: BrawlerCreep) {
-		if (creep.memory.order) {
-			const target = Game.getObjectById<Creep>(creep.memory.order.target);
-
-			if (target && (target.my || hivemind.relations.isAlly(target?.owner?.username)) && creep.heal(target) === OK) {
-				return true;
-			}
-		}
-
-		// See if damaged creeps are adjacent, heal those.
-		const nearbyDamaged = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-			filter: creep => creep.hits < creep.hitsMax,
-		});
-		if (_.size(nearbyDamaged) > 0 && creep.heal(_.max(nearbyDamaged, creep => creep.hitsMax - creep.hits)) === OK) {
-			return true;
-		}
-
-		// Heal self.
-		if (creep.hits < creep.hitsMax && creep.heal(creep) === OK) {
-			return true;
-		}
-
-		// See if damaged creeps are in range, heal those.
-		const rangedDamaged = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
-			filter: creep => creep.hits < creep.hitsMax,
-		});
-		if (_.size(rangedDamaged) > 0 && creep.rangedHeal(rangedDamaged[0]) === OK) {
-			return true;
 		}
 
 		return false;
