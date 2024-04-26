@@ -406,6 +406,8 @@ export default class RoomManager {
 		if (!this.checkWallIntegrity()) return;
 
 		this.buildEndgameStructures();
+
+		this.buildPlannedStructures('wall.deco', STRUCTURE_WALL);
 	}
 
 	manageExtensions() {
