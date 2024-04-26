@@ -147,8 +147,12 @@ export default class TransporterRole extends Role {
 		if (creep.store.getUsedCapacity() >= creep.store.getCapacity() * 0.9 && !creep.memory.delivering) {
 			this.setTransporterState(true);
 		}
-		else if (creep.store.getUsedCapacity() <= creep.store.getCapacity() * 0.1 && creep.memory.delivering // Don't switch state if we're currently filling a bay.
-			&& (!creep.memory.order || !isResourceDestinationOrder(creep.room, creep.memory.order) || !isBayDestinationOrder(creep.memory.order))) {
+		else if (
+			creep.store.getUsedCapacity() <= creep.store.getCapacity() * 0.1
+			&& !_.some(getResourcesIn(creep.store), resourceType => resourceType !== RESOURCE_ENERGY && creep.store.getUsedCapacity(resourceType) > 0)
+			&& creep.memory.delivering // Don't switch state if we're currently filling a bay.
+			&& (!creep.memory.order || !isResourceDestinationOrder(creep.room, creep.memory.order) || !isBayDestinationOrder(creep.memory.order))
+		) {
 			this.setTransporterState(false);
 		}
 
@@ -553,7 +557,7 @@ export default class TransporterRole extends Role {
 			};
 
 			if (storagePosition && target.pos.x === storagePosition.x && target.pos.y === storagePosition.y) {
-				option.priority = creep.memory.role === 'transporter' ? storagePriority : 5;
+				option.priority = creep.memory.role === 'transporter' ? (storagePriority + ((creep.room.storage || creep.room.terminal) ? 1 : 0)) : 5;
 			}
 			else {
 				if (store[RESOURCE_ENERGY] < 100) option.priority--;
