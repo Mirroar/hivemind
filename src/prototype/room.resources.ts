@@ -50,6 +50,18 @@ declare global {
 		mineralTypes: ResourceConstant[];
 		addResource: (resourceType: ResourceConstant, amount: number) => void;
 	}
+
+	interface Source {
+		isDangerous: () => boolean;
+	}
+
+	interface Mineral {
+		isDangerous: () => boolean;
+	}
+
+	interface StructureKeeperLair {
+		isDangerous: () => boolean;
+	}
 }
 
 // Define quick access property room.sourceDispatcher.
@@ -718,4 +730,59 @@ Room.prototype.getBestCircumstancialStorageSource = function (this: Room, resour
 	}
 
 	return null;
+};
+
+/**
+ * Checks if a keeper lair is considered dangerous.
+ *
+ * @return {boolean}
+ *   True if a source keeper is spawned or about to spawn.
+ */
+StructureKeeperLair.prototype.isDangerous = function (this: StructureKeeperLair) {
+	if (_.some(this.room.enemyCreeps['Source Keeper'], c => c.pos.getRangeTo(this) <= 5)) return true;
+
+	return !this.ticksToSpawn || this.ticksToSpawn < 10;
+};
+
+/**
+ * Checks if being close to this source is currently dangerous.
+ *
+ * @return {boolean}
+ *   True if an active keeper lair is nearby and we have no defenses.
+ */
+const isDangerous = function (this: Source | Mineral) {
+	const lair = this.getNearbyLair();
+	if (!lair || !lair.isDangerous()) return false;
+
+	// It's still safe if a guardian with sufficient lifespan is nearby to take
+	// care of any source keepers, and the lair isn't too close to the source.
+	if (this.room.creepsByRole.skKiller && lair.pos.getRangeTo(this) > 4) {
+		for (const guardian of _.values<SkKillerCreep>(this.room.creepsByRole.skKiller)) {
+			if (lair.pos.getRangeTo(guardian) < 5 && guardian.ticksToLive > 30) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+};
+
+/**
+ * Checks if being close to this source is currently dangerous.
+ *
+ * @return {boolean}
+ *   True if an active keeper lair is nearby and we have no defenses.
+ */
+Source.prototype.isDangerous = function (this: Source) {
+	return isDangerous.call(this);
+};
+
+/**
+ * Checks if being close to this mineral is currently dangerous.
+ *
+ * @return {boolean}
+ *   True if an active keeper lair is nearby and we have no defenses.
+ */
+Mineral.prototype.isDangerous = function (this: Mineral) {
+	return isDangerous.call(this);
 };
