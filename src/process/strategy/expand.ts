@@ -660,11 +660,13 @@ export default class ExpandProcess extends Process {
 		if (droppedResources?.length > 0) return;
 
 		// Alright, this is it, flipping the switch!
-		room.controller.unclaim();
-		_.each(
-			_.filter(room.find(FIND_MY_CREEPS), creep => creep.memory.singleRoom === room.name),
-			creep => creep.suicide(),
-		);
+		if (room.controller.unclaim() === OK) {
+			room.setEvacuating(false);
+			_.each(
+				_.filter(room.find(FIND_MY_CREEPS), creep => creep.memory.singleRoom === room.name),
+				creep => creep.suicide(),
+			);
+		}
 	}
 
 	private cleanupMemory() {
