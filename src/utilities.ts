@@ -1,7 +1,4 @@
-/* global hivemind PathFinder Room RoomPosition TERRAIN_MASK_WALL REACTIONS
-STRUCTURE_RAMPART STRUCTURE_ROAD BODYPART_COST
-TOP TOP_RIGHT RIGHT BOTTOM_RIGHT BOTTOM BOTTOM_LEFT LEFT TOP_LEFT
-STRUCTURE_PORTAL STRUCTURE_KEEPER_LAIR */
+/* global PathFinder RoomPosition REACTIONS BODYPART_COST */
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
@@ -116,24 +113,6 @@ const utilities = {
 		});
 
 		return PathFinder.search(startPosition, endPosition, options);
-	},
-
-	/**
-	 * Returns closest target to a room object.
-	 *
-	 * @param {RoomObject} roomObject
-	 *   The room object the search originates from.
-	 * @param {RoomObject[]} targets
-	 *   A list of room objects to check.
-	 *
-	 * @return {RoomObject}
-	 *   The closest target.
-	 */
-	getClosest(roomObject, targets) {
-		if (targets.length > 0) {
-			const target = roomObject.pos.findClosestByRange(targets);
-			return target && target.id;
-		}
 	},
 
 	/**
