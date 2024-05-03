@@ -1,5 +1,5 @@
 /* global PathFinder Room RoomPosition
-STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER CONTROLLER_DOWNGRADE FIND_SOURCES
+STRUCTURE_KEEPER_LAIR STRUCTURE_CONTROLLER FIND_SOURCES
 TERRAIN_MASK_WALL TERRAIN_MASK_SWAMP POWER_BANK_DECAY STRUCTURE_PORTAL
 STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
@@ -35,6 +35,12 @@ declare global {
 		}
 	}
 }
+
+type AdjacentRoomEntry = {
+	range: number;
+	origin: string;
+	room: string;
+};
 
 export interface RoomIntelMemory {
 	lastScan: number;
@@ -104,7 +110,7 @@ export default class RoomIntel {
 	otherUnsafeRooms: string[];
 	joinedDirs: Record<string, Record<string, boolean>>;
 
-	constructor(roomName) {
+	constructor(roomName: string) {
 		this.roomName = roomName;
 
 		const key = 'intel:' + roomName;
@@ -139,9 +145,9 @@ export default class RoomIntel {
 		this.gatherResourceIntel(room);
 
 		const structures = room.structuresByType;
-		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK] as StructurePowerBank[]);
+		this.gatherPowerIntel(structures[STRUCTURE_POWER_BANK]);
 		this.gatherDepositIntel();
-		this.gatherPortalIntel(structures[STRUCTURE_PORTAL] as StructurePortal[]);
+		this.gatherPortalIntel(structures[STRUCTURE_PORTAL]);
 		this.gatherInvaderIntel(structures);
 		this.gatherExitIntel(room.name);
 
@@ -180,7 +186,7 @@ export default class RoomIntel {
 		this.memory.rcl = 0;
 		this.memory.ticksToDowngrade = 0;
 		this.memory.hasController = typeof room.controller !== 'undefined';
-		if (room.controller && room.controller.owner) {
+		if (room.controller?.owner) {
 			this.memory.owner = room.controller.owner.username;
 			this.memory.rcl = room.controller.level;
 			this.memory.ticksToDowngrade = room.controller.ticksToDowngrade;
@@ -386,7 +392,7 @@ export default class RoomIntel {
 	gatherPortalIntel(portals: StructurePortal[]) {
 		delete this.memory.portals;
 
-		const targetRooms = [];
+		const targetRooms: string[] = [];
 		for (const portal of portals || []) {
 			// Ignore same-shard portals for now.
 			if ('shard' in portal.destination) {
@@ -456,13 +462,13 @@ export default class RoomIntel {
 		if (this.memory.owner) return;
 		if (!structures[STRUCTURE_STORAGE] && !structures[STRUCTURE_TERMINAL] && ruins.length === 0) return;
 
-		const resources = {};
+		const resources: Partial<Record<ResourceConstant, number>> = {};
 		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
 		_.each(collections, objects => {
 			_.each(objects, object => {
 				if (!object.store) return;
 
-				_.each(object.store, (amount, resourceType) => {
+				_.each(object.store, (amount: number, resourceType: ResourceConstant) => {
 					resources[resourceType] = (resources[resourceType] || 0) + amount;
 				});
 			});
@@ -497,10 +503,10 @@ export default class RoomIntel {
 	 * @param {object} structures
 	 *   An object containing Arrays of structures, keyed by structure type.
 	 */
-	gatherInvaderIntel(structures) {
+	gatherInvaderIntel(structures: Record<string, Structure[]>) {
 		delete this.memory.invaderInfo;
 
-		const core: StructureInvaderCore = _.first(structures[STRUCTURE_INVADER_CORE]);
+		const core = _.first(structures[STRUCTURE_INVADER_CORE]) as StructureInvaderCore;
 		if (!core) return;
 
 		// Commit basic invader core info.
@@ -619,7 +625,7 @@ export default class RoomIntel {
 	 */
 	isClaimed(): boolean {
 		if (this.isOwned()) return true;
-		if (this.memory.reservation && this.memory.reservation.username && this.memory.reservation.username !== getUsername()) return true;
+		if (this.memory.reservation?.username && this.memory.reservation.username !== getUsername()) return true;
 
 		return false;
 	}
@@ -675,7 +681,7 @@ export default class RoomIntel {
 	 *   Type of this room's mineral source.
 	 */
 	getMineralTypes(): string[] {
-		const result = [];
+		const result: string[] = [];
 
 		for (const mineral of this.memory.minerals || []) {
 			result.push(mineral.type);
@@ -716,7 +722,7 @@ export default class RoomIntel {
 	 */
 	getCostMatrix(): CostMatrix {
 		// @todo For some reason, calling this in console gives a different version of the cost matrix. Verify!
-		let obstaclePositions;
+		let obstaclePositions: {obstacles: RoomPosition[]; roads: RoomPosition[]};
 		if (this.memory.costPositions) {
 			obstaclePositions = {
 				obstacles: unpackCoordListAsPosList(this.memory.costPositions[0], this.roomName),
@@ -817,7 +823,7 @@ export default class RoomIntel {
 	 * @return {number}
 	 *   Number of tiles of the given type in this room.
 	 */
-	countTiles(type: string) {
+	countTiles(type: 'plain' | 'swamp' | 'wall' | 'exit') {
 		if (!this.memory.terrain) return 0;
 
 		return this.memory.terrain[type] || 0;
@@ -871,7 +877,7 @@ export default class RoomIntel {
 				[RIGHT]: 'E',
 				[BOTTOM]: 'S',
 				[LEFT]: 'W',
-			};
+			} as const;
 
 			this.newStatus = {
 				N: true,
@@ -880,14 +886,14 @@ export default class RoomIntel {
 				W: true,
 			};
 
-			const openList = {};
-			const closedList = {};
+			const openList: Record<string, AdjacentRoomEntry> = {};
+			const closedList: Record<string, AdjacentRoomEntry> = {};
 			this.joinedDirs = {};
 			this.otherSafeRooms = options ? (options.safe || []) : [];
 			this.otherUnsafeRooms = options ? (options.unsafe || []) : [];
 			// Add initial directions to open list.
-			for (const moveDir of _.keys(this.memory.exits)) {
-				const dir = dirMap[moveDir];
+			for (const moveDir in this.memory.exits) {
+				const dir: string = dirMap[moveDir];
 				const roomName = this.memory.exits[moveDir];
 
 				this.addAdjacentRoomToCheck(roomName, openList, {dir, range: 0});
@@ -895,7 +901,7 @@ export default class RoomIntel {
 
 			// Process adjacent rooms until range has been reached.
 			while (_.size(openList) > 0) {
-				let minRange = null;
+				let minRange: AdjacentRoomEntry = null;
 				for (const roomName in openList) {
 					if (!minRange || minRange.range > openList[roomName].range) {
 						minRange = openList[roomName];
@@ -942,7 +948,7 @@ export default class RoomIntel {
 	 * @param {object} base
 	 *   Information about the room this operation is base on.
 	 */
-	addAdjacentRoomToCheck(roomName: string, openList: Record<string, {range: number; origin: string; room: string}>, base: {range: number; dir: string}) {
+	addAdjacentRoomToCheck(roomName: string, openList: Record<string, AdjacentRoomEntry>, base: {range: number; dir: string}) {
 		if (!this.isPotentiallyUnsafeRoom(roomName)) return;
 
 		openList[roomName] = {
@@ -975,7 +981,7 @@ export default class RoomIntel {
 	 * @param {object} closedList
 	 *   List of rooms that have been checked.
 	 */
-	handleAdjacentRoom(roomData: {range: number; origin: string; room: string}, openList: Record<string, {range: number; origin: string; room: string}>, closedList: Record<string, {range: number; origin: string; room: string}>) {
+	handleAdjacentRoom(roomData: AdjacentRoomEntry, openList: Record<string, AdjacentRoomEntry>, closedList: Record<string, AdjacentRoomEntry>) {
 		const roomIntel = getRoomIntel(roomData.room);
 		if (roomIntel.getAge() > 100_000) {
 			// Room has no intel, declare it as unsafe.

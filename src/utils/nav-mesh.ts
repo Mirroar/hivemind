@@ -3,7 +3,7 @@ TERRAIN_MASK_WALL STRUCTURE_KEEPER_LAIR */
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import {encodePosition, serializePosition, deserializePosition, serializeCoords} from 'utils/serialization';
+import {encodePosition, deserializePosition, serializeCoords} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
@@ -88,8 +88,7 @@ export default class NavMesh {
 		// Mesh doesn't need to be updated very often.
 		// @todo Allow forcing update for when we dismantle a structure.
 		if (
-			this.memory.rooms[roomName]
-			&& this.memory.rooms[roomName].paths
+			this.memory.rooms[roomName]?.paths
 			&& !hivemind.hasIntervalPassed(10_000, this.memory.rooms[roomName].gen)
 		) return;
 
@@ -147,17 +146,18 @@ export default class NavMesh {
 	 *   An array of exit information objects.
 	 */
 	getExitInfo(roomName: string): ExitInfo[] {
-		const exits: ExitInfo[] = [];
-
-		this.collectExitGroups(roomName, exits, LEFT, true, 0);
-		this.collectExitGroups(roomName, exits, RIGHT, true, 49);
-		this.collectExitGroups(roomName, exits, TOP, false, 0);
-		this.collectExitGroups(roomName, exits, BOTTOM, false, 49);
+		const exits: ExitInfo[] = [
+			...this.collectExitGroups(roomName, LEFT, true, 0),
+			...this.collectExitGroups(roomName, RIGHT, true, 49),
+			...this.collectExitGroups(roomName, TOP, false, 0),
+			...this.collectExitGroups(roomName, BOTTOM, false, 49),
+		];
 
 		return exits;
 	}
 
-	collectExitGroups(roomName: string, exits: ExitInfo[], dir: DirectionConstant, vertical: boolean, offset: number) {
+	collectExitGroups(roomName: string, dir: DirectionConstant, vertical: boolean, offset: number): ExitInfo[] {
+		const exits: ExitInfo[] = [];
 		const isAvailable = this.isAvailableExitDirection(roomName, dir);
 		let groupId = 1;
 		let currentStart: number = null;
@@ -187,6 +187,8 @@ export default class NavMesh {
 
 			this.costMatrix.set(x, y, isAvailable ? (nextId + 100) : 255);
 		}
+
+		return exits;
 	}
 
 	isAvailableExitDirection(roomName: string, dir: DirectionConstant): boolean {
@@ -311,17 +313,46 @@ export default class NavMesh {
 		const costMatrix = getCostMatrix(roomName, {ignoreMilitary: true});
 
 		for (const region of regions) {
-			const centerXR = region.center % 50;
-			const centerYR = Math.floor(region.center / 50);
+			this.addConnectingPathsForRegion(region, paths, roomName, costMatrix);
+		}
 
-			for (const exitId of region.exits) {
-				const exit = this.exitLookup[exitId];
-				const centerX = exit.vertical ? exit.offset : exit.center;
-				const centerY = exit.vertical ? exit.center : exit.offset;
+		return paths;
+	}
+
+	addConnectingPathsForRegion(region: RegionInfo, paths: Record<number, Record<number, number>>, roomName: string, costMatrix: CostMatrix) {
+		const centerXR = region.center % 50;
+		const centerYR = Math.floor(region.center / 50);
+
+		for (const exitId of region.exits) {
+			const exit = this.exitLookup[exitId];
+			const centerX = exit.vertical ? exit.offset : exit.center;
+			const centerY = exit.vertical ? exit.center : exit.offset;
+
+			const result = PathFinder.search(
+				new RoomPosition(centerX, centerY, roomName),
+				new RoomPosition(centerXR, centerYR, roomName),
+				{
+					roomCallback: () => costMatrix,
+					maxRooms: 1,
+				},
+			);
+
+			if (!result.incomplete) {
+				if (!paths[exitId]) paths[exitId] = {};
+				paths[exitId][0] = result.path.length;
+			}
+
+			for (const exitId2 of region.exits) {
+				if (exitId === exitId2) continue;
+				if (paths[exitId2] && paths[exitId2][exitId]) continue;
+
+				const exit2 = this.exitLookup[exitId2];
+				const centerX2 = exit2.vertical ? exit2.offset : exit2.center;
+				const centerY2 = exit2.vertical ? exit2.center : exit2.offset;
 
 				const result = PathFinder.search(
 					new RoomPosition(centerX, centerY, roomName),
-					new RoomPosition(centerXR, centerYR, roomName),
+					new RoomPosition(centerX2, centerY2, roomName),
 					{
 						roomCallback: () => costMatrix,
 						maxRooms: 1,
@@ -330,35 +361,10 @@ export default class NavMesh {
 
 				if (!result.incomplete) {
 					if (!paths[exitId]) paths[exitId] = {};
-					paths[exitId][0] = result.path.length;
-				}
-
-				for (const exitId2 of region.exits) {
-					if (exitId === exitId2) continue;
-					if (paths[exitId2] && paths[exitId2][exitId]) continue;
-
-					const exit2 = this.exitLookup[exitId2];
-					const centerX2 = exit2.vertical ? exit2.offset : exit2.center;
-					const centerY2 = exit2.vertical ? exit2.center : exit2.offset;
-
-					const result = PathFinder.search(
-						new RoomPosition(centerX, centerY, roomName),
-						new RoomPosition(centerX2, centerY2, roomName),
-						{
-							roomCallback: () => costMatrix,
-							maxRooms: 1,
-						},
-					);
-
-					if (!result.incomplete) {
-						if (!paths[exitId]) paths[exitId] = {};
-						paths[exitId][exitId2] = result.path.length;
-					}
+					paths[exitId][exitId2] = result.path.length;
 				}
 			}
 		}
-
-		return paths;
 	}
 
 	getPortals(roomName: string) {
@@ -437,10 +443,6 @@ export default class NavMesh {
 		const startTime = Game.cpu.getUsed();
 		const startRoom = startPos.roomName;
 		const endRoom = endPos.roomName;
-		let availableExits: Array<{
-			id: number;
-			center: number;
-		}> = [];
 		const openList: NavMeshPathfindingEntry[] = [];
 		const openListLookup: Record<string, boolean> = {};
 		const closedList: Record<string, boolean> = {};
@@ -452,60 +454,8 @@ export default class NavMesh {
 		}
 
 		const roomMemory = this.memory.rooms[startRoom];
-		if (roomMemory.regions) {
-			const costMatrix = getCostMatrix(startRoom, {ignoreMilitary: true});
-			for (const region of roomMemory.regions) {
-				// Check if we can reach region center.
-				const result = PathFinder.search(
-					startPos,
-					deserializePosition(region.center, startRoom),
-					{
-						roomCallback: () => costMatrix,
-						maxRooms: 1,
-					},
-				);
-
-				if (result.incomplete) continue;
-
-				// Exits for this region are available.
-				availableExits = _.filter(roomMemory.exits, exit => region.exits.includes(exit.id));
-			}
-		}
-		else {
-			availableExits = roomMemory.exits;
-		}
-
-		for (const exit of availableExits) {
-			const segmentLength = roomMemory.paths[exit.id] ? roomMemory.paths[exit.id][0] : 50;
-			const entry: NavMeshPathfindingEntry = {
-				exitId: exit.id,
-				pos: exit.center,
-				roomName: startRoom,
-				parent: null,
-				pathLength: segmentLength,
-				totalSteps: segmentLength,
-				heuristic: (Game.map.getRoomLinearDistance(startRoom, endRoom) - 1) * 50,
-				portal: false,
-			};
-			openList.push(entry);
-			openListLookup[startRoom + '/' + entry.pos] = true;
-		}
-
-		for (const portal of roomMemory.portals || []) {
-			const entry: NavMeshPathfindingEntry = {
-				exitId: null,
-				pos: portal.pos,
-				roomName: startRoom,
-				parent: null,
-				pathLength: 25,
-				totalSteps: 25,
-				heuristic: (Game.map.getRoomLinearDistance(startRoom, endRoom) - 1) * 50,
-				portal: true,
-				targetRoom: portal.room,
-			};
-			openList.push(entry);
-			openListLookup[startRoom + '/' + entry.pos] = true;
-		}
+		this.addExitsToOpenList(this.getAvailableExits(startPos, startRoom), openList, openListLookup, startRoom, endRoom);
+		this.addPortalsToOpenList(openList, openListLookup, startRoom, endRoom);
 
 		while (openList.length > 0) {
 			if (Game.cpu.getUsed() - startTime > (options.maxCpu || 5)) {
@@ -518,8 +468,7 @@ export default class NavMesh {
 			const current = this.popBestCandidate(openList);
 			const nextRoom = current.portal ? current.targetRoom : this.getAdjacentRoom(current.roomName, current.exitId);
 			const correspondingExit = current.portal ? null : this.getCorrespondingExitId(current.exitId);
-			let costMultiplier = 1;
-			closedList[current.roomName + '/' + current.pos] = true;
+			closedList[`${current.roomName}/${current.pos}`] = true;
 
 			if (nextRoom === endRoom) {
 				// @todo There might be shorter paths to the actual endPosition.
@@ -547,58 +496,29 @@ export default class NavMesh {
 			if (current.portal) {
 				const portalBack = _.find(roomMemory.portals, p => p.room === current.roomName);
 				const exitPos = portalBack ? portalBack.pos : (25 + (50 * 25));
-				if (closedList[nextRoom + '/' + exitPos]) continue;
+				if (closedList[`${nextRoom}/${exitPos}`]) continue;
 
-				closedList[nextRoom + '/' + exitPos] = true;
+				closedList[`${nextRoom}/${exitPos}`] = true;
 			}
 			else if (roomMemory.exits[correspondingExit]) {
 				const exitPos = roomMemory.exits[correspondingExit].center;
-				if (closedList[nextRoom + '/' + exitPos]) continue;
+				if (closedList[`${nextRoom}/${exitPos}`]) continue;
 
-				closedList[nextRoom + '/' + exitPos] = true;
+				closedList[`${nextRoom}/${exitPos}`] = true;
 			}
 
 			if (hivemind.segmentMemory.isReady()) {
 				const roomIntel = getRoomIntel(nextRoom);
 				if (roomIntel.isOwned()) {
 					if (!options.allowDanger && !hivemind.relations.isAlly(roomIntel.getOwner())) continue;
-
-					costMultiplier *= 5;
-				}
-				else if (roomIntel.isClaimed() && roomIntel.getReservationStatus().username !== 'Invader') {
-					costMultiplier *= 1.5;
-				}
-				else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-					// Allow pathing through source keeper rooms since we can safely avoid them.
-					costMultiplier *= 1.2;
 				}
 			}
-
-			if (Memory.rooms[nextRoom]?.enemies && !Memory.rooms[nextRoom]?.enemies?.safe && !options.allowDanger) {
-				// Avoid rooms with enemies in them if possible.
-				costMultiplier *= 2;
-			}
-
-			availableExits = [];
-			if (current.portal) {
-				availableExits = roomMemory.exits;
-			}
-
-			if (roomMemory.regions) {
-				// Find region containing corresponding exit.
-				const region = _.find(roomMemory.regions, (region: any) => region.exits.includes(correspondingExit));
-				if (!region) continue;
-
-				availableExits = _.filter(roomMemory.exits, exit => exit.id !== correspondingExit && region.exits.includes(exit.id));
-			}
-			else {
-				availableExits = _.filter(roomMemory.exits, exit => exit.id !== correspondingExit);
-			}
-
-			for (const exit of availableExits) {
+	
+			const costMultiplier = this.calculateCostMultiplier(nextRoom, options.allowDanger);
+			for (const exit of this.getAvailableExitsCorrespondingTo(nextRoom, correspondingExit, current.portal)) {
 				// Check if in closed list.
-				if (closedList[nextRoom + '/' + exit.center]) continue;
-				if (openListLookup[nextRoom + '/' + exit.center]) continue;
+				if (closedList[`${nextRoom}/${exit.center}`]) continue;
+				if (openListLookup[`${nextRoom}/${exit.center}`]) continue;
 
 				if (!current.portal) {
 					// If there's a weird path mismatch, skip.
@@ -627,14 +547,14 @@ export default class NavMesh {
 				}
 
 				openList.push(item);
-				openListLookup[nextRoom + '/' + exit.center] = true;
-				openListLookup[nextRoom + '/' + item.pos] = true;
+				openListLookup[`${nextRoom}/${exit.center}`] = true;
+				openListLookup[`${nextRoom}/${item.pos}`] = true;
 			}
 
 			for (const portal of roomMemory.portals || []) {
 				// Check if in closed list.
-				if (closedList[nextRoom + '/' + portal.pos]) continue;
-				if (openListLookup[nextRoom + '/' + portal.pos]) continue;
+				if (closedList[`${nextRoom}/${portal.pos}`]) continue;
+				if (openListLookup[`${nextRoom}/${portal.pos}`]) continue;
 
 				const item = {
 					exitId: null,
@@ -654,8 +574,7 @@ export default class NavMesh {
 				}
 
 				openList.push(item);
-				openListLookup[nextRoom + '/' + item.pos] = true;
-				openListLookup[nextRoom + '/' + item.pos] = true;
+				openListLookup[`${nextRoom}/${item.pos}`] = true;
 			}
 		}
 
@@ -664,6 +583,114 @@ export default class NavMesh {
 		return {
 			incomplete: true,
 		};
+	}
+
+	getAvailableExits(startPos: RoomPosition, roomName: string): Array<{
+		id: number;
+		center: number;
+	}> {
+		const roomMemory = this.memory.rooms[roomName];
+		if (!roomMemory.regions) return roomMemory.exits;
+
+		const costMatrix = getCostMatrix(roomName, {ignoreMilitary: true});
+		for (const region of roomMemory.regions) {
+			// Check if we can reach region center.
+			const result = PathFinder.search(
+				startPos,
+				deserializePosition(region.center, roomName),
+				{
+					roomCallback: () => costMatrix,
+					maxRooms: 1,
+				},
+			);
+
+			if (result.incomplete) continue;
+
+			// Exits for this region are available.
+			return _.filter(roomMemory.exits, exit => region.exits.includes(exit.id));
+		}
+
+		return [];
+	}
+
+	getAvailableExitsCorrespondingTo(roomName: string, exitId: number | null, isPortal: boolean): Array<{
+		id: number;
+		center: number;
+	}> {
+		const roomMemory = this.memory.rooms[roomName];
+		if (isPortal) return roomMemory.exits;
+
+		if (!roomMemory.regions) return _.filter(roomMemory.exits, exit => exit.id !== exitId);
+
+		// Find region containing corresponding exit.
+		const region = _.find(roomMemory.regions, (region: any) => region.exits.includes(exitId));
+		if (!region) return [];
+
+		return _.filter(roomMemory.exits, exit => exit.id !== exitId && region.exits.includes(exit.id));
+	}
+
+	addExitsToOpenList(exits: Array<{id: number; center: number;}>, openList: NavMeshPathfindingEntry[], openListLookup: Record<string, boolean>, roomName: string, endRoom: string) {
+		const roomMemory = this.memory.rooms[roomName];
+		for (const exit of exits) {
+			const segmentLength = roomMemory.paths[exit.id] ? roomMemory.paths[exit.id][0] : 50;
+			const entry: NavMeshPathfindingEntry = {
+				exitId: exit.id,
+				pos: exit.center,
+				roomName,
+				parent: null,
+				pathLength: segmentLength,
+				totalSteps: segmentLength,
+				heuristic: (Game.map.getRoomLinearDistance(roomName, endRoom) - 1) * 50,
+				portal: false,
+			};
+			openList.push(entry);
+			openListLookup[`${roomName}/${entry.pos}`] = true;
+		}
+	}
+
+	addPortalsToOpenList(openList: NavMeshPathfindingEntry[], openListLookup: Record<string, boolean>, roomName: string, endRoom: string) {
+		const roomMemory = this.memory.rooms[roomName];
+		for (const portal of roomMemory.portals || []) {
+			const entry: NavMeshPathfindingEntry = {
+				exitId: null,
+				pos: portal.pos,
+				roomName,
+				parent: null,
+				pathLength: 25,
+				totalSteps: 25,
+				heuristic: (Game.map.getRoomLinearDistance(roomName, endRoom) - 1) * 50,
+				portal: true,
+				targetRoom: portal.room,
+			};
+			openList.push(entry);
+			openListLookup[`${roomName}/${entry.pos}`] = true;
+		}
+	}
+
+	calculateCostMultiplier(roomName: string, allowDanger: boolean): number {
+		let costMultiplier = 1;
+		if (hivemind.segmentMemory.isReady()) {
+			const roomIntel = getRoomIntel(roomName);
+			if (roomIntel.isOwned()) {
+				if (!hivemind.relations.isAlly(roomIntel.getOwner())) {
+					costMultiplier *= 5;
+				}
+			}
+			else if (roomIntel.isClaimed() && roomIntel.getReservationStatus().username !== 'Invader') {
+				costMultiplier *= 1.5;
+			}
+			else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+				// Allow pathing through source keeper rooms since we can safely avoid them.
+				costMultiplier *= 1.2;
+			}
+		}
+
+		if (Memory.rooms[roomName]?.enemies && !Memory.rooms[roomName]?.enemies?.safe && !allowDanger) {
+			// Avoid rooms with enemies in them if possible.
+			costMultiplier *= 2;
+		}
+
+		return costMultiplier;
 	}
 
 	popBestCandidate(openList: NavMeshPathfindingEntry[]): NavMeshPathfindingEntry {

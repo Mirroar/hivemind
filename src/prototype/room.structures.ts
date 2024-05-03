@@ -16,6 +16,8 @@ declare global {
 			[STRUCTURE_LINK]: StructureLink[];
 			[STRUCTURE_NUKER]: StructureNuker[];
 			[STRUCTURE_OBSERVER]: StructureObserver[];
+			[STRUCTURE_PORTAL]: StructurePortal[];
+			[STRUCTURE_POWER_BANK]: StructurePowerBank[];
 			[STRUCTURE_POWER_SPAWN]: StructurePowerSpawn[];
 			[STRUCTURE_RAMPART]: StructureRampart[];
 			[STRUCTURE_SPAWN]: StructureSpawn[];

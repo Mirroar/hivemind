@@ -10,8 +10,7 @@ import './prototype/room';
 import './prototype/structure';
 
 // Create kernel object.
-import {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
-import hivemind from 'hivemind';
+import hivemind, {PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_HIGH} from 'hivemind';
 import SegmentedMemory from 'utils/segmented-memory';
 
 import container from 'utils/container';
@@ -58,7 +57,7 @@ import * as Profiler from 'utils/Profiler';
 
 declare global {
 	interface RawMemory {
-		_parsed: boolean;
+		_parsed: Memory;
 	}
 
 	namespace NodeJS {
@@ -98,12 +97,14 @@ balancer.init();
 
 // @todo make unarmed creeps run from hostiles.
 
-const main = {
+class BotKernel {
+	lastTime: number = 0;
+	lastMemory: Memory = null;
 
 	/**
 	 * Runs main game loop.
 	 */
-	loop() {
+	runTick() {
 		this.useMemoryFromHeap();
 
 		hivemind.segmentMemory.manage();
@@ -213,10 +214,8 @@ const main = {
 
 		this.showDebug();
 		this.recordStats();
-	},
+	}
 
-	lastTime: 0,
-	lastMemory: null,
 	useMemoryFromHeap() {
 		if (this.lastTime && this.lastMemory && Game.time === this.lastTime + 1) {
 			delete global.Memory;
@@ -233,7 +232,7 @@ const main = {
 		}
 
 		this.lastTime = Game.time;
-	},
+	}
 
 	/**
 	 * Saves CPU stats for the current tick to memory.
@@ -252,7 +251,7 @@ const main = {
 		stats.recordStat('cpu_total', time);
 		stats.recordStat('bucket', Game.cpu.bucket);
 		stats.recordStat('creeps', _.size(Game.creeps));
-	},
+	}
 
 	/**
 	 * Periodically deletes unused data from memory.
@@ -296,37 +295,12 @@ const main = {
 
 		// Periodically clean old room memory.
 		if (Game.time % 3738 === 2100 && hivemind.segmentMemory.isReady()) {
-			let count = 0;
-			_.each(Memory.rooms, (memory, roomName) => {
-				if (getRoomIntel(roomName).getAge() > 100_000) {
-					delete Memory.rooms[roomName];
-					count++;
-				}
-
-				if (memory.observeTargets && !Game.rooms[roomName]?.observer) {
-					delete memory.observeTargets;
-				}
-			});
-
-			if (count > 0) {
-				hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
-			}
+			this.cleanupRoomMemory();
 		}
 
 		// Periodically clean old squad memory.
 		if (Game.time % 548 === 3) {
-			_.each(Memory.squads, (memory, squadName) => {
-				// Only delete if squad can't be spawned.
-				if (memory.spawnRoom && Game.rooms[memory.spawnRoom]) return;
-
-				// Don't delete inter-shard squad that can't have a spawn room.
-				if (squadName === 'interShardExpansion') return;
-
-				// Only delete if there are no creeps belonging to this squad.
-				if (_.size(_.filter(Game.creeps, creep => creep.memory.squadName === squadName)) > 0) return;
-
-				delete Memory.squads[squadName];
-			});
+			this.cleanupSquadMemory();
 		}
 
 		// Periodically garbage collect in caches.
@@ -352,7 +326,40 @@ const main = {
 		if (Game.time % 3625 == 0 && hivemind.segmentMemory.isReady()) {
 			this.cleanupSegmentMemory();
 		}
-	},
+	}
+
+	cleanupRoomMemory() {
+		let count = 0;
+		_.each(Memory.rooms, (memory, roomName) => {
+			if (getRoomIntel(roomName).getAge() > 100_000) {
+				delete Memory.rooms[roomName];
+				count++;
+			}
+
+			if (memory.observeTargets && !Game.rooms[roomName]?.observer) {
+				delete memory.observeTargets;
+			}
+		});
+
+		if (count > 0) {
+			hivemind.log('main').debug('Pruned old memory for', count, 'rooms.');
+		}
+	}
+
+	cleanupSquadMemory() {
+		_.each(Memory.squads, (memory, squadName) => {
+			// Only delete if squad can't be spawned.
+			if (memory.spawnRoom && Game.rooms[memory.spawnRoom]) return;
+
+			// Don't delete inter-shard squad that can't have a spawn room.
+			if (squadName === 'interShardExpansion') return;
+
+			// Only delete if there are no creeps belonging to this squad.
+			if (_.size(_.filter(Game.creeps, creep => creep.memory.squadName === squadName)) > 0) return;
+
+			delete Memory.squads[squadName];
+		});
+	}
 
 	cleanupSegmentMemory() {
 		// Clean old entries from remote path manager from segment memory.
@@ -383,7 +390,7 @@ const main = {
 			const isMyRoom = Game.rooms[roomName] && Game.rooms[roomName].isMine();
 			if (!isMyRoom) hivemind.segmentMemory.delete(key);
 		});
-	},
+	}
 
 	/**
 	 *
@@ -396,10 +403,11 @@ const main = {
 			Memory.hivemind.showProcessDebug--;
 			hivemind.drawProcessDebug();
 		}
-	},
+	}
 
 };
 
+const kernel = new BotKernel();
 export const loop = ErrorMapper.wrapLoop(() => {
-	main.loop();
+	kernel.runTick();
 });

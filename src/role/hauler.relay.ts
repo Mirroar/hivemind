@@ -463,7 +463,7 @@ export default class RelayHaulerRole extends Role {
 				filter: structure => structure.structureType === STRUCTURE_CONTAINER
 					&& structure.store.getFreeCapacity() < structure.store.getCapacity() * 0.1
 					&& structure.store.getUsedCapacity(RESOURCE_ENERGY) > 100,
-			});
+			}) as StructureContainer[];
 			if (container.length > 0) creep.heapMemory.energyPickupTarget = container[0].id;
 			return container[0];
 		}

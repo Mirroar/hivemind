@@ -99,7 +99,8 @@
 		],
 		"ignores": [
 			"snippets.js",
-			"mock/constants.ts"
+			"mock/constants.ts",
+			"src/utils/Profiler"
 		],
 		"settings": {
 			"import/resolver": {
