@@ -17,6 +17,7 @@
 		"node": "^16.0"
 	},
 	"scripts": {
+		"build": "rollup -c",
 		"test": "xo"
 	},
 	"devDependencies": {
