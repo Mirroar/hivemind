@@ -37,7 +37,6 @@ const roleNameMap = {
 	brawler: 'F',
 	gatherer: 'G',
 	guardian: 'FE',
-	gift: ':) GIFT (: ',
 	harvester: 'H',
 	'harvester.deposit': 'HD',
 	'harvester.remote': 'HR',

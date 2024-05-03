@@ -11,7 +11,6 @@ import caravanTraderRole from 'role/caravan-trader';
 import claimerRole from 'role/claimer';
 import depositHarvesterRole from 'role/harvester.deposit';
 import dismantlerRole from 'role/dismantler';
-import giftRole from 'role/gift';
 import guardianRole from 'role/guardian';
 import harvesterRole from 'role/harvester';
 import helperRole from 'role/helper';
@@ -40,7 +39,6 @@ const creepRoles = {
 	'caravan-trader': caravanTraderRole,
 	claimer: claimerRole,
 	dismantler: dismantlerRole,
-	gift: giftRole,
 	guardian: guardianRole,
 	harvester: harvesterRole,
 	'harvester.deposit': depositHarvesterRole,

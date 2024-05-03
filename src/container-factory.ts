@@ -20,7 +20,6 @@ import brawlerSpawnRole from 'spawn-role/brawler';
 import builderSpawnRole from 'spawn-role/builder';
 import depositHarvesterSpawnRole from 'spawn-role/harvester.deposit';
 import dismantlerSpawnRole from 'spawn-role/dismantler';
-import giftSpawnRole from 'spawn-role/gift';
 import harvesterSpawnRole from 'spawn-role/harvester';
 import helperSpawnRole from 'spawn-role/helper';
 import mineralHarvesterSpawnRole from 'spawn-role/harvester.minerals';
@@ -60,7 +59,6 @@ const spawnClasses = {
 	brawler: brawlerSpawnRole,
 	builder: builderSpawnRole,
 	dismantler: dismantlerSpawnRole,
-	gift: giftSpawnRole,
 	harvester: harvesterSpawnRole,
 	'harvester.deposit': depositHarvesterSpawnRole,
 	'harvester.minerals': mineralHarvesterSpawnRole,
