@@ -125,7 +125,7 @@ const getNearbyContainer = function (this: Source | Mineral) {
 
 			if (!this.room.roomPlanner) return true;
 
-			let positionType = (this instanceof Source) ? 'container.source' : 'container.mineral';
+			const positionType = (this instanceof Source) ? 'container.source' : 'container.mineral';
 			if (this.room.roomPlanner.isPlannedLocation(s.pos, positionType)) return true;
 
 			return false;

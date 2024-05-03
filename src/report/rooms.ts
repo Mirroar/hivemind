@@ -23,7 +23,7 @@ interface RoomData {
 }
 
 export default class RoomsReport {
-	private funnelManager: FunnelManager;
+	private readonly funnelManager: FunnelManager;
 
 	constructor(funnelManager: FunnelManager) {
 		this.funnelManager = funnelManager;
@@ -80,7 +80,7 @@ export default class RoomsReport {
 	}
 
 	getRoomInfo(room: Room): RoomData {
-		let weight = 0;
+		const weight = 0;
 
 		return {
 			name: room.name,
@@ -93,7 +93,7 @@ export default class RoomsReport {
 			mineralType: _.map(room.minerals, m => m.mineralType).join(', '),
 			storagePercent: (room.storage || room.terminal) ? ((1 - (room.getFreeStorage() / room.getStorageLimit())) * 100) : null,
 			labUsage: (room.memory.labUsage?.total || 0) === 0 ? null : (room.memory.labUsage.busy / room.memory.labUsage.total),
-		}
+		};
 	}
 
 	help() {

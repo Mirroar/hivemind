@@ -179,8 +179,6 @@ export default class RemoteHarvesterRole extends Role {
 					// Place a container construction site for this source.
 					containerPosition.createConstructionSite(STRUCTURE_CONTAINER);
 				}
-
-				return;
 			}
 		});
 	}

@@ -220,6 +220,7 @@ export default class MineBuilderRole extends Role {
 				// Too dangerous, return home.
 				this.setReturning(creep, true);
 			}
+
 			return;
 		}
 

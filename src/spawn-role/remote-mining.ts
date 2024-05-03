@@ -1,13 +1,12 @@
 /* global MOVE CLAIM BODYPART_COST CONTROLLER_RESERVE_MAX RESOURCE_ENERGY */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_PLAINS, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import hivemind from 'hivemind';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
-import {MOVEMENT_MODE_PLAINS, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface BuilderSpawnOption extends SpawnOption {
 	unitType: 'builder';
@@ -37,10 +36,10 @@ interface SkKillerSpawnOption extends SpawnOption {
 }
 
 type RemoteMiningSpawnOption = BuilderSpawnOption
-	| ClaimerSpawnOption
-	| HarvesterSpawnOption
-	| HaulerSpawnOption
-	| SkKillerSpawnOption;
+| ClaimerSpawnOption
+| HarvesterSpawnOption
+| HaulerSpawnOption
+| SkKillerSpawnOption;
 
 export default class RemoteMiningSpawnRole extends SpawnRole {
 	/**
@@ -254,7 +253,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 				(creep: ClaimerCreep) =>
 					creep.memory.mission === 'reserve' && creep.memory.target === encodePosition(pos),
 			);
-			const activeClaimersOnArrival = _.filter(claimers, creep => (creep.spawning || creep.ticksToLive > pathLength + claimerSpawnTime))
+			const activeClaimersOnArrival = _.filter(claimers, creep => (creep.spawning || creep.ticksToLive > pathLength + claimerSpawnTime));
 			if (activeClaimersOnArrival.length > 0) continue;
 
 			const roomMemory = Memory.rooms[pos.roomName];
@@ -294,7 +293,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		}
 	}
 
-	addSkKillerOptionForPosition (room: Room, roomName: string, options: RemoteMiningSpawnOption[]) {
+	addSkKillerOptionForPosition(room: Room, roomName: string, options: RemoteMiningSpawnOption[]) {
 		const roomIntel = getRoomIntel(roomName);
 		if (roomIntel.isClaimable()) return;
 		if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) == 0) return;
@@ -378,9 +377,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		const isEstablished = operation.hasContainer(targetPos) && (container?.hits || CONTAINER_HITS) > CONTAINER_HITS / 2;
 
 		// @todo Allow larger harvesters if we need CPU and have spawn time to spare.
-		const sizeFactor = (room.controller.level === 8 ? 2 : 
-			(room.controller.level === 7 ? 1.8 : 
-			(room.controller.level === 6 ? 1.5 : 1)));
+		const sizeFactor = (room.controller.level === 8 ? 2
+			: (room.controller.level === 7 ? 1.8
+				: (room.controller.level === 6 ? 1.5 : 1)));
 
 		const option: HarvesterSpawnOption = {
 			unitType: 'harvester',
@@ -471,7 +470,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	getHarvesterCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
 		return (new BodyBuilder())
 			.setWeights({[WORK]: 20, [CARRY]: (option.isEstablished && room.controller.level < 7) ? 0 : 1})
-			.setPartLimit(WORK, option.size ? option.size + 1 : 0)
+			.setPartLimit(WORK, option.size > 0 ? option.size + 1 : 0)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
 			.setCarryContentLevel(0)
 			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))

@@ -42,7 +42,6 @@ export default class FunnelManager {
 				], room => this.getFunnelRoomScore(room)).name);
 			}
 
-
 			return funneledRooms;
 		});
 	}

@@ -245,13 +245,13 @@ export default class RelayHaulerRole extends Role {
 		if (creep.room.storage || creep.room.terminal) return;
 
 		const structures = _.filter([
-				...(creep.room.myStructuresByType[STRUCTURE_SPAWN] || []),
-				...(creep.room.myStructuresByType[STRUCTURE_EXTENSION] || []),
-				...(creep.room.myStructuresByType[STRUCTURE_TOWER] || []),
-				...(creep.room.myStructuresByType[STRUCTURE_POWER_SPAWN] || []),
-			],
-			(structure: AnyStoreStructure) =>
-				creep.pos.getRangeTo(structure.pos) <= 1
+			...(creep.room.myStructuresByType[STRUCTURE_SPAWN] || []),
+			...(creep.room.myStructuresByType[STRUCTURE_EXTENSION] || []),
+			...(creep.room.myStructuresByType[STRUCTURE_TOWER] || []),
+			...(creep.room.myStructuresByType[STRUCTURE_POWER_SPAWN] || []),
+		],
+		(structure: AnyStoreStructure) =>
+			creep.pos.getRangeTo(structure.pos) <= 1
 				&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
 		);
 
@@ -321,6 +321,7 @@ export default class RelayHaulerRole extends Role {
 				// Too dangerous, return home.
 				this.startDelivering(creep);
 			}
+
 			return;
 		}
 
@@ -459,10 +460,10 @@ export default class RelayHaulerRole extends Role {
 			// This prevents overflowing containers from keeping haulers busy
 			// picking up spilled energy.
 			const container = creep.pos.findInRange(FIND_STRUCTURES, 1, {
-				filter: structure => structure.structureType === STRUCTURE_CONTAINER 
+				filter: structure => structure.structureType === STRUCTURE_CONTAINER
 					&& structure.store.getFreeCapacity() < structure.store.getCapacity() * 0.1
 					&& structure.store.getUsedCapacity(RESOURCE_ENERGY) > 100,
-			}) as StructureContainer[];
+			});
 			if (container.length > 0) creep.heapMemory.energyPickupTarget = container[0].id;
 			return container[0];
 		}

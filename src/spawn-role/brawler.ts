@@ -339,7 +339,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 	getBrawlerCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
 		return (new BodyBuilder())
-			.setWeights({[ATTACK]: 2,[HEAL]: 1})
+			.setWeights({[ATTACK]: 2, [HEAL]: 1})
 			.setPartLimit(ATTACK, maxAttackParts)
 			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)
@@ -348,7 +348,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 	getBlinkyCreepBody(room: Room, maxAttackParts?: number): BodyPartConstant[] {
 		return (new BodyBuilder())
-			.setWeights({[RANGED_ATTACK]: 7,[HEAL]: 3})
+			.setWeights({[RANGED_ATTACK]: 7, [HEAL]: 3})
 			.setPartLimit(RANGED_ATTACK, maxAttackParts)
 			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.setMoveBufferRatio(0.4)

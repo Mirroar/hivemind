@@ -8,10 +8,10 @@ interface HarvestRoomInfo extends RoomListEntry {
 type SourceRoomAvailability = {
 	current: number;
 	max: number;
-}
+};
 
 export default class RemoteMinePrioritizer {
-	getRoomsToMine(maxAmount: number): {rooms: string[], maxRooms: number} {
+	getRoomsToMine(maxAmount: number): {rooms: string[]; maxRooms: number} {
 		const result: string[] = [];
 		const sourceRooms = this.getRemoteMiningSourceRooms();
 

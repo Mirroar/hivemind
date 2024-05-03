@@ -1,8 +1,7 @@
 /* global FIND_MINERALS STRUCTURE_EXTRACTOR MOVE WORK CARRY CREEP_SPAWN_TIME */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
-import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface MineralHarvesterSpawnOption extends SpawnOption {
 	source: Id<Mineral>;

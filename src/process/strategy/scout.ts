@@ -206,7 +206,7 @@ export default class ScoutProcess extends Process {
 
 		if (Game.map.getRoomStatus(roomName).status === 'closed') return 0;
 
-		let roomIntel = getRoomIntel(roomName);
+		const roomIntel = getRoomIntel(roomName);
 		// @todo Calculate cost for room reservation instead of this flat estimation.
 		let income = -2000;
 		let sourceCapacity: number = SOURCE_ENERGY_CAPACITY;
@@ -372,6 +372,7 @@ export default class ScoutProcess extends Process {
 			if (distanceToNextRoom < minDist) {
 				result.addScore((distanceToNextRoom - minDist), 'tooClose');
 			}
+
 			if (distanceToNextRoom > maxDist) {
 				result.addScore(-(distanceToNextRoom - maxDist), 'tooFar');
 			}

@@ -185,7 +185,7 @@ function getCachedStructureReference<T extends typeof structuresToReference[numb
 	}
 
 	return structure;
-};
+}
 
 Object.defineProperty(Room.prototype, 'factoryManager', {
 	get(this: Room) {
@@ -256,7 +256,7 @@ Room.prototype.updateControllerContainer = function (this: Room) {
 		const containerPositions: RoomPosition[] = this.roomPlanner.getLocations('container.controller');
 		if (containerPositions.length > 0) {
 			const structures = _.filter(
-				this.structuresByType[STRUCTURE_CONTAINER], 
+				this.structuresByType[STRUCTURE_CONTAINER],
 				structure => _.some(containerPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
 			);
 			this.memory.controllerContainer = structures.length > 0 && structures[0].id;
@@ -294,7 +294,7 @@ Room.prototype.updateControllerLink = function (this: Room) {
 	}
 
 	const structures = _.filter(
-		this.myStructuresByType[STRUCTURE_LINK], 
+		this.myStructuresByType[STRUCTURE_LINK],
 		structure => structure.pos.getRangeTo(this.controller) <= 3,
 	);
 	this.memory.controllerLink = structures.length > 0 && structures[0].id;
@@ -314,7 +314,7 @@ Room.prototype.updateStorageLink = function (this: Room) {
 		const linkPositions: RoomPosition[] = this.roomPlanner.getLocations('link.storage');
 		if (linkPositions.length > 0) {
 			const structures = _.filter(
-				this.myStructuresByType[STRUCTURE_LINK], 
+				this.myStructuresByType[STRUCTURE_LINK],
 				structure => _.some(linkPositions, pos => pos.x === structure.pos.x && pos.y === structure.pos.y),
 			);
 			this.memory.storageLink = structures.length > 0 && structures[0].id;

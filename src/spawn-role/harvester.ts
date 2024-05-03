@@ -1,10 +1,9 @@
 /* global ENERGY_REGEN_TIME PWR_REGEN_SOURCE POWER_INFO MOVE WORK CARRY */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_MINIMAL, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
 import {getDangerMatrix} from 'utils/cost-matrix';
 import {handleMapArea} from 'utils/map';
-import {MOVEMENT_MODE_MINIMAL, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface HarvesterSpawnOption extends SpawnOption {
 	source: Id<Source>;
@@ -159,9 +158,9 @@ export default class HarvesterSpawnRole extends SpawnRole {
 
 		// @todo Only spawn bigger harvesters in high level rooms when there's
 		// enough energy and we need to save CPU.
-		const sizeFactor = (source.room.controller.level === 8 ? 2 :
-			(source.room.controller.level === 7 ? 1.8 : 
-			(source.room.controller.level === 6 ? 1.5 : 1.2)));
+		const sizeFactor = (source.room.controller.level === 8 ? 2
+			: (source.room.controller.level === 7 ? 1.8
+				: (source.room.controller.level === 6 ? 1.5 : 1.2)));
 
 		return sizeFactor * numberOfParts;
 	}
@@ -179,7 +178,7 @@ export default class HarvesterSpawnRole extends SpawnRole {
 	 */
 	getCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
 		const source = Game.getObjectById(option.source);
-		const hasSpawnAtSource = _.filter(room.myStructuresByType[STRUCTURE_SPAWN], s => source.pos.getRangeTo(s.pos) <= 2 && s.isOperational()).length > 0;
+		const hasSpawnAtSource = _.some(room.myStructuresByType[STRUCTURE_SPAWN], s => source.pos.getRangeTo(s.pos) <= 2 && s.isOperational());
 		const hasFewExtensions = room.energyCapacityAvailable < SPAWN_ENERGY_CAPACITY * 2;
 
 		return (new BodyBuilder())

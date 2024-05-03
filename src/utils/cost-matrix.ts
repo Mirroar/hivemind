@@ -98,12 +98,10 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 }
 
 function roomHasBlockingConstructionSites(roomName: string): boolean {
-	return cache.inHeap('roomHasBlockingConstructionSites:' + roomName, 20, () => {
-		return (Game.rooms[roomName]?.find(
-			FIND_MY_CONSTRUCTION_SITES,
-			{filter: site => !site.isWalkable()}
-		) || []).length > 0;
-	})
+	return cache.inHeap('roomHasBlockingConstructionSites:' + roomName, 20, () => (Game.rooms[roomName]?.find(
+		FIND_MY_CONSTRUCTION_SITES,
+		{filter: site => !site.isWalkable()},
+	) || []).length > 0);
 }
 
 /**

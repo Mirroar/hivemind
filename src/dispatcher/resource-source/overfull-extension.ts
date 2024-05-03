@@ -33,7 +33,7 @@ export default class OverfullExtensionSource extends StructureSource<OverfullExt
 					type: this.getType(),
 					target: extension.id,
 					resourceType: RESOURCE_ENERGY,
-                    amount: extension.store.getUsedCapacity(RESOURCE_ENERGY) - extension.store.getUsedCapacity(RESOURCE_ENERGY),
+					amount: extension.store.getUsedCapacity(RESOURCE_ENERGY) - extension.store.getUsedCapacity(RESOURCE_ENERGY),
 				};
 
 				option.priority -= this.room.getCreepsWithOrder(this.getType(), extension.id).length * 2;

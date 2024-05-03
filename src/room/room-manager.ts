@@ -130,6 +130,7 @@ export default class RoomManager {
 			this.buildPlannedStructures('tower.' + i, STRUCTURE_RAMPART, pos => this.roomPlanner.isPlannedLocation(pos, 'tower'));
 			this.buildPlannedStructures('tower.' + i, STRUCTURE_TOWER, pos => this.roomPlanner.isPlannedLocation(pos, 'tower'));
 		}
+
 		// @todo We don't really want to build ramparts at spots where we
 		// can't build towers yet (if we're not at max RCL).
 		this.buildPlannedStructures('tower', STRUCTURE_RAMPART);

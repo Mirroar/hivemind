@@ -14,20 +14,20 @@ const TILE_IS_UNSAFE = 2;
 const TILE_IS_UNSAFE_NEAR_WALL = 3;
 
 const decorativeWallPattern = [
-	[1,0,0,0,0,0,0,0,0,0,0,0],
-	[1,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[1,0,0,0,0,0,0,0,0,0,0,0],
-	[1,0,0,0,0,0,0,0,0,0,0,0],
-	[0,1,1,0,0,0,0,0,0,0,1,1],
-	[0,0,0,0,1,1,0,1,1,0,0,0],
-	[0,0,0,0,0,0,1,0,0,0,0,0],
-	[0,0,0,0,0,0,1,0,0,0,0,0],
-	[0,0,0,0,0,0,0,0,0,0,0,0],
-	[0,0,0,0,0,0,1,0,0,0,0,0],
-	[0,0,0,0,0,0,1,0,0,0,0,0],
-	[0,0,0,0,1,1,0,1,1,0,0,0],
-	[0,1,1,0,0,0,0,0,0,0,1,1],
+	[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+	[0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+	[0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0],
+	[0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
 ];
 
 export default class RoomVariationBuilder extends RoomVariationBuilderBase {
@@ -771,6 +771,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					this.placementManager.planLocation(new RoomPosition(x, y, this.roomName), 'safe', null);
 					continue;
 				}
+
 				if (this.safetyMatrix.get(x, y) === TILE_IS_ENDANGERED) continue;
 
 				this.placementManager.blockPosition(x, y);

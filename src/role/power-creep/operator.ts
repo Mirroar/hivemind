@@ -56,11 +56,11 @@ interface OperatorRetrieveOpsOrder extends OperatorOrderInterface {
 }
 
 type OperatorOrder = OperatorWaitOrder
-	| OperatorEnablePowersOrder
-	| OperatorRenewOrder
-	| OperatorUsePowerOrder
-	| OperatorDepositOpsOrder
-	| OperatorRetrieveOpsOrder;
+| OperatorEnablePowersOrder
+| OperatorRenewOrder
+| OperatorUsePowerOrder
+| OperatorDepositOpsOrder
+| OperatorRetrieveOpsOrder;
 
 export default class OperatorRole extends Role {
 	creep: PowerCreep;

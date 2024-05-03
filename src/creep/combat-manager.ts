@@ -6,8 +6,8 @@ import {handleMapArea} from 'utils/map';
 type AttackTarget = Creep | Structure;
 
 interface ScoredPosition {
-	pos: RoomPosition,
-	score: number,
+	pos: RoomPosition;
+	score: number;
 }
 
 const rangedMassAttackDamage = {
@@ -15,7 +15,7 @@ const rangedMassAttackDamage = {
 	1: RANGED_ATTACK_POWER,
 	2: RANGED_ATTACK_POWER * 0.4,
 	3: RANGED_ATTACK_POWER * 0.1,
-}
+};
 
 const TILE_PLAINS = 1;
 const TILE_SWAMP = 2;
@@ -52,11 +52,10 @@ export default class CombatManager {
 		));
 		// @todo Handle the fact that we can't melee attack and heal at the same time.
 		if (target) {
-			if (creep.pos.getRangeTo(target.pos) <=1) {
+			if (creep.pos.getRangeTo(target.pos) <= 1) {
 				if (!this.hasAttacked) creep.heal(target);
-			} else {
-				if (!this.hasAttacked && !this.hasRangedAttacked) creep.rangedHeal(target);
 			}
+			else if (!this.hasAttacked && !this.hasRangedAttacked) creep.rangedHeal(target);
 		}
 	}
 
@@ -196,10 +195,10 @@ export default class CombatManager {
 	}
 
 	private scoreKitingPositions(creep: Creep, enemyCreeps: Creep[], positions: RoomPosition[]): ScoredPosition[] {
-		const scored = _.map(positions, pos => {return {
+		const scored = _.map(positions, pos => ({
 			pos,
 			score: 0,
-		}});
+		}));
 
 		// @todo Prefer positions where we can do a high amount of RMA damage.
 		this.addRoomCenterRangeScore(scored);
@@ -271,11 +270,9 @@ export default class CombatManager {
 
 		const terrain = new Room.Terrain(pos.roomName);
 		const structures = pos.lookFor(LOOK_STRUCTURES);
-		if (terrain.get(pos.x, pos.y) & TERRAIN_MASK_WALL) {
-			if (!_.some(structures, s => s.structureType === STRUCTURE_ROAD)) {
-				this.tileCache[encodedPos] = TILE_WALL;
-				return;
-			}
+		if (terrain.get(pos.x, pos.y) & TERRAIN_MASK_WALL && !_.some(structures, s => s.structureType === STRUCTURE_ROAD)) {
+			this.tileCache[encodedPos] = TILE_WALL;
+			return;
 		}
 
 		if (_.any(structures, s => !s.isWalkable())) {
@@ -283,11 +280,9 @@ export default class CombatManager {
 			return;
 		}
 
-		if (terrain.get(pos.x, pos.y) & TERRAIN_MASK_SWAMP) {
-			if (!_.some(structures, s => s.structureType === STRUCTURE_ROAD)) {
-				this.tileCache[encodedPos] = TILE_SWAMP;
-				return;
-			}
+		if (terrain.get(pos.x, pos.y) & TERRAIN_MASK_SWAMP && !_.some(structures, s => s.structureType === STRUCTURE_ROAD)) {
+			this.tileCache[encodedPos] = TILE_SWAMP;
+			return;
 		}
 
 		this.tileCache[encodedPos] = TILE_PLAINS;
@@ -344,7 +339,7 @@ export default class CombatManager {
 	public couldWinFightAgainst(creep: Creep, otherCreep: Creep): boolean {
 		if (
 			(
-				creep.getActiveBodyparts(RANGED_ATTACK) > 0 
+				creep.getActiveBodyparts(RANGED_ATTACK) > 0
 				|| (creep.getActiveBodyparts(ATTACK) > 0 && otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0)
 			)
 			&& otherCreep.getActiveBodyparts(HEAL) === 0
@@ -453,8 +448,8 @@ export default class CombatManager {
 					priority,
 					weight,
 					object: target,
-				}
-			}
+				};
+			},
 		);
 	}
 

@@ -10,7 +10,7 @@ declare global {
 			idle: number;
 			waiting: number;
 			total: number;
-		}
+		};
 	}
 }
 
@@ -61,12 +61,14 @@ export default class ManageLabsProcess extends Process {
 		const source2 = Game.getObjectById<StructureLab>(memory.labs.source2);
 		if (!source1 || !source2) return;
 
-		if (!memory.labUsage) memory.labUsage = {
-			busy: 0,
-			idle: 0,
-			waiting: 0,
-			total: 0,
-		};
+		if (!memory.labUsage) {
+			memory.labUsage = {
+				busy: 0,
+				idle: 0,
+				waiting: 0,
+				total: 0,
+			};
+		}
 
 		memory.labUsage.total++;
 		if (memory.labUsage.total >= 10_000) {
@@ -80,6 +82,7 @@ export default class ManageLabsProcess extends Process {
 			memory.labUsage.idle++;
 			return;
 		}
+
 		if (source1.mineralType !== memory.currentReaction[0] || source2.mineralType !== memory.currentReaction[1]) {
 			memory.labUsage.waiting++;
 			return;

@@ -12,7 +12,6 @@ interface TransportRouteOption {
 }
 
 export default class TradeRouteManager {
-
 	/**
 	 * Determines when it makes sense to transport resources between rooms.
 	 *
@@ -60,7 +59,7 @@ export default class TradeRouteManager {
 						&& room2.terminal.store.getUsedCapacity() > 10_000;
 					if (this.roomNeedsTerminalSpace(room2) && !isEvacuatingRoomWithLowEnergy) return;
 
-					const isLow = resourceLevel2 === 'low' 
+					const isLow = resourceLevel2 === 'low'
 						|| (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
 					const isLowEnough = resourceLevel2 === 'medium';
 					const shouldReceiveResources = isLow

@@ -21,7 +21,7 @@ declare global {
 			[STRUCTURE_SPAWN]: StructureSpawn[];
 			[STRUCTURE_TOWER]: StructureTower[];
 			[STRUCTURE_WALL]: StructureWall[];
-		},
+		};
 		myStructures: AnyOwnedStructure[];
 		myStructuresByType: {
 			[STRUCTURE_EXTENSION]: StructureExtension[];
@@ -36,7 +36,7 @@ declare global {
 			[STRUCTURE_SPAWN]: StructureSpawn[];
 			[STRUCTURE_TOWER]: StructureTower[];
 			[STRUCTURE_WALL]: StructureWall[];
-		},
+		};
 		generateLinkNetwork: () => void;
 		isClearingTerminal: () => boolean;
 		isClearingStorage: () => boolean;

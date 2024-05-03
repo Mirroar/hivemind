@@ -5,7 +5,7 @@ import {ErrorMapper} from 'utils/ErrorMapper';
 
 import './prototype/construction-site';
 import './prototype/cost-matrix';
-import './prototype/creep';
+import {clearHeapMemory} from './prototype/creep';
 import './prototype/room';
 import './prototype/structure';
 
@@ -51,7 +51,6 @@ import './manager.source';
 /* eslint-enable import/no-unassigned-import */
 
 import cache from 'utils/cache';
-import {clearHeapMemory} from 'prototype/creep';
 
 // Allow profiling of code.
 import stats from 'utils/stats';

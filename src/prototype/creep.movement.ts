@@ -11,7 +11,6 @@ import {encodePosition, decodePosition, serializePositionPath, deserializePositi
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
-import {profile} from 'utils/Profiler';
 
 declare global {
 	interface Creep {
@@ -136,9 +135,9 @@ function moveToRange(this: Creep | PowerCreep, target, range, options) {
 	if (!options) options = {};
 	options.range = range;
 	return this.goTo(target, options);
-};
+}
+
 Creep.prototype.moveToRange = moveToRange;
-//profile(Creep.prototype, 'moveToRange');
 
 /**
  * Ensures that the creep is in range before performing an operation.
@@ -174,7 +173,6 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 
 	callback();
 };
-//profile(Creep.prototype, 'whenInRange');
 
 /**
  * Saves a cached path in a creeps memory for use.
@@ -298,6 +296,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 					opacity: 0.1,
 				});
 			}
+
 			this.say('S:' + pos.x + 'x' + pos.y);
 
 			if (path[0].roomName === this.pos.roomName) {
@@ -432,6 +431,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 				opacity: 0.5,
 			});
 		}
+
 		this.say('getonit');
 
 		if (path[0].roomName === this.pos.roomName) {
@@ -456,9 +456,11 @@ function updateStuckDetection(creep: Creep | PowerCreep) {
 	if (!creep.heapMemory._stuckDetection || new RoomPosition(creep.heapMemory._stuckDetection[0].x, creep.heapMemory._stuckDetection[0].y, creep.heapMemory._stuckDetection[0].roomName).getRangeTo(creep.pos) > 0) {
 		creep.heapMemory._stuckDetection = [creep.pos, 0];
 	}
+
 	if (!('fatigue' in creep) || !creep.fatigue) {
 		creep.heapMemory._stuckDetection[1]++;
 	}
+
 	creep.room.visual.text(creep.heapMemory._stuckDetection[1].toString(), creep.pos);
 }
 
@@ -860,7 +862,7 @@ Creep.prototype.calculatePath = function (this: Creep | PowerCreep, target: Room
 	if (result) return result.path;
 
 	return null;
-}
+};
 
 /**
  * Makes this creep move to a certain room.
@@ -974,8 +976,8 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 	// Bugfix for weird cases where travelling through a portal didn't work,
 	// leading to extremely far move requests.
 	if (this.heapMemory._nmpi > 0 && Game.map.getRoomLinearDistance(nextPos.roomName, this.pos.roomName) > 3) {
-		const prevPos = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi - 1]);
-		if (Game.map.getRoomLinearDistance(prevPos.roomName, this.pos.roomName) <= 3) {
+		const previousPosition = decodePosition(this.heapMemory._nmp.path[this.heapMemory._nmpi - 1]);
+		if (Game.map.getRoomLinearDistance(previousPosition.roomName, this.pos.roomName) <= 3) {
 			this.heapMemory._nmpi--;
 			return OK;
 		}
@@ -999,12 +1001,10 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 				if (x === this.pos.x && y === this.pos.y) return null;
 
 				const portalHere = _.find(this.room.lookForAt(LOOK_STRUCTURES, x, y), s => s.structureType === STRUCTURE_PORTAL) as StructurePortal;
-				if (portalHere && portalHere.destination instanceof RoomPosition && portal.destination instanceof RoomPosition && portalHere.destination.roomName === portal.destination.roomName) {
-					if (this.move(this.pos.getDirectionTo(x, y)) === OK) {
-						this.heapMemory._nmpi++;
-						portalUsed = true;
-						return false;
-					}
+				if (portalHere && portalHere.destination instanceof RoomPosition && portal.destination instanceof RoomPosition && portalHere.destination.roomName === portal.destination.roomName && this.move(this.pos.getDirectionTo(x, y)) === OK) {
+					this.heapMemory._nmpi++;
+					portalUsed = true;
+					return false;
 				}
 
 				return null;

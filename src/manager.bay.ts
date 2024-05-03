@@ -48,7 +48,7 @@ export default class Bay {
 			250,
 			() => {
 				const room = Game.rooms[this.pos.roomName];
-				let ids: Array<Id<AnyBayStructure>> = [];
+				const ids: Array<Id<AnyBayStructure>> = [];
 				for (const structureType of bayStructures) {
 					for (const structure of (room.structuresByType[structureType]) || []) {
 						if (structure.pos.getRangeTo(this.pos) > 1) continue;
@@ -99,12 +99,12 @@ export default class Bay {
 							return true;
 						}
 					}
-	
+
 					return false;
 				},
 			);
 			if (hasOverfullExtension) return true;
-	
+
 			// Do not add extensions to bay if another important structure is in the bay.
 			const importantStructures = this.pos.findInRange(FIND_STRUCTURES, 1, {
 				filter: structure => (problematicStructures as string[]).includes(structure.structureType) && structure.isOperational(),

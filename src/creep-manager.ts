@@ -226,7 +226,6 @@ export default class CreepManager {
 
 		if (!memory.creeps) {
 			memory.creeps = {
-				//max: {},
 				roles: {},
 			};
 		}

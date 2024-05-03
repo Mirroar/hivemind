@@ -29,7 +29,7 @@ export {
 	MOVEMENT_MODE_SLOW,
 	MOVEMENT_MODE_MINIMAL,
 	MOVEMENT_MODE_NONE,
-}
+};
 
 export default class BodyBuilder {
 	moveMode: MovementMode;
@@ -187,7 +187,7 @@ export default class BodyBuilder {
 			case MOVEMENT_MODE_PLAINS:
 				return 2 * multiplier;
 			case MOVEMENT_MODE_ROAD:
-				return 1 * multiplier;
+				return multiplier;
 			case MOVEMENT_MODE_SLOW:
 				return 2 / 5 * multiplier;
 			case MOVEMENT_MODE_MINIMAL:
@@ -198,7 +198,6 @@ export default class BodyBuilder {
 				const exhaustiveCheck: never = this.moveMode;
 				throw 'Invalid movement mode given.';
 		}
-
 	}
 
 	public setMovePartBoost(resourceType: ResourceConstant) {

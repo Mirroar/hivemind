@@ -1,11 +1,10 @@
 /* global MOVE ATTACK WORK CARRY HEAL */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_PLAINS} from 'creep/body-builder';
 import hivemind from 'hivemind';
 import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
-import {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_PLAINS} from 'creep/body-builder';
 
 declare global {
 	interface RoomDefenseSpawnOption extends SpawnOption {

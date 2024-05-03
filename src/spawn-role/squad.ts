@@ -1,9 +1,8 @@
 /* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
 import Squad from 'manager.squad';
-import {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
 
 const availableUnitTypes = [
 	'ranger',

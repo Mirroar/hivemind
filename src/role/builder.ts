@@ -335,10 +335,8 @@ export default class BuilderRole extends Role {
 				}
 
 				// Roads are not that important, repair only when low.
-				if (target.structureType === STRUCTURE_ROAD) {
-					if (target.hits > target.hitsMax / 3) {
-						option.priority = 0;
-					}
+				if (target.structureType === STRUCTURE_ROAD && target.hits > target.hitsMax / 3) {
+					option.priority = 0;
 				}
 
 				// Slightly adjust weight so that closer structures get
@@ -361,7 +359,7 @@ export default class BuilderRole extends Role {
 		}
 	}
 
-	getAvailableRepairTargets(creep: BuilderCreep): Structure<BuildableStructureConstant>[] {
+	getAvailableRepairTargets(creep: BuilderCreep): Array<Structure<BuildableStructureConstant>> {
 		const repairableStructureIds = cache.inHeap('repairStructures:' + creep.room.name, 50, () => {
 			const repairableStructures = _.filter(creep.room.structures, (structure: Structure<BuildableStructureConstant>) => {
 				if (structure.hits >= this.getStructureMaxHits(structure)) return false;
@@ -399,12 +397,10 @@ export default class BuilderRole extends Role {
 			return _.map(
 				repairableStructures,
 				structure => structure.id,
-			) as Id<Structure<BuildableStructureConstant>>[];
+			) as Array<Id<Structure<BuildableStructureConstant>>>;
 		});
 
-		return cache.inObject(creep.room, 'repairStructures', 1, () => {
-			return _.filter(_.map(repairableStructureIds, (id: Id<Structure<BuildableStructureConstant>>) => Game.getObjectById(id)));
-		});
+		return cache.inObject(creep.room, 'repairStructures', 1, () => _.filter(_.map(repairableStructureIds, (id: Id<Structure<BuildableStructureConstant>>) => Game.getObjectById(id))));
 	}
 
 	getStructureMaxHits(structure: Structure<BuildableStructureConstant>): number {
@@ -609,7 +605,7 @@ export default class BuilderRole extends Role {
 		});
 
 		for (const structure of needsRepair) {
-			let maxHealth = this.getStructureMaxHits(structure);
+			const maxHealth = this.getStructureMaxHits(structure);
 			if (structure.hits > maxHealth - (workParts * 100)) continue;
 
 			creep.repair(structure);

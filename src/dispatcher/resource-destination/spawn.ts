@@ -24,10 +24,10 @@ export default class SpawnDestination extends StructureDestination<SpawnDestinat
 		return this.cacheEmptyTaskListFor('', 5, () => {
 			const options: SpawnDestinationTask[] = [];
 
-			const targetSpawns = _.filter(this.room.myStructuresByType[STRUCTURE_SPAWN], structure => 
+			const targetSpawns = _.filter(this.room.myStructuresByType[STRUCTURE_SPAWN], structure =>
 				(!structure.isBaySpawn() || this.room.controller.level < 3)
 				&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-			const targetExtensions = _.filter(this.room.myStructuresByType[STRUCTURE_EXTENSION], structure => 
+			const targetExtensions = _.filter(this.room.myStructuresByType[STRUCTURE_EXTENSION], structure =>
 				!structure.isBayExtension()
 				&& structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
 			const targets = [...targetSpawns, ...targetExtensions];

@@ -236,7 +236,7 @@ export default class RemoteBuilderRole extends Role {
 					structure.hits < structure.hitsMax
 					&& (structure.my || hivemind.relations.isAlly(structure.owner.username)),
 			);
-			const targets = [...ramparts, ...spawns, ...towers]
+			const targets = [...ramparts, ...spawns, ...towers];
 			if (targets.length > 0) {
 				this.creep.memory.repairTarget = targets[0].id;
 				this.creep.heapMemory.repairMinHits = minHits;

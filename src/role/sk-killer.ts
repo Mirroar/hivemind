@@ -100,7 +100,7 @@ export default class RemoteHarvesterRole extends Role {
 		const room = creep.room;
 
 		// Filter hostiles.
-		for(const owner in room.enemyCreeps) {
+		for (const owner in room.enemyCreeps) {
 			if (hivemind.relations.isAlly(owner)) continue;
 
 			// Count body parts for strength estimation.

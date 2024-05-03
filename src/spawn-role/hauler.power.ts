@@ -1,9 +1,8 @@
 /* global CREEP_LIFE_TIME CREEP_SPAWN_TIME MAX_CREEP_SIZE MOVE CARRY */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
-import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface PowerHaulerSpawnOption extends SpawnOption {
 	targetRoom: string;

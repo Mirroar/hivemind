@@ -1,6 +1,6 @@
 /**
  * Exmple settings file for user settings.
- * 
+ *
  * Copy to `src/settings.local.ts` to use this.
  */
 const settings: Partial<SettingsObject> = {
@@ -13,6 +13,6 @@ const settings: Partial<SettingsObject> = {
 
 		return true;
 	} : null,
-}
+};
 
 export default settings;

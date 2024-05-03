@@ -88,13 +88,11 @@ export default class MapVisualsProcess extends Process {
 	}
 
 	getExpansionScoreCutoff(): number {
-		return cache.inHeap('expansionScoreCutoff', 5000, () => {
-			return _.max(_.map(Memory.strategy?.roomList ?? {}, (info, roomName) => {
-				if (Game.rooms[roomName]?.isMine()) return 0;
+		return cache.inHeap('expansionScoreCutoff', 5000, () => _.max(_.map(Memory.strategy?.roomList ?? {}, (info, roomName) => {
+			if (Game.rooms[roomName]?.isMine()) return 0;
 
-				return info.expansionScore ?? 0;
-			})) - 0.5;
-		});
+			return info.expansionScore ?? 0;
+		})) - 0.5);
 	}
 
 	drawExpansionStatus() {

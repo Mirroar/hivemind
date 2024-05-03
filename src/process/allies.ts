@@ -43,9 +43,9 @@ export default class AlliesProcess extends Process {
 			Memory.requests.trade[RESOURCE_ENERGY][request.roomName] = {
 				amount: Math.min(request.maxAmount | 5000, 5000),
 				lastSeen: Game.time,
-				priority: (request.goalType === FunnelGoal.RCL7) ? 3 :
-					(request.goalType === FunnelGoal.RCL8) ? 2 :
-					(request.goalType === FunnelGoal.GCL) ? 1 : -1,
+				priority: (request.goalType === FunnelGoal.RCL7) ? 3
+					: ((request.goalType === FunnelGoal.RCL8) ? 2
+						: (request.goalType === FunnelGoal.GCL) ? 1 : -1),
 				timeout: request.timeout ?? (Game.time + 100),
 			};
 		}

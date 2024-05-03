@@ -64,7 +64,7 @@ export default class TradeRoute {
 
 	getReversePath() {
 		if (!this.memory.roomPath) return null;
-		return this.memory.roomPath.slice(0, -1).reverse().concat([this.getOrigin()]);
+		return [...this.memory.roomPath.slice(0, -1).reverse(), this.getOrigin()];
 	}
 
 	setResourceType(resourceType: ResourceConstant) {

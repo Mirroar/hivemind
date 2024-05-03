@@ -73,7 +73,7 @@ export default class GuardianRole extends Role {
 		for (const target of targets) {
 			const closestRampart = _.min(
 				_.filter(
-					creep.room.myStructuresByType[STRUCTURE_RAMPART], 
+					creep.room.myStructuresByType[STRUCTURE_RAMPART],
 					s => {
 						if (!creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart')) return false;
 						if (creep.room.roomPlanner.isPlannedLocation(s.pos, 'rampart.ramp')) return false;

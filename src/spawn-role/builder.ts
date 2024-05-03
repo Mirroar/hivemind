@@ -1,10 +1,9 @@
 /* global FIND_MY_CONSTRUCTION_SITES MOVE WORK CARRY */
 
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
-import {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 
 interface BuilderSpawnOption extends SpawnOption {
 	size: number;

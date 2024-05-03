@@ -176,7 +176,7 @@ export default class UpgraderRole extends Role {
 		// Could also try to get energy from another nearby container.
 		const otherContainers = _.filter(
 			creep.room.structuresByType[STRUCTURE_CONTAINER],
-			structure => 
+			structure =>
 				structure.store.energy > CONTAINER_CAPACITY / 4
 				&& structure.id !== creep.room.memory.controllerContainer
 				&& creep.room.controller.pos.getRangeTo(structure.pos) <= (creep.room.controller.level < 4 ? 10 : 3),

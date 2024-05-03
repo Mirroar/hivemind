@@ -560,18 +560,9 @@ Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: Res
 	for (const bodyPart in BOOSTS) {
 		if (!BOOSTS[bodyPart][resourceType]) continue;
 
-		if (bodyPart === ATTACK || bodyPart === RANGED_ATTACK) {
-			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
-				return [15000, 7500, 2500];
-		}
-		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair) {
-			if (this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL)
-				return [15000, 7500, 2500];
-		}
-		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].upgradeController) {
-			if (this.controller.level >= 8)
-				return [15000, 7500, 2500];
-		}
+		if ((bodyPart === ATTACK || bodyPart === RANGED_ATTACK) && this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return [15_000, 7500, 2500];
+		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair && this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return [15_000, 7500, 2500];
+		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].upgradeController && this.controller.level >= 8) return [15_000, 7500, 2500];
 	}
 
 	const reaction = this.memory.currentReaction;

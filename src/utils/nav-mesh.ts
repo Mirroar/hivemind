@@ -362,7 +362,7 @@ export default class NavMesh {
 	}
 
 	getPortals(roomName: string) {
-		let portals: Record<string, {
+		const portals: Record<string, {
 			targetRoom: string;
 			positions: RoomPosition[];
 			totalX: number;
@@ -400,13 +400,13 @@ export default class NavMesh {
 			return {
 				room: portal.targetRoom,
 				pos: pos.x + (50 * pos.y),
-			}
+			};
 		});
 	}
 
 	isPortalBlocked(room: Room, pos: RoomPosition): boolean {
 		let hasFreeSpace = false;
-		this.terrain
+		this.terrain;
 
 		handleMapArea(pos.x, pos.y, (x, y) => {
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
@@ -427,7 +427,7 @@ export default class NavMesh {
 		});
 	}
 
-	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean, maxCpu?: number}): {
+	findPath(startPos: RoomPosition, endPos: RoomPosition, options?: {maxPathLength?: number; allowDanger?: boolean; maxCpu?: number}): {
 		path?: RoomPosition[];
 		length?: number;
 		incomplete: boolean;
@@ -583,6 +583,7 @@ export default class NavMesh {
 			if (current.portal) {
 				availableExits = roomMemory.exits;
 			}
+
 			if (roomMemory.regions) {
 				// Find region containing corresponding exit.
 				const region = _.find(roomMemory.regions, (region: any) => region.exits.includes(correspondingExit));

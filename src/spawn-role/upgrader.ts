@@ -2,11 +2,10 @@
 CONTROLLER_MAX_UPGRADE_PER_TICK */
 
 import balancer from 'excess-energy-balancer';
-import BodyBuilder from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_SLOW} from 'creep/body-builder';
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
-import {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_SLOW} from 'creep/body-builder';
 
 interface UpgraderSpawnOption extends SpawnOption {
 	mini?: boolean;
@@ -133,7 +132,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 1, [WORK]: hasEasyEnergyAccess ? 10 : 1})
-			.setPartLimit(WORK, option.mini ? 2 : room.controller.level === 8 ? CONTROLLER_MAX_UPGRADE_PER_TICK : MAX_CREEP_SIZE)
+			.setPartLimit(WORK, option.mini ? 2 : (room.controller.level === 8 ? CONTROLLER_MAX_UPGRADE_PER_TICK : MAX_CREEP_SIZE))
 			.setMovementMode(hasEasyEnergyAccess ? MOVEMENT_MODE_SLOW : MOVEMENT_MODE_ROAD)
 			.setCarryContentLevel(0)
 			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))

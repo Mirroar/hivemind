@@ -132,12 +132,10 @@ export default class SpawnManager {
 				const closestSpawn = _.min(spawns, spawn => spawn.pos.getRangeTo(option.preferClosestSpawn));
 				// Only spawn once preferred spawn is ready.
 
-				if (closestSpawn.pos.getRangeTo(option.preferClosestSpawn) < 3) {
-					if (!availableSpawns.includes(closestSpawn)) return false;
-				}
+				if (closestSpawn.pos.getRangeTo(option.preferClosestSpawn) < 3 && !availableSpawns.includes(closestSpawn)) return false;
 
 				return true;
-			}
+			},
 		);
 		const option = utilities.getBestOption(options);
 		if (!option) return;
@@ -220,7 +218,7 @@ export default class SpawnManager {
 
 		if (result !== OK) {
 			hivemind.log('creeps', room.name).error('Trying to spawn creep', creepName, 'failed with error code', result);
-			hivemind.log('creeps', room.name).error('Body cost:', _.sum(body, (part) => BODYPART_COST[part]), 'Energy Capacity', room.energyCapacityAvailable, 'Energy:', room.energyAvailable);
+			hivemind.log('creeps', room.name).error('Body cost:', _.sum(body, part => BODYPART_COST[part]), 'Energy Capacity', room.energyCapacityAvailable, 'Energy:', room.energyAvailable);
 			return false;
 		}
 

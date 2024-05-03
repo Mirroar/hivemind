@@ -73,7 +73,7 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?: boolean; allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string, avoidNearbyCreeps?: boolean} = {}) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: {isQuad?: boolean; allowDanger?: boolean; whiteListRooms?: string[]; singleRoom?: string; avoidNearbyCreeps?: boolean} = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,

@@ -273,7 +273,7 @@ export default class HarvesterRole extends Role {
 					creep.room.myStructuresByType[STRUCTURE_LINK],
 					structure =>
 						structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-						&& source.pos.getRangeTo(structure.pos) <= 3
+						&& source.pos.getRangeTo(structure.pos) <= 3,
 				);
 				if (links.length > 0) {
 					target = links[0];
