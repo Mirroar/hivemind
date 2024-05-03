@@ -87,43 +87,46 @@ export default class ExpandProcess extends Process {
 		// We probably can't expect to expand earlier than 100 ticks into the game.
 		if (!stats.getStat('cpu_total', 1000)) return;
 
-		const ownedRooms = Game.myRooms.length;
+		Memory.hivemind.canExpand = false;
+		if (!this.memory.currentTarget && this.mayExpand()) {
+			Memory.hivemind.canExpand = true;
+			this.chooseNewExpansionTarget();
+		}
+
+		this.manageCurrentExpansion();
+		this.abandonWeakRooms();
+		this.abandonStripmines();
+
+		this.manageEvacuation();
+		this.cleanupMemory();
+	}
+
+	getCpuStats() {
 		const harvestRooms = Memory.strategy.remoteHarvesting ? Memory.strategy.remoteHarvesting.currentCount : 0;
 
 		// If we have many rooms with remote harvesting, be a bit more lenient
 		// on CPU cap for claiming a new room. Remote harvesting can always be
 		// dialed back to the most efficient rooms to save CPU.
 		const cpuLimit = harvestRooms < 5 ? 0.8 : 1;
+		const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
+		const longTermCpuUsage = stats.getStat('cpu_total', 10_000) ? stats.getStat('cpu_total', 10_000) / Game.cpu.limit : shortTermCpuUsage;
 
+		return {cpuLimit, shortTermCpuUsage, longTermCpuUsage};
+	}
+
+	mayExpand(): boolean {
+		const ownedRooms = Game.myRooms.length;
 		const hasFreeControlLevels = ownedRooms < Game.gcl.level;
 		const maxRooms = settings.get('maxOwnedRooms');
 		const shardMemory = interShard.getLocalMemory();
 		const mayHaveMoreRooms = !maxRooms || (shardMemory.info && shardMemory.info.ownedRooms < maxRooms);
-		const shortTermCpuUsage = stats.getStat('cpu_total', 1000) / Game.cpu.limit;
-		const longTermCpuUsage = stats.getStat('cpu_total', 10_000) ? stats.getStat('cpu_total', 10_000) / Game.cpu.limit : shortTermCpuUsage;
 
-		const canExpand = hasFreeControlLevels
+		const cpuStats = this.getCpuStats();
+
+		return hasFreeControlLevels
 			&& mayHaveMoreRooms
-			&& shortTermCpuUsage < cpuLimit
-			&& longTermCpuUsage < cpuLimit;
-
-		Memory.hivemind.canExpand = false;
-		if (!this.memory.currentTarget && canExpand) {
-			Memory.hivemind.canExpand = true;
-			this.chooseNewExpansionTarget();
-		}
-
-		this.manageCurrentExpansion();
-
-		// Check if we could benefit from giving up a room to expand to a better one.
-		if (shortTermCpuUsage > cpuLimit && longTermCpuUsage > cpuLimit) {
-			this.abandonWeakRoom();
-		}
-
-		this.abandonStripmine();
-
-		this.manageEvacuation();
-		this.cleanupMemory();
+			&& cpuStats.shortTermCpuUsage < cpuStats.cpuLimit
+			&& cpuStats.longTermCpuUsage < cpuStats.cpuLimit;
 	}
 
 	/**
@@ -561,12 +564,17 @@ export default class ExpandProcess extends Process {
 	/**
 	 * Decides if it's worth giving up a weak room in favor of a new expansion.
 	 */
-	abandonWeakRoom() {
+	abandonWeakRooms() {
 		// Only abandon rooms if we aren't in the process of expanding.
 		if (this.memory.currentTarget) return;
 
 		// Only choose a new target if we aren't already relocating.
 		if (this.memory.evacuatingRoom) return;
+
+		// Only give up a room if we need more CPU.
+		const cpuStats = this.getCpuStats();
+		if (cpuStats.shortTermCpuUsage < cpuStats.cpuLimit) return;
+		if (cpuStats.longTermCpuUsage < cpuStats.cpuLimit) return;
 
 		// @todo Take into account better expansions on other shards.
 		// We expect a minimal gain from giving up a room.
@@ -596,7 +604,7 @@ export default class ExpandProcess extends Process {
 	/**
 	 * Decides if it's worth giving up a weak room in favor of a new expansion.
 	 */
-	abandonStripmine() {
+	abandonStripmines() {
 		// Only choose a new target if we aren't already relocating.
 		if (this.memory.evacuatingRoom) return;
 
