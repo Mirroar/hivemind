@@ -82,13 +82,10 @@ export default class RemoteMinePrioritizer {
 
 			// @todo Actually calculate spawn usage for each.
 			let spawnCapacity = spawnCount * 5;
-			let roomNeeds = 1;
+			let roomNeeds = 0;
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;
 			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
-
-			// Allow more remotes when using new method, since it spawns stuff more dynamically.
-			if (settings.get('newRemoteMiningRoomFilter') && settings.get('newRemoteMiningRoomFilter')(room.name)) roomNeeds--;
 
 			// Increase spawn capacity if there's a power creep that can help.
 			const powerCreep = _.find(Game.powerCreeps, creep => {
