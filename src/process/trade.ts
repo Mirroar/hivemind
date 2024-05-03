@@ -7,6 +7,7 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import {getResourcesIn} from 'utils/store';
 
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
@@ -17,14 +18,16 @@ const recipes = utilities.getReactionRecipes();
 
 type TradeResource = ResourceConstant | InterShardResourceConstant;
 
-interface ResourceStates {
+type TotalResources = {
+	rooms: number;
+	resources: Partial<Record<ResourceConstant, number>>;
+	sources: Partial<Record<ResourceConstant, number>>;
+};
+
+type ResourceStates = {
 	rooms: Record<string, RoomResourceState>;
-	total: {
-		rooms: number;
-		resources: Partial<Record<ResourceConstant, number>>;
-		sources: Partial<Record<ResourceConstant, number>>;
-	};
-}
+	total: TotalResources;
+};
 
 function isIntershardResource(resourceType: TradeResource): resourceType is InterShardResourceConstant {
 	return (INTERSHARD_RESOURCES as string[]).includes(resourceType);
@@ -48,71 +51,99 @@ export default class TradeProcess extends Process {
 		this.removeOldTrades();
 
 		this.availableCredits = Math.max(0, Game.market.credits - creditReserve);
+		this.manageTradeOrders();
+	}
 
+	manageTradeOrders() {
 		const resources = this.getRoomResourceStates();
+		this.manageLabResourceTradeOrders(resources);
+		this.manageEnergyTradeOrders(resources);
+		this.managePowerTradeOrders(resources);
+		this.manageOpsTradeOrders(resources);
+
+		if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingPixels')) {
+			// Try to buy pixels when price is low.
+			this.tryBuyResources(PIXEL);
+			this.instaBuyResources(PIXEL);
+		}
+	}
+
+	manageLabResourceTradeOrders(resources: ResourceStates) {
+		for (const resourceType of RESOURCES_ALL) {
+			const tier = this.getResourceTier(resourceType);
+
+			if (tier === 1) {
+				this.manageTier1ResourceTradeOrder(resourceType, resources);
+			}
+			else if (recipes[resourceType]) {
+				this.manageCompoundResourceTradeOrder(resourceType, resources);
+			}
+		}
+	}
+
+	manageTier1ResourceTradeOrder(resourceType: ResourceConstant, resources: ResourceStates) {
 		const total = resources.total;
 		const maxStorage = total.rooms * STORAGE_CAPACITY / 20;
 		const highStorage = total.rooms * STORAGE_CAPACITY / 50;
 		const lowStorage = total.rooms * Math.min(STORAGE_CAPACITY / 100, 20_000);
 		const minStorage = total.rooms * Math.min(STORAGE_CAPACITY / 200, 10_000);
 
-		for (const resourceType of RESOURCES_ALL) {
-			const tier = this.getResourceTier(resourceType);
-
-			if (resourceType === RESOURCE_ENERGY) {
-				// Buy energy for rooms under attack so we can hold out longer.
-				for (const room of Game.myRooms) {
-					if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
-						if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500) {
-							this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
-						}
-						else {
-							this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
-						}
-					}
-				}
-			}
-			else if (tier === 1) {
-				// Check for base resources we have too much of.
-				if ((total.resources[resourceType] || 0) > maxStorage) {
-					this.instaSellResources(resourceType, resources.rooms);
-				}
-
-				if ((total.resources[resourceType] || 0) > highStorage) {
-					this.trySellResources(resourceType, resources.rooms);
-				}
-
-				// Check for base resources we're missing.
-				if ((total.resources[resourceType] || 0) < lowStorage && this.availableCredits > 0) {
-					this.tryBuyResources(resourceType, resources.rooms);
-				}
-
-				if ((total.resources[resourceType] || 0) < minStorage && this.availableCredits > 0) {
-					this.instaBuyResources(resourceType, resources.rooms);
-				}
-			}
-			else if (recipes[resourceType]) {
-				// Check if we can make a nice profit selling some boost compounds.
-				const resourceWorth = this.calculateWorth(resourceType);
-				if (resourceWorth) {
-					const history = this.getPriceData(resourceType);
-					if (history && history.average && history.average > resourceWorth) {
-						// Alright, looks like we can make a profit by selling this!
-						if ((total.resources[resourceType] || 0) > minStorage) {
-							this.instaSellResources(resourceType, resources.rooms);
-						}
-
-						if ((total.resources[resourceType] || 0) > minStorage) {
-							this.trySellResources(resourceType, resources.rooms);
-						}
-					}
-				}
-			}
+		// Check for base resources we have too much of.
+		if ((total.resources[resourceType] || 0) > maxStorage) {
+			this.instaSellResources(resourceType, resources.rooms);
 		}
 
+		if ((total.resources[resourceType] || 0) > highStorage) {
+			this.trySellResources(resourceType, resources.rooms);
+		}
+
+		// Check for base resources we're missing.
+		if ((total.resources[resourceType] || 0) < lowStorage && this.availableCredits > 0) {
+			this.tryBuyResources(resourceType, resources.rooms);
+		}
+
+		if ((total.resources[resourceType] || 0) < minStorage && this.availableCredits > 0) {
+			this.instaBuyResources(resourceType, resources.rooms);
+		}
+	}
+
+	manageCompoundResourceTradeOrder(resourceType: ResourceConstant, resources: ResourceStates) {
+		// Check if we can make a nice profit selling some boost compounds.
+		const resourceWorth = this.calculateWorth(resourceType);
+		if (!resourceWorth) return;
+
+		const total = resources.total;
+		const minStorage = total.rooms * Math.min(STORAGE_CAPACITY / 200, 10_000);
+
+		const history = this.getPriceData(resourceType);
+		if (history?.average && history.average > resourceWorth) {
+			// Alright, looks like we can make a profit by selling this!
+			if ((total.resources[resourceType] || 0) > minStorage) {
+				this.instaSellResources(resourceType, resources.rooms);
+			}
+
+			if ((total.resources[resourceType] || 0) > minStorage) {
+				this.trySellResources(resourceType, resources.rooms);
+			}
+		}
+	}
+
+	manageEnergyTradeOrders(resources: ResourceStates) {
 		if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingEnergy')) {
+			// Buy energy for rooms under attack so we can hold out longer.
+			for (const room of Game.myRooms) {
+				if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
+					if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500) {
+						this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
+					}
+					else {
+						this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
+					}
+				}
+			}
+
 			// Also try to cheaply buy some energy for rooms that are low on it.
-			_.each(resources.rooms, (roomState: any, roomName: string) => {
+			_.each(resources.rooms, (roomState, roomName) => {
 				if (!roomState.canTrade) return;
 				if (roomState.isEvacuating) return;
 				if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > STORAGE_CAPACITY / 10) return;
@@ -124,33 +155,39 @@ export default class TradeProcess extends Process {
 				this.tryBuyResources(RESOURCE_ENERGY, temporary, true);
 			});
 		}
+	}
 
-		if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingPixels')) {
-			// Try to buy pixels when price is low.
-			this.tryBuyResources(PIXEL);
-			this.instaBuyResources(PIXEL);
+	managePowerTradeOrders(resources: ResourceStates) {
+		if (!hivemind.settings.get('allowSellingPower')) return;
+
+		const total = resources.total;
+		const highStorage = total.rooms * STORAGE_CAPACITY / 50;
+		const lowStorage = total.rooms * Math.min(STORAGE_CAPACITY / 100, 20_000);
+
+		// Sell excess power we can't apply to our account.
+		if ((total.resources[RESOURCE_POWER] || 0) > highStorage) {
+			this.instaSellResources(RESOURCE_POWER, resources.rooms);
 		}
 
-		if (hivemind.settings.get('allowSellingPower')) {
-			// Sell excess power we can't apply to our account.
-			if ((total.resources[RESOURCE_POWER] || 0) > highStorage) {
-				this.instaSellResources(RESOURCE_POWER, resources.rooms);
-			}
+		if ((total.resources[RESOURCE_POWER] || 0) > lowStorage) {
+			this.trySellResources(RESOURCE_POWER, resources.rooms);
+		}
+	}
 
-			if ((total.resources[RESOURCE_POWER] || 0) > lowStorage) {
-				this.trySellResources(RESOURCE_POWER, resources.rooms);
-			}
+	manageOpsTradeOrders(resources: ResourceStates) {
+		if (!hivemind.settings.get('allowSellingOps')) return;
+
+		const total = resources.total;
+		const lowStorage = total.rooms * Math.min(STORAGE_CAPACITY / 100, 20_000);
+		const minStorage = total.rooms * Math.min(STORAGE_CAPACITY / 200, 10_000);
+
+		// Sell excess ops.
+		if ((total.resources[RESOURCE_OPS] || 0) > lowStorage) {
+			this.instaSellResources(RESOURCE_OPS, resources.rooms);
 		}
 
-		if (hivemind.settings.get('allowSellingOps')) {
-			// Sell excess ops.
-			if ((total.resources[RESOURCE_OPS] || 0) > lowStorage) {
-				this.instaSellResources(RESOURCE_OPS, resources.rooms);
-			}
-
-			if ((total.resources[RESOURCE_OPS] || 0) > minStorage) {
-				this.trySellResources(RESOURCE_OPS, resources.rooms);
-			}
+		if ((total.resources[RESOURCE_OPS] || 0) > minStorage) {
+			this.trySellResources(RESOURCE_OPS, resources.rooms);
 		}
 	}
 
@@ -164,7 +201,7 @@ export default class TradeProcess extends Process {
 	 */
 	getRoomResourceStates(): ResourceStates {
 		const rooms = {};
-		const total = {
+		const total: TotalResources = {
 			resources: {},
 			sources: {},
 			rooms: 0,
@@ -175,7 +212,7 @@ export default class TradeProcess extends Process {
 			if (!roomData) continue;
 
 			total.rooms++;
-			for (const resourceType of _.keys(roomData.totalResources)) {
+			for (const resourceType of getResourcesIn(roomData.totalResources)) {
 				total.resources[resourceType] = (total.resources[resourceType] || 0) + roomData.totalResources[resourceType];
 			}
 
@@ -202,7 +239,7 @@ export default class TradeProcess extends Process {
 	 */
 	instaSellResources(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
 		// Find room with highest amount of this resource.
-		const roomName = this.getHighestResourceState(resourceType, rooms);
+		const roomName = this.getRoomHighestOn(resourceType, rooms);
 		if (!roomName) return;
 
 		const room = Game.rooms[roomName];
@@ -261,14 +298,15 @@ export default class TradeProcess extends Process {
 	 */
 	instaBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, force?: boolean) {
 		// Find room with lowest amount of this resource.
-		const roomName = isIntershardResource(resourceType) ? null : this.getLowestResourceState(resourceType, rooms);
+		const roomName = isIntershardResource(resourceType) ? null : this.getRoomLowestOn(resourceType, rooms);
 		if (!roomName && !isIntershardResource(resourceType)) return;
 
 		const room = Game.rooms[roomName];
 
 		const bestOrder = this.findBestSellOrder(resourceType, roomName);
-		const history = this.getPriceData(resourceType);
 		if (!bestOrder) return;
+
+		const history = this.getPriceData(resourceType);
 		if (!history) return;
 
 		const maxPrice = history.average - Math.min(history.stdDev / 5, history.average * 0.1);
@@ -333,7 +371,7 @@ export default class TradeProcess extends Process {
 		}
 
 		// Find room with lowest amount of this resource.
-		const roomName = isIntershardResource(resourceType) ? null : this.getLowestResourceState(resourceType, rooms);
+		const roomName = isIntershardResource(resourceType) ? null : this.getRoomLowestOn(resourceType, rooms);
 		if (!roomName && !isIntershardResource(resourceType)) return;
 
 		// Find comparable deals for buying this resource.
@@ -392,7 +430,7 @@ export default class TradeProcess extends Process {
 		}
 
 		// Find room with highest amount of this resource.
-		const roomName = this.getHighestResourceState(resourceType, rooms);
+		const roomName = this.getRoomHighestOn(resourceType, rooms);
 		if (!roomName) return;
 
 		// Find comparable deals for selling this resource.
@@ -446,12 +484,12 @@ export default class TradeProcess extends Process {
 	 * @return {string}
 	 *   Name of the room with the lowest resource amount.
 	 */
-	getLowestResourceState(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
-		let minAmount;
-		let bestRoom;
+	getRoomLowestOn(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>): string {
+		let minAmount: number;
+		let bestRoom: string;
 		_.each(rooms, (roomState: RoomResourceState, roomName: string) => {
 			if (!roomState.canTrade) return;
-			if (Game.rooms[roomName] && Game.rooms[roomName].isFullOn(resourceType)) return;
+			if (Game.rooms[roomName]?.isFullOn(resourceType)) return;
 			if (!minAmount || (roomState.totalResources[resourceType] || 0) < minAmount) {
 				minAmount = roomState.totalResources[resourceType];
 				bestRoom = roomName;
@@ -472,9 +510,9 @@ export default class TradeProcess extends Process {
 	 * @return {string}
 	 *   Name of the room with the highest resource amount.
 	 */
-	getHighestResourceState(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
-		let maxAmount;
-		let bestRoom;
+	getRoomHighestOn(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>): string {
+		let maxAmount: number;
+		let bestRoom: string;
 		_.each(rooms, (roomState: RoomResourceState, roomName: string) => {
 			if (!roomState.canTrade) return;
 			if (!maxAmount || (roomState.totalResources[resourceType] || 0) > maxAmount) {
@@ -529,12 +567,12 @@ export default class TradeProcess extends Process {
 	 * @return {object}
 	 *   The order as returned from Game.market.
 	 */
-	findBestSellOrder(resourceType: TradeResource, roomName: string) {
+	findBestSellOrder(resourceType: TradeResource, roomName: string): Order {
 		// Find best deal for buying this resource.
 		const orders = Game.market.getAllOrders(order => order.type === ORDER_SELL && order.resourceType === resourceType);
 
-		let minScore;
-		let bestOrder;
+		let minScore: number;
+		let bestOrder: Order;
 		_.each(orders, order => {
 			if (order.amount < 100) return;
 			const transactionCost = isIntershardResource(resourceType) ? 0 : Game.market.calcTransactionCost(1000, roomName, order.roomName);
