@@ -183,7 +183,6 @@ function generateQuadCostMatrix(matrix: CostMatrix, roomName: string): CostMatri
  */
 function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDangerousTiles: boolean): CostMatrix {
 	const newMatrix = matrix.clone();
-	const terrain = new Room.Terrain(roomName);
 	const dangerMatrix = new PathFinder.CostMatrix();
 
 	// No need to consider enemies when the room is safemoded.
@@ -215,56 +214,75 @@ function generateCombatCostMatrix(matrix: CostMatrix, roomName: string, blockDan
 		const pos = openList.pop();
 		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(pos, 'safe')) continue;
 
-		// Increase cost matrix value for the given tile.
-		let value = matrix.get(pos.x, pos.y);
-		if (value === 0) {
-			value = 2;
-			if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP) value = 5;
-		}
-
-		newMatrix.set(pos.x, pos.y, blockDangerousTiles ? 255 : 5 * value + 25);
-		dangerMatrix.set(pos.x, pos.y, 1);
-		handleMapArea(pos.x, pos.y, (x, y) => {
-			// @todo No need to consider tiles at 3 range dangerous if there's
-			// no ranged creeps.
-			if (dangerMatrix.get(x, y) > 0) return;
-
-			const newPos = new RoomPosition(x, y, roomName);
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
-			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
-			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'safe')) return;
-			dangerMatrix.set(x, y, 2);
-			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
-
-			let value = matrix.get(x, y);
-			if (value === 0) {
-				value = 2;
-				if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) value = 5;
-			}
-
-			newMatrix.set(x, y, blockDangerousTiles ? 255 : 5 * value + 25);
-		}, 3);
-
-		// Add available adjacent tiles.
-		handleMapArea(pos.x, pos.y, (x, y) => {
-			if (x === pos.x && y === pos.y) return;
-
-			const newPos = new RoomPosition(x, y, roomName);
-			if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
-
-			const newLocation = encodePosition(newPos);
-			if (closedList[newLocation]) return;
-			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
-			if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
-
-			closedList[newLocation] = true;
-			openList.push(newPos);
-		});
+		updateNewMatrices(matrix, newMatrix, dangerMatrix, pos, blockDangerousTiles);
+		handleAdjacentTiles(pos, openList, closedList);
 	}
 
 	cache.inHeap('dangerMatrix:' + roomName, 20, () => dangerMatrix);
 
 	return newMatrix;
+}
+
+function updateNewMatrices(
+	matrix: CostMatrix,
+	newMatrix: CostMatrix,
+	dangerMatrix: CostMatrix,
+	pos: RoomPosition,
+	blockDangerousTiles: boolean,
+) {
+	const roomName = pos.roomName;
+	const terrain = new Room.Terrain(roomName);
+
+	// Increase cost matrix value for the given tile.
+	let value = matrix.get(pos.x, pos.y);
+	if (value === 0) {
+		value = 2;
+		if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP) value = 5;
+	}
+
+	newMatrix.set(pos.x, pos.y, blockDangerousTiles ? 255 : (5 * value) + 25);
+	dangerMatrix.set(pos.x, pos.y, 1);
+	handleMapArea(pos.x, pos.y, (x, y) => {
+		// @todo No need to consider tiles at 3 range dangerous if there's
+		// no ranged creeps.
+		if (dangerMatrix.get(x, y) > 0) return;
+
+		const newPos = new RoomPosition(x, y, roomName);
+		if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'safe')) return;
+		dangerMatrix.set(x, y, 2);
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
+
+		let value = matrix.get(x, y);
+		if (value === 0) {
+			value = 2;
+			if (terrain.get(x, y) === TERRAIN_MASK_SWAMP) value = 5;
+		}
+
+		newMatrix.set(x, y, blockDangerousTiles ? 255 : (5 * value) + 25);
+	}, 3);
+}
+
+function handleAdjacentTiles(pos: RoomPosition, openList: RoomPosition[], closedList: Record<string, boolean>) {
+	const roomName = pos.roomName;
+	const terrain = new Room.Terrain(roomName);
+
+	// Add available adjacent tiles.
+	handleMapArea(pos.x, pos.y, (x, y) => {
+		if (x === pos.x && y === pos.y) return;
+
+		const newPos = new RoomPosition(x, y, roomName);
+		if (terrain.get(x, y) === TERRAIN_MASK_WALL && !Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'road')) return;
+
+		const newLocation = encodePosition(newPos);
+		if (closedList[newLocation]) return;
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'rampart')) return;
+		if (Game.rooms[roomName].roomPlanner.isPlannedLocation(newPos, 'wall')) return;
+
+		closedList[newLocation] = true;
+		openList.push(newPos);
+	});
 }
 
 function getDangerMatrix(roomName: string): CostMatrix {
@@ -289,7 +307,14 @@ function getDangerMatrix(roomName: string): CostMatrix {
  * @param {Function} sourceKeeperCallback
  *   Gets called for every position in range of a source keeper.
  */
-function markBuildings(roomName: string, structures, constructionSites, roadCallback, blockerCallback, sourceKeeperCallback) {
+function markBuildings(
+	roomName: string,
+	structures: Record<string, Structure[]>,
+	constructionSites: Record<string, ConstructionSite[]>,
+	roadCallback: (structure: Structure) => void,
+	blockerCallback: (structure: Structure | ConstructionSite) => void,
+	sourceKeeperCallback: (x: number, y: number) => void,
+) {
 	_.each(OBSTACLE_OBJECT_TYPES, structureType => {
 		_.each(structures[structureType], structure => {
 			// Can't walk through non-walkable buildings.
@@ -307,7 +332,7 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 		blockerCallback(structure);
 	});
 
-	_.each(structures[STRUCTURE_RAMPART], structure => {
+	_.each(structures[STRUCTURE_RAMPART], (structure: StructureRampart) => {
 		if (!structure.my) {
 			// Enemy ramparts are blocking.
 			blockerCallback(structure);
@@ -352,29 +377,7 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 		for (const dir of [TOP, BOTTOM, LEFT, RIGHT]) {
 			if (!exits[dir]) continue;
 
-			const otherRoomName = exits[dir];
-			if ((Memory.strategy?.remoteHarvesting?.rooms || []).includes(otherRoomName)) continue;
-
-			const otherRoomIntel = getRoomIntel(otherRoomName);
-			if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) continue;
-			if (_.size(otherRoomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) === 0) continue;
-
-			// @todo Instead of reading cost matrix values, check distance to
-			// keeper lairs and sources.
-			const matrix = getCostMatrix(otherRoomName);
-			if (dir === TOP || dir === BOTTOM) {
-				const y = (dir === TOP ? 0 : 49);
-				for (let x = 1; x < 49; x++) {
-					if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
-				}
-
-				continue;
-			}
-
-			const x = (dir === LEFT ? 0 : 49);
-			for (let y = 1; y < 49; y++) {
-				if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
-			}
+			markSourceKeeperExits(exits[dir], dir, sourceKeeperCallback);
 		}
 	}
 
@@ -382,6 +385,31 @@ function markBuildings(roomName: string, structures, constructionSites, roadCall
 		// Favor roads over plain tiles.
 		roadCallback(structure);
 	});
+}
+
+function markSourceKeeperExits(roomName: string, dir: TOP | LEFT | BOTTOM | RIGHT, sourceKeeperCallback: (x: number, y: number) => void) {
+	if ((Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) return;
+
+	const otherRoomIntel = getRoomIntel(roomName);
+	if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) return;
+	if (_.size(otherRoomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) === 0) return;
+
+	// @todo Instead of reading cost matrix values, check distance to
+	// keeper lairs and sources.
+	const matrix = getCostMatrix(roomName);
+	if (dir === TOP || dir === BOTTOM) {
+		const y = (dir === TOP ? 0 : 49);
+		for (let x = 1; x < 49; x++) {
+			if (matrix.get(x, 49 - y) > 100) sourceKeeperCallback(x, y);
+		}
+
+		return;
+	}
+
+	const x = (dir === LEFT ? 0 : 49);
+	for (let y = 1; y < 49; y++) {
+		if (matrix.get(49 - x, y) > 100) sourceKeeperCallback(x, y);
+	}
 }
 
 export {

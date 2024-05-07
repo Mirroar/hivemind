@@ -64,42 +64,10 @@ declare global {
  *    can be expected for smaller lists.
  */
 
-Object.defineProperty(exports, '__esModule', {value: true});
-
 const PERMACACHE: {
 	_packedRoomNames?: Record<string, string>;
 	_unpackedRoomNames?: Record<string, string>;
 } = {}; // Create a permanent cache for immutable items such as room names
-
-/**
- * Convert a hex string to a Uint16Array.
- */
-function hexToUint16Array(hex: string): Uint16Array {
-	const length = Math.ceil(hex.length / 4); // Four hex chars for each 16-bit value
-	const array = new Uint16Array(length);
-	for (let i = 0; i < hex.length; i += 4) {
-		array[i >>> 2] = Number.parseInt(hex.substr(i, 4), 16);
-	}
-
-	return array;
-}
-
-/**
- * Convert a Uint16Array to a hex string. Note that uint16ArrayToHex(hexToUint16Array('0123abce')) will
- * return '123abcde' since this does not account for zero padding. Fortunately this is not an issue for screeps, since
- * ids do not seem to be allowed to start with a 0.
- */
-function uint16ArrayToHex(array: Uint16Array): string {
-	const hex = [];
-	let current;
-	for (const element of array) {
-		current = element;
-		hex.push((current >>> 8).toString(16));
-		hex.push((current & 0xFF).toString(16));
-	}
-
-	return hex.join('');
-}
 
 /**
  * Convert a standard 24-character hex id in screeps to a compressed UTF-16 encoded string of length 6.
@@ -108,11 +76,11 @@ function uint16ArrayToHex(array: Uint16Array): string {
  */
 function packId<T extends _HasId>(id: Id<T>): string {
 	return String.fromCharCode(Number.parseInt(id.slice(0, 4), 16))
-		   + String.fromCharCode(Number.parseInt(id.slice(4, 8), 16))
-		   + String.fromCharCode(Number.parseInt(id.slice(8, 12), 16))
-		   + String.fromCharCode(Number.parseInt(id.slice(12, 16), 16))
-		   + String.fromCharCode(Number.parseInt(id.slice(16, 20), 16))
-		   + String.fromCharCode(Number.parseInt(id.slice(20, 24), 16));
+		+ String.fromCharCode(Number.parseInt(id.slice(4, 8), 16))
+		+ String.fromCharCode(Number.parseInt(id.slice(8, 12), 16))
+		+ String.fromCharCode(Number.parseInt(id.slice(12, 16), 16))
+		+ String.fromCharCode(Number.parseInt(id.slice(16, 20), 16))
+		+ String.fromCharCode(Number.parseInt(id.slice(20, 24), 16));
 }
 
 /**
@@ -155,7 +123,7 @@ function packIdList<T extends _HasId>(ids: Array<Id<T>>): string {
 function unpackIdList<T extends _HasId>(packedIds: string): Array<Id<T>> {
 	const ids: Array<Id<T>> = [];
 	for (let i = 0; i < packedIds.length; i += 6) {
-		ids.push(unpackId(packedIds.substr(i, 6)));
+		ids.push(unpackId(packedIds.slice(i, i + 6)));
 	}
 
 	return ids;
@@ -216,7 +184,7 @@ function packCoordList(coords: Coord[]): string {
  * Benchmarking: average of 100ns per coord to execute on shard2 public server
  */
 function unpackCoordList(chars: string): Coord[] {
-	const coords = [];
+	const coords: Coord[] = [];
 	let xShiftedSixOrY;
 	for (let i = 0; i < chars.length; ++i) {
 		xShiftedSixOrY = chars.charCodeAt(i) - 65;
@@ -235,8 +203,8 @@ function unpackCoordList(chars: string): Coord[] {
  * Benchmarking: average of 500ns per coord to execute on shard2 public server
  */
 function unpackCoordListAsPosList(packedCoords: string, roomName: string): RoomPosition[] {
-	const positions = [];
-	let coord;
+	const positions: RoomPosition[] = [];
+	let coord: Coord;
 	for (const packedCoord of packedCoords) {
 		// Each coord is saved as a single character; unpack each and insert the room name to get the positions list
 		coord = unpackCoord(packedCoord);
@@ -261,10 +229,10 @@ function packRoomName(roomName: string): string {
 		const yDir = match[3];
 		const y = Number(match[4]);
 		let quadrant;
-		if (xDir == 'W') {
-			quadrant = yDir == 'N' ? 0 : 1;
+		if (xDir === 'W') {
+			quadrant = yDir === 'N' ? 0 : 1;
 		}
-		else if (yDir == 'N') {
+		else if (yDir === 'N') {
 			quadrant = 2;
 		}
 		else {
@@ -272,7 +240,7 @@ function packRoomName(roomName: string): string {
 		}
 
 		// Y is 6 bits, x is 6 bits, quadrant is 2 bits
-		const number = (quadrant << 13 | ((x * 90) + y)) + 65;
+		const number = ((quadrant << 13) | ((x * 90) + y)) + 65;
 		const char = String.fromCharCode(number);
 		PERMACACHE._packedRoomNames[roomName] = char;
 		PERMACACHE._unpackedRoomNames[char] = roomName;
@@ -293,19 +261,19 @@ function unpackRoomName(char: string): string {
 			x: Math.floor(coords / 90),
 			y: coords % 90,
 		};
-		let roomName;
+		let roomName: string;
 		switch (q) {
 			case 0:
-				roomName = 'W' + x + 'N' + y;
+				roomName = `W${x}N${y}`;
 				break;
 			case 1:
-				roomName = 'W' + x + 'S' + y;
+				roomName = `W${x}S${y}`;
 				break;
 			case 2:
-				roomName = 'E' + x + 'N' + y;
+				roomName = `E${x}N${y}`;
 				break;
 			case 3:
-				roomName = 'E' + x + 'S' + y;
+				roomName = `E${x}S${y}`;
 				break;
 			default:
 				roomName = 'ERROR';
@@ -360,9 +328,9 @@ function packPosList(posList: RoomPosition[]): string {
  * Benchmarking: average of 1.5us per position to execute on shard2 public server.
  */
 function unpackPosList(chars: string): RoomPosition[] {
-	const posList = [];
+	const posList: RoomPosition[] = [];
 	for (let i = 0; i < chars.length; i += 2) {
-		posList.push(unpackPos(chars.substr(i, 2)));
+		posList.push(unpackPos(chars.slice(i, i + 2)));
 	}
 
 	return posList;
