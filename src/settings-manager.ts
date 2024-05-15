@@ -66,7 +66,6 @@ declare global {
 		roomScoutInterval: number;
 		scoutProcessInterval: number;
 		scoutSpawnPriority: number;
-		season4EnableCaravanDelivery: boolean;
 		treatNonAlliesAsEnemies: boolean;
 		visualizeCreepMovement: boolean;
 		visualizeNavMesh: boolean;

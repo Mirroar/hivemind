@@ -7,7 +7,6 @@ import utilities from 'utilities';
 
 import brawlerRole from 'role/brawler';
 import builderRole from 'role/builder';
-import caravanTraderRole from 'role/caravan-trader';
 import claimerRole from 'role/claimer';
 import depositHarvesterRole from 'role/harvester.deposit';
 import dismantlerRole from 'role/dismantler';
@@ -36,7 +35,6 @@ const creepRoles = {
 	builder: builderRole,
 	'builder.mines': mineBuilderRole,
 	'builder.remote': remoteBuilderRole,
-	'caravan-trader': caravanTraderRole,
 	claimer: claimerRole,
 	dismantler: dismantlerRole,
 	guardian: guardianRole,

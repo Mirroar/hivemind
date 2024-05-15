@@ -170,9 +170,6 @@ const settings: SettingsObject = {
 	allowSellingPower: true,
 	allowSellingOps: true,
 
-	// Seasons:
-	season4EnableCaravanDelivery: false,
-
 	// Script hooks:
 	onTick: null,
 };
