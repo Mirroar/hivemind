@@ -10,6 +10,7 @@ import settings from 'settings-manager';
 import Squad from 'manager.squad';
 import stats from 'utils/stats';
 import {getUsername} from 'utils/account';
+import {getRoomIntel} from 'room-intel';
 
 interface ExpansionTarget extends RoomListEntry {
 	roomName: string;
@@ -133,6 +134,8 @@ export default class ExpandProcess extends Process {
 	 * Chooses a new target room to expand to.
 	 */
 	chooseNewExpansionTarget() {
+		if (!hivemind.segmentMemory.isReady()) return;
+
 		// Choose a room to expand to.
 		let bestTarget;
 		let modifiedBestExpansionScore: number;
@@ -165,6 +168,9 @@ export default class ExpandProcess extends Process {
 			}
 
 			if (expansionTargetScoringProgress.rooms[roomName]) continue;
+
+			const roomIntel = getRoomIntel(roomName);
+			if (roomIntel.isOwned()) continue;
 
 			expansionTargetScoringProgress.rooms[roomName] = true;
 			if (typeof info.expansionScore === 'undefined' || info.expansionScore === 0) continue;
