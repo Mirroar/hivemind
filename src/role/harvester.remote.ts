@@ -2,6 +2,8 @@
 STRUCTURE_CONTAINER FIND_SOURCES LOOK_CONSTRUCTION_SITES
 FIND_MY_CONSTRUCTION_SITES */
 
+import CombatManager from 'creep/combat-manager';
+import container from 'utils/container';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition, serializePositionPath} from 'utils/serialization';
@@ -23,8 +25,12 @@ declare global {
 }
 
 export default class RemoteHarvesterRole extends Role {
+	private combatManager: CombatManager;
+
 	constructor() {
 		super();
+
+		this.combatManager = container.get('CombatManager');
 
 		// Remote harvesters have slighly higher priority, since they don't use much
 		// cpu once they are harvesting.
@@ -59,6 +65,11 @@ export default class RemoteHarvesterRole extends Role {
 	 */
 	travelToSource(creep: RemoteHarvesterCreep) {
 		const sourcePosition = decodePosition(creep.memory.source);
+
+		if (this.combatManager.needsToFlee(creep)) {
+			this.combatManager.performFleeTowards(creep, sourcePosition, 1);
+			return true;
+		}
 
 		if (creep.pos.roomName !== creep.operation.getRoom() && !creep.hasCachedPath()) {
 			const paths = creep.operation.getPaths();

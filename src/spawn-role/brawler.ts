@@ -70,6 +70,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getRemoteDefenseSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
+		if (room.getEffectiveAvailableEnergy() < 5_000) return;
+
 		const harvestPositions: RoomPosition[] = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
@@ -80,6 +82,9 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			// Only spawn if there are enemies.
 			if (!operation) continue;
 			if (!operation.isUnderAttack() && !operation.hasInvaderCore()) continue;
+
+			// Don't defend operations where we still need a dismantler.
+			if (operation.isUnderAttack() && operation.needsDismantler()) continue;
 
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
@@ -96,8 +101,6 @@ export default class BrawlerSpawnRole extends SpawnRole {
 
 			if (responseType === RESPONSE_NONE) continue;
 
-			if (operation.isUnderAttack() && operation.needsDismantler()) continue;
-
 			const sourceLocation = encodePosition(pos);
 			options.push({
 				priority: 3,
@@ -113,6 +116,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	getPowerHarvestDefenseSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
 		if (!hivemind.settings.get('enablePowerMining')) return;
 		if (!Memory.strategy || !Memory.strategy.power || !Memory.strategy.power.rooms) return;
+		if (room.getEffectiveAvailableEnergy() < 10_000) return;
 
 		_.each(Memory.strategy.power.rooms, (info, roomName) => {
 			if (!info.isActive) return;

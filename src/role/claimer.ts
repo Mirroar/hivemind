@@ -1,3 +1,5 @@
+import container from 'utils/container';
+import CombatManager from 'creep/combat-manager';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition} from 'utils/serialization';
@@ -28,8 +30,12 @@ declare global {
 }
 
 export default class ClaimerRole extends Role {
+	private combatManager: CombatManager;
+
 	constructor() {
 		super();
+
+		this.combatManager = container.get('CombatManager');
 
 		// Claimers have high priority because of their short life spans.
 		this.stopAt = 0;
@@ -44,6 +50,11 @@ export default class ClaimerRole extends Role {
 	 */
 	run(creep: ClaimerCreep) {
 		const targetPosition = decodePosition(creep.memory.target);
+		if (this.combatManager.needsToFlee(creep)) {
+			this.combatManager.performFleeTowards(creep, targetPosition, 1);
+			return;
+		}
+
 		if (creep.interRoomTravel(targetPosition)) return;
 		if (creep.pos.roomName !== targetPosition.roomName) return;
 

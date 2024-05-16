@@ -4,6 +4,8 @@ FIND_MY_CONSTRUCTION_SITES LOOK_STRUCTURES MAX_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
+import CombatManager from 'creep/combat-manager';
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
@@ -31,6 +33,14 @@ declare global {
 
 export default class RelayHaulerRole extends Role {
 	actionTaken: boolean;
+	combatManager: CombatManager;
+
+	constructor() {
+		super();
+
+		this.actionTaken = false;
+		this.combatManager = container.get('CombatManager');
+	}
 
 	/**
 	 * Makes a creep behave like a relay hauler.
@@ -158,6 +168,12 @@ export default class RelayHaulerRole extends Role {
 	performDeliver(creep: RelayHaulerCreep) {
 		const sourceRoom = creep.memory.sourceRoom;
 		if (!Game.rooms[sourceRoom]) return;
+		const room = Game.rooms[sourceRoom];
+
+		if (this.combatManager.needsToFlee(creep)) {
+			this.combatManager.performFleeTowards(creep, room.getStorageLocation(), 5);
+			return;
+		}
 
 		if (this.performRelay(creep)) return;
 
@@ -175,7 +191,7 @@ export default class RelayHaulerRole extends Role {
 		const hasTarget = creep.heapMemory.deliveryTarget && creep.isInRoom();
 		if (creep.pos.roomName === sourceRoom || hasTarget) {
 			const target = this.getDeliveryTarget(creep);
-			const targetPosition = target ? target.pos : Game.rooms[sourceRoom].getStorageLocation();
+			const targetPosition = target ? target.pos : room.getStorageLocation();
 			if (!targetPosition) return;
 
 			this.storeResources(creep, target);
@@ -189,7 +205,7 @@ export default class RelayHaulerRole extends Role {
 			}
 		}
 		else {
-			creep.moveToRange(Game.rooms[sourceRoom].getStorageLocation(), 1);
+			creep.moveToRange(room.getStorageLocation(), 1);
 		}
 	}
 
@@ -305,6 +321,11 @@ export default class RelayHaulerRole extends Role {
 		if (!sourcePosition) {
 			creep.say('newtar');
 			this.startDelivering(creep);
+			return;
+		}
+
+		if (this.combatManager.needsToFlee(creep)) {
+			this.combatManager.performFleeTowards(creep, sourcePosition, 1);
 			return;
 		}
 

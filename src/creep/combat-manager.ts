@@ -1,3 +1,4 @@
+import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import utilities from 'utilities';
 import {getResourcesIn} from 'utils/store';
@@ -133,6 +134,31 @@ export default class CombatManager {
 		return 0;
 	}
 
+	public performFleeTowards(creep: Creep, targetPosition: RoomPosition, targetRange: number = 0) {
+		if (!this.needsToFlee(creep)) {
+			// No danger, We can move to our target normally.
+			creep.whenInRange(targetRange, targetPosition, () => {});
+		}
+
+		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
+		const positions = this.getValidNeighboringPositions(creep.pos);
+		const scoredPositions = this.scoreKitingPositions(creep, enemyCreeps, positions);
+		if (scoredPositions.length === 0) {
+			// We don't know what to do. Guess we just move to the target position.
+			creep.whenInRange(targetRange, targetPosition, () => {});
+		}
+
+		const newPosition = _.max(scoredPositions, 'score');
+		if (!creep.pos.isEqualTo(newPosition)) creep.move(creep.pos.getDirectionTo(newPosition.pos));
+
+		return;
+	}
+
+	public needsToFlee(creep: Creep): boolean {
+		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
+		return this.hasEnemyCreepsInFightingRange(creep, enemyCreeps);
+	}
+
 	public performKitingMovement(creep: Creep, target: AttackTarget) {
 		let targetRange = this.getMaxAttackRange(creep);
 		if (target instanceof Creep) {
@@ -177,21 +203,23 @@ export default class CombatManager {
 	}
 
 	public getEnemyMilitaryCreeps(room: Room): Creep[] {
-		const creeps = [];
-		for (const userName in room.enemyCreeps) {
-			if (hivemind.relations.isAlly(userName)) continue;
-			for (const enemyCreep of room.enemyCreeps[userName]) {
-				// Ignore creeps that are not dangerous to us.
-				if (
-					enemyCreep.getActiveBodyparts(ATTACK) === 0
-					&& enemyCreep.getActiveBodyparts(RANGED_ATTACK) === 0
-				) continue;
+		return cache.inObject(room, 'enemyMilitaryCreeps', 1, () => {
+			const creeps = [];
+			for (const userName in room.enemyCreeps) {
+				if (hivemind.relations.isAlly(userName)) continue;
+				for (const enemyCreep of room.enemyCreeps[userName]) {
+					// Ignore creeps that are not dangerous to us.
+					if (
+						enemyCreep.getActiveBodyparts(ATTACK) === 0
+						&& enemyCreep.getActiveBodyparts(RANGED_ATTACK) === 0
+					) continue;
 
-				creeps.push(enemyCreep);
+					creeps.push(enemyCreep);
+				}
 			}
-		}
 
-		return creeps;
+			return creeps;
+		});
 	}
 
 	private scoreKitingPositions(creep: Creep, enemyCreeps: Creep[], positions: RoomPosition[]): ScoredPosition[] {
