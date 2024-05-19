@@ -137,35 +137,42 @@ Room.prototype.getFreeStorage = function (this: Room) {
  * @return {number}
  *   Amount of this resource in storage or terminal.
  */
-Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: string): number {
-	let total = 0;
-	if (this.storage && this.storage.store[resourceType]) {
-		total += this.storage.store[resourceType];
-	}
-
-	if (this.terminal && this.terminal.store[resourceType]) {
-		total += this.terminal.store[resourceType];
-	}
-
-	/* If (this.factory && this.factory.store[resourceType]) {
-		total += this.factory.store[resourceType];
-	} */
-
-	// Add resources in transporters to prevent fluctuation from transporters
-	// moving stuff around.
-	_.each(this.creepsByRole.transporter, creep => {
-		total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
-	});
-
-	if (!this.terminal && !this.storage) {
-		// Until a storage is built, haulers effectively act as transporters.
-		_.each(this.creepsByRole.hauler, creep => {
-			total += creep.store.getUsedCapacity(resourceType as ResourceConstant);
-		});
-	}
-
-	return total;
+Room.prototype.getCurrentResourceAmount = function (this: Room, resourceType: ResourceConstant): number {
+	return getAllResources(this)[resourceType] || 0;
 };
+
+function getAllResources(room: Room): Record<string, number> {
+	return cache.inObject(room, 'allResources', 1, () => {
+		const resources: Record<string, number> = {};
+
+		for (const resourceType in room.storage?.store || {}) {
+			resources[resourceType] = (resources[resourceType] || 0) + room.storage.store[resourceType];
+		}
+
+		for (const resourceType in room.terminal?.store || {}) {
+			resources[resourceType] = (resources[resourceType] || 0) + room.terminal.store[resourceType];
+		}
+
+		// Add resources in transporters to prevent fluctuation from transporters
+		// moving stuff around.
+		_.each(room.creepsByRole.transporter, creep => {
+			for (const resourceType in creep.store) {
+				resources[resourceType] = (resources[resourceType] || 0) + creep.store[resourceType];
+			}
+		});
+
+		if (!room.terminal && !room.storage) {
+			// Until a storage is built, haulers effectively act as transporters.
+			_.each(room.creepsByRole.hauler, creep => {
+				for (const resourceType in creep.store) {
+					resources[resourceType] = (resources[resourceType] || 0) + creep.store[resourceType];
+				}
+			});
+		}
+
+		return resources;
+	});
+}
 
 /**
  * Gets amount of energy stored, taking into account energy on storage location.
@@ -217,15 +224,16 @@ Room.prototype.getStoredEnergy = function (this: Room) {
  *   Amount of minerals stored in this room.
  */
 Room.prototype.getCurrentMineralAmount = function (this: Room) {
-	// @todo This could use caching.
-	let total = 0;
+	return cache.inObject(this, 'storedMinerals', 1, () => {
+		let total = 0;
 
-	for (const resourceType of RESOURCES_ALL) {
-		if (resourceType === RESOURCE_ENERGY || resourceType === RESOURCE_POWER) continue;
-		total += this.getCurrentResourceAmount(resourceType);
-	}
+		for (const resourceType of RESOURCES_ALL) {
+			if (resourceType === RESOURCE_ENERGY || resourceType === RESOURCE_POWER) continue;
+			total += this.getCurrentResourceAmount(resourceType);
+		}
 
-	return total;
+		return total;
+	});
 };
 
 /**
