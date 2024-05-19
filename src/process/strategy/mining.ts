@@ -69,7 +69,7 @@ export default class RemoteMiningProcess extends Process {
 
 		memory.remoteHarvesting.lastCheck = Game.time;
 
-		if (Game.myRooms.length < 3) {
+		if (Game.myRooms.length === 1 && Game.cpu.limit >= 20) {
 			// Early game, make sure to remote mine as much as possible for a
 			// quick start.
 			memory.remoteHarvesting.currentCount = 20;
@@ -77,9 +77,10 @@ export default class RemoteMiningProcess extends Process {
 		}
 
 		// Reduce count if we are over the available maximum.
-		if (memory.remoteHarvesting.currentCount > availableHarvestRoomCount) {
-			Game.notify('⚒ reduced remote mining count from ' + memory.remoteHarvesting.currentCount + ' to ' + availableHarvestRoomCount + ' because that is the maximum number of available rooms.');
-			memory.remoteHarvesting.currentCount = availableHarvestRoomCount;
+		const availableHarvestRoomCountWithBuffer = availableHarvestRoomCount + 3;
+		if (memory.remoteHarvesting.currentCount > availableHarvestRoomCountWithBuffer) {
+			Game.notify('⚒ reduced remote mining count from ' + memory.remoteHarvesting.currentCount + ' to ' + availableHarvestRoomCountWithBuffer + ' because that is the maximum number of available rooms.');
+			memory.remoteHarvesting.currentCount = availableHarvestRoomCountWithBuffer;
 		}
 
 		// Check past CPU and bucket usage.
