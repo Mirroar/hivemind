@@ -171,7 +171,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		}
 
 		// For small attackers that should be defeated easily, use simple brawler.
-		if (enemyPower < smallDefenderPower && !isRangedEnemy) {
+		if (enemyPower < smallDefenderPower / 2 && !isRangedEnemy) {
 			return RESPONSE_MINI_BRAWLER;
 		}
 
@@ -180,12 +180,12 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		}
 
 		// If damage and heal suffices, use single melee / heal creep.
-		const brawlerBody = this.getBrawlerCreepBody(room);
-		const numberBrawlerAttack = _.filter(brawlerBody, p => p === ATTACK).length;
-		const numberBrawlerHeal = _.filter(brawlerBody, p => p === HEAL).length;
-		if (!isRangedEnemy && enemyPower < (numberBrawlerAttack * ATTACK_POWER) + (numberBrawlerHeal * HEAL_POWER * meleeWithHealValue)) {
-			return RESPONSE_FULL_BRAWLER;
-		}
+		// const brawlerBody = this.getBrawlerCreepBody(room);
+		// const numberBrawlerAttack = _.filter(brawlerBody, p => p === ATTACK).length;
+		// const numberBrawlerHeal = _.filter(brawlerBody, p => p === HEAL).length;
+		// if (!isRangedEnemy && enemyPower < (numberBrawlerAttack * ATTACK_POWER) + (numberBrawlerHeal * HEAL_POWER * meleeWithHealValue)) {
+		// 	return RESPONSE_FULL_BRAWLER;
+		// }
 
 		// If damage and heal suffices, use single range / heal creep.
 		const blinkyBody = this.getBlinkyCreepBody(room);
@@ -203,9 +203,9 @@ export default class BrawlerSpawnRole extends SpawnRole {
 		const numberTrainRanged = _.filter(rangedBody, p => p === RANGED_ATTACK).length;
 		const numberTrainHeal = _.filter(healBody, p => p === HEAL).length;
 
-		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * healValue)) {
-			return RESPONSE_ATTACK_HEAL_TRAIN;
-		}
+		// if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberTrainHeal * HEAL_POWER * healValue)) {
+		// 	return RESPONSE_ATTACK_HEAL_TRAIN;
+		// }
 
 		if (!isRangedEnemy && enemyPower < (numberTrainAttack * ATTACK_POWER) + (numberBlinkyRanged * RANGED_ATTACK_POWER) + (numberBlinkyHeal * HEAL_POWER * healValue)) {
 			return RESPONSE_ATTACK_BLINKY_TRAIN;
