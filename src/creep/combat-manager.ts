@@ -156,7 +156,9 @@ export default class CombatManager {
 
 	public needsToFlee(creep: Creep): boolean {
 		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
-		return this.hasEnemyCreepsInFightingRange(creep, enemyCreeps);
+		if (!this.hasEnemyCreepsInFightingRange(creep, enemyCreeps)) return false;
+
+		return _.some(enemyCreeps, c => c.owner.username !== 'Source Keeper' && !this.couldWinFightAgainst(creep, c));
 	}
 
 	public performKitingMovement(creep: Creep, target: AttackTarget) {
