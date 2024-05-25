@@ -206,6 +206,8 @@ export default class ReportProcess extends Process {
 	 * Generates report email for remote mining.
 	 */
 	generateRemoteMiningReport() {
+		if (!Memory.strategy.remoteHarvesting) return;
+
 		let reportText = this.generateHeading('⚒ Remote mining');
 
 		reportText += 'Remote mining in ' + Memory.strategy.remoteHarvesting.currentCount + ' rooms';

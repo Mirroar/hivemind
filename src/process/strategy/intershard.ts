@@ -257,6 +257,15 @@ export default class InterShardProcess extends Process {
 	}
 
 	failIntershardExpansion() {
+		if (!Memory.strategy.expand) {
+			Memory.strategy.expand = {
+				failedExpansions: [],
+				currentTarget: null,
+				pathBlocked: null,
+				evacuatingRoom: null,
+			};
+		}
+
 		if (!Memory.strategy.expand.failedExpansions) {
 			Memory.strategy.expand.failedExpansions = [];
 		}

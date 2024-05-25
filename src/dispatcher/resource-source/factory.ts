@@ -21,6 +21,7 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 
 	getTasks(context: ResourceSourceContext) {
 		if (!this.room.factory) return [];
+		if (!this.room.factoryManager) return [];
 
 		return this.cacheEmptyTaskListFor(context.resourceType || '', 25, () => {
 			const options: FactorySourceTask[] = [];

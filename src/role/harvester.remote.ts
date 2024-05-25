@@ -236,6 +236,7 @@ export default class RemoteHarvesterRole extends Role {
 		const workParts = creep.getActiveBodyparts(CARRY) ? creep.getActiveBodyparts(WORK) : 0;
 		if (workParts === 0) return false;
 		if (creep.store.energy < workParts) return false;
+		if (!creep.operation.hasContainer(creep.memory.source)) return false;
 
 		const needsRepair = _.filter(
 			creep.room.structuresByType[STRUCTURE_CONTAINER],
@@ -243,7 +244,7 @@ export default class RemoteHarvesterRole extends Role {
 			structure =>
 				structure.hits <= structure.hitsMax - (workParts * REPAIR_POWER)
 				&& creep.pos.getRangeTo(structure.pos) <= 3
-				&& creep.operation.getContainerPosition(creep.memory.source).isEqualTo(structure.pos),
+				&& creep.operation.getContainerPosition(creep.memory.source)?.isEqualTo(structure.pos),
 		);
 		if (needsRepair.length > 0) {
 			const result = creep.repair(needsRepair[0]);

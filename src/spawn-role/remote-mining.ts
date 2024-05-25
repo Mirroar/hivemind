@@ -307,6 +307,8 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 		// Don't spawn if there is no full path.
 		const operation = Game.operationsByType.mining['mine:' + roomName];
+		if (!operation) return;
+
 		const paths = operation.getPaths();
 		const travelTime = _.min(_.map(paths, path => path.travelTime ?? 500));
 		if (!travelTime) return;

@@ -367,6 +367,9 @@ export default class RemoteMiningOperation extends Operation {
 		return cache.inObject(this, 'hasContainer:' + sourceLocation, 0, () => {
 			if (!this.memory.status[sourceLocation]) return false;
 
+			const paths = this.getPaths();
+			if (!paths[sourceLocation] || !paths[sourceLocation].accessible) return false;
+	
 			if (!Game.rooms[this.roomName]) {
 				return Boolean(this.memory.status[sourceLocation].containerId);
 			}
