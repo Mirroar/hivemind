@@ -494,7 +494,7 @@ const minCutInterface = {
 	},
 
 	// Calculates min cut tiles from room, rect[]
-	getCutTiles(roomName: string, rect: MinCutRect[], bounds?: MinCutRect, verbose = false) {
+	getCutTiles(roomName: string, rect: MinCutRect[], bounds?: MinCutRect, verbose = false): Array<{x: number; y: number}> {
 		if (!bounds) bounds = {x1: 0, y1: 0, x2: 49, y2: 49};
 
 		const graph = minCutInterface.createGraph(roomName, rect, bounds);
@@ -504,7 +504,7 @@ const minCutInterface = {
 		const sink = (2 * 50 * 50) + 1;
 		const count = graph.calculateMinCut(source, sink);
 		if (verbose) console.log('Number of Tiles in Cut:', count);
-		const positions = [];
+		const positions: Array<{x: number; y: number}> = [];
 		if (count > 0) {
 			const cutEdges = graph.markReachableVertices(source);
 			// Get Positions from Edge

@@ -7,6 +7,7 @@ import {encodePosition, decodePosition} from 'utils/serialization';
 import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
+import type {ExitCoords} from 'utils/room-info';
 
 const TILE_IS_ENDANGERED = 0;
 const TILE_IS_SAFE = 1;
@@ -34,13 +35,13 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	exitCenters: ExitCoords;
 	roomCenter: RoomPosition;
 	roomCenterEntrances: RoomPosition[];
+	safetyMatrix: CostMatrix;
+
 	protected sourceInfo: Record<string, {
 		harvestPosition: RoomPosition;
 	}>;
 
 	protected steps: Array<() => StepResult>;
-
-	safetyMatrix: CostMatrix;
 
 	constructor(roomName: string, variation: string, protected variationInfo: VariationInfo, wallMatrix: CostMatrix, exitMatrix: CostMatrix) {
 		super(roomName, variation, wallMatrix, exitMatrix);
@@ -70,7 +71,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 	buildStep(step: number): StepResult {
 		if (step < this.steps.length) {
-			return this.steps[step].call(this);
+			const method = this.steps[step];
+
+			return method.call(this);
 		}
 
 		return 'done';
@@ -148,20 +151,20 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		// @todo Reasonably handle sources that can be accessed from multiple
 		// sides. For example by checking if theres more than 1 group of
 		// unconnected free tiles.
-		let bestPos;
+		let bestPos: {x: number; y: number; freeTileCount: number} = null;
 		handleMapArea(source.x, source.y, (x, y) => {
 			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
 
-			let numberFreeTiles = 0;
+			let freeTileCount = 0;
 			handleMapArea(x, y, (x2, y2) => {
 				if (this.terrain.get(x2, y2) === TERRAIN_MASK_WALL) return;
 				if (!this.placementManager.isBuildableTile(x2, y2)) return;
 
-				numberFreeTiles++;
+				freeTileCount++;
 			});
 
-			if (!bestPos || bestPos.numFreeTiles < numberFreeTiles) {
-				bestPos = {x, y, numFreeTiles: numberFreeTiles};
+			if (!bestPos || bestPos.freeTileCount < freeTileCount) {
+				bestPos = {x, y, freeTileCount};
 			}
 		});
 
@@ -469,11 +472,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					[x - dx, y - dy],
 					[x, y - dy],
 					[x + dx, y - dy],
-					[x, y + 2 * dy],
-					[x + dx, y + 2 * dy],
-					[x + 2 * dx, y + 2 * dy],
-					[x + 2 * dx, y + dy],
-					[x + 2 * dx, y],
+					[x, y + (2 * dy)],
+					[x + dx, y + (2 * dy)],
+					[x + (2 * dx), y + (2 * dy)],
+					[x + (2 * dx), y + dy],
+					[x + (2 * dx), y],
 				];
 				if (!this.canFitLabStamp(nextPos, dx, dy, availableTiles)) continue;
 
@@ -600,8 +603,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		this.safetyMatrix = new PathFinder.CostMatrix();
 
 		const openList = [];
-		openList.push(encodePosition(roomCenter));
-		openList.push(encodePosition(roomIntel.getControllerPosition()));
+		openList.push(encodePosition(roomCenter), encodePosition(roomIntel.getControllerPosition()));
 		for (const source of roomIntel.getSourcePositions()) {
 			openList.push(encodePosition(new RoomPosition(source.x, source.y, this.roomName)));
 		}
@@ -659,8 +661,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	 *   Only check walls that have been declared as relevant in a previous pass.
 	 */
 	pruneWallFromTiles(walls: RoomPosition[], startLocations: string[], onlyRelevant?: boolean) {
-		const openList = {};
-		const closedList = {};
+		const openList: Record<string, boolean> = {};
+		const closedList: Record<string, boolean> = {};
 		let safetyValue = TILE_IS_SAFE;
 
 		for (const location of startLocations) {
@@ -706,7 +708,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	 * @param {object} closedList
 	 *   List of tiles that have been checked, keyed by encoded tile position.
 	 */
-	checkForAdjacentWallsToPrune(targetPos: RoomPosition, walls: RoomPosition[], openList, closedList) {
+	checkForAdjacentWallsToPrune(targetPos: RoomPosition, walls: RoomPosition[], openList: Record<string, boolean>, closedList: Record<string, boolean>) {
 		// Add unhandled adjacent tiles to open list.
 		handleMapArea(targetPos.x, targetPos.y, (x, y) => {
 			if (x === targetPos.x && y === targetPos.y) return;
@@ -795,7 +797,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 					this.roomPlan.removePosition('extension', road);
 					this.roomPlan.removePosition('extension.bay', road);
 					for (let i = 0; i < 10; i++) {
-						this.roomPlan.removePosition('extension.bay.' + i, road);
+						this.roomPlan.removePosition(`extension.bay.${i}`, road);
 					}
 
 					this.placementManager.unblockPosition(road.x, road.y);
@@ -850,64 +852,72 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 
 	placeOnRamps(): StepResult {
 		for (const rampart of this.roomPlan.getPositions('rampart')) {
-			handleMapArea(rampart.x, rampart.y, (x, y) => {
-				if (this.safetyMatrix.get(x, y) !== TILE_IS_ENDANGERED) return;
-				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-
-				const pos = new RoomPosition(x, y, this.roomName);
-				if (
-					!this.roomPlan.hasPosition('road', pos)
-					&& !this.roomPlan.hasPosition('road.toRampart', pos)
-				) return;
-				if (this.roomPlan.hasPosition('rampart', pos)) return;
-
-				this.placementManager.planLocation(pos, 'rampart', null);
-				this.placementManager.planLocation(pos, 'rampart.ramp', null);
-			}, 3);
+			this.placeOnRampsAround(rampart);
 		}
 
 		return 'ok';
 	}
 
+	placeOnRampsAround(rampart: RoomPosition) {
+		handleMapArea(rampart.x, rampart.y, (x, y) => {
+			if (this.safetyMatrix.get(x, y) !== TILE_IS_ENDANGERED) return;
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+			const pos = new RoomPosition(x, y, this.roomName);
+			if (
+				!this.roomPlan.hasPosition('road', pos)
+				&& !this.roomPlan.hasPosition('road.toRampart', pos)
+			) return;
+			if (this.roomPlan.hasPosition('rampart', pos)) return;
+
+			this.placementManager.planLocation(pos, 'rampart', null);
+			this.placementManager.planLocation(pos, 'rampart.ramp', null);
+		}, 3);
+	}
+
 	placeQuadBreaker(): StepResult {
 		for (const rampart of this.roomPlan.getPositions('rampart')) {
-			handleMapArea(rampart.x, rampart.y, (x, y) => {
-				if (this.safetyMatrix.get(x, y) !== TILE_IS_UNSAFE) return;
-				if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
-
-				this.safetyMatrix.set(x, y, TILE_IS_UNSAFE_NEAR_WALL);
-				if (this.placementManager.getExitDistance(x, y) < 3) return;
-				if (this.placementManager.isBlockedTile(x, y)) return;
-
-				const pos = new RoomPosition(x, y, this.roomName);
-				if (this.roomPlan.hasPosition('road', pos)) return;
-
-				let nearRoad = false;
-				if (
-					this.roomPlan.hasPosition('road', new RoomPosition(x - 1, y, this.roomName))
-					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x - 1, y, this.roomName))
-				) nearRoad = true;
-				if (
-					this.roomPlan.hasPosition('road', new RoomPosition(x + 1, y, this.roomName))
-					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x + 1, y, this.roomName))
-				) nearRoad = true;
-				if (
-					this.roomPlan.hasPosition('road', new RoomPosition(x, y - 1, this.roomName))
-					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x, y - 1, this.roomName))
-				) nearRoad = true;
-				if (
-					this.roomPlan.hasPosition('road', new RoomPosition(x, y + 1, this.roomName))
-					&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x, y + 1, this.roomName))
-				) nearRoad = true;
-
-				if (!nearRoad && (x + y) % 2 === 0) return;
-
-				this.placementManager.planLocation(pos, 'wall', null);
-				this.placementManager.planLocation(pos, 'wall.quad', null);
-			}, 3);
+			this.placeQuadBreakerAround(rampart);
 		}
 
 		return 'ok';
+	}
+
+	placeQuadBreakerAround(rampart: RoomPosition) {
+		handleMapArea(rampart.x, rampart.y, (x, y) => {
+			if (this.safetyMatrix.get(x, y) !== TILE_IS_UNSAFE) return;
+			if (this.terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+			this.safetyMatrix.set(x, y, TILE_IS_UNSAFE_NEAR_WALL);
+			if (this.placementManager.getExitDistance(x, y) < 3) return;
+			if (this.placementManager.isBlockedTile(x, y)) return;
+
+			const pos = new RoomPosition(x, y, this.roomName);
+			if (this.roomPlan.hasPosition('road', pos)) return;
+
+			let nearRoad = false;
+			if (
+				this.roomPlan.hasPosition('road', new RoomPosition(x - 1, y, this.roomName))
+				&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x - 1, y, this.roomName))
+			) nearRoad = true;
+			if (
+				this.roomPlan.hasPosition('road', new RoomPosition(x + 1, y, this.roomName))
+				&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x + 1, y, this.roomName))
+			) nearRoad = true;
+			if (
+				this.roomPlan.hasPosition('road', new RoomPosition(x, y - 1, this.roomName))
+				&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x, y - 1, this.roomName))
+			) nearRoad = true;
+			if (
+				this.roomPlan.hasPosition('road', new RoomPosition(x, y + 1, this.roomName))
+				&& !this.roomPlan.hasPosition('road.rampart', new RoomPosition(x, y + 1, this.roomName))
+			) nearRoad = true;
+
+			if (!nearRoad && (x + y) % 2 === 0) return;
+
+			this.placementManager.planLocation(pos, 'wall', null);
+			this.placementManager.planLocation(pos, 'wall.quad', null);
+		}, 3);
 	}
 
 	placeDecorativeWalls(): StepResult {

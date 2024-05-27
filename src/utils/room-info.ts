@@ -1,8 +1,11 @@
 import cache from 'utils/cache';
 
-declare global {
-	type ExitCoords = Record<string, RoomPosition[]>;
-}
+export type ExitCoords = {
+	N: RoomPosition[];
+	S: RoomPosition[];
+	W: RoomPosition[];
+	E: RoomPosition[];
+};
 
 function getExitCenters(roomName: string): ExitCoords {
 	return cache.inHeap('exitCenters:' + roomName, 10_000, () => {
@@ -38,11 +41,14 @@ function getExitCoordsByDirection(roomName: string): ExitCoords {
  *   Array of RoomPosition objects, keyed by exit direction.
  */
 function findExitCenters(roomName: string, exitCoords: ExitCoords): ExitCoords {
-	const exitCenters: ExitCoords = {};
+	const exitCenters: ExitCoords = {
+		N: [],
+		S: [],
+		W: [],
+		E: [],
+	};
 
 	for (const dir of _.keys(exitCoords)) {
-		exitCenters[dir] = [];
-
 		let startPos = null;
 		let previousPos = null;
 		for (const pos of exitCoords[dir]) {
