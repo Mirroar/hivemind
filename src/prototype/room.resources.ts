@@ -492,58 +492,48 @@ Room.prototype.getResourceState = function (this: Room) {
  *   The room's storage or terminal.
  */
 Room.prototype.getBestStorageTarget = function (this: Room, amount, resourceType) {
-	if (this.storage && this.terminal) {
-		const storageFree = this.storage.store.getFreeCapacity();
-		const terminalFree = this.terminal.store.getFreeCapacity();
-		if (this.isEvacuating() && terminalFree > this.terminal.store.getCapacity() * 0.2) {
-			// If we're evacuating, store everything in terminal to be sent away.
-			return this.terminal;
-		}
+	if (!this.storage || !this.terminal) return this.storage || this.terminal;
 
-		if (this.isClearingTerminal() && storageFree > amount + 5000) {
-			// If we're clearing out the terminal, put everything into storage.
-			return this.storage;
-		}
+	return determineBestStorageTarget(this, amount, resourceType);
+};
 
-		if (this.isClearingStorage() && terminalFree > amount + (resourceType == RESOURCE_ENERGY ? 0 : 5000)) {
-			// If we're clearing out the storage, put everything into terminal.
-			return this.terminal;
-		}
-
-		if (!resourceType) {
-			if (this.storage.store.getUsedCapacity() / this.storage.store.getCapacity() < this.terminal.store.getUsedCapacity() / this.terminal.store.getCapacity()) {
-				return this.storage;
-			}
-
-			return this.terminal;
-		}
-
-		if (resourceType === RESOURCE_ENERGY && this.terminal && this.terminal.store[RESOURCE_ENERGY] < 7000 && terminalFree > 0) {
-			// Make sure terminal has energy for transactions.
-			return this.terminal;
-		}
-
-		if (storageFree >= amount && terminalFree >= amount && (this.storage.store[resourceType] || 0) / storageFree < (this.terminal.store[resourceType] || 0) / terminalFree) {
-			return this.storage;
-		}
-
-		if (terminalFree >= amount) {
-			return this.terminal;
-		}
-
-		if (storageFree >= amount) {
-			return this.storage;
-		}
+function determineBestStorageTarget(room: Room, amount: number, resourceType: ResourceConstant) {
+	const storageFree = room.storage.store.getFreeCapacity();
+	const terminalFree = room.terminal.store.getFreeCapacity();
+	if (room.isEvacuating() && terminalFree > room.terminal.store.getCapacity() * 0.2) {
+		// If we're evacuating, store everything in terminal to be sent away.
+		return room.terminal;
 	}
-	else if (this.storage) {
-		return this.storage;
+
+	if (room.isClearingTerminal() && storageFree > amount + 5000) {
+		// If we're clearing out the terminal, put everything into storage.
+		return room.storage;
 	}
-	else if (this.terminal) {
-		return this.terminal;
+
+	if (room.isClearingStorage() && terminalFree > amount + (resourceType == RESOURCE_ENERGY ? 0 : 5000)) {
+		// If we're clearing out the storage, put everything into terminal.
+		return room.terminal;
+	}
+
+	if (resourceType === RESOURCE_ENERGY && room.terminal && room.terminal.store[RESOURCE_ENERGY] < 7000 && terminalFree > 0) {
+		// Make sure terminal gets energy for transactions.
+		return room.terminal;
+	}
+
+	if (storageFree >= amount && terminalFree >= amount && (room.storage.store[resourceType] || 0) / storageFree < (room.terminal.store[resourceType] || 0) / terminalFree) {
+		return room.storage;
+	}
+
+	if (terminalFree >= amount) {
+		return room.terminal;
+	}
+
+	if (storageFree >= amount) {
+		return room.storage;
 	}
 
 	return null;
-};
+}
 
 /**
  * Determines the best place to get resources from.
