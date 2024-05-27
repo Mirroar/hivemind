@@ -37,96 +37,6 @@ export default class CombatManager {
 		this.healNearbyTargets(creep);
 	}
 
-	private healNearbyTargets(creep: Creep) {
-		const healParts = creep.getActiveBodyparts(HEAL);
-		if (healParts === 0) return;
-
-		const targets = creep.pos.findInRange(FIND_CREEPS, 3, {
-			// @todo Allow full-health creeps when pre-healing makes sense.
-			filter: c => c.hits < c.hitsMax && (c.my || hivemind.relations.isAlly(c.owner.username)),
-		});
-
-		const target = _.max(targets, c => Math.min(
-			c.hitsMax - c.hits,
-			// @todo Factor in boosts.
-			healParts * (c.pos.getRangeTo(creep) <= 1 ? HEAL_POWER : RANGED_HEAL_POWER),
-		));
-		// @todo Handle the fact that we can't melee attack and heal at the same time.
-		if (target) {
-			if (creep.pos.getRangeTo(target.pos) <= 1) {
-				if (!this.hasAttacked) creep.heal(target);
-			}
-			else if (!this.hasAttacked && !this.hasRangedAttacked) creep.rangedHeal(target);
-		}
-	}
-
-	private attackNearbyTargets(creep: Creep) {
-		const availableTargets = this.getNearbyTargets(creep);
-		if (availableTargets.length === 0) return;
-
-		const availableOwnedTargets = _.filter(availableTargets, target => ('owner' in target) && target?.owner?.username);
-
-		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
-			if (availableOwnedTargets.length >= 2 && this.determineMassAttackDamage(creep, availableOwnedTargets) > RANGED_ATTACK_POWER) {
-				// @todo Ideally, even involve score from `scoreTargets()`.
-				creep.rangedMassAttack();
-				this.hasRangedAttacked = true;
-				return;
-			}
-
-			this.hasRangedAttacked = true;
-			creep.rangedAttack(this.getMostValuableTarget(creep, availableTargets));
-			return;
-		}
-
-		if (creep.getActiveBodyparts(ATTACK) > 0) {
-			this.hasAttacked = true;
-			creep.attack(this.getMostValuableTarget(creep, availableTargets));
-		}
-	}
-
-	private determineMassAttackDamage(creep: Creep, targets: AttackTarget[]): number {
-		let total = 0;
-		for (const target of targets) {
-			total += rangedMassAttackDamage[creep.pos.getRangeTo(target.pos)];
-		}
-
-		return total;
-	}
-
-	private getNearbyTargets(creep: Creep): AttackTarget[] {
-		const availableTargets = [];
-		const maxRange = this.getMaxAttackRange(creep);
-
-		for (const enemyName in creep.room.enemyCreeps) {
-			if (hivemind.relations.isAlly(enemyName)) continue;
-
-			for (const target of creep.room.enemyCreeps[enemyName]) {
-				if (creep.pos.getRangeTo(target) > maxRange) continue;
-
-				availableTargets.push(target);
-			}
-		}
-
-		// @todo Add construction sites (that have build progress) to run over.
-		// @todo Add structures in range only if room is not owned by an ally.
-		// @todo Add power creeps
-		// @todo Use same filters here and in `getAllTargetsInRoom`.
-		const isMyRoom = creep.room.isMine()
-			|| hivemind.relations.isAlly(creep.room.controller?.owner?.username)
-			|| hivemind.relations.isAlly(creep.room.controller?.reservation?.username)
-			|| (Memory.strategy?.remoteHarvesting?.rooms || []).includes(creep.room.name);
-		for (const structure of creep.pos.findInRange(FIND_STRUCTURES, maxRange)) {
-			if (!structure.hits) continue;
-			if ('owner' in structure && hivemind.relations.isAlly(structure.owner?.username)) continue;
-			if (!('owner' in structure) && isMyRoom) continue;
-
-			availableTargets.push(structure);
-		}
-
-		return availableTargets;
-	}
-
 	public getMaxAttackRange(creep: Creep): number {
 		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) return 3;
 		if (creep.getActiveBodyparts(ATTACK) > 0) return 1;
@@ -192,18 +102,6 @@ export default class CombatManager {
 		return _.any(enemyCreeps ?? this.getEnemyMilitaryCreeps(creep.room), c => c.pos.getRangeTo(creep) <= 5);
 	}
 
-	private getValidNeighboringPositions(position: RoomPosition) {
-		const positions: RoomPosition[] = [];
-		handleMapArea(position.x, position.y, (x, y) => {
-			const newPosition = new RoomPosition(x, y, position.roomName);
-			if (this.isTileWall(newPosition)) return;
-
-			positions.push(newPosition);
-		});
-
-		return positions;
-	}
-
 	public getEnemyMilitaryCreeps(room: Room): Creep[] {
 		return cache.inObject(room, 'enemyMilitaryCreeps', 1, () => {
 			const creeps = [];
@@ -222,6 +120,148 @@ export default class CombatManager {
 
 			return creeps;
 		});
+	}
+
+	public couldWinFightAgainst(creep: Creep, otherCreep: Creep): boolean {
+		if (
+			(
+				creep.getActiveBodyparts(RANGED_ATTACK) > 0
+				|| (creep.getActiveBodyparts(ATTACK) > 0 && otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0)
+			)
+			&& otherCreep.getActiveBodyparts(HEAL) === 0
+			&& creep.hits === creep.hitsMax
+		) {
+			// Take pot shots at creeps that can't heal.
+			return true;
+		}
+
+		if (
+			creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
+			&& otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0
+		) return true;
+
+		if (creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER + creep.getActiveBodyparts(HEAL) * HEAL_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER) {
+			return true;
+		}
+
+		if (
+			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK)
+			&& creep.getActiveBodyparts(ATTACK) * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
+			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER >= otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
+		) return true;
+
+		return false;
+	}
+
+	public getMostValuableTarget(creep: Creep, targets?: AttackTarget[]): AttackTarget | null {
+		if (!targets) targets = this.getAllTargetsInRoom(creep.room);
+
+		const scoredTargets = this.scoreTargets(creep, targets);
+
+		const bestTarget = utilities.getBestOption(scoredTargets);
+		return bestTarget?.object;
+	}
+
+	private healNearbyTargets(creep: Creep) {
+		const healParts = creep.getActiveBodyparts(HEAL);
+		if (healParts === 0) return;
+
+		const targets = creep.pos.findInRange(FIND_CREEPS, 3, {
+			// @todo Allow full-health creeps when pre-healing makes sense.
+			filter: c => c.hits < c.hitsMax && (c.my || hivemind.relations.isAlly(c.owner.username)),
+		});
+
+		const target = _.max(targets, c => Math.min(
+			c.hitsMax - c.hits,
+			// @todo Factor in boosts.
+			healParts * (c.pos.getRangeTo(creep) <= 1 ? HEAL_POWER : RANGED_HEAL_POWER),
+		));
+		// @todo Handle the fact that we can't melee attack and heal at the same time.
+		if (target) {
+			if (creep.pos.getRangeTo(target.pos) <= 1) {
+				if (!this.hasAttacked) creep.heal(target);
+			}
+			else if (!this.hasAttacked && !this.hasRangedAttacked) creep.rangedHeal(target);
+		}
+	}
+
+	private attackNearbyTargets(creep: Creep) {
+		const availableTargets = this.getNearbyTargets(creep);
+		if (availableTargets.length === 0) return;
+
+		const availableOwnedTargets = _.filter(availableTargets, target => ('owner' in target) && target?.owner?.username);
+
+		if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
+			if (availableOwnedTargets.length >= 2 && this.determineMassAttackDamage(creep, availableOwnedTargets) > RANGED_ATTACK_POWER) {
+				// @todo Ideally, even involve score from `scoreTargets()`.
+				creep.rangedMassAttack();
+				this.hasRangedAttacked = true;
+				return;
+			}
+
+			this.hasRangedAttacked = true;
+			creep.rangedAttack(this.getMostValuableTarget(creep, availableTargets));
+			return;
+		}
+
+		if (creep.getActiveBodyparts(ATTACK) > 0) {
+			this.hasAttacked = true;
+			creep.attack(this.getMostValuableTarget(creep, availableTargets));
+		}
+	}
+
+	private determineMassAttackDamage(creep: Creep, targets: AttackTarget[]): number {
+		let total = 0;
+		for (const target of targets) {
+			total += rangedMassAttackDamage[creep.pos.getRangeTo(target.pos)];
+		}
+
+		return total;
+	}
+
+	private getNearbyTargets(creep: Creep): AttackTarget[] {
+		const availableTargets: AttackTarget[] = [];
+		const maxRange = this.getMaxAttackRange(creep);
+
+		for (const enemyName in creep.room.enemyCreeps) {
+			if (hivemind.relations.isAlly(enemyName)) continue;
+
+			for (const target of creep.room.enemyCreeps[enemyName]) {
+				if (creep.pos.getRangeTo(target) > maxRange) continue;
+
+				availableTargets.push(target);
+			}
+		}
+
+		// @todo Add construction sites (that have build progress) to run over.
+		// @todo Add structures in range only if room is not owned by an ally.
+		// @todo Add power creeps
+		// @todo Use same filters here and in `getAllTargetsInRoom`.
+		const isMyRoom = creep.room.isMine()
+			|| hivemind.relations.isAlly(creep.room.controller?.owner?.username)
+			|| hivemind.relations.isAlly(creep.room.controller?.reservation?.username)
+			|| (Memory.strategy?.remoteHarvesting?.rooms || []).includes(creep.room.name);
+		for (const structure of creep.pos.findInRange(FIND_STRUCTURES, maxRange)) {
+			if (!structure.hits) continue;
+			if ('owner' in structure && hivemind.relations.isAlly(structure.owner?.username)) continue;
+			if (!('owner' in structure) && isMyRoom) continue;
+
+			availableTargets.push(structure);
+		}
+
+		return availableTargets;
+	}
+
+	private getValidNeighboringPositions(position: RoomPosition) {
+		const positions: RoomPosition[] = [];
+		handleMapArea(position.x, position.y, (x, y) => {
+			const newPosition = new RoomPosition(x, y, position.roomName);
+			if (this.isTileWall(newPosition)) return;
+
+			positions.push(newPosition);
+		});
+
+		return positions;
 	}
 
 	private scoreKitingPositions(creep: Creep, enemyCreeps: Creep[], positions: RoomPosition[]): ScoredPosition[] {
@@ -364,46 +404,6 @@ export default class CombatManager {
 				}
 			}
 		}
-	}
-
-	public couldWinFightAgainst(creep: Creep, otherCreep: Creep): boolean {
-		if (
-			(
-				creep.getActiveBodyparts(RANGED_ATTACK) > 0
-				|| (creep.getActiveBodyparts(ATTACK) > 0 && otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0)
-			)
-			&& otherCreep.getActiveBodyparts(HEAL) === 0
-			&& creep.hits === creep.hitsMax
-		) {
-			// Take pot shots at creeps that can't heal.
-			return true;
-		}
-
-		if (
-			creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
-			&& otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0
-		) return true;
-
-		if (creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER + creep.getActiveBodyparts(HEAL) * HEAL_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER) {
-			return true;
-		}
-
-		if (
-			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK)
-			&& creep.getActiveBodyparts(ATTACK) * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
-			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER >= otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
-		) return true;
-
-		return false;
-	}
-
-	public getMostValuableTarget(creep: Creep, targets?: AttackTarget[]): AttackTarget | null {
-		if (!targets) targets = this.getAllTargetsInRoom(creep.room);
-
-		const scoredTargets = this.scoreTargets(creep, targets);
-
-		const bestTarget = utilities.getBestOption(scoredTargets);
-		return bestTarget?.object;
 	}
 
 	private getAllTargetsInRoom(room: Room): AttackTarget[] {
