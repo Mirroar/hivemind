@@ -8,7 +8,8 @@ import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispa
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
-import type { ResourceLevel } from 'room/resource-level-manager';
+import type {ResourceLevel} from 'room/resource-level-manager';
+import { getResourcesIn } from 'utils/store';
 
 declare global {
 	interface Room {
@@ -61,6 +62,13 @@ declare global {
 		isDangerous: () => boolean;
 	}
 }
+
+type SourceEvaluation = {
+	location: string;
+	sourceCount: number;
+	distance: number;
+	averageDistance: number;
+};
 
 // Define quick access property room.sourceDispatcher.
 Object.defineProperty(Room.prototype, 'sourceDispatcher', {
@@ -143,18 +151,18 @@ function getAllResources(room: Room): Record<string, number> {
 	return cache.inObject(room, 'allResources', 1, () => {
 		const resources: Record<string, number> = {};
 
-		for (const resourceType in room.storage?.store || {}) {
+		for (const resourceType of getResourcesIn(room.storage?.store)) {
 			resources[resourceType] = (resources[resourceType] || 0) + room.storage.store[resourceType];
 		}
 
-		for (const resourceType in room.terminal?.store || {}) {
+		for (const resourceType of getResourcesIn(room.terminal?.store)) {
 			resources[resourceType] = (resources[resourceType] || 0) + room.terminal.store[resourceType];
 		}
 
 		// Add resources in transporters to prevent fluctuation from transporters
 		// moving stuff around.
 		_.each(room.creepsByRole.transporter, creep => {
-			for (const resourceType in creep.store) {
+			for (const resourceType of getResourcesIn(creep.store)) {
 				resources[resourceType] = (resources[resourceType] || 0) + creep.store[resourceType];
 			}
 		});
@@ -162,7 +170,7 @@ function getAllResources(room: Room): Record<string, number> {
 		if (!room.terminal && !room.storage) {
 			// Until a storage is built, haulers effectively act as transporters.
 			_.each(room.creepsByRole.hauler, creep => {
-				for (const resourceType in creep.store) {
+				for (const resourceType of getResourcesIn(creep.store)) {
 					resources[resourceType] = (resources[resourceType] || 0) + creep.store[resourceType];
 				}
 			});
@@ -192,7 +200,7 @@ Room.prototype.getStoredEnergy = function (this: Room) {
 		}
 
 		// Add dropped resources and containers on harvest spots.
-		const harvestPositions = this.roomPlanner && this.roomPlanner.getLocations('harvester');
+		const harvestPositions = this.roomPlanner?.getLocations('harvester');
 		for (const position of harvestPositions || []) {
 			for (const resource of position.lookFor(LOOK_RESOURCES)) {
 				if (resource.resourceType !== RESOURCE_ENERGY) continue;
@@ -246,7 +254,7 @@ Room.prototype.getEffectiveAvailableEnergy = function (this: Room) {
 	if (!this.factory || !this.factory.isOperational() || this.isEvacuating()) return availableEnergy;
 
 	// @todo Get resource unpacking factor from API or config.
-	return availableEnergy + Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5;
+	return availableEnergy + (Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5);
 };
 
 /**
@@ -339,7 +347,7 @@ Room.prototype.stopTradePreparation = function (this: Room) {
 Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
 	// @todo Sort by profitability because it influences spawn order.
 	return cache.inHeap('remoteSourcePositions:' + this.name, 500, () => {
-		const evaluations = [];
+		const evaluations: SourceEvaluation[] = [];
 		_.each(Game.operationsByType.mining, operation => {
 			const locations = operation.getMiningLocationsByRoom();
 
@@ -363,7 +371,7 @@ Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
 	});
 };
 
-function getRemoteHarvestSourceEvaluation(operation: RemoteMiningOperation, location: string) {
+function getRemoteHarvestSourceEvaluation(operation: RemoteMiningOperation, location: string): SourceEvaluation {
 	const filteredPaths = _.filter(operation.getPaths(), path => path.path);
 
 	return {
@@ -381,7 +389,7 @@ function getRemoteHarvestSourceEvaluation(operation: RemoteMiningOperation, loca
  *   An array of objects containing information about controller targets.
  */
 Room.prototype.getRemoteReservePositions = function (this: Room) {
-	const reservePositions = [];
+	const reservePositions: RoomPosition[] = [];
 	_.each(Game.operationsByType.mining, operation => {
 		const roomName = operation.getClaimerSourceRoom();
 		if (this.name !== roomName) return;
@@ -425,7 +433,7 @@ Room.prototype.getResourceState = function (this: Room) {
 			totalResources: {},
 			state: {},
 			canTrade: false,
-			addResource(resourceType: ResourceConstant, amount: number) {
+			addResource(this: RoomResourceState, resourceType: ResourceConstant, amount: number) {
 				this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
 			},
 			isEvacuating: false,
@@ -510,7 +518,7 @@ function determineBestStorageTarget(room: Room, amount: number, resourceType: Re
 		return room.storage;
 	}
 
-	if (room.isClearingStorage() && terminalFree > amount + (resourceType == RESOURCE_ENERGY ? 0 : 5000)) {
+	if (room.isClearingStorage() && terminalFree > amount + (resourceType === RESOURCE_ENERGY ? 0 : 5000)) {
 		// If we're clearing out the storage, put everything into terminal.
 		return room.terminal;
 	}
@@ -557,10 +565,10 @@ Room.prototype.getBestStorageSource = function (this: Room, resourceType: Resour
 			return this.storage;
 		}
 	}
-	else if (this.storage && this.storage.store[resourceType]) {
+	else if (this.storage?.store[resourceType]) {
 		return this.storage;
 	}
-	else if (this.terminal && this.terminal.store[resourceType] && (!this.memory.fillTerminal || this.memory.fillTerminal !== resourceType)) {
+	else if (this.terminal?.store[resourceType] && (!this.memory.fillTerminal || this.memory.fillTerminal !== resourceType)) {
 		return this.terminal;
 	}
 
@@ -626,7 +634,7 @@ StructureKeeperLair.prototype.isDangerous = function (this: StructureKeeperLair)
  * @return {boolean}
  *   True if an active keeper lair is nearby and we have no defenses.
  */
-const isDangerous = function (this: Source | Mineral) {
+const isDangerous = function (this: Source | Mineral): boolean {
 	const lair = this.getNearbyLair();
 	if (!lair || !lair.isDangerous()) return false;
 
