@@ -8,6 +8,7 @@ import ProcessReport from './report/process';
 import ReclaimManager from './reclaim-manager';
 import RemoteMinePrioritizer from './empire/remote-mine-prioritizer';
 import ReportManager from './report/report-manager';
+import ResourceLevelManager from 'room/resource-level-manager';
 import ResourcesReport from './report/resources';
 import RolesReport from './report/roles';
 import RoomsReport from './report/rooms';
@@ -46,6 +47,7 @@ declare global {
 		ReclaimManager: ReclaimManager;
 		RemoteMinePrioritizer: RemoteMinePrioritizer;
 		ReportManager: ReportManager;
+		ResourceLevelManager: ResourceLevelManager;
 		ResourcesReport: ResourcesReport;
 		RolesReport: RolesReport;
 		RoomsReport: RoomsReport;
@@ -86,6 +88,7 @@ function containerFactory(container: Container) {
 	container.set('ReclaimManager', () => new ReclaimManager());
 	container.set('RemoteMinePrioritizer', () => new RemoteMinePrioritizer());
 	container.set('ReportManager', () => new ReportManager());
+	container.set('ResourceLevelManager', () => new ResourceLevelManager());
 	container.set('ResourcesReport', () => new ResourcesReport());
 	container.set('RolesReport', () => new RolesReport());
 	container.set('RoomsReport', () => new RoomsReport(container.get('FunnelManager')));

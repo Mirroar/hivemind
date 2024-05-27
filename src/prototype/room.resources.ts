@@ -7,8 +7,8 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import ResourceDestinationDispatcher from 'dispatcher/resource-destination/dispatcher';
 import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
-import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
+import type { ResourceLevel } from 'room/resource-level-manager';
 
 declare global {
 	interface Room {
@@ -33,8 +33,6 @@ declare global {
 		getBestStorageTarget: (amount: number, resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
 		getBestStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
 		getBestCircumstancialStorageSource: (resourceType: ResourceConstant) => StructureStorage | StructureTerminal;
-		determineResourceLevel: (amount: number, resourceType: ResourceConstant) => ResourceLevel;
-		getResourceLevelCutoffs: (resourceType: ResourceConstant) => ResourceLevelCuttoffs;
 	}
 
 	interface RoomMemory {
@@ -473,125 +471,14 @@ Room.prototype.getResourceState = function (this: Room) {
 			}
 		}
 
+		const resourceLevelManager = container.get('ResourceLevelManager');
 		for (const resourceType of RESOURCES_ALL) {
-			roomData.state[resourceType] = this.determineResourceLevel(roomData.totalResources[resourceType] || 0, resourceType);
+			roomData.state[resourceType] = resourceLevelManager.determineResourceLevel(this, roomData.totalResources[resourceType] || 0, resourceType);
 		}
 
 		return roomData;
 	});
 };
-
-type ResourceLevel = 'low' | 'medium' | 'high' | 'excessive';
-type ResourceLevelCuttoffs = [number, number, number];
-
-Room.prototype.determineResourceLevel = function (this: Room, amount: number, resourceType: ResourceConstant): ResourceLevel {
-	const cutoffs = this.getResourceLevelCutoffs(resourceType);
-	if (amount >= cutoffs[0]) return 'excessive';
-	if (amount >= cutoffs[1]) return 'high';
-	if (amount >= cutoffs[2]) return 'medium';
-	return 'low';
-};
-
-Room.prototype.getResourceLevelCutoffs = function (this: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
-	if (resourceType === RESOURCE_ENERGY) {
-		// Defending rooms need energy to defend.
-		if (this.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) return [1_000_000, 100_000, 50_000];
-
-		// Rooms we are funneling should pull extra energy.
-		const funnelManager = container.get('FunnelManager');
-		if (funnelManager.isFunnelingTo(this.name)) return [500_000, 300_000, 150_000];
-
-		return [200_000, 50_000, 20_000];
-	}
-
-	if (resourceType === RESOURCE_POWER) {
-		// Only rooms with power spawns need power.
-		if (!this.powerSpawn) return [1, 0, 0];
-		return [50_000, 30_000, 10_000];
-	}
-
-	if (resourceType === RESOURCE_OPS) {
-		// Only rooms with power creeps need ops.
-		if (_.filter(Game.powerCreeps, c => c.pos && c.pos.roomName === this.name).length === 0) return [1, 0, 0];
-		return [10_000, 5000, 1000];
-	}
-
-	// @todo If the room has a factory, consolidate normal resources and bars.
-
-	// Basic commodities need a factory.
-	if (([RESOURCE_SILICON, RESOURCE_METAL, RESOURCE_BIOMASS, RESOURCE_MIST] as string[]).includes(resourceType)) {
-		if (!this.factory) return [1, 0, 0];
-		return [30_000, 10_000, 2000];
-	}
-
-	// @todo For commodities, ignore anything we don't need for recipes of the
-	// current factory level.
-	if (
-		([
-			RESOURCE_COMPOSITE,
-			RESOURCE_CRYSTAL,
-			RESOURCE_LIQUID,
-			RESOURCE_WIRE,
-			RESOURCE_SWITCH,
-			RESOURCE_TRANSISTOR,
-			RESOURCE_MICROCHIP,
-			RESOURCE_CIRCUIT,
-			RESOURCE_DEVICE,
-			RESOURCE_CELL,
-			RESOURCE_PHLEGM,
-			RESOURCE_TISSUE,
-			RESOURCE_MUSCLE,
-			RESOURCE_ORGANOID,
-			RESOURCE_ORGANISM,
-			RESOURCE_ALLOY,
-			RESOURCE_TUBE,
-			RESOURCE_FIXTURES,
-			RESOURCE_FRAME,
-			RESOURCE_HYDRAULICS,
-			RESOURCE_MACHINE,
-			RESOURCE_CONDENSATE,
-			RESOURCE_CONCENTRATE,
-			RESOURCE_EXTRACT,
-			RESOURCE_SPIRIT,
-			RESOURCE_EMANATION,
-			RESOURCE_ESSENCE,
-		] as string[]).includes(resourceType)
-	) {
-		if (!this.factory) return [1, 0, 0];
-		if (!isCommodityNeededAtFactoryLevel(this.factory.getEffectiveLevel(), resourceType)) return [1, 0, 0];
-		return [10_000, 5000, 500];
-	}
-
-	// For boosts, try to have a minimum amount for all types. Later, make
-	// dependent on room military state and so on.
-	// @todo If there's no labs, we don't need boosts.
-	for (const bodyPart in BOOSTS) {
-		if (!BOOSTS[bodyPart][resourceType]) continue;
-
-		if ((bodyPart === ATTACK || bodyPart === RANGED_ATTACK) && this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return [15_000, 7500, 2500];
-		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair && this.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return [15_000, 7500, 2500];
-		if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].upgradeController && this.controller.level >= 8) return [15_000, 7500, 2500];
-	}
-
-	const reaction = this.memory.currentReaction;
-	if (reaction && (resourceType === reaction[0] || resourceType === reaction[1])) {
-		// Make sure we request enough resources of this type to perform reactions.
-		return [50_000, 30_000, 10_000];
-	}
-
-	// Any other resources, we can store but don't need.
-	return [50_000, 0, 0];
-};
-
-function isCommodityNeededAtFactoryLevel(factoryLevel: number, resourceType: ResourceConstant): boolean {
-	for (const productType in COMMODITIES) {
-		const recipe = COMMODITIES[productType];
-		if (recipe.level && recipe.level !== factoryLevel) continue;
-		if (recipe.components[resourceType]) return true;
-	}
-
-	return false;
-}
 
 /**
  * Determines the best place to store resources.
