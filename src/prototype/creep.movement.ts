@@ -11,6 +11,7 @@ import {encodePosition, decodePosition, serializePositionPath, deserializePositi
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
+import type {GetPathOptions} from 'utilities';
 
 declare global {
 	interface Creep {
@@ -75,10 +76,18 @@ declare global {
 
 	interface CreepMemory {
 		cachedPath?: CachedPath;
+		go?: {
+			lastAccess: number;
+			target?: string;
+		};
 	}
 
 	interface PowerCreepMemory {
 		cachedPath?: CachedPath;
+		go?: {
+			lastAccess: number;
+			target?: string;
+		};
 	}
 
 	interface CreepHeapMemory {
@@ -131,7 +140,7 @@ type GoToOptions = {
  * @return {boolean}
  *   Whether the movement succeeded.
  */
-function moveToRange(this: Creep | PowerCreep, target, range, options) {
+function moveToRange(this: Creep | PowerCreep, target: RoomObject, range: number, options?: GoToOptions): boolean {
 	if (!options) options = {};
 	options.range = range;
 	return this.goTo(target, options);
@@ -155,8 +164,8 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 		visual.rect(
 			target.x - range - 0.4,
 			target.y - range - 0.4,
-			2 * range + 0.8,
-			2 * range + 0.8,
+			(2 * range) + 0.8,
+			(2 * range) + 0.8,
 			{
 				fill: 'transparent',
 				stroke: color,
@@ -297,7 +306,7 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 				});
 			}
 
-			this.say('S:' + pos.x + 'x' + pos.y);
+			this.say(`S:${pos.x}x${pos.y}`);
 
 			if (path[0].roomName === this.pos.roomName) {
 				this.move(this.pos.getDirectionTo(path[0]));
@@ -355,16 +364,15 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
  *   reached it.
  */
 Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
-	const creep = this;
 	const target = this.pos.findClosestByRange(this.getCachedPath(), {
-		filter: pos => {
+		filter: (pos: RoomPosition) => {
 			// Try to move to a position on the path that is in the current room.
 			if (pos.roomName !== this.room.name) return false;
 			// Don't move onto exit tiles when looking to find our path.
 			if (pos.x === 0 || pos.x === 49 || pos.y === 0 || pos.y === 49) return false;
 
 			// Only try to get on positions not blocked by other creeps.
-			return creep.canMoveOnto(pos);
+			return this.canMoveOnto(pos);
 		},
 	});
 
@@ -700,7 +708,7 @@ function drawCreepMovement(creep: Creep | PowerCreep) {
 
 function getVisualizationColor(creep: Creep | PowerCreep) {
 	const hue: number = cache.inHeap('creepColor:' + creep.name, 10_000, oldValue => oldValue?.data ?? Math.floor(Math.random() * 360));
-	return 'hsl(' + hue + ', 50%, 50%)';
+	return `hsl(${hue}, 50%, 50%)`;
 }
 
 /**
@@ -782,7 +790,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target: RoomObject | 
 						const costs = getCostMatrix(roomName, pfOptions);
 
 						// Also try not to drive through bays.
-						if (Game.rooms[roomName] && Game.rooms[roomName].roomPlanner) {
+						if (Game.rooms[roomName]?.roomPlanner) {
 							_.each(Game.rooms[roomName].roomPlanner.getLocations('bay_center'), pos => {
 								if (costs.get(pos.x, pos.y) <= 20) {
 									costs.set(pos.x, pos.y, 20);
@@ -837,7 +845,7 @@ Creep.prototype.calculatePath = function (this: Creep | PowerCreep, target: Room
 	if (!options) options = {};
 
 	// @todo Properly type this.
-	const pfOptions: any = {};
+	const pfOptions: GetPathOptions = {};
 	if (this.memory.singleRoom) {
 		if (this.pos.roomName === this.memory.singleRoom) {
 			pfOptions.maxRooms = 1;

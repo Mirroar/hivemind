@@ -7,7 +7,6 @@ declare global {
 	interface CreepMemory {
 		role?: string;
 		singleRoom?: string;
-		go?: any;
 	}
 
 	interface CreepHeapMemory {
@@ -17,7 +16,6 @@ declare global {
 	interface PowerCreepMemory {
 		role: string;
 		singleRoom?: string;
-		go?: any;
 	}
 }
 
