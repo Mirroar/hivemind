@@ -2,9 +2,22 @@ import Process from 'process/process';
 
 declare global {
 	interface RoomMemory {
-		roleplay;
+		roleplay?: {
+			roomSong?: SongMemory;
+		};
 	}
 }
+
+export type SongName = 'harder';
+
+export type SongMemory = {
+	name: SongName;
+	currentBeat: number;
+};
+
+// @todo Move memory to heap, it doesn't need to be persisted.
+// @todo Song for defense: Still alive
+// @todo Song for attack: Seven nation army
 
 /* eslint-disable array-element-newline */
 const songs = {
@@ -42,7 +55,7 @@ const songs = {
 
 export default class RoomSongsProcess extends Process {
 	room: Room;
-	memory;
+	memory: SongMemory;
 
 	/**
 	 * Makes creeps sing songs.
@@ -57,14 +70,19 @@ export default class RoomSongsProcess extends Process {
 
 		// Initialize memory.
 		if (!this.room.memory.roleplay) this.room.memory.roleplay = {};
-		if (!this.room.memory.roleplay.roomSong) this.room.memory.roleplay.roomSong = {};
+		if (!this.room.memory.roleplay.roomSong) {
+			this.room.memory.roleplay.roomSong = {
+				name: 'harder',
+				currentBeat: 0,
+			};
+		}
 		this.memory = this.room.memory.roleplay.roomSong;
 	}
 
 	/**
 	 * Sings a song in our room.
 	 */
-	run = function () {
+	run() {
 		// @todo Choose from multiple songs.
 		if (!this.memory.name) this.memory.name = 'harder';
 		if (!songs[this.memory.name]) return;
@@ -82,5 +100,5 @@ export default class RoomSongsProcess extends Process {
 
 		const creep = creeps[Math.floor(Math.random() * creeps.length)];
 		creep.say(song.lines[this.memory.currentBeat], true);
-	};
+	}
 }
