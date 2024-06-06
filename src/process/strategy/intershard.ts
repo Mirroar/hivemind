@@ -151,6 +151,11 @@ export default class InterShardProcess extends Process {
 
 			newLimits[shardName] = Math.round(totalCpu * data.neededCpu / this._shardData.total.neededCpu);
 		});
+
+		if (newLimits['shard3'] > 20) {
+			this.redistributeExtraCPU(newLimits);
+		}
+
 		Game.cpu.setShardLimits(newLimits);
 	}
 
@@ -212,6 +217,23 @@ export default class InterShardProcess extends Process {
 		});
 
 		return isFunctional;
+	}
+
+	/**
+	 * Shard 3 is limited to 20 CPU, any extra CPU should be distributed to other shards.
+	 */
+	redistributeExtraCPU(newLimits: Record<string, number>) {
+		const extraCpu = newLimits['shard3'] - 20;
+		const otherShardsTotal = _.sum(_.values(newLimits)) - newLimits['shard3'];
+
+		_.each(newLimits, (limit, shardName) => {
+			if (shardName === 'shard3') {
+				newLimits[shardName] = 20;
+				return;
+			}
+
+			newLimits[shardName] = Math.round(limit + extraCpu * limit / otherShardsTotal);
+		});
 	}
 
 	/**
