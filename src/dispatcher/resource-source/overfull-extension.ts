@@ -15,7 +15,7 @@ export default class OverfullExtensionSource extends StructureSource<OverfullExt
 	}
 
 	getHighestPriority() {
-		return 3;
+		return 5;
 	}
 
 	getTasks(context: ResourceSourceContext) {
@@ -25,10 +25,11 @@ export default class OverfullExtensionSource extends StructureSource<OverfullExt
 			const options: OverfullExtensionSourceTask[] = [];
 
 			for (const extension of this.room.structuresByType[STRUCTURE_EXTENSION] || []) {
-				if (extension.store.getUsedCapacity(RESOURCE_ENERGY) <= extension.store.getCapacity(RESOURCE_ENERGY)) continue;
+				const capacity = extension.isOperational() ? extension.store.getCapacity(RESOURCE_ENERGY) : 0;
+				if (extension.store.getUsedCapacity(RESOURCE_ENERGY) <= capacity) continue;
 
 				const option: OverfullExtensionSourceTask = {
-					priority: 3,
+					priority: 5,
 					weight: 1 - (context.creep.pos.getRangeTo(extension) / 100) - (extension.isOperational() ? 0 : 0.5),
 					type: this.getType(),
 					target: extension.id,
