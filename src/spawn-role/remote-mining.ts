@@ -394,7 +394,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		if (isActiveRoom) option.priority++;
 
 		const roomMemory = Memory.rooms[position.roomName];
-		if (roomMemory.lastClaim) {
+		if (roomMemory?.lastClaim) {
 			const remainingReservation = roomMemory.lastClaim.value + (roomMemory.lastClaim.time - Game.time);
 			if (remainingReservation > travelTime) option.priority++;
 		}
