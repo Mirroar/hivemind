@@ -182,11 +182,11 @@ export default class InterShardProcess extends Process {
 		if (shardMemory.info) {
 			this._shardData[shardName].rooms = shardMemory.info.ownedRooms;
 			this._shardData[shardName].creeps = shardMemory.info.ownedCreeps;
-			this._shardData[shardName].neededCpu = 3 + this._shardData[shardName].rooms + (this._shardData[shardName].creeps / 10);
+			this._shardData[shardName].neededCpu = 3 + this._shardData[shardName].rooms;
 
 			if (shardMemory.info.interShardExpansion && this.isAdjacentShardFuntional(shardName)) {
-				// Allow for more CPU while creating out first intershard room.
-				this._shardData[shardName].neededCpu += 3;
+				// Allow for more CPU while creating our first intershard room.
+				this._shardData[shardName].neededCpu += 1;
 			}
 		}
 		else if (this.isAdjacentShardFuntional(shardName)) {
