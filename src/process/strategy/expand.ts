@@ -2,19 +2,22 @@
 TERRAIN_MASK_WALL STRUCTURE_ROAD FIND_CONSTRUCTION_SITES STRUCTURE_RAMPART */
 
 import cache from 'utils/cache';
+import container from 'utils/container';
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
+import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
 import Squad from 'manager.squad';
 import stats from 'utils/stats';
 import {getUsername} from 'utils/account';
 import {getRoomIntel} from 'room-intel';
 
-interface ExpansionTarget extends RoomListEntry {
+interface ExpansionTarget {
 	roomName: string;
 	spawnRoom: string;
+	expansionScore: number;
 }
 
 type ExpandProcessMemory = {
@@ -58,6 +61,7 @@ let expansionTargetScoringProgress: {
 export default class ExpandProcess extends Process {
 	memory: ExpandProcessMemory;
 	navMesh: NavMesh;
+	roomStatus: RoomStatus;
 
 	/**
 	 * Chooses rooms for expansion and sends creeps there.
@@ -78,7 +82,8 @@ export default class ExpandProcess extends Process {
 		}
 
 		this.memory = Memory.strategy.expand;
-		this.navMesh = new NavMesh();
+		this.navMesh = container.get('NavMesh');
+		this.roomStatus = container.get('RoomStatus');
 	}
 
 	/**
@@ -137,12 +142,12 @@ export default class ExpandProcess extends Process {
 		if (!hivemind.segmentMemory.isReady()) return;
 
 		// Choose a room to expand to.
-		let bestTarget;
+		let bestTarget: ExpansionTarget;
 		let modifiedBestExpansionScore: number;
 		const startTime = Game.cpu.getUsed();
 		if (expansionTargetScoringProgress) {
 			bestTarget = expansionTargetScoringProgress.bestTarget;
-			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget.roomName, bestTarget);
+			if (bestTarget) modifiedBestExpansionScore = this.getModifiedExpansionScore(bestTarget.roomName, bestTarget.expansionScore);
 		}
 		else {
 			expansionTargetScoringProgress = {
@@ -151,18 +156,17 @@ export default class ExpandProcess extends Process {
 			};
 		}
 
-		for (const roomName in Memory.strategy.roomList) {
+		for (const roomName of this.roomStatus.getPotentialExpansionTargets()) {
 			const roomFilter = settings.get('expansionRoomFilter');
 			if (roomFilter && !roomFilter(roomName)) {
 				expansionTargetScoringProgress.rooms[roomName] = true;
 				continue;
 			}
 
-			const info = Memory.strategy.roomList[roomName];
 			if (Game.cpu.getUsed() - startTime >= settings.get('maxExpansionCpuPerTick')) {
 				// Don't spend more than configured cpu amount trying to find
 				// a target each tick.
-				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(expansionTargetScoringProgress.rooms), '/', _.size(Memory.strategy.roomList), 'rooms checked so far.');
+				hivemind.log('strategy').debug('Suspended trying to find expansion target.', _.size(expansionTargetScoringProgress.rooms), '/', this.roomStatus.getPotentialExpansionTargets().length, 'rooms checked so far.');
 				hivemind.log('strategy').debug('Current best target:', bestTarget ? bestTarget.roomName : 'N/A', '@', bestTarget ? modifiedBestExpansionScore : 'N/A');
 				return;
 			}
@@ -173,9 +177,10 @@ export default class ExpandProcess extends Process {
 			if (roomIntel.isOwned()) continue;
 
 			expansionTargetScoringProgress.rooms[roomName] = true;
-			if (typeof info.expansionScore === 'undefined' || info.expansionScore === 0) continue;
+			const expansionScore = this.roomStatus.getExpansionScore(roomName) || 0;
+			if (expansionScore === 0) continue;
 
-			const modifiedExpansionScore = this.getModifiedExpansionScore(roomName, info);
+			const modifiedExpansionScore = this.getModifiedExpansionScore(roomName, expansionScore);
 			if (bestTarget && modifiedBestExpansionScore >= modifiedExpansionScore) continue;
 			if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
 
@@ -183,7 +188,7 @@ export default class ExpandProcess extends Process {
 			const bestSpawn = this.findClosestSpawn(roomName);
 			if (!bestSpawn) continue;
 
-			bestTarget = {...info, spawnRoom: bestSpawn, roomName};
+			bestTarget = {spawnRoom: bestSpawn, roomName, expansionScore};
 			modifiedBestExpansionScore = modifiedExpansionScore;
 			expansionTargetScoringProgress.bestTarget = bestTarget;
 		}
@@ -200,8 +205,8 @@ export default class ExpandProcess extends Process {
 	 * This takes into account failed expansion attempts in close proximity to
 	 * the target room.
 	 */
-	getModifiedExpansionScore(roomName: string, info: RoomListEntry): number {
-		let score = info.expansionScore || 0;
+	getModifiedExpansionScore(roomName: string, expansionScore: number): number {
+		let score = expansionScore;
 
 		for (const failedAttempt of this.memory.failedExpansions || []) {
 			const distance = Game.map.getRoomLinearDistance(roomName, failedAttempt.roomName);

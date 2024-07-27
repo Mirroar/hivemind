@@ -1,8 +1,10 @@
 import cache from 'utils/cache';
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import Process from 'process/process';
+import RoomStatus from 'room/room-status';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
@@ -58,14 +60,20 @@ export default class InterShardProcess extends Process {
 	}>;
 
 	navMesh: NavMesh;
+	roomStatus: RoomStatus;
+
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
+
+		this.roomStatus = container.get('RoomStatus');
+		this.navMesh = container.get('NavMesh');
+	}
 
 	/**
 	 * Makes decisions concerning inter-shard travel.
 	 */
 	run() {
 		this.memory = interShard.getLocalMemory();
-
-		this.navMesh = new NavMesh();
 
 		this.updateShardInfo();
 		this.distributeCPU();
@@ -97,35 +105,34 @@ export default class InterShardProcess extends Process {
 		// Determine significant rooms.
 		this.memory.info.rooms = {};
 		const roomStats = this.memory.info.rooms;
-		_.each(Memory.strategy.roomList, (info, roomName) => {
-			if (typeof info.expansionScore === 'undefined') return;
-
-			if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) {
-				// The following scores only apply to unowned rooms.
-				if (!roomStats.bestExpansion || roomStats.bestExpansion.score < info.expansionScore) {
-					roomStats.bestExpansion = {
-						name: roomName,
-						score: info.expansionScore,
-					};
-				}
+		for (const roomName of this.roomStatus.getPotentialExpansionTargets()) {
+			// The following scores only apply to unowned rooms.
+			const expansionScore = this.roomStatus.getExpansionScore(roomName);
+			if (!roomStats.bestExpansion || roomStats.bestExpansion.score < expansionScore) {
+				roomStats.bestExpansion = {
+					name: roomName,
+					score: expansionScore,
+				};
 			}
-			else {
-				// The following scores only apply to owned rooms.
-				if (!roomStats.bestRoom || roomStats.bestRoom.score < info.expansionScore) {
-					roomStats.bestRoom = {
-						name: roomName,
-						score: info.expansionScore,
-					};
-				}
+		}
 
-				if (!roomStats.worstRoom || roomStats.worstRoom.score > info.expansionScore) {
-					roomStats.worstRoom = {
-						name: roomName,
-						score: info.expansionScore,
-					};
-				}
+		for (const room of Game.myRooms) {
+			const expansionScore = this.roomStatus.getExpansionScore(room.name);
+			// The following scores only apply to owned rooms.
+			if (!roomStats.bestRoom || roomStats.bestRoom.score < expansionScore) {
+				roomStats.bestRoom = {
+					name: room.name,
+					score: expansionScore,
+				};
 			}
-		});
+
+			if (!roomStats.worstRoom || roomStats.worstRoom.score > expansionScore) {
+				roomStats.worstRoom = {
+					name: room.name,
+					score: expansionScore,
+				};
+			}
+		}
 	}
 
 	/**

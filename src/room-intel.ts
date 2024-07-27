@@ -5,9 +5,11 @@ STRUCTURE_POWER_BANK FIND_MY_CONSTRUCTION_SITES STRUCTURE_STORAGE
 STRUCTURE_TERMINAL FIND_RUINS STRUCTURE_INVADER_CORE EFFECT_COLLAPSE_TIMER */
 
 import cache from 'utils/cache';
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
+import RoomStatus from 'room/room-status';
 import {deserializeCoords, serializeCoords, serializePosition} from 'utils/serialization';
 import {getUsername} from 'utils/account';
 import {handleMapArea} from 'utils/map';
@@ -102,6 +104,8 @@ export interface RoomIntelMemory {
 }
 
 export default class RoomIntel {
+	roomStatus: RoomStatus;
+
 	roomName: string;
 	memory: RoomIntelMemory;
 	newStatus: Record<string, boolean>;
@@ -119,6 +123,8 @@ export default class RoomIntel {
 		}
 
 		this.memory = hivemind.segmentMemory.get(key);
+
+		this.roomStatus = container.get('RoomStatus');
 	}
 
 	/**
@@ -443,15 +449,13 @@ export default class RoomIntel {
 	 */
 	gatherAbandonedResourcesIntel(structures: Record<string, Structure[]>, ruins: Ruin[]) {
 		// Find origin room.
-		if (!Memory.strategy) return;
-		if (!Memory.strategy.roomList) return;
-		const strategyInfo = Memory.strategy.roomList[this.roomName];
-		if (!strategyInfo || !strategyInfo.origin) return;
+		if (!this.roomStatus.hasRoom(this.roomName)) return;
 
-		const roomMemory = Memory.rooms[strategyInfo.origin];
+		const origin = this.roomStatus.getOrigin(this.roomName);
+		const roomMemory = Memory.rooms[origin];
 		if (!roomMemory) return;
 
-		if (!Game.rooms[strategyInfo.origin] || !Game.rooms[strategyInfo.origin].isMine()) {
+		if (!Game.rooms[origin] || !Game.rooms[origin].isMine()) {
 			delete roomMemory.abandonedResources;
 			return;
 		}

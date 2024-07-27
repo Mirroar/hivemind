@@ -12,6 +12,7 @@ import ResourceLevelManager from 'room/resource-level-manager';
 import ResourcesReport from './report/resources';
 import RolesReport from './report/roles';
 import RoomsReport from './report/rooms';
+import RoomStatus from './room/room-status';
 import SpawnManager from './spawn-manager';
 import TradeRouteManager from './empire/trade-route-manager';
 import TrafficManager from './creep/traffic-manager';
@@ -51,6 +52,7 @@ declare global {
 		ResourcesReport: ResourcesReport;
 		RolesReport: RolesReport;
 		RoomsReport: RoomsReport;
+		RoomStatus: RoomStatus;
 		SpawnManager: SpawnManager;
 		TradeRouteManager: TradeRouteManager;
 		TrafficManager: TrafficManager;
@@ -92,6 +94,7 @@ function containerFactory(container: Container) {
 	container.set('ResourcesReport', () => new ResourcesReport());
 	container.set('RolesReport', () => new RolesReport());
 	container.set('RoomsReport', () => new RoomsReport(container.get('FunnelManager')));
+	container.set('RoomStatus', () => new RoomStatus());
 	container.set('SpawnManager', () => {
 		const spawnManager = new SpawnManager();
 		for (const roleName in spawnClasses) {

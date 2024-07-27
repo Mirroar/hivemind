@@ -1,8 +1,12 @@
+import container from 'utils/container';
+import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
 import {getRoomIntel} from 'room-intel';
 
-interface HarvestRoomInfo extends RoomListEntry {
+interface HarvestRoomInfo {
 	roomName: string;
+	origin: string;
+	harvestPriority: number;
 }
 
 type SourceRoomAvailability = {
@@ -11,6 +15,12 @@ type SourceRoomAvailability = {
 };
 
 export default class RemoteMinePrioritizer {
+	roomStatus: RoomStatus;
+
+	constructor() {
+		this.roomStatus = container.get('RoomStatus');
+	}
+
 	getRoomsToMine(maxAmount: number): {rooms: string[]; maxRooms: number} {
 		const result: string[] = [];
 		const sourceRooms = this.getRemoteMiningSourceRooms();
@@ -18,7 +28,7 @@ export default class RemoteMinePrioritizer {
 		// Create ordered list of best harvest rooms.
 		// @todo At this point we should carry duplicate for rooms that could have
 		// multiple origins.
-		const sortedHarvestRooms = _.sortBy(this.getRemoteHarvestRooms(sourceRooms), info => {
+		const sortedHarvestRooms = _.sortBy(this.getRemoteHarvestRooms(sourceRooms), (info: HarvestRoomInfo) => {
 			// Rooms that don't have a terminal yet need remotes to get enough
 			// energy to upgrade and build one.
 			const originHasTerminal = Game.rooms[info.origin]?.terminal;
@@ -111,29 +121,20 @@ export default class RemoteMinePrioritizer {
 
 	getRemoteHarvestRooms(sourceRooms: Record<string, SourceRoomAvailability>): HarvestRoomInfo[] {
 		const harvestRooms: HarvestRoomInfo[] = [];
-		_.each(Memory.strategy.roomList, (info: RoomListEntry, roomName: string) => {
+		for (const roomName of this.roomStatus.getAllKnownRooms()) {
 			// Ignore rooms that are not profitable to harvest from.
-			if (!info.harvestPriority || info.harvestPriority <= 0.1) return;
-			if (!sourceRooms[info.origin]) return;
+			const harvestPriority = this.roomStatus.getHarvestPriority(roomName);
+			if (harvestPriority <= 0.1) continue;
 
-			const roomIntel = getRoomIntel(roomName);
-			if (!roomIntel.isClaimable()) {
-				if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-					if (
-						Game.shard.name === 'shardSeason'
-						&& roomName !== 'E34N16'
-						&& roomName !== 'E34N15'
-						&& roomName !== 'E36N14'
-						&& roomName !== 'E36N15'
-						&& roomName !== 'E44N15'
-						&& roomName !== 'E44N16'
-						&& roomName !== 'E45N16'
-					) return;
-				}
-			}
+			const origin = this.roomStatus.getOrigin(roomName);
+			if (!sourceRooms[origin]) continue;
 
-			harvestRooms.push({...info, roomName});
-		});
+			// @TODO: Include SK room filter here.
+			// const roomIntel = getRoomIntel(roomName);
+			// if (!roomIntel.isClaimable() && _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) return;
+
+			harvestRooms.push({roomName, origin, harvestPriority});
+		}
 
 		return harvestRooms;
 	}

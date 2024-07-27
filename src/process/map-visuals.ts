@@ -1,9 +1,11 @@
 /* global RoomPosition */
 
 import cache from 'utils/cache';
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import RemotePathManager from 'empire/remote-path-manager';
+import RoomStatus from 'room/room-status';
 import {deserializePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
@@ -15,6 +17,14 @@ const drawMiningStatus = true;
  * Displays map visuals.
  */
 export default class MapVisualsProcess extends Process {
+	roomStatus: RoomStatus;
+
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
+
+		this.roomStatus = container.get('RoomStatus');
+	}
+
 	/**
 	 * Creates map visuals for our empire.
 	 */
@@ -26,20 +36,21 @@ export default class MapVisualsProcess extends Process {
 			this.drawExpansionStatus();
 
 			// We need to check a combination of entries in room memory, and those
-			// contained in Memory.strategy.roomList.
-			_.each(Memory.strategy.roomList, (info, roomName) => {
-				if (typeof roomName !== 'string') return;
+			// contained in RoomStatus.
+			for (const roomName of this.roomStatus.getAllKnownRooms()) {
+				if (typeof roomName !== 'string') continue;
 
 				this.drawIntelStatus(roomName);
 				this.drawRoomStatus(roomName);
 				this.drawRemoteMinePaths(roomName);
-			});
+			}
 
-			_.each(_.filter(Memory.rooms, (mem, roomName) => !Memory.strategy?.roomList?.[roomName]), (mem, roomName) => {
-				if (typeof roomName !== 'string') return;
+			// @todo Make sure we actually need this loop.
+			for (const roomName in _.filter(Memory.rooms, (mem, roomName) => !this.roomStatus.hasRoom(roomName))) {
+				if (typeof roomName !== 'string') continue;
 
 				this.drawIntelStatus(roomName);
-			});
+			}
 
 			this.drawNavMesh();
 
@@ -74,24 +85,24 @@ export default class MapVisualsProcess extends Process {
 	 *   Name of the room in question.
 	 */
 	drawRoomStatus(roomName: string) {
-		const info = Memory.strategy.roomList[roomName];
-
-		if (drawIntelStatus && info.scoutPriority > 0) {
-			Game.map.visual.text(info.scoutPriority.toPrecision(2), new RoomPosition(3, 23, roomName), {fontSize: 5});
-			Game.map.visual.line(new RoomPosition(25, 25, roomName), new RoomPosition(25, 25, info.origin), {opacity: 0.5, width: 1});
+		const scoutPriority = this.roomStatus.getScoutPriority(roomName);
+		if (drawIntelStatus && scoutPriority > 0) {
+			Game.map.visual.text(scoutPriority.toPrecision(2), new RoomPosition(3, 23, roomName), {fontSize: 5});
+			Game.map.visual.line(new RoomPosition(25, 25, roomName), new RoomPosition(25, 25, this.roomStatus.getOrigin(roomName)), {opacity: 0.5, width: 1});
 		}
 
-		if (!info.expansionScore) return;
-		if (info.expansionScore < this.getExpansionScoreCutoff()) return;
+		const expansionScore = this.roomStatus.getExpansionScore(roomName);
+		if (!expansionScore) return;
+		if (expansionScore < this.getExpansionScoreCutoff()) return;
 
-		Game.map.visual.text(info.expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
+		Game.map.visual.text(expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
 	}
 
 	getExpansionScoreCutoff(): number {
-		return cache.inHeap('expansionScoreCutoff', 5000, () => _.max(_.map(Memory.strategy?.roomList ?? {}, (info, roomName) => {
+		return cache.inHeap('expansionScoreCutoff', 5000, () => _.max(_.map(this.roomStatus.getPotentialExpansionTargets(), (roomName: string) => {
 			if (Game.rooms[roomName]?.isMine()) return 0;
 
-			return info.expansionScore ?? 0;
+			return this.roomStatus.getExpansionScore(roomName);
 		})) - 0.5);
 	}
 
@@ -119,14 +130,14 @@ export default class MapVisualsProcess extends Process {
 	}
 
 	drawRemoteMinePaths(roomName: string) {
-		const info = Memory.strategy.roomList[roomName];
-		if ((info?.harvestPriority ?? 0) <= 0.1) return;
+		const harvestPriority = this.roomStatus.getHarvestPriority(roomName);
+		if (harvestPriority <= 0.1) return;
 
 		if (drawMiningStatus && (Memory.strategy.remoteHarvesting?.rooms || []).includes(roomName)) {
 			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
 		}
 
-		Game.map.visual.text(info.harvestPriority.toPrecision(3), new RoomPosition(7, 3, roomName), {fontSize: 5, align: 'left'});
+		Game.map.visual.text(harvestPriority.toPrecision(3), new RoomPosition(7, 3, roomName), {fontSize: 5, align: 'left'});
 
 		const remotePathManager = new RemotePathManager();
 		const intel = getRoomIntel(roomName);

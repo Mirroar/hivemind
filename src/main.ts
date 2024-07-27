@@ -22,6 +22,8 @@ import {getRoomIntel, RoomIntelMemory} from 'room-intel';
 import {PlayerIntelMemory} from 'player-intel';
 import {RoomPlannerMemory} from 'room/planner/room-planner';
 
+import RoomStatus from 'room/room-status';
+
 // Load top-level processes.
 import AlliesProcess from 'process/allies';
 import CleanupProcess from 'process/cleanup';
@@ -100,6 +102,12 @@ balancer.init();
 class BotKernel {
 	lastTime: number = 0;
 	lastMemory: Memory = null;
+
+	roomStatus: RoomStatus;
+
+	constructor() {
+		this.roomStatus = container.get('RoomStatus');
+	}
 
 	/**
 	 * Runs main game loop.
@@ -281,10 +289,10 @@ class BotKernel {
 			const currentScoutDistance = Memory.hivemind.maxScoutDistance || 7;
 			if (usedMemory > 1_800_000 && currentScoutDistance > 2) {
 				Memory.hivemind.maxScoutDistance = currentScoutDistance - 1;
-				for (const roomName in Memory.strategy.roomList) {
-					if (Memory.strategy.roomList[roomName].range > Memory.hivemind.maxScoutDistance) {
+				for (const roomName of this.roomStatus.getAllKnownRooms()) {
+					if (this.roomStatus.getDistanceToOrigin(roomName) > Memory.hivemind.maxScoutDistance) {
 						delete Memory.rooms[roomName];
-						delete Memory.strategy.roomList[roomName];
+						this.roomStatus.deleteRoom(roomName);
 					}
 				}
 			}

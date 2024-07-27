@@ -1,7 +1,17 @@
+import container from 'utils/container';
 import Process from 'process/process';
 import hivemind from 'hivemind';
+import RoomStatus from 'room/room-status';
 
 export default class SpawnPowerCreepsProcess extends Process {
+	roomStatus: RoomStatus;
+
+	constructor(parameters: ProcessParameters) {
+		super(parameters);
+
+		this.roomStatus = container.get('RoomStatus');
+	}
+
 	/**
 	 * Spawns power creeps in their assigned rooms.
 	 */
@@ -41,11 +51,7 @@ export default class SpawnPowerCreepsProcess extends Process {
 		});
 
 		const bestRoom = _.max(roomsWithoutPC, room => {
-			if (!Memory.strategy) return 0;
-			if (!Memory.strategy.roomList) return 0;
-			if (!Memory.strategy.roomList[room.name]) return 0;
-
-			return Memory.strategy.roomList[room.name].expansionScore || 0;
+			return this.roomStatus.getExpansionScore(room.name) || 0;
 		});
 
 		if (!bestRoom) return;

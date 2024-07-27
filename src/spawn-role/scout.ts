@@ -1,7 +1,9 @@
 /* global MOVE */
 
+import container from 'utils/container';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
+import RoomStatus from 'room/room-status';
 import SpawnRole from 'spawn-role/spawn-role';
 import {decodePosition} from 'utils/serialization';
 
@@ -20,6 +22,14 @@ declare global {
 const scoutSpawnThrottle = CREEP_LIFE_TIME / 3;
 
 export default class ScoutSpawnRole extends SpawnRole {
+	roomStatus: RoomStatus;
+
+	constructor() {
+		super();
+
+		this.roomStatus = container.get('RoomStatus');
+	}
+
 	/**
 	 * Adds scout spawn options for the given room.
 	 *
@@ -66,10 +76,9 @@ export default class ScoutSpawnRole extends SpawnRole {
 			_.each(memory.portals[shardName], (info, portalPos) => {
 				if (info.scouted && Game.time - info.scouted < 2000) return;
 
-				// Only spawn scout if we're repsonsible for the portal room.
+				// Only spawn scout if we're responsible for the portal room.
 				const pos = decodePosition(portalPos);
-				if (!Memory.strategy || !Memory.strategy.roomList[pos.roomName]) return;
-				if (Memory.strategy.roomList[pos.roomName].origin !== room.name) return;
+				if (this.roomStatus.getOrigin(pos.roomName) !== room.name) return;
 
 				options.push({
 					priority: hivemind.settings.get('scoutSpawnPriority'),

@@ -1,5 +1,7 @@
 import cache from 'utils/cache';
+import container from 'utils/container';
 import TradeRoute from 'trade-route';
+import RoomStatus from 'room/room-status';
 
 interface TraderouteInfo {
 	source: string;
@@ -7,6 +9,12 @@ interface TraderouteInfo {
 }
 
 export default class FunnelManager {
+	roomStatus: RoomStatus;
+
+	constructor() {
+		this.roomStatus = container.get('RoomStatus');
+	}
+
 	getRoomsToFunnel(): string[] {
 		return cache.inHeap('funneledRooms', 500, () => {
 			const funneledRooms: string[] = [];
@@ -59,7 +67,7 @@ export default class FunnelManager {
 	protected getFunnelRoomScore(room: Room) {
 		const energyNeededToUpgrade = Math.max(0, room.controller.progressTotal - room.controller.progress);
 
-		return Memory.strategy.roomList[room.name]?.expansionScore / (energyNeededToUpgrade + 1);
+		return this.roomStatus.getExpansionScore(room.name) / (energyNeededToUpgrade + 1);
 	}
 
 	isFunneling() {

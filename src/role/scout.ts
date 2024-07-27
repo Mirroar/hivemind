@@ -4,6 +4,7 @@ import cache from 'utils/cache';
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import Role from 'role/role';
+import RoomStatus from 'room/room-status';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
@@ -30,13 +31,24 @@ declare global {
 	}
 }
 
-interface ScoutTarget extends RoomListEntry {
+interface ScoutTarget {
 	roomName: string;
+	scoutPriority: number;
+	origin: string;
+	range: number;
 }
 
 const accessibilityCache = {};
 
 export default class ScoutRole extends Role {
+	roomStatus: RoomStatus;
+
+	constructor() {
+		super();
+
+		this.roomStatus = container.get('RoomStatus');
+	}
+
 	/**
 	 * Makes a creep behave like a scout.
 	 *
@@ -200,8 +212,13 @@ export default class ScoutRole extends Role {
 	getScoutableRooms() {
 		return cache.inHeap('scoutableRooms', 200, () => _.filter(
 			_.map(
-				Memory.strategy.roomList,
-				(info: RoomListEntry, roomName: string) => ({...info, roomName}),
+				this.roomStatus.getPotentialScoutTargets(),
+				(roomName: string): ScoutTarget => ({
+					roomName,
+					scoutPriority: this.roomStatus.getScoutPriority(roomName),
+					origin: this.roomStatus.getOrigin(roomName),
+					range: this.roomStatus.getDistanceToOrigin(roomName),
+				}),
 			),
 			(info: ScoutTarget) => {
 				if (info.scoutPriority <= 0) return false;

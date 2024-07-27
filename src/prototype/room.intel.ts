@@ -7,7 +7,7 @@ import Bay from 'manager.bay';
 import cache from 'utils/cache';
 import FactoryManager from 'factory-manager';
 import RoomDefense from 'room-defense';
-import utilities from 'utilities';
+import RoomStatus from 'room/room-status';
 import {getUsername} from 'utils/account';
 
 declare global {
@@ -346,10 +346,9 @@ Room.prototype.updateStorageLink = function (this: Room) {
  *   True if a scout is needed.
  */
 Room.prototype.needsScout = function (this: Room) {
-	if (!Memory.strategy) return false;
+	const roomStatus = container.get('RoomStatus');
 
-	const room = this;
-	return _.any(Memory.strategy.roomList, (info: RoomListEntry) => info.origin === room.name && info.scoutPriority >= 1);
+	return roomStatus.getPotentialScoutTargets().some(roomName => roomStatus.getOrigin(roomName) === this.name);
 };
 
 /**
