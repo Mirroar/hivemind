@@ -39,7 +39,7 @@ export default class RoomDefenseProcess extends Process {
 	 * Manages this room's towers.
 	 */
 	manageTowers() {
-		const towers = _.filter(this.room.myStructuresByType[STRUCTURE_TOWER], s => s.energy > 0);
+		const towers = _.filter(this.room.myStructuresByType[STRUCTURE_TOWER], s => s.energy > 0 && s.isOperational());
 
 		if (towers.length === 0) return;
 
