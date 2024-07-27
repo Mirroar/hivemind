@@ -32,8 +32,6 @@ export default class DropDestination extends TaskProvider<DropDestinationTask, R
 		const creep = context.creep;
 
 		for (const resourceType of getResourcesIn(creep.store)) {
-			if (resourceType === RESOURCE_ENERGY) continue;
-
 			const storageTarget = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
 			if (storageTarget) continue;
 
@@ -56,7 +54,19 @@ export default class DropDestination extends TaskProvider<DropDestinationTask, R
 
 	execute(task: DropDestinationTask, context: ResourceDestinationContext) {
 		const creep = context.creep;
-		creep.drop(task.resourceType);
-		delete creep.memory.order;
+
+		if (task.resourceType === RESOURCE_ENERGY && creep.pos.getRangeTo(creep.room.getStorageLocation()) > 0) {
+			creep.whenInRange(0, creep.room.getStorageLocation(), () => {
+				if (creep.drop(task.resourceType) === OK) {
+					delete creep.memory.order;
+				}
+			});
+
+			return;
+		}
+
+		if (creep.drop(task.resourceType) === OK) {
+			delete creep.memory.order;
+		}
 	}
 }
