@@ -1,5 +1,11 @@
-let callTimes = {};
+let callTimes: Record<string, number[]> = {};
 let firstTick = Game.time;
+
+interface CallStats {
+	average: number;
+	maximum: number;
+	count: number;
+}
 
 function timeCall<T>(key: string, callback: () => T): number {
 	const startTime = Game.cpu.getUsed();
@@ -26,7 +32,7 @@ function getElapsedTicks() {
 }
 
 function getCallStats(prefix?: string) {
-	const stats = {};
+	const stats: Record<string, CallStats> = {};
 	for (const key in callTimes) {
 		if (prefix && !key.startsWith(prefix)) continue;
 
@@ -36,8 +42,8 @@ function getCallStats(prefix?: string) {
 	return stats;
 }
 
-function generateCallStats(key: string) {
-	let maximum;
+function generateCallStats(key: string): CallStats {
+	let maximum: number;
 	let sum = 0;
 
 	for (const record of callTimes[key]) {

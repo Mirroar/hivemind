@@ -68,11 +68,9 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	}
 
 	addHaulerSpawnOptions(room: Room, options: RemoteMiningSpawnOption[]) {
-		// @todo Reduce needed carry parts to account for energy spent on road maintenance.
 		// @todo Reduce needed carry parts to account for higher throughput with relays.
 		const maximumNeededCarryParts = this.getMaximumCarryParts(room);
 		const maxHaulerSize = this.getMaximumHaulerSize(room, maximumNeededCarryParts);
-		const hasRoads = room.controller.level > 3 && (room.storage || room.terminal);
 		const haulerBody = this.getMaximumHaulerBody(room, maxHaulerSize);
 		const haulerSpawnTime = (haulerBody?.length || 0) * CREEP_SPAWN_TIME;
 

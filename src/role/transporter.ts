@@ -11,13 +11,6 @@ import utilities from 'utilities';
 import {getResourcesIn} from 'utils/store';
 import {handleMapArea} from 'utils/map';
 
-type TransporterDropOrderOption = {
-	priority: number;
-	weight: number;
-	type: 'drop';
-	resourceType: ResourceConstant;
-};
-
 type TransporterStructureOrderOption = {
 	priority: number;
 	weight: number;
@@ -39,14 +32,6 @@ type TransporterPickupOrderOption = {
 	weight: number;
 	type: 'resource';
 	object: Resource;
-	resourceType: ResourceConstant;
-};
-
-type TransporterPositionOrderOption = {
-	priority: number;
-	weight: number;
-	type: 'position';
-	object: RoomPosition;
 	resourceType: ResourceConstant;
 };
 

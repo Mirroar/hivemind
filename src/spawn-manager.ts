@@ -123,9 +123,9 @@ export default class SpawnManager {
 		const availableSpawns = this.filterAvailableSpawns(spawns);
 		if (availableSpawns.length === 0) return;
 
-		const options = _.filter(
+		const options: SpawnOption[] = _.filter(
 			this.getAllSpawnOptions(room),
-			option => {
+			(option: SpawnOption) => {
 				if (!option.preferClosestSpawn) return true;
 
 				const closestSpawn = _.min(spawns, spawn => spawn.pos.getRangeTo(option.preferClosestSpawn));

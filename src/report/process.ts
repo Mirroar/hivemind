@@ -1,4 +1,3 @@
-import cache from 'utils/cache';
 import {drawTable} from 'utils/room-visuals';
 import {getCallStats, getElapsedTicks} from 'utils/cpu';
 

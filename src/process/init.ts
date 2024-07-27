@@ -68,7 +68,7 @@ export default class InitProcess extends Process {
 		});
 
 		// Cache creeps per room and role.
-		_.each(Game.creeps, creep => {
+		_.each(Game.creeps, (creep: Creep) => {
 			creep.enhanceData();
 		});
 
