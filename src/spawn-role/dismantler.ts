@@ -1,6 +1,7 @@
 /* global MOVE WORK */
 
 import BodyBuilder, {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
+import RemoteMiningOperation from 'operation/remote-mining';
 import SpawnRole from 'spawn-role/spawn-role';
 
 interface DismantlerSpawnOption extends SpawnOption {
@@ -84,24 +85,28 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	addOperationDismantlers(room: Room, options: DismantlerSpawnOption[]) {
-		const operations = _.filter(Game.operationsByType.mining, o => o.needsDismantler());
+		const operations = _.filter(Game.operationsByType.mining, o => o.needsDismantler() && !o.isUnderAttack());
 		_.each(operations, operation => {
 			const locations = operation.getMiningLocationsByRoom()[room.name];
 			if (!locations || locations.length === 0) return;
 
 			for (const sourceLocation of locations) {
-				if (!operation.needsDismantler(sourceLocation)) continue;
-
-				const dismantlerCount = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.source === sourceLocation).length;
-				if (dismantlerCount > 0) continue;
-
-				options.push({
-					priority: 3,
-					weight: 0,
-					operation: operation.name,
-					source: sourceLocation,
-				});
+				this.addDismantlerForOperation(room, options, operation, sourceLocation);
 			}
+		});
+	}
+
+	addDismantlerForOperation(room: Room, options: DismantlerSpawnOption[], operation: RemoteMiningOperation, sourceLocation: string) {
+		if (!operation.needsDismantler(sourceLocation)) return;
+
+		const dismantlerCount = _.filter(Game.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.source === sourceLocation).length;
+		if (dismantlerCount > 0) return;
+
+		options.push({
+			priority: 3,
+			weight: 0,
+			operation: operation.name,
+			source: sourceLocation,
 		});
 	}
 
