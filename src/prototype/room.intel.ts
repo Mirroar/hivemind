@@ -240,9 +240,19 @@ Room.prototype.enhanceData = function (this: Room) {
 * Gathers information about a room and saves it to memory for faster access.
 */
 Room.prototype.scan = function (this: Room) {
-	this.updateControllerContainer();
-	this.updateControllerLink();
-	this.updateStorageLink();
+	// @todo Remove this function in favor of adding properties to the room object directly.
+	cache.inHeap('room:' + this.name + ':scan', 10, () => {
+		if (!this.controller?.my) {
+			delete this.memory.controllerContainer;
+			delete this.memory.controllerLink;
+			delete this.memory.storageLink;
+			return;
+		}
+
+		this.updateControllerContainer();
+		this.updateControllerLink();
+		this.updateStorageLink();
+	});
 };
 
 /**
