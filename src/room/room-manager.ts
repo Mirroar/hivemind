@@ -171,7 +171,11 @@ export default class RoomManager {
 
 	cleanExtensions() {
 		for (const extension of this.structuresByType[STRUCTURE_EXTENSION] || []) {
-			if (this.roomPlanner.isPlannedLocation(extension.pos, 'extension')) continue;
+			// Don't remove planned extensions.
+			// Unless they're not operational due to downgrade. That tends to
+			// mess up `room.energyAvailable` so often that we can easily get spawn-locked.
+			// We'd rather destroy and rebuild them in that case.
+			if (this.roomPlanner.isPlannedLocation(extension.pos, 'extension') && extension.isOperational()) continue;
 			if (!this.roomPlanner.isPlannedLocation(extension.pos, 'road')) continue;
 
 			extension.destroy();
