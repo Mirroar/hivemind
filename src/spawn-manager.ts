@@ -230,7 +230,26 @@ export default class SpawnManager {
 
 		if (result !== OK) {
 			hivemind.log('creeps', room.name).error('Trying to spawn creep', creepName, 'failed with error code', result);
-			hivemind.log('creeps', room.name).error('Body cost:', _.sum(body, part => BODYPART_COST[part]), 'Energy Capacity', room.energyCapacityAvailable, 'Energy:', room.energyAvailable);
+
+			const bodyCost = _.sum(body, part => BODYPART_COST[part]);
+			hivemind.log('creeps', room.name).error('Body cost:', bodyCost, 'Energy Capacity', room.energyCapacityAvailable, 'Energy:', room.energyAvailable);
+
+			if (
+				result === ERR_NOT_ENOUGH_RESOURCES
+				&& bodyCost <= room.energyCapacityAvailable
+				&& bodyCost <= room.energyAvailable
+				&& _.size(room.creepsByRole.transporter) === 0
+			) {
+				// Sometimes rooms have problems recovering due to downgrades.
+				// We get ERR_NOT_ENOUGH_RESOURCES even though we should have enough.
+				// Example:
+				// [10:17:12][shard0][    Creeps][E42S58] Trying to spawn creep H_xt failed with error code -6 
+				// [10:17:12][shard0][    Creeps][E42S58] Body cost: 500 Energy Capacity 550 Energy: 850 
+
+				// In these cases, spawn a minimal transporter that can at least help recover the room by emptying extensions.
+				this.spawnRevoveryCreep(room, spawn);
+			}
+
 			return false;
 		}
 
@@ -255,6 +274,21 @@ export default class SpawnManager {
 		// Notify the role that spawning was successful.
 		role.onSpawn(room, option, body, creepName);
 		return true;
+	}
+
+	spawnRevoveryCreep(room: Room, spawn: StructureSpawn) {
+		const body = [CARRY, CARRY, MOVE, CARRY, CARRY, MOVE];
+		const creepName = this.generateCreepName('transporter');
+		const result = spawn.spawnCreep(body, creepName, {
+			memory: {
+				role: 'transporter',
+				singleRoom: room.name,
+			},
+		});
+
+		if (result !== OK) {
+			hivemind.log('creeps', room.name).error('Trying to spawn recovery creep', creepName, 'failed with error code', result);
+		}
 	}
 
 	/**
