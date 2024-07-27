@@ -84,6 +84,10 @@ export default class RoomPlanner {
 		}
 	}
 
+	hasRoomPlan(): boolean {
+		return !!this.activeRoomPlan;
+	}
+
 	reloadRoomPlan() {
 		const activeInfo = getRoomPlanFor(this.roomName);
 		this.activeRoomPlan = activeInfo && activeInfo.plan;
