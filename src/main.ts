@@ -258,7 +258,7 @@ class BotKernel {
 	 */
 	cleanup() {
 		// Periodically clean creep memory.
-		if (Game.time % 16 === 7) {
+		if (Game.time % 320 === 7) {
 			for (const name in Memory.creeps) {
 				if (!Game.creeps[name]) {
 					delete Memory.creeps[name];
@@ -307,6 +307,16 @@ class BotKernel {
 		if (Game.time % 253 === 0) {
 			cache.collectGarbage();
 			cache.collectGarbage(Memory);
+		}
+
+		// Periodically clear old trade routes.
+		if (Game.time % 453 === 0) {
+			this.cleanupTradeRoutes();
+		}
+
+		// Periodically clean nav mesh memory.
+		if (Game.time % 5432 === 0) {
+			container.get('NavMesh').cleanMemory();
 		}
 
 		// Periodically clean memory that is no longer needed.
@@ -359,6 +369,17 @@ class BotKernel {
 
 			delete Memory.squads[squadName];
 		});
+	}
+
+	cleanupTradeRoutes() {
+		for (const routeName in Memory.tradeRoutes) {
+			const route = Memory.tradeRoutes[routeName];
+			if (route.active) continue;
+
+			if (_.any(Game.creepsByRole.mule, (creep: MuleCreep) => creep.memory.route === routeName)) continue;
+
+			delete Memory.tradeRoutes[routeName];
+		}
 	}
 
 	cleanupSegmentMemory() {

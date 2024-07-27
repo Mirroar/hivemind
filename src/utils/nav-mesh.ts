@@ -783,4 +783,12 @@ export default class NavMesh {
 
 		return path.reverse();
 	}
+
+	cleanMemory() {
+		for (const roomName in this.memory.rooms) {
+			if (Game.time - this.memory.rooms[roomName].gen < CREEP_LIFE_TIME * 50) continue;
+
+			delete this.memory.rooms[roomName];
+		}
+	}
 }
