@@ -60,6 +60,7 @@ export default class TradeProcess extends Process {
 		this.manageEnergyTradeOrders(resources);
 		this.managePowerTradeOrders(resources);
 		this.manageOpsTradeOrders(resources);
+		this.manageOverflowingTerminals(resources);
 
 		if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingPixels')) {
 			// Try to buy pixels when price is low.
@@ -189,6 +190,40 @@ export default class TradeProcess extends Process {
 		if ((total.resources[RESOURCE_OPS] || 0) > minStorage) {
 			this.trySellResources(RESOURCE_OPS, resources.rooms);
 		}
+	}
+
+	manageOverflowingTerminals(resources: ResourceStates) {
+		// Check for terminals with too much of a resource.
+		for (const room of Game.myRooms) {
+			if (!room.terminal) continue;
+			if (room.storage && room.storage.store.getFreeCapacity() > room.storage.store.getCapacity() * 0.1) continue;
+			if (room.terminal.store.getFreeCapacity() >= room.terminal.store.getCapacity() * 0.05) continue;
+
+			const mostValuableResource = this.getMostValuableResource(room);
+			if (!mostValuableResource) continue;
+
+			this.instaSellResources(mostValuableResource, {[room.name]: resources.rooms[room.name]});
+		}
+	}
+
+	getMostValuableResource(room: Room): ResourceConstant {
+		const store = room.terminal.store;
+		let bestResource: ResourceConstant;
+		let bestValue = 0;
+		for (const resourceType of getResourcesIn(store)) {
+			const worth = this.calculateWorth(resourceType);
+			const bestOrder = this.findBestBuyOrder(resourceType, room.name);
+			if (!bestOrder) continue;
+
+			const value = bestOrder.price / worth;
+
+			if (value > bestValue) {
+				bestValue = value;
+				bestResource = resourceType;
+			}
+		}
+
+		return bestResource;
 	}
 
 	/**
