@@ -154,6 +154,19 @@ export default class SpawnManager {
 		if (!this.trySpawnCreep(room, spawn, option)) {
 			_.each(availableSpawns, s => {
 				s.waiting = true;
+
+				const role = this.roles[option.role];
+				const body = role.getCreepBody(room, option);
+
+				const creepCost = _.sum(body, part => BODYPART_COST[part]);
+				room.visual.text(room.energyAvailable + '/' + creepCost, spawn.pos.x + 0.05, spawn.pos.y + 0.05, {
+					font: 0.5,
+					color: 'black',
+				});
+				room.visual.text(room.energyAvailable + '/' + creepCost, spawn.pos.x, spawn.pos.y, {
+					font: 0.5,
+				});
+
 				room.visual.text(option.role + '@' + option.priority.toPrecision(1), spawn.pos.x + 0.05, spawn.pos.y + 0.65, {
 					font: 0.5,
 					color: 'black',
