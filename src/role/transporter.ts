@@ -185,6 +185,13 @@ export default class TransporterRole extends Role {
 			// It's fine if we're explicitly delivering to this bay right now.
 			if (creep.memory.order && isResourceDestinationOrder(creep.room, creep.memory.order) && isBayDestinationOrder(creep.memory.order) && creep.memory.order.name === bay.name) continue;
 
+			// It's fine if we're explicitly picking up from this bay right now.
+			if (creep.memory.order && isResourceSourceOrder(creep.room, creep.memory.order) && isStructureSourceOrder(creep.memory.order)) {
+				const order = creep.memory.order;
+				const target = Game.getObjectById(order.target);
+				if (order.type === 'overfullExtension' && bay.pos.getRangeTo(target.pos) <= 1) continue;
+			}
+
 			// We're standing in a bay that we're not delivering to.
 			const terrain = new Room.Terrain(creep.pos.roomName);
 			// @todo Bay's available tiles should by handled and cached by the bay itself.
