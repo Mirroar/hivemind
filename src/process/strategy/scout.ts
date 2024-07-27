@@ -508,6 +508,13 @@ export default class ScoutProcess extends Process {
 			}
 		}
 
+		// Remove rooms that are no longer valid scouting targets.
+		for (const roomName of _.keys(roomList)) {
+			if (closedList[roomName]) continue;
+
+			delete roomList[roomName];
+		}
+
 		return roomList;
 	}
 
