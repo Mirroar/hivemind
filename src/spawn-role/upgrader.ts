@@ -23,9 +23,11 @@ export default class UpgraderSpawnRole extends SpawnRole {
 			const options: UpgraderSpawnOption[] = [];
 			const maxUpgraders = this.getUpgraderAmount(room);
 			const upgraderCount = _.size(_.filter(room.creepsByRole.upgrader, creep => !creep.ticksToLive || creep.ticksToLive > creep.body.length * 3));
+
+			const priority = this.isCloseToDowngrade(room) ? 5 : 3;
 			if (upgraderCount < maxUpgraders) {
 				options.push({
-					priority: 3,
+					priority,
 					weight: 1,
 				});
 			}
@@ -33,7 +35,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 			if (maxUpgraders === 0 && upgraderCount === 0 && room.controller.progress > room.controller.progressTotal) {
 				// Spawn a mini upgrader to get ticksToDowngrade up so level gets raised.
 				options.push({
-					priority: 3,
+					priority,
 					weight: 1,
 					mini: true,
 				});
@@ -57,7 +59,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		if (maxUpgraders === 0) {
 			// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.
-			if (room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.1) {
+			if (this.isCloseToDowngrade(room)) {
 				hivemind.log('creeps', room.name).info('trying to spawn upgrader because controller is close to downgrading', room.controller.ticksToDowngrade, '/', CONTROLLER_DOWNGRADE[room.controller.level]);
 				return 1;
 			}
@@ -68,6 +70,10 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		}
 
 		return maxUpgraders;
+	}
+
+	isCloseToDowngrade(room: Room): boolean {
+		return room.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[room.controller.level] * 0.1;
 	}
 
 	/**
