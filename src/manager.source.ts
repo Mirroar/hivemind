@@ -74,16 +74,19 @@ Object.defineProperty(Mineral.prototype, 'harvesters', {
  * @return {number}
  *   Maximum number of harvesters on this source.
  */
-const getNumberHarvestSpots = function (this: Source | Mineral) {
+const getHarvestSpotCount = function (this: Source | Mineral) {
 	return cache.inHeap('numFreeSquares:' + this.id, 5000, () => {
 		const terrain = this.room.lookForAtArea(LOOK_TERRAIN, this.pos.y - 1, this.pos.x - 1, this.pos.y + 1, this.pos.x + 1, true);
 		const adjacentTerrain = [];
 		for (const tile of terrain) {
 			if (tile.x === this.pos.x && tile.y === this.pos.y) continue;
-			if (tile.terrain === 'plain' || tile.terrain === 'swamp') {
-				// @todo Make sure no structures are blocking this tile.
-				adjacentTerrain.push(tile);
-			}
+			if (tile.terrain !== 'plain' && tile.terrain !== 'swamp') continue;
+
+			// Make sure no structures are blocking this tile.
+			const structures = this.room.lookForAt(LOOK_STRUCTURES, tile.x, tile.y);
+			if (_.any(structures, (s: Structure) => !s.isWalkable())) continue;
+
+			adjacentTerrain.push(tile);
 		}
 
 		return adjacentTerrain.length;
@@ -97,7 +100,7 @@ const getNumberHarvestSpots = function (this: Source | Mineral) {
  *   Maximum number of harvesters on this source.
  */
 Source.prototype.getNumHarvestSpots = function (this: Source) {
-	return getNumberHarvestSpots.call(this);
+	return getHarvestSpotCount.call(this);
 };
 
 /**
@@ -107,7 +110,7 @@ Source.prototype.getNumHarvestSpots = function (this: Source) {
  *   Maximum number of harvesters on this mineral.
  */
 Mineral.prototype.getNumHarvestSpots = function (this: Mineral) {
-	return getNumberHarvestSpots.call(this);
+	return getHarvestSpotCount.call(this);
 };
 
 /**
@@ -120,7 +123,7 @@ const getNearbyContainer = function (this: Source | Mineral) {
 	const containerId = cache.inHeap('container:' + this.id, 150, () => {
 		// Check if there is a container nearby.
 		// @todo Could use old data and just check if object still exits.
-		const structures = _.filter(this.room.structuresByType[STRUCTURE_CONTAINER], s => {
+		const structures: StructureContainer[] = _.filter(this.room.structuresByType[STRUCTURE_CONTAINER], s => {
 			if (s.pos.getRangeTo(this) > 5) return false;
 
 			if (!this.room.roomPlanner) return true;
