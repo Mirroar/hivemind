@@ -163,6 +163,8 @@ export default class InterShardProcess extends Process {
 			this.redistributeExtraCPU(newLimits);
 		}
 
+		this.clampLimits(newLimits);
+
 		Game.cpu.setShardLimits(newLimits);
 	}
 
@@ -241,6 +243,18 @@ export default class InterShardProcess extends Process {
 
 			newLimits[shardName] = Math.round(limit + extraCpu * limit / otherShardsTotal);
 		});
+	}
+
+	clampLimits(cpuLimits: Record<string, number>) {
+		// Make sure sum of CPU limits is less than 300.
+		const totalCpu = _.sum(_.values(cpuLimits));
+		if (totalCpu <= 300) return;
+
+		let excessCpu = totalCpu - 300;
+		
+		// Remove excess from shard with most CPU.
+		const sortedShards = _.sortBy(_.keys(cpuLimits), shardName => -cpuLimits[shardName]);
+		cpuLimits[sortedShards[0]] -= excessCpu;
 	}
 
 	/**
