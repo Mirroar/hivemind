@@ -34,6 +34,17 @@ export default class RoomStatus {
         this.memory = Memory.strategy.roomList;
     }
 
+    addRoom(roomName: string, origin: string, range: number): void {
+        this.memory[roomName] = {
+            origin,
+            range,
+        };
+    }
+
+    deleteRoom(roomName: string): void {
+        delete this.memory[roomName];
+    }
+
     resetScores(roomName: string): void {
         delete this.memory[roomName].scoutPriority;
         delete this.memory[roomName].expansionScore;
@@ -80,27 +91,23 @@ export default class RoomStatus {
         return this.memory[roomName] !== undefined;
     }
 
-    deleteRoom(roomName: string): void {
-        delete this.memory[roomName];
-    }
-
-    getOrigin(roomName: string): string {
-        return this.memory[roomName].origin;
+    getOrigin(roomName: string): string | null {
+        return this.memory[roomName]?.origin ?? null;
     }
 
     getDistanceToOrigin(roomName: string): number {
-        return this.memory[roomName].range;
+        return this.memory[roomName]?.range ?? 100;
     }
 
     getExpansionScore(roomName: string): number | null {
-        return this.memory[roomName].expansionScore ?? null;
+        return this.memory[roomName]?.expansionScore ?? null;
     }
 
     getHarvestPriority(roomName: string): number {
-        return this.memory[roomName].harvestPriority ?? 0;
+        return this.memory[roomName]?.harvestPriority ?? 0;
     }
 
     getScoutPriority(roomName: string): number {
-        return this.memory[roomName].scoutPriority ?? 0;
+        return this.memory[roomName]?.scoutPriority ?? 0;
     }
 }

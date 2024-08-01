@@ -478,7 +478,19 @@ export default class ScoutProcess extends Process {
 			}
 		}
 
-		return scoutTargets;
+		for (const roomName of this.roomStatus.getAllKnownRooms()) {
+			if (!scoutTargets[roomName]) {
+				// Remove rooms that are no longer in scouting range.
+				this.roomStatus.deleteRoom(roomName);
+			}
+		}
+
+		for (const roomName in scoutTargets) {
+			if (!this.roomStatus.hasRoom(roomName)) {
+				// Add rooms we didn't have in our list, yet.
+				this.roomStatus.addRoom(roomName, scoutTargets[roomName].origin, scoutTargets[roomName].range);
+			}
+		}
 	}
 
 	/**
