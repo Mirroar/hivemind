@@ -93,7 +93,13 @@ export default class MuleRole extends Role {
 
 	followRoomPath(creep: MuleCreep) {
 		if (!creep.memory.roomPath) {
-			const targetPosition = new RoomPosition(25, 25, creep.memory.delivering ? this.tradeRoute.getTarget() : this.tradeRoute.getOrigin());
+			const targetRoom = creep.memory.delivering ? this.tradeRoute.getTarget() : this.tradeRoute.getOrigin();
+
+			// @todo If for some reason the trade route has no room information,
+			// look for a nearby room to move to and suicide.
+			if (!targetRoom) return;
+
+			const targetPosition = new RoomPosition(25, 25, targetRoom);
 			creep.interRoomTravel(targetPosition);
 			return;
 		}

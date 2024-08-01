@@ -76,6 +76,7 @@ export default class ScoutProcess extends Process {
 	run() {
 		hivemind.log('strategy').info('Running scout process...');
 
+		this.findObservers();
 		this.generateScoutTargets();
 		this.generateMineralStatus();
 
@@ -448,11 +449,8 @@ export default class ScoutProcess extends Process {
 	 */
 	generateScoutTargets() {
 		const scoutTargets: Record<string, ScoutTarget> = {};
-
 		const openList = this.getScoutOrigins();
 		const closedList: Record<string, boolean> = {};
-
-		this.findObservers();
 
 		// Flood fill from own rooms and add rooms we need intel of.
 		while (_.size(openList) > 0) {

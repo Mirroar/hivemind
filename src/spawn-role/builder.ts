@@ -63,7 +63,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 			return 0;
 		}
 
-		if (!room.roomPlanner.hasRoomPlan()) {
+		if (!room.roomPlanner?.hasRoomPlan()) {
 			// No need for builders if there's no plan.
 			return 0;
 		}

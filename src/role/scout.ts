@@ -127,6 +127,7 @@ export default class ScoutRole extends Role {
 	 */
 	chooseScoutTarget(creep: ScoutCreep, invalidateOldTarget?: boolean) {
 		if (creep.heapMemory.pauseUntil) {
+			creep.whenInRange(1, creep.pos, () => {});
 			if (Game.time >= creep.heapMemory.pauseUntil) delete creep.heapMemory.pauseUntil;
 			return;
 		}
@@ -154,7 +155,7 @@ export default class ScoutRole extends Role {
 		}
 
 		if (!creep.memory.scoutTarget) {
-			creep.memory.scoutTarget = creep.memory.origin;
+			// Wait for new scout targets to become available.
 			creep.heapMemory.pauseUntil = Game.time + 50;
 		}
 	}
@@ -286,8 +287,7 @@ export default class ScoutRole extends Role {
 			return false;
 		}
 
-		if (creep.heapMemory.stuckCount++ < 10) return false;
-
-		return true;
+		creep.heapMemory.stuckCount++;
+		return creep.heapMemory.stuckCount > 10;
 	}
 }

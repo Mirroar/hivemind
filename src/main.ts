@@ -384,7 +384,7 @@ class BotKernel {
 			const route = Memory.tradeRoutes[routeName];
 			if (route.active) continue;
 
-			if (_.any(Game.creepsByRole.mule, (creep: MuleCreep) => creep.memory.route === routeName)) continue;
+			if (_.any(Game.creepsByRole?.mule || [], (creep: MuleCreep) => creep.memory.route === routeName)) continue;
 
 			delete Memory.tradeRoutes[routeName];
 		}
