@@ -26,15 +26,11 @@ export default class InitProcess extends Process {
 	 * @override
 	 */
 	run() {
-		Game.squads = {};
 		Game.creepsByRole = {};
 		Game.operations = {};
 		Game.operationsByType = {};
 
 		// Add data to global Game object.
-		_.each(Memory.squads, (data, squadName) => {
-			Game.squads[squadName] = new Squad(squadName);
-		});
 		_.each(operationClasses, (opClass, opType) => {
 			Game.operationsByType[opType] = {};
 		});
