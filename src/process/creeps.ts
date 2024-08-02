@@ -98,12 +98,16 @@ export default class CreepsProcess extends Process {
 		// Run power creeps.
 		const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0);
 		this.powerCreepManager.onTickStart();
-		utilities.bubbleWrap(() => {
-			this.powerCreepManager.manageCreeps(powerCreeps);
+		hivemind.runSubProcess('creeps_powerCreeps', () => {
+			utilities.bubbleWrap(() => {
+				this.powerCreepManager.manageCreeps(powerCreeps);
+			});
 		});
 		this.powerCreepManager.report();
 
 		// Resolve traffic jams.
-		this.trafficManager.manageTraffic();
+		hivemind.runSubProcess('creeps_trafficManager', () => {
+			this.trafficManager.manageTraffic();
+		});
 	}
 }
