@@ -1,3 +1,4 @@
+import cache from 'utils/cache';
 import {encodePosition, decodePosition} from 'utils/serialization';
 
 declare global {
@@ -7,10 +8,6 @@ declare global {
 
 	interface Memory {
 		squads: Record<string, SquadMemory>;
-	}
-
-	interface Game {
-		squads: Record<string, Squad>;
 	}
 
 	type SquadMemory = {
@@ -199,6 +196,26 @@ export default class Squad {
 
 		return null;
 	}
+}
+
+function getAllSquads(): Record<string, Squad> {
+	return cache.inObject(Game, 'squads', 1, () => {
+		const squads = {};
+		for (const squadName in Memory.squads) {
+			squads[squadName] = new Squad(squadName);
+		}
+
+		return squads;
+	});
+}
+
+function getSquad(squadName: string): Squad | null {
+	return getAllSquads()[squadName] || null;
+}
+
+export {
+	getAllSquads,
+	getSquad,
 }
 
 global.Squad = Squad;

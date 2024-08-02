@@ -2,6 +2,7 @@
 
 import interShard from 'intershard';
 import Role from 'role/role';
+import {getSquad} from 'manager.squad';
 
 export default class UnassignedRole extends Role {
 	/**
@@ -38,7 +39,7 @@ export default class UnassignedRole extends Role {
 		for (const room of Game.myRooms) {
 			if (!room.needsReclaiming()) continue;
 			if (!room.isSafeForReclaiming()) continue;
-			if (!Game.squads['intershardReclaim:' + room.name]) continue;
+			if (!getSquad('intershardReclaim:' + room.name)) continue;
 
 			const interShardMemory = interShard.getLocalMemory();
 			if (!interShardMemory.info.rooms.reclaimable) continue;

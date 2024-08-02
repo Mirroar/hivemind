@@ -2,7 +2,7 @@
 
 import BodyBuilder, {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
 import SpawnRole from 'spawn-role/spawn-role';
-import Squad from 'manager.squad';
+import Squad, {getAllSquads} from 'manager.squad';
 
 const availableUnitTypes = [
 	'ranger',
@@ -36,7 +36,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
 			const options: SquadSpawnOption[] = [];
 
-			_.each(Game.squads, squad => {
+			_.each(getAllSquads(), squad => {
 				if (squad.getSpawn() !== room.name) return;
 
 				const availableEnergy = room.getEffectiveAvailableEnergy();

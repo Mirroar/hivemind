@@ -44,4 +44,4 @@ r = {roomName: 'E19N24', spawnRoom: 'E16N22'}; (new ExpandProcess()).startExpans
 const roomName = 'E43S53'; p = new ExpandProcess({}, {}); Game.rooms[roomName].setEvacuating(true); Memory.strategy.expand.evacuatingRoom = {name: roomName, cooldown: null};
 
 // Send a squad to operate in a room.
-import Squad from 'manager.squad'; const s = new Squad('squadName'); s.setSpawn('W25S18'); s.setTarget(new RoomPosition(24, 24, 'W28S19')); a.addUnit('ranger');
+const s = new Squad('squadName'); s.setSpawn('W25S18'); s.setTarget(new RoomPosition(24, 24, 'W28S19')); a.addUnit('ranger');

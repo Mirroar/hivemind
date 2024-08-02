@@ -1,6 +1,7 @@
 import container from 'utils/container';
 import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
+import {getAllSquads} from 'manager.squad';
 import {getRoomIntel} from 'room-intel';
 
 interface HarvestRoomInfo {
@@ -95,7 +96,7 @@ export default class RemoteMinePrioritizer {
 			let roomNeeds = 0;
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;
-			roomNeeds += _.filter(Game.squads, squad => squad.getSpawn() === room.name).length;
+			roomNeeds += _.filter(getAllSquads(), squad => squad.getSpawn() === room.name).length;
 
 			// Increase spawn capacity if there's a power creep that can help.
 			const powerCreep = _.find(Game.powerCreeps, creep => {

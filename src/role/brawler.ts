@@ -13,6 +13,7 @@ import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getUsername} from 'utils/account';
+import {getSquad} from 'manager.squad';
 
 interface ControllerTargetOption extends WeightedOption {
 	type: 'controller';
@@ -411,7 +412,7 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.squadName) {
 			// This only gets called for squad units in a room where no fighting
 			// needs to take place.
-			const squad = Game.squads[creep.memory.squadName];
+			const squad = getSquad(creep.memory.squadName);
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
 				creep.whenInRange(this.isPositionBlocked(targetPos) ? 1 : 0, targetPos, () => {
@@ -558,7 +559,7 @@ export default class BrawlerRole extends Role {
 	 */
 	performSquadMove(creep: BrawlerCreep) {
 		// Check if there are orders and set a target accordingly.
-		const squad = Game.squads[creep.memory.squadName];
+		const squad = getSquad(creep.memory.squadName);
 		if (!squad) return; // @todo Go recycle.
 
 		// Movement is dictated by squad orders.
@@ -686,7 +687,7 @@ export default class BrawlerRole extends Role {
 
 			// If attack flag is directly on controller, claim it, otherwise just reserve.
 			if (creep.memory.squadName) {
-				const squad = Game.squads[creep.memory.squadName];
+				const squad = getSquad(creep.memory.squadName);
 				const targetPos = squad && squad.getTarget();
 				if (targetPos && targetPos.getRangeTo(target) === 0) {
 					if (target.reservation && target.reservation.username !== getUsername()) {

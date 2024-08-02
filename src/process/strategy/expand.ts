@@ -9,7 +9,7 @@ import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
-import Squad from 'manager.squad';
+import Squad, {getAllSquads} from 'manager.squad';
 import stats from 'utils/stats';
 import {getUsername} from 'utils/account';
 import {getRoomIntel} from 'room-intel';
@@ -354,7 +354,7 @@ export default class ExpandProcess extends Process {
 		const squad = new Squad('expand');
 		squad.disband();
 
-		_.each(Game.squads, (squad, squadName) => {
+		_.each(getAllSquads(), (squad, squadName) => {
 			if (squadName.startsWith('expandSupport.' + roomName)) {
 				squad.disband();
 			}
@@ -407,7 +407,7 @@ export default class ExpandProcess extends Process {
 		// Remove support squads from older rooms.
 		// @todo This should no longer be necessary when the code in stopExpansion
 		// works reliably.
-		_.each(Game.squads, (squad, squadName) => {
+		_.each(getAllSquads(), (squad, squadName) => {
 			if (squadName.startsWith('expandSupport.') && !activeSquads[squadName]) {
 				squad.disband();
 			}
