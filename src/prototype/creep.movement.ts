@@ -379,34 +379,7 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 	if (!target) {
 		// We're not in the correct room to move on this path. Kind of sucks, but try to get there using the default pathfinder anyway.
 		// @todo Actually, we might be in the right room, but there are creeps on all parts of the path.
-		if (this.pos.roomName === this.getCachedPath()[0].roomName) {
-			this.say('Blocked');
-
-			const path = this.calculatePath(this.getCachedPath()[0]);
-			if (!path || path.length === 0) {
-				this.say('no way!');
-				return true;
-			}
-
-			if (path[0].roomName === this.pos.roomName) {
-				this.move(this.pos.getDirectionTo(path[0]));
-
-				const creep = path[0].lookFor(LOOK_CREEPS)[0];
-				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
-				const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
-				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
-			}
-			else {
-				this.moveTo(path[0]);
-			}
-		}
-		else {
-			this.say('Searching');
-			// @todo Use our pathfinder to get onto the cached path.
-			this.moveTo(this.getCachedPath()[0]);
-		}
-
-		this.heapMemory._moveBlocked = true;
+		getToPathRoom(this);
 		return true;
 	}
 
@@ -459,6 +432,38 @@ Creep.prototype.getOntoCachedPath = function (this: Creep | PowerCreep) {
 
 	return false;
 };
+
+function getToPathRoom(creep: Creep | PowerCreep): void {
+	if (creep.pos.roomName === creep.getCachedPath()[0].roomName) {
+		creep.say('Blocked');
+
+		const path = creep.calculatePath(creep.getCachedPath()[0]);
+		if (!path || path.length === 0) {
+			creep.say('no way!');
+			return;
+		}
+
+		if (path[0].roomName === creep.pos.roomName) {
+			creep.move(creep.pos.getDirectionTo(path[0]));
+
+			const otherCreep = path[0].lookFor(LOOK_CREEPS)[0];
+			if (otherCreep) container.get('TrafficManager').setBlockingCreep(creep, otherCreep);
+
+			const powerCreep = path[0].lookFor(LOOK_POWER_CREEPS)[0];
+			if (powerCreep) container.get('TrafficManager').setBlockingCreep(creep, powerCreep);
+		}
+		else {
+			creep.moveTo(path[0]);
+		}
+	}
+	else {
+		creep.say('Searching');
+		// @todo Use our pathfinder to get onto the cached path.
+		creep.moveTo(creep.getCachedPath()[0]);
+	}
+
+	creep.heapMemory._moveBlocked = true;
+}
 
 function updateStuckDetection(creep: Creep | PowerCreep) {
 	if (!creep.heapMemory._stuckDetection || new RoomPosition(creep.heapMemory._stuckDetection[0].x, creep.heapMemory._stuckDetection[0].y, creep.heapMemory._stuckDetection[0].roomName).getRangeTo(creep.pos) > 0) {
@@ -955,23 +960,12 @@ Creep.prototype.interRoomTravel = function (this: Creep | PowerCreep, targetPos,
 	return false;
 };
 
-Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos, options) {
+Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos, options: GoToOptions) {
 	if (!hivemind.segmentMemory.isReady()) return OK;
 
 	if (!options) options = {};
 
-	const pos = encodePosition(targetPos);
-	if (!this.heapMemory._nmpt || !this.heapMemory._nmp || this.heapMemory._nmpt !== pos) {
-		this.heapMemory._nmpt = pos;
-		const mesh = new NavMesh();
-		const path = mesh.findPath(this.pos, targetPos, options);
-		this.heapMemory._nmp = {
-			incomplete: path.incomplete,
-			path: path.path ? _.map(path.path, encodePosition) : null,
-		};
-
-		this.heapMemory._nmpi = 0;
-	}
+	initNavMemory(this, targetPos, options);
 
 	if (!this.heapMemory._nmp.path) {
 		if (this.moveToRoom(targetPos.roomName)) return OK;
@@ -1047,6 +1041,21 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 
 	return OK;
 };
+
+function initNavMemory(creep: Creep | PowerCreep, targetPos: RoomPosition, options: GoToOptions) {
+	const pos = encodePosition(targetPos);
+	if (!creep.heapMemory._nmpt || !creep.heapMemory._nmp || creep.heapMemory._nmpt !== pos) {
+		creep.heapMemory._nmpt = pos;
+		const mesh = new NavMesh();
+		const path = mesh.findPath(creep.pos, targetPos, options);
+		creep.heapMemory._nmp = {
+			incomplete: path.incomplete,
+			path: path.path ? _.map(path.path, encodePosition) : null,
+		};
+
+		creep.heapMemory._nmpi = 0;
+	}
+}
 
 Creep.prototype.getNavMeshMoveTarget = function (this: Creep | PowerCreep) {
 	return this.heapMemory._nmpt;
