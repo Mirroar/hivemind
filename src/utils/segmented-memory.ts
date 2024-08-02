@@ -15,7 +15,7 @@ declare global {
 }
 
 const maxActiveSegments = 10;
-const maxSegmentLength = 100 * 1000 - 10;
+const maxSegmentLength = 100 * 1000;
 
 export default class SegmentedMemory {
 	_isReady: boolean;
@@ -114,6 +114,7 @@ export default class SegmentedMemory {
 		}
 
 		let stringified = '';
+		let currentLength = 0;
 		let allSaved = true;
 		_.each(this.data, (value, key) => {
 			if (typeof RawMemory.segments[this.currentSegment] === 'undefined') {
@@ -126,11 +127,12 @@ export default class SegmentedMemory {
 			if (this.savedKeys[key]) return null;
 
 			const part = JSON.stringify(value);
-			const partLength = part.length + key.length + 4;
+			const partLength = this.getStringMemoryUsage(',"' + key + '":' + part);
 
-			if (stringified.length + partLength > maxSegmentLength) {
+			if (currentLength + partLength > maxSegmentLength) {
 				this.saveToCurrentSegment(stringified);
 				stringified = '';
+				currentLength = 0;
 
 				if (typeof RawMemory.segments[this.currentSegment] === 'undefined' && this.savedSegments.length >= maxActiveSegments) {
 					// Can't save more data this tick.
@@ -141,6 +143,7 @@ export default class SegmentedMemory {
 			}
 
 			stringified += (stringified.length > 0 ? ',' : '') + '"' + key + '":' + part;
+			currentLength += partLength;
 			this.savedKeys[key] = true;
 
 			return null;
@@ -151,6 +154,13 @@ export default class SegmentedMemory {
 			this.saveToCurrentSegment(stringified);
 			this.registerSaveCompletion();
 		}
+	}
+
+	getStringMemoryUsage(str: string) {
+		// Create a buffer from the string with the specified encoding
+		const buffer = Buffer.from(str, 'utf8');
+		
+		return buffer.byteLength;
 	}
 
 	saveToCurrentSegment(data: string) {
