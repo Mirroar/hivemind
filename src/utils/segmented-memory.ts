@@ -157,10 +157,7 @@ export default class SegmentedMemory {
 	}
 
 	getStringMemoryUsage(str: string) {
-		// Create a buffer from the string with the specified encoding
-		const buffer = Buffer.from(str, 'utf8');
-		
-		return buffer.byteLength;
+		return str.length + 1;
 	}
 
 	saveToCurrentSegment(data: string) {
