@@ -28,7 +28,7 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 
 			// Get reaction resources.
 			const roomMemory = this.room.memory;
-			if (roomMemory?.labs && roomMemory?.currentReaction) {
+			if (roomMemory?.labs && roomMemory?.currentReaction && !this.room.isEvacuating()) {
 				this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source1), roomMemory.currentReaction[0], context);
 				this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source2), roomMemory.currentReaction[1], context);
 			}
