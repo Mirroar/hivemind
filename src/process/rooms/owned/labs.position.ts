@@ -41,9 +41,7 @@ export default class ReactionsProcess extends Process {
 			reactor: Array<Id<StructureLab>>;
 		} = null;
 		for (const lab of labs) {
-			const closeLabs = lab.pos.findInRange<StructureLab>(FIND_STRUCTURES, 2, {
-				filter: structure => structure.structureType === STRUCTURE_LAB && structure.id !== lab.id,
-			});
+			const closeLabs = labs.filter(otherLab => lab.pos.getRangeTo(otherLab) <= 2 && otherLab.id !== lab.id);
 			if (closeLabs.length < 2) continue;
 
 			for (const lab2 of closeLabs) {
