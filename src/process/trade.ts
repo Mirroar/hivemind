@@ -211,6 +211,8 @@ export default class TradeProcess extends Process {
 		let bestResource: ResourceConstant;
 		let bestValue = 0;
 		for (const resourceType of getResourcesIn(store)) {
+			if (resourceType === RESOURCE_ENERGY) continue;
+
 			const worth = this.calculateWorth(resourceType);
 			const bestOrder = this.findBestBuyOrder(resourceType, room.name);
 			if (!bestOrder) continue;
@@ -675,10 +677,15 @@ export default class TradeProcess extends Process {
 		const history = this.getPriceData(resourceType);
 		if (!history) return 0;
 
-		if (history.average < 10 && history.total > 10_000) return 10_000;
-		if (history.average < 100 && history.total > 1000) return 1000;
-		if (history.average < 1000 && history.total > 100) return 100;
-		if (history.average < 10_000 && history.total > 10) return 10;
+		// if (history.average < 10 && history.total > 10_000) return 10_000;
+		// if (history.average < 100 && history.total > 1000) return 1000;
+		// if (history.average < 1000 && history.total > 100) return 100;
+		// if (history.average < 10_000 && history.total > 10) return 10;
+
+		if (history.total > 10_000) return 10_000;
+		if (history.total > 1000) return 1000;
+		if (history.total > 100) return 100;
+		if (history.total > 10) return 10;
 
 		return 1;
 	}
