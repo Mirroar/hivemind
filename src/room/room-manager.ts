@@ -161,12 +161,15 @@ export default class RoomManager {
 	 * Removes structures that might prevent the room's construction.
 	 */
 	cleanRoom() {
+		this.removeHostileStructures();
+		this.removeHostileConstructionSites();
+		
+		if (!this.room.roomPlanner?.hasRoomPlan()) return;
+
 		this.cleanExtensions();
 		this.cleanLabs();
 		this.cleanLinks();
 		this.cleanWalls();
-		this.removeHostileStructures();
-		this.removeHostileConstructionSites();
 	}
 
 	cleanExtensions() {
