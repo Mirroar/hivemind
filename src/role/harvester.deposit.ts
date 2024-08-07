@@ -127,6 +127,12 @@ export default class DepositHarvesterRole extends Role {
 		}
 
 		const target = creep.room.getBestStorageTarget(creep.store.getUsedCapacity(), resourceType);
+		if (!target) {
+			// Drop resources on the ground.
+			creep.dropAny();
+			return;
+		}
+
 		creep.whenInRange(1, target, () => {
 			creep.transferAny(target);
 		});
