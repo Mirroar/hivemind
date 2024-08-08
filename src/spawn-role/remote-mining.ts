@@ -2,7 +2,6 @@
 
 import BodyBuilder, {MOVEMENT_MODE_PLAINS, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import hivemind from 'hivemind';
-import settings from 'settings-manager';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
@@ -243,7 +242,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			if (!operation.hasActiveHarvesters()) continue;
 
 			// @todo Cache path for claimers, as well, to get an exact number.
-			const pathLength = _.sample(operation.getPaths())?.path.length || 50;
+			const pathLength = _.sample(operation.getPaths())?.path?.length || 50;
 			const claimerBody = this.getClaimerCreepBody(room);
 			const claimerSpawnTime = claimerBody.length * CREEP_SPAWN_TIME;
 			const claimers = _.filter(
