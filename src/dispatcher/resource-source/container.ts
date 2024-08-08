@@ -1,4 +1,5 @@
 import StructureSource from 'dispatcher/resource-source/structure';
+import { getResourcesIn } from 'utils/store';
 
 interface ContainerSourceTask extends StructureSourceTask {
 	type: 'container';
@@ -22,6 +23,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 		const options: ContainerSourceTask[] = [];
 
 		this.addContainerEnergySourceOptions(options, context);
+		this.addContainerResourceSourceOptions(options, context);
 
 		return options;
 	}
@@ -81,5 +83,48 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 
 			options.push(option);
 		}
+	}
+
+	private addContainerResourceSourceOptions(options: ContainerSourceTask[], context: ResourceSourceContext) {
+		const room = this.room;
+		// We need a decent place to store these resources.
+		if (!room.terminal && !room.storage) return;
+
+		// Take non-energy out of containers.
+		const containers = room.structuresByType[STRUCTURE_CONTAINER] || [];
+
+		for (const container of containers) {
+			const assignedResourceType = this.getAssignedResourceType(container);
+			for (const resourceType of getResourcesIn(container.store)) {
+				if (resourceType === RESOURCE_ENERGY) continue;
+				if (container.store[resourceType] === 0) continue;
+				if (
+					resourceType === assignedResourceType
+					&& container.store.getUsedCapacity(resourceType) < CONTAINER_CAPACITY / 2
+				) continue;
+
+				const option: ContainerSourceTask = {
+					priority: 3,
+					weight: container.store[resourceType] / 20, // @todo Also factor in distance.
+					type: this.getType(),
+					target: container.id,
+					resourceType,
+				};
+
+				option.priority -= room.getCreepsWithOrder('container', container.id).length * 2;
+
+				options.push(option);
+			}
+		}
+	}
+
+	private getAssignedResourceType(container: StructureContainer): ResourceConstant | null {
+		for (const mineral of this.room.minerals) {
+			if (container.id !== mineral.getNearbyContainer()?.id) continue;
+
+			return mineral.mineralType;
+		}
+
+		return null;
 	}
 }

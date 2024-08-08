@@ -464,12 +464,7 @@ export default class TransporterRole extends Role {
 		});
 		if (dispatcherTask) options.push(dispatcherTask);
 
-		this.addObjectResourceOptions(options, FIND_DROPPED_RESOURCES, 'resource');
-		this.addObjectResourceOptions(options, FIND_TOMBSTONES, 'tombstone');
-		this.addObjectResourceOptions(options, FIND_RUINS, 'tombstone');
-		this.addContainerResourceOptions(options);
 		this.addHighLevelResourceOptions(options);
-		this.addEvacuatingRoomResourceOptions(options);
 
 		return options;
 	}
@@ -482,208 +477,13 @@ export default class TransporterRole extends Role {
 	 */
 	getAvailableEnergySources(): TransporterSourceOrderOption[] {
 		const creep = this.creep;
-		const room = creep.room;
-		const options: TransporterSourceOrderOption[] = [];
-
 		const task = creep.room.sourceDispatcher.getTask({
 			creep,
 			resourceType: RESOURCE_ENERGY,
 		});
-		if (task) options.push(task);
+		if (task) return [task];
 
-		let priority = 0;
-		if (room.energyAvailable < room.energyCapacityAvailable * 0.9) {
-			// Spawning is important, so get energy when needed.
-			priority = 4;
-		}
-		else if (room.terminal && room.storage && room.storage.store.energy > 5000 && room.terminal.store.energy < room.storage.store.energy * 0.05 && !room.isClearingTerminal()) {
-			// Take some energy out of storage to put into terminal from time to time.
-			priority = 2;
-		}
-
-		this.addObjectEnergySourceOptions(options, FIND_DROPPED_RESOURCES, 'resource', priority);
-		this.addObjectEnergySourceOptions(options, FIND_TOMBSTONES, 'tombstone', priority);
-		this.addObjectEnergySourceOptions(options, FIND_RUINS, 'tombstone', priority);
-
-		return options;
-	}
-
-	/**
-	 * Adds options for picking up energy from room objects to priority list.
-	 *
-	 * @param {Array} options
-	 *   A list of potential energy sources.
-	 * @param {String} findConstant
-	 *   The type of find operation to run, e.g. FIND_DROPPED_RESOURCES.
-	 * @param {string} optionType
-	 *   Type designation of added resource options.
-	 */
-	addObjectEnergySourceOptions(options: TransporterSourceOrderOption[], findConstant: FIND_RUINS | FIND_TOMBSTONES | FIND_DROPPED_RESOURCES, optionType: 'resource' | 'tombstone', storagePriority: number) {
-		const creep = this.creep;
-
-		// Get storage location, since that is a low priority source for transporters.
-		const storagePosition = creep.room.getStorageLocation();
-
-		// Look for energy on the ground.
-		const targets = creep.room.find(findConstant, {
-			filter: target => {
-				const store = target instanceof Resource ? {[target.resourceType]: target.amount} : target.store;
-				if ((store[RESOURCE_ENERGY] || 0) < 20) return false;
-				if (!this.isSafePosition(creep, target.pos)) return false;
-
-				// Const result = PathFinder.search(creep.pos, target.pos);
-				// if (result.incomplete) return false;
-
-				return true;
-			},
-		});
-
-		for (const target of targets) {
-			const store = target instanceof Resource ? {[target.resourceType]: target.amount} : target.store;
-			const option = {
-				priority: 4,
-				weight: store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
-				type: optionType,
-				object: target,
-				resourceType: RESOURCE_ENERGY,
-			};
-
-			if (storagePosition && target.pos.x === storagePosition.x && target.pos.y === storagePosition.y) {
-				option.priority = creep.memory.role === 'transporter' ? (storagePriority + ((creep.room.storage || creep.room.terminal) ? 1 : 0)) : 5;
-			}
-			else {
-				if (store[RESOURCE_ENERGY] < 100) option.priority--;
-				if (store[RESOURCE_ENERGY] < 200) option.priority--;
-
-				// If spawn / extensions need filling, transporters should not pick up
-				// energy from random targets as readily, instead prioritize storage.
-				if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.room.getCurrentResourceAmount(RESOURCE_ENERGY) > 5000 && creep.memory.role === 'transporter') option.priority -= 2;
-			}
-
-			if (store[RESOURCE_ENERGY] < creep.store.getCapacity() * 2) {
-				option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 3;
-				option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 3;
-			}
-
-			if (creep.room.storage && creep.room.getFreeStorage() < store[RESOURCE_ENERGY] && creep.room.getEffectiveAvailableEnergy() > 20_000) {
-				// If storage is super full, try leaving stuff on the ground.
-				option.priority -= 2;
-			}
-
-			options.push(option);
-		}
-	}
-
-	/**
-	 * Adds options for picking up resources from certain objects to priority list.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 * @param {String} findConstant
-	 *   The type of find operation to run, e.g. FIND_DROPPED_RESOURCES.
-	 * @param {string} optionType
-	 *   Type designation of added resource options.
-	 */
-	addObjectResourceOptions(options: TransporterSourceOrderOption[], findConstant: FIND_RUINS | FIND_TOMBSTONES | FIND_DROPPED_RESOURCES, optionType: 'resource' | 'tombstone') {
-		const creep = this.creep;
-
-		// Look for resources on the ground.
-		const targets = creep.room.find(findConstant, {
-			filter: target => {
-				if (!this.isSafePosition(creep, target.pos)) return false;
-
-				const storeAmount = target instanceof Resource ? target.amount : target.store.getUsedCapacity();
-				if (storeAmount > 10) {
-					const result = PathFinder.search(creep.pos, target.pos);
-					if (!result.incomplete) return true;
-				}
-
-				return false;
-			},
-		});
-
-		for (const target of targets) {
-			const store = target instanceof Resource ? {[target.resourceType]: target.amount} : target.store;
-			for (const resourceType of getResourcesIn(store)) {
-				if (resourceType === RESOURCE_ENERGY) continue;
-				if (store[resourceType] === 0) continue;
-
-				const option = {
-					priority: 4,
-					weight: store[resourceType] / 30, // @todo Also factor in distance.
-					type: optionType,
-					object: target,
-					resourceType,
-				};
-
-				if (resourceType === RESOURCE_POWER) {
-					option.priority++;
-				}
-
-				if (creep.room.getFreeStorage() < store[resourceType]) {
-					// If storage is super full, try leaving stuff on the ground.
-					continue;
-				}
-
-				if (store[resourceType] < creep.store.getCapacity() * 2) {
-					option.priority -= creep.room.getCreepsWithOrder('getEnergy', target.id).length * 2;
-					option.priority -= creep.room.getCreepsWithOrder('getResource', target.id).length * 2;
-				}
-
-				options.push(option);
-			}
-		}
-	}
-
-	/**
-	 * Adds options for picking up resources from containers to priority list.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 */
-	addContainerResourceOptions(options: TransporterSourceOrderOption[]) {
-		const room = this.creep.room;
-		// We need a decent place to store these resources.
-		if (!room.terminal && !room.storage) return;
-
-		// Take non-energy out of containers.
-		const containers = _.filter(
-			room.structuresByType[STRUCTURE_CONTAINER],
-			structure => this.isSafePosition(this.creep, structure.pos),
-		);
-
-		for (const container of containers) {
-			for (const resourceType of getResourcesIn(container.store)) {
-				if (resourceType === RESOURCE_ENERGY) continue;
-				if (container.store[resourceType] === 0) continue;
-
-				let isEmptyMineralContainer = false;
-				for (const mineral of room.minerals) {
-					if (
-						container.id === mineral.getNearbyContainer()?.id
-						&& resourceType === mineral.mineralType
-						&& container.store[resourceType] < CONTAINER_CAPACITY / 2
-					) {
-						isEmptyMineralContainer = true;
-						break;
-					}
-				}
-
-				if (isEmptyMineralContainer) continue;
-
-				const option: TransporterStructureOrderOption = {
-					priority: 3,
-					weight: container.store[resourceType] / 20, // @todo Also factor in distance.
-					type: 'structure',
-					object: container,
-					resourceType,
-				};
-
-				option.priority -= room.getCreepsWithOrder('getResource', container.id).length * 2;
-
-				options.push(option);
-			}
-		}
+		return [];
 	}
 
 	/**
@@ -693,6 +493,8 @@ export default class TransporterRole extends Role {
 	 *   A list of potential resource sources.
 	 */
 	addHighLevelResourceOptions(options: TransporterSourceOrderOption[]) {
+		// @todo Remove once dispatcher handles picking up requested resources automatically.
+
 		const room = this.creep.room;
 		if (room.isEvacuating()) return;
 
@@ -733,45 +535,6 @@ export default class TransporterRole extends Role {
 				options.push(option);
 			}
 		}
-	}
-
-	/**
-	 * Adds options for picking up resources for moving to terminal.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 */
-	addEvacuatingRoomResourceOptions(options: TransporterSourceOrderOption[]) {
-		const room = this.creep.room;
-		if (!room.isEvacuating()) return;
-
-		// Take everything out of labs.
-		const labs = room.myStructuresByType[STRUCTURE_LAB] || [];
-		for (const lab of labs) {
-			if (room.boostManager.isLabUsedForBoosting(lab.id)) continue;
-
-			if (lab.store[RESOURCE_ENERGY] > 0) {
-				options.push({
-					priority: 3,
-					weight: 0,
-					type: 'structure',
-					object: lab,
-					resourceType: RESOURCE_ENERGY,
-				});
-			}
-
-			if (lab.mineralType) {
-				options.push({
-					priority: 3,
-					weight: 0,
-					type: 'structure',
-					object: lab,
-					resourceType: lab.mineralType,
-				});
-			}
-		}
-
-		// @todo Destroy nuker once storage is empty so we can pick up contained resources.
 	}
 
 	/**

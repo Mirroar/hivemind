@@ -31,9 +31,14 @@ export default class DropDestination extends TaskProvider<DropDestinationTask, R
 	addDropResourceTasks(context: ResourceDestinationContext, options: DropDestinationTask[]) {
 		const creep = context.creep;
 
+		const terminal = this.room.terminal;
+		const terminalNeedsSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
 		for (const resourceType of getResourcesIn(creep.store)) {
 			const storageTarget = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
-			if (storageTarget) continue;
+			const wouldBlockTerminal = storageTarget === terminal
+				&& terminalNeedsSpaceForEnergy
+				&& resourceType !== RESOURCE_ENERGY;
+			if (storageTarget && !wouldBlockTerminal) continue;
 
 			// Resources only get dropped if we have nowhere to store them.
 			options.push({

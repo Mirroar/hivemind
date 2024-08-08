@@ -25,6 +25,7 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 			const options: LabSourceTask[] = [];
 
 			this.addLabResourceOptions(options, context);
+			this.addLabEvacuationOptions(options, context);
 
 			// Get reaction resources.
 			const roomMemory = this.room.memory;
@@ -131,6 +132,36 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 			option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
 
 			options.push(option);
+		}
+	}
+
+	addLabEvacuationOptions(options: LabSourceTask[], context: ResourceSourceContext) {
+		if (!this.room.isEvacuating()) return;
+
+		// Take everything out of labs.
+		const labs = this.room.myStructuresByType[STRUCTURE_LAB] || [];
+		for (const lab of labs) {
+			if (this.room.boostManager.isLabUsedForBoosting(lab.id)) continue;
+
+			if (lab.store[RESOURCE_ENERGY] > 0) {
+				options.push({
+					priority: 3,
+					weight: 0,
+					type: 'lab',
+					target: lab.id,
+					resourceType: RESOURCE_ENERGY,
+				});
+			}
+
+			if (lab.mineralType) {
+				options.push({
+					priority: 3,
+					weight: 0,
+					type: 'lab',
+					target: lab.id,
+					resourceType: lab.mineralType,
+				});
+			}
 		}
 	}
 

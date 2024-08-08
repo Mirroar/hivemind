@@ -30,9 +30,12 @@ export default class StorageDestination extends StructureDestination<StorageDest
 	addStoreResourceTasks(context: ResourceDestinationContext, options: StorageDestinationTask[]) {
 		const creep = context.creep;
 
+		const terminal = this.room.terminal;
+		const terminalNeedsSpaceForEnergy = terminal && (terminal.store.getFreeCapacity() + terminal.store.getUsedCapacity(RESOURCE_ENERGY)) < 5000;
 		for (const resourceType of getResourcesIn(creep.store)) {
 			const storageTarget = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
 			if (!storageTarget) continue;
+			if (resourceType !== RESOURCE_ENERGY && terminalNeedsSpaceForEnergy) continue;
 
 			options.push({
 				priority: 0,
