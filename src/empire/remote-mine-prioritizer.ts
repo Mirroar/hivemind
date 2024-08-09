@@ -123,6 +123,8 @@ export default class RemoteMinePrioritizer {
 	getRemoteHarvestRooms(sourceRooms: Record<string, SourceRoomAvailability>): HarvestRoomInfo[] {
 		const harvestRooms: HarvestRoomInfo[] = [];
 		for (const roomName of this.roomStatus.getAllKnownRooms()) {
+			if (Game.rooms[roomName]?.isMine()) continue;
+
 			// Ignore rooms that are not profitable to harvest from.
 			const harvestPriority = this.roomStatus.getHarvestPriority(roomName);
 			if (harvestPriority <= 0.1) continue;

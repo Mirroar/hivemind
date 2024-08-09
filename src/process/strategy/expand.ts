@@ -613,7 +613,7 @@ export default class ExpandProcess extends Process {
 	}
 
 	/**
-	 * Decides if it's worth giving up a weak room in favor of a new expansion.
+	 * Decides if stripmines are finished and should be abandoned.
 	 */
 	abandonStripmines() {
 		// Only choose a new target if we aren't already relocating.
