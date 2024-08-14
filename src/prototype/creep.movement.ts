@@ -849,7 +849,6 @@ Creep.prototype.calculateGoToPath = function (this: Creep | PowerCreep, target, 
 Creep.prototype.calculatePath = function (this: Creep | PowerCreep, target: RoomPosition, options?: GoToOptions): RoomPosition[] {
 	if (!options) options = {};
 
-	// @todo Properly type this.
 	const pfOptions: GetPathOptions = {};
 	if (this.memory.singleRoom) {
 		if (this.pos.roomName === this.memory.singleRoom) {
@@ -859,7 +858,7 @@ Creep.prototype.calculatePath = function (this: Creep | PowerCreep, target: Room
 		pfOptions.singleRoom = this.memory.singleRoom;
 	}
 
-	pfOptions.maxRooms = options.maxRooms;
+	pfOptions.maxRooms = options.maxRooms ?? pfOptions.maxRooms;
 	pfOptions.allowDanger = options.allowDanger;
 	pfOptions.avoidNearbyCreeps = options.avoidNearbyCreeps;
 
