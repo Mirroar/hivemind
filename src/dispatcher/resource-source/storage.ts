@@ -79,18 +79,30 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		const terminal = this.room.terminal;
 		if (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.95) return;
 
-		// @todo Only add a single option for the most abundant resource type.
+		// Find resource with highest count and take that.
+		let max = null;
+		let maxResourceType = null;
 		for (const resourceType of getResourcesIn(storage.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
 
-			options.push({
-				priority: storage.store[resourceType] > context.creep.store.getCapacity() / 2 ? 2 : 1,
-				weight: 0, // @todo Increase weight of more expensive resources.
-				type: this.getType(),
-				target: storage.id,
-				resourceType,
-			});
+			// Do not take out resources that would be put back right away.
+			if (this.room.getBestStorageTarget(context.creep.store.getFreeCapacity(), resourceType)?.id === storage.id) continue;
+
+			if (!max || terminal.store[resourceType] > max) {
+				max = terminal.store[resourceType];
+				maxResourceType = resourceType;
+			}
 		}
+
+		if (!maxResourceType) return;
+
+		options.push({
+			priority: storage.store[maxResourceType] > context.creep.store.getCapacity() / 2 ? 2 : 1,
+			weight: 0, // @todo Increase weight of more expensive resources.
+			type: this.getType(),
+			target: storage.id,
+			resourceType: maxResourceType,
+		});
 	}
 
 	addClearingTerminalResourceOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
