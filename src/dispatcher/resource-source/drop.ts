@@ -32,7 +32,7 @@ export default class DropSource extends TaskProvider<DropSourceTask, ResourceSou
 		const creep = context.creep;
 
 		// Look for dropped resources.
-		const targets = this.room.find(FIND_DROPPED_RESOURCES, {
+		const resources = this.room.find(FIND_DROPPED_RESOURCES, {
 			filter: resource => {
 				if (resource.amount < 10) return false;
 
@@ -43,72 +43,54 @@ export default class DropSource extends TaskProvider<DropSourceTask, ResourceSou
 			},
 		});
 
-		for (const target of targets) {
-			if (context.resourceType && context.resourceType !== target.resourceType) return;
+		for (const resource of resources) {
+			if (context.resourceType && context.resourceType !== resource.resourceType) return;
 
 			const option: DropSourceTask = {
 				priority: 4,
-				weight: target.amount / (target.resourceType === RESOURCE_ENERGY ? 100 : 30), // @todo Also factor in distance.
+				weight: resource.amount / (resource.resourceType === RESOURCE_ENERGY ? 100 : 30), // @todo Also factor in distance.
 				type: this.getType(),
-				target: target.id,
-				resourceType: target.resourceType,
+				target: resource.id,
+				resourceType: resource.resourceType,
 			};
 
-			if (target.resourceType === RESOURCE_POWER) {
+			if (resource.resourceType === RESOURCE_POWER) {
 				option.priority++;
 			}
-			else if (target.resourceType === RESOURCE_ENERGY) {
+			else if (resource.resourceType === RESOURCE_ENERGY) {
 				// Get storage location, since that is a low priority source for transporters.
 				const storagePosition = creep.room.getStorageLocation();
 
-				if (storagePosition && target.pos.x === storagePosition.x && target.pos.y === storagePosition.y) {
-					option.priority = creep.memory.role === 'transporter' ? (this.getStoragePriority(creep) + ((creep.room.storage || creep.room.terminal) ? 1 : 0)) : 5;
+				if (storagePosition && resource.pos.x === storagePosition.x && resource.pos.y === storagePosition.y) {
+					option.priority = creep.memory.role === 'transporter' ? ((creep.room.storage || creep.room.terminal) ? 1 : 0) : 4;
 				}
 				else {
-					if (target.amount < 100) option.priority--;
-					if (target.amount < 200) option.priority--;
+					if (resource.amount < 100) option.priority--;
+					if (resource.amount < 200) option.priority--;
 	
 					// If spawn / extensions need filling, transporters should not pick up
 					// energy from random targets as readily, instead prioritize storage.
 					if (creep.room.energyAvailable < creep.room.energyCapacityAvailable && creep.room.getCurrentResourceAmount(RESOURCE_ENERGY) > 5000 && creep.memory.role === 'transporter') option.priority -= 2;
 
-					if (creep.room.storage && creep.room.getFreeStorage() < target.amount && creep.room.getEffectiveAvailableEnergy() > 20_000) {
+					if (creep.room.storage && creep.room.getFreeStorage() < resource.amount && creep.room.getEffectiveAvailableEnergy() > 20_000) {
 						// If storage is super full, try leaving stuff on the ground.
 						option.priority -= 2;
 					}
-
 				}
-	
 			}
 
-			if (creep.room.getFreeStorage() < target.amount) {
+			if ((creep.room.storage || creep.room.terminal) && creep.room.getFreeStorage() < resource.amount) {
 				// If storage is super full, try leaving stuff on the ground.
 				continue;
 			}
 
-			if (target.amount < creep.store.getCapacity() * 2) {
+			if (resource.amount < creep.store.getCapacity() * 2) {
 				// We only need to limit the number of creeps picking up resources if the amount is small.
-				option.priority -= this.room.getCreepsWithOrder('drop', target.id).length * 2;
+				option.priority -= this.room.getCreepsWithOrder('drop', resource.id).length * 2;
 			}
 
 			options.push(option);
 		}
-	}
-
-	getStoragePriority(creep: Creep): number {
-		const room = creep.room;
-		if (room.energyAvailable < room.energyCapacityAvailable * 0.9) {
-			// Spawning is important, so get energy when needed.
-			return 4;
-		}
-		
-		if (room.terminal && room.storage && room.storage.store.energy > 5000 && room.terminal.store.energy < room.storage.store.energy * 0.05 && !room.isClearingTerminal()) {
-			// Take some energy out of storage to put into terminal from time to time.
-			// @todo This really should be in the resource destination for the terminal.
-			return 2;
-		}
-
-		return 0;
 	}
 
 	isValid(task: DropSourceTask, context: ResourceSourceContext): boolean {

@@ -64,6 +64,7 @@ export default class BayDestination extends TaskProvider<BayDestinationTask, Res
 			if (!target.refillFrom(creep)) {
 				delete creep.memory.order;
 
+				// Move out of the bay as soon as possible.
 				const exitPosition = target.getExitPosition();
 				if (exitPosition) creep.move(creep.pos.getDirectionTo(exitPosition));
 			}

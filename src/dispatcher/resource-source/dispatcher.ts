@@ -8,7 +8,6 @@ import LabSource from 'dispatcher/resource-source/lab';
 import LinkSource from 'dispatcher/resource-source/link';
 import OverfullExtensionSource from 'dispatcher/resource-source/overfull-extension';
 import StorageSource from 'dispatcher/resource-source/storage';
-import TerminalSource from 'dispatcher/resource-source/terminal';
 
 declare global {
 	interface ResourceSourceTask extends Task {
@@ -33,6 +32,5 @@ export default class ResourceSourceDispatcher extends Dispatcher<ResourceSourceT
 		this.addProvider(new LinkSource(room));
 		this.addProvider(new OverfullExtensionSource(room));
 		this.addProvider(new StorageSource(room));
-		this.addProvider(new TerminalSource(room));
 	}
 }

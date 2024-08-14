@@ -1,10 +1,12 @@
 import TaskProvider from 'dispatcher/task-provider';
 import utilities from 'utilities';
 
+type ValidatorCallback<TaskType extends Task, ContextType> = (task: TaskType, context: ContextType) => boolean;
+
 export default class Dispatcher<TaskType extends Task, ContextType> {
 	protected providers: Record<string, TaskProvider<TaskType, ContextType>> = {};
 
-	getTask(context: ContextType): TaskType {
+	getTask(context: ContextType, validator?: ValidatorCallback<TaskType, ContextType>): TaskType {
 		const options: TaskType[] = [];
 		let highestPriority = -10;
 
@@ -14,6 +16,7 @@ export default class Dispatcher<TaskType extends Task, ContextType> {
 			for (const option of provider.getTasks(context)) {
 				if (option.priority < highestPriority) continue;
 				if (!provider.isValid(option, context)) continue;
+				if (validator && !validator(option, context)) continue;
 
 				options.push(option);
 				if (highestPriority < option.priority) highestPriority = option.priority;

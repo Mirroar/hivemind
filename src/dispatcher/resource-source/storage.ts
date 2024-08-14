@@ -16,25 +16,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 	}
 
 	getHighestPriority(context?: ResourceSourceContext) {
-		return Math.max(2, this.getEnergyPickupPriority(context));
-	}
-
-	getEnergyPickupPriority(context?: ResourceSourceContext): number {
-		if (!context) return 0;
-		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return 0;
-		if (context.creep.memory.role !== 'transporter') return 5;
-
-		if (this.room.energyAvailable < this.room.energyCapacityAvailable * 0.9) {
-			// Spawning is important, so get energy when needed.
-			return 4;
-		}
-
-		if (this.room.terminal && this.room.storage && !this.terminalNeedsClearing() && this.room.terminal.store.energy < this.room.storage.store.energy * 0.05) {
-			// Take some energy out of storage to put into terminal from time to time.
-			return 2;
-		}
-
-		return 0;
+		return 3;
 	}
 
 	getTasks(context: ResourceSourceContext) {
@@ -43,6 +25,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		const options: StorageSourceTask[] = [];
 
 		this.addStorageEnergySourceOptions(options, context);
+		this.addResourceFallbackOptions(options, context);
 		this.addClearingStorageResourceOptions(options, context);
 		this.addClearingTerminalResourceOptions(options, context);
 
@@ -50,7 +33,9 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 	}
 
 	addStorageEnergySourceOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
-		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;
+		// We deliberately don't return tasks if no resource type is specified.
+		if (context.resourceType !== RESOURCE_ENERGY) return;
+		
 		const creep = context.creep;
 
 		// Energy can be gotten at the room's storage or terminal.
@@ -60,13 +45,30 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
 		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !this.room.storage || storageTarget.id !== this.room.storage.id) {
 			options.push({
-				priority: this.getEnergyPickupPriority(context),
+				priority: 2,
 				weight: 0,
 				type: this.getType(),
 				target: storageTarget.id,
 				resourceType: RESOURCE_ENERGY,
 			});
 		}
+	}
+
+	addResourceFallbackOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
+		// If a resource type is specified, allow taking it from storage at priority 0.
+		if (!context.resourceType) return;
+		if (context.resourceType === RESOURCE_ENERGY) return;
+
+		const storageTarget = this.room.getBestStorageSource(context.resourceType);
+		if (!storageTarget) return;
+
+		options.push({
+			priority: 0,
+			weight: 0,
+			type: this.getType(),
+			target: storageTarget.id,
+			resourceType: context.resourceType,
+		});
 	}
 
 	addClearingStorageResourceOptions(options: StorageSourceTask[], context: ResourceSourceContext) {
@@ -77,6 +79,7 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		const terminal = this.room.terminal;
 		if (terminal.store.getUsedCapacity() > terminal.store.getCapacity() * 0.95) return;
 
+		// @todo Only add a single option for the most abundant resource type.
 		for (const resourceType of getResourcesIn(storage.store)) {
 			if (context.resourceType && resourceType !== context.resourceType) continue;
 

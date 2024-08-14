@@ -41,14 +41,21 @@ export default class LabDestination extends StructureDestination<LabDestinationT
 		const freeCapacity = lab.store.getFreeCapacity(resourceType);
 		if (freeCapacity < lab.store.getCapacity(resourceType) * 0.2) return;
 
-		options.push({
+		const option: LabDestinationTask = {
 			priority: 3,
-			weight: freeCapacity / 100,
+			weight: 1 - (lab.store[lab.mineralType] / lab.store.getCapacity(lab.mineralType)),
 			type: this.getType(),
 			target: labId,
 			resourceType,
 			amount: freeCapacity,
-		});
+		}
+
+		options.push(option);
+
+		if (lab.store[lab.mineralType] > lab.store.getCapacity(lab.mineralType) * 0.2) {
+			option.priority--;
+		}
+
 	}
 
 	isValid(task: LabDestinationTask, context: ResourceDestinationContext) {

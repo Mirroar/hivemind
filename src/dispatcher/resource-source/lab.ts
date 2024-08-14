@@ -27,13 +27,6 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 			this.addLabResourceOptions(options, context);
 			this.addLabEvacuationOptions(options, context);
 
-			// Get reaction resources.
-			const roomMemory = this.room.memory;
-			if (roomMemory?.labs && roomMemory?.currentReaction && !this.room.isEvacuating()) {
-				this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source1), roomMemory.currentReaction[0], context);
-				this.addSourceLabResourceOptions(options, Game.getObjectById<StructureLab>(roomMemory.labs.source2), roomMemory.currentReaction[1], context);
-			}
-
 			return options;
 		});
 	}
@@ -66,7 +59,7 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 				const option: LabSourceTask = {
 					priority: 0,
 					weight: mineralAmount / mineralCapacity,
-					type: 'lab',
+					type: this.getType(),
 					target: lab.id,
 					resourceType: lab.mineralType,
 				};
@@ -90,8 +83,6 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 				}
 
 				option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
-				option.priority -= this.room.getCreepsWithOrder('getEnergy', lab.id).length * 2;
-				option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
 
 				if (option.priority > 0) options.push(option);
 			}
@@ -100,39 +91,28 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 		if (!currentReaction) return;
 
 		// Clear out source labs with wrong resources.
-		let lab = Game.getObjectById<StructureLab>(room.memory.labs.source1);
-		if (lab?.mineralType && (!context.resourceType || context.resourceType === lab.mineralType) && lab.store[lab.mineralType] > 0 && lab.mineralType !== currentReaction[0]) {
-			const option: LabSourceTask = {
-				priority: 3,
-				weight: 0,
-				type: 'lab',
-				target: lab.id,
-				resourceType: lab.mineralType,
-			};
+		this.addClearSourceLabOption(options, Game.getObjectById<StructureLab>(room.memory.labs.source1), context, currentReaction[0]);
+		this.addClearSourceLabOption(options, Game.getObjectById<StructureLab>(room.memory.labs.source2), context, currentReaction[1]);
+	}
 
-			option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
-			option.priority -= this.room.getCreepsWithOrder('getEnergy', lab.id).length * 2;
-			option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
+	addClearSourceLabOption(options: LabSourceTask[], lab: StructureLab, context: ResourceSourceContext, resourceType: ResourceConstant) {
+		if (!lab) return;
+		if (!lab.mineralType) return;
+		if (context.resourceType && context.resourceType !== lab.mineralType) return;
+		if (lab.store.getUsedCapacity(lab.mineralType) === 0) return;
+		if (lab.mineralType === resourceType) return;
 
-			options.push(option);
-		}
+		const option: LabSourceTask = {
+			priority: 3,
+			weight: 0,
+			type: this.getType(),
+			target: lab.id,
+			resourceType: lab.mineralType,
+		};
 
-		lab = Game.getObjectById<StructureLab>(room.memory.labs.source2);
-		if (lab?.mineralType && (!context.resourceType || context.resourceType === lab.mineralType) && lab.store[lab.mineralType] > 0 && lab.mineralType !== currentReaction[1]) {
-			const option: LabSourceTask = {
-				priority: 3,
-				weight: 0,
-				type: 'lab',
-				target: lab.id,
-				resourceType: lab.mineralType,
-			};
+		option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
 
-			option.priority -= this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2;
-			option.priority -= this.room.getCreepsWithOrder('getEnergy', lab.id).length * 2;
-			option.priority -= this.room.getCreepsWithOrder('getResource', lab.id).length * 2;
-
-			options.push(option);
-		}
+		options.push(option);
 	}
 
 	addLabEvacuationOptions(options: LabSourceTask[], context: ResourceSourceContext) {
@@ -145,9 +125,9 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 
 			if (lab.store[RESOURCE_ENERGY] > 0) {
 				options.push({
-					priority: 3,
+					priority: 3 - this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2,
 					weight: 0,
-					type: 'lab',
+					type: this.getType(),
 					target: lab.id,
 					resourceType: RESOURCE_ENERGY,
 				});
@@ -155,49 +135,14 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 
 			if (lab.mineralType) {
 				options.push({
-					priority: 3,
+					priority: 3 - this.room.getCreepsWithOrder(this.getType(), lab.id).length * 2,
 					weight: 0,
-					type: 'lab',
+					type: this.getType(),
 					target: lab.id,
 					resourceType: lab.mineralType,
 				});
 			}
 		}
-	}
-
-	/**
-	 * Adds options for getting reaction lab resources.
-	 *
-	 * @param {Array} options
-	 *   A list of potential resource sources.
-	 * @param {StructureLab} lab
-	 *   The lab to fill.
-	 * @param {string} resourceType
-	 *   The type of resource that should be put in the lab.
-	 */
-	addSourceLabResourceOptions(options: LabSourceTask[], lab: StructureLab, resourceType: ResourceConstant, context: ResourceSourceContext) {
-		if (!lab) return;
-		if (lab.mineralType && lab.mineralType !== resourceType) return;
-		if (lab.store[lab.mineralType] > lab.store.getCapacity(lab.mineralType) * 0.5) return;
-		if (context.resourceType && context.resourceType !== resourceType) return;
-
-		const source = this.room.getBestStorageSource(resourceType);
-		if (!source) return;
-		if ((source.store[resourceType] || 0) === 0) return;
-
-		const option: LabSourceTask = {
-			priority: 3,
-			weight: 1 - (lab.store[lab.mineralType] / lab.store.getCapacity(lab.mineralType)),
-			type: 'lab',
-			target: source.id,
-			resourceType,
-		};
-
-		if (lab.store[lab.mineralType] > lab.store.getCapacity(lab.mineralType) * 0.2) {
-			option.priority--;
-		}
-
-		options.push(option);
 	}
 
 	isValid(task: LabSourceTask, context: ResourceSourceContext) {

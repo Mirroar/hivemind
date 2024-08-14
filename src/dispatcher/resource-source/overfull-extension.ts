@@ -38,8 +38,6 @@ export default class OverfullExtensionSource extends StructureSource<OverfullExt
 				};
 
 				option.priority -= this.room.getCreepsWithOrder(this.getType(), extension.id).length * 2;
-				option.priority -= this.room.getCreepsWithOrder('getEnergy', extension.id).length * 2;
-				option.priority -= this.room.getCreepsWithOrder('getResource', extension.id).length * 2;
 
 				options.push(option);
 			}

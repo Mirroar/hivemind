@@ -42,8 +42,6 @@ export default class LinkSource extends StructureSource<LinkSourceTask> {
 				}
 
 				option.priority -= this.room.getCreepsWithOrder(this.getType(), link.id).length * 2;
-				option.priority -= this.room.getCreepsWithOrder('getEnergy', link.id).length * 2;
-				option.priority -= this.room.getCreepsWithOrder('getResource', link.id).length * 2;
 
 				options.push(option);
 			}
@@ -53,9 +51,9 @@ export default class LinkSource extends StructureSource<LinkSourceTask> {
 	}
 
 	isValid(task: LinkSourceTask, context: ResourceSourceContext) {
-		if (!super.isValid(task, context)) return false;
 		if (!this.room.linkNetwork) return false;
 		if (this.room.linkNetwork.energy <= this.room.linkNetwork.maxEnergy) return false;
+		if (!super.isValid(task, context)) return false;
 
 		return true;
 	}

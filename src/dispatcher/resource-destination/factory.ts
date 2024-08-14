@@ -28,6 +28,8 @@ export default class FactoryDestination extends StructureDestination<FactoryDest
 			const missingResources = this.room.factoryManager.getMissingComponents();
 			if (!missingResources) return [];
 
+			const neededResources = this.room.factoryManager.getRequestedComponents() || {};
+
 			let resourceType: ResourceConstant;
 			for (resourceType in missingResources) {
 				if (context.resourceType && resourceType !== context.resourceType) continue;
@@ -36,7 +38,7 @@ export default class FactoryDestination extends StructureDestination<FactoryDest
 				const option: FactoryDestinationTask = {
 					type: this.getType(),
 					priority: 3,
-					weight: missingResources[resourceType] / 1000,
+					weight: missingResources[resourceType] / neededResources[resourceType],
 					resourceType,
 					amount: missingResources[resourceType],
 					target: this.room.factory.id,

@@ -190,7 +190,7 @@ export default class Bay {
 	}
 
 	getExitPosition(): RoomPosition {
-		const coords = cache.inHeap('exitCoords:' + this.name, 500, () => {
+		const coords = cache.inHeap('bayExitCoords:' + this.name, 500, () => {
 			let exitCoords;
 			const room = Game.rooms[this.pos.roomName];
 			handleMapArea(this.pos.x, this.pos.y, (x, y) => {
@@ -202,5 +202,31 @@ export default class Bay {
 		});
 
 		return new RoomPosition(coords.x, coords.y, this.pos.roomName);
+	}
+
+	getPossibleExitTiles(): RoomPosition[] {
+		return cache.inHeap('bayExitTiles:' + this.name, 500, () => {
+			const terrain = new Room.Terrain(this.pos.roomName);
+			// @todo Bay's available tiles should by handled and cached by the bay itself.
+			const availableTiles: RoomPosition[] = [];
+			handleMapArea(this.pos.x, this.pos.y, (x, y) => {
+				if (x === this.pos.x && y === this.pos.y) return;
+				if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+				const pos = new RoomPosition(x, y, this.pos.roomName);
+
+				// Check if there's a structure here already.
+				const structures = pos.lookFor(LOOK_STRUCTURES);
+				if (_.some(structures, structure => !structure.isWalkable())) return;
+
+				// Check if there's a construction site here already.
+				const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+				if (_.some(sites, site => !site.isWalkable())) return;
+
+				availableTiles.push(pos);
+			});
+
+			return availableTiles;
+		});
 	}
 }

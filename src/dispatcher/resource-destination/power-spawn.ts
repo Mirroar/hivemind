@@ -42,13 +42,14 @@ export default class PowerSpawnDestination extends StructureDestination<PowerSpa
 		if (!powerSpawn) return;
 
 		const freeCapacity = powerSpawn.store.getFreeCapacity(resourceType);
-		if (freeCapacity < powerSpawn.store.getCapacity(resourceType) * minFreeLevel) return;
+		const capacity = powerSpawn.store.getCapacity(resourceType);
+		if (freeCapacity < capacity * minFreeLevel) return;
 		if (context.resourceType && context.resourceType !== resourceType) return;
 
 		const option: PowerSpawnDestinationTask = {
 			type: this.getType(),
 			priority: 3,
-			weight: freeCapacity / 100,
+			weight: freeCapacity / capacity,
 			resourceType,
 			amount: freeCapacity,
 			target: powerSpawn.id,

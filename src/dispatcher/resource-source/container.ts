@@ -22,56 +22,55 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 	getTasks(context: ResourceSourceContext) {
 		const options: ContainerSourceTask[] = [];
 
-		this.addContainerEnergySourceOptions(options, context);
-		this.addContainerResourceSourceOptions(options, context);
+		this.emptyEnergyFromContainers(options, context);
+		this.emptyResourcesFromContainers(options, context);
 
 		return options;
 	}
 
-	private addContainerEnergySourceOptions(options: ContainerSourceTask[], context: ResourceSourceContext) {
+	private emptyEnergyFromContainers(options: ContainerSourceTask[], context: ResourceSourceContext) {
 		const creep = context.creep;
 		if (context.resourceType && context.resourceType !== RESOURCE_ENERGY) return;
 
 		// Look for energy in Containers.
-		const targets = _.filter(this.room.structuresByType[STRUCTURE_CONTAINER], structure => structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1);
+		const containers = _.filter(this.room.structuresByType[STRUCTURE_CONTAINER], structure => structure.store[RESOURCE_ENERGY] > creep.store.getCapacity() * 0.1);
 
 		// Prefer containers used as harvester dropoff.
-		for (const target of targets) {
+		for (const container of containers) {
 			const option: ContainerSourceTask = {
 				priority: 1,
-				weight: target.store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
+				weight: container.store[RESOURCE_ENERGY] / 100, // @todo Also factor in distance.
 				type: this.getType(),
-				target: target.id,
+				target: container.id,
 				resourceType: RESOURCE_ENERGY,
 			};
 
 			// Don't use the controller container as a normal source if we're upgrading.
 			if (
-				target.id === this.room.memory.controllerContainer
+				container.id === this.room.memory.controllerContainer
 				&& (this.room.creepsByRole.upgrader || this.room.creepsByRole.builder)
 				&& creep.memory.role === 'transporter'
 			) {
-				if (this.room.energyAvailable === this.room.energyCapacityAvailable) continue;
 				continue;
 			}
 
-			for (const source of target.room.sources) {
-				if (source.getNearbyContainer()?.id !== target.id) continue;
+			for (const source of container.room.sources) {
+				if (source.getNearbyContainer()?.id !== container.id) continue;
 
 				option.priority++;
-				if (target.store.getUsedCapacity() >= creep.store.getFreeCapacity() // This container is filling up, prioritize emptying it when we aren't
+				if (container.store.getUsedCapacity() >= creep.store.getFreeCapacity() // This container is filling up, prioritize emptying it when we aren't
 					// busy filling extensions.
 					&& (this.room.energyAvailable >= this.room.energyCapacityAvailable || !this.room.storage || creep.memory.role !== 'transporter')) option.priority += 2;
 
 				break;
 			}
 
-			for (const bay of target.room.bays) {
-				if (bay.pos.getRangeTo(target.pos) > 0) continue;
-				if (!target.room.roomPlanner) continue;
-				if (!target.room.roomPlanner.isPlannedLocation(target.pos, 'harvester')) continue;
+			for (const bay of container.room.bays) {
+				if (bay.pos.getRangeTo(container.pos) > 0) continue;
+				if (!container.room.roomPlanner) continue;
+				if (!container.room.roomPlanner.isPlannedLocation(container.pos, 'harvester')) continue;
 
-				if (target.store.getUsedCapacity() < target.store.getCapacity() / 3) {
+				if (container.store.getUsedCapacity() < container.store.getCapacity() / 3) {
 					// Do not empty containers in harvester bays for quicker extension refills.
 					option.priority = -1;
 				}
@@ -79,25 +78,29 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				break;
 			}
 
-			option.priority -= this.room.getCreepsWithOrder('container', target.id).length * 3;
+			option.priority -= this.room.getCreepsWithOrder('container', container.id).length * 3;
 
 			options.push(option);
 		}
 	}
 
-	private addContainerResourceSourceOptions(options: ContainerSourceTask[], context: ResourceSourceContext) {
+	private emptyResourcesFromContainers(options: ContainerSourceTask[], context: ResourceSourceContext) {
 		const room = this.room;
 		// We need a decent place to store these resources.
 		if (!room.terminal && !room.storage) return;
 
 		// Take non-energy out of containers.
-		const containers = room.structuresByType[STRUCTURE_CONTAINER] || [];
+		const containers = _.filter(room.structuresByType[STRUCTURE_CONTAINER], structure => structure.store.getUsedCapacity() > 0);
 
 		for (const container of containers) {
 			const assignedResourceType = this.getAssignedResourceType(container);
 			for (const resourceType of getResourcesIn(container.store)) {
+				if (container.store.getUsedCapacity(resourceType) === 0) continue;
+
+				// Energy is handled separately.
 				if (resourceType === RESOURCE_ENERGY) continue;
-				if (container.store[resourceType] === 0) continue;
+
+				// Only take out the assigned resource type if the container is getting close to full.
 				if (
 					resourceType === assignedResourceType
 					&& container.store.getUsedCapacity(resourceType) < CONTAINER_CAPACITY / 2

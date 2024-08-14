@@ -22,7 +22,7 @@ export default class NukerDestination extends StructureDestination<NukerDestinat
 	getTasks(context: ResourceDestinationContext) {
 		if (this.room.isEvacuating()) return [];
 
-		return this.cacheEmptyTaskListFor(context.resourceType || '', 100, () => {
+		return this.cacheEmptyTaskListFor(context.resourceType || '', 1000, () => {
 			const options: NukerDestinationTask[] = [];
 			this.addResourceTask(RESOURCE_GHODIUM, options, context);
 
