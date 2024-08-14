@@ -6,6 +6,8 @@ LOOK_CONSTRUCTION_SITES CONSTRUCTION_COST CREEP_LIFE_TIME MAX_CONSTRUCTION_SITES
 CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
+// @todo Only build early-game roads on swamps.
+
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RoomPlanner from 'room/planner/room-planner';
@@ -179,7 +181,7 @@ export default class RoomManager {
 			// mess up `room.energyAvailable` so often that we can easily get spawn-locked.
 			// We'd rather destroy and rebuild them in that case.
 			if (this.roomPlanner.isPlannedLocation(extension.pos, 'extension') && extension.isOperational()) continue;
-			if (!this.roomPlanner.isPlannedLocation(extension.pos, 'road')) continue;
+			if (!this.roomPlanner.isPlannedLocation(extension.pos, 'road') && extension.isOperational()) continue;
 
 			extension.destroy();
 		}
