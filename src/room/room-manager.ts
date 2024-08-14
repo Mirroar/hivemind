@@ -10,10 +10,11 @@ FIND_MY_CONSTRUCTION_SITES */
 
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
+import PersistentFeatureFlag from 'utils/persistent-feature-flag';
+import RemoteMiningOperation from 'operation/remote-mining';
 import RoomPlanner from 'room/planner/room-planner';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {serializeCoords} from 'utils/serialization';
-import RemoteMiningOperation from 'operation/remote-mining';
 
 declare global {
 	interface Structure {
@@ -42,10 +43,13 @@ interface ScoredExtractorPosition {
 	mineralType?: MineralConstant;
 }
 
+type RoomManagerFeatureFlag = 'finishedRecovering' | 'cleanedRoom' | 'builtAllStructures' | 'ranAtRcl'; 
+
 export default class RoomManager {
 	room: Room;
 	roomPlanner: RoomPlanner;
 	memory: RoomManagerMemory;
+	featureFlags: PersistentFeatureFlag<RoomManagerFeatureFlag>;
 	roomConstructionSites: ConstructionSite[];
 	constructionSitesByType: Record<string, ConstructionSite[]>;
 
@@ -80,6 +84,8 @@ export default class RoomManager {
 		}
 
 		this.memory = Memory.rooms[this.room.name].manager;
+
+		this.featureFlags = new PersistentFeatureFlag<RoomManagerFeatureFlag>('room:managerFlags:' + this.room.name);
 	}
 
 	/**
@@ -96,25 +102,63 @@ export default class RoomManager {
 	 * Manages the assigned room.
 	 */
 	runLogic() {
-		if (!this.roomPlanner || !this.roomPlanner.isPlanningFinished()) return;
-		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !this.room.controller?.safeMode) return;
+		if (!this.roomPlanner) return;
+		if (!this.roomPlanner.isPlanningFinished()) {
+			// Make sure to reset feature flags when room planner is running.
+			this.featureFlags.reset();
+
+			return;
+		}
+
+		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !this.room.controller?.safeMode) {
+			// Don't build anything while under attack.
+			// Reset feature flags to make sure we rebuild everything once the threat is gone.
+			this.featureFlags.reset();
+
+			return;
+		}
+
+		// Figure out if rcl has changed and we need to build some new structures.
+		if (this.room.controller.level !== this.featureFlags.getNumeric('ranAtRcl')) {
+			this.featureFlags.reset();
+			this.featureFlags.setNumeric('ranAtRcl', this.room.controller.level);
+		}
+
+		// @todo Figure out if a road, container or rampart has decayed and needs rebuilding.
 
 		delete this.memory.runNextTick;
+		if (this.featureFlags.isSet('builtAllStructures')) return;
+
 		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
 		this.constructionSitesByType = _.groupBy(this.roomConstructionSites, 'structureType');
 		this.roomStructures = this.room.structures;
 		this.structuresByType = this.room.structuresByType;
 		this.newStructures = 0;
 
-		if (this.isRoomRecovering()) {
-			this.buildRoomDefenseFirst();
-
-			if (!this.structuresByType[STRUCTURE_SPAWN] || this.structuresByType[STRUCTURE_SPAWN].length === 0) return;
-			if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0 && (!this.structuresByType[STRUCTURE_STORAGE] || this.structuresByType[STRUCTURE_STORAGE].length === 0)) return;
-		}
-
+		if (this.recoverRoom()) return;
 		this.cleanRoom();
 		this.manageStructures();
+
+		// If there's nothing more to build, we're done.
+		if (this.checkWallIntegrity() && this.roomConstructionSites.length + this.newStructures === 0) {
+			this.featureFlags.set('builtAllStructures');
+		}
+	}
+
+	recoverRoom(): boolean {
+		if (this.featureFlags.isSet('finishedRecovering')) return false;
+		if (!this.isRoomRecovering()) {
+			this.featureFlags.set('finishedRecovering');
+			return false;
+		}
+
+		this.buildRoomDefenseFirst();
+
+		if (!this.structuresByType[STRUCTURE_SPAWN] || this.structuresByType[STRUCTURE_SPAWN].length === 0) return true;
+		if (CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] > 0 && (!this.structuresByType[STRUCTURE_STORAGE] || this.structuresByType[STRUCTURE_STORAGE].length === 0)) return true;
+
+		this.featureFlags.set('finishedRecovering');
+		return false;
 	}
 
 	isRoomRecovering(): boolean {
@@ -163,6 +207,8 @@ export default class RoomManager {
 	 * Removes structures that might prevent the room's construction.
 	 */
 	cleanRoom() {
+		if (this.featureFlags.isSet('cleanedRoom')) return;
+
 		this.removeHostileStructures();
 		this.removeHostileConstructionSites();
 		
@@ -172,6 +218,7 @@ export default class RoomManager {
 		this.cleanLabs();
 		this.cleanLinks();
 		this.cleanWalls();
+		this.featureFlags.set('cleanedRoom');
 	}
 
 	cleanExtensions() {
@@ -771,21 +818,23 @@ export default class RoomManager {
 	checkWallIntegrity(minHits?: number) {
 		// @todo make this consistent with defense manager.
 		if (!minHits) minHits = hivemind.settings.get('minWallIntegrity');
+
 		const maxHealth = hivemind.settings.get('maxWallHealth');
+		const targetHealth = minHits * maxHealth[this.room.controller.level] / maxHealth[8];
 
-		minHits *= maxHealth[this.room.controller.level] / maxHealth[8];
+		return cache.inHeap(`wallIntegrity:${this.room.name}:${minHits}`, 100, () => {
+			for (const pos of this.roomPlanner.getLocations('rampart')) {
+				if (this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
 
-		for (const pos of this.roomPlanner.getLocations('rampart')) {
-			if (this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
-
-			// Check if there's a rampart here already.
-			const structures = pos.lookFor(LOOK_STRUCTURES);
-			if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= minHits).length === 0) {
-				return false;
+				// Check if there's a rampart here already.
+				const structures = pos.lookFor(LOOK_STRUCTURES);
+				if (_.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART && structure.hits >= targetHealth).length === 0) {
+					return false;
+				}
 			}
-		}
 
-		return true;
+			return true;
+		});
 	}
 
 	/**
