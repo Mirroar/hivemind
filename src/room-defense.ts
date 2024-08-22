@@ -27,7 +27,7 @@ const ENEMY_STRENGTH_NORMAL = 2; // Enemies are strong or numerous, but can prob
 const ENEMY_STRENGTH_STRONG = 3; // Enemies are strong or numerous, but can probably be handled with boosted active defense.
 const ENEMY_STRENGTH_DEADLY = 4; // Enemies are strong or numerous, and we need help from outside.
 
-type EnemyStrength = typeof ENEMY_STRENGTH_NONE
+export type EnemyStrength = typeof ENEMY_STRENGTH_NONE
 	| typeof ENEMY_STRENGTH_WEAK
 	| typeof ENEMY_STRENGTH_NORMAL
 	| typeof ENEMY_STRENGTH_STRONG
@@ -74,10 +74,11 @@ export default class RoomDefense {
 	}
 
 	drawDebug() {
-		const dangerMatrix = getDangerMatrix(this.roomName);
 		const visual = this.room.visual;
 		if (!visual || hivemind.settings.get('disableRoomVisuals')) return;
+		if (this.room.defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return;
 
+		const dangerMatrix = getDangerMatrix(this.roomName);
 		for (let x = 0; x < 50; x++) {
 			for (let y = 0; y < 50; y++) {
 				if (dangerMatrix.get(x, y) === 1) {
@@ -108,7 +109,7 @@ export default class RoomDefense {
 	}
 
 	getLowestWallStrength(): number {
-		return cache.inObject(this.room, 'weakestWallStrength', 1, () => {
+		return cache.inHeap('weakestWallStrength:' + this.room.name, 5, () => {
 			if (!this.room.roomPlanner) return 0;
 
 			const rampartPositions: RoomPosition[] = this.room.roomPlanner.getLocations('rampart');
@@ -118,8 +119,7 @@ export default class RoomDefense {
 				if (this.room.roomPlanner.isPlannedLocation(pos, 'rampart.ramp')) continue;
 
 				// Check if there's a rampart here already.
-				const structures = pos.lookFor(LOOK_STRUCTURES);
-				const ramps = _.filter(structures, structure => structure.structureType === STRUCTURE_RAMPART);
+				const ramps = _.filter(this.room.myStructuresByType[STRUCTURE_RAMPART], structure => structure.pos.isEqualTo(pos));
 				if (ramps.length === 0) {
 					return 0;
 				}
@@ -146,7 +146,7 @@ export default class RoomDefense {
 	 *   4: Enemies are strong or numerous, and we need help from outside.
 	 */
 	getEnemyStrength(): EnemyStrength {
-		return cache.inObject(this.room, 'getEnemyStrength', 1, () => {
+		return cache.inHeap('getEnemyStrength:' + this.roomName, 5, () => {
 			let attackStrength = 0;
 			let healStrength = 0;
 			let totalStrength = 0;

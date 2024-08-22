@@ -4,6 +4,7 @@ ATTACK_POWER RANGED_ATTACK_POWER HEAL_POWER RANGED_HEAL_POWER
 CARRY CLAIM MOVE TOUGH WORK TOWER_ENERGY_COST */
 
 import hivemind from 'hivemind';
+import cache from 'utils/cache';
 
 declare global {
 	interface Room {
@@ -311,19 +312,21 @@ Room.prototype.assertTargetPriorities = function (this: Room) {
  *   An enemy creep to shoot.
  */
 Room.prototype.getTowerTarget = function (this: Room) {
-	this.assertMilitarySituation();
-	let max = null;
-	for (const creep of this.militaryObjects.creeps) {
-		if (!creep.militaryPriority) continue;
-		if (creep.militaryPriority <= 0) continue;
-		if (max && max.militaryPriority > creep.militaryPriority) continue;
+	return cache.inObject(this, 'towerTarget', 1, () => {
+		this.assertMilitarySituation();
+		let max = null;
+		for (const creep of this.militaryObjects.creeps) {
+			if (!creep.militaryPriority) continue;
+			if (creep.militaryPriority <= 0) continue;
+			if (max && max.militaryPriority > creep.militaryPriority) continue;
 
-		max = creep;
-	}
+			max = creep;
+		}
 
-	if (max) this.visual.circle(max.pos.x, max.pos.y, {radius: 2, fill: 'red'});
+		if (max) this.visual.circle(max.pos.x, max.pos.y, {radius: 1, fill: 'red', opacity: 0.5});
 
-	return max;
+		return max;
+	});
 };
 
 /**

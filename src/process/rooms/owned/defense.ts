@@ -1,10 +1,9 @@
-/* global FIND_MY_STRUCTURES STRUCTURE_TOWER FIND_HOSTILE_CREEPS FIND_MY_CREEPS
-HEAL */
+/* global STRUCTURE_TOWER HEAL */
 
 import hivemind from 'hivemind';
 import Process from 'process/process';
-import {simpleAllies} from 'utils/communication';
-import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL, EnemyStrength} from 'room-defense';
+import cache from 'utils/cache';
 
 export default class RoomDefenseProcess extends Process {
 	room: Room;
@@ -27,7 +26,7 @@ export default class RoomDefenseProcess extends Process {
 	run() {
 		this.manageTowers();
 		this.manageSafeMode();
-		this.manageDefense();
+		this.manageDefenseRequests();
 		this.room.defense.openRampartsToFriendlies();
 		this.room.defense.drawDebug();
 
@@ -43,72 +42,97 @@ export default class RoomDefenseProcess extends Process {
 
 		if (towers.length === 0) return;
 
-		const hostileCreeps = this.room.find(FIND_HOSTILE_CREEPS);
+		const hostileCreeps = this.getHostileCreeps();
 		const enemyStrength = this.room.defense.getEnemyStrength();
 		for (const tower of towers) {
-			// Attack enemies.
-			if (hostileCreeps.length > 0) {
-				// Use new military manager if possible.
-				const target = this.room.getTowerTarget();
-				if (target) {
-					this.room.visual.line(tower.pos.x, tower.pos.y, target.pos.x, target.pos.y, {color: 'red'});
-
-					if (target.my) {
-						tower.heal(target);
-					}
-					else {
-						// @todo Only attack if we can be sure it's not tower drain.
-						if ((this.room.controller.safeMode ?? 0) < 200 || target.pos.getRangeTo(25, 25) <= 20) {
-							tower.attack(target);
-						}
-					}
-
-					continue;
-				}
-			}
-
-			// Heal friendlies.
-			// @todo Don't check this for every tower in the room.
-			const damaged = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
-				filter: creep => creep.hits < creep.hitsMax && (creep.getActiveBodyparts(ATTACK) > 0 || creep.getActiveBodyparts(RANGED_ATTACK) > 0 || enemyStrength === 0),
-			});
-			if (damaged) {
-				tower.heal(damaged);
-				continue;
-			}
-
-			// Heal friendlies.
-			// @todo Don't check this for every tower in the room.
-			const damagedPCs = tower.pos.findClosestByRange(FIND_MY_POWER_CREEPS, {
-				filter: creep => creep.hits < creep.hitsMax,
-			});
-			if (damagedPCs) {
-				tower.heal(damagedPCs);
-				continue;
-			}
-
-			// Repair ramparts during a strong attack.
-			if (enemyStrength >= ENEMY_STRENGTH_NORMAL && tower.store.getUsedCapacity(RESOURCE_ENERGY) > tower.store.getCapacity(RESOURCE_ENERGY) / 2) {
-				let availableRamparts = [];
-				for (const creep of hostileCreeps) {
-					if (!creep.isDangerous()) continue;
-					if (hivemind.relations.isAlly(creep.owner.username)) continue;
-
-					if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
-						availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 3, {
-							filter: s => s.structureType === STRUCTURE_RAMPART && this.room.roomPlanner.isPlannedLocation(s.pos, 'rampart'),
-						}));
-					}
-					else {
-						availableRamparts = availableRamparts.concat(creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-							filter: s => s.structureType === STRUCTURE_RAMPART && this.room.roomPlanner.isPlannedLocation(s.pos, 'rampart'),
-						}));
-					}
-				}
-
-				tower.repair(_.min(availableRamparts, 'hits'));
-			}
+			if (this.performTowerAttack(tower, hostileCreeps)) continue;
+			if (this.performTowerHeal(tower, enemyStrength)) continue;
+			if (this.performTowerRampartRepair(tower, hostileCreeps, enemyStrength)) continue;
 		}
+	}
+
+	getHostileCreeps(): Creep[] {
+		let hostileCreeps: Creep[] = [];
+		for (const userName in this.room.enemyCreeps) {
+			if (hivemind.relations.isAlly(userName)) continue;
+
+			hostileCreeps = hostileCreeps.concat(this.room.enemyCreeps[userName]);
+		}
+
+		return hostileCreeps;
+	}
+
+	performTowerAttack(tower: StructureTower, hostileCreeps: Creep[]): boolean {
+		if (hostileCreeps.length === 0) return false;
+
+		// Use new military manager if possible.
+		const target = this.room.getTowerTarget();
+		if (!target) return false;
+	
+		this.room.visual.line(tower.pos.x, tower.pos.y, target.pos.x, target.pos.y, {color: 'red'});
+
+		// @todo Only attack if we can be sure it's not tower drain.
+		// @todo We might want to attack targets close to the room edge if they're close to ramparts, as well.
+		if (
+			(this.room.controller.safeMode ?? 1000) < 200
+			|| target.pos.getRangeTo(25, 25) <= 20
+			|| target.owner.username === 'Invader'
+			|| target.hits < target.hitsMax
+		) {
+			if (tower.attack(target) === OK) return true;
+		}
+
+		return false;
+	}
+
+	performTowerHeal(tower: StructureTower, enemyStrength: EnemyStrength): boolean {
+		const damagedTargets = cache.inObject(tower.room, 'damagedTargetsToHeal', 1, () => {
+			const damagedCreeps = _.filter(tower.room.creeps, creep => creep.hits < creep.hitsMax && (
+				creep.getActiveBodyparts(ATTACK) > 0
+				|| creep.getActiveBodyparts(RANGED_ATTACK) > 0
+				|| enemyStrength === 0
+			));
+			const damagedPCs = _.filter(tower.room.powerCreeps, creep => creep.hits < creep.hitsMax);
+
+			return [...damagedCreeps, ...damagedPCs];
+		});
+		if (damagedTargets.length === 0) return false;
+
+		const bestTarget = _.min(damagedTargets, creep => creep.hits / creep.hitsMax / (1 + tower.getPowerAtRange(tower.pos.getRangeTo(creep.pos))));
+		if (!bestTarget) return false;
+		if (tower.heal(bestTarget) === OK) return true;
+
+		return false;
+	}
+
+	performTowerRampartRepair(tower: StructureTower, hostileCreeps: Creep[], enemyStrength: EnemyStrength): boolean {
+		// Repair ramparts during a strong attack.
+		if (enemyStrength < ENEMY_STRENGTH_NORMAL) return false;
+		if (tower.store.getUsedCapacity(RESOURCE_ENERGY) < tower.store.getCapacity(RESOURCE_ENERGY) / 2) return false;
+	
+		const availableRamparts = cache.inObject(tower.room, 'endangeredRamparts', 1, () => {
+			let availableRamparts = new Set<StructureRampart>();
+			for (const creep of hostileCreeps) {
+				if (!creep.isDangerous()) continue;
+
+				const creepRange = creep.getActiveBodyparts(RANGED_ATTACK) > 0 ? 3 : 1;
+				const rampartsInRange = (tower.room.structuresByType[STRUCTURE_RAMPART] || []).filter(rampart => rampart.pos.getRangeTo(creep.pos) <= creepRange);
+
+				for (const rampart of rampartsInRange) {
+					availableRamparts.add(rampart);
+				}
+			}
+
+			return availableRamparts;
+		});
+		if (availableRamparts.size === 0) return false;
+
+		const prioritizedRampart = _.min([...availableRamparts], rampart => rampart.hits / (1 + tower.getPowerAtRange(tower.pos.getRangeTo(rampart.pos))));
+		if (!prioritizedRampart) return false;
+
+		if (tower.repair(prioritizedRampart) === OK) return true;
+
+		return false;
 	}
 
 	/**
@@ -141,9 +165,12 @@ export default class RoomDefenseProcess extends Process {
 				if (hivemind.relations.isAlly(userName)) continue;
 
 				for (const creep of this.room.enemyCreeps[userName]) {
+					// Structures can only be attacked by dangerous creeps, but
+					// construction sites can be stomped by any creep.
 					if (structure instanceof Structure && !creep.isDangerous()) continue;
 
-					// Max range is 1 more than actual creep range to allow for room unclaim before safemode.
+					// Max range is 1 more than actual creep range to allow for
+					// room unclaim before safemode.
 					const maxRange = creep.getActiveBodyparts(RANGED_ATTACK) > 0 ? 4 : 2;
 					if (structure.pos.getRangeTo(creep.pos) <= maxRange) return true;
 				}
@@ -198,7 +225,7 @@ export default class RoomDefenseProcess extends Process {
 	/**
 	 * Requests defense from allies when under attack.
 	 */
-	manageDefense() {
+	manageDefenseRequests() {
 		if (this.room.controller.safeMode) return;
 		if (this.room.defense.getEnemyStrength() <= ENEMY_STRENGTH_NORMAL) return;
 

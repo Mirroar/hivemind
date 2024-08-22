@@ -32,24 +32,42 @@ const stompingCreeps: Record<string, boolean> = {};
 Creep.prototype.isDangerous = function (this: Creep) {
 	if (hivemind.relations.isAlly(this.owner.username)) return false;
 
+	const isInMyRoom = this.room.isMine();
+
 	for (const part of this.body) {
-		if (part.type !== MOVE && part.type !== TOUGH) {
+		if (
+			part.type !== MOVE
+			&& part.type !== TOUGH
+			&& (isInMyRoom || part.type !== WORK)
+			&& (isInMyRoom || part.type !== CARRY)
+		) {
 			return true;
 		}
 	}
 
+	if (mightStompConstructionSites(this, isInMyRoom)) return true;
+
+	return false;
+};
+
+function mightStompConstructionSites(creep: Creep, isInMyRoom: boolean): boolean {
+	// We don't care about creeps stomping construction sites in rooms
+	// outside our own.
+	if (!isInMyRoom) return false;
+
 	// Creeps that are about to stomp our construction sites are also considered
 	// dangerous.
-	if (stompingCreeps[this.id]) return true;
+	if (stompingCreeps[creep.id]) return true;
 
-	const site = this.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
-	if (site && site.pos.getRangeTo(this.pos) <= 5) {
-		stompingCreeps[this.id] = true;
+	// @todo This check seems expensive. Maybe cache it for a tick?
+	const site = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES);
+	if (site && site.pos.getRangeTo(creep.pos) <= 5) {
+		stompingCreeps[creep.id] = true;
 		return true;
 	}
 
 	return false;
-};
+}
 
 PowerCreep.prototype.isDangerous = function (this: PowerCreep) {
 	if (hivemind.relations.isAlly(this.owner.username)) return false;

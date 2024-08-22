@@ -286,6 +286,9 @@ function handleAdjacentTiles(pos: RoomPosition, openList: RoomPosition[], closed
 }
 
 function getDangerMatrix(roomName: string): CostMatrix {
+	if (!Game.rooms[roomName]?.isMine()) return new PathFinder.CostMatrix();
+	if (Game.rooms[roomName].defense.getEnemyStrength() === ENEMY_STRENGTH_NONE) return new PathFinder.CostMatrix();
+
 	getCostMatrix(roomName);
 
 	return cache.fromHeap('dangerMatrix:' + roomName, true) || new PathFinder.CostMatrix();
