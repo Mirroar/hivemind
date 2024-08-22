@@ -82,7 +82,7 @@ export default class PlayerIntel {
 	}
 
 	isNpc(): boolean {
-		return this.userName === SYSTEM_USERNAME || this.userName === 'Invader';
+		return this.userName === SYSTEM_USERNAME || this.userName === 'Invader' || this.userName === 'Source Keeper';
 	}
 
 	getAllOwnedRooms(): string[] {
@@ -105,6 +105,9 @@ export default class PlayerIntel {
 		if (!this.memory.creeps) this.memory.creeps = {};
 
 		for (const creep of creeps) {
+			// Only keep track of military creeps.
+			if (!creep.isDangerous()) continue;
+
 			if (!this.memory.creeps[creep.id]) {
 				// Record some info about this creep.
 				this.memory.creeps[creep.id] = {
@@ -112,7 +115,7 @@ export default class PlayerIntel {
 					boosts: _.countBy(creep.body, 'boost'),
 					pos: null,
 					lastSeen: Game.time,
-					expires: Game.time + creep.ticksToLive,
+					expires: Game.time + (creep.ticksToLive ?? CREEP_LIFE_TIME),
 				};
 			}
 
@@ -120,6 +123,7 @@ export default class PlayerIntel {
 			const creepIntel = this.memory.creeps[creep.id];
 
 			creepIntel.lastSeen = Game.time;
+			creepIntel.expires = Game.time + (creep.ticksToLive ?? CREEP_LIFE_TIME);
 
 			const {x, y, roomName} = creep.pos;
 			creepIntel.pos = {x, y, roomName};
