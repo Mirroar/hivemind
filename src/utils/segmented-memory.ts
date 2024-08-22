@@ -15,7 +15,7 @@ declare global {
 }
 
 const maxActiveSegments = 10;
-const maxSegmentLength = 100 * 1000;
+const maxSegmentLength = 100 * 1024;
 
 export default class SegmentedMemory {
 	_isReady: boolean;
@@ -142,6 +142,12 @@ export default class SegmentedMemory {
 				}
 			}
 
+			// Ensure the part can fit in an empty segment
+			if (partLength > maxSegmentLength) {
+				hivemind.log('memory').notify(`Data for key "${key}" exceeds the maximum segment length (${(partLength / 1024).toPrecision(3)} kb).`);
+				return null;
+			}
+
 			stringified += (stringified.length > 0 ? ',' : '') + '"' + key + '":' + part;
 			currentLength += partLength;
 			this.savedKeys[key] = true;
@@ -157,7 +163,7 @@ export default class SegmentedMemory {
 	}
 
 	getStringMemoryUsage(str: string) {
-		return str.length + 1;
+		return str.length;
 	}
 
 	saveToCurrentSegment(data: string) {
@@ -173,7 +179,7 @@ export default class SegmentedMemory {
 		this.memory.lastFullSave = Game.time;
 
 		// Inform the user.
-		hivemind.log('memory').debug('Saved', (this.totalLength / 1000).toPrecision(3) + 'kB of data to', this.currentSegment - this.startSegment, 'segments.');
+		hivemind.log('memory').debug('Saved', (this.totalLength / 1024).toPrecision(3) + 'kB of data to', this.currentSegment - this.startSegment, 'segments.');
 
 		// Clean up.
 		delete this.savedKeys;
