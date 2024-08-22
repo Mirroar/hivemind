@@ -72,7 +72,7 @@ export default class WorkerCreepDestination extends TaskProvider<WorkerCreepDest
 		if (target.spawning) return false;
 		if (target.store.getFreeCapacity(task.resourceType) < target.store.getCapacity(RESOURCE_ENERGY) / 5) return false;
 		if (target.room.name !== context.creep.room.name) return false;
-		if (!context.creep.store[task.resourceType]) return false;
+		if (!context.ignoreStoreContent && context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
 
 		return true;
 	}
@@ -80,6 +80,12 @@ export default class WorkerCreepDestination extends TaskProvider<WorkerCreepDest
 	execute(task: WorkerCreepDestinationTask, context: ResourceDestinationContext) {
 		const creep = context.creep;
 		const target = Game.getObjectById(task.target);
+
+		if (creep.store.getUsedCapacity(task.resourceType) === 0) {
+			delete creep.memory.order;
+			return;
+		}
+
 		creep.whenInRange(1, target, () => {
 			if (task.amount) {
 				creep.transfer(target, task.resourceType, Math.min(task.amount, creep.store.getUsedCapacity(task.resourceType), target.store.getFreeCapacity(task.resourceType)));

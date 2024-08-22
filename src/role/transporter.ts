@@ -4,11 +4,9 @@ STRUCTURE_EXTENSION STRUCTURE_SPAWN STRUCTURE_TOWER STRUCTURE_NUKER ERR_NO_PATH
 STRUCTURE_POWER_SPAWN TERRAIN_MASK_WALL LOOK_STRUCTURES RESOURCE_ENERGY
 LOOK_CONSTRUCTION_SITES OK ORDER_SELL FIND_TOMBSTONES FIND_RUINS */
 
-import hivemind from 'hivemind';
 import Role from 'role/role';
 import utilities from 'utilities';
 import {getResourcesIn} from 'utils/store';
-import {handleMapArea} from 'utils/map';
 
 type TransporterOrder = ResourceSourceTask | ResourceDestinationTask;
 
@@ -94,6 +92,7 @@ export default class TransporterRole extends Role {
 		if ((creep.heapMemory.idlingFor || 0) > 0) {
 			creep.heapMemory.idlingFor--;
 			creep.whenInRange(1, creep, () => {});
+			creep.say(`⌛${creep.heapMemory.idlingFor}`);
 			return;
 		}
 
@@ -284,6 +283,11 @@ export default class TransporterRole extends Role {
 		}
 
 		if (!order) {
+			if (creep.store.getUsedCapacity() > 0) {
+				this.setDelivering(true);
+				return false;
+			}
+
 			creep.heapMemory.idlingFor = 20;
 			return false;
 		}
@@ -305,7 +309,7 @@ export default class TransporterRole extends Role {
 		if (creep.room.terminal || creep.room.storage) {
 			// It might be more important to pick up a resource needed for a specific task.
 			const bestDestination = creep.room.destinationDispatcher.getTask(
-				{creep},
+				{creep, ignoreStoreContent: true},
 				(task: ResourceDestinationTask) => {
 					return creep.room.getCurrentResourceAmount(task.resourceType) >= (task.amount || 0);
 				},
@@ -328,6 +332,10 @@ export default class TransporterRole extends Role {
 				if (source) {
 					creep.room.visual.text('for: ' + bestDestination.type + '@' + bestDestination.priority, creep.pos.x, creep.pos.y + 0.8);
 					bestSource = source;
+				}
+				else {
+					creep.room.visual.text('no source :(', creep.pos.x, creep.pos.y + 1.6);
+					creep.room.visual.text('for: ' + bestDestination.type + '@' + bestDestination.priority, creep.pos.x, creep.pos.y + 0.8);
 				}
 			}
 		}

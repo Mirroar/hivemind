@@ -39,16 +39,16 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		const creep = context.creep;
 
 		// Energy can be gotten at the room's storage or terminal.
-		const storageTarget = this.room.getBestStorageSource(RESOURCE_ENERGY);
-		if (!storageTarget) return;
+		const storageSource = this.room.getBestStorageSource(RESOURCE_ENERGY);
+		if (!storageSource) return;
 
 		// Only transporters can get the last bit of energy from storage, so spawning can always go on.
-		if (creep.memory.role === 'transporter' || storageTarget.store[RESOURCE_ENERGY] > 5000 || !this.room.storage || storageTarget.id !== this.room.storage.id) {
+		if (creep.memory.role === 'transporter' || storageSource.store[RESOURCE_ENERGY] > 5000 || !this.room.storage || storageSource.id !== this.room.storage.id) {
 			options.push({
 				priority: 2,
 				weight: 0,
 				type: this.getType(),
-				target: storageTarget.id,
+				target: storageSource.id,
 				resourceType: RESOURCE_ENERGY,
 			});
 		}
@@ -59,14 +59,14 @@ export default class StorageSource extends StructureSource<StorageSourceTask> {
 		if (!context.resourceType) return;
 		if (context.resourceType === RESOURCE_ENERGY) return;
 
-		const storageTarget = this.room.getBestStorageSource(context.resourceType);
-		if (!storageTarget) return;
+		const storageSource = this.room.getBestStorageSource(context.resourceType);
+		if (!storageSource) return;
 
 		options.push({
 			priority: 0,
 			weight: 0,
 			type: this.getType(),
-			target: storageTarget.id,
+			target: storageSource.id,
 			resourceType: context.resourceType,
 		});
 	}

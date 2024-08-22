@@ -21,6 +21,7 @@ declare global {
 
 	interface ResourceDestinationContext {
 		resourceType?: string;
+		ignoreStoreContent?: boolean;
 		creep: Creep;
 	}
 }

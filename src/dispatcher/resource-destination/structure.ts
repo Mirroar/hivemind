@@ -29,7 +29,7 @@ export default class StructureDestination<TaskType extends StructureDestinationT
 		if (!structure.isOperational()) return false;
 		if (context.creep.memory.singleRoom && structure.pos.roomName !== context.creep.memory.singleRoom) return false;
 		if (structure.store.getFreeCapacity(task.resourceType) === 0) return false;
-		if (context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
+		if (!context.ignoreStoreContent && context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
 
 		return true;
 	}
@@ -37,6 +37,11 @@ export default class StructureDestination<TaskType extends StructureDestinationT
 	execute(task: TaskType, context: ResourceDestinationContext) {
 		const creep = context.creep;
 		const target = Game.getObjectById(task.target);
+
+		if (creep.store.getUsedCapacity(task.resourceType) === 0) {
+			delete creep.memory.order;
+			return;
+		}
 
 		creep.whenInRange(1, target, () => {
 			if (task.amount) {

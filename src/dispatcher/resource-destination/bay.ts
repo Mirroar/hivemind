@@ -52,7 +52,7 @@ export default class BayDestination extends TaskProvider<BayDestinationTask, Res
 		if (!bay) return false;
 		if (bay.energy >= bay.energyCapacity) return false;
 		if (bay.hasHarvester()) return false;
-		if (!context.creep.store[RESOURCE_ENERGY]) return false;
+		if (!context.ignoreStoreContent && context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
 
 		return true;
 	}
@@ -60,6 +60,12 @@ export default class BayDestination extends TaskProvider<BayDestinationTask, Res
 	execute(task: BayDestinationTask, context: ResourceDestinationContext) {
 		const creep = context.creep;
 		const target = _.find(creep.room.bays, bay => bay.name === task.name);
+
+		if (creep.store.getUsedCapacity(task.resourceType) === 0) {
+			delete creep.memory.order;
+			return;
+		}
+
 		creep.whenInRange(0, target.pos, () => {
 			if (!target.refillFrom(creep)) {
 				delete creep.memory.order;
