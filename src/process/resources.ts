@@ -4,8 +4,7 @@ import container from 'utils/container';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
-import {ENEMY_STRENGTH_NONE} from 'room-defense';
-import {getResourcesIn} from 'utils/store';
+import type {TransportRouteOption} from 'empire/trade-route-manager';
 
 /**
  * Sends resources between owned rooms when needed.
@@ -16,9 +15,14 @@ export default class ResourcesProcess extends Process {
 	 */
 	run() {
 		const manager = container.get('TradeRouteManager');
-		let routes = manager.getAvailableTransportRoutes();
-		let best = utilities.getBestOption(routes);
+		let routes: TransportRouteOption[] = manager.getAvailableTransportRoutes();
 
+		this.transportResources(routes);
+	}
+
+	transportResources(routes: TransportRouteOption[]) {
+		const manager = container.get('TradeRouteManager');
+		let best = utilities.getBestOption(routes);
 		while (best) {
 			const room = Game.rooms[best.source];
 

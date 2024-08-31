@@ -93,7 +93,7 @@ function containerFactory(container: Container) {
 	container.set('ResourceLevelManager', () => new ResourceLevelManager());
 	container.set('ResourcesReport', () => new ResourcesReport());
 	container.set('RolesReport', () => new RolesReport());
-	container.set('RoomsReport', () => new RoomsReport(container.get('FunnelManager')));
+	container.set('RoomsReport', (c) => new RoomsReport(c.get('FunnelManager')));
 	container.set('RoomStatus', () => new RoomStatus());
 	container.set('SpawnManager', () => {
 		const spawnManager = new SpawnManager();
@@ -103,7 +103,7 @@ function containerFactory(container: Container) {
 
 		return spawnManager;
 	});
-	container.set('TradeRouteManager', () => new TradeRouteManager());
+	container.set('TradeRouteManager', (c) => new TradeRouteManager(c.get('ResourceLevelManager')));
 	container.set('TrafficManager', () => new TrafficManager());
 }
 

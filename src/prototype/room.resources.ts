@@ -9,7 +9,7 @@ import ResourceSourceDispatcher from 'dispatcher/resource-source/dispatcher';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 import type {ResourceLevel} from 'room/resource-level-manager';
-import { getResourcesIn } from 'utils/store';
+import {getResourcesIn} from 'utils/store';
 
 declare global {
 	interface Room {
@@ -480,7 +480,7 @@ Room.prototype.getResourceState = function (this: Room) {
 		}
 
 		const resourceLevelManager = container.get('ResourceLevelManager');
-		for (const resourceType of RESOURCES_ALL) {
+		for (const resourceType of getResourcesIn(roomData.totalResources)) {
 			roomData.state[resourceType] = resourceLevelManager.determineResourceLevel(this, roomData.totalResources[resourceType] || 0, resourceType);
 		}
 

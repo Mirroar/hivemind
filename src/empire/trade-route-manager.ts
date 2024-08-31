@@ -1,9 +1,10 @@
-
-import Process from 'process/process';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
+import ResourceLevelManager from 'room/resource-level-manager';
+import cache from 'utils/cache';
+import {timeCall} from 'utils/cpu';
 import {getResourcesIn} from 'utils/store';
 
-interface TransportRouteOption {
+export interface TransportRouteOption {
 	priority: number;
 	weight: number;
 	resourceType: ResourceConstant;
@@ -12,6 +13,12 @@ interface TransportRouteOption {
 }
 
 export default class TradeRouteManager {
+	resourceLevelManager: ResourceLevelManager;
+
+	constructor(resourceLevelManager: ResourceLevelManager) {
+		this.resourceLevelManager = resourceLevelManager;
+	}
+
 	/**
 	 * Determines when it makes sense to transport resources between rooms.
 	 *
@@ -20,14 +27,17 @@ export default class TradeRouteManager {
 	 */
 	public getAvailableTransportRoutes(): TransportRouteOption[] {
 		const options = [];
-		const rooms = this.getResourceStates();
-
+		const rooms: Record<string, RoomResourceState> = this.getResourceStates();
+		
 		_.each(rooms, (roomState: RoomResourceState, roomName: string) => {
 			const room = Game.rooms[roomName];
 			if (!roomState.canTrade) return;
 
+			const needsTerminalSpace = this.roomNeedsTerminalSpace(room);
+			const needsStorageSpace = this.roomNeedsStorageSpace(room);
+
 			// Do not try transferring from a room that is already preparing a transfer.
-			if (room.memory.fillTerminal && !this.roomNeedsTerminalSpace(room) && !this.roomNeedsStorageSpace(room)) return;
+			if (room.memory.fillTerminal && !needsTerminalSpace && !needsStorageSpace) return;
 
 			if (room.terminal.cooldown) return;
 
@@ -38,40 +48,40 @@ export default class TradeRouteManager {
 
 				this.addResourceRequestOptions(options, room, resourceType, roomState);
 
-				if (!['high', 'excessive'].includes(resourceLevel) && !this.roomNeedsTerminalSpace(room)) continue;
+				if (
+					resourceLevel !== 'high'
+					&& resourceLevel !== 'excessive'
+					&& !needsTerminalSpace
+				) continue;
 
 				// Make sure we have enough to send (while evacuating).
-				if (this.roomNeedsTerminalSpace(room) && (roomState.totalResources[resourceType] || 0) < 100) continue;
+				if (needsTerminalSpace && (roomState.totalResources[resourceType] || 0) < 100) continue;
 				if (resourceType === RESOURCE_ENERGY && (roomState.totalResources[resourceType] || 0) < 10_000) continue;
 
 				// Look for other rooms that are low on this resource.
 				_.each(rooms, (roomState2: any, roomName2: string) => {
 					if (roomName === roomName2) return;
-
-					const room2 = Game.rooms[roomName2];
-					const resourceLevel2 = roomState2.state[resourceType] || 'low';
-
 					if (!roomState2.canTrade) return;
 
-					const isEvacuatingRoomWithLowEnergy = room2.isEvacuating()
-						&& resourceType === RESOURCE_ENERGY
-						&& room2.getEffectiveAvailableEnergy() < 5000
-						&& room2.terminal.store.getUsedCapacity() > 10_000;
-					if (this.roomNeedsTerminalSpace(room2) && !isEvacuatingRoomWithLowEnergy) return;
+					const room2 = Game.rooms[roomName2];
+					
+					// Make sure target has space left.
+					if (room2.terminal.store.getFreeCapacity() < 5000) return;
 
+					if (resourceType === RESOURCE_ENERGY && this.roomNeedsTerminalSpace(room2) && !this.isEvacuatingRoomWithLowEnergy(room2)) return;
+
+					const resourceLevel2 = roomState2.state[resourceType] || this.resourceLevelManager.determineResourceLevel(room2, roomState2.totalResources[resourceType] || 0, resourceType);
 					const isLow = resourceLevel2 === 'low'
 						|| (resourceType === RESOURCE_ENERGY && room2.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && resourceLevel2 === 'medium');
 					const isLowEnough = resourceLevel2 === 'medium';
 					const shouldReceiveResources = isLow
 						|| (resourceLevel === 'excessive' && isLowEnough);
 
-					if (!this.roomNeedsTerminalSpace(room) && !this.roomNeedsStorageSpace(room) && !shouldReceiveResources) return;
-
-					// Make sure target has space left.
-					if (room2.terminal.store.getFreeCapacity() < 5000) return;
+					if (!needsTerminalSpace && !needsStorageSpace && !shouldReceiveResources) return;
 
 					// Make sure source room has enough energy to send resources.
-					if (room.terminal.store.energy < Game.market.calcTransactionCost(5000, roomName, roomName2)) return;
+					const neededEnergy = Game.market.calcTransactionCost(5000, roomName, roomName2) + (resourceType === RESOURCE_ENERGY ? 5000 : 0);
+					if (room.terminal.store.energy < neededEnergy) return;
 
 					const option = {
 						priority: 3,
@@ -81,7 +91,7 @@ export default class TradeRouteManager {
 						target: roomName2,
 					};
 
-					if (this.roomNeedsTerminalSpace(room) && resourceType !== RESOURCE_ENERGY) {
+					if (needsTerminalSpace && resourceType !== RESOURCE_ENERGY) {
 						option.priority++;
 						if (room.terminal.store[resourceType] && room.terminal.store[resourceType] >= 5000) {
 							option.priority++;
@@ -178,23 +188,37 @@ export default class TradeRouteManager {
 	}
 
 	public roomNeedsTerminalSpace(room: Room): boolean {
-		return room.isEvacuating()
-			|| (room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3)
-			|| (room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
+		return cache.inObject(room, 'roomNeedsTerminalSpace', 1, () => {
+			return room.isEvacuating()
+				|| (room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3)
+				|| (room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
+		});
 	}
 
 	public roomHasUncertainStorage(room: Room): boolean {
 		if (!room) return true;
 
-		return room.isEvacuating()
-			|| room.isClearingStorage()
-			|| room.isClearingTerminal();
+		return cache.inObject(room, 'roomHasUncertainStorage', 1, () => {
+			return room.isEvacuating()
+				|| room.isClearingStorage()
+				|| room.isClearingTerminal();
+		});
 	}
 
 	public roomNeedsStorageSpace(room: Room): boolean {
-		return room.terminal
-			&& room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.1
-			&& room.storage
-			&& room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.1;
+		return cache.inObject(room, 'roomNeedsStorageSpace', 1, () => {
+			return room.terminal
+				&& room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.1
+				&& room.storage
+				&& room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.1;
+		});
+	}
+
+	public isEvacuatingRoomWithLowEnergy(room: Room): boolean {
+		return cache.inObject(room, 'isEvacuatingRoomWithLowEnergy', 1, () => {
+			return room.isEvacuating()
+			&& room.getEffectiveAvailableEnergy() < 5000
+			&& room.terminal.store.getUsedCapacity() > 10_000;
+		});
 	}
 }
