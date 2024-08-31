@@ -20,6 +20,8 @@ export default class PlayerIntelManager {
 			this.intelCache[userName] = new PlayerIntel(userName);
 		}
 
+		this.intelCache[userName].cleanupMemory();
+
 		return this.intelCache[userName];
 	}
 

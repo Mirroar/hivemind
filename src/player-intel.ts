@@ -40,9 +40,7 @@ export default class PlayerIntel {
 
 		this.memory = this.getMemory();
 
-		if (!this.memory.lastCleanup || Game.time - this.memory.lastCleanup > CLEANUP_INTERVAL) {
-			this.cleanupMemory();
-		}
+		this.cleanupMemory();
 	}
 
 	hasMemory() {
@@ -58,6 +56,8 @@ export default class PlayerIntel {
 	}
 
 	cleanupMemory() {
+		if (Game.time - (this.memory.lastCleanup || 0) < CLEANUP_INTERVAL) return;
+
 		for (const roomName in this.memory.rooms) {
 			const roomIntel = getRoomIntel(roomName);
 
@@ -73,12 +73,14 @@ export default class PlayerIntel {
 		}
 
 		for (const id in this.memory.creeps) {
-			const creepIntel = this.memory.creeps[id];
+			const creepIntel: CreepIntel = this.memory.creeps[id];
 
 			// @todo Also delete creeps we can be sure have died. We could check
 			// tombstones, for example.
 			if (Game.time > creepIntel.expires) delete this.memory.creeps[id];
 		}
+
+		this.memory.lastCleanup = Game.time;
 	}
 
 	isNpc(): boolean {
