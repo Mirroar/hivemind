@@ -1,3 +1,4 @@
+import hivemind from 'hivemind';
 import Process from 'process/process';
 import {FunnelGoal, simpleAllies} from 'utils/communication';
 
@@ -24,6 +25,8 @@ export default class AlliesProcess extends Process {
 		if (!Memory.requests) {
 			Memory.requests = {trade: {}, defense: {}};
 		}
+
+		if (hivemind.relations.allies.length === 0) return;
 
 		simpleAllies.initRun();
 		this.handleRequests();
