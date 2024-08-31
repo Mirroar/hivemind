@@ -6,8 +6,6 @@ LOOK_CONSTRUCTION_SITES CONSTRUCTION_COST CREEP_LIFE_TIME MAX_CONSTRUCTION_SITES
 CONTROLLER_STRUCTURES FIND_HOSTILE_STRUCTURES OK STRUCTURE_LINK
 FIND_MY_CONSTRUCTION_SITES */
 
-// @todo Only build early-game roads on swamps.
-
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import PersistentFeatureFlag from 'utils/persistent-feature-flag';
@@ -57,6 +55,7 @@ export default class RoomManager {
 	structuresByType: Record<string, Structure[]>;
 
 	newStructures: number;
+	lastDecayCheck: number = 0;
 
 	/**
 	 * Creates a new RoomManager object.
@@ -102,6 +101,7 @@ export default class RoomManager {
 	 * Manages the assigned room.
 	 */
 	runLogic() {
+		delete this.memory.runNextTick;
 		if (!this.roomPlanner) return;
 		if (!this.roomPlanner.isPlanningFinished()) {
 			// Make sure to reset feature flags when room planner is running.
@@ -124,16 +124,14 @@ export default class RoomManager {
 			this.featureFlags.setNumeric('ranAtRcl', this.room.controller.level);
 		}
 
-		// @todo Figure out if a road, container or rampart has decayed and needs rebuilding.
+		if (this.featureFlags.isSet('builtAllStructures')) {
+			// Figure out if a road, container or rampart has decayed and needs rebuilding.
+			this.periodicallyCheckDecayingStructures();
 
-		delete this.memory.runNextTick;
-		if (this.featureFlags.isSet('builtAllStructures')) return;
+			return;
+		}
 
-		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
-		this.constructionSitesByType = _.groupBy(this.roomConstructionSites, 'structureType');
-		this.roomStructures = this.room.structures;
-		this.structuresByType = this.room.structuresByType;
-		this.newStructures = 0;
+		this.initializeStructureInformation();
 
 		if (this.recoverRoom()) return;
 		this.cleanRoom();
@@ -143,6 +141,39 @@ export default class RoomManager {
 		if (this.checkWallIntegrity() && this.roomConstructionSites.length + this.newStructures === 0) {
 			this.featureFlags.set('builtAllStructures');
 		}
+	}
+
+	periodicallyCheckDecayingStructures() {
+		// We only need to check decaying structures if the room is fully built.
+		if (!this.featureFlags.isSet('builtAllStructures')) return;
+		if (!hivemind.hasIntervalPassed(CREEP_LIFE_TIME, this.lastDecayCheck)) return;
+		
+		this.lastDecayCheck = Game.time;
+		this.initializeStructureInformation();
+		this.checkDecayedRoomPlanStructures();
+		this.buildOperationRoads();
+	}
+
+	checkDecayedRoomPlanStructures() {
+		if (this.room.controller.level >= 6) {
+			this.buildPlannedStructures('container', STRUCTURE_CONTAINER);
+		}
+		else if (this.room.controller.level >= 2) {
+			this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
+			this.buildPlannedStructures('container.controller', STRUCTURE_CONTAINER);
+		}
+
+		if (this.room.controller.level < 4) return;
+		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
+		this.buildPlannedStructures('road', STRUCTURE_ROAD);
+	}
+
+	initializeStructureInformation() {
+		this.newStructures = 0;
+		this.roomConstructionSites = this.room.find(FIND_MY_CONSTRUCTION_SITES);
+		this.constructionSitesByType = _.groupBy(this.roomConstructionSites, 'structureType');
+		this.roomStructures = this.room.structures;
+		this.structuresByType = this.room.structuresByType;
 	}
 
 	recoverRoom(): boolean {
@@ -335,11 +366,13 @@ export default class RoomManager {
 		if (!this.canCreateConstructionSites()) return;
 
 		if (this.room.controller.level === 0) {
+			const terrain = this.room.getTerrain();
+
 			// Build road to sources asap to make getting energy easier.
-			this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
+			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
 
 			// Build road to controller for easier upgrading.
-			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
+			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
 
 			// If we're waiting for a claim, busy ourselves by building roads.
 			this.buildPlannedStructures('road', STRUCTURE_ROAD);
@@ -360,12 +393,15 @@ export default class RoomManager {
 		this.manageStorage();
 		this.manageTerminal();
 
-		if (this.room.storage || CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] < 1) {
+		if (this.room.storage || CONTROLLER_STRUCTURES[STRUCTURE_STORAGE][this.room.controller.level] === 0) {
+			// At this point, only build roads on swamp tiles.
+			const terrain = this.room.getTerrain();
+
 			// Build road to sources asap to make getting energy easier.
-			this.buildPlannedStructures('road.source', STRUCTURE_ROAD);
+			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
 
 			// Build road to controller for easier upgrading.
-			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD);
+			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
 		}
 
 		if (!this.canCreateConstructionSites()) return;
