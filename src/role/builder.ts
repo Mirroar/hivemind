@@ -114,8 +114,8 @@ export default class BuilderRole extends Role {
 					delete creep.memory.repairing;
 					this.performUpgrade(creep);
 				}
-				else {
-					// Prevent draining energy stores by recycling.
+				else if (!creep.room.roomManager?.hasMisplacedSpawn()) {
+					// Prevent draining energy stores or CPU by recycling.
 					delete creep.memory.repairing;
 					this.performRecycle(creep);
 				}
