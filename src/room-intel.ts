@@ -466,7 +466,11 @@ export default class RoomIntel {
 		if (this.memory.owner) return;
 
 		const resources: Partial<Record<ResourceConstant, number>> = {};
-		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
+		const collections: RoomObject[][] = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
+		if (Game.shard.name === 'shardSeason') {
+			collections.push(room.find(FIND_SCORE_CONTAINERS));
+		}
+
 		_.each(collections, objects => {
 			_.each(objects, object => {
 				if (!object.store) return;
@@ -481,6 +485,33 @@ export default class RoomIntel {
 
 		roomMemory.abandonedResources[this.roomName] = resources;
 
+		if (Game.shard.name === 'shardSeason') {
+			const scoreAmount = resources[RESOURCE_SCORE] || 0;
+			if (scoreAmount === 0) return;
+
+			const assignedGatherers = _.filter(Game.creepsByRole.gatherer || {}, creep => creep.memory.targetRoom === this.roomName) as GathererCreep[];
+			let assignedSpace = _.sum(_.map(assignedGatherers, creep => creep.store.getFreeCapacity()));
+			const availableGatherers = _.filter(
+				Game.creepsByRole.gatherer,
+				creep => !creep.memory.targetRoom &&
+					Game.map.getRoomLinearDistance(creep.room.name, this.roomName) <= 5 &&
+					creep.ticksToLive > (this.roomStatus.getDistanceToOrigin(this.roomName) + Game.map.getRoomLinearDistance(creep.room.name, this.roomName)) * 50,
+			) as GathererCreep[];
+			_.sortBy(availableGatherers, creep => Game.map.getRoomLinearDistance(creep.room.name, this.roomName));
+			_.each(availableGatherers, (creep: GathererCreep) => {
+				// If we have enough gathering space assigned, we're done.
+				if (assignedSpace >= scoreAmount) return false;
+		
+				// Reassign gatherer to this room.
+				creep.memory.targetRoom = this.roomName;
+				creep.memory.origin = this.roomStatus.getOrigin(this.roomName);
+				delete (creep as unknown as ScoutCreep).memory.scoutTarget;
+				assignedSpace += creep.store.getCapacity();
+
+				return null;
+			});
+		}
+	
 		// @todo Consider resources from buildings that might need dismantling first.
 
 		// @todo Also consider saving containers with resources if it's not one
