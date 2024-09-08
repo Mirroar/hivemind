@@ -81,7 +81,7 @@ export default class ContainerDestination extends StructureDestination<Container
 		const structure = Game.getObjectById(task.target);
 		if (!structure) return false;
 		if (context.creep.memory.singleRoom && structure.pos.roomName !== context.creep.memory.singleRoom) return false;
-		if (context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
+		if (!context.ignoreStoreContent && context.creep.store.getUsedCapacity(task.resourceType) === 0) return false;
 
 		// Full container only invalidates this task if we're already there.
 		if (structure.store.getFreeCapacity(task.resourceType) === 0 && context.creep.pos.getRangeTo(structure.pos) === 1) return false;
