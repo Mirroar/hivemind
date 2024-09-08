@@ -26,7 +26,6 @@
 		"@rollup/plugin-node-resolve": "^13.0.4",
 		"@types/lodash": "^3.10.6",
 		"@types/node": "^13.13.52",
-		"@types/screeps": "^3.3.3",
 		"eslint-import-resolver-typescript": "^2.7.1",
 		"grunt": "^1.4.1",
 		"grunt-screeps": "^1.5.0",
