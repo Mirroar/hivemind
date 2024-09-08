@@ -288,7 +288,7 @@ export default class TransporterRole extends Role {
 				return false;
 			}
 
-			creep.heapMemory.idlingFor = 20;
+			creep.heapMemory.idlingFor = 5;
 			return false;
 		}
 

@@ -373,7 +373,8 @@ export default class BuilderRole extends Role {
 	}
 
 	getAvailableRepairTargets(creep: BuilderCreep): Array<Structure<BuildableStructureConstant>> {
-		const repairableStructureIds = cache.inHeap('repairStructures:' + creep.room.name, 50, () => {
+		// @todo This caching messes up early game builders thinking there's nothing left to do.
+		const repairableStructureIds = cache.inHeap('repairStructures:' + creep.room.name, 5, () => {
 			const repairableStructures = _.filter(creep.room.structures, (structure: Structure<BuildableStructureConstant>) => {
 				if (structure.hits >= this.getStructureMaxHits(structure)) return false;
 				if (structure.needsDismantling()) return false;
