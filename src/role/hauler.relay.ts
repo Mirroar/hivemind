@@ -10,6 +10,7 @@ import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
+import {getResourcesIn} from 'utils/store';
 
 declare global {
 	interface RelayHaulerCreep extends Creep {
@@ -27,7 +28,7 @@ declare global {
 	interface RelayHaulerCreepHeapMemory extends CreepHeapMemory {
 		deliveryTarget?: Id<AnyStoreStructure>;
 		order?: ResourceDestinationTask;
-		energyPickupTarget?: Id<Resource | Tombstone | Ruin | StructureContainer>;
+		pickupTarget?: Id<Resource | Tombstone | Ruin | StructureContainer | ScoreContainer>;
 	}
 }
 
@@ -74,7 +75,7 @@ export default class RelayHaulerRole extends Role {
 	startPickup(creep: RelayHaulerCreep) {
 		delete creep.memory.delivering;
 		delete creep.heapMemory.deliveryTarget;
-		delete creep.heapMemory.energyPickupTarget;
+		delete creep.heapMemory.pickupTarget;
 
 		this.determineTargetSource(creep);
 		const path = this.getPath(creep);
@@ -143,7 +144,7 @@ export default class RelayHaulerRole extends Role {
 
 		delete creep.memory.source;
 		delete creep.heapMemory.deliveryTarget;
-		delete creep.heapMemory.energyPickupTarget;
+		delete creep.heapMemory.pickupTarget;
 
 		if (!path) {
 			creep.moveToRoom(creep.memory.sourceRoom);
@@ -218,14 +219,15 @@ export default class RelayHaulerRole extends Role {
 	getDeliveryTarget(creep: RelayHaulerCreep) {
 		if (creep.heapMemory.deliveryTarget) {
 			const target = Game.getObjectById(creep.heapMemory.deliveryTarget);
-			if (target && target.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+			if (target && target.store.getFreeCapacity() > 0) {
 				return target;
 			}
 
 			delete creep.heapMemory.deliveryTarget;
 		}
 
-		const target = Game.rooms[creep.memory.sourceRoom].getBestStorageTarget(creep.store.energy, RESOURCE_ENERGY);
+		// We might have something other than energy to deliver, but for simplicity's sake we only check for energy here.
+		const target = Game.rooms[creep.memory.sourceRoom].getBestStorageTarget(creep.store.getUsedCapacity(), RESOURCE_ENERGY);
 		if (!target) return null;
 
 		creep.heapMemory.deliveryTarget = target.id;
@@ -235,7 +237,7 @@ export default class RelayHaulerRole extends Role {
 	storeResources(creep: RelayHaulerCreep, target?: AnyStoreStructure) {
 		this.transferEnergyToNearbyTargets(creep);
 
-		if (!creep.room.storage && !creep.room.terminal) {
+		if (!creep.room.storage && !creep.room.terminal && creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
 			if (!creep.heapMemory.order || !creep.room.destinationDispatcher.validateTask(creep.heapMemory.order, {creep})) {
 				creep.heapMemory.order = creep.room.destinationDispatcher.getTask({
 					creep,
@@ -250,14 +252,17 @@ export default class RelayHaulerRole extends Role {
 		}
 
 		// @todo If no storage is available, use default delivery method.
-		if (!target || creep.store[RESOURCE_ENERGY] > target.store.getFreeCapacity(RESOURCE_ENERGY)) {
+		if (!target || creep.store.getUsedCapacity() > target.store.getFreeCapacity()) {
 			this.dropResources(creep);
 			return;
 		}
 
 		creep.whenInRange(1, target, () => {
-			if (creep.transfer(target, RESOURCE_ENERGY) === OK) {
-				creep.operation?.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			for (const resourceType of getResourcesIn(creep.store)) {
+				if (creep.transfer(target, resourceType) === OK) {
+					creep.operation?.addResourceGain(creep.store.getUsedCapacity(resourceType), resourceType);
+					break;
+				}
 			}
 		});
 	}
@@ -265,6 +270,7 @@ export default class RelayHaulerRole extends Role {
 	transferEnergyToNearbyTargets(creep: RelayHaulerCreep) {
 		if (creep.room.name !== creep.memory.sourceRoom) return;
 		if (creep.room.storage || creep.room.terminal) return;
+		if (creep.store.getUsedCapacity(RESOURCE_ENERGY) === 0) return;
 
 		const structures = _.filter([
 			...(creep.room.myStructuresByType[STRUCTURE_SPAWN] || []),
@@ -295,16 +301,22 @@ export default class RelayHaulerRole extends Role {
 		const storageLocation = creep.room.getStorageLocation();
 		if (!storageLocation) {
 			// If there's no place to deliver, just drop the energy on the spot, somebody will probably pick it up.
-			if (creep.drop(RESOURCE_ENERGY) === OK) {
-				creep.operation?.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			for (const resourceType of getResourcesIn(creep.store)) {
+				if (creep.drop(resourceType) === OK) {
+					creep.operation?.addResourceGain(creep.store.getUsedCapacity(resourceType), resourceType);
+					break;
+				}
 			}
 
 			return;
 		}
 
 		creep.whenInRange(0, storageLocation, () => {
-			if (creep.drop(RESOURCE_ENERGY) === OK) {
-				creep.operation.addResourceGain(creep.store.energy, RESOURCE_ENERGY);
+			for (const resourceType of getResourcesIn(creep.store)) {
+				if (creep.drop(resourceType) === OK) {
+					creep.operation?.addResourceGain(creep.store.getUsedCapacity(resourceType), resourceType);
+					break;
+				}
 			}
 		});
 	}
@@ -463,7 +475,9 @@ export default class RelayHaulerRole extends Role {
 					creep.pickup(target);
 				}
 				else {
-					creep.withdraw(target, RESOURCE_ENERGY);
+					for (const resourceType of getResourcesIn(target.store)) {
+						creep.withdraw(target, resourceType);
+					}
 				}
 			});
 			return true;
@@ -473,14 +487,16 @@ export default class RelayHaulerRole extends Role {
 	}
 
 	getNearbyEnergyTarget(creep: RelayHaulerCreep) {
-		if (creep.heapMemory.energyPickupTarget) {
-			const target = Game.getObjectById(creep.heapMemory.energyPickupTarget);
+		// @todo Only pick up other resources if the source room has a storage or terminal.
 
-			if (target && target.pos.roomName === creep.pos.roomName && ((target instanceof Resource) || target.store.getUsedCapacity(RESOURCE_ENERGY) >= 20)) {
+		if (creep.heapMemory.pickupTarget) {
+			const target = Game.getObjectById(creep.heapMemory.pickupTarget);
+
+			if (target && target.pos.roomName === creep.pos.roomName && ((target instanceof Resource) || target.store.getUsedCapacity() >= 20)) {
 				return target;
 			}
 
-			delete creep.heapMemory.energyPickupTarget;
+			delete creep.heapMemory.pickupTarget;
 
 			// If we just happened to pick up energy from the ground, check if
 			// there's also a full container nearby and empty that as well.
@@ -491,35 +507,35 @@ export default class RelayHaulerRole extends Role {
 					&& structure.store.getFreeCapacity() < structure.store.getCapacity() * 0.1
 					&& structure.store.getUsedCapacity(RESOURCE_ENERGY) > 100,
 			}) as StructureContainer[];
-			if (container.length > 0) creep.heapMemory.energyPickupTarget = container[0].id;
+			if (container.length > 0) creep.heapMemory.pickupTarget = container[0].id;
 			return container[0];
 		}
 
-		// @todo Check if there's a valid (short) path to the resource.
+		// @todo Check if there's a valid (short) path to the resource, or make sure it's on accessible terrain (eg not next to a source keeper).
 		const resources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
 			filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= 20,
 		});
 
 		if (resources.length > 0) {
-			creep.heapMemory.energyPickupTarget = resources[0].id;
+			creep.heapMemory.pickupTarget = resources[0].id;
 			return resources[0];
 		}
 
 		const tombstone = creep.pos.findInRange(FIND_TOMBSTONES, 3, {
-			filter: tombstone => tombstone.store.getUsedCapacity(RESOURCE_ENERGY) >= 20,
+			filter: tombstone => tombstone.store.getUsedCapacity() >= 20,
 		});
 
 		if (tombstone.length > 0) {
-			creep.heapMemory.energyPickupTarget = tombstone[0].id;
+			creep.heapMemory.pickupTarget = tombstone[0].id;
 			return tombstone[0];
 		}
 
 		const ruin = creep.pos.findInRange(FIND_RUINS, 3, {
-			filter: ruin => ruin.store.getUsedCapacity(RESOURCE_ENERGY) >= 20,
+			filter: ruin => ruin.store.getUsedCapacity() >= 20,
 		});
 
 		if (ruin.length > 0) {
-			creep.heapMemory.energyPickupTarget = ruin[0].id;
+			creep.heapMemory.pickupTarget = ruin[0].id;
 			return ruin[0];
 		}
 
