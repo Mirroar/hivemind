@@ -4,6 +4,7 @@ import BodyBuilder, {MOVEMENT_MODE_MINIMAL, MOVEMENT_MODE_ROAD} from 'creep/body
 import SpawnRole from 'spawn-role/spawn-role';
 import {getDangerMatrix} from 'utils/cost-matrix';
 import {handleMapArea} from 'utils/map';
+import stats from 'utils/stats';
 
 interface HarvesterSpawnOption extends SpawnOption {
 	source: Id<Source>;
@@ -156,13 +157,21 @@ export default class HarvesterSpawnRole extends SpawnRole {
 			}
 		});
 
-		// @todo Only spawn bigger harvesters in high level rooms when there's
-		// enough energy and we need to save CPU.
-		const sizeFactor = (source.room.controller.level === 8 ? 2
-			: (source.room.controller.level === 7 ? 1.8
-				: (source.room.controller.level === 6 ? 1.5 : 1.2)));
+		return this.getHarvesterSizeFactor(source.room) * numberOfParts;
+	}
 
-		return sizeFactor * numberOfParts;
+	getHarvesterSizeFactor(room: Room) {
+		if (!this.shouldSpawnOversizedHarvesters()) return 1;
+
+		if (room.controller.level >= 8) return 2;
+		if (room.controller.level >= 7) return 1.8;
+		if (room.controller.level >= 6) return 1.5;
+
+		return 1;
+	}
+
+	shouldSpawnOversizedHarvesters() {
+		return (stats.getStat('cpu_total', 1000) || 0) / Game.cpu.limit > 0.75;
 	}
 
 	/**
