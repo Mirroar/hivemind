@@ -164,7 +164,7 @@ export default class RoomIntel {
 		}
 
 		const ruins = room.find(FIND_RUINS);
-		this.gatherAbandonedResourcesIntel(structures, ruins);
+		this.gatherAbandonedResourcesIntel(room, structures, ruins);
 
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
 		let constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
@@ -447,7 +447,7 @@ export default class RoomIntel {
 	 * @param {object[]} ruins
 	 *   An array of Ruin objects.
 	 */
-	gatherAbandonedResourcesIntel(structures: Record<string, Structure[]>, ruins: Ruin[]) {
+	gatherAbandonedResourcesIntel(room: Room, structures: Record<string, Structure[]>, ruins: Ruin[]) {
 		// Find origin room.
 		if (!this.roomStatus.hasRoom(this.roomName)) return;
 
@@ -464,7 +464,6 @@ export default class RoomIntel {
 		delete roomMemory.abandonedResources[this.roomName];
 
 		if (this.memory.owner) return;
-		if (!structures[STRUCTURE_STORAGE] && !structures[STRUCTURE_TERMINAL] && ruins.length === 0) return;
 
 		const resources: Partial<Record<ResourceConstant, number>> = {};
 		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
@@ -478,7 +477,7 @@ export default class RoomIntel {
 			});
 		});
 
-		if (_.keys(resources).length === 0) return;
+		if (Object.keys(resources).length === 0) return;
 
 		roomMemory.abandonedResources[this.roomName] = resources;
 
