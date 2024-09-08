@@ -145,7 +145,11 @@ export default class RelayHaulerRole extends Role {
 		delete creep.heapMemory.deliveryTarget;
 		delete creep.heapMemory.energyPickupTarget;
 
-		if (!path) return;
+		if (!path) {
+			creep.moveToRoom(creep.memory.sourceRoom);
+
+			return;
+		}
 
 		creep.setCachedPath(serializePositionPath(path), false, 1);
 	}
