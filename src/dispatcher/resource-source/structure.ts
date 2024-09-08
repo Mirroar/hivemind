@@ -42,14 +42,15 @@ export default class StructureSource<TaskType extends StructureSourceTask> exten
 		creep.whenInRange(1, target, () => {
 			const resourceType = task.resourceType;
 
+			let result: ScreepsReturnCode;
 			if (task.amount) {
-				creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity()));
+				result = creep.withdraw(target, resourceType, Math.min(target.store.getUsedCapacity(resourceType), creep.memory.order.amount, creep.store.getFreeCapacity()));
 			}
 			else {
-				creep.withdraw(target, resourceType);
+				result = creep.withdraw(target, resourceType);
 			}
 
-			delete creep.memory.order;
+			if (result === OK) delete creep.memory.order;
 		});
 	}
 
