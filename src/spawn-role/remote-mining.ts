@@ -6,6 +6,7 @@ import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
+import stats from 'utils/stats';
 
 interface BuilderSpawnOption extends SpawnOption {
 	unitType: 'builder';
@@ -375,11 +376,6 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		const container = operation.getContainer(targetPos);
 		const isEstablished = operation.hasContainer(targetPos) && (container?.hits || CONTAINER_HITS) > CONTAINER_HITS / 2;
 
-		// @todo Allow larger harvesters if we need CPU and have spawn time to spare.
-		const sizeFactor = (room.controller.level === 8 ? 2
-			: (room.controller.level === 7 ? 1.8
-				: (room.controller.level === 6 ? 1.5 : 1)));
-
 		const option: HarvesterSpawnOption = {
 			unitType: 'harvester',
 			priority: 1,
@@ -387,7 +383,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 			targetPos: position,
 			// @todo Consider established when roads are fully built.
 			isEstablished,
-			size: (operation.getHarvesterSize(targetPos) || 0) * sizeFactor,
+			size: (operation.getHarvesterSize(targetPos) || 0) * this.getHarvesterSizeFactor(room),
 		};
 
 		if (isActiveRoom) option.priority++;
@@ -425,6 +421,20 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		if (workParts >= operation.getHarvesterSize(targetPos) * requestedSaturation) return;
 
 		options.push(option);
+	}
+
+	getHarvesterSizeFactor(room: Room) {
+		if (!this.shouldSpawnOversizedHarvesters()) return 1;
+
+		if (room.controller.level >= 8) return 2;
+		if (room.controller.level >= 7) return 1.8;
+		if (room.controller.level >= 6) return 1.5;
+
+		return 1;
+	}
+
+	shouldSpawnOversizedHarvesters() {
+		return (stats.getStat('cpu_total', 1000) || 0) / Game.cpu.limit > 0.75;
 	}
 
 	/**
