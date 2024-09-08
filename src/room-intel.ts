@@ -465,16 +465,15 @@ export default class RoomIntel {
 
 		if (this.memory.owner) return;
 
+		// @todo Also consider dropped resources or other structures.
 		const resources: Partial<Record<ResourceConstant, number>> = {};
-		const collections: RoomObject[][] = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins];
+		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins] as Array<Array<AnyStoreStructure | Ruin>>;
 		if (Game.shard.name === 'shardSeason') {
 			collections.push(room.find(FIND_SCORE_CONTAINERS));
 		}
 
 		_.each(collections, objects => {
 			_.each(objects, object => {
-				if (!object.store) return;
-
 				_.each(object.store, (amount: number, resourceType: ResourceConstant) => {
 					resources[resourceType] = (resources[resourceType] || 0) + amount;
 				});
