@@ -190,7 +190,7 @@ Source.prototype.getNearbyLink = function (this: Source) {
 	});
 
 	if (linkId) {
-		return Game.getObjectById<StructureLink>(linkId);
+		return Game.getObjectById(linkId as Id<StructureLink>);
 	}
 
 	return null;

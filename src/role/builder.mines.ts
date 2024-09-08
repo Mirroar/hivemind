@@ -25,7 +25,7 @@ declare global {
 	}
 
 	interface MineBuilderCreepHeapMemory extends CreepHeapMemory {
-		energyPickupTarget: string;
+		energyPickupTarget: Id<Resource>;
 	}
 }
 

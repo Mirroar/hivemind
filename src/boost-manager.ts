@@ -239,7 +239,7 @@ export default class BoostManager {
 		}
 
 		for (const id in this.memory.labs) {
-			if (!Game.getObjectById(id) || !neededBoosts[this.memory.labs[id]]) {
+			if (!Game.getObjectById(id as Id<StructureLab>) || !neededBoosts[this.memory.labs[id]]) {
 				delete this.memory.labs[id];
 			}
 		}

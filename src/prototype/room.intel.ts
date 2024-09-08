@@ -128,7 +128,7 @@ Object.defineProperty(Room.prototype, 'minerals', {
 	 */
 	get(this: Room): Mineral[] {
 		return cache.inObject(this, 'minerals', 1, () => {
-			const mineralIds = cache.inHeap('mineral:' + this.name, 10_000, () => _.map<Mineral, string>(this.find(FIND_MINERALS), 'id'));
+			const mineralIds = cache.inHeap('mineral:' + this.name, 10_000, () => _.map<Mineral, Id<Mineral>>(this.find(FIND_MINERALS), 'id'));
 
 			const minerals = [];
 			for (const mineralId of mineralIds) {

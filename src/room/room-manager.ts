@@ -973,7 +973,7 @@ export default class RoomManager {
 		if (!this.needsDismantling()) return null;
 
 		for (const id of _.keys(this.memory.dismantle)) {
-			const structure = Game.getObjectById<AnyOwnedStructure>(id);
+			const structure = Game.getObjectById(id as Id<AnyOwnedStructure>);
 			if (!structure) {
 				delete this.memory.dismantle[id];
 				continue;

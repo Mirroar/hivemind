@@ -53,6 +53,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		const numberConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
 		const hasStorage = room.storage || room.terminal;
 
+		// @todo Check if no construction or repairs are needed so we don't unnecessarily spawn builders.
 		if (numberConstructionSites === 0 && room.memory.noBuilderNeeded && Game.time - room.memory.noBuilderNeeded < 1500 && hasStorage) {
 			return 0;
 		}

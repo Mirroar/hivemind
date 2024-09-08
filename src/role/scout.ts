@@ -129,6 +129,7 @@ export default class ScoutRole extends Role {
 		if (creep.heapMemory.pauseUntil) {
 			creep.whenInRange(1, creep.pos, () => {});
 			if (Game.time >= creep.heapMemory.pauseUntil) delete creep.heapMemory.pauseUntil;
+
 			return;
 		}
 

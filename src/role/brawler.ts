@@ -94,7 +94,7 @@ export default class BrawlerRole extends Role {
 
 		if (creep.memory.order) {
 			// Attack ordered target first.
-			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
+			const target = Game.getObjectById<Creep | AnyStructure>(creep.memory.order.target);
 
 			if (target instanceof StructureController && !target.my && this.attackMilitaryTarget(creep, target)) return;
 		}
@@ -622,9 +622,9 @@ export default class BrawlerRole extends Role {
 	performMilitaryAttack(creep: BrawlerCreep) {
 		if (creep.memory.order) {
 			// Attack ordered target first.
-			const target = Game.getObjectById<Creep | AnyOwnedStructure>(creep.memory.order.target);
+			const target = Game.getObjectById<Creep | AnyStructure>(creep.memory.order.target);
 
-			if (target && !target.my && this.attackMilitaryTarget(creep, target)) return (creep.getActiveBodyparts(ATTACK) || 0) > 0;
+			if (target && (!("my" in target) || !target.my) && this.attackMilitaryTarget(creep, target)) return (creep.getActiveBodyparts(ATTACK) || 0) > 0;
 		}
 
 		// See if enemies are nearby, attack one of those.

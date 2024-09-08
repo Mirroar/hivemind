@@ -89,7 +89,7 @@ export default class CleanupProcess extends Process {
 	 */
 	cleanupConstructionSiteMemory() {
 		for (const id in this.memory.constructionSites) {
-			if (!Game.getObjectById(id)) delete this.memory.constructionSites[id];
+			if (!Game.getObjectById(id as Id<ConstructionSite>)) delete this.memory.constructionSites[id];
 		}
 	}
 }

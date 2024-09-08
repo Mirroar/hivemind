@@ -41,7 +41,7 @@ export default class FactorySource extends StructureSource<FactorySourceTask> {
 			const storedAmount = this.room.factory.store.getUsedCapacity(resourceType);
 			const extraAmount = storedAmount - (neededResources[resourceType] || 0);
 
-			// @todo Create only one task, but allow picking up multiple resource types when resolving.
+			// @todo Create only one task, but allow picking up multiple resource types when resolving. But make sure it fits context.resourceType
 			const structure = this.room.factory;
 			options.push({
 				type: this.getType(),

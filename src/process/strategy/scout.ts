@@ -87,6 +87,7 @@ export default class ScoutProcess extends Process {
 		let allDone = true;
 		let checkedCount = 0;
 		if (!Memory.strategy.roomListProgress) Memory.strategy.roomListProgress = [];
+
 		for (const roomName of this.roomStatus.getAllKnownRooms()) {
 			// Ignore rooms we already checked recently.
 			if (Memory.strategy.roomListProgress.includes(roomName)) continue;
