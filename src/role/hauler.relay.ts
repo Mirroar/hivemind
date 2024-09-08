@@ -182,12 +182,14 @@ export default class RelayHaulerRole extends Role {
 		if (this.performRelay(creep)) return;
 
 		// Transfer energy to nearby mine builders.
-		const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-			filter: creep => ['builder', 'builder.remote', 'builder.mines', 'upgrader'].includes(creep.memory.role) && creep.store.getFreeCapacity(RESOURCE_ENERGY) > creep.store.getCapacity() / 3,
-		});
-		if (creeps.length > 0) {
-			creep.transfer(_.sample(creeps), RESOURCE_ENERGY);
-			return;
+		if (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+			const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+				filter: creep => ['builder', 'builder.remote', 'builder.mines', 'upgrader'].includes(creep.memory.role) && creep.store.getFreeCapacity(RESOURCE_ENERGY) > creep.store.getCapacity() / 3,
+			});
+			if (creeps.length > 0) {
+				creep.transfer(_.sample(creeps), RESOURCE_ENERGY);
+				return;
+			}
 		}
 
 		if (this.pickupNearbyEnergy(creep)) return;
