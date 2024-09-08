@@ -478,7 +478,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 
 	getHarvesterCreepBody(room: Room, option: HarvesterSpawnOption): BodyPartConstant[] {
 		return (new BodyBuilder())
-			.setWeights({[WORK]: 20, [CARRY]: (option.isEstablished && room.controller.level < 7) ? 0 : 1})
+			.setWeights({[WORK]: 20, [CARRY]: (option.isEstablished && room.controller.level >= 6) ? 0 : 1})
 			.setPartLimit(WORK, option.size > 0 ? option.size + 1 : 0)
 			.setMovementMode(option.isEstablished ? MOVEMENT_MODE_ROAD : MOVEMENT_MODE_PLAINS)
 			.setCarryContentLevel(0)
