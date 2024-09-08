@@ -11,6 +11,7 @@ import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {throttle} from 'utils/throttle';
 import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import {getResourcesIn} from 'utils/store';
 
 interface RepairOrder {
 	type: 'repair';
@@ -88,6 +89,8 @@ export default class BuilderRole extends Role {
 			return;
 		}
 
+		this.dumpResources(creep);
+
 		if ((creep.memory.repairing || creep.memory.upgrading) && creep.store[RESOURCE_ENERGY] === 0) {
 			this.setBuilderState(creep, false);
 		}
@@ -140,6 +143,16 @@ export default class BuilderRole extends Role {
 			// @todo Replace with dispatcher calls similar to hauler creeps delivery
 			// once all sources are covered by dispatcher.
 			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
+		}
+	}
+
+	dumpResources(creep: BuilderCreep) {
+		if (creep.store.getUsedCapacity() === creep.store.getUsedCapacity(RESOURCE_ENERGY)) return;
+
+		for (const resourceType of getResourcesIn(creep.store)) {
+			if (resourceType === RESOURCE_ENERGY) continue;
+
+			if (creep.drop(resourceType) === OK) return;
 		}
 	}
 
