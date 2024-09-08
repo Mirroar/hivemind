@@ -311,7 +311,7 @@ export default class TransporterRole extends Role {
 			const bestDestination = creep.room.destinationDispatcher.getTask(
 				{creep, ignoreStoreContent: true},
 				(task: ResourceDestinationTask) => {
-					return creep.room.getCurrentResourceAmount(task.resourceType) >= (task.amount || 0);
+					return creep.room.getCurrentResourceAmount(task.resourceType) > 0;
 				},
 			);
 			if (this.destinationHasHigherPriority(bestDestination, bestSource)) {
