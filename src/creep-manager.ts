@@ -68,6 +68,10 @@ export default class CreepManager {
 		this.prepareStatMemory(roleId);
 	}
 
+	hasRole(roleId: string) {
+		return !!this.roles[roleId];
+	}
+
 	/**
 	 * Runs cleanup tasks at the beginning of a tick.
 	 */

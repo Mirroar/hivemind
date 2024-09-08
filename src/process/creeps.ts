@@ -87,6 +87,8 @@ export default class CreepsProcess extends Process {
 		// Run normal creeps.
 		this.creepManager.onTickStart();
 		_.each(Game.creepsByRole, (creeps, role) => {
+			if (!this.creepManager.hasRole(role)) return;
+
 			hivemind.runSubProcess('creeps_' + role, () => {
 				utilities.bubbleWrap(() => {
 					this.creepManager.manageCreeps(creeps);
