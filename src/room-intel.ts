@@ -467,7 +467,7 @@ export default class RoomIntel {
 
 		// @todo Also consider dropped resources or other structures.
 		const resources: Partial<Record<ResourceConstant, number>> = {};
-		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins] as Array<Array<AnyStoreStructure | Ruin>>;
+		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins] as Array<Array<AnyStoreStructure | Ruin | ScoreContainer>>;
 		if (Game.shard.name === 'shardSeason') {
 			collections.push(room.find(FIND_SCORE_CONTAINERS));
 		}
