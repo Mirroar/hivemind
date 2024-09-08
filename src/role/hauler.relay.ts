@@ -539,6 +539,17 @@ export default class RelayHaulerRole extends Role {
 			return ruin[0];
 		}
 
+		if (Game.shard.name === 'shardSeason') {
+			const scoreContainer = creep.pos.findInRange(FIND_SCORE_CONTAINERS, 3, {
+				filter: container => container.store.getUsedCapacity(RESOURCE_SCORE) >= 20,
+			});
+
+			if (scoreContainer.length > 0) {
+				creep.heapMemory.pickupTarget = scoreContainer[0].id;
+				return scoreContainer[0];
+			}
+		}
+
 		return null;
 	}
 }
