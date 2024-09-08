@@ -93,8 +93,16 @@ export default class RoomStatus {
 		return this.memory[roomName]?.origin ?? null;
 	}
 
+	setOrigin(roomName: string, origin: string): void {
+		this.memory[roomName].origin = origin;
+	}
+
 	getDistanceToOrigin(roomName: string): number {
 		return this.memory[roomName]?.range ?? 100;
+	}
+
+	setDistanceToOrigin(roomName: string, range: number): void {
+		this.memory[roomName].range = range;
 	}
 
 	getExpansionScore(roomName: string): number | null {

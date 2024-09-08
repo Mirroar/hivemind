@@ -480,7 +480,12 @@ export default class ScoutProcess extends Process {
 		}
 
 		for (const roomName of this.roomStatus.getAllKnownRooms()) {
-			if (!scoutTargets[roomName]) {
+			if (scoutTargets[roomName]) {
+				// Update rooms that are still in scouting range.
+				this.roomStatus.setOrigin(roomName, scoutTargets[roomName].origin);
+				this.roomStatus.setDistanceToOrigin(roomName, scoutTargets[roomName].range);
+			}
+			else {
 				// Remove rooms that are no longer in scouting range.
 				this.roomStatus.deleteRoom(roomName);
 			}
