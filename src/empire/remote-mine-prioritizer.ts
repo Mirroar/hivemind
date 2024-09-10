@@ -44,7 +44,7 @@ export default class RemoteMinePrioritizer {
 
 			const roomIntel = getRoomIntel(info.roomName);
 			if (
-				!roomIntel.isClaimable()
+				roomIntel.isSourceKeeperRoom()
 				&& _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0
 				&& (Game.rooms[info.origin]?.controller?.level || 0) < 7
 			) {
@@ -134,7 +134,7 @@ export default class RemoteMinePrioritizer {
 
 			// @TODO: Include SK room filter here.
 			// const roomIntel = getRoomIntel(roomName);
-			// if (!roomIntel.isClaimable() && _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) return;
+			// if (roomIntel.isSourceKeeperRoom() && _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) return;
 
 			harvestRooms.push({roomName, origin, harvestPriority});
 		}

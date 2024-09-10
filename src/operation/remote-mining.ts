@@ -145,9 +145,9 @@ export default class RemoteMiningOperation extends Operation {
 
 					const sourceRoom = path[path.length - 1].roomName;
 					const travelTime = path.length;
-					const generatedEnergy = roomIntel.isClaimable()
-						? (this.canReserveFrom(sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY)
-						: SOURCE_ENERGY_KEEPER_CAPACITY;
+					const generatedEnergy = roomIntel.isSourceKeeperRoom()
+						? SOURCE_ENERGY_KEEPER_CAPACITY
+						: (this.canReserveFrom(sourceRoom) ? SOURCE_ENERGY_CAPACITY : SOURCE_ENERGY_NEUTRAL_CAPACITY);
 					const requiredWorkParts = generatedEnergy / ENERGY_REGEN_TIME / HARVEST_POWER;
 					const requiredCarryParts = Math.ceil(2 * travelTime * generatedEnergy / ENERGY_REGEN_TIME / CARRY_CAPACITY);
 					return {
@@ -501,7 +501,7 @@ export default class RemoteMiningOperation extends Operation {
 
 		// No dismantlers for SK rooms, they get confused easily...
 		const roomIntel = getRoomIntel(this.roomName);
-		if (!roomIntel.isClaimable()) return [];
+		if (roomIntel.isSourceKeeperRoom()) return [];
 
 		const cached = cache.inHeap('blockedTiles:' + sourceLocation, 100, () => {
 			const blockedTiles = [];

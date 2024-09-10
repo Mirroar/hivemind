@@ -663,6 +663,10 @@ export default class RoomIntel {
 		return false;
 	}
 
+	isSourceKeeperRoom(): boolean {
+		return !this.isClaimable() && this.getSourcePositions().length > 0;
+	}
+
 	/**
 	 * Gets info about a room's reservation status.
 	 */
@@ -729,7 +733,7 @@ export default class RoomIntel {
 	 * @return {object}
 	 *   An Object containing id, type, x and y position of the mineral deposit.
 	 */
-	getMineralPositions(): Array<{x: number; y: number; id: Id<Mineral>; type: MineralConstant}> {
+	getMineralPositions(): Array<{x: number; y: number; id: Id<Mineral>; type: MineralConstant; amount: number}> {
 		return this.memory.minerals || [];
 	}
 
