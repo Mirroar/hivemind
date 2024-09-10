@@ -6,7 +6,7 @@ import container from 'utils/container';
 import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
-import {decodePosition, serializePositionPath} from 'utils/serialization';
+import {decodePosition, encodePosition, serializePositionPath} from 'utils/serialization';
 
 declare global {
 	interface SkKillerCreep extends Creep {
@@ -113,9 +113,10 @@ export default class RemoteHarvesterRole extends Role {
 				) {
 					const closestLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.pos.getRangeTo(creep.pos));
 					const closestResource = _.min([...room.sources, ...room.minerals], (s: Source | Mineral) => s.pos.getRangeTo(closestLair.pos));
-					// @todo Only ignore mineral source keepers if we're not
-					// mining that mineral.
-					if (closestResource instanceof Mineral) continue;
+
+					// Ignore source keepers if we're not mining that resource.
+					const targetPos = encodePosition(closestResource.pos);
+					if (!_.find(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)) continue;
 
 					sourceKeepers.push(creep);
 					continue;
@@ -137,7 +138,7 @@ export default class RemoteHarvesterRole extends Role {
 		}
 
 		// @todo Consider healing nearby injured creeps.
-		const hasHealed = creep.hits < creep.hitsMax && creep.heal(creep) === OK;
+		const hasHealed = this.healNearbyCreeps(creep);
 
 		if (sourceKeepers.length > 0) {
 			const target = this.getTargetSourceKeeper(creep, sourceKeepers);
@@ -151,10 +152,33 @@ export default class RemoteHarvesterRole extends Role {
 		}
 
 		// If there's no current target, move to SK lair with soonest respawn.
-		const nextLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.ticksToSpawn);
+		const nextLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => {
+			const closestResource = _.min([...room.sources, ...room.minerals], (s: Source | Mineral) => s.pos.getRangeTo(s.pos));
+
+			// Ignore lairs if we're not mining that resource.
+			const targetPos = encodePosition(closestResource.pos);
+			if (!_.find(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)) return CREEP_LIFE_TIME + creep.pos.getRangeTo(s.pos);
+
+			return s.ticksToSpawn;
+		});
 		creep.whenInRange(1, nextLair, () => {
 			// Stand around menacingly.
 		});
+	}
+
+	healNearbyCreeps(creep: SkKillerCreep): boolean {
+		if (creep.hits < creep.hitsMax && creep.heal(creep) === OK) return true;
+
+		const injuredCreeps = creep.pos.findInRange(FIND_MY_CREEPS, 3, {
+			filter: c => c.hits < c.hitsMax && c.id !== creep.id,
+		});
+
+		if (injuredCreeps.length === 0) return false;
+
+		const target = _.min(injuredCreeps, c => c.pos.getRangeTo(creep.pos));
+		if (creep.heal(target) === OK) return true;
+
+		return false;
 	}
 
 	getTargetSourceKeeper(creep: SkKillerCreep, sourceKeepers: Creep[]): Creep {
