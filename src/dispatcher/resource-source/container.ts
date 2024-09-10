@@ -96,6 +96,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 			const assignedResourceType = this.getAssignedResourceType(container);
 			for (const resourceType of getResourcesIn(container.store)) {
 				if (container.store.getUsedCapacity(resourceType) === 0) continue;
+				if (context.resourceType && context.resourceType !== resourceType) continue;
 
 				// Energy is handled separately.
 				if (resourceType === RESOURCE_ENERGY) continue;
