@@ -11,6 +11,7 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 import {getResourcesIn} from 'utils/store';
+import cache from 'utils/cache';
 
 declare global {
 	interface RelayHaulerCreep extends Creep {
@@ -193,7 +194,7 @@ export default class RelayHaulerRole extends Role {
 			}
 		}
 
-		if (this.pickupNearbyEnergy(creep)) return;
+		if (this.pickupNearbyResources(creep)) return;
 
 		const hasTarget = creep.heapMemory.deliveryTarget && creep.isInRoom();
 		if (creep.pos.roomName === sourceRoom || hasTarget) {
@@ -366,7 +367,7 @@ export default class RelayHaulerRole extends Role {
 
 		// Pick up energy / resources directly next to the creep.
 		// From drops, tombstones or ruins.
-		if (this.pickupNearbyEnergy(creep)) {
+		if (this.pickupNearbyResources(creep)) {
 			creep.say('ene'); return;
 		}
 
@@ -460,15 +461,12 @@ export default class RelayHaulerRole extends Role {
 	 * @return {boolean}
 	 *   True if a pickup was made this tick.
 	 */
-	pickupNearbyEnergy(creep: RelayHaulerCreep) {
+	pickupNearbyResources(creep: RelayHaulerCreep) {
 		if (creep.store.getFreeCapacity() === 0) return false;
 		if (creep.room.isMine()) return false;
 
-		// @todo Allow hauler to pick up other resources as well, but respect that
-		// when delivering.
-		// @todo Allow picking up from tombstones and ruins.
 		// Check if energy is on the ground nearby and pick that up.
-		const target = this.getNearbyEnergyTarget(creep);
+		const target = this.getNearbyResourceTarget(creep);
 		if (target) {
 			creep.whenInRange(1, target, () => {
 				if (target instanceof Resource) {
@@ -476,6 +474,8 @@ export default class RelayHaulerRole extends Role {
 				}
 				else {
 					for (const resourceType of getResourcesIn(target.store)) {
+						if (resourceType !== RESOURCE_ENERGY && !this.hasSourceRoomStorage(creep)) continue;
+
 						creep.withdraw(target, resourceType);
 					}
 				}
@@ -486,9 +486,7 @@ export default class RelayHaulerRole extends Role {
 		return false;
 	}
 
-	getNearbyEnergyTarget(creep: RelayHaulerCreep) {
-		// @todo Only pick up other resources if the source room has a storage or terminal.
-
+	getNearbyResourceTarget(creep: RelayHaulerCreep) {
 		if (creep.heapMemory.pickupTarget) {
 			const target = Game.getObjectById(creep.heapMemory.pickupTarget);
 
@@ -513,7 +511,7 @@ export default class RelayHaulerRole extends Role {
 
 		// @todo Check if there's a valid (short) path to the resource, or make sure it's on accessible terrain (eg not next to a source keeper).
 		const resources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3, {
-			filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= 20,
+			filter: resource => (resource.resourceType === RESOURCE_ENERGY || this.hasSourceRoomStorage(creep)) && resource.amount >= 20,
 		});
 
 		if (resources.length > 0) {
@@ -522,7 +520,7 @@ export default class RelayHaulerRole extends Role {
 		}
 
 		const tombstone = creep.pos.findInRange(FIND_TOMBSTONES, 3, {
-			filter: tombstone => tombstone.store.getUsedCapacity() >= 20,
+			filter: tombstone => (this.hasSourceRoomStorage(creep) ? tombstone.store.getUsedCapacity() : tombstone.store.getUsedCapacity(RESOURCE_ENERGY)) >= 20,
 		});
 
 		if (tombstone.length > 0) {
@@ -531,7 +529,7 @@ export default class RelayHaulerRole extends Role {
 		}
 
 		const ruin = creep.pos.findInRange(FIND_RUINS, 3, {
-			filter: ruin => ruin.store.getUsedCapacity() >= 20,
+			filter: ruin => (this.hasSourceRoomStorage(creep) ? ruin.store.getUsedCapacity() : ruin.store.getUsedCapacity(RESOURCE_ENERGY)) >= 20,
 		});
 
 		if (ruin.length > 0) {
@@ -539,7 +537,7 @@ export default class RelayHaulerRole extends Role {
 			return ruin[0];
 		}
 
-		if (Game.shard.name === 'shardSeason') {
+		if (Game.shard.name === 'shardSeason' && this.hasSourceRoomStorage(creep)) {
 			const scoreContainer = creep.pos.findInRange(FIND_SCORE_CONTAINERS, 3, {
 				filter: container => container.store.getUsedCapacity(RESOURCE_SCORE) >= 20,
 			});
@@ -551,5 +549,14 @@ export default class RelayHaulerRole extends Role {
 		}
 
 		return null;
+	}
+
+	hasSourceRoomStorage(creep: RelayHaulerCreep) {
+		return cache.inHeap('hasSourceRoomStorage:' + creep.memory.sourceRoom, 100, () => {
+			const room = Game.rooms[creep.memory.sourceRoom];
+			if (!room) return false;
+
+			return !!(room.storage || room.terminal);
+		});
 	}
 }
