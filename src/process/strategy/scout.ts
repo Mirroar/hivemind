@@ -422,7 +422,7 @@ export default class ScoutProcess extends Process {
 
 		let sourceFactor = 0.25;
 
-		if (!roomIntel.isClaimable()) {
+		if (roomIntel.isSourceKeeperRoom()) {
 			// Penalty for SK rooms since we can only havest them much later.
 			sourceFactor = 0.15;
 		}
