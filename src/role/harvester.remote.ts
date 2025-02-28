@@ -73,7 +73,13 @@ export default class RemoteHarvesterRole extends Role {
 
 		if (creep.pos.roomName !== creep.operation.getRoom() && !creep.hasCachedPath()) {
 			const paths = creep.operation.getPaths();
-			if (!paths[creep.memory.source] || !paths[creep.memory.source].accessible) return false;
+			if (!paths[creep.memory.source]?.accessible) {
+				// We need to wait for the path to be accessible again.
+				creep.whenInRange(1, creep.pos, () => {});
+				
+				return false;
+			}
+
 			creep.setCachedPath(serializePositionPath(paths[creep.memory.source].path), true, 1);
 		}
 
@@ -108,6 +114,23 @@ export default class RemoteHarvesterRole extends Role {
 	performRemoteHarvest(creep: RemoteHarvesterCreep) {
 		if (creep.pos.roomName !== creep.operation.getRoom()) return;
 
+		// Check if something blocks building the container.
+		const container = creep.operation.getContainer(creep.memory.source);
+		if (!container) {
+			const containerPosition = creep.operation.getContainerPosition(creep.memory.source);
+			if (containerPosition) {
+				const structures = containerPosition.lookFor(LOOK_STRUCTURES).filter(s => (OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType));
+				if (structures.length > 0) {
+					// Dismantle blocking structures.
+					creep.whenInRange(1, structures[0], () => {
+						creep.dismantle(structures[0]);
+					});
+
+					return;
+				}
+			}
+		}
+
 		// Check if a container nearby is in need of repairs, since we can handle
 		// it with less intents than haulers do.
 		const workParts = creep.getActiveBodyparts(CARRY) ? creep.getActiveBodyparts(WORK) : 0;
@@ -137,7 +160,7 @@ export default class RemoteHarvesterRole extends Role {
 
 		// Keep away from source keepers.
 		if (source.isDangerous()) {
-			if (creep.pos.getRangeTo(source) < 5) {
+			if (creep.pos.getRangeTo(source) < 5 || creep.pos.getRangeTo(source.getNearbyLair()) < 5) {
 				// @todo To save cpu, just move back along remote path.
 				creep.whenInRange(5, new RoomPosition(25, 25, creep.pos.roomName), () => {});
 				return;

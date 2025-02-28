@@ -6,7 +6,7 @@ import container from 'utils/container';
 import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
-import {decodePosition, encodePosition, serializePositionPath} from 'utils/serialization';
+import {encodePosition, serializePositionPath} from 'utils/serialization';
 
 declare global {
 	interface SkKillerCreep extends Creep {
@@ -104,25 +104,30 @@ export default class RemoteHarvesterRole extends Role {
 			if (hivemind.relations.isAlly(owner)) continue;
 
 			// Count body parts for strength estimation.
-			for (const creep of room.enemyCreeps[owner]) {
-				if (!creep.isDangerous()) continue;
+			for (const enemyCreep of room.enemyCreeps[owner]) {
+				if (!enemyCreep.isDangerous()) continue;
 
 				if (
-					creep.owner.username === 'Source Keeper'
-					&& _.min(_.map(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.pos.getRangeTo(creep.pos))) <= 5
+					enemyCreep.owner.username === 'Source Keeper'
+					&& _.min(_.map(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.pos.getRangeTo(enemyCreep.pos))) <= 5
 				) {
-					const closestLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.pos.getRangeTo(creep.pos));
+					const closestLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => s.pos.getRangeTo(enemyCreep.pos));
 					const closestResource = _.min([...room.sources, ...room.minerals], (s: Source | Mineral) => s.pos.getRangeTo(closestLair.pos));
 
 					// Ignore source keepers if we're not mining that resource.
 					const targetPos = encodePosition(closestResource.pos);
-					if (!_.find(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)) continue;
+					if (
+						!_.find(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)
+						&& !_.find(Game.creepsByRole['harvester.sk-mining'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)
+						&& enemyCreep.pos.getRangeTo(creep.pos) > 4
+						&& _.some(!creep.room.creeps, c => c.memory.role !== 'skKiller' && c.pos.getRangeTo(enemyCreep) < 4)
+					) continue;
 
-					sourceKeepers.push(creep);
+					sourceKeepers.push(enemyCreep);
 					continue;
 				}
 
-				otherEnemies.push(creep);
+				otherEnemies.push(enemyCreep);
 			}
 		}
 
@@ -152,14 +157,21 @@ export default class RemoteHarvesterRole extends Role {
 		}
 
 		// If there's no current target, move to SK lair with soonest respawn.
-		const nextLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (s: StructureKeeperLair) => {
-			const closestResource = _.min([...room.sources, ...room.minerals], (s: Source | Mineral) => s.pos.getRangeTo(s.pos));
+		const nextLair = _.min(room.structuresByType[STRUCTURE_KEEPER_LAIR], (lair: StructureKeeperLair) => {
+			const closestResource: Source | Mineral = _.min([...room.sources, ...room.minerals], (source: Source | Mineral) => source.pos.getRangeTo(lair.pos));
+
+			creep.room.visual.line(lair.pos, closestResource.pos, {color: '#ff0000'});
 
 			// Ignore lairs if we're not mining that resource.
 			const targetPos = encodePosition(closestResource.pos);
-			if (!_.find(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)) return CREEP_LIFE_TIME + creep.pos.getRangeTo(s.pos);
+			if (!_.find({...Game.creepsByRole['harvester.remote'], ...Game.creepsByRole['harvester.sk-mining']}, (c: RemoteHarvesterCreep) => c.memory.source === targetPos)) {
+				creep.room.visual.text((CREEP_LIFE_TIME + creep.pos.getRangeTo(lair.pos)).toString(), lair.pos, {color: '#ff0000'});
 
-			return s.ticksToSpawn;
+				return CREEP_LIFE_TIME + creep.pos.getRangeTo(lair.pos);
+			} 
+
+			creep.room.visual.text((lair.ticksToSpawn || CREEP_CLAIM_LIFE_TIME).toString(), lair.pos, {color: '#ffff00'});
+			return lair.ticksToSpawn;
 		});
 		creep.whenInRange(1, nextLair, () => {
 			// Stand around menacingly.
@@ -176,7 +188,10 @@ export default class RemoteHarvesterRole extends Role {
 		if (injuredCreeps.length === 0) return false;
 
 		const target = _.min(injuredCreeps, c => c.pos.getRangeTo(creep.pos));
-		if (creep.heal(target) === OK) return true;
+		if (creep.pos.getRangeTo(target) > 1) {
+			if (creep.rangedHeal(target) === OK) return true;
+		}
+		else if (creep.heal(target) === OK) return true;
 
 		return false;
 	}

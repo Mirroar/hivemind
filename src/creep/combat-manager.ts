@@ -52,9 +52,9 @@ export default class CombatManager {
 
 		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
 		const positions = this.getValidNeighboringPositions(creep.pos);
-		const scoredPositions = this.scoreKitingPositions(creep, enemyCreeps, positions);
+		const scoredPositions = this.scoreKitingPositions(creep, enemyCreeps, positions, targetPosition);
 		if (scoredPositions.length === 0) {
-			// We don't know what to do. Guess we just move to the target position.
+			// We don't know what to do. Guess we just move towards the target position.
 			creep.whenInRange(targetRange, targetPosition, () => {});
 		}
 
@@ -68,7 +68,7 @@ export default class CombatManager {
 		const enemyCreeps = this.getEnemyMilitaryCreeps(creep.room);
 		if (!this.hasEnemyCreepsInFightingRange(creep, enemyCreeps)) return false;
 
-		return _.some(enemyCreeps, c => c.owner.username !== 'Source Keeper' && !this.couldWinFightAgainst(creep, c));
+		return _.some(enemyCreeps, c => !this.couldWinFightAgainst(creep, c));
 	}
 
 	public performKitingMovement(creep: Creep, target: AttackTarget) {
@@ -99,7 +99,7 @@ export default class CombatManager {
 	}
 
 	public hasEnemyCreepsInFightingRange(creep: Creep, enemyCreeps?: Creep[]): boolean {
-		return _.any(enemyCreeps ?? this.getEnemyMilitaryCreeps(creep.room), c => c.pos.getRangeTo(creep) <= 5);
+		return _.any(enemyCreeps ?? this.getEnemyMilitaryCreeps(creep.room), c => c.pos.getRangeTo(creep) <= (c.owner.username === 'Source Keeper' ? 3 : 5));
 	}
 
 	public getEnemyMilitaryCreeps(room: Room): Creep[] {
@@ -123,6 +123,8 @@ export default class CombatManager {
 	}
 
 	public couldWinFightAgainst(creep: Creep, otherCreep: Creep): boolean {
+		const towerHealPower = this.getTowerHealPower(creep);
+
 		if (
 			(
 				creep.getActiveBodyparts(RANGED_ATTACK) > 0
@@ -140,17 +142,30 @@ export default class CombatManager {
 			&& otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0
 		) return true;
 
-		if (creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER + creep.getActiveBodyparts(HEAL) * HEAL_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER) {
+		if (creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER + creep.getActiveBodyparts(HEAL) * HEAL_POWER + towerHealPower > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER) {
 			return true;
 		}
 
 		if (
 			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK)
 			&& creep.getActiveBodyparts(ATTACK) * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
-			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER >= otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
+			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER + towerHealPower >= otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
 		) return true;
 
 		return false;
+	}
+
+	public getTowerHealPower(creep: Creep): number {
+		if (!creep.room.isMine()) return 0;
+
+		let total = 0;
+		for (const tower of creep.room.myStructuresByType[STRUCTURE_TOWER] || []) {
+			if (tower.store.getUsedCapacity(RESOURCE_ENERGY) < TOWER_ENERGY_COST) continue;
+
+			total += TOWER_POWER_HEAL * tower.getPowerAtRange(creep.pos.getRangeTo(tower));
+		}
+
+		return total;
 	}
 
 	public getMostValuableTarget(creep: Creep, targets?: AttackTarget[]): AttackTarget | null {
@@ -264,25 +279,30 @@ export default class CombatManager {
 		return positions;
 	}
 
-	private scoreKitingPositions(creep: Creep, enemyCreeps: Creep[], positions: RoomPosition[]): ScoredPosition[] {
+	private scoreKitingPositions(creep: Creep, enemyCreeps: Creep[], positions: RoomPosition[], targetPosition?: RoomPosition): ScoredPosition[] {
 		const scored = _.map(positions, pos => ({
 			pos,
 			score: 0,
 		}));
 
 		// @todo Prefer positions where we can do a high amount of RMA damage.
-		this.addRoomCenterRangeScore(scored);
+		this.addPositionRangeScore(creep, targetPosition ?? new RoomPosition(25, 25, creep.room.name), scored);
 		this.addTerrainScore(creep, enemyCreeps, scored);
 		this.addEnemyRangeScore(creep, enemyCreeps, scored);
 
 		return scored;
 	}
 
-	private addRoomCenterRangeScore(positions: ScoredPosition[]) {
+	private addPositionRangeScore(creep: Creep, targetPosition: RoomPosition, positions: ScoredPosition[]) {
+		if (targetPosition.roomName !== creep.room.name) {
+			// @todo Find out which exit we'd need to path to.
+			return;
+		}
+
 		for (const position of positions) {
-			const range = position.pos.getRangeTo(25, 25);
+			const range = position.pos.getRangeTo(targetPosition);
 			position.score -= range * (0.9 + (range / 10));
-			position.score -= Math.min(25 - position.pos.x, 25 - position.pos.y);
+			position.score -= Math.min(Math.abs(targetPosition.x - position.pos.x), Math.abs(targetPosition.y - position.pos.y));
 		}
 	}
 

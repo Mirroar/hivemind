@@ -52,9 +52,6 @@ declare global {
 	}
 }
 
-// @todo Calculate from constants.
-const wallHealth: Record<number, number> = hivemind.settings.get('maxWallHealth');
-
 export default class BuilderRole extends Role {
 	transporterRole: TransporterRole;
 
@@ -117,7 +114,7 @@ export default class BuilderRole extends Role {
 					delete creep.memory.repairing;
 					this.performUpgrade(creep);
 				}
-				else if (!creep.room.roomManager?.hasMisplacedSpawn()) {
+				else if (!creep.room.roomManager?.isMovingMisplacedSpawn()) {
 					// Prevent draining energy stores or CPU by recycling.
 					delete creep.memory.repairing;
 					this.performRecycle(creep);
@@ -173,7 +170,7 @@ export default class BuilderRole extends Role {
 
 	performUpgrade(creep: BuilderCreep) {
 		if (
-			creep.room.roomManager?.hasMisplacedSpawn()
+			creep.room.roomManager?.isMovingMisplacedSpawn()
 			|| (creep.room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL && !creep.room.controller?.safeMode)
 			|| creep.room.find(FIND_MY_CONSTRUCTION_SITES).length > 0
 		) {
@@ -418,39 +415,35 @@ export default class BuilderRole extends Role {
 	}
 
 	getStructureMaxHits(structure: Structure<BuildableStructureConstant>): number {
-		if (structure.structureType === STRUCTURE_WALL || structure.structureType === STRUCTURE_RAMPART) {
-			// @todo Have a defcon system that determines how high ramparts
-			// should be at any given time.
-			let maxHealth = wallHealth[structure.room.controller.level];
-			if (
-				structure.structureType === STRUCTURE_WALL
-				&& structure.room.roomPlanner
-				&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.quad')
-			) {
-				maxHealth /= 10;
-			}
-
-			if (
-				structure.structureType === STRUCTURE_RAMPART
-				&& structure.room.roomPlanner
-				&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart.ramp')
-			) {
-				maxHealth /= 10;
-			}
-
-			if (
-				structure.structureType === STRUCTURE_WALL
-				&& structure.room.roomPlanner
-				&& (structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.blocker')
-				|| structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.deco'))
-			) {
-				maxHealth = 10_000;
-			}
-
-			return maxHealth;
+		if (structure.structureType !== STRUCTURE_WALL && structure.structureType !== STRUCTURE_RAMPART) return structure.hitsMax;
+	
+		let maxHealth = structure.room.defense.getDesiredWallStrength();
+		if (
+			structure.structureType === STRUCTURE_WALL
+			&& structure.room.roomPlanner
+			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.quad')
+		) {
+			maxHealth /= 10;
 		}
 
-		return structure.hitsMax;
+		if (
+			structure.structureType === STRUCTURE_RAMPART
+			&& structure.room.roomPlanner
+			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart.ramp')
+		) {
+			maxHealth /= 10;
+		}
+
+		if (
+			structure.structureType === STRUCTURE_WALL
+			&& structure.room.roomPlanner
+			&& (structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.blocker')
+			|| structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.deco'))
+		) {
+			maxHealth = 10_000;
+		}
+
+		return maxHealth;
 	}
 
 	/**

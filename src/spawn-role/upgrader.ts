@@ -93,7 +93,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// Do not spawn upgraders in evacuating rooms.
 		if (room.isEvacuating()) return 0;
 
-		if (room.roomManager?.hasMisplacedSpawn()) return 0;
+		if (room.roomManager?.isMovingMisplacedSpawn()) return 0;
 
 		if (room.controller.level >= 6 && room.isStripmine()) return 0;
 

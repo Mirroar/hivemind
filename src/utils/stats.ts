@@ -81,6 +81,21 @@ const stats = {
 			return null;
 		}
 
+		if (Memory.history[key][interval / 10]) {
+			// To get a better, more current reading, agregate stat from lower
+			// values.
+			const subMemory = Memory.history[key][interval / 10];
+			let total = _.sum(subMemory.currentValues);
+			let count = subMemory.currentValues.length;
+			for (let i = 0; i < 10 - subMemory.currentValues.length; i++) {
+				if (typeof subMemory.previousValues === undefined) break;
+				total += subMemory.previousValues?.[9 - i] || 0;
+				count++;
+			}
+
+			return total / count;
+		}
+
 		return _.last(Memory.history[key][interval].currentValues);
 	},
 };

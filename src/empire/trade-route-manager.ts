@@ -1,7 +1,6 @@
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import ResourceLevelManager from 'room/resource-level-manager';
 import cache from 'utils/cache';
-import {timeCall} from 'utils/cpu';
 import {getResourcesIn} from 'utils/store';
 
 export interface TransportRouteOption {
@@ -188,7 +187,7 @@ export default class TradeRouteManager {
 	}
 
 	public roomNeedsTerminalSpace(room: Room): boolean {
-		return cache.inObject(room, 'roomNeedsTerminalSpace', 1, () => {
+		return cache.inObject(room, 'needsTerminalSpace', 1, () => {
 			return room.isEvacuating()
 				|| (room.isClearingTerminal() && room.storage && room.storage.store.getFreeCapacity() < room.storage.store.getCapacity() * 0.3)
 				|| (room.isClearingStorage() && room.terminal && room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.3);
@@ -198,7 +197,7 @@ export default class TradeRouteManager {
 	public roomHasUncertainStorage(room: Room): boolean {
 		if (!room) return true;
 
-		return cache.inObject(room, 'roomHasUncertainStorage', 1, () => {
+		return cache.inObject(room, 'hasUncertainStorage', 1, () => {
 			return room.isEvacuating()
 				|| room.isClearingStorage()
 				|| room.isClearingTerminal();
@@ -206,7 +205,7 @@ export default class TradeRouteManager {
 	}
 
 	public roomNeedsStorageSpace(room: Room): boolean {
-		return cache.inObject(room, 'roomNeedsStorageSpace', 1, () => {
+		return cache.inObject(room, 'needsStorageSpace', 1, () => {
 			return room.terminal
 				&& room.terminal.store.getFreeCapacity() < room.terminal.store.getCapacity() * 0.1
 				&& room.storage

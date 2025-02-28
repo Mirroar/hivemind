@@ -14,6 +14,7 @@ const availableUnitTypes = [
 	'brawler',
 	'blinky',
 	'test',
+	'boostedBlinky',
 ] as const;
 
 declare global {
@@ -172,6 +173,15 @@ export default class SquadSpawnRole extends SpawnRole {
 			.build();
 	}
 
+	getBoostedBlinkyCreepBody(room: Room) {
+		return (new BodyBuilder())
+			.setWeights({[TOUGH]: 1, [RANGED_ATTACK]: 3, [HEAL]: 2})
+			.setMoveBufferRatio(0.4)
+			.setMovePartBoost(this.getBestBoost(room, 12, 'fatigue'))
+			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
+			.build();
+	}
+
 	/**
 	 * Gets memory for a new creep.
 	 *
@@ -211,6 +221,15 @@ export default class SquadSpawnRole extends SpawnRole {
 
 		if (option.unitType === 'attacker') {
 			return this.generateCreepBoosts(room, body, ATTACK, 'attack');
+		}
+
+		if (option.unitType === 'boostedBlinky') {
+			return {
+				...this.generateCreepBoosts(room, body, RANGED_ATTACK, 'rangedAttack'),
+				...this.generateCreepBoosts(room, body, HEAL, 'heal'),
+				...this.generateCreepBoosts(room, body, TOUGH, 'damage'),
+				...this.generateCreepBoosts(room, body, MOVE, 'fatigue'),
+			}
 		}
 
 		return null;

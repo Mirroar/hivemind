@@ -21,6 +21,7 @@ declare global {
 		getStoredEnergy: () => number;
 		getCurrentMineralAmount: () => number;
 		getEffectiveAvailableEnergy: () => number;
+		getEffectiveAvailableMinerals: (resourceType: ResourceConstant) => number;
 		isFullOnEnergy: () => boolean;
 		isFullOnPower: () => boolean;
 		isFullOnMinerals: () => boolean;
@@ -257,6 +258,26 @@ Room.prototype.getEffectiveAvailableEnergy = function (this: Room) {
 	return availableEnergy + (Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5);
 };
 
+const mineralBars = {
+    [RESOURCE_HYDROGEN]: RESOURCE_REDUCTANT,
+    [RESOURCE_OXYGEN]: RESOURCE_OXIDANT,
+    [RESOURCE_UTRIUM]: RESOURCE_UTRIUM_BAR,
+    [RESOURCE_KEANIUM]: RESOURCE_KEANIUM_BAR,
+    [RESOURCE_LEMERGIUM]: RESOURCE_LEMERGIUM_BAR,
+    [RESOURCE_ZYNTHIUM]: RESOURCE_ZYNTHIUM_BAR,
+    [RESOURCE_CATALYST]: RESOURCE_PURIFIER,
+	[RESOURCE_GHODIUM]: RESOURCE_GHODIUM_MELT,
+}
+
+Room.prototype.getEffectiveAvailableMinerals = function (this: Room, resourceType: ResourceConstant) {
+	const availableMinerals = this.getCurrentResourceAmount(resourceType);
+
+	if (!this.factory || !this.factory.isOperational() || this.isEvacuating()) return availableMinerals;
+
+	// @todo Get resource unpacking factor from API or config.
+	return availableMinerals + (Math.max(0, this.getCurrentResourceAmount(mineralBars[resourceType])) * 5);
+}
+
 /**
  * Decides whether a room's storage has too much energy.
  *
@@ -345,7 +366,6 @@ Room.prototype.stopTradePreparation = function (this: Room) {
  *   An array of objects containing information about remote harvest targets.
  */
 Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
-	// @todo Sort by profitability because it influences spawn order.
 	return cache.inHeap('remoteSourcePositions:' + this.name, 500, () => {
 		const evaluations: SourceEvaluation[] = [];
 		_.each(Game.operationsByType.mining, operation => {
@@ -358,9 +378,10 @@ Room.prototype.getRemoteHarvestSourcePositions = function (this: Room) {
 			});
 		});
 
+		// Sort by profitability because it influences spawn order.
 		const harvestPositions: RoomPosition[] = [];
 		for (const evaluation of _.sortBy(evaluations, evaluation => {
-			if (this.storage || this.terminal) return evaluation.averageDistance * (1.2 - (evaluation.sourceCount / 5));
+			// if (this.storage || this.terminal) return evaluation.averageDistance * (1.2 - (evaluation.sourceCount / 5));
 
 			return evaluation.distance;
 		})) {
@@ -390,16 +411,6 @@ function getRemoteHarvestSourceEvaluation(operation: RemoteMiningOperation, loca
  */
 Room.prototype.getRemoteReservePositions = function (this: Room) {
 	const reservePositions: RoomPosition[] = [];
-	_.each(Game.operationsByType.mining, operation => {
-		const roomName = operation.getClaimerSourceRoom();
-		if (this.name !== roomName) return;
-
-		const position = getRoomIntel(operation.getRoom()).getControllerPosition();
-		if (!position) return;
-
-		reservePositions.push(position);
-	});
-
 	// Add positions of nearby safe rooms.
 	const safeRooms = this.roomPlanner ? this.roomPlanner.getAdjacentSafeRooms() : [];
 	for (const roomName of safeRooms) {
@@ -625,7 +636,7 @@ Room.prototype.getBestCircumstancialStorageSource = function (this: Room, resour
 StructureKeeperLair.prototype.isDangerous = function (this: StructureKeeperLair) {
 	if (_.some(this.room.enemyCreeps['Source Keeper'], c => c.pos.getRangeTo(this) <= 5)) return true;
 
-	return !this.ticksToSpawn || this.ticksToSpawn < 10;
+	return !this.ticksToSpawn || this.ticksToSpawn < 20;
 };
 
 /**

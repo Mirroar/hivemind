@@ -51,43 +51,65 @@ export default class ResourceLevelManager {
 
 	getResourceLevelCutoffs(room: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 		// @todo If the room has a factory, consolidate normal resources and bars.
-	
+		const applicableCutoffs: ResourceLevelCuttoffs[] = [];
 		if (resourceType === RESOURCE_ENERGY) {
-			return this.getEnergyCutoffs(room);
+			applicableCutoffs.push(this.getEnergyCutoffs(room));
 		}
 
 		if (resourceType === RESOURCE_POWER) {
-			return this.getPowerCutoffs(room);
+			applicableCutoffs.push(this.getPowerCutoffs(room));
 		}
 
 		if (resourceType === RESOURCE_OPS) {
-			return this.getOpsCutoffs(room);
+			applicableCutoffs.push(this.getOpsCutoffs(room));
 		}
 
 		if (this.isDepositResource(resourceType)) {
-			return this.getDepositCutoffs(room);
+			applicableCutoffs.push(this.getDepositCutoffs(room));
 		}
 
 		if (this.isCommodityResource(resourceType)) {
-			return this.getCommodityCutoffs(room, resourceType);
+			applicableCutoffs.push(this.getCommodityCutoffs(room, resourceType));
 		}
 
 		if (this.isBoostResource(resourceType)) {
-			return this.getBoostCutoffs(room, resourceType);
+			applicableCutoffs.push(this.getBoostCutoffs(room, resourceType));
 		}
 
 		if (this.isReactionResource(room, resourceType)) {
-			return this.getReactionCutoffs(room, resourceType);
+			applicableCutoffs.push(this.getReactionCutoffs(room, resourceType));
 		}
 
 		// Any other resources, we can store but don't need.
-		return [50_000, 0, 0];
+		if (applicableCutoffs.length === 0) {
+			applicableCutoffs.push([50_000, 0, 0]);
+		}
+
+		if (Game.shard.name === 'shardSeason' && resourceType === RESOURCE_SCORE) {
+			if (_.some(Game.flags, flag => flag.name === 'score:' + room.name)) {
+				applicableCutoffs.push([100_000, 50_000, 20_000]);
+			}
+		}
+
+		return applicableCutoffs.reduce((acc, cutoffs) => {
+			return [
+				Math.max(acc[0], cutoffs[0]),
+				Math.max(acc[1], cutoffs[1]),
+				Math.max(acc[2], cutoffs[2]),
+			];
+		});
 	}
 
 	private getEnergyCutoffs(room: Room): ResourceLevelCuttoffs {
 		if (room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
 			// Defending rooms need energy to defend.
-			return [1_000_000, 100_000, 50_000];
+			// @todo But only if we have a chance of winning.
+			return [200_000, 100_000, 50_000];
+		}
+
+		if (room.defense.isAnyRoomUnderAttack()) {
+			// Rooms that are not under attack should give extra energy to rooms that are.
+			return [50_000, 20_000, 15_000];
 		}
 
 		const funnelManager = container.get('FunnelManager');
@@ -96,11 +118,16 @@ export default class ResourceLevelManager {
 			return [500_000, 300_000, 150_000];
 		}
 
+		if ((room.myStructuresByType[STRUCTURE_POWER_SPAWN] || []).length > 0) {
+			// Power processing rooms need a lot of energy.
+			return [200_000, 100_000, 50_000];
+		}
+
 		return [200_000, 50_000, 20_000];
 	}
 
 	private getPowerCutoffs(room: Room): ResourceLevelCuttoffs {
-		if (!room.powerSpawn) {
+		if (!room.powerSpawn || room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
 			return [1, 0, 0];
 		}
 
@@ -121,7 +148,7 @@ export default class ResourceLevelManager {
 
 	private getDepositCutoffs(room: Room): ResourceLevelCuttoffs {
 		// Basic commodities need any kind of factory.
-		if (!room.factory) {
+		if (!room.factory || room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
 			return [1, 0, 0];
 		}
 
@@ -134,7 +161,7 @@ export default class ResourceLevelManager {
 
 	private getCommodityCutoffs(room: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 		// Higher level commodities need a factory of appropriate level to be used.
-		if (!room.factory) {
+		if (!room.factory || room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
 			return [1, 0, 0];
 		}
 
@@ -171,20 +198,24 @@ export default class ResourceLevelManager {
 		for (const bodyPart in BOOSTS) {
 			if (!BOOSTS[bodyPart][resourceType]) continue;
 
-			if ((bodyPart === ATTACK || bodyPart === RANGED_ATTACK) && room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
-				return [15_000, 7500, 2500];
-			}
-
-			if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair && room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
-				return [15_000, 7500, 2500];
-			}
-
 			if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].upgradeController && room.controller.level >= 8) {
+				return [15_000, 7500, 2500];
+			}
+
+			if (room.defense.getEnemyStrength() <= ENEMY_STRENGTH_NORMAL) continue;
+
+			if ((bodyPart === ATTACK || bodyPart === RANGED_ATTACK)) {
+				return [15_000, 7500, 2500];
+			}
+
+			if (bodyPart === WORK && BOOSTS[bodyPart][resourceType].repair) {
 				return [15_000, 7500, 2500];
 			}
 		}
 
-		return [50_000, 0, 0];
+		if (room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return [1, 0, 0];
+
+		return [15_000, 0, 0];
 	}
 
 	private isReactionResource(room: Room, resourceType: ResourceConstant): boolean {
@@ -197,7 +228,9 @@ export default class ResourceLevelManager {
 	}
 
 	private getReactionCutoffs(room: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
-		return [50_000, 30_000, 10_000];
+		if (room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return [1, 0, 0];
+
+		return [30_000, 20_000, 10_000];
 	}
 
 }

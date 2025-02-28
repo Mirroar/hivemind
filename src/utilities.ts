@@ -6,6 +6,7 @@ import {ErrorMapper} from 'utils/ErrorMapper';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
+import { add } from 'lodash';
 
 declare global {
 	type TileCallback = (x: number, y: number) => boolean | void;
@@ -96,7 +97,12 @@ const utilities = {
 				};
 
 				// Work with roads and structures in a room.
-				const costs = getCostMatrix(roomName, options);
+				const costMatrixOptions = {
+					allowDanger: allowDanger || addOptions.allowDanger,
+					isQuad: addOptions.isQuad,
+					singleRoom: addOptions.singleRoom && addOptions.singleRoom === roomName,
+				};
+				const costs = getCostMatrix(roomName, costMatrixOptions);
 
 				if (addOptions.avoidNearbyCreeps && roomName === startPosition.roomName) {
 					const adjustedCosts = costs.clone();

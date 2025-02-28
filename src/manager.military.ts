@@ -298,7 +298,6 @@ Room.prototype.assertTargetPriorities = function (this: Room) {
 
 		const neededDamageFactor = creep.hits === creep.hitsMax ? 1.1 : 1;
 		if (effectiveDamage > potentialHealing * neededDamageFactor) {
-			// @todo Reduce priority (even stop targeting) when close to exit, to prevent tower drain by fleeing.
 			creep.militaryPriority = creep.getMilitaryValue() * (effectiveDamage - potentialHealing) * (creep.hitsMax / creep.hits) * creep.ticksToLive / CREEP_LIFE_TIME;
 			visual.text(creep.militaryPriority.toPrecision(2), creep.pos.x + 1, creep.pos.y + 0.2, {font: 0.5, color: 'yellow'});
 		}

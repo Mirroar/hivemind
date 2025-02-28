@@ -112,7 +112,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		}
 
 		// Add more builders if we're moving a spawn.
-		if (room.roomManager?.hasMisplacedSpawn()) {
+		if (room.roomManager?.isMovingMisplacedSpawn()) {
 			maxWorkParts *= 2;
 		}
 

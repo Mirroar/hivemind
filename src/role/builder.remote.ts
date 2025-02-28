@@ -180,7 +180,11 @@ export default class RemoteBuilderRole extends Role {
 				// Could not set a target for building. Start upgrading instead.
 				if (creep.room.isMine()) {
 					creep.memory.upgrading = true;
+					return;
 				}
+
+				creep.whenInRange(4, creep.room.controller, () => {});
+				return;
 			}
 		}
 

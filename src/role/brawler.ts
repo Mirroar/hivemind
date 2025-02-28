@@ -415,7 +415,7 @@ export default class BrawlerRole extends Role {
 			const squad = getSquad(creep.memory.squadName);
 			const targetPos = squad && squad.getTarget();
 			if (targetPos) {
-				creep.whenInRange(this.isPositionBlocked(targetPos) ? 1 : 0, targetPos, () => {
+				creep.whenInRange(this.isPositionBlocked(targetPos) ? 3 : 0, targetPos, () => {
 					const structures = targetPos.lookFor(LOOK_STRUCTURES);
 					if (_.some(structures, s => s.structureType === STRUCTURE_PORTAL)) {
 						creep.move(creep.pos.getDirectionTo(targetPos));
@@ -424,6 +424,14 @@ export default class BrawlerRole extends Role {
 
 				return;
 			}
+		}
+
+		// Simple Room defenders. Look for enemies and engage.
+		for (const username in creep.room.enemyCreeps || {}) {
+			if (hivemind.relations.isAlly(username)) continue;
+
+			const hostiles = creep.room.enemyCreeps[username];
+			creep.whenInRange(1, hostiles[0], () => {}, {allowDanger: true});
 		}
 
 		creep.whenInRange(10, new RoomPosition(25, 25, creep.pos.roomName), () => {});
@@ -496,10 +504,7 @@ export default class BrawlerRole extends Role {
 		}
 
 		// Non-combat creeps just move toward their target.
-		creep.goTo(target, {
-			range: 1,
-			maxRooms: 1,
-		});
+		creep.whenInRange(1, target, () => {});
 	}
 
 	performTrainMove(creep: BrawlerCreep) {

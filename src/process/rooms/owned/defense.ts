@@ -78,11 +78,24 @@ export default class RoomDefenseProcess extends Process {
 			|| target.pos.getRangeTo(25, 25) <= 20
 			|| target.owner.username === 'Invader'
 			|| target.hits < target.hitsMax
+			|| this.canKillBeforeFleeing(target)
 		) {
 			if (tower.attack(target) === OK) return true;
 		}
 
 		return false;
+	}
+
+	canKillBeforeFleeing(target: Creep): boolean {
+		const potentialDamage = this.room.getMilitaryAssertion(target.pos.x, target.pos.y, 'myDamage');
+		const potentialHealing = this.room.getMilitaryAssertion(target.pos.x, target.pos.y, 'healing');
+		// Potential damage is reduced if creep has boosted tough parts.
+		const effectiveDamage = target.getEffectiveDamage(potentialDamage);
+
+		const distanceToExit = 24 - target.pos.getRangeTo(25, 25);
+		if (distanceToExit <= 0) return false;
+
+		return effectiveDamage * distanceToExit > target.hits;
 	}
 
 	performTowerHeal(tower: StructureTower, enemyStrength: EnemyStrength): boolean {

@@ -121,7 +121,7 @@ export default class ExpandProcess extends Process {
 	}
 
 	mayExpand(): boolean {
-		const ownedRooms = Game.myRooms.length;
+		const ownedRooms = interShard.getTotalOwnedRooms();
 		const hasFreeControlLevels = ownedRooms < Game.gcl.level;
 		const maxRooms = settings.get('maxOwnedRooms');
 		const shardMemory = interShard.getLocalMemory();

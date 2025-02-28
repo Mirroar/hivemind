@@ -16,7 +16,7 @@ import type {GetPathOptions} from 'utilities';
 declare global {
 	interface Creep {
 		moveToRange: (target: RoomObject | RoomPosition, range: number, options?: GoToOptions) => boolean;
-		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void;
+		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void, options?: GoToOptions) => void;
 		setCachedPath: (path: Array<string | number>, reverse?: boolean, distance?: number) => void;
 		getCachedPath: () => RoomPosition[] | null;
 		hasCachedPath: () => boolean;
@@ -42,7 +42,7 @@ declare global {
 
 	interface PowerCreep {
 		moveToRange: (target: RoomObject | RoomPosition, range: number, options?: GoToOptions) => boolean;
-		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void) => void;
+		whenInRange: (range: number, target: RoomObject | RoomPosition, callback: () => void, options?: GoToOptions) => void;
 		setCachedPath: (path: Array<string | number>, reverse?: boolean, distance?: number) => void;
 		getCachedPath: () => RoomPosition[];
 		hasCachedPath: () => boolean;
@@ -97,12 +97,15 @@ declare global {
 		_mtrTarget?: string;
 		_mtrNextRoom?: string;
 		moveWithoutNavMesh?: boolean;
+		// Nav mesh path target.
 		_nmpt?: string;
+		// Nav mesh path index.
+		_nmpi?: number;
+		// Nav mesh path.
 		_nmp?: {
 			path?: string[];
 			incomplete: boolean;
 		};
-		_nmpi?: number;
 	}
 
 	interface PowerCreepHeapMemory {
@@ -151,7 +154,7 @@ Creep.prototype.moveToRange = moveToRange;
 /**
  * Ensures that the creep is in range before performing an operation.
  */
-Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target, callback) {
+Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target, callback, options?: GoToOptions) {
 	if (target instanceof RoomObject) {
 		target = target.pos;
 	}
@@ -176,7 +179,7 @@ Creep.prototype.whenInRange = function (this: Creep | PowerCreep, range, target,
 	}
 
 	if (this.pos.getRangeTo(target) > range) {
-		this.moveToRange(target, range);
+		this.moveToRange(target, range, options);
 		return;
 	}
 
@@ -290,7 +293,19 @@ Creep.prototype.followCachedPath = function (this: Creep | PowerCreep) {
 		if (this.pos.getRangeTo(pos) > 0) {
 			updateStuckDetection(this);
 
-			const path = this.calculatePath(pos, {avoidNearbyCreeps: this.heapMemory._stuckDetection[1] > 2});
+			if (this.pos.getRangeTo(pos) === 1) {
+				this.move(this.pos.getDirectionTo(pos));
+
+				// Due to push-behavior we sometimes try to move onto another creep.
+				// That creep needs to be pushed away.
+				const creep = pos.lookFor(LOOK_CREEPS)[0];
+				if (creep) container.get('TrafficManager').setBlockingCreep(this, creep);
+				const powerCreep = pos.lookFor(LOOK_POWER_CREEPS)[0];
+				if (powerCreep) container.get('TrafficManager').setBlockingCreep(this, powerCreep);
+				return;
+			}	
+
+			const path = this.calculatePath(pos, {range: 1, avoidNearbyCreeps: this.heapMemory._stuckDetection[1] > 2});
 			if (!path || path.length === 0) {
 				this.say('no way!');
 				return;
@@ -789,6 +804,7 @@ Creep.prototype.goTo = function (this: Creep | PowerCreep, target: RoomObject | 
 						const pfOptions = {
 							singleRoom: false,
 							isQuad: false,
+							allowDanger: options.allowDanger,
 						};
 
 						// Work with roads and structures in a room.
@@ -1042,18 +1058,19 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 };
 
 function initNavMemory(creep: Creep | PowerCreep, targetPos: RoomPosition, options: GoToOptions) {
+	// If we already have a path to the target, don't recalculate it.
 	const pos = encodePosition(targetPos);
-	if (!creep.heapMemory._nmpt || !creep.heapMemory._nmp || creep.heapMemory._nmpt !== pos) {
-		creep.heapMemory._nmpt = pos;
-		const mesh = new NavMesh();
-		const path = mesh.findPath(creep.pos, targetPos, options);
-		creep.heapMemory._nmp = {
-			incomplete: path.incomplete,
-			path: path.path ? _.map(path.path, encodePosition) : null,
-		};
+	if (creep.heapMemory._nmpt && creep.heapMemory._nmp && creep.heapMemory._nmpt === pos) return;
 
-		creep.heapMemory._nmpi = 0;
-	}
+	delete creep.heapMemory.moveWithoutNavMesh;
+	creep.heapMemory._nmpt = pos;
+	creep.heapMemory._nmpi = 0;
+	const mesh = new NavMesh();
+	const path = mesh.findPath(creep.pos, targetPos, options);
+	creep.heapMemory._nmp = {
+		incomplete: path.incomplete,
+		path: path.path ? _.map(path.path, encodePosition) : null,
+	};
 }
 
 Creep.prototype.getNavMeshMoveTarget = function (this: Creep | PowerCreep) {

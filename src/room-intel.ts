@@ -99,7 +99,7 @@ export interface RoomIntelMemory {
 		activates: number;
 		collapses: number;
 	};
-	costPositions: [string, string];
+	costPositions: [string, string, string];
 	lastScout: number;
 }
 
@@ -139,6 +139,11 @@ export default class RoomIntel {
 		this.registerScoutAttempt();
 
 		let lastScanThreshold = hivemind.settings.get('roomIntelCacheDuration');
+		if (Game.shard.name === 'shardSeason' && room.find(FIND_SCORE_CONTAINERS).length > 0) {
+			// Update intel more frequently for rooms with score.
+			lastScanThreshold = Math.min(lastScanThreshold, 50);
+		}
+
 		if (Game.cpu.bucket < 5000) {
 			lastScanThreshold *= 5;
 		}
@@ -163,8 +168,7 @@ export default class RoomIntel {
 			this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
 		}
 
-		const ruins = room.find(FIND_RUINS);
-		this.gatherAbandonedResourcesIntel(room, structures, ruins);
+		this.gatherAbandonedResourcesIntel(room, structures);
 
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
 		let constructionSites = _.groupBy(room.find(FIND_MY_CONSTRUCTION_SITES), 'structureType');
@@ -447,7 +451,7 @@ export default class RoomIntel {
 	 * @param {object[]} ruins
 	 *   An array of Ruin objects.
 	 */
-	gatherAbandonedResourcesIntel(room: Room, structures: Record<string, Structure[]>, ruins: Ruin[]) {
+	gatherAbandonedResourcesIntel(room: Room, structures: Record<string, Structure[]>) {
 		// Find origin room.
 		if (!this.roomStatus.hasRoom(this.roomName)) return;
 
@@ -465,9 +469,13 @@ export default class RoomIntel {
 
 		if (this.memory.owner) return;
 
-		// @todo Also consider dropped resources or other structures.
+		// @todo Maybe don't try to loot from other players' remotes.
+
+		const ruins = room.find(FIND_RUINS);
+		const tombstones = room.find(FIND_TOMBSTONES);
+
 		const resources: Partial<Record<ResourceConstant, number>> = {};
-		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], ruins] as Array<Array<AnyStoreStructure | Ruin | ScoreContainer>>;
+		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], structures[STRUCTURE_CONTAINER], ruins, tombstones] as Array<Array<AnyStoreStructure | Ruin | ScoreContainer>>;
 		if (Game.shard.name === 'shardSeason') {
 			collections.push(room.find(FIND_SCORE_CONTAINERS));
 		}
@@ -480,6 +488,14 @@ export default class RoomIntel {
 			});
 		});
 
+		// Also consider dropped resources or other structures.
+		_.each(room.find(FIND_DROPPED_RESOURCES), resource => {
+			// Only consider big piles, since they will decay while we try to get there.
+			if (resource.amount < 1000) return;
+
+			resources[resource.resourceType] = (resources[resource.resourceType] || 0) + resource.amount;
+		});
+
 		if (Object.keys(resources).length === 0) return;
 
 		roomMemory.abandonedResources[this.roomName] = resources;
@@ -488,11 +504,12 @@ export default class RoomIntel {
 			const scoreAmount = resources[RESOURCE_SCORE] || 0;
 			if (scoreAmount === 0) return;
 
-			const assignedGatherers = _.filter(Game.creepsByRole.gatherer || {}, creep => creep.memory.targetRoom === this.roomName) as GathererCreep[];
+			const assignedGatherers = _.filter(Game.creepsByRole.gatherer || {}, creep => creep.memory.targetRoom === this.roomName || creep.pos.roomName === this.roomName) as GathererCreep[];
 			let assignedSpace = _.sum(_.map(assignedGatherers, creep => creep.store.getFreeCapacity()));
 			const availableGatherers = _.filter(
 				Game.creepsByRole.gatherer,
 				creep => !creep.memory.targetRoom &&
+					creep.store.getFreeCapacity() > 0 &&
 					Game.map.getRoomLinearDistance(creep.room.name, this.roomName) <= 5 &&
 					creep.ticksToLive > (this.roomStatus.getDistanceToOrigin(this.roomName) + Game.map.getRoomLinearDistance(creep.room.name, this.roomName)) * 50,
 			) as GathererCreep[];
@@ -503,9 +520,10 @@ export default class RoomIntel {
 		
 				// Reassign gatherer to this room.
 				creep.memory.targetRoom = this.roomName;
+				creep.memory.stack = [];
 				creep.memory.origin = this.roomStatus.getOrigin(this.roomName);
 				delete (creep as unknown as ScoutCreep).memory.scoutTarget;
-				assignedSpace += creep.store.getCapacity();
+				assignedSpace += creep.store.getFreeCapacity();
 
 				return null;
 			});
@@ -566,11 +584,12 @@ export default class RoomIntel {
 	 * @param {object} constructionSites
 	 *   An object containing Arrays of construction sites, keyed by structure type.
 	 */
-	gatherPathfindingInfo(structures, constructionSites) {
+	gatherPathfindingInfo(structures: Record<string, Structure[]>, constructionSites: Record<string, ConstructionSite[]>) {
 		const obstaclePositions = this.generateObstacleList(this.roomName, structures, constructionSites);
 		this.memory.costPositions = [
 			packCoordList(_.map(obstaclePositions.obstacles, deserializeCoords)),
 			packCoordList(_.map(obstaclePositions.roads, deserializeCoords)),
+			packCoordList(_.map(obstaclePositions.endangered, deserializeCoords)),
 		];
 	}
 
@@ -589,10 +608,15 @@ export default class RoomIntel {
 	 *   - obstacles: Any positions a creep cannot move through.
 	 *   - roads: Any positions where a creep travels with road speed.
 	 */
-	generateObstacleList(roomName, structures, constructionSites) {
-		const result = {
+	generateObstacleList(roomName: string, structures: Record<string, Structure[]>, constructionSites: Record<string, ConstructionSite[]>) {
+		const result: {
+			obstacles: number[];
+			roads: number[];
+			endangered: number[];
+		} = {
 			obstacles: [],
 			roads: [],
+			endangered: [],
 		};
 
 		markBuildings(
@@ -601,15 +625,20 @@ export default class RoomIntel {
 			constructionSites,
 			structure => {
 				const location = serializeCoords(structure.pos.x, structure.pos.y);
-				if (!_.contains(result.obstacles, location)) {
+				if (!_.contains(result.roads, location)) {
 					result.roads.push(location);
 				}
 			},
-			structure => result.obstacles.push(serializePosition(structure.pos, roomName)),
-			(x, y) => {
-				const location = serializeCoords(x, y);
+			structure => {
+				const location = serializeCoords(structure.pos.x, structure.pos.y);
 				if (!_.contains(result.obstacles, location)) {
 					result.obstacles.push(location);
+				}
+			},
+			(x, y) => {
+				const location = serializeCoords(x, y);
+				if (!_.contains(result.endangered, location)) {
+					result.endangered.push(location);
 				}
 			},
 		);
@@ -671,7 +700,15 @@ export default class RoomIntel {
 	 * Gets info about a room's reservation status.
 	 */
 	getReservationStatus(): ReservationDefinition {
-		return this.memory.reservation;
+		const reservation = this.memory.reservation;
+
+		// Adjust by time that's passed since last scan.
+		if (!reservation) return null;
+
+		return {
+			username: reservation.username,
+			ticksToEnd: Math.min(CONTROLLER_RESERVE_MAX, Math.max(0, reservation.ticksToEnd - this.getAge())),
+		};
 	}
 
 	/**
@@ -757,13 +794,14 @@ export default class RoomIntel {
 	 * @return {PathFinder.CostMatrix}
 	 *   A cost matrix representing this room.
 	 */
-	getCostMatrix(): CostMatrix {
+	getBaseCostMatrix(allowDanger?: boolean): CostMatrix {
 		// @todo For some reason, calling this in console gives a different version of the cost matrix. Verify!
-		let obstaclePositions: {obstacles: RoomPosition[]; roads: RoomPosition[]};
+		let obstaclePositions: {obstacles: RoomPosition[]; roads: RoomPosition[], endangered: RoomPosition[]} = null;
 		if (this.memory.costPositions) {
 			obstaclePositions = {
 				obstacles: unpackCoordListAsPosList(this.memory.costPositions[0], this.roomName),
 				roads: unpackCoordListAsPosList(this.memory.costPositions[1], this.roomName),
+				endangered: unpackCoordListAsPosList(this.memory.costPositions[2] || "", this.roomName),
 			};
 		}
 
@@ -771,6 +809,12 @@ export default class RoomIntel {
 		if (obstaclePositions) {
 			for (const pos of obstaclePositions.obstacles) {
 				matrix.set(pos.x, pos.y, 0xFF);
+			}
+
+			for (const pos of obstaclePositions.endangered) {
+				if (matrix.get(pos.x, pos.y) === 0) {
+					matrix.set(pos.x, pos.y, allowDanger ? 0 : 0xFF);
+				}
 			}
 
 			for (const pos of obstaclePositions.roads) {
@@ -834,6 +878,27 @@ export default class RoomIntel {
 		if (!controller) return null;
 
 		return new RoomPosition(controller.x, controller.y, this.roomName);
+	}
+
+	getControllerReservePositionCount(): number {
+		return cache.inHeap('controllerReservePositionCount:' + this.roomName, CREEP_LIFE_TIME, () => {
+			const position = this.getControllerPosition();
+			if (!position) return 0;
+
+			const terrain = new Room.Terrain(this.roomName);
+
+			let count = 0;
+			const costMatrix = this.getBaseCostMatrix();
+			handleMapArea(position.x, position.y, (x, y) => {
+				if (x === position.x && y === position.y) return;
+				if (costMatrix.get(x, y) >= 100) return;
+				if (terrain.get(x, y) === TERRAIN_MASK_WALL) return;
+
+				count++;
+			});
+
+			return count;
+		});
 	}
 
 	/**

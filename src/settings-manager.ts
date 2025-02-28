@@ -48,6 +48,7 @@ declare global {
 		minRclForPowerMining: number;
 		minWallIntegrity: number;
 		notifyFactoryProduction: boolean;
+		onGlobalReset?: () => void;
 		onTick?: () => void;
 		operatorEachRoom: false | number;
 		operatorNames: string[];

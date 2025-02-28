@@ -330,6 +330,9 @@ export default class RemoteMiningOperation extends Operation {
 	canReserveFrom(roomName: string): boolean {
 		if (!Game.rooms[roomName] || !Game.rooms[roomName].isMine()) return false;
 
+		const roomIntel = getRoomIntel(this.roomName);
+		if (roomIntel.getControllerReservePositionCount() > 1) return Game.rooms[roomName].energyCapacityAvailable >= BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
+
 		return Game.rooms[roomName].energyCapacityAvailable >= 2 * (BODYPART_COST[CLAIM] + BODYPART_COST[MOVE]);
 	}
 
@@ -517,7 +520,7 @@ export default class RemoteMiningOperation extends Operation {
 				if (pos.roomName !== roomName) {
 					// Load cost matrix for the current room.
 					roomName = pos.roomName;
-					matrix = getCostMatrix(roomName, {ignoreMilitary: true});
+					matrix = getCostMatrix(roomName, {ignoreMilitary: true, allowDanger: true});
 				}
 
 				// Don't try to dismantle things in our own rooms.
