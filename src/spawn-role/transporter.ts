@@ -37,6 +37,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 					= _.filter(Game.creepsByRole.hauler, creep => creep.memory.sourceRoom === room.name).length
 					+ _.filter(Game.creepsByRole['hauler.relay'], creep => creep.memory.sourceRoom === room.name).length > 0;
 				const hasExtensions = (room.myStructuresByType[STRUCTURE_EXTENSION] || []).length > 0;
+				const hasBuilders = _.size(room.creepsByRole.builder) + _.size(room.creepsByRole.upgrader) + _.size(room.creepsByRole['builder.remote']) > 0;
 				if (transporterCount >= maxTransporters / 2) {
 					option.priority--;
 					option.priority--;
@@ -49,7 +50,7 @@ export default class TransporterSpawnRole extends SpawnRole {
 					option.force = true;
 					option.weight = 1;
 				}
-				else if (!room.storage && !room.terminal) {
+				else if (!room.storage && !room.terminal && !hasBuilders) {
 					const spawns = _.filter(Game.spawns, spawn => spawn.room.name === room.name);
 					const sources = room.sources;
 					const minSpawnDistance = _.min(_.map(spawns, spawn => _.min(_.map(sources, source => spawn.pos.getRangeTo(source.pos)))));

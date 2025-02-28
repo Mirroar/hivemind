@@ -47,7 +47,7 @@ const creepRoles = {
 	helper: helperRole,
 	mule: muleRole,
 	scout: scoutRole,
-	skKiller: skKillerRole,
+	//skKiller: skKillerRole,
 	transporter: transporterRole,
 	unassigned: unassignedRole,
 	upgrader: upgraderRole,

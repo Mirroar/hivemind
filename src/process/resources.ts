@@ -33,16 +33,17 @@ export default class ResourcesProcess extends Process {
 
 			const terminal = room.terminal;
 			const maxAmount = room.getCurrentResourceAmount(best.resourceType);
+			// @todo Determine trade volume dynamically based on differnce in resource level.
 			const tradeVolume = Math.ceil(Math.min(maxAmount, 5000));
-			let sentSuccessfully = true;
+			let sentSuccessfully = false;
+			let clearTradesOfThisType = true;
 			if (best.source === best.target) {
-				sentSuccessfully = false;
+				clearTradesOfThisType = false;
 			}
 			else if (maxAmount === 0) {
-				sentSuccessfully = false;
 			}
 			else if (manager.roomHasUncertainStorage(Game.rooms[best.target])) {
-				sentSuccessfully = false;
+				clearTradesOfThisType = false;
 			}
 			else if (manager.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 				let amount = Math.min(terminal.store[best.resourceType], 50_000);
@@ -59,19 +60,19 @@ export default class ResourcesProcess extends Process {
 
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
-				if (result !== OK) sentSuccessfully = false;
+				if (result === OK) sentSuccessfully = true;
 			}
 			else if (terminal.store[best.resourceType] && terminal.store[best.resourceType] >= tradeVolume * 0.9) {
 				const amount = Math.min(tradeVolume, terminal.store[best.resourceType]);
 				const result = terminal.send(best.resourceType, amount, best.target, 'Resource equalizing');
 				hivemind.log('trade').info('sending', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
-				if (result !== OK) sentSuccessfully = false;
+				if (result === OK) sentSuccessfully = true;
 			}
 			else if (manager.roomNeedsTerminalSpace(room) && (!room?.storage[best.resourceType] || terminal.store.getFreeCapacity() < terminal.store.getCapacity() * 0.05) && terminal.store[best.resourceType]) {
 				const amount = terminal.store[best.resourceType];
 				const result = terminal.send(best.resourceType, amount, best.target, 'Evacuating');
 				hivemind.log('trade').info('evacuating', amount, best.resourceType, 'from', best.source, 'to', best.target, ':', result);
-				if (result !== OK) sentSuccessfully = false;
+				if (result === OK) sentSuccessfully = true;
 			}
 			else {
 				if (
@@ -81,12 +82,20 @@ export default class ResourcesProcess extends Process {
 					hivemind.log('trade').info('Preparing', tradeVolume, best.resourceType, 'for transport from', best.source, 'to', best.target);
 					room.prepareForTrading(best.resourceType);
 				}
-
-				sentSuccessfully = false;
 			}
 
 			// Use multiple routes as long as no room is involved multiple times.
-			routes = sentSuccessfully ? _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target) : _.filter(routes, (option: any) => option.source !== best.source || option.resourceType !== best.resourceType);
+			if (sentSuccessfully) {
+				routes = _.filter(routes, (option: any) => option.source !== best.source && option.target !== best.source && option.source !== best.target && option.target !== best.target);
+			}
+			else if (clearTradesOfThisType) {
+				routes = _.filter(routes, (option: any) => option.source !== best.source || option.resourceType !== best.resourceType);
+			}
+			else {
+				// Just clear the current route.
+				routes = _.filter(routes, (option: any) => option !== best);
+			}
+			
 			best = utilities.getBestOption(routes);
 		}
 	}

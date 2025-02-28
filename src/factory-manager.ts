@@ -1,3 +1,4 @@
+import hivemind from 'hivemind';
 import cache from 'utils/cache';
 
 declare global {
@@ -117,30 +118,68 @@ export default class FactoryManager {
 		const storageFull = this.room.getFreeStorage() - this.room.factory.store.getUsedCapacity() < this.room.getStorageLimit() * 0.05;
 		const storageEmpty = this.room.getFreeStorage() - this.room.factory.store.getUsedCapacity() > this.room.getStorageLimit() * 0.95;
 		const minRawMaterialRatio = 0.2;
-		const maxRawMaterialRatio = 0.8;
+		const maxRawMaterialRatio = 1;
 
 		const storedEnergy = this.room.getStoredEnergy() + this.room.factory.store.getUsedCapacity(RESOURCE_ENERGY);
 		const storedProduct = this.room.getCurrentResourceAmount(resourceType) + this.room.factory.store.getUsedCapacity(resourceType);
 		const storedResource = this.room.getCurrentResourceAmount(uncompressRecipes[resourceType] || compressRecipes[resourceType]) + this.room.factory.store.getUsedCapacity(uncompressRecipes[resourceType] || compressRecipes[resourceType]);
 
 		if (resourceType === RESOURCE_BATTERY) {
+			// We want to compress energy when we have a lot of it, and need more storage space.
+			// @todo Also compress when we need to send it long distances.
 			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
-			return (storedProduct < 500 || storageFull || rawMaterialRatio > maxRawMaterialRatio) && storedEnergy > 15_000;
+			const minProduct = hivemind.settings.get('enableDepositMining') ? 500 : 0;
+			return (
+					storedProduct < minProduct
+					|| storageFull
+					|| rawMaterialRatio > maxRawMaterialRatio
+				)
+				&& storedEnergy > 15_000;
 		}
 
 		if (resourceType === RESOURCE_ENERGY) {
+			// We want to uncompress energy when we have the space and need for it.
 			const rawMaterialRatio = storedProduct / Math.max(storedProduct + storedResource, 1);
-			return (storedProduct < 10_000 || storageEmpty || rawMaterialRatio < minRawMaterialRatio) && storedResource > 100;
+			return (
+					storedProduct < 10_000
+					// || storageEmpty
+					|| rawMaterialRatio < minRawMaterialRatio
+				)
+				&& storedResource > 100;
 		}
 
-		if (uncompressRecipes[resourceType]) {
+		const isCompressingRecipe = !!uncompressRecipes[resourceType];
+		if (isCompressingRecipe) {
+			// resourceType is compressed, e.g. a bar. Thus the recipe is one for compressing.
+			// storedProduct is the amount of compressed resource.
+			// storedResource is the amount of raw resource.
+			// We want to compress when we need it for commodities, or when we need more storage space.
+			// @todo Also compress when we need to send it long distances.
 			const rawMaterialRatio = storedResource / Math.max(storedProduct + storedResource, 1);
-			return (storedProduct < 500 || storageFull || rawMaterialRatio > maxRawMaterialRatio) && storedResource > 5000 && storedEnergy > 5000;
+			const minProduct = hivemind.settings.get('enableDepositMining') ? 500 : 0;
+			return (
+					storedProduct < minProduct 
+					|| storageFull 
+					|| rawMaterialRatio > maxRawMaterialRatio
+				)
+				&& storedResource > 5000
+				&& storedEnergy > 5000;
 		}
 
-		if (compressRecipes[resourceType]) {
+		const isUncompressingRecipe = !!compressRecipes[resourceType];
+		if (isUncompressingRecipe) {
+			// resourceType is uncomplessed, e.g. a mineral. Thus the recipe is one for uncompressing.
+			// storedProduct is the amount of raw resource.
+			// storedResource is the amount of compressed resource.
+			// We want to uncompress when we have a lot of the compressed resource, and storage space.
 			const rawMaterialRatio = storedProduct / Math.max(storedProduct + storedResource, 1);
-			return (storedProduct < 2000 || storageEmpty || rawMaterialRatio < minRawMaterialRatio) && storedResource > 100 && storedEnergy > 5000;
+			return (
+					storedProduct < 2000 
+					// || storageEmpty
+					|| rawMaterialRatio < minRawMaterialRatio
+				)
+				&& storedResource > 100
+				&& storedEnergy > 5000;
 		}
 
 		// @todo For level-based recipes, use empire-wide resource capabilities and request via terminal.

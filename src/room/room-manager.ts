@@ -30,6 +30,7 @@ declare global {
 	interface RoomManagerMemory {
 		runNextTick: boolean;
 		hasMisplacedSpawn: boolean;
+		isMovingMispacedSpawn: boolean;
 		dismantle: Record<string, number>;
 	}
 }
@@ -79,6 +80,7 @@ export default class RoomManager {
 				dismantle: {},
 				runNextTick: false,
 				hasMisplacedSpawn: false,
+				isMovingMispacedSpawn: false,
 			};
 		}
 
@@ -111,11 +113,12 @@ export default class RoomManager {
 		}
 
 		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NONE && !this.room.controller?.safeMode) {
-			// Don't build anything while under attack.
+			// Don't build anything while under attack from anything but NPC Invaders.
 			// Reset feature flags to make sure we rebuild everything once the threat is gone.
+			// @todo Actually we do still want to place construction sites for walls and ramparts.
 			this.featureFlags.reset();
 
-			return;
+			if (!this.room.defense.getEnemyInfo().invaderOnly) return;
 		}
 
 		// Figure out if rcl has changed and we need to build some new structures.
@@ -124,10 +127,11 @@ export default class RoomManager {
 			this.featureFlags.setNumeric('ranAtRcl', this.room.controller.level);
 		}
 
-		if (this.featureFlags.isSet('builtAllStructures')) {
+		if (this.featureFlags.isSet('builtAllStructures') && !this.memory.isMovingMispacedSpawn && !this.memory.hasMisplacedSpawn) {
 			// Figure out if a road, container or rampart has decayed and needs rebuilding.
 			this.periodicallyCheckDecayingStructures();
 
+			// Otherwise, we're done here.
 			return;
 		}
 
@@ -209,13 +213,11 @@ export default class RoomManager {
 			this.buildPlannedStructures(`tower.${i}`, STRUCTURE_TOWER, pos => this.roomPlanner.isPlannedLocation(pos, 'tower'));
 		}
 
-		// @todo We don't really want to build ramparts at spots where we
-		// can't build towers yet (if we're not at max RCL).
-		this.buildPlannedStructures('tower', STRUCTURE_RAMPART);
+		// If for some reason other tower are not in numbered spots, build them anyway.
 		this.buildPlannedStructures('tower', STRUCTURE_TOWER);
 
 		// Build normal ramparts.
-		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
+		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART, pos => !this.roomPlanner.isPlannedLocation(pos, 'rampart.ramp'));
 
 		// Build spawn once we have enough capacity for decently sized creeps.
 		if (this.checkWallIntegrity(10_000)) {
@@ -331,7 +333,7 @@ export default class RoomManager {
 
 				const paths = operation.getPaths();
 				for (const sourceLocation of locations[this.room.name]) {
-					for (const position of paths[sourceLocation].path) {
+					for (const position of paths[sourceLocation]?.path || []) {
 						if (position.roomName === this.room.name) positions[serializeCoords(position.x, position.y)] = position;
 					}
 				}
@@ -450,7 +452,7 @@ export default class RoomManager {
 		const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
 		const roomSpawnSites = this.constructionSitesByType[STRUCTURE_SPAWN] || [];
 
-		delete this.memory.hasMisplacedSpawn;
+		delete this.memory.isMovingMispacedSpawn;
 		if (roomSpawns.length >= CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level] && this.roomConstructionSites.length === 0) {
 			this.removeMisplacedSpawn(roomSpawns as StructureSpawn[]);
 		}
@@ -738,8 +740,12 @@ export default class RoomManager {
 	 *   List of spawns in the room.
 	 */
 	removeMisplacedSpawn(roomSpawns: StructureSpawn[]) {
+		this.memory.hasMisplacedSpawn = false;
+
 		for (const spawn of roomSpawns) {
 			if (this.roomPlanner.isPlannedLocation(spawn.pos, 'spawn')) continue;
+
+			this.memory.hasMisplacedSpawn = true;
 
 			// Only destroy spawn if there are enough resources and builders available.
 			const roomEnergy = this.room.storage ? this.room.storage.store.energy : 0;
@@ -748,7 +754,7 @@ export default class RoomManager {
 
 			// This spawn is misplaced, set a flag for spawning more builders to help.
 			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2) {
-				this.memory.hasMisplacedSpawn = true;
+				this.memory.isMovingMispacedSpawn = true;
 			}
 
 			// Don't check whether spawn can be moved right now if a creep is spawning.
@@ -776,8 +782,8 @@ export default class RoomManager {
 	 * @return {boolean}
 	 *   True if a spawn needs to be moved.
 	 */
-	hasMisplacedSpawn(): boolean {
-		return this.memory.hasMisplacedSpawn;
+	isMovingMisplacedSpawn(): boolean {
+		return this.memory.isMovingMispacedSpawn;
 	}
 
 	/**

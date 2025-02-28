@@ -42,16 +42,19 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 	const cacheDuration = hivemind.segmentMemory.isReady() ? (roomHasBlockingConstructionSites(roomName) ? 20 : 500) : 1;
 
 	let cacheKey = 'costMatrix:' + roomName;
+	if (options.allowDanger) {
+		cacheKey += ':danger';
+	}
 	let matrix = hivemind.segmentMemory.isReady() ? cache.inHeap(
 		cacheKey,
 		cacheDuration,
 		() => {
 			const roomIntel = getRoomIntel(roomName);
-			return roomIntel.getCostMatrix();
+			return roomIntel.getBaseCostMatrix(options.allowDanger);
 		},
 	) : new PathFinder.CostMatrix();
 
-	if (matrix && options.singleRoom && hivemind.segmentMemory.isReady()) {
+	if (options.singleRoom && hivemind.segmentMemory.isReady()) {
 		// Highly discourage room exits if creep is supposed to stay in a room.
 		cacheKey += ':singleRoom';
 
@@ -62,7 +65,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 		);
 	}
 
-	if (matrix && options.isQuad) {
+	if (options.isQuad) {
 		cacheKey += ':quad';
 
 		matrix = cache.inHeap(
@@ -73,8 +76,7 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 	}
 
 	if (
-		matrix
-		&& !options.ignoreMilitary
+		!options.ignoreMilitary
 		&& !options.allowDanger
 		&& hivemind.segmentMemory.isReady()
 		&& Game.rooms[roomName]
@@ -92,6 +94,16 @@ function getCostMatrix(roomName: string, options?: CostMatrixOptions): CostMatri
 	}
 	else {
 		cache.inHeap('dangerMatrix:' + roomName, 20, () => new PathFinder.CostMatrix());
+	}
+
+	if (!options.allowDanger && !options.ignoreMilitary) {
+		// Avoid source keepers directly, no need to cache.
+		matrix = matrix.clone();
+		for (const creep of Game.rooms[roomName]?.enemyCreeps?.['Source Keeper'] || []) {
+			handleMapArea(creep.pos.x, creep.pos.y, (x, y) => {
+				matrix.set(x, y, 255);
+			}, 3);
+		}
 	}
 
 	return matrix;
@@ -119,10 +131,10 @@ function generateSingleRoomCostMatrix(matrix: CostMatrix, roomName: string): Cos
 	const newMatrix = matrix.clone();
 	const terrain = new Room.Terrain(roomName);
 	for (let i = 1; i < 49; i++) {
-		if (terrain.get(i, 0) !== TERRAIN_MASK_WALL) newMatrix.set(i, 0, 50);
-		if (terrain.get(0, i) !== TERRAIN_MASK_WALL) newMatrix.set(0, i, 50);
-		if (terrain.get(i, 49) !== TERRAIN_MASK_WALL) newMatrix.set(i, 49, 50);
-		if (terrain.get(49, i) !== TERRAIN_MASK_WALL) newMatrix.set(49, i, 50);
+		if (terrain.get(i, 0) !== TERRAIN_MASK_WALL) newMatrix.set(i, 0, 150);
+		if (terrain.get(0, i) !== TERRAIN_MASK_WALL) newMatrix.set(0, i, 150);
+		if (terrain.get(i, 49) !== TERRAIN_MASK_WALL) newMatrix.set(i, 49, 150);
+		if (terrain.get(49, i) !== TERRAIN_MASK_WALL) newMatrix.set(49, i, 150);
 	}
 
 	return newMatrix;
@@ -348,28 +360,39 @@ function markBuildings(
 		const roomIntel = getRoomIntel(roomName);
 		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
 			if (!(Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) {
-				// Add area around keeper lairs as obstacles.
-				// @todo For SK rooms that we harvest, still consider the
-				// mineral SK lair as dangerous.
-				_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
-					handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
-						sourceKeeperCallback(x, y);
-					}, 3);
-				});
-
 				// Add area around sources as obstacles.
 				_.each(roomIntel.getSourcePositions(), sourceInfo => {
 					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
 						sourceKeeperCallback(x, y);
 					}, 4);
+
+					// Add area around keeper lairs as obstacles.
+					_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
+						if (structure.pos.getRangeTo(sourceInfo.x, sourceInfo.y) > 7) return;
+
+						handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
+							sourceKeeperCallback(x, y);
+						}, 3);
+					});
 				});
 			}
 
-			// Add area around mineral as obstacles.
-			for (const mineralInfo of roomIntel.getMineralPositions()) {
-				handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
-					sourceKeeperCallback(x, y);
-				}, 4);
+			if (!Memory.strategy?.skMining?.[roomName]) {
+				// Add area around mineral as obstacles.
+				for (const mineralInfo of roomIntel.getMineralPositions()) {
+					handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
+						sourceKeeperCallback(x, y);
+					}, 4);
+
+					// Add area around keeper lairs as obstacles.
+					_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
+						if (structure.pos.getRangeTo(mineralInfo.x, mineralInfo.y) > 7) return;
+
+						handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
+							sourceKeeperCallback(x, y);
+						}, 3);
+					});
+				}
 			}
 		}
 
@@ -399,6 +422,8 @@ function markSourceKeeperExits(roomName: string, dir: TOP | LEFT | BOTTOM | RIGH
 
 	// @todo Instead of reading cost matrix values, check distance to
 	// keeper lairs and sources.
+	// @todo This kind of depends on whether we allow traversing dangerous
+	// rooms or not.
 	const matrix = getCostMatrix(roomName);
 	if (dir === TOP || dir === BOTTOM) {
 		const y = (dir === TOP ? 0 : 49);

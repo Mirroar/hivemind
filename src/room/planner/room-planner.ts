@@ -6,7 +6,6 @@ import hivemind from 'hivemind';
 import RoomPlan from 'room/planner/room-plan';
 import RoomPlanGenerator from 'room/planner/room-plan-generator';
 import stats from 'utils/stats';
-import utilities from 'utilities';
 import {getRoomPlanFor, setRoomPlanFor} from 'room/planner/room-plan-management';
 import {getRoomIntel} from 'room-intel';
 

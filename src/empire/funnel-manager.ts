@@ -18,7 +18,7 @@ export default class FunnelManager {
 	getRoomsToFunnel(): string[] {
 		return cache.inHeap('funneledRooms', 500, () => {
 			const funneledRooms: string[] = [];
-			const roomsAtLevel = _.groupBy(this.getAvailableRoomsToFunnel(), room => room.controller.level);
+			const roomsAtLevel: Record<number, Room[]> = _.groupBy(this.getAvailableRoomsToFunnel(), room => room.controller.level);
 
 			const hasEnoughRCL8 = (roomsAtLevel[8]?.length || 0) > 1 || true;
 			const hasRCL7 = (roomsAtLevel[7]?.length || 0) > 0;
@@ -35,20 +35,20 @@ export default class FunnelManager {
 				return funneledRooms;
 			}
 
-			if (
-				(hasEnoughRCL7)
-				|| (!hasRCL6 && hasRCL7)
-			) {
-				// Funnel to best RCL 7 room.
+			if (hasEnoughRCL7 && !hasEnoughRCL8) {
+				// Funnel to best RCL 7 room to get one to RCL 8.
 				funneledRooms.push(_.max(roomsAtLevel[7], room => this.getFunnelRoomScore(room)).name);
 			}
-			else if (hasRCL6) {
-				// Funnel to best RCL 6 or 7 room.
+			else if (hasRCL6 || hasRCL7) {
+				// Funnel to best RCL 6 or 7 room to get more spawn capacity.
 				funneledRooms.push(_.max([
 					...(roomsAtLevel[6] ?? []),
 					...(roomsAtLevel[7] ?? []),
 				], room => this.getFunnelRoomScore(room)).name);
 			}
+
+			// If GCL upgrade is close, don't funnel so we can be more energy efficient.
+			if (this.getGclUpgradeScore() > _.max(funneledRooms.map(roomName => this.getFunnelRoomScore(Game.rooms[roomName])))) return [];
 
 			return funneledRooms;
 		});
@@ -68,6 +68,13 @@ export default class FunnelManager {
 		const energyNeededToUpgrade = Math.max(0, room.controller.progressTotal - room.controller.progress);
 
 		return this.roomStatus.getExpansionScore(room.name) / (energyNeededToUpgrade + 1);
+	}
+
+	protected getGclUpgradeScore() {
+		const gclProgressNeeded = Math.max(0, Game.gcl.progressTotal - Game.gcl.progress);
+
+		// @todo Maybe estimate it around the highest expansion score for a new room.
+		return 10 / (gclProgressNeeded + 1);
 	}
 
 	isFunneling() {

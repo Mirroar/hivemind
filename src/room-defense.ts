@@ -6,6 +6,7 @@ import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import {getDangerMatrix} from 'utils/cost-matrix';
 import {getResourcesIn} from 'utils/store';
+import { max } from 'lodash';
 
 declare global {
 	interface RoomMemory {
@@ -98,6 +99,44 @@ export default class RoomDefense {
 		}
 	}
 
+	getDesiredWallStrength(): number {
+		const roomLevel = this.room.controller.level;
+		const maxWallHealth = hivemind.settings.get('maxWallHealth');
+
+		return (maxWallHealth[roomLevel] || 0) * this.getWallStrengthMultiplier();
+	}
+
+	getWallStrengthMultiplier(): number {
+		if (this.hasSafeModeCooldown()) return 2;
+		if (this.isAnyRoomSafeModed()) return 1.5;
+
+		return 1;
+	}
+
+	hasSafeModeCooldown(): boolean {
+		return Boolean(this.room.controller.safeModeCooldown);
+	}
+
+	isAnyRoomSafeModed(): boolean {
+		return cache.inHeap('isAnyRoomSafeModed', 5, () => {
+			for (const room of Game.myRooms) {
+				if (room.controller?.safeMode) return true;
+			}
+
+			return false;
+		});
+	}
+
+	isAnyRoomUnderAttack(): boolean {
+		return cache.inHeap('isAnyRoomUnderAttack', 5, () => {
+			for (const room of Game.myRooms) {
+				if (room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return true;
+			}
+
+			return false;
+		});
+	}
+
 	/**
 	 * Checks if a room's walls are intact.
 	 *
@@ -147,6 +186,34 @@ export default class RoomDefense {
 	 */
 	getEnemyStrength(): EnemyStrength {
 		return cache.inHeap('getEnemyStrength:' + this.roomName, 5, () => {
+			const towerStrength = TOWER_POWER_ATTACK * (this.room.myStructuresByType[STRUCTURE_TOWER] || []).length / 2;
+
+			// Active defense is calculated as having 2 creeps
+			// with 50% attack and move parts.
+			const defensiveCreepStrength = 2 * ATTACK_POWER * Math.min(MAX_CREEP_SIZE / 2, Math.floor(this.room.energyCapacityAvailable / (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])));
+
+			// @todo Factor in if we can use boosts on defense creeps.
+			const defenseBoostPower = 1;
+
+			// If the enemy can take down a piece of wall in < 3000 ticks, that's a problem.
+			const normalDamageThreshold = this.getLowestWallStrength() / 3000;
+
+			// If the enemy can take down a piece of wall in < 1000 ticks, that's a big problem.
+			const highDamageThreshold = this.getLowestWallStrength() / 1000;
+
+			const {attackStrength, healStrength, invaderOnly} = this.getEnemyInfo();
+
+			if (attackStrength === 0) return ENEMY_STRENGTH_NONE;
+			if (invaderOnly || (healStrength < towerStrength && attackStrength < highDamageThreshold)) return ENEMY_STRENGTH_WEAK;
+			if (healStrength < towerStrength + defensiveCreepStrength && attackStrength > normalDamageThreshold) return ENEMY_STRENGTH_NORMAL;
+			if (healStrength < towerStrength + defensiveCreepStrength * defenseBoostPower && attackStrength > highDamageThreshold) return ENEMY_STRENGTH_STRONG;
+
+			return ENEMY_STRENGTH_DEADLY;
+		});
+	}
+
+	getEnemyInfo() {
+		return cache.inHeap('getEnemyInfo:' + this.roomName, 5, () => {
 			let attackStrength = 0;
 			let healStrength = 0;
 			let totalStrength = 0;
@@ -185,30 +252,11 @@ export default class RoomDefense {
 				}
 			}
 
-			const towerStrength = TOWER_POWER_ATTACK * (this.room.myStructuresByType[STRUCTURE_TOWER] || []).length / 2;
-
-			// Active defense is calculated as having 2 creeps
-			// with 50% attack and move parts.
-			const defensiveCreepStrength = 2 * ATTACK_POWER * Math.min(MAX_CREEP_SIZE / 2, Math.floor(this.room.energyCapacityAvailable / (BODYPART_COST[ATTACK] + BODYPART_COST[MOVE])));
-
-			// @todo Factor in if we can use boosts on defense creeps.
-			const defenseBoostPower = 1;
-
-			// If the enemy can take down a piece of wall in < 3000 ticks, that's a problem.
-			const normalDamageThreshold = this.getLowestWallStrength() / 3000;
-
-			// If the enemy can take down a piece of wall in < 1000 ticks, that's a big problem.
-			const highDamageThreshold = this.getLowestWallStrength() / 1000;
-
-			if (attackStrength === 0) return ENEMY_STRENGTH_NONE;
-			if (invaderOnly || (healStrength < towerStrength && attackStrength < highDamageThreshold)) return ENEMY_STRENGTH_WEAK;
-			if (healStrength < towerStrength + defensiveCreepStrength && attackStrength > normalDamageThreshold) return ENEMY_STRENGTH_NORMAL;
-			if (healStrength < towerStrength + defensiveCreepStrength * defenseBoostPower && attackStrength > highDamageThreshold) return ENEMY_STRENGTH_STRONG;
-
-			return ENEMY_STRENGTH_DEADLY;
+			return {attackStrength, healStrength, totalStrength, invaderOnly};
 		});
 	}
 
+	// @todo This stuff probably should live in a separate process.
 	openRampartsToFriendlies() {
 		if (_.size(this.room.enemyCreeps) === 0) {
 			if (this.memory.lastActivity && Game.time - this.memory.lastActivity > 10) {

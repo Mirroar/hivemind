@@ -48,7 +48,8 @@ export default class RemotePathManager {
 				plainCost: 2,
 				swampCost: (room.storage || room.terminal) ? 3 : 10,
 				maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
-				roomCallback: roomName => this.getCostMatrix(roomName, sourcePosition.roomName === roomName),
+				roomCallback: roomName => this.getRemotePathCostMatrix(roomName, sourcePosition.roomName === roomName),
+				heuristicWeight: 1,
 			});
 
 			if (!result || result.incomplete || result.path.length >= minPathLength) continue;
@@ -64,7 +65,7 @@ export default class RemotePathManager {
 		return minPath;
 	}
 
-	getCostMatrix(roomName: string, isTargetRoom: boolean): CostMatrix | false {
+	getRemotePathCostMatrix(roomName: string, isTargetRoom: boolean): CostMatrix | false {
 		return cache.inHeap('remotePathManagerCostMatrix:' + roomName + (isTargetRoom ? ':t' : ''), 1000, () => {
 			const roomIntel = getRoomIntel(roomName);
 

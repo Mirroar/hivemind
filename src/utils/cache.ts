@@ -124,6 +124,10 @@ const cache = {
 
 		delete o._cache[key];
 	},
+
+	removeFromHeap(key: string) {
+		cache.removeEntry(heapCache, key);
+	}
 };
 
 export default cache;

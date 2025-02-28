@@ -171,6 +171,7 @@ const settings: SettingsObject = {
 	allowSellingOps: true,
 
 	// Script hooks:
+	onGlobalReset: null,
 	onTick: null,
 };
 

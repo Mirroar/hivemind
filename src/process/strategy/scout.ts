@@ -192,30 +192,22 @@ export default class ScoutProcess extends Process {
 		if (Game.map.getRoomStatus(roomName).status === 'closed') return 0;
 
 		const roomIntel = getRoomIntel(roomName);
-		// @todo Calculate cost for room reservation instead of this flat estimation.
-		let income = -2000;
-		let sourceCapacity: number = SOURCE_ENERGY_CAPACITY;
-		if (!roomIntel.isClaimable()) {
-			// SK rooms don't need reservation. Instead we spawn SK killers,
-			// which generate additional income for us.
-			sourceCapacity = SOURCE_ENERGY_KEEPER_CAPACITY;
-		}
-
-		let pathLength = 0;
+		let pathLength = 500;
 		const sourcePositions = roomIntel.getSourcePositions();
+		if (sourcePositions.length === 0) return 0;
+
 		for (const pos of sourcePositions) {
 			const path = this.pathManager.getPathFor(new RoomPosition(pos.x, pos.y, roomName));
 			if (!path) continue;
 
-			income += sourceCapacity;
-			pathLength += path.length;
+			pathLength = Math.min(path.length, pathLength);
 		}
 
 		// @todo Add score if this is a safe room (that will be reserved
 		// anyways and can't be attacked).
 
 		if (pathLength <= 0) return 0;
-		return income / pathLength;
+		return SOURCE_ENERGY_CAPACITY / pathLength;
 	}
 
 	/**

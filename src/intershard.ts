@@ -98,6 +98,27 @@ const interShard = {
 		this.writeLocalMemory();
 	},
 
+	getTotalOwnedRooms(): number {
+		const ownedRooms = {
+			[Game.shard.name]: Game.myRooms.length,
+		}
+
+		this.addAdjacentOwnedRooms(ownedRooms, this.getLocalMemory());
+
+		return _.sum(_.values(ownedRooms));
+	},
+
+	addAdjacentOwnedRooms(ownedRooms: Record<string, number>, memory: ShardMemory) {
+		if (!memory.portals) return;
+
+		for (const shardName of _.keys(memory.portals)) {
+			if (typeof ownedRooms[shardName] !== 'undefined') continue;
+
+			const shardMemory = this.getRemoteMemory(shardName);
+			ownedRooms[shardName] = shardMemory.info?.ownedRooms || 0;
+			this.addAdjacentOwnedRooms(ownedRooms, shardMemory);
+		}
+	},
 };
 
 export default interShard;

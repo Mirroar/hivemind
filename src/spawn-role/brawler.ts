@@ -3,11 +3,11 @@ RANGED_ATTACK_POWER HEAL_POWER RESOURCE_ENERGY */
 
 import BodyBuilder from 'creep/body-builder';
 import cache from 'utils/cache';
-import container from 'utils/container';
 import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
+import { has } from 'lodash';
 
 interface BrawlerSpawnOption extends SpawnOption {
 	targetPos?: string;
@@ -55,6 +55,8 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			this.getRemoteDefenseSpawnOptions(room, options);
 			this.getPowerHarvestDefenseSpawnOptions(room, options);
 			this.getTrainPartSpawnOptions(room, options);
+
+			// @todo Move reclaiming to a separate spawn role.
 			this.getReclaimSpawnOptions(room, options);
 
 			return options;
@@ -70,8 +72,6 @@ export default class BrawlerSpawnRole extends SpawnRole {
 	 *   A list of spawn options to add to.
 	 */
 	getRemoteDefenseSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {
-		if (room.getEffectiveAvailableEnergy() < 5_000) return;
-
 		const harvestPositions: RoomPosition[] = room.getRemoteHarvestSourcePositions();
 		for (const pos of harvestPositions) {
 			const operation = Game.operationsByType.mining['mine:' + pos.roomName];
@@ -83,8 +83,14 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			if (!operation) continue;
 			if (!operation.isUnderAttack() && !operation.hasInvaderCore()) continue;
 
+			// Only do costly defense if we have enough energy.
+			if (operation.isUnderAttack() && room.getEffectiveAvailableEnergy() < 5_000) return;
+
 			// Don't defend operations where we still need a dismantler.
 			if (operation.isUnderAttack() && operation.needsDismantler()) continue;
+
+			// Only spawn defenders for actively used sources.
+			if (!this.isActivelyUsedSource(room, pos)) continue;
 
 			// Don't spawn simple source defenders in quick succession.
 			// If they fail, there's a stronger enemy that we need to deal with
@@ -93,7 +99,7 @@ export default class BrawlerSpawnRole extends SpawnRole {
 			const defenseTimeDiff = operation.isProfitable() ? 300 : 1500;
 			if (room.memory.recentBrawler && Game.time - (room.memory.recentBrawler[targetPos] || -10_000) < defenseTimeDiff) continue;
 
-			const brawlers = _.filter(Game.creepsByRole.brawler || [], (creep: Creep) => creep.memory.operation === 'mine:' + pos.roomName);
+			const brawlers = _.filter(Game.creepsByRole.brawler || [], (creep: BrawlerCreep) => creep.memory.operation === 'mine:' + pos.roomName);
 			if (_.size(brawlers) > 0) continue;
 
 			const totalEnemyData = operation.getTotalEnemyData();
@@ -111,6 +117,14 @@ export default class BrawlerSpawnRole extends SpawnRole {
 				operation: operation.name,
 			});
 		}
+	}
+
+	isActivelyUsedSource(room: Room, pos: RoomPosition): boolean {
+		const roomList: Record<string, boolean> = cache.fromHeap('activeRemoteRooms:' + room.name, true);
+		if (roomList?.[pos.roomName]) return true;
+
+		const hasActiveHarvesters = _.some(Game.creepsByRole['harvester.remote'], (creep: RemoteHarvesterCreep) => decodePosition(creep.memory.source).roomName === pos.roomName);
+		return hasActiveHarvesters;
 	}
 
 	getPowerHarvestDefenseSpawnOptions(room: Room, options: BrawlerSpawnOption[]) {

@@ -93,11 +93,12 @@ hivemind.logGlobalReset();
 
 containerSetup(container);
 
+const globalResetCallback = hivemind.settings.get('onGlobalReset');
+if (globalResetCallback) {
+	globalResetCallback();
+}
+
 balancer.init();
-
-// @todo Add a healer to defender squads, or spawn one when creeps are injured.
-
-// @todo make unarmed creeps run from hostiles.
 
 class BotKernel {
 	lastTime: number = 0;
@@ -127,9 +128,9 @@ class BotKernel {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
-		const hook = hivemind.settings.get('onTick');
-		if (hook) {
-			hook();
+		const onTickCallback = hivemind.settings.get('onTick');
+		if (onTickCallback) {
+			onTickCallback();
 		}
 
 		hivemind.runProcess('creeps', CreepsProcess, {

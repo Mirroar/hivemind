@@ -95,7 +95,7 @@ export default class MapVisualsProcess extends Process {
 		if (!expansionScore) return;
 		if (expansionScore < this.getExpansionScoreCutoff()) return;
 
-		Game.map.visual.text(expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left'});
+		Game.map.visual.text(expansionScore.toPrecision(3), new RoomPosition(8, 4, roomName), {fontSize: 7, align: 'left', color: '#80ff80'});
 	}
 
 	getExpansionScoreCutoff(): number {
@@ -145,15 +145,28 @@ export default class MapVisualsProcess extends Process {
 			const position = new RoomPosition(coords.x, coords.y, roomName);
 			const path = remotePathManager.getPathFor(position);
 			if (!path) {
-				Game.map.visual.text('?', position, {color: '#ff0000', fontSize: 5});
+				Game.map.visual.text('🚫', position, {color: '#ff0000', fontSize: 5});
 				continue;
 			}
 
-			Game.map.visual.poly(path, {
+			const pathLength = path.length;
+			Game.map.visual.text(pathLength.toString(), position, {fontSize: 4, align: 'left'});
+
+			Game.map.visual.poly(this.getPathSegments(path), {
 				opacity: 0.3,
 				stroke: '#00ffff',
 			});
 		}
+	}
+
+	getPathSegments(path: RoomPosition[]): RoomPosition[] {
+		const segments: RoomPosition[] = [];
+		for (let i = path.length - 1; i > 0; i -= 5) {
+			segments.push(path[i]);
+		}
+		segments.push(path[0]);
+
+		return segments;
 	}
 
 	/**

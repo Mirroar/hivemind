@@ -26,6 +26,10 @@ function getRoomPlanFor(roomName: string): RoomPlanWithVersion | null {
 }
 
 function setRoomPlanFor(roomName: string, plan: RoomPlan, version: number) {
+	if (Game.rooms[roomName]?.roomManager) {
+		Game.rooms[roomName].roomManager.featureFlags.reset();
+	}
+
 	const key = 'room-plan:' + roomName;
 	if (!plan) {
 		hivemind.segmentMemory.delete(key);
