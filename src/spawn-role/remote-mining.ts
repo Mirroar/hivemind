@@ -180,6 +180,15 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		let total = 0;
 		for (const position of this.getActiveRemoteHarvestPositions(room)) {
 			const operation = Game.operationsByType.mining['mine:' + position.roomName];
+			const roomIntel = getRoomIntel(position.roomName);
+
+			// Don't spawn for SK rooms if SK killer is missing.
+			if (roomIntel.isSourceKeeperRoom() && _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+				const hasSkKiller = _.some(Game.creepsByRole.skKiller, creep => creep.memory.targetRoom === position.roomName);
+				if (!hasSkKiller) {
+					continue;
+				}
+			}
 
 			const paths = operation.getPaths();
 			const targetPos = encodePosition(position);
@@ -231,6 +240,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 	addBuilderSpawnOptions(room: Room, options: RemoteMiningSpawnOption[], builderDemand: number) {
 		if (options.length > 0) return;
 		if (!room.storage && !room.terminal) return;
+		if (room.getEffectiveAvailableEnergy() < 5000) return;
 
 		const currentWorkParts = cache.inObject(room, 'remoteMiningBuilderData', 1, () => {
 			const currentBuilders = _.filter(Game.creepsByRole['builder.mines'], creep => creep.memory.sourceRoom === room.name);

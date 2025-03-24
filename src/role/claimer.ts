@@ -4,6 +4,7 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition} from 'utils/serialization';
 import {getUsername} from 'utils/account';
+import hivemind from 'hivemind';
 
 declare global {
 	interface RoomMemory {
@@ -116,7 +117,9 @@ export default class ClaimerRole extends Role {
 			};
 
 			if (creep.room.controller.reservation && creep.room.controller.reservation.username !== getUsername()) {
-				creep.attackController(target);
+				if (!hivemind.relations.isAlly(creep.room.controller.reservation.username)) {
+					creep.attackController(target);
+				}
 				return;
 			}
 

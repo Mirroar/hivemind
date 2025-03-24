@@ -123,7 +123,13 @@ export default class CombatManager {
 	}
 
 	public couldWinFightAgainst(creep: Creep, otherCreep: Creep): boolean {
+		if (creep.room.isMine() && creep.room.controller.safeMode) return true;
+
 		const towerHealPower = this.getTowerHealPower(creep);
+		const activeAllies = this.getAlliedCombatCreeps(creep.pos);
+		const attackParts = creep.getActiveBodyparts(ATTACK) + _.sum(activeAllies, c => c.getActiveBodyparts(ATTACK)) * 0.5;
+		const healParts = creep.getActiveBodyparts(HEAL) + _.sum(activeAllies, c => c.getActiveBodyparts(HEAL)) * 0.5;
+		const rangedAttackParts = creep.getActiveBodyparts(RANGED_ATTACK) + _.sum(activeAllies, c => c.getActiveBodyparts(RANGED_ATTACK)) * 0.5;
 
 		if (
 			(
@@ -138,18 +144,19 @@ export default class CombatManager {
 		}
 
 		if (
-			creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
+			creep.getActiveBodyparts(RANGED_ATTACK) > 0
+			&& rangedAttackParts * RANGED_ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
 			&& otherCreep.getActiveBodyparts(RANGED_ATTACK) === 0
 		) return true;
 
-		if (creep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER + creep.getActiveBodyparts(HEAL) * HEAL_POWER + towerHealPower > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER) {
+		if (rangedAttackParts * RANGED_ATTACK_POWER + healParts * HEAL_POWER + towerHealPower > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER + otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER) {
 			return true;
 		}
 
 		if (
-			creep.getActiveBodyparts(ATTACK) > otherCreep.getActiveBodyparts(ATTACK)
-			&& creep.getActiveBodyparts(ATTACK) * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
-			&& creep.getActiveBodyparts(HEAL) * HEAL_POWER + towerHealPower >= otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
+			attackParts > otherCreep.getActiveBodyparts(ATTACK)
+			&& attackParts * ATTACK_POWER > otherCreep.getActiveBodyparts(HEAL) * HEAL_POWER
+			&& healParts * HEAL_POWER + towerHealPower >= otherCreep.getActiveBodyparts(RANGED_ATTACK) * RANGED_ATTACK_POWER
 		) return true;
 
 		return false;
@@ -166,6 +173,33 @@ export default class CombatManager {
 		}
 
 		return total;
+	}
+
+	public getAlliedCombatCreeps(position: RoomPosition): Creep[] {
+		const allies = [];
+		const room = Game.rooms[position.roomName];
+		if (!room) return allies;
+
+		for (const creep of Object.values(room.creeps)) {
+			if (!creep.my) continue;
+			if (creep.pos.getRangeTo(position) > 5) continue;
+			if (creep.getActiveBodyparts(ATTACK) === 0 && creep.getActiveBodyparts(RANGED_ATTACK) === 0 && creep.getActiveBodyparts(HEAL) === 0) continue;
+
+			allies.push(creep);
+		}
+
+		for (const userName in room.enemyCreeps) {
+			if (!hivemind.relations.isAlly(userName)) continue;
+
+			for (const creep of room.enemyCreeps[userName]) {
+				if (creep.pos.getRangeTo(position) > 3) continue;
+				if (creep.getActiveBodyparts(ATTACK) === 0 && creep.getActiveBodyparts(RANGED_ATTACK) === 0 && creep.getActiveBodyparts(HEAL) === 0) continue;
+
+				allies.push(creep);
+			}
+		}
+
+		return allies;
 	}
 
 	public getMostValuableTarget(creep: Creep, targets?: AttackTarget[]): AttackTarget | null {

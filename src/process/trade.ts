@@ -8,6 +8,7 @@ import Process from 'process/process';
 import utilities from 'utilities';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getResourcesIn} from 'utils/store';
+import container from 'utils/container';
 
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
@@ -60,6 +61,7 @@ export default class TradeProcess extends Process {
 		this.manageEnergyTradeOrders(resources);
 		this.managePowerTradeOrders(resources);
 		this.manageOpsTradeOrders(resources);
+		this.manageCommodityTradeOrders(resources);
 		this.manageOverflowingTerminals(resources);
 
 		if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingPixels')) {
@@ -104,7 +106,7 @@ export default class TradeProcess extends Process {
 		}
 
 		if ((total.resources[resourceType] || 0) < minStorage && this.availableCredits > 0) {
-			this.instaBuyResources(resourceType, resources.rooms);
+			this.instaBuyResources(resourceType, resources.rooms, true);
 		}
 	}
 
@@ -189,6 +191,23 @@ export default class TradeProcess extends Process {
 
 		if ((total.resources[RESOURCE_OPS] || 0) > minStorage) {
 			this.trySellResources(RESOURCE_OPS, resources.rooms);
+		}
+	}
+
+	manageCommodityTradeOrders(resources: ResourceStates) {
+		const resourceManager = container.get('ResourceLevelManager');
+
+		for (const resourceType of RESOURCES_ALL) {
+			if (!resourceManager.isCommodityResource(resourceType) && !resourceManager.isDepositResource(resourceType)) continue;
+
+			// Sell what we can.
+			// @todo Keep resources if we can craft something better.
+			const total = resources.total;
+			if ((total.resources[resourceType] || 0) === 0) continue;
+
+			if ((total.resources[resourceType] || 0) > 0) {
+				this.instaSellResources(resourceType, resources.rooms);
+			}
 		}
 	}
 
@@ -290,7 +309,9 @@ export default class TradeProcess extends Process {
 		hivemind.log('trade', roomName).debug('Could sell', resourceType, 'for', bestOrder.price, '- we want at least', minPrice);
 		if (bestOrder.price < minPrice) return;
 
-		const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount);
+		const amount = Math.min(this.getMaxOrderAmount(resourceType), bestOrder.amount, room.getCurrentResourceAmount(resourceType));
+		if (amount === 0) return;
+		
 		const transactionCost = Game.market.calcTransactionCost(amount, roomName, bestOrder.roomName);
 
 		if (amount > (room.terminal.store[resourceType] || 0)) {
@@ -393,6 +414,8 @@ export default class TradeProcess extends Process {
 	 *   If set, only check agains orders from rooms given by `rooms` parameter.
 	 */
 	tryBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, ignoreOtherRooms?: boolean) {
+		if (!hivemind.settings.get('enableCreatingTradeOrders')) return;
+
 		if (_.some(Game.market.orders, order => {
 			if (order.type === ORDER_BUY && order.resourceType === resourceType) {
 				if (ignoreOtherRooms && !rooms[order.roomName]) {
@@ -462,6 +485,8 @@ export default class TradeProcess extends Process {
 	 *   Resource states for rooms to check, keyed by room name.
 	 */
 	trySellResources(resourceType: ResourceConstant, rooms: Record<string, RoomResourceState>) {
+		if (!hivemind.settings.get('enableCreatingTradeOrders')) return;
+
 		if (_.some(Game.market.orders, order => order.type === ORDER_SELL && order.resourceType === resourceType)) {
 			return;
 		}
@@ -706,33 +731,52 @@ export default class TradeProcess extends Process {
 		return cache.inHeap('price:' + resourceType, 5000, () => {
 			const history = Game.market.getHistory(resourceType);
 
-			// There needs to be a few days of price data before we consider dealing.
-			if (history.length < 4) return null;
-
-			// Find days with highest and lowest deal values.
-			const minDay = _.min(history, 'avgPrice');
-			const maxDay = _.max(history, 'avgPrice');
-			const maxDev = _.max(history, 'stddevPrice');
-
 			let count = 0;
 			let totalValue = 0;
 			let totalDev = 0;
-			_.each(history, day => {
-				// Skip days with highest and lowest deal values as outliers.
-				if (day.date === minDay.date) return;
-				if (day.date === maxDay.date) return;
-				if (day.date === maxDev.date) return;
-				if (day.resourceType !== resourceType) return;
 
-				count += day.volume;
-				totalValue += day.volume * day.avgPrice;
-				totalDev += day.volume * day.stddevPrice;
-			});
+			// There needs to be a few days of price data before we consider dealing.
+			if (history.length > 3) {
+				// Find days with highest and lowest deal values.
+				const minDay = _.min(history, 'avgPrice');
+				const maxDay = _.max(history, 'avgPrice');
+				const maxDev = _.max(history, 'stddevPrice');
+
+				_.each(history, day => {
+					// Skip days with highest and lowest deal values as outliers.
+					if (day.date === minDay.date) return;
+					if (day.date === maxDay.date) return;
+					if (day.date === maxDev.date) return;
+					if (day.resourceType !== resourceType) return;
+
+					count += day.volume;
+					totalValue += day.volume * day.avgPrice;
+					totalDev += day.volume * day.stddevPrice;
+				});
+			}
+
+			const currentOrders = Game.market.getAllOrders(order => order.resourceType === resourceType);
+			const {currentCount, currentValue, items} = _.reduce(currentOrders, (result, order: Order) => {
+				if (order.resourceType !== resourceType) return result;
+				if (order.remainingAmount === 0) return result;
+
+				result.currentCount += order.remainingAmount;
+				result.currentValue += order.remainingAmount * order.price;
+				result.items.push({ amount: order.remainingAmount, price: order.price });
+
+				return result;
+			}, {currentCount: 0, currentValue: 0, items: []});
+
+			const currentStdDev = Math.sqrt(_.reduce(items, (total, item) => {
+				return total + Math.pow(item.price - currentValue / currentCount, 2) * item.amount;
+			}, 0) / currentCount);
+
+			if (count + currentCount === 0) return null;
 
 			return {
-				total: count,
-				average: totalValue / count,
-				stdDev: totalDev / count,
+				total: count + currentCount,
+				average: (totalValue + currentValue) / (count + currentCount),
+				stdDev: (totalDev + currentStdDev) / (count + currentCount),
 			};
 		});
 	}

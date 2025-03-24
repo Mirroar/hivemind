@@ -110,12 +110,9 @@ export default class TradeRouteManager {
 
 	private addResourceRequestOptions(options: TransportRouteOption[], room: Room, resourceType: ResourceConstant, roomState: RoomResourceState) {
 		// Fullfill allies trade requests.
-		for (const roomName2 in Memory?.requests?.trade?.[resourceType] || {}) {
-			const info = Memory.requests.trade[resourceType][roomName2];
-			if (Game.time - info.lastSeen > 10) {
-				// Request was not recorded recently, skip it.
-				continue;
-			}
+		const requests = this.getCurrentResourceRequests(resourceType);
+		for (const roomName2 in requests) {
+			const info = requests[roomName2];
 
 			const tier = this.getResourceTier(resourceType);
 			const shouldReceiveResources
@@ -152,6 +149,43 @@ export default class TradeRouteManager {
 
 			options.push(option);
 		}
+	}
+
+	private getCurrentResourceRequests(resourceType: ResourceConstant): Record<string, {lastSeen: number, priority: number, amount: number, timeout?: number}> {
+		const requests = Memory?.requests?.trade?.[resourceType] || {};
+		const result = {};
+
+		for (const roomName in requests) {
+			const info = requests[roomName];
+			if (Game.time - info.lastSeen > 10) {
+				// Request was not recorded recently, skip it.
+				continue;
+			}
+
+			result[roomName] = info;
+		}
+
+		if (Game.shard.name === 'thunderdrone') {
+			// // Send T3 boosts to harabi.
+			// if (['XKHO2', 'XLHO2', 'XZHO2', 'XGHO2'].includes(resourceType)) {
+			// 	result['E22S5'] = {
+			// 		lastSeen: Game.time,
+			// 		priority: 0.5,
+			// 		amount: 1000,
+			// 	};
+			// }
+
+			// // Send T3 boosts to MadDokMike.
+			// if (['XUH2O', 'XLHO2', 'XZH2O', 'XZHO2', 'XGHO2'].includes(resourceType)) {
+			// 	result['E25S2'] = {
+			// 		lastSeen: Game.time,
+			// 		priority: 0.5,
+			// 		amount: 1000,
+			// 	};
+			// }
+		}
+
+		return result;
 	}
 
 	private getResourceTier(resourceType: ResourceConstant): number {

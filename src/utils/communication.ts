@@ -2,7 +2,7 @@ import hivemind from 'hivemind';
 
 export const allies = hivemind.relations.allies;
 // This is the conventional segment used for team communication
-export const allySegmentID = 77;
+export const allySegmentID = 90;
 
 // This isn't in the docs for some reason, so we need to add it
 export const maxSegmentsOpen = 10;

@@ -2,6 +2,8 @@
 SOURCE_ENERGY_NEUTRAL_CAPACITY ENERGY_REGEN_TIME CONTROLLER_RESERVE_MAX
 HARVEST_POWER LOOK_STRUCTURES STRUCTURE_CONTAINER */
 
+// @todo Only spawn claimers when the target room is reserved by an enemy, no need to start with harvesters.
+
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import Operation from 'operation/operation';
