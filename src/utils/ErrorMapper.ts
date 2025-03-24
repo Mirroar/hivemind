@@ -90,7 +90,7 @@ export class ErrorMapper {
 			}
 			catch (error) {
 				if (error instanceof Error) {
-					if ('sim' in Game.rooms) {
+					if ('sim' in Game.rooms || !this.consumer) {
 						const message = 'Source maps don\'t work in the simulator - displaying original error';
 						console.log(`<span style='color:red'>${message}<br>${_.escape(error.stack)}</span>`);
 					}

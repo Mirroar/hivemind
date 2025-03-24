@@ -88,7 +88,16 @@ export default class LabSource extends StructureSource<LabSourceTask> {
 			}
 		}
 
-		if (!currentReaction) return;
+		if (!currentReaction) {
+			// Clear labs if we're not running any reaction so we can use the resources for something else.
+			this.addClearSourceLabOption(options, Game.getObjectById<StructureLab>(room.memory.labs.source1), context, null);
+			this.addClearSourceLabOption(options, Game.getObjectById<StructureLab>(room.memory.labs.source2), context, null);
+			for (const labID of labs) {
+				this.addClearSourceLabOption(options, Game.getObjectById<StructureLab>(labID), context, null);
+			}
+
+			return;
+		};
 
 		// Clear out source labs with wrong resources.
 		this.addClearSourceLabOption(options, Game.getObjectById<StructureLab>(room.memory.labs.source1), context, currentReaction[0]);

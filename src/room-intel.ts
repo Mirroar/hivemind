@@ -813,7 +813,7 @@ export default class RoomIntel {
 
 			for (const pos of obstaclePositions.endangered) {
 				if (matrix.get(pos.x, pos.y) === 0) {
-					matrix.set(pos.x, pos.y, allowDanger ? 0 : 0xFF);
+					matrix.set(pos.x, pos.y, allowDanger ? 25 : 0xFF);
 				}
 			}
 

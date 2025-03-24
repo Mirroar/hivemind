@@ -791,4 +791,14 @@ export default class NavMesh {
 			delete this.memory.rooms[roomName];
 		}
 	}
+
+	getRoomDistance(room1: string, room2: string): number {
+		const route = cache.inHeap('roomDistanceRoute:' + room1 + '.' + room2, 1000, () => {
+			return this.findPath(new RoomPosition(25, 25, room1), new RoomPosition(25, 25, room2), {maxPathLength: 700});
+		});
+		const roomLinearDistance = Game.map.getRoomLinearDistance(room1, room2);
+		if (route.incomplete) return roomLinearDistance;
+
+		return Math.min(route.path.length - 1, roomLinearDistance);
+	}
 }

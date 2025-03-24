@@ -206,12 +206,11 @@ export default class ScoutRole extends Role {
 		return _.filter(rooms, (info: ScoutTarget) => {
 			if (info.roomName === creep.pos.roomName) return false;
 			if (creep.memory.invalidScoutTargets && creep.memory.invalidScoutTargets.includes(info.roomName)) return false;
-			if (Game.map.getRoomLinearDistance(creep.pos.roomName, info.roomName) > 5) return false;
+			if (container.get('NavMesh').getRoomDistance(creep.pos.roomName, info.roomName) > 5) return false;
 
 			return true;
 		});
 	}
-
 
 	getScoutableRoomsByOrigin(origin: string): ScoutTarget[] {
 		return cache.inHeap('scoutableRooms:' + origin, 200, () => _.filter(this.getScoutableRooms(), (info: ScoutTarget) => {
@@ -223,7 +222,7 @@ export default class ScoutRole extends Role {
 
 	getScoutableRoomsInRange(roomName: string, range: number): ScoutTarget[] {
 		return cache.inHeap('scoutableRooms:' + roomName + ':' + range, 200, () => _.filter(this.getScoutableRooms(), (info: ScoutTarget) => {
-			if (Game.map.getRoomLinearDistance(roomName, info.roomName) > range) return false;
+			if (container.get('NavMesh').getRoomDistance(roomName, info.roomName) > range) return false;
 
 			return true;
 		}));

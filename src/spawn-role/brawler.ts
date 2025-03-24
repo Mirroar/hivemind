@@ -7,7 +7,6 @@ import hivemind from 'hivemind';
 import NavMesh from 'utils/nav-mesh';
 import SpawnRole from 'spawn-role/spawn-role';
 import {encodePosition, decodePosition} from 'utils/serialization';
-import { has } from 'lodash';
 
 interface BrawlerSpawnOption extends SpawnOption {
 	targetPos?: string;

@@ -165,6 +165,7 @@ const settings: SettingsObject = {
 
 	// Trade:
 	enableTradeManagement: true,
+	enableCreatingTradeOrders: true,
 	allowBuyingEnergy: false,
 	allowBuyingPixels: false,
 	allowSellingPower: true,

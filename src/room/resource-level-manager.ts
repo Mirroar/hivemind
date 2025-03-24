@@ -142,7 +142,7 @@ export default class ResourceLevelManager {
 		return [10_000, 5000, 1000];
 	}
 
-	private isDepositResource(resourceType: ResourceConstant): boolean {
+	public isDepositResource(resourceType: ResourceConstant): boolean {
 		return depositResourceTypes.includes(resourceType);
 	}
 
@@ -155,7 +155,7 @@ export default class ResourceLevelManager {
 		return [30_000, 10_000, 2000];
 	}
 
-	private isCommodityResource(resourceType: ResourceConstant): boolean {
+	public isCommodityResource(resourceType: ResourceConstant): boolean {
 		return commodityResourceTypes.includes(resourceType);
 	}
 
@@ -182,7 +182,7 @@ export default class ResourceLevelManager {
 		return false;
 	}
 
-	private isBoostResource(resourceType: ResourceConstant): boolean {
+	public isBoostResource(resourceType: ResourceConstant): boolean {
 		for (const bodyPart in BOOSTS) {
 			if (!BOOSTS[bodyPart][resourceType]) continue;
 

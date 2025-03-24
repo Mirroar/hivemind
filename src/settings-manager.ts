@@ -20,6 +20,7 @@ declare global {
 		dismantleUnwantedRamparts: boolean;
 		enableDepositMining: boolean;
 		enablePowerMining: boolean;
+		enableCreatingTradeOrders: boolean;
 		enableTradeManagement: boolean;
 		expansionMaxRoomDistance: number;
 		expansionMinRoomDistance: number;

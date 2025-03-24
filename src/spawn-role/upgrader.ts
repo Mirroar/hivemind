@@ -97,10 +97,10 @@ export default class UpgraderSpawnRole extends SpawnRole {
 
 		if (room.controller.level >= 6 && room.isStripmine()) return 0;
 
-		const availableEnergy = room.getEffectiveAvailableEnergy();
+		const availableEnergy = room.getEffectiveAvailableEnergy() - this.getDesiredEnergyReserve(room);
 		const funnelManager = container.get('FunnelManager');
-		const isFunneling = room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(room.name);
-		if (isFunneling && availableEnergy < 100_000) return 0;
+		const isFunnelingElsewhere = room.terminal && funnelManager.isFunneling() && !funnelManager.isFunnelingTo(room.name);
+		if (isFunnelingElsewhere && availableEnergy < 100_000) return 0;
 
 		if (room.controller.level === 8 && !balancer.maySpendEnergyOnGpl()) return 0;
 
@@ -110,16 +110,29 @@ export default class UpgraderSpawnRole extends SpawnRole {
 			return 1;
 		}
 
+		const isFunnelingToRoom = room.terminal && funnelManager.isFunnelingTo(room.name);
+
 		// Spawn upgraders depending on stored energy.
 		// RCL 7 rooms need to keep a bit more energy in reserve for doing other
 		// things like power or deposit harvesting, sending squads, ...
 		if (availableEnergy < (room.controller.level === 7 ? 25_000 : 10_000)) return 0;
 		if (availableEnergy < (room.controller.level === 7 ? 75_000 : 50_000)) return 1;
 		if (availableEnergy < 100_000) return 2;
-		if (availableEnergy < 125_000 && isFunneling) return 3;
-		if (availableEnergy < 150_000) return isFunneling ? 4 : 3;
+		if (availableEnergy < 125_000 && isFunnelingToRoom) return 3;
+		if (availableEnergy < 150_000) return isFunnelingToRoom ? 4 : 3;
+		if (availableEnergy < 200_000) return isFunnelingToRoom ? 5 : 4;
+		if (availableEnergy < 250_000) return isFunnelingToRoom ? 6 : 5;
 		// @todo Have maximum depend on number of work parts.
-		return isFunneling ? 5 : 4;
+		return isFunnelingToRoom ? 7 : 6;
+	}
+
+	private getDesiredEnergyReserve(room: Room): number {
+		if (room.controller.level === 8) return 100_000;
+		if (room.controller.level === 7) return 50_000;
+		if (room.controller.level === 6) return 25_000;
+		if (room.controller.level === 5) return 10_000;
+
+		return 0;
 	}
 
 	/**

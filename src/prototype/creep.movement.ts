@@ -955,6 +955,7 @@ Creep.prototype.interRoomTravel = function (this: Creep | PowerCreep, targetPos,
 	if (!isInTargetRoom || (!this.isInRoom() && this.getNavMeshMoveTarget())) {
 		if (this.heapMemory.moveWithoutNavMesh) {
 			if (!this.moveToRoom(targetPos.roomName, allowDanger)) {
+				delete this.heapMemory.moveWithoutNavMesh;
 				return false;
 			}
 
@@ -963,6 +964,7 @@ Creep.prototype.interRoomTravel = function (this: Creep | PowerCreep, targetPos,
 
 		if (this.moveUsingNavMesh(targetPos, {allowDanger}) !== OK) {
 			hivemind.log('creeps').debug(this.name, 'can\'t move from', this.pos.roomName, 'to', targetPos.roomName);
+			hivemind.log('creeps').debug(this.name, 'path:', JSON.stringify(this.heapMemory._nmp));
 
 			// Try moving to target room without using nav mesh.
 			this.heapMemory.moveWithoutNavMesh = true;
@@ -1060,7 +1062,7 @@ Creep.prototype.moveUsingNavMesh = function (this: Creep | PowerCreep, targetPos
 function initNavMemory(creep: Creep | PowerCreep, targetPos: RoomPosition, options: GoToOptions) {
 	// If we already have a path to the target, don't recalculate it.
 	const pos = encodePosition(targetPos);
-	if (creep.heapMemory._nmpt && creep.heapMemory._nmp && creep.heapMemory._nmpt === pos) return;
+	if (creep.heapMemory._nmpt && creep.heapMemory._nmp && !creep.heapMemory._nmp.incomplete && creep.heapMemory._nmpt === pos) return;
 
 	delete creep.heapMemory.moveWithoutNavMesh;
 	creep.heapMemory._nmpt = pos;
