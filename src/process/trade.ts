@@ -200,8 +200,10 @@ export default class TradeProcess extends Process {
 		for (const resourceType of RESOURCES_ALL) {
 			if (!resourceManager.isCommodityResource(resourceType) && !resourceManager.isDepositResource(resourceType)) continue;
 
+			// If we can upgrade this commodity, don't sell it.
+			if (this.canUpgradeCommodity(resourceType)) continue;
+
 			// Sell what we can.
-			// @todo Keep resources if we can craft something better.
 			const total = resources.total;
 			if ((total.resources[resourceType] || 0) === 0) continue;
 
@@ -209,6 +211,49 @@ export default class TradeProcess extends Process {
 				this.instaSellResources(resourceType, resources.rooms);
 			}
 		}
+	}
+
+	getPowerCreepFactoryLevels(): number[] {
+		return cache.inHeap('power-creep-factory-levels', 1000, () => {
+			const levels: number[] = [];
+			for (const powerCreep of Object.values(Game.powerCreeps)) {
+				if (!powerCreep.ticksToLive) continue;
+				if (powerCreep.shard !== Game.shard.name) continue;
+				if (!powerCreep.powers[PWR_OPERATE_FACTORY]) continue;
+				
+				if (!levels.includes(powerCreep.powers[PWR_OPERATE_FACTORY].level)) levels.push(powerCreep.powers[PWR_OPERATE_FACTORY].level);
+			}
+
+			return levels;
+		});
+	}
+
+	getCommodityUpgradeLevels() {
+		return cache.inHeap('commodity-upgrade-levels', 100_000, () => {
+			const levels: Partial<Record<CommoditiesTypes, number[]>> = {};
+			const resourceManager = container.get('ResourceLevelManager');
+
+			for (const [, commodity] of Object.entries(COMMODITIES)) {
+				if (!commodity.level) continue;
+
+				for (const component of getResourcesIn(commodity.components)) {
+					if (!resourceManager.isCommodityResource(component)) continue;
+					if (!levels[component]) levels[component] = [];
+					if (!levels[component].includes(commodity.level)) levels[component].push(commodity.level);
+				}
+			}
+
+			return levels;
+		});
+	}
+
+	canUpgradeCommodity(resourceType: ResourceConstant) {
+		const upgradeLevels = this.getCommodityUpgradeLevels();
+		if (!upgradeLevels[resourceType]) return false;
+
+		const factoryLevels = this.getPowerCreepFactoryLevels();
+
+		return factoryLevels.some(level => upgradeLevels[resourceType].includes(level));
 	}
 
 	manageOverflowingTerminals(resources: ResourceStates) {
