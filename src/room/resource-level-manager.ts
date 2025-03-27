@@ -1,46 +1,17 @@
 import container from 'utils/container';
+import ResourceInformation from 'utils/resource-information';
 import {ENEMY_STRENGTH_NORMAL} from "room-defense";
 
 export type ResourceLevel = 'low' | 'medium' | 'high' | 'excessive';
 export type ResourceLevelCuttoffs = [number, number, number];
 
-const depositResourceTypes: string[] = [
-	RESOURCE_SILICON,
-	RESOURCE_METAL,
-	RESOURCE_BIOMASS,
-	RESOURCE_MIST,
-];
-const commodityResourceTypes: string[] = [
-	RESOURCE_COMPOSITE,
-	RESOURCE_CRYSTAL,
-	RESOURCE_LIQUID,
-	RESOURCE_WIRE,
-	RESOURCE_SWITCH,
-	RESOURCE_TRANSISTOR,
-	RESOURCE_MICROCHIP,
-	RESOURCE_CIRCUIT,
-	RESOURCE_DEVICE,
-	RESOURCE_CELL,
-	RESOURCE_PHLEGM,
-	RESOURCE_TISSUE,
-	RESOURCE_MUSCLE,
-	RESOURCE_ORGANOID,
-	RESOURCE_ORGANISM,
-	RESOURCE_ALLOY,
-	RESOURCE_TUBE,
-	RESOURCE_FIXTURES,
-	RESOURCE_FRAME,
-	RESOURCE_HYDRAULICS,
-	RESOURCE_MACHINE,
-	RESOURCE_CONDENSATE,
-	RESOURCE_CONCENTRATE,
-	RESOURCE_EXTRACT,
-	RESOURCE_SPIRIT,
-	RESOURCE_EMANATION,
-	RESOURCE_ESSENCE,
-];
-
 export default class ResourceLevelManager {
+	private resourceInformation: ResourceInformation;
+
+	constructor(resourceInformation: ResourceInformation) {
+		this.resourceInformation = resourceInformation;
+	}
+
 	determineResourceLevel(room: Room, amount: number, resourceType: ResourceConstant): ResourceLevel {
 		const cutoffs = this.getResourceLevelCutoffs(room, resourceType);
 		if (amount >= cutoffs[0]) return 'excessive';
@@ -64,15 +35,15 @@ export default class ResourceLevelManager {
 			applicableCutoffs.push(this.getOpsCutoffs(room));
 		}
 
-		if (this.isDepositResource(resourceType)) {
+		if (this.resourceInformation.isDepositResource(resourceType)) {
 			applicableCutoffs.push(this.getDepositCutoffs(room));
 		}
 
-		if (this.isCommodityResource(resourceType)) {
+		if (this.resourceInformation.isCommodityResource(resourceType)) {
 			applicableCutoffs.push(this.getCommodityCutoffs(room, resourceType));
 		}
 
-		if (this.isBoostResource(resourceType)) {
+		if (this.resourceInformation.isBoostResource(resourceType)) {
 			applicableCutoffs.push(this.getBoostCutoffs(room, resourceType));
 		}
 
@@ -142,10 +113,6 @@ export default class ResourceLevelManager {
 		return [10_000, 5000, 1000];
 	}
 
-	public isDepositResource(resourceType: ResourceConstant): boolean {
-		return depositResourceTypes.includes(resourceType);
-	}
-
 	private getDepositCutoffs(room: Room): ResourceLevelCuttoffs {
 		// Basic commodities need any kind of factory.
 		if (!room.factory || room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
@@ -155,41 +122,17 @@ export default class ResourceLevelManager {
 		return [30_000, 10_000, 2000];
 	}
 
-	public isCommodityResource(resourceType: ResourceConstant): boolean {
-		return commodityResourceTypes.includes(resourceType);
-	}
-
 	private getCommodityCutoffs(room: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 		// Higher level commodities need a factory of appropriate level to be used.
 		if (!room.factory || room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) {
 			return [1, 0, 0];
 		}
 
-		if (!this.isCommodityNeededAtFactoryLevel(room.factory.getEffectiveLevel(), resourceType)) {
+		if (!this.resourceInformation.isCommodityNeededAtFactoryLevel(room.factory.getEffectiveLevel(), resourceType)) {
 			return [1, 0, 0];
 		}
 
 		return [10_000, 5000, 500];
-	}
-
-	private isCommodityNeededAtFactoryLevel(factoryLevel: number, resourceType: ResourceConstant): boolean {
-		for (const productType in COMMODITIES) {
-			const recipe = COMMODITIES[productType];
-			if (recipe.level && recipe.level !== factoryLevel) continue;
-			if (recipe.components[resourceType]) return true;
-		}
-
-		return false;
-	}
-
-	public isBoostResource(resourceType: ResourceConstant): boolean {
-		for (const bodyPart in BOOSTS) {
-			if (!BOOSTS[bodyPart][resourceType]) continue;
-
-			return true;
-		}
-
-		return false;
 	}
 
 	private getBoostCutoffs(room: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
