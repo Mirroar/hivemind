@@ -195,10 +195,10 @@ export default class TradeProcess extends Process {
 	}
 
 	manageCommodityTradeOrders(resources: ResourceStates) {
-		const resourceManager = container.get('ResourceLevelManager');
+		const resourceInformation = container.get('ResourceInformation');
 
 		for (const resourceType of RESOURCES_ALL) {
-			if (!resourceManager.isCommodityResource(resourceType) && !resourceManager.isDepositResource(resourceType)) continue;
+			if (!resourceInformation.isCommodityResource(resourceType) && !resourceInformation.isDepositResource(resourceType)) continue;
 
 			// If we can upgrade this commodity, don't sell it.
 			if (this.canUpgradeCommodity(resourceType)) continue;
@@ -228,27 +228,9 @@ export default class TradeProcess extends Process {
 		});
 	}
 
-	getCommodityUpgradeLevels() {
-		return cache.inHeap('commodity-upgrade-levels', 100_000, () => {
-			const levels: Partial<Record<CommoditiesTypes, number[]>> = {};
-			const resourceManager = container.get('ResourceLevelManager');
-
-			for (const [, commodity] of Object.entries(COMMODITIES)) {
-				if (!commodity.level) continue;
-
-				for (const component of getResourcesIn(commodity.components)) {
-					if (!resourceManager.isCommodityResource(component)) continue;
-					if (!levels[component]) levels[component] = [];
-					if (!levels[component].includes(commodity.level)) levels[component].push(commodity.level);
-				}
-			}
-
-			return levels;
-		});
-	}
-
 	canUpgradeCommodity(resourceType: ResourceConstant) {
-		const upgradeLevels = this.getCommodityUpgradeLevels();
+		const resourceInformation = container.get('ResourceInformation');
+		const upgradeLevels = resourceInformation.getCommodityUpgradeLevels();
 		if (!upgradeLevels[resourceType]) return false;
 
 		const factoryLevels = this.getPowerCreepFactoryLevels();
