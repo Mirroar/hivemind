@@ -71,6 +71,17 @@ type SourceEvaluation = {
 	averageDistance: number;
 };
 
+const mineralBars = {
+	[RESOURCE_HYDROGEN]: RESOURCE_REDUCTANT,
+	[RESOURCE_OXYGEN]: RESOURCE_OXIDANT,
+	[RESOURCE_UTRIUM]: RESOURCE_UTRIUM_BAR,
+	[RESOURCE_KEANIUM]: RESOURCE_KEANIUM_BAR,
+	[RESOURCE_LEMERGIUM]: RESOURCE_LEMERGIUM_BAR,
+	[RESOURCE_ZYNTHIUM]: RESOURCE_ZYNTHIUM_BAR,
+	[RESOURCE_CATALYST]: RESOURCE_PURIFIER,
+	[RESOURCE_GHODIUM]: RESOURCE_GHODIUM_MELT,
+}
+
 // Define quick access property room.sourceDispatcher.
 Object.defineProperty(Room.prototype, 'sourceDispatcher', {
 	get(this: Room) {
@@ -257,17 +268,6 @@ Room.prototype.getEffectiveAvailableEnergy = function (this: Room) {
 	// @todo Get resource unpacking factor from API or config.
 	return availableEnergy + (Math.max(0, this.getCurrentResourceAmount(RESOURCE_BATTERY) - 5000) * 5);
 };
-
-const mineralBars = {
-    [RESOURCE_HYDROGEN]: RESOURCE_REDUCTANT,
-    [RESOURCE_OXYGEN]: RESOURCE_OXIDANT,
-    [RESOURCE_UTRIUM]: RESOURCE_UTRIUM_BAR,
-    [RESOURCE_KEANIUM]: RESOURCE_KEANIUM_BAR,
-    [RESOURCE_LEMERGIUM]: RESOURCE_LEMERGIUM_BAR,
-    [RESOURCE_ZYNTHIUM]: RESOURCE_ZYNTHIUM_BAR,
-    [RESOURCE_CATALYST]: RESOURCE_PURIFIER,
-	[RESOURCE_GHODIUM]: RESOURCE_GHODIUM_MELT,
-}
 
 Room.prototype.getEffectiveAvailableMinerals = function (this: Room, resourceType: ResourceConstant) {
 	const availableMinerals = this.getCurrentResourceAmount(resourceType);

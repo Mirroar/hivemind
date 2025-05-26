@@ -520,9 +520,12 @@ export default class RemoteMiningOperation extends Operation {
 			for (let i = path.length - 1; i > 0; i--) {
 				const pos = path[i];
 				if (pos.roomName !== roomName) {
-					// Load cost matrix for the current room.
+					// Load cost matrix for the room the path is currently going through.
 					roomName = pos.roomName;
-					matrix = getCostMatrix(roomName, {ignoreMilitary: true, allowDanger: true});
+					matrix = getCostMatrix(roomName, {
+						ignoreMilitary: true,
+						allowDanger: true,
+					});
 				}
 
 				// Don't try to dismantle things in our own rooms.
