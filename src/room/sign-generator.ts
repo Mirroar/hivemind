@@ -1,53 +1,43 @@
+import container from "utils/container";
+
 export enum RoomSignType {
     Owned = 'owned',
     Remote = 'remote',
-    Expansion = 'expansion',
     Other = 'other',
 }
 
 const signTemplates: Record<RoomSignType, string[]> = {
     [RoomSignType.Owned]: [
-        'Room managed by hivemind.',
-        'Controlled by hivemind bot.',
-        'This room is under hivemind operation.',
-        'hivemind: owned room.',
-        'Maintained by hivemind.',
+        'Powered by Hivemind\n\n  - https://github.com/mirroar/hivemind',
+        'Room managed by hivemind\n\n  - https://github.com/mirroar/hivemind',
+        'Controlled by hivemind bot\n\n  - https://github.com/mirroar/hivemind',
+        'This room is under hivemind operation\n\n  - https://github.com/mirroar/hivemind',
+        'Maintained by hivemind\n\n  - https://github.com/mirroar/hivemind',
     ],
     [RoomSignType.Remote]: [
         'Remote site managed by hivemind.',
-        'hivemind: remote resource location.',
         'Resource extraction by hivemind.',
         'Remote operation by hivemind bot.',
         'hivemind remote room.',
     ],
-    [RoomSignType.Expansion]: [
-        'Reserved for hivemind expansion.',
-        'hivemind: planned expansion.',
-        'Expansion target for hivemind.',
-        'hivemind will expand here.',
-        'Future hivemind site.',
-    ],
-    [RoomSignType.Other]: [
-        'Signed by hivemind.',
-        'hivemind was here.',
-        'Room visited by hivemind.',
-        'hivemind: neutral room.',
-        'No current hivemind activity.',
-    ],
+    [RoomSignType.Other]: [],
 }
 
-
-export default class SignGenerator {
+export default class RoomSignGenerator {
     public generateSign(roomName: string) {
         const roomType = this.getRoomType(roomName);
         const randomSeed = this.getRandomSeed(roomName);
         
-        return this.getRandomSign(roomType, randomSeed);
+        return this.getRandomSign(roomName, roomType, randomSeed);
     }
 
     private getRoomType(roomName: string): RoomSignType {
         if (Game.rooms[roomName]?.isMine()) {
             return RoomSignType.Owned;
+        }
+
+        if ((Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) {
+            return RoomSignType.Remote;
         }
 
         return RoomSignType.Other;
@@ -64,8 +54,19 @@ export default class SignGenerator {
         return Math.floor(seed % 1000); // Limit the seed to a manageable range
     }
 
-    private getRandomSign(roomType: RoomSignType, seed: number): string {
+    private getRandomSign(roomName: string, roomType: RoomSignType, seed: number): string | null {
         const signs = signTemplates[roomType];
+        if (!signs || signs.length === 0) {
+            const roomStatus = container.get('RoomStatus');
+            const isCloseRoom = roomStatus.hasRoom(roomName) && roomStatus.getDistanceToOrigin(roomName) <= 2;
+
+            if (roomType === RoomSignType.Owned || roomType === RoomSignType.Remote || isCloseRoom) {
+                return '';
+            }
+
+            return null;
+        }
+
         const index = seed % signs.length;
         
         return signs[index];

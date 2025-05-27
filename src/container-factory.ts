@@ -12,6 +12,7 @@ import ResourceInformation from 'utils/resource-information';
 import ResourceLevelManager from 'room/resource-level-manager';
 import ResourcesReport from './report/resources';
 import RolesReport from './report/roles';
+import RoomSignGenerator from './room/sign-generator';
 import RoomSignManager from './room/sign-manager';
 import RoomsReport from './report/rooms';
 import RoomStatus from './room/room-status';
@@ -54,6 +55,7 @@ declare global {
 		ResourceLevelManager: ResourceLevelManager;
 		ResourcesReport: ResourcesReport;
 		RolesReport: RolesReport;
+		RoomSignGenerator: RoomSignGenerator;
 		RoomSignManager: RoomSignManager;
 		RoomsReport: RoomsReport;
 		RoomStatus: RoomStatus;
@@ -100,7 +102,8 @@ function containerFactory(container: Container) {
 	));
 	container.set('ResourcesReport', () => new ResourcesReport());
 	container.set('RolesReport', () => new RolesReport());
-	container.set('RoomSignManager', () => new RoomSignManager());
+	container.set('RoomSignGenerator', () => new RoomSignGenerator());
+	container.set('RoomSignManager', (c) => new RoomSignManager(c.get('RoomSignGenerator')));
 	container.set('RoomsReport', (c) => new RoomsReport(c.get('FunnelManager')));
 	container.set('RoomStatus', () => new RoomStatus());
 	container.set('SpawnManager', () => {
