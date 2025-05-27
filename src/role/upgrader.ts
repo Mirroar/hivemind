@@ -3,6 +3,7 @@ UPGRADE_CONTROLLER_POWER */
 
 import balancer from 'excess-energy-balancer';
 import cache from 'utils/cache';
+import container from 'utils/container';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 
@@ -90,7 +91,7 @@ export default class UpgraderRole extends Role {
 			const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
 				if (!creep.room.roomPlanner) return null;
 
-				// Get harvest position from room planner.
+				// Get upgrader position from room planner.
 				return _.sample(creep.room.roomPlanner.getLocations('upgrader.0'));
 			});
 			if (upgraderPosition) creep.goTo(upgraderPosition);
@@ -104,8 +105,12 @@ export default class UpgraderRole extends Role {
 					balancer.recordGplEnergy(amount);
 				}
 
-				if (distance === 1 && controller.sign && controller.sign.username) {
-					creep.signController(controller, '');
+				const roomSignManager = container.get('RoomSignManager');
+				if (roomSignManager.shouldSign(creep.room.name)) {
+					creep.say('🖊️');
+					creep.whenInRange(1, controller, () => {
+						creep.signController(controller, roomSignManager.getExpectedSign(creep.room.name));
+					});
 				}
 			});
 		}
