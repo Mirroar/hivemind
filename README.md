@@ -79,6 +79,7 @@ Your best bet for finding up-to-date information on setting up a private server 
 
 - **Combat**: Does not automatically attack other players' rooms.
 - **Defense**: No handling of incoming nukes.
+- **Economy**: No automatic mineral mining from source keeper rooms.
 
 ### Reasoning
 
