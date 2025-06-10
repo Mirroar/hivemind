@@ -209,6 +209,13 @@ export default class UpgraderRole extends Role {
 		if (!creep.room.memory.controllerLink && !creep.room.memory.controllerContainer) {
 			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
 		}
+		else {
+			// Wait near the controller for energy to be delivered.
+			const controllerPosition = creep.room.controller.pos;
+			creep.whenInRange(3, controllerPosition, () => {
+				creep.say('🔄');
+			});
+		}
 	}
 
 	/**
