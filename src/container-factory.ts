@@ -16,6 +16,8 @@ import RoomSignManager from './room/sign-manager';
 import RoomsReport from './report/rooms';
 import RoomStatus from './room/room-status';
 import SpawnManager from './spawn-manager';
+import Squad from 'squad';
+import SquadManager from 'manager.squad';
 import TradeRouteManager from './empire/trade-route-manager';
 import TrafficManager from './creep/traffic-manager';
 import {Container} from './utils/container';
@@ -58,6 +60,7 @@ declare global {
 		RoomsReport: RoomsReport;
 		RoomStatus: RoomStatus;
 		SpawnManager: SpawnManager;
+		SquadManager: SquadManager;
 		TradeRouteManager: TradeRouteManager;
 		TrafficManager: TrafficManager;
 	}
@@ -92,7 +95,10 @@ function containerFactory(container: Container) {
 	container.set('PlayerIntelManager', () => new PlayerIntelManager());
 	container.set('ProcessReport', () => new ProcessReport());
 	container.set('ReclaimManager', () => new ReclaimManager());
-	container.set('RemoteMinePrioritizer', () => new RemoteMinePrioritizer());
+	container.set('RemoteMinePrioritizer', (c) => new RemoteMinePrioritizer(
+		c.get('RoomStatus'),
+		c.get('SquadManager'),
+	));
 	container.set('ReportManager', () => new ReportManager());
 	container.set('ResourceInformation', () => new ResourceInformation());
 	container.set('ResourceLevelManager', (c) => new ResourceLevelManager(
@@ -111,6 +117,7 @@ function containerFactory(container: Container) {
 
 		return spawnManager;
 	});
+	container.set('SquadManager', () => new SquadManager(Squad));
 	container.set('TradeRouteManager', (c) => new TradeRouteManager(c.get('ResourceLevelManager')));
 	container.set('TrafficManager', () => new TrafficManager());
 }

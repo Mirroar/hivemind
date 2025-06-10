@@ -9,7 +9,7 @@ import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
-import Squad, {getAllSquads} from 'manager.squad';
+import SquadManager from 'manager.squad';
 import stats from 'utils/stats';
 import {getUsername} from 'utils/account';
 import {getRoomIntel} from 'room-intel';
@@ -62,6 +62,7 @@ export default class ExpandProcess extends Process {
 	memory: ExpandProcessMemory;
 	navMesh: NavMesh;
 	roomStatus: RoomStatus;
+	squadManager: SquadManager;
 
 	/**
 	 * Chooses rooms for expansion and sends creeps there.
@@ -84,6 +85,7 @@ export default class ExpandProcess extends Process {
 		this.memory = Memory.strategy.expand;
 		this.navMesh = container.get('NavMesh');
 		this.roomStatus = container.get('RoomStatus');
+		this.squadManager = container.get('SquadManager');
 	}
 
 	/**
@@ -234,7 +236,7 @@ export default class ExpandProcess extends Process {
 		this.manageStripmines(roomInfo.roomName);
 
 		// Spawn expansion squad at origin.
-		const squad = new Squad('expand');
+		const squad = this.squadManager.getOrCreateSquad('expand');
 		squad.setSpawn(roomInfo.spawnRoom);
 
 		// Send to target room.
@@ -266,7 +268,7 @@ export default class ExpandProcess extends Process {
 		this.manageExpansionSupport();
 
 		const info = this.memory.currentTarget;
-		const squad = new Squad('expand');
+		const squad = this.squadManager.getOrCreateSquad('expand');
 
 		this.checkAccessPath();
 
@@ -351,10 +353,12 @@ export default class ExpandProcess extends Process {
 	 */
 	stopExpansion() {
 		const roomName = this.memory.currentTarget.roomName;
-		const squad = new Squad('expand');
-		squad.disband();
+		const squad = this.squadManager.getSquad('expand');
+		if (squad) {
+			squad.disband();
+		}
 
-		_.each(getAllSquads(), (squad, squadName) => {
+		_.each(this.squadManager.getAllSquads(), (squad, squadName) => {
 			if (squadName.startsWith('expandSupport.' + roomName)) {
 				squad.disband();
 			}
@@ -390,7 +394,7 @@ export default class ExpandProcess extends Process {
 			if (!path || path.incomplete) continue;
 
 			const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
-			const supportSquad = new Squad(squadName);
+			const supportSquad = this.squadManager.getOrCreateSquad(squadName);
 			supportSquad.setSpawn(room.name);
 			supportSquad.setTarget(new RoomPosition(25, 25, info.roomName));
 			supportSquad.clearUnits();
@@ -407,7 +411,7 @@ export default class ExpandProcess extends Process {
 		// Remove support squads from older rooms.
 		// @todo This should no longer be necessary when the code in stopExpansion
 		// works reliably.
-		_.each(getAllSquads(), (squad, squadName) => {
+		_.each(this.squadManager.getAllSquads(), (squad, squadName) => {
 			if (squadName.startsWith('expandSupport.') && !activeSquads[squadName]) {
 				squad.disband();
 			}
@@ -531,7 +535,7 @@ export default class ExpandProcess extends Process {
 
 		if (!originRoom || (this.memory.pathBlocked && Game.time - this.memory.pathBlocked > 5 * CREEP_LIFE_TIME)) {
 			const newOrigin = this.findClosestSpawn(info.roomName);
-			const squad = new Squad('expand');
+			const squad = this.squadManager.getOrCreateSquad('expand');
 			if (newOrigin) {
 				info.spawnRoom = newOrigin;
 				squad.setSpawn(newOrigin);

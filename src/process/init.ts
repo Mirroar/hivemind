@@ -12,6 +12,7 @@ import RoomOperation from 'operation/room';
 declare global {
 	interface Game {
 		creepsByRole: Record<string, Record<string, Creep>>;
+		creepsBySquad: Record<string, Partial<Record<SquadUnitType, Record<string, Creep>>>>;
 		myRooms: Room[];
 	}
 }
@@ -27,6 +28,7 @@ export default class InitProcess extends Process {
 	 */
 	run() {
 		Game.creepsByRole = {};
+		Game.creepsBySquad = {};
 		Game.operations = {};
 		Game.operationsByType = {};
 

@@ -1,6 +1,5 @@
 /* global Creep ERR_NOT_ENOUGH_RESOURCES RESOURCE_ENERGY STRUCTURE_LINK */
 
-import { getSquad } from 'manager.squad';
 import 'prototype/creep.military';
 import 'prototype/creep.movement';
 import 'prototype/creep.train';
@@ -148,15 +147,14 @@ Creep.prototype.enhanceData = function (this: Creep) {
 
 	// Store creeps that are part of a squad in the correct object.
 	if (this.memory.squadName) {
-		const squad = getSquad(this.memory.squadName);
-		if (squad) {
-			const unitType = this.memory.squadUnitType || this.memory.role;
-			if (!squad.units[unitType]) {
-				squad.units[unitType] = [];
-			}
-
-			squad.units[unitType].push(this.id);
+		const unitType = this.memory.squadUnitType || this.memory.role;
+		if (!Game.creepsBySquad[this.memory.squadName]) {
+			Game.creepsBySquad[this.memory.squadName] = {};
 		}
+		if (!Game.creepsBySquad[this.memory.squadName][unitType]) {
+			Game.creepsBySquad[this.memory.squadName][unitType] = {};
+		}
+		Game.creepsBySquad[this.memory.squadName][unitType][this.name] = this;
 	}
 };
 

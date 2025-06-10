@@ -1,8 +1,9 @@
 /* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
 
 import BodyBuilder, {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
+import container from 'utils/container';
 import SpawnRole from 'spawn-role/spawn-role';
-import Squad, {getAllSquads} from 'manager.squad';
+import SquadManager, {Squad} from 'manager.squad';
 
 const availableUnitTypes = [
 	'ranger',
@@ -27,6 +28,13 @@ interface SquadSpawnOption extends SpawnOption {
 }
 
 export default class SquadSpawnRole extends SpawnRole {
+	squadManager: SquadManager;
+
+	constructor() {
+		super();
+		this.squadManager = container.get('SquadManager');
+	}
+
 	/**
 	 * Adds squad spawn options for the given room.
 	 *
@@ -37,7 +45,7 @@ export default class SquadSpawnRole extends SpawnRole {
 		return this.cacheEmptySpawnOptionsFor(room, 10, () => {
 			const options: SquadSpawnOption[] = [];
 
-			_.each(getAllSquads(), squad => {
+			_.each(this.squadManager.getAllSquads(), (squad: Squad) => {
 				if (squad.getSpawn() !== room.name) return;
 
 				const availableEnergy = room.getEffectiveAvailableEnergy();
@@ -51,7 +59,7 @@ export default class SquadSpawnRole extends SpawnRole {
 					priority: roomHasReserves ? 4 : 2,
 					weight: 1.1,
 					unitType: spawnUnitType,
-					squad: squad.name,
+					squad: squad.getName(),
 				});
 			});
 
@@ -70,15 +78,13 @@ export default class SquadSpawnRole extends SpawnRole {
 	 */
 	needsSpawning(room: Room, squad: Squad): SquadUnitType | null {
 		const neededUnits: SquadUnitType[] = [];
-		for (const unitType in squad.memory.composition) {
+		for (const unitType in squad.getComposition()) {
 			if (!availableUnitTypes.includes(unitType as SquadUnitType)) continue;
 
-			if (squad.getUnitCount(unitType as SquadUnitType) > _.size(squad.units[unitType])) {
+			if (squad.getUnitCount(unitType as SquadUnitType) > _.size(Game.creepsBySquad[squad.getName()]?.[unitType as SquadUnitType])) {
 				neededUnits.push(unitType as SquadUnitType);
 			}
 		}
-
-		if (_.size(neededUnits) === 0) squad.memory.fullySpawned = true;
 
 		// @todo Some squad units might need to be spawned at higher priorities
 		// than others.

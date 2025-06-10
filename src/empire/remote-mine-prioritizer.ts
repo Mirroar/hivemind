@@ -1,7 +1,6 @@
-import container from 'utils/container';
 import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
-import {getAllSquads} from 'manager.squad';
+import SquadManager from 'manager.squad';
 import {getRoomIntel} from 'room-intel';
 
 interface HarvestRoomInfo {
@@ -16,10 +15,7 @@ type SourceRoomAvailability = {
 };
 
 export default class RemoteMinePrioritizer {
-	roomStatus: RoomStatus;
-
-	constructor() {
-		this.roomStatus = container.get('RoomStatus');
+	constructor(private roomStatus: RoomStatus, private squadManager: SquadManager) {
 	}
 
 	getRoomsToMine(maxAmount: number): {rooms: string[]; maxRooms: number} {
@@ -76,6 +72,7 @@ export default class RemoteMinePrioritizer {
 	getRemoteMiningSourceRooms(): Record<string, SourceRoomAvailability> {
 		const sourceRooms: Record<string, SourceRoomAvailability> = {};
 
+
 		// Determine how much remote mining each room can handle.
 		for (const room of Game.myRooms) {
 			let spawnCount = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
@@ -96,7 +93,7 @@ export default class RemoteMinePrioritizer {
 			let roomNeeds = 0;
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;
-			roomNeeds += _.filter(getAllSquads(), squad => squad.getSpawn() === room.name).length;
+			roomNeeds += _.filter(this.squadManager.getAllSquads(), squad => squad.getSpawn() === room.name).length;
 
 			// Increase spawn capacity if there's a power creep that can help.
 			const powerCreep = _.find(Game.powerCreeps, creep => {

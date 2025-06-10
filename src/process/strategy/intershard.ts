@@ -8,6 +8,7 @@ import RoomStatus from 'room/room-status';
 import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
+import SquadManager from 'manager.squad';
 
 declare global {
 	interface ShardMemory {
@@ -61,12 +62,14 @@ export default class InterShardProcess extends Process {
 
 	navMesh: NavMesh;
 	roomStatus: RoomStatus;
+	squadManager: SquadManager;
 
 	constructor(parameters: ProcessParameters) {
 		super(parameters);
 
 		this.roomStatus = container.get('RoomStatus');
 		this.navMesh = container.get('NavMesh');
+		this.squadManager = container.get('SquadManager');
 	}
 
 	/**
@@ -326,7 +329,9 @@ export default class InterShardProcess extends Process {
 	removeIntershardExpansionRequest() {
 		delete this.memory.info.interShardExpansion;
 
-		const squad = new Squad('interShardExpansion');
+		const squad = this.squadManager.getSquad('interShardExpansion');
+		if (!squad) return;
+
 		squad.clearUnits();
 		squad.disband();
 	}
@@ -349,7 +354,7 @@ export default class InterShardProcess extends Process {
 
 		// Preliminarily create `interShardExpansion` squad. It will be filled
 		// by creeps travelling here through a portal.
-		const squad = new Squad('interShardExpansion');
+		const squad = this.squadManager.getOrCreateSquad('interShardExpansion');
 		squad.clearUnits();
 		squad.addUnit('singleClaim');
 		squad.addUnit('builder');
@@ -361,7 +366,7 @@ export default class InterShardProcess extends Process {
 	 */
 	manageExpansionSupport() {
 		// Clear squad unit assignments for when no support is needed.
-		const squad = new Squad('interShardSupport');
+		const squad = this.squadManager.getOrCreateSquad('interShardSupport');
 		squad.clearUnits();
 
 		// Check if a shard we're scouting is trying to expand.
@@ -464,7 +469,7 @@ export default class InterShardProcess extends Process {
 				portalRoom: this.findClosestPortalToRoom(room.name),
 			});
 
-			const squad = new Squad('intershardReclaim:' + room.name);
+			const squad = this.squadManager.getOrCreateSquad('intershardReclaim:' + room.name);
 			squad.setUnitCount('builder', 1);
 			squad.setUnitCount('brawler', 1);
 			squad.setTarget(new RoomPosition(25, 25, room.name));
