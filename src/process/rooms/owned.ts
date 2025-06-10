@@ -10,7 +10,7 @@ import RoomDefenseProcess from 'process/rooms/owned/defense';
 import RoomManagerProcess from 'process/rooms/owned/manager';
 import RoomSongsProcess from 'process/rooms/owned/songs';
 import RoomOperation from 'operation/room';
-import hivemind, {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS} from 'hivemind';
+import hivemind, {PROCESS_PRIORITY_LOW, PROCESS_PRIORITY_DEFAULT, PROCESS_PRIORITY_ALWAYS, PROCESS_PRIORITY_HIGH} from 'hivemind';
 import {timeCall} from 'utils/cpu';
 
 declare global {
@@ -87,6 +87,7 @@ export default class OwnedRoomProcess extends Process {
 				hivemind.runProcess(this.room.name + '_links', ManageLinksProcess, {
 					interval: 3,
 					room: this.room,
+					priority: PROCESS_PRIORITY_HIGH,
 				});
 			});
 
