@@ -429,8 +429,9 @@ export default class RelayHaulerRole extends Role {
 				const path = creep.operation.getPaths()[creep.memory.source];
 				const haulerIsAboutToDie = creep.ticksToLive < path.path.length * 1.5;
 				if (relevantAmountReached || !hasActiveHarvester || haulerIsAboutToDie) {
-					creep.withdraw(container, RESOURCE_ENERGY);
-					this.startDelivering(creep);
+					if (creep.withdraw(container, RESOURCE_ENERGY) === OK) {
+						this.startDelivering(creep);
+					}
 				}
 			});
 

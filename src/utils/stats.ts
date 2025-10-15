@@ -88,7 +88,7 @@ const stats = {
 			let total = _.sum(subMemory.currentValues);
 			let count = subMemory.currentValues.length;
 			for (let i = 0; i < 10 - subMemory.currentValues.length; i++) {
-				if (typeof subMemory.previousValues === undefined) break;
+				if (typeof subMemory.previousValues === 'undefined') break;
 				total += subMemory.previousValues?.[9 - i] || 0;
 				count++;
 			}

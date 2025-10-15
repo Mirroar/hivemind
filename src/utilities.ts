@@ -6,7 +6,6 @@ import {ErrorMapper} from 'utils/ErrorMapper';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
-import { add } from 'lodash';
 
 declare global {
 	type TileCallback = (x: number, y: number) => boolean | void;
