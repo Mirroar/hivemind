@@ -6,7 +6,6 @@ import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import {getDangerMatrix} from 'utils/cost-matrix';
 import {getResourcesIn} from 'utils/store';
-import { max } from 'lodash';
 
 declare global {
 	interface RoomMemory {

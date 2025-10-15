@@ -120,7 +120,7 @@ export default class RemoteHarvesterRole extends Role {
 						!_.find(Game.creepsByRole['harvester.remote'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)
 						&& !_.find(Game.creepsByRole['harvester.sk-mining'], (c: RemoteHarvesterCreep) => c.memory.source === targetPos)
 						&& enemyCreep.pos.getRangeTo(creep.pos) > 4
-						&& _.some(!creep.room.creeps, c => c.memory.role !== 'skKiller' && c.pos.getRangeTo(enemyCreep) < 4)
+						&& !_.some(creep.room.creeps, c => c.memory.role !== 'skKiller' && c.pos.getRangeTo(enemyCreep) < 4)
 					) continue;
 
 					sourceKeepers.push(enemyCreep);

@@ -30,7 +30,7 @@ declare global {
 	interface RoomManagerMemory {
 		runNextTick: boolean;
 		hasMisplacedSpawn: boolean;
-		isMovingMispacedSpawn: boolean;
+		isMovingMisplacedSpawn: boolean;
 		dismantle: Record<string, number>;
 	}
 }
@@ -80,7 +80,7 @@ export default class RoomManager {
 				dismantle: {},
 				runNextTick: false,
 				hasMisplacedSpawn: false,
-				isMovingMispacedSpawn: false,
+				isMovingMisplacedSpawn: false,
 			};
 		}
 
@@ -127,7 +127,7 @@ export default class RoomManager {
 			this.featureFlags.setNumeric('ranAtRcl', this.room.controller.level);
 		}
 
-		if (this.featureFlags.isSet('builtAllStructures') && !this.memory.isMovingMispacedSpawn && !this.memory.hasMisplacedSpawn) {
+		if (this.featureFlags.isSet('builtAllStructures') && !this.memory.isMovingMisplacedSpawn && !this.memory.hasMisplacedSpawn) {
 			// Figure out if a road, container or rampart has decayed and needs rebuilding.
 			this.periodicallyCheckDecayingStructures();
 
@@ -452,7 +452,7 @@ export default class RoomManager {
 		const roomSpawns = this.structuresByType[STRUCTURE_SPAWN] || [];
 		const roomSpawnSites = this.constructionSitesByType[STRUCTURE_SPAWN] || [];
 
-		delete this.memory.isMovingMispacedSpawn;
+		delete this.memory.isMovingMisplacedSpawn;
 		if (roomSpawns.length >= CONTROLLER_STRUCTURES[STRUCTURE_SPAWN][this.room.controller.level] && this.roomConstructionSites.length === 0) {
 			this.removeMisplacedSpawn(roomSpawns as StructureSpawn[]);
 		}
@@ -754,7 +754,7 @@ export default class RoomManager {
 
 			// This spawn is misplaced, set a flag for spawning more builders to help.
 			if (roomEnergy > CONSTRUCTION_COST[STRUCTURE_SPAWN] * 2) {
-				this.memory.isMovingMispacedSpawn = true;
+				this.memory.isMovingMisplacedSpawn = true;
 			}
 
 			// Don't check whether spawn can be moved right now if a creep is spawning.
@@ -783,7 +783,7 @@ export default class RoomManager {
 	 *   True if a spawn needs to be moved.
 	 */
 	isMovingMisplacedSpawn(): boolean {
-		return this.memory.isMovingMispacedSpawn;
+		return this.memory.isMovingMisplacedSpawn;
 	}
 
 	/**
