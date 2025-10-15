@@ -7,7 +7,6 @@ import GraveSource from 'dispatcher/resource-source/grave';
 import LabSource from 'dispatcher/resource-source/lab';
 import LinkSource from 'dispatcher/resource-source/link';
 import OverfullExtensionSource from 'dispatcher/resource-source/overfull-extension';
-import ScoreContainerSource from './score-container';
 import StorageSource from 'dispatcher/resource-source/storage';
 
 declare global {
@@ -32,7 +31,6 @@ export default class ResourceSourceDispatcher extends Dispatcher<ResourceSourceT
 		this.addProvider(new LabSource(room));
 		this.addProvider(new LinkSource(room));
 		this.addProvider(new OverfullExtensionSource(room));
-		if (Game.shard.name === 'shardSeason') this.addProvider(new ScoreContainerSource(room));
 		this.addProvider(new StorageSource(room));
 	}
 }

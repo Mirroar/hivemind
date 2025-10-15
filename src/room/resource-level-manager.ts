@@ -56,12 +56,6 @@ export default class ResourceLevelManager {
 			applicableCutoffs.push([50_000, 0, 0]);
 		}
 
-		if (Game.shard.name === 'shardSeason' && resourceType === RESOURCE_SCORE) {
-			if (_.some(Game.flags, flag => flag.name === 'score:' + room.name)) {
-				applicableCutoffs.push([100_000, 50_000, 20_000]);
-			}
-		}
-
 		return applicableCutoffs.reduce((acc, cutoffs) => {
 			return [
 				Math.max(acc[0], cutoffs[0]),

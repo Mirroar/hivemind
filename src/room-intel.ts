@@ -139,11 +139,6 @@ export default class RoomIntel {
 		this.registerScoutAttempt();
 
 		let lastScanThreshold = hivemind.settings.get('roomIntelCacheDuration');
-		if (Game.shard.name === 'shardSeason' && room.find(FIND_SCORE_CONTAINERS).length > 0) {
-			// Update intel more frequently for rooms with score.
-			lastScanThreshold = Math.min(lastScanThreshold, 50);
-		}
-
 		if (Game.cpu.bucket < 5000) {
 			lastScanThreshold *= 5;
 		}
@@ -475,10 +470,7 @@ export default class RoomIntel {
 		const tombstones = room.find(FIND_TOMBSTONES);
 
 		const resources: Partial<Record<ResourceConstant, number>> = {};
-		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], structures[STRUCTURE_CONTAINER], ruins, tombstones] as Array<Array<AnyStoreStructure | Ruin | ScoreContainer>>;
-		if (Game.shard.name === 'shardSeason') {
-			collections.push(room.find(FIND_SCORE_CONTAINERS));
-		}
+		const collections = [structures[STRUCTURE_STORAGE], structures[STRUCTURE_TERMINAL], structures[STRUCTURE_CONTAINER], ruins, tombstones] as Array<Array<AnyStoreStructure | Ruin>>;
 
 		_.each(collections, objects => {
 			_.each(objects, object => {
@@ -500,35 +492,6 @@ export default class RoomIntel {
 
 		roomMemory.abandonedResources[this.roomName] = resources;
 
-		if (Game.shard.name === 'shardSeason') {
-			const scoreAmount = resources[RESOURCE_SCORE] || 0;
-			if (scoreAmount === 0) return;
-
-			const assignedGatherers = _.filter(Game.creepsByRole.gatherer || {}, creep => creep.memory.targetRoom === this.roomName || creep.pos.roomName === this.roomName) as GathererCreep[];
-			let assignedSpace = _.sum(_.map(assignedGatherers, creep => creep.store.getFreeCapacity()));
-			const availableGatherers = _.filter(
-				Game.creepsByRole.gatherer,
-				creep => !creep.memory.targetRoom &&
-					creep.store.getFreeCapacity() > 0 &&
-					Game.map.getRoomLinearDistance(creep.room.name, this.roomName) <= 5 &&
-					creep.ticksToLive > (this.roomStatus.getDistanceToOrigin(this.roomName) + Game.map.getRoomLinearDistance(creep.room.name, this.roomName)) * 50,
-			) as GathererCreep[];
-			_.sortBy(availableGatherers, creep => Game.map.getRoomLinearDistance(creep.room.name, this.roomName));
-			_.each(availableGatherers, (creep: GathererCreep) => {
-				// If we have enough gathering space assigned, we're done.
-				if (assignedSpace >= scoreAmount) return false;
-		
-				// Reassign gatherer to this room.
-				creep.memory.targetRoom = this.roomName;
-				creep.memory.stack = [];
-				creep.memory.origin = this.roomStatus.getOrigin(this.roomName);
-				delete (creep as unknown as ScoutCreep).memory.scoutTarget;
-				assignedSpace += creep.store.getFreeCapacity();
-
-				return null;
-			});
-		}
-	
 		// @todo Consider resources from buildings that might need dismantling first.
 
 		// @todo Also consider saving containers with resources if it's not one

@@ -30,7 +30,7 @@ declare global {
 	interface RelayHaulerCreepHeapMemory extends CreepHeapMemory {
 		deliveryTarget?: Id<AnyStoreStructure>;
 		order?: ResourceDestinationTask;
-		pickupTarget?: Id<Resource | Tombstone | Ruin | StructureContainer | ScoreContainer>;
+		pickupTarget?: Id<Resource | Tombstone | Ruin | StructureContainer>;
 	}
 }
 
@@ -546,21 +546,10 @@ export default class RelayHaulerRole extends Role {
 			return ruin[0];
 		}
 
-		if (Game.shard.name === 'shardSeason' && this.hasSourceRoomStorage(creep)) {
-			const scoreContainer = creep.pos.findInRange(FIND_SCORE_CONTAINERS, 3, {
-				filter: container => container.store.getUsedCapacity(RESOURCE_SCORE) >= 20,
-			});
-
-			if (scoreContainer.length > 0) {
-				creep.heapMemory.pickupTarget = scoreContainer[0].id;
-				return scoreContainer[0];
-			}
-		}
-
 		return null;
 	}
 
-	isValidPickupTarget(creep: RelayHaulerCreep, target: Resource | Tombstone | Ruin | StructureContainer | ScoreContainer) {
+	isValidPickupTarget(creep: RelayHaulerCreep, target: Resource | Tombstone | Ruin | StructureContainer) {
 		if (!target) return false;
 		if (target.pos.roomName !== creep.pos.roomName) return false;
 
