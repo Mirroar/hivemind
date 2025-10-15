@@ -376,24 +376,6 @@ function markBuildings(
 					});
 				});
 			}
-
-			if (!Memory.strategy?.skMining?.[roomName]) {
-				// Add area around mineral as obstacles.
-				for (const mineralInfo of roomIntel.getMineralPositions()) {
-					handleMapArea(mineralInfo.x, mineralInfo.y, (x, y) => {
-						sourceKeeperCallback(x, y);
-					}, 4);
-
-					// Add area around keeper lairs as obstacles.
-					_.each(structures[STRUCTURE_KEEPER_LAIR], structure => {
-						if (structure.pos.getRangeTo(mineralInfo.x, mineralInfo.y) > 7) return;
-
-						handleMapArea(structure.pos.x, structure.pos.y, (x, y) => {
-							sourceKeeperCallback(x, y);
-						}, 3);
-					});
-				}
-			}
 		}
 
 		// For exit consistency, we need to check corresponding exit
