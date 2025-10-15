@@ -82,7 +82,7 @@ const stats = {
 		}
 
 		if (Memory.history[key][interval / 10]) {
-			// To get a better, more current reading, agregate stat from lower
+			// To get a better, more current reading, aggregate stat from lower
 			// values.
 			const subMemory = Memory.history[key][interval / 10];
 			let total = _.sum(subMemory.currentValues);
