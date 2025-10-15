@@ -21,6 +21,8 @@ export default class MuleSpawnRole extends SpawnRole {
 		if (!room.storage) return [];
 
 		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
+			if (Game.cpu.bucket < 8_000) return [];
+
 			const options: MuleSpawnOption[] = [];
 			_.each(Memory.tradeRoutes, (mem, routeName) => {
 				const tradeRoute = new TradeRoute(routeName);

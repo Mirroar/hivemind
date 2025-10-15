@@ -26,6 +26,7 @@ export default class ReclaimSpawnRole extends SpawnRole {
 
 		return this.cacheEmptySpawnOptionsFor(room, 100, () => {
 			if (room.getEffectiveAvailableEnergy() < 10_000) return [];
+			if (Game.cpu.bucket < 8_000) return [];
 
 			const options: ReclaimSpawnOption[] = [];
 			this.room = room;
