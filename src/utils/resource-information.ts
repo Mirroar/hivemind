@@ -2,13 +2,13 @@ import cache from "utils/cache";
 import container from "utils/container";
 import { getResourcesIn } from "utils/store";
 
-export const depositResourceTypes: string[] = [
+export const depositResourceTypes: ResourceConstant[] = [
     RESOURCE_SILICON,
     RESOURCE_METAL,
     RESOURCE_BIOMASS,
     RESOURCE_MIST,
 ];
-export const commodityResourceTypes: string[] = [
+export const commodityResourceTypes: ResourceConstant[] = [
     RESOURCE_COMPOSITE,
     RESOURCE_CRYSTAL,
     RESOURCE_LIQUID,
