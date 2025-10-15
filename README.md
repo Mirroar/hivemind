@@ -62,9 +62,9 @@ Your best bet for finding up-to-date information on setting up a private server 
 5. **Deploy**:
    You can copy the files from the `dist` directory to the server using the screeps game client.
 
-   Alternatively, you can push the code using grunt (requires copying `Gruntfile.example.js` to `Gruntfile.js` and adding your account information):
+   Alternatively, you can push the code using grunt (requires copying `Gruntfile.example.js` to `Gruntfile.cjs` and adding your account information):
    ```
-   grunt screeps
+   grunt screeps --gruntfile Gruntfile.cjs
    ```
 
 ## Features
