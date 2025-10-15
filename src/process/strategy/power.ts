@@ -70,7 +70,7 @@ export default class PowerMiningProcess extends Process {
 
 		const totalStoredPower = _.sum(Game.myRooms, (room: Room) => room.getCurrentResourceAmount(RESOURCE_POWER));
 		const rcl8RoomCount = _.filter(Game.myRooms, (room: Room) => room.controller.level >= 8).length;
-		const storedPowerLevel = totalStoredPower / Math.min(rcl8RoomCount, 1);
+		const storedPowerLevel = totalStoredPower / Math.max(rcl8RoomCount, 1);
 		const maxDistance = Math.ceil(hivemind.settings.get('maxRangeForPowerMining') / (totalStoredPower < 50_000 ? 1 : 2));
 
 		_.each(memory.rooms, (info, roomName) => {
