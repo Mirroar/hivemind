@@ -117,11 +117,11 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		// things like power or deposit harvesting, sending squads, ...
 		if (availableEnergy < (room.controller.level === 7 ? 25_000 : 10_000)) return 0;
 		if (availableEnergy < (room.controller.level === 7 ? 75_000 : 50_000)) return 1;
-		if (availableEnergy < 100_000) return 2;
-		if (availableEnergy < 125_000 && isFunnelingToRoom) return 3;
-		if (availableEnergy < 150_000) return isFunnelingToRoom ? 4 : 3;
-		if (availableEnergy < 200_000) return isFunnelingToRoom ? 5 : 4;
-		if (availableEnergy < 250_000) return isFunnelingToRoom ? 6 : 5;
+		if (availableEnergy < 100_000 && Game.cpu.bucket > 5000) return 2;
+		if (availableEnergy < 125_000 && Game.cpu.bucket > 6000 && isFunnelingToRoom) return 3;
+		if (availableEnergy < 150_000 && Game.cpu.bucket > 7000) return isFunnelingToRoom ? 4 : 3;
+		if (availableEnergy < 200_000 && Game.cpu.bucket > 8000) return isFunnelingToRoom ? 5 : 4;
+		if (availableEnergy < 250_000 && Game.cpu.bucket > 9000) return isFunnelingToRoom ? 6 : 5;
 		// @todo Have maximum depend on number of work parts.
 		return isFunnelingToRoom ? 7 : 6;
 	}
