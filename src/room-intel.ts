@@ -872,12 +872,16 @@ export default class RoomIntel {
 	 *   Position of this room's controller.
 	 */
 	getControllerPosition(): RoomPosition {
-		if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return null;
+		if (!this.memory.structures || !this.memory.structures[STRUCTURE_CONTROLLER]) return this.getFallbackControllerPosition();
 
 		const controller: {x: number; y: number} = _.sample(this.memory.structures[STRUCTURE_CONTROLLER]);
-		if (!controller) return null;
+		if (!controller) return this.getFallbackControllerPosition();
 
 		return new RoomPosition(controller.x, controller.y, this.roomName);
+	}
+
+	getFallbackControllerPosition(): RoomPosition | null {
+		return Game.rooms[this.roomName]?.controller?.pos;
 	}
 
 	getControllerReservePositionCount(): number {
