@@ -2,6 +2,7 @@ import cache from 'utils/cache';
 import container from 'utils/container';
 import TradeRoute from 'trade-route';
 import RoomStatus from 'room/room-status';
+import hivemind from 'hivemind';
 
 interface TraderouteInfo {
 	source: string;
@@ -20,7 +21,7 @@ export default class FunnelManager {
 			const funneledRooms: string[] = [];
 			const roomsAtLevel: Record<number, Room[]> = _.groupBy(this.getAvailableRoomsToFunnel(), room => room.controller.level);
 
-			const hasEnoughRCL8 = (roomsAtLevel[8]?.length || 0) > 1 || true;
+			const hasEnoughRCL8 = (roomsAtLevel[8]?.length || 0) > 1 || !hivemind.settings.get('prioritizeFunnelingToRCL8');
 			const hasRCL7 = (roomsAtLevel[7]?.length || 0) > 0;
 			const hasRCL6 = (roomsAtLevel[6]?.length || 0) > 0;
 			const hasEnoughRCL7 = (roomsAtLevel[7]?.length || 0) > 2;

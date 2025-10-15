@@ -149,6 +149,9 @@ const settings: SettingsObject = {
 	// Manages energy spending in high level rooms.
 	minEnergyToUpgradeAtRCL8: 50_000,
 	minEnergyForNuker: 50_000,
+	// When enabled, will funnel at least one room to RCL 8 before upgrading
+	// further rooms to RCL 7.
+	prioritizeFunnelingToRCL8: false,
 	// The ratio of leftover energy to put into power processing vs. GPL.
 	// Must be between 0 and 1.
 	powerProcessingEnergyRatio: 0.5,

@@ -62,6 +62,7 @@ declare global {
 		powerPriorities: PowerConstant[];
 		powerProcessingEnergyRatio: number;
 		prioritizeFactoryLevels: boolean;
+		prioritizeFunnelingToRCL8: boolean;
 		rampartWhitelistedUsers: string[];
 		recordRoomStats: boolean;
 		remoteMineRoomFilter?: (roomName: string) => boolean;
