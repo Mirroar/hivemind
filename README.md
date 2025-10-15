@@ -29,7 +29,7 @@ It is intended to be used without interaction, but the bot's behaviour can be cu
 
 ### Prerequisites
 
-- Node.js (version 12 or higher)
+- Node.js (version 16), use nvm or something similar to downgrade if necessary
 - A screeps account
 - An active screeps API key, if you want to push code directly
 
