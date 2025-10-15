@@ -109,6 +109,7 @@ const settings: SettingsObject = {
 	// Expansion:
 	// Number of ticks we may cache expansion scores.
 	expansionScoreCacheDuration: 20_000,
+	minOwnedRooms: 1,
 	maxOwnedRooms: null,
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.
