@@ -586,10 +586,15 @@ export default class ExpandProcess extends Process {
 		// Only choose a new target if we aren't already relocating.
 		if (this.memory.evacuatingRoom) return;
 
-		// Only give up a room if we need more CPU.
-		const cpuStats = this.getCpuStats();
-		if (cpuStats.shortTermCpuUsage < cpuStats.cpuLimit) return;
-		if (cpuStats.longTermCpuUsage < cpuStats.cpuLimit) return;
+		// Don't give up rooms if we have less than the minimum number of owned rooms.
+		if (Game.myRooms.length <= settings.get('minOwnedRooms')) return;
+
+		// Only give up a room if we need more CPU or have too many rooms allocated.
+		if (Game.myRooms.length <= (settings.get('maxOwnedRooms') ?? Infinity)) {
+			const cpuStats = this.getCpuStats();
+			if (cpuStats.shortTermCpuUsage < cpuStats.cpuLimit) return;
+			if (cpuStats.longTermCpuUsage < cpuStats.cpuLimit) return;
+		}
 
 		// @todo Take into account better expansions on other shards.
 		// We expect a minimal gain from giving up a room.

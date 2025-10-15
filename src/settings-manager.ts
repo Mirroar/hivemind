@@ -45,6 +45,7 @@ declare global {
 		minEnergyForPowerHarvesting: number;
 		minEnergyForPowerProcessing: number;
 		minEnergyToUpgradeAtRCL8: number;
+		minOwnedRooms?: number;
 		minRclForDepositMining: number;
 		minRclForPowerMining: number;
 		minWallIntegrity: number;
