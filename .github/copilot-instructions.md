@@ -131,7 +131,7 @@ npm test
 - `src/report/` - Reporting and statistics
 
 **Configuration & Types:**
-- `src/index.d.ts` - TypeScript type definitions
+- `src/index.d.ts` - TypeScript type definitions for the screeps API, similar to the "@types/screeps" package.
 
 ### Build Output
 - `dist/main.js` - Bundled JavaScript output (uploaded to Screeps)
