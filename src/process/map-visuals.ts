@@ -139,6 +139,8 @@ export default class MapVisualsProcess extends Process {
 
 		Game.map.visual.text(harvestPriority.toPrecision(3), new RoomPosition(7, 3, roomName), {fontSize: 5, align: 'left'});
 
+		if (!hivemind.segmentMemory.isReady()) return;
+
 		const remotePathManager = new RemotePathManager();
 		const intel = getRoomIntel(roomName);
 		for (const coords of intel.getSourcePositions()) {
