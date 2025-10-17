@@ -18,6 +18,7 @@
 		"node": "^16.0"
 	},
 	"scripts": {
+		"prebuild": "node scripts/prebuild.cjs",
 		"build": "rollup -c",
 		"test": "xo"
 	},
@@ -100,7 +101,8 @@
 		"ignores": [
 			"snippets.js",
 			"mock/constants.ts",
-			"src/utils/Profiler"
+			"src/utils/Profiler",
+			"scripts/prebuild.cjs"
 		],
 		"settings": {
 			"import/resolver": {
