@@ -78,7 +78,7 @@ const utilities = {
 	 * @return {object}
 	 *   Result of the pathfinding operation.
 	 */
-	getPath(startPosition: RoomPosition, endPosition, allowDanger = false, addOptions: GetPathOptions = {}) {
+	getPath(startPosition: RoomPosition, endPosition, allowDanger: boolean = false, addOptions: GetPathOptions = {}) {
 		const options: PathFinderOpts = {
 			plainCost: 2,
 			swampCost: 10,
