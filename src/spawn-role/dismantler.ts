@@ -64,7 +64,7 @@ export default class DismantlerSpawnRole extends SpawnRole {
 	 */
 	addRoomPlannerDismantlers(room: Room, options: DismantlerSpawnOption[]) {
 		if (room.isEvacuating()) return;
-		if (!room.roomManager.needsDismantling()) return;
+		if (!room.roomManager || !room.roomManager.needsDismantling()) return;
 
 		const dismantlerCount = _.filter(room.creepsByRole.dismantler || [], (creep: DismantlerCreep) => creep.memory.targetRoom === room.name && creep.memory.sourceRoom === room.name).length;
 		if (dismantlerCount > 0) return;
