@@ -178,16 +178,18 @@ export default class MapVisualsProcess extends Process {
 		if (!hivemind.settings.get('visualizeNavMesh')) return;
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
-			const roomIntel = getRoomIntel(roomName);
 			let color = '#ffffff';
-			if (roomIntel.isOwned()) {
-				color = '#ff0000';
-			}
-			else if (roomIntel.isClaimed()) {
-				color = '#ffff00';
-			}
-			else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-				color = '#ff8000';
+			if (hivemind.segmentMemory.isReady()) {
+				const roomIntel = getRoomIntel(roomName);
+				if (roomIntel.isOwned()) {
+					color = '#ff0000';
+				}
+				else if (roomIntel.isClaimed()) {
+					color = '#ffff00';
+				}
+				else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+					color = '#ff8000';
+				}
 			}
 
 			const style = {
