@@ -151,8 +151,10 @@ export default class TransporterSpawnRole extends SpawnRole {
 		const refillPathLength = cache.inHeap('ccRefillPathLength:' + room.name, 5000, () => {
 			const container = Game.getObjectById<StructureContainer>(room.memory.controllerContainer);
 			if (!container) return 1;
+			let storageLocation = room.getStorageLocation();
+			if (!storageLocation) return 1;
 
-			const path = utilities.getPath(room.getStorageLocation(), container.pos, false, {singleRoom: room.name});
+			const path = utilities.getPath(storageLocation, container.pos, false, {singleRoom: room.name});
 
 			if (path.incomplete) return 1;
 			return path.path.length;
