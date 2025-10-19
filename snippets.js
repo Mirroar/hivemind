@@ -3,7 +3,7 @@
  */
 /* global FIND_CONSTRUCTION_SITES */
 
-// Remove all constructions sites in a roon you have vision in:
+// Remove all constructions sites in a room you have vision in:
 _.forEach(Game.rooms.E49S48.find(FIND_CONSTRUCTION_SITES), s => s.remove());
 
 // Show CPU usage for all processes for 100 ticks.
