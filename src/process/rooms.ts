@@ -93,6 +93,7 @@ export default class RoomsProcess extends Process {
 	}
 
 	manageInterShardExpansionRoomPlan() {
+		if (!hivemind.segmentMemory.isReady()) return;
 		const memory = interShard.getLocalMemory();
 		if (!memory?.info?.interShardExpansion?.room) return;
 

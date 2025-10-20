@@ -72,8 +72,10 @@ export default class InitProcess extends Process {
 
 		_.each(Game.rooms, room => {
 			if (room.isMine()) {
-				if (hivemind.segmentMemory.isReady()) room.roomPlanner = new RoomPlanner(room.name);
-				room.roomManager = new RoomManager(room);
+				if (hivemind.segmentMemory.isReady()) {
+					room.roomPlanner = new RoomPlanner(room.name);
+					room.roomManager = new RoomManager(room);
+				}
 				room.boostManager = new BoostManager(room);
 				room.boostManager.manageBoostLabs();
 				room.generateLinkNetwork();
