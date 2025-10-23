@@ -5,6 +5,11 @@
 	"description": "",
 	"main": "dist/main.js",
 	"screeps_bot": true,
+	"exports": {
+		".": {
+			"import": "./dist/main.js",
+		}
+	},
 	"files": [
 		"dist/",
 		"README.md",
