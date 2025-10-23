@@ -4,23 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.0.0] - TBD
 ### Added
-- Only deserialize `Memory` on a global reset to save CPU.
+- Only deserialize `Memory` on a global reset to save CPU (memhack).
 - Added a settings manager and several settings to customize the bot's behavior. See `settings.default.js` for more information.
-- Remote builders (used when expanding) will not automatically harvest energy in nearby rooms when the target room's sources are depleted.
+- Remote builders (used when expanding) will now automatically harvest energy in nearby rooms when the target room's sources are depleted.
 - Added a manager for segmented memory that loads on a new global and saves every 100 ticks.
-- Room intel and room planner now use segmented memory.
 - Added operations that are able to keep track of certain stats.
 - Added room operations to track room CPU usage.
 - Converted remote mining code to operations to keep track of spent and gained resources and CPU usage, and for better code structure.
 - Structures blocking a remote mining path will now automatically be dismantled.
 - Added a remote path manager that manages the paths for remote mining.
-- Added the ability to place ramparts using mincut algorithm instead of at room borders (disabled by default).
-- Operator power creeps can now boost spawns and extensions.
-- More remote mining is possible in a room with a spawn-boosting power creep.
+- Operator Power Creeps can now boost spawns and extensions.
+- More remote mining is possible in a room with a spawn-boosting Power Creep.
+- Dispatcher-driven logistics covering structures, bays, tombstones, etc.
+- Factory pipeline & manager (commodity production, deposit mining, PWR_OPERATE_FACTORY handling).
+- Inter-room & inter-shard portal navigation.
+- Localized and inter-shard reclaim features for rooms that lose their spawns.
+- New reports powered by room visuals that can be toggled via console commands.
+- Room sign generator (simple & comprehensive) and optional decorative wall patterns.
+- Automated inter-shard expansions.
 
 ### Changed
+- (BREAKING) Large TypeScript/class migration across roles, kernel, intel, operations, etc. - Hivemind now runs fully on typescript.
+- Ramparts are now placed using min-cut algorithm instead of at room borders.
+- Room intel and room planner now use segmented memory.
 - Improved calculation of how many remote mines a room can handle.
 - Improved drop harvesting for harvesters and mineral harvesters to save CPU.
 - Expansion target is now chosen across multiple ticks to prevent CPU timeouts.
@@ -28,8 +36,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bigger attack creeps are used to destroy invader cores more efficiently.
 - Power haulers can now pick up power from ruins.
 - Power harvesters attack nearby hostile creeps.
+- (BREAKING) Logistics behavior for transporters and builders are now routed through the dispatcher system.
+- Introduced a dependency-injection (DI) container.
+- Room planner overhaul with multi-variation planning, scoring, better tower placement & road safety, link/container/bay layout tweaks, lab 4×4 blueprinting, rampart/wall handling, tunnel handling, and improved serialization.
+- Remote mining & ops: smarter spawn order/hauler sizing, relay haulers, SK-room support, better invader-core handling, proactive defense, more intelligent expansion scoring/selection, and per-room hauler pooling.
+- Combat & defense: Better targeting for combat creeps, follow logic for pairs, siege-defense improvements including tower logic, enemy strength/efficiency modeling, "quad breaker" walls.
+- Scouting: Earlier scouting, nav-mesh fixes, debug views, CPU-bounded target search.
+- Resource funneling/transfer: Added cross-room funneling of energy to prioritize rooms that can gain RCL, higher priority for empty labs, better upgrade energy routing, emergency upgraders when near downgrade.
+- Early game: earlier roads, smarter builder/upgrader behavior (no dedicated upgraders at low RCL), spawn order tweaks.
+- Allies: updated SimpleAllies integration, including ally defense requests.
+- Performance: broad CPU reductions via semi-persistent heap data, cached structure lists, spawn-role idle caches, dispatcher/result caches, capped pathfinding CPU, improved traffic/stuck handling.
+- Tooling/DX: CI & Node updates, error mapper, circular-dependency cleanups, module splits.
+- Behavior flags & safety: conservative abandonment thresholds, bucket-aware spawn gates, improved flee logic for claimers/remotes/haulers, empire-wide power-storage guardrails.
 
 ### Removed
+- `Game.squads` removed; squad logic moved into `SquadManager`.
+- Direct access to `Memory.strategy.roomList` removed; replaced by `RoomStatus`.
+- Removed the `gift` role (ineffective for overfull storage).
+- Removed season-specific/legacy seasonal code paths and some old source keeper mining scaffolding.
+
+### Fixed
+- Transporter "ping-pong", builders/upgraders choosing wrong sources, terminal overflow quirks, lab emptying stalls, destroyed/inactive structure handling, pathing around invader cores, creep MOVE mismatches, downgrade-near edge cases, and many other reliability bugs across 2021→2025.
+- Segmented memory & player-intel leaks, cache duration bugs, and "double global" oddities.
+- Remote defense logic and observer behavior.
 
 ## [2.0.1] - 2021-05-23
 Caution: This release has an error caused in the map visuals process, which might limit functionality.
@@ -71,13 +100,13 @@ Caution: This release has an error caused in the map visuals process, which migh
 - Remote harvesters try to dismantle structures that block their path.
 - Creeps can now pick up resources from tombstones and ruins.
 - Added some useful code snippets to `snippets.js`.
-- Added support for operator power creeps, with automatic upgrades, assignment and spawning.
+- Added support for operator Power Creeps, with automatic upgrades, assignment and spawning.
 - Room planner places walls near spawns so creeps can no longer be spawned in a direction thar would cause them to be stuck afterwards.
 - Cache some data (like cost matrices) in heap.
 - Automatically remove graffiti (signs) from our own controllers.
 - Abandoned resources (like old storaged) in scouted rooms are detected for later gathering.
 - Added daily report emails to notify of GLC, GPL, Power harvesting and remote harvesting activity.
-- Added the ability to scout through intershard portals.
+- Added the ability to scout through inter-shard portals.
 - Added the ability to try and expand to an adjacent shard.
 - Safe mode is triggered automatically when a room's ramparts are almost broken.
 - Added the ability to automatically abandon and unclaim rooms with a low score in favor of much better rooms.
@@ -90,7 +119,7 @@ Caution: This release has an error caused in the map visuals process, which migh
 ### Changed
 - Game object prototype enhancements have been moved into separate files like `room.prototype.intel.js`.
 - Several global and room tasks have been moved into new processes.
-- A lot of things no ĺonger run at a fixed tick interval, but get throttled based on bucket an CPU usage.
+- A lot of things no longer run at a fixed tick interval, but get throttled based on bucket an CPU usage.
 - Link management is now more intelligent instead of only sending energy to controller link.
 - Several function have been refactored for better readability and to reduce duplication.
 - We no longer create a new instace of the Logger class for almost every log message. Instead, the Hivemind class has a factory method for getting a Logger.
@@ -124,7 +153,7 @@ Caution: This release has an error caused in the map visuals process, which migh
 - RoomPlanner places and builds links in a more reasonable order (at controller, at sources, then at storage).
 - RoomPlanner places a bay with spawn, link, container and extensions around each source's harvest position.
 - Roads to the controller are built much earlier in new rooms.
-- Power spawns and nukers are only supplied if the room has a surplus of energy.
+- Power Spawns and nukers are only supplied if the room has a surplus of energy.
 - Attack creeps that are not considered dangerous if they are in rooms we own / reserve.
 - Optimized memory usage of serialized paths and room cost matrixes.
 - Creeps for power harvesting are only spawned if there is enough energy for all of them.
