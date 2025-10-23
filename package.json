@@ -7,7 +7,7 @@
 	"screeps_bot": true,
 	"exports": {
 		".": {
-			"import": "./dist/main.js",
+			"import": "./dist/main.js"
 		}
 	},
 	"files": [
