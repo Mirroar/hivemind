@@ -4,7 +4,6 @@ import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RoomManager from 'room/room-manager';
 import RoomPlanner from 'room/planner/room-planner';
-import Squad from 'manager.squad';
 
 import MiningOperation from 'operation/remote-mining';
 import RoomOperation from 'operation/room';
