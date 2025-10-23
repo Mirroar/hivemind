@@ -5,6 +5,12 @@
 	"description": "",
 	"main": "dist/main.js",
 	"screeps_bot": true,
+	"files": [
+		"dist/",
+		"README.md",
+		"LICENSE",
+		"CHANGELOG.md"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/Mirroar/hivemind.git"
