@@ -123,6 +123,8 @@ export default class ExpandProcess extends Process {
 	}
 
 	mayExpand(): boolean {
+		if (!settings.get('expand')) return false;
+
 		const ownedRooms = interShard.getTotalOwnedRooms();
 		const hasFreeControlLevels = ownedRooms < Game.gcl.level;
 		const maxRooms = settings.get('maxOwnedRooms');
@@ -580,6 +582,8 @@ export default class ExpandProcess extends Process {
 	 * Decides if it's worth giving up a weak room in favor of a new expansion.
 	 */
 	abandonWeakRooms() {
+		if (!settings.get('abandon')) return;
+
 		// Only abandon rooms if we aren't in the process of expanding.
 		if (this.memory.currentTarget) return;
 

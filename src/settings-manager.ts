@@ -3,6 +3,7 @@ import localSettings from 'settings.local';
 
 declare global {
 	type SettingsObject = {
+		abandon: boolean;
 		allowBuyingEnergy: boolean;
 		allowBuyingPixels: boolean;
 		allowSellingOps: boolean;
@@ -22,6 +23,7 @@ declare global {
 		enablePowerMining: boolean;
 		enableCreatingTradeOrders: boolean;
 		enableTradeManagement: boolean;
+		expand: boolean;
 		expansionMaxRoomDistance: number;
 		expansionMinRoomDistance: number;
 		expansionRoomFilter?: (roomName: string) => boolean;
