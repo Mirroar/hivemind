@@ -138,7 +138,7 @@ export default class Logger {
 				}
 			}
 
-			prefix += '[<font color="#' + roomColor + '">' + this.roomName + '</font>]';
+			prefix += '<font color="#' + roomColor + '">[' + '<a href="#!/room/' + Game.shard.name + '/' + this.roomName + '">' + this.roomName + '</a>' + ']</font>';
 		}
 		else {
 			prefix += '        ';
