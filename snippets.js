@@ -46,3 +46,7 @@ const roomName = 'E43S53'; p = new ExpandProcess({}, {}); Game.rooms[roomName].s
 
 // Send a squad to operate in a room.
 const s = container.get('SquadManager').getOrCreateSquad('squadName'); s.setSpawn('W25S18'); s.setTarget(new RoomPosition(24, 24, 'W28S19')); s.addUnit('ranger');
+
+// Check what resources are trying to be moved around
+JSON.stringify(container.get('TradeRouteManager').getAvailableTransportRoutes(), null, 2);
+JSON.stringify(Game.rooms.E45S51.getResourceState(), null, 2);

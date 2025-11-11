@@ -440,12 +440,26 @@ Room.prototype.getResourceState = function (this: Room) {
 	const terminal = this.terminal;
 
 	return cache.inObject(this, 'resourceState', 1, () => {
+		const room = this;
 		const roomData: RoomResourceState = {
 			totalResources: {},
 			state: {},
 			canTrade: false,
 			addResource(this: RoomResourceState, resourceType: ResourceConstant, amount: number) {
 				this.totalResources[resourceType] = (this.totalResources[resourceType] || 0) + amount;
+
+				if (!room.factory || !room.factory.isOperational() || room.isEvacuating) return;
+
+				// Count batteries as energy.
+				if (resourceType === RESOURCE_BATTERY) {
+					this.totalResources[RESOURCE_ENERGY] = (this.totalResources[RESOURCE_ENERGY] || 0) + amount * 5;
+				}
+
+				// Count bars as minerals.
+				const baseMineral = Object.keys(mineralBars).find(key => mineralBars[key] === resourceType);
+				if (baseMineral) {
+					this.totalResources[baseMineral] = (this.totalResources[baseMineral] || 0) + amount * 5;
+				}
 			},
 			isEvacuating: false,
 			mineralTypes: [],
@@ -484,8 +498,8 @@ Room.prototype.getResourceState = function (this: Room) {
 			const labs = this.myStructuresByType[STRUCTURE_LAB] || [];
 
 			for (const lab of labs) {
-				if (lab.mineralType && lab.mineralAmount > 0) {
-					roomData.addResource(lab.mineralType, lab.mineralAmount);
+				if (lab.mineralType && lab.store.getUsedCapacity(lab.mineralType) > 0) {
+					roomData.addResource(lab.mineralType, lab.store.getUsedCapacity(lab.mineralType));
 				}
 			}
 		}

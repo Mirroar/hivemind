@@ -27,11 +27,11 @@ export default class ResourceLevelManager {
 
 		if (isBadApplePlayerShard && badAppleRooms.includes(room.name)) {
 			// In bad apple rooms, we don't need any resources except lots of energy.
-			if (resourceType == RESOURCE_ENERGY) {
+			if (resourceType === RESOURCE_ENERGY) {
 				return [800_000, 600_000, 500_000];
 			}
 
-			return [0, 0, 0];
+			return [20_000, 0, 0];
 		}
 
 		if (resourceType === RESOURCE_ENERGY) {

@@ -58,7 +58,7 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	getUpgraderAmount(room: Room): number {
 		let maxUpgraders = this.getBaseUpgraderAmount(room);
 
-		if (isBadApplePlayerShard && badAppleRooms.includes(room.name)) {
+		if (isBadApplePlayerShard && badAppleRooms.includes(room.name) && room.controller.level >= 7) {
 			// In bad apple rooms, we don't need upgraders most of the time.
 			maxUpgraders = Math.min(maxUpgraders, 1);
 		}

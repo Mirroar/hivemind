@@ -165,26 +165,6 @@ export default class TradeRouteManager {
 			result[roomName] = info;
 		}
 
-		if (Game.shard.name === 'thunderdrone') {
-			// // Send T3 boosts to harabi.
-			// if (['XKHO2', 'XLHO2', 'XZHO2', 'XGHO2'].includes(resourceType)) {
-			// 	result['E22S5'] = {
-			// 		lastSeen: Game.time,
-			// 		priority: 0.5,
-			// 		amount: 1000,
-			// 	};
-			// }
-
-			// // Send T3 boosts to MadDokMike.
-			// if (['XUH2O', 'XLHO2', 'XZH2O', 'XZHO2', 'XGHO2'].includes(resourceType)) {
-			// 	result['E25S2'] = {
-			// 		lastSeen: Game.time,
-			// 		priority: 0.5,
-			// 		amount: 1000,
-			// 	};
-			// }
-		}
-
 		return result;
 	}
 
