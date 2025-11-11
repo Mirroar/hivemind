@@ -87,6 +87,23 @@ export default class UpgraderRole extends Role {
 		const controller = creep.room.controller;
 		const distance = creep.pos.getRangeTo(controller);
 		const isOnlyUpgrader = creep.memory.role === 'upgrader' && _.size(creep.room.creepsByRole.upgrader) === 1;
+
+		const roomSignManager = container.get('RoomSignManager');
+		if (!isOnlyUpgrader && roomSignManager.shouldSign(creep.room.name)) {
+			// Make sure only one upgrader signs the controller to avoid redirecting all of them.
+			const signingCreepId = cache.inHeap('signingCreep:' + creep.room.name, 1000, () => {
+				return creep.id;
+			});
+			if (signingCreepId === creep.id) {
+				creep.say('🖊️');
+				creep.whenInRange(1, controller, () => {
+					creep.signController(controller, roomSignManager.getExpectedSign(creep.room.name));
+				});
+
+				return;
+			}
+		}
+
 		if (distance > 3 && isOnlyUpgrader) {
 			const upgraderPosition = cache.inHeap('upgraderPosition:' + creep.room.name, 500, () => {
 				if (!creep.room.roomPlanner) return null;
@@ -103,14 +120,6 @@ export default class UpgraderRole extends Role {
 				if (controller.level == 8 && result == OK) {
 					const amount = Math.min(creep.store[RESOURCE_ENERGY], creep.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER);
 					balancer.recordGplEnergy(amount);
-				}
-
-				const roomSignManager = container.get('RoomSignManager');
-				if (roomSignManager.shouldSign(creep.room.name)) {
-					creep.say('🖊️');
-					creep.whenInRange(1, controller, () => {
-						creep.signController(controller, roomSignManager.getExpectedSign(creep.room.name));
-					});
 				}
 			});
 		}

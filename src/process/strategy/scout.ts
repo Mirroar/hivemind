@@ -9,6 +9,7 @@ import RoomStatus from 'room/room-status';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 import {isHighway} from 'utils/room-name';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 declare global {
 	interface StructureObserver {
@@ -230,6 +231,11 @@ export default class ScoutProcess extends Process {
 				this.reasons[reason] = (this.reasons[reason] || 0) + amount;
 			},
 		};
+
+		if (isBadApplePlayerShard && badAppleRooms.includes(roomName)) {
+			result.addScore(20, 'badAppleRoom');
+			return result;
+		}
 
 		if (this.getExpansionScoreFromCache(roomName, result)) {
 			return result;

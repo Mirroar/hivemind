@@ -1,6 +1,7 @@
 import container from 'utils/container';
 import ResourceInformation from 'utils/resource-information';
 import {ENEMY_STRENGTH_NORMAL} from "room-defense";
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 export type ResourceLevel = 'low' | 'medium' | 'high' | 'excessive';
 export type ResourceLevelCuttoffs = [number, number, number];
@@ -23,6 +24,16 @@ export default class ResourceLevelManager {
 	getResourceLevelCutoffs(room: Room, resourceType: ResourceConstant): ResourceLevelCuttoffs {
 		// @todo If the room has a factory, consolidate normal resources and bars.
 		const applicableCutoffs: ResourceLevelCuttoffs[] = [];
+
+		if (isBadApplePlayerShard && badAppleRooms.includes(room.name)) {
+			// In bad apple rooms, we don't need any resources except lots of energy.
+			if (resourceType == RESOURCE_ENERGY) {
+				return [800_000, 600_000, 500_000];
+			}
+
+			return [0, 0, 0];
+		}
+
 		if (resourceType === RESOURCE_ENERGY) {
 			applicableCutoffs.push(this.getEnergyCutoffs(room));
 		}
