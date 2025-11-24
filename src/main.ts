@@ -56,6 +56,8 @@ import cache from 'utils/cache';
 // Allow profiling of code.
 import stats from 'utils/stats';
 import * as Profiler from 'utils/Profiler';
+import { isBadApplePlayerShard } from 'warmind.local/settings';
+import { loop as loopScreen } from 'display/runner';
 
 declare global {
 	interface RawMemory {
@@ -127,6 +129,10 @@ class BotKernel {
 		hivemind.runProcess('init', InitProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
+
+		if (isBadApplePlayerShard) {
+			loopScreen();
+		}
 
 		const onTickCallback = hivemind.settings.get('onTick');
 		if (onTickCallback) {
