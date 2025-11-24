@@ -388,6 +388,7 @@ export default class BuilderRole extends Role {
 					structure.structureType === STRUCTURE_RAMPART
 					&& creep.room.roomPlanner
 					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart')
+					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'screen')
 				) {
 					// Let old ramparts decay naturally.
 					return false;
@@ -432,6 +433,14 @@ export default class BuilderRole extends Role {
 			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart.ramp')
 		) {
 			maxHealth /= 10;
+		}
+
+		if (
+			structure.structureType === STRUCTURE_RAMPART
+			&& structure.room.roomPlanner
+			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'screen')
+		) {
+			maxHealth = 200_000;
 		}
 
 		if (
