@@ -323,7 +323,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		const roomIntel = getRoomIntel(this.roomName);
 		for (const source of roomIntel.getSourcePositions()) {
 			const shouldAddSpawn = this.variationInfo.sourcesWithSpawn.includes(source.id);
-			const harvestPosition = this.sourceInfo[source.id].harvestPosition;
+			const harvestPosition = this.sourceInfo[source.id]?.harvestPosition;
+			if (!harvestPosition) continue;
+			
 			const sourceRoads = this.placementManager.findAccessRoad(harvestPosition, this.roomCenterEntrances);
 			for (const pos of sourceRoads) {
 				this.placementManager.planLocation(pos, 'road', 1);

@@ -5,6 +5,7 @@ import { TextSprite, Marquee } from "display/marquee";
 import { badAppleRooms, isBadApplePlayerShard } from "warmind.local/settings";
 import { calculateScreepRepairProgress } from "./rampartManagement";
 import hivemind from "hivemind";
+import cache from "utils/cache";
 
 const ROOMS = {
     NW: badAppleRooms[0] || 'E10N10',
@@ -106,11 +107,19 @@ function updateTimeKeeperDisplay(tick: number): void {
 
     const bits = ('0000000000000000' + tick.toString(2)).slice(-16).split('').map(b => b === '1');
     bits.forEach((bit, index) => {
-        const loc = room.roomPlanner.getLocations(`timeKeeper.${index}`)[0];
-        if (!loc) return;
+        const rampartId = cache.inHeap(`baTimeKeeperRampart_${timeKeeperRoomName}_${index}`, 10000, () => {
+            const loc = room.roomPlanner.getLocations(`timeKeeper.${index}`)[0];
+            if (!loc) return null;
 
-        const structures = room.lookForAt(LOOK_STRUCTURES, loc.x, loc.y);
-        const rampart = structures.find(s => s.structureType === STRUCTURE_RAMPART) as StructureRampart;
+            const structures = room.lookForAt(LOOK_STRUCTURES, loc.x, loc.y);
+            const rampart = structures.find(s => s.structureType === STRUCTURE_RAMPART) as StructureRampart;
+            if (!rampart) return null;
+
+            return rampart.id;
+        });
+        if (!rampartId) return;
+
+        const rampart = Game.getObjectById<StructureRampart>(rampartId);
         if (!rampart) return;
 
         if (bit) {

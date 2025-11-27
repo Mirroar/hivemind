@@ -7,6 +7,7 @@ import container from 'utils/container';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
 import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
+import { shouldRoomRepairScreenRamparts } from 'display/rampartManagement';
 
 interface UpgraderSpawnOption extends SpawnOption {
 	mini?: boolean;
@@ -61,6 +62,11 @@ export default class UpgraderSpawnRole extends SpawnRole {
 		if (isBadApplePlayerShard && badAppleRooms.includes(room.name) && room.controller.level >= 7) {
 			// In bad apple rooms, we don't need upgraders most of the time.
 			maxUpgraders = Math.min(maxUpgraders, 1);
+
+			// When repairing, we will even stop upgrading altogether.
+			if (shouldRoomRepairScreenRamparts(room)) {
+				maxUpgraders = 0;
+			}
 		}
 
 		if (maxUpgraders === 0) {

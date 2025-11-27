@@ -76,10 +76,12 @@ export default class BadAppleRoomVariationBuilder extends RoomVariationBuilder {
 			return 'ok';
 		}
 
+		hivemind.log('rooms', this.roomName).info('Placing Time Keeper...');
+
 		// Find 16x1 area along right edge for Time Keeper.
-		for (let y = 14; y > 1; y--) {
+		for (let y = 11; y > 1; y--) {
+			let runLength = 0;
 			for (let x = 49; x >= 25; x--) {
-				let runLength = 0;
 				if (!this.placementManager.isBuildableTile(x, y, true, true)) {
 					runLength = 0;
 					continue;
@@ -89,8 +91,10 @@ export default class BadAppleRoomVariationBuilder extends RoomVariationBuilder {
 
 				if (runLength >= 16) {
 					// Found a spot.
+					hivemind.log('rooms', this.roomName).info(`Placing Time Keeper at x=${x}, y=${y} (runLength=${runLength})`);
+
 					for (let offset = 0; offset < 16; offset++) {
-						const pos = new RoomPosition(x, y + offset, this.roomName);
+						const pos = new RoomPosition(x + offset, y, this.roomName);
 						this.placementManager.planLocation(pos, 'timeKeeper', 1);
 						this.placementManager.planLocation(pos, `timeKeeper.${offset}`, 1);
 					}

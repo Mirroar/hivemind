@@ -445,6 +445,14 @@ export default class BuilderRole extends Role {
 		}
 
 		if (
+			structure.structureType === STRUCTURE_RAMPART
+			&& structure.room.roomPlanner
+			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'timeKeeper')
+		) {
+			maxHealth = MAX_SCREEN_RAMPART_HITS;
+		}
+
+		if (
 			structure.structureType === STRUCTURE_WALL
 			&& structure.room.roomPlanner
 			&& (structure.room.roomPlanner.isPlannedLocation(structure.pos, 'wall.blocker')
