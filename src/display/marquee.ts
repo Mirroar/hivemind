@@ -4,20 +4,33 @@
 
 import { PixelFrame } from "display/frame";
 
-// --- 5x7 uppercase font for needed chars (P,L,E,A,S,T,N,D,B,Y, space, '.') ---
+// --- 5x7 uppercase font for needed chars ---
 const FONT_5x7: Record<string, string[]> = {
   'A': ['01110','10001','10001','11111','10001','10001','10001'],
   'B': ['11110','10001','10001','11110','10001','10001','11110'],
   'D': ['11110','10001','10001','10001','10001','10001','11110'],
   'E': ['11111','10000','10000','11110','10000','10000','11111'],
+  'I': ['01110','00100','00100','00100','00100','00100','01110'],
   'L': ['10000','10000','10000','10000','10000','10000','11111'],
   'N': ['10001','10001','11001','10101','10011','10001','10001'],
   'P': ['11110','10001','10001','11110','10000','10000','10000'],
   'S': ['01111','10000','10000','01110','00001','00001','11110'],
   'T': ['11111','00100','00100','00100','00100','00100','00100'],
+  'U': ['10001','10001','10001','10001','10001','10001','01110'],
   'Y': ['10001','01010','00100','00100','00100','00100','00100'],
   ' ': ['00000','00000','00000','00000','00000','00000','00000'],
   '.': ['00000','00000','00000','00000','00000','00100','00100'],
+  '1': ['00100','01100','00100','00100','00100','00100','01110'],
+  '2': ['01110','10001','00001','00010','00100','01000','11111'],
+  '3': ['01110','10001','00001','00110','00001','10001','01110'],
+  '4': ['00010','00110','01010','10010','11111','00010','00010'],
+  '5': ['11111','10000','10000','11110','00001','00001','11110'],
+  '6': ['01110','10000','10000','11110','10001','10001','01110'],
+  '7': ['11111','00001','00010','00100','01000','01000','01000'],
+  '8': ['01110','10001','10001','01110','10001','10001','01110'],
+  '9': ['01110','10001','10001','01111','00001','00001','01110'],
+  '0': ['01110','10001','10011','10101','11001','10001','01110'],
+  '%': ['11000','11001','00010','00100','01000','10011','00011'],
 };
 
 export interface TextSpriteOpts {
@@ -25,6 +38,8 @@ export interface TextSpriteOpts {
   letterSpacing?: number;// spaces (in scaled pixels) between glyphs; default 1
   padLeft?: number;      // pixels of left padding in output sprite; default 0
   padRight?: number;     // pixels of right padding; default 0 (you can use as marquee gap)
+  padTop?: number;       // pixels of top padding; default 0
+  padBottom?: number;    // pixels of bottom padding; default 0
 }
 
 export class TextSprite {
@@ -33,6 +48,8 @@ export class TextSprite {
   readonly spacing: number;
   readonly padLeft: number;
   readonly padRight: number;
+  readonly padTop: number;
+  readonly padBottom: number;
   readonly glyphW = 5;
   readonly glyphH = 7;
   readonly frame: PixelFrame; // pre-rendered text bitmap (0/1)
@@ -43,13 +60,15 @@ export class TextSprite {
     this.spacing = opts.letterSpacing ?? 1;
     this.padLeft = opts.padLeft ?? 0;
     this.padRight = opts.padRight ?? 0;
+    this.padTop = opts.padTop ?? 0;
+    this.padBottom = opts.padBottom ?? 0;
 
     const wPerGlyph = this.glyphW * this.scale;
     const hScaled = this.glyphH * this.scale;
     const track = this.text.length === 0 ? 0
       : (this.text.length - 1) * this.spacing;
     const w = this.padLeft + this.padRight + this.text.length * wPerGlyph + track;
-    const h = hScaled;
+    const h = hScaled + this.padTop + this.padBottom;
 
     this.frame = new PixelFrame(w, h);
     this.render();
@@ -73,7 +92,7 @@ export class TextSprite {
           if (row.charCodeAt(gx) === 49) { // '1'
             // stamp scale×scale block
             const x0 = penX + gx * this.scale;
-            const y0 = gy * this.scale;
+            const y0 = this.padTop + gy * this.scale;
             for (let sy = 0; sy < this.scale; sy++) {
               const yy = y0 + sy;
               const off = yy * w;
@@ -94,6 +113,7 @@ export interface MarqueeOpts {
   y?: number;         // top y on destination frame; default center vertically
   gap?: number;       // extra gap between repeats (pixels); default 8
   overwrite?: boolean;// true: force 1 over dest; false: OR-blend (dest=dest|src); default true
+  border?: number;    // pixels of blank border around marquee
 }
 
 /** Scrolls a TextSprite across a destination frame (wrap-around). */
@@ -105,6 +125,7 @@ export class Marquee {
   private yTop: number | null;
   private offset = 0; // horizontal scroll offset, increases each tick
   private wrapW: number;
+  private border: number;
 
   constructor(sprite: TextSprite, destW: number, destH: number, opts: MarqueeOpts = {}) {
     this.sprite = sprite;
@@ -113,6 +134,7 @@ export class Marquee {
     this.overwrite = opts.overwrite ?? true;
     this.yTop = Number.isFinite(opts.y as number) ? (opts.y as number) : null;
     this.wrapW = sprite.frame.w + this.gap;
+    this.border = opts.border ?? 0;
 
     // center vertically if y not provided
     if (this.yTop == null) {
@@ -148,10 +170,30 @@ export class Marquee {
         const sxWrapped = (x + this.offset) % this.wrapW;
         if (sxWrapped < sw) {
           const s = src[siBase + sxWrapped];
-          if (s) {
-            if (this.overwrite) dst[di + x] = 1;
-            else dst[di + x] |= s;
-          }
+          if (this.overwrite) dst[di + x] = s;
+          else dst[di + x] |= s;
+        }
+        else dst[di + x] = 0; // clear gap area
+      }
+    }
+
+    if (this.border > 0) {
+      const b = this.border;
+      // top border
+      for (let y = 0; y < b; y++) {
+        const dy = dyTop - y - 1;
+        if (dy < 0) continue;
+        const di = dy * dw;
+        for (let x = 0; x < dw; x++) {
+          dst[di + x] = 1;
+        }
+      }
+      // bottom border
+      for (let y = 0; y < b; y++) {
+        const dy = dyBot + y;
+        const di = dy * dw;
+        for (let x = 0; x < dw; x++) {
+          dst[di + x] = 1;
         }
       }
     }

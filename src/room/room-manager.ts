@@ -448,6 +448,9 @@ export default class RoomManager {
 		if (this.room.controller.level < 7) return;
 		if (!badAppleRooms.includes(this.room.name)) return;
 
+		// Build timekeeper first.
+		this.buildPlannedStructures('timeKeeper', STRUCTURE_RAMPART);
+
 		// Build screen ramparts. Use a dithering pattern to get better early screen coverage.
 		const offsets = [[0, 0], [1, 1], [0, 1], [1, 0]];
 		for (const offset of offsets) {

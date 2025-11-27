@@ -55,11 +55,11 @@ export class SpiralTestPattern {
       const dy = y - cy;
       for (let x = 0; x < this.w; x++, i++) {
         const dx = x - cx;
-        const theta = Math.atan2(dy, dx);       // −π..π
-        const r = Math.hypot(dx, dy) + eps;     // avoid 0
+        const theta = Math.atan2(dy, dx);
+        const r = Math.hypot(dx, dy) + eps;
         this.theta[i] = theta;
         this.logR[i]  = Math.log(r);
-        this.invR[i]  = 1 / (1 + r);            // thicker near center
+        this.invR[i]  = Math.sqrt(1 / (1 + r));
       }
     }
   }
@@ -69,7 +69,7 @@ export class SpiralTestPattern {
     this.phase = this.omega * Game.time;
 
     const N = this.w * this.h;
-    const m = this.arms;
+    const m = this.arms / 2;
     const a = this.a;
     const base = this.bandBase;
     const gain = this.bandGain;

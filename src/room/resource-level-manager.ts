@@ -30,6 +30,9 @@ export default class ResourceLevelManager {
 			if (resourceType === RESOURCE_ENERGY) {
 				return [800_000, 600_000, 500_000];
 			}
+			if (resourceType === RESOURCE_BATTERY && room.controller.level >= 7) {
+				return [50_000, 20_000, 10_000];
+			}
 
 			return [20_000, 0, 0];
 		}

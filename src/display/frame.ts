@@ -71,6 +71,24 @@ export class FrameApplier {
     this.w = screen.width;
     this.h = screen.height;
     this.curr = new Uint8Array(this.w * this.h); // starts all 0/private
+    this.resetToRampartState();
+  }
+
+  resetToRampartState(): void {
+    // Scan all ramparts on the big screen and set curr[] accordingly
+    for (let y = 0; y < this.h; y++) {
+      for (let x = 0; x < this.w; x++) {
+        const id = this.screen.getRampartIdAt(x, y);
+        if (id) {
+          const obj = Game.getObjectById<StructureRampart>(id);
+          this.curr[y * this.w + x] = (obj?.isPublic ?? false) ? 1 : 0;
+        } else {
+          this.curr[y * this.w + x] = 0;
+        }
+      }
+    }
+    this.target = null;
+    this.ptr = 0;
   }
 
   /** Reset current buffer (e.g., after rebuild) to a known frame. */

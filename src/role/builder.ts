@@ -12,6 +12,7 @@ import utilities from 'utilities';
 import {throttle} from 'utils/throttle';
 import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getResourcesIn} from 'utils/store';
+import { MAX_SCREEN_RAMPART_HITS } from 'display/rampartManagement';
 
 interface RepairOrder {
 	type: 'repair';
@@ -440,7 +441,7 @@ export default class BuilderRole extends Role {
 			&& structure.room.roomPlanner
 			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'screen')
 		) {
-			maxHealth = 200_000;
+			maxHealth = MAX_SCREEN_RAMPART_HITS;
 		}
 
 		if (

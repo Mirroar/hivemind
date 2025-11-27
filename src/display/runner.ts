@@ -3,6 +3,8 @@ import { FrameApplier } from "display/frame";
 import { SpiralTestPattern } from "display/spiral";
 import { TextSprite, Marquee } from "display/marquee";
 import { badAppleRooms, isBadApplePlayerShard } from "warmind.local/settings";
+import { calculateScreepRepairProgress } from "./rampartManagement";
+import hivemind from "hivemind";
 
 const ROOMS = {
     NW: badAppleRooms[0] || 'E10N10',
@@ -15,8 +17,13 @@ let bigScreen: BigScreen;
 let player: FrameApplier;
 let spiral: SpiralTestPattern;
 let marquee: Marquee;
+let textRecalculatedAt = 0;
 
-if (isBadApplePlayerShard) {
+function initializeBadAppleDisplay(): void {
+    if (!isBadApplePlayerShard) {
+        return;
+    }
+
     if (!bigScreen) {
         bigScreen = new BigScreen(ROOMS, {
             margin: 0, perRoomW: 50, perRoomH: 36, blockSize: 1, ttlTicks: 500
@@ -33,26 +40,30 @@ if (isBadApplePlayerShard) {
         const w = bigScreen.width;
         const h = bigScreen.height;
         spiral = new SpiralTestPattern(w, h, {
-            arms: 6,
-            tightness: 0.45,
+            arms: 5,
+            tightness: 0.55,
             degPerTick: 0.5,    // slow, smooth rotation; try 1.0 if you like
-            bandBase: 0.26,
+            bandBase: 0.25,
             bandGain: 0.9,
             invert: false
         });
     }
 
-    if (!marquee) {
-        const text = 'PLEASE STAND BY...';
+    if (!marquee || hivemind.hasIntervalPassed(1000, textRecalculatedAt)) {
+        textRecalculatedAt = Game.time;
+        const progress = calculateScreepRepairProgress();
+        const text = `PLEASE STAND BY... ${Math.floor(progress * 100)}% BUILT... `;
         const textSprite = new TextSprite(text, {
             scale: 2,
             letterSpacing: 1,
+            padTop: 3,
+            padBottom: 3,
         });
         marquee = new Marquee(textSprite, bigScreen.width, bigScreen.height, {
             speed: 1,
             y: 4,
-            gap: 20,
             overwrite: true,
+            border: 1,
         });
     }
 }
@@ -60,21 +71,56 @@ if (isBadApplePlayerShard) {
 export function loop() {
     if (!isBadApplePlayerShard) return;
 
-  // Keep rampart cache fresh (cheap when not visible)
-  if ((Game.time & 0x1FF) === 0) bigScreen.refreshAll();
+    initializeBadAppleDisplay();
 
-  // If last frame finished, generate the next spiral frame and start applying
-  if (player.isDone()) {
-    const frame = spiral.tick();
-    marquee.tick();
-    marquee.overlay(frame);
-    player.startFrame(frame);
-  }
+    // Keep rampart cache fresh (cheap when not visible)
+    if ((Game.time & 0x1FF) === 0) bigScreen.refreshAll();
 
-  // Spend your toggle budget this tick
-  const TOGGLE_CPU = 60;                    // reserve some CPU for the rest of empire
-  const COST_PER_TOGGLE = 0.2;
-  const BUDGET = Math.floor(TOGGLE_CPU / COST_PER_TOGGLE);
+    updateTimeKeeperDisplay(Game.time);
 
-  player.step(BUDGET);
+    // If last frame finished, generate the next spiral frame and start applying
+    if (player.isDone()) {
+        const frame = spiral.tick();
+        marquee.tick();
+        marquee.overlay(frame);
+        player.startFrame(frame);
+    }
+
+    // Spend your toggle budget this tick
+    const TOGGLE_CPU = 60;                    // reserve some CPU for the rest of empire
+    const COST_PER_TOGGLE = 0.2;
+    const BUDGET = Math.floor(TOGGLE_CPU / COST_PER_TOGGLE);
+
+    player.step(BUDGET);
+}
+
+function updateTimeKeeperDisplay(tick: number): void {
+    const timeKeeperRoomName = badAppleRooms[2];
+    const room = Game.rooms[timeKeeperRoomName];
+    if (!room) return;
+
+    if (room.roomPlanner.getLocations('timeKeeper').length === 0) {
+        // No time keeper planned, yet.
+        return;
+    }
+
+    const bits = ('0000000000000000' + tick.toString(2)).slice(-16).split('').map(b => b === '1');
+    bits.forEach((bit, index) => {
+        const loc = room.roomPlanner.getLocations(`timeKeeper.${index}`)[0];
+        if (!loc) return;
+
+        const structures = room.lookForAt(LOOK_STRUCTURES, loc.x, loc.y);
+        const rampart = structures.find(s => s.structureType === STRUCTURE_RAMPART) as StructureRampart;
+        if (!rampart) return;
+
+        if (bit) {
+            // Show bit on rampart
+            if (!rampart.isPublic)
+                rampart.setPublic(true);
+        } else {
+            // Hide bit
+            if (rampart.isPublic)
+                rampart.setPublic(false);
+        }
+    });
 }

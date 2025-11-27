@@ -5,6 +5,7 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import utilities from 'utilities';
 import type {TransportRouteOption} from 'empire/trade-route-manager';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 /**
  * Sends resources between owned rooms when needed.
@@ -45,7 +46,13 @@ export default class ResourcesProcess extends Process {
 			else if (manager.roomHasUncertainStorage(Game.rooms[best.target])) {
 				clearTradesOfThisType = false;
 			}
-			else if (manager.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
+			else if (
+				(
+					manager.roomNeedsTerminalSpace(room)
+					|| (isBadApplePlayerShard && badAppleRooms.includes(best.target))
+				)
+				&& terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000
+			) {
 				let amount = Math.min(terminal.store[best.resourceType], 50_000);
 				if (best.resourceType === RESOURCE_ENERGY) {
 					amount -= Game.market.calcTransactionCost(amount, best.source, best.target);

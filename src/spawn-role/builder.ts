@@ -4,6 +4,8 @@ import BodyBuilder, {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
+import { shouldRoomRepairScreenRamparts } from 'display/rampartManagement';
 
 interface BuilderSpawnOption extends SpawnOption {
 	size: number;
@@ -96,8 +98,14 @@ export default class BuilderSpawnRole extends SpawnRole {
 		// @todo Only if they are not fully built, of course.
 		if (room.roomPlanner && room.controller.level >= 4) {
 			maxWorkParts += _.size(room.roomPlanner.getLocations('rampart')) / 10;
-			if (room.controller.level >= 7)
-				maxWorkParts += _.size(room.roomPlanner.getLocations('screen')) / 50;
+			if (
+				room.controller.level >= 7
+				&& isBadApplePlayerShard
+				&& badAppleRooms.includes(room.name)
+				&& shouldRoomRepairScreenRamparts(room)
+			) {
+				maxWorkParts += _.size(room.roomPlanner.getLocations('screen')) / 20;
+			}
 		}
 
 		// Add more builders if we have a lot of energy to spare.

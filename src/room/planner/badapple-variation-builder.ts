@@ -26,6 +26,7 @@ export default class BadAppleRoomVariationBuilder extends RoomVariationBuilder {
 			this.placeHarvestBayStructures,
 			this.placeBays,
 			this.placeRamparts,
+			this.placeTimeKeeper,
 			this.sealRoom,
 			this.placeTowers,
 			this.placeRoadsToRamps,
@@ -68,4 +69,37 @@ export default class BadAppleRoomVariationBuilder extends RoomVariationBuilder {
 
         return 'ok';
     }
+
+	protected placeTimeKeeper(): StepResult {
+		// Only place Time Keeper in top-right bad apple room.
+		if (badAppleRooms.indexOf(this.roomName) !== 2) {
+			return 'ok';
+		}
+
+		// Find 16x1 area along right edge for Time Keeper.
+		for (let y = 14; y > 1; y--) {
+			for (let x = 49; x >= 25; x--) {
+				let runLength = 0;
+				if (!this.placementManager.isBuildableTile(x, y, true, true)) {
+					runLength = 0;
+					continue;
+				}
+				
+				runLength++;
+
+				if (runLength >= 16) {
+					// Found a spot.
+					for (let offset = 0; offset < 16; offset++) {
+						const pos = new RoomPosition(x, y + offset, this.roomName);
+						this.placementManager.planLocation(pos, 'timeKeeper', 1);
+						this.placementManager.planLocation(pos, `timeKeeper.${offset}`, 1);
+					}
+
+					return 'ok';
+				}
+			}
+		}
+
+		return 'ok';
+	}
 }
