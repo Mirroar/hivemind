@@ -129,7 +129,7 @@ export class Marquee {
 
   constructor(sprite: TextSprite, destW: number, destH: number, opts: MarqueeOpts = {}) {
     this.sprite = sprite;
-    this.speed = Math.max(1, Math.floor(opts.speed ?? 1));
+    this.speed = opts.speed ?? 1;
     this.gap = opts.gap ?? 8;
     this.overwrite = opts.overwrite ?? true;
     this.yTop = Number.isFinite(opts.y as number) ? (opts.y as number) : null;

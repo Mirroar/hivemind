@@ -390,6 +390,7 @@ export default class BuilderRole extends Role {
 					&& creep.room.roomPlanner
 					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart')
 					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'screen')
+					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'timeKeeper')
 				) {
 					// Let old ramparts decay naturally.
 					return false;

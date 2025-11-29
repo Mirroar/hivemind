@@ -61,7 +61,7 @@ function initializeBadAppleDisplay(): void {
             padBottom: 3,
         });
         marquee = new Marquee(textSprite, bigScreen.width, bigScreen.height, {
-            speed: 1,
+            speed: 0.5,
             y: 4,
             overwrite: true,
             border: 1,
@@ -88,7 +88,7 @@ export function loop() {
     }
 
     // Spend your toggle budget this tick
-    const TOGGLE_CPU = 60;                    // reserve some CPU for the rest of empire
+    const TOGGLE_CPU = 80;                    // reserve some CPU for the rest of empire
     const COST_PER_TOGGLE = 0.2;
     const BUDGET = Math.floor(TOGGLE_CPU / COST_PER_TOGGLE);
 
