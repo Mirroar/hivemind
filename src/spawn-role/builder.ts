@@ -1,6 +1,6 @@
 /* global FIND_MY_CONSTRUCTION_SITES MOVE WORK CARRY */
 
-import BodyBuilder, {MOVEMENT_MODE_ROAD} from 'creep/body-builder';
+import BodyBuilder, {MOVEMENT_MODE_PLAINS, MOVEMENT_MODE_ROAD} from 'creep/body-builder';
 import cache from 'utils/cache';
 import SpawnRole from 'spawn-role/spawn-role';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
@@ -171,9 +171,19 @@ export default class BuilderSpawnRole extends SpawnRole {
 	 *   A list of body parts the new creep should consist of.
 	 */
 	getCreepBody(room: Room, option: BuilderSpawnOption): BodyPartConstant[] {
-		return (new BodyBuilder())
-			.setWeights({[WORK]: 4, [CARRY]: 3})
-			.setMovementMode(MOVEMENT_MODE_ROAD)
+		const builder = new BodyBuilder();
+		builder.setWeights({[WORK]: 4, [CARRY]: 3});
+		builder.setMovementMode(MOVEMENT_MODE_ROAD);
+
+		if (isBadApplePlayerShard && badAppleRooms.includes(room.name)) {
+			// Lots of off-road movement in Bad Apple rooms.
+			builder.setMovementMode(MOVEMENT_MODE_PLAINS);
+
+			// More carry parts to transport more energy for big rampart repairs.
+			builder.setWeights({[WORK]: 3, [CARRY]: 4});
+		}
+
+		return builder
 			.setPartLimit(WORK, option.size)
 			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
 			.build();

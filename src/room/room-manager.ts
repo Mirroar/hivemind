@@ -445,8 +445,11 @@ export default class RoomManager {
 
 	checkBadAppleScreenRamparts() {
 		if (!isBadApplePlayerShard) return;
-		if (this.room.controller.level < 7) return;
 		if (!badAppleRooms.includes(this.room.name)) return;
+		if (this.room.controller.level < 7) return;
+
+		// Only build these ramparts if no other construction sites are present, so those get priority.
+		if (this.roomConstructionSites.length > 0) return;
 
 		// Build timekeeper first.
 		this.buildPlannedStructures('timeKeeper', STRUCTURE_RAMPART);

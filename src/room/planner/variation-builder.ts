@@ -155,12 +155,11 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		// unconnected free tiles.
 		let bestPos: {x: number; y: number; freeTileCount: number} = null;
 		handleMapArea(source.x, source.y, (x, y) => {
-			if (!this.placementManager.isBuildableTile(x, y)) return;
+			if (!this.placementManager.isBuildableTile(x, y, true, true)) return;
 
 			let freeTileCount = 0;
 			handleMapArea(x, y, (x2, y2) => {
-				if (!this.placementManager.isBuildableTile(x2, y2)) return;
-
+				if (!this.placementManager.isBuildableTile(x2, y2, true, true)) return;
 				freeTileCount++;
 			});
 
