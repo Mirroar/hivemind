@@ -9,6 +9,7 @@ import utilities from 'utilities';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getResourcesIn} from 'utils/store';
 import container from 'utils/container';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 // Minimum value for a trade. Would be cool if this was a game constant.
 const minTradeValue = 0.001;
@@ -143,6 +144,18 @@ export default class TradeProcess extends Process {
 						this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
 					}
 				}
+
+				if (isBadApplePlayerShard && badAppleRooms.includes(room.name)) {
+					if (room.getEffectiveAvailableEnergy() < 200_000) {
+						this.tryBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
+					}
+					if (room.getStoredEnergy() < 50_000) {
+						this.tryBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
+					}
+					if (room.getStoredEnergy() < 20_000) {
+						this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
+					}
+				}
 			}
 
 			// Also try to cheaply buy some energy for rooms that are low on it.
@@ -152,10 +165,10 @@ export default class TradeProcess extends Process {
 				if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > STORAGE_CAPACITY / 10) return;
 
 				// @todo Force creating a buy order for every affected room.
-				const temporary = {
+				const singleRoomState = {
 					[roomName]: roomState,
 				};
-				this.tryBuyResources(RESOURCE_ENERGY, temporary, true);
+				this.tryBuyResources(RESOURCE_ENERGY, singleRoomState, true);
 			});
 		}
 	}
@@ -391,6 +404,12 @@ export default class TradeProcess extends Process {
 		const bestOrder = this.findBestSellOrder(resourceType, roomName);
 		if (!bestOrder) return;
 
+		// Don't buy energy from high range by dealing with distant rooms.
+		if (resourceType === RESOURCE_ENERGY) {
+			const transactionCost = Game.market.calcTransactionCost(10000, roomName, bestOrder.roomName);
+			if (transactionCost > 5000) return;
+		}
+
 		const history = this.getPriceData(resourceType);
 		if (!history) return;
 
@@ -443,7 +462,7 @@ export default class TradeProcess extends Process {
 	tryBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, ignoreOtherRooms?: boolean) {
 		if (!hivemind.settings.get('enableCreatingTradeOrders')) return;
 
-		if (_.some(Game.market.orders, order => {
+		const isBuyingResourceInOtherRooms = _.some(Game.market.orders, order => {
 			if (order.type === ORDER_BUY && order.resourceType === resourceType) {
 				if (ignoreOtherRooms && !rooms[order.roomName]) {
 					return false;
@@ -453,7 +472,8 @@ export default class TradeProcess extends Process {
 			}
 
 			return false;
-		})) {
+		});
+		if (isBuyingResourceInOtherRooms) {
 			return;
 		}
 
