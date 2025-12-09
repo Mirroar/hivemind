@@ -45,6 +45,8 @@ export function calculateScreepRepairProgress(): number {
                 roomMaxProgress += DESIRED_SCREEN_RAMPART_HITS;
             }
 
+            Game.notify(`${roomName} screen rampart progress: ${roomProgress} / ${roomMaxProgress} (${((roomProgress / roomMaxProgress) * 100).toFixed(2)}%)`);
+
             return { progress: roomProgress, max: roomMaxProgress };
         });
         totalProgress += progress;
