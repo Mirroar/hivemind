@@ -6,6 +6,7 @@ import { badAppleRooms, isBadApplePlayerShard } from "warmind.local/settings";
 import { calculateScreepRepairProgress } from "./rampartManagement";
 import hivemind from "hivemind";
 import cache from "utils/cache";
+import { decodeFrame, getDecodedVideoFrames } from "warmind.local/video";
 
 const ROOMS = {
     NW: badAppleRooms[0] || 'E10N10',
@@ -19,6 +20,9 @@ let player: FrameApplier;
 let spiral: SpiralTestPattern;
 let marquee: Marquee;
 let textRecalculatedAt = 0;
+let videoFrameData: Uint8Array[];
+let currentVideoFrameIndex = 0;
+let isPlayingVideo = false;
 
 function initializeBadAppleDisplay(): void {
     if (!isBadApplePlayerShard) {
@@ -67,6 +71,15 @@ function initializeBadAppleDisplay(): void {
             border: 1,
         });
     }
+
+    if (!videoFrameData) {
+        try {
+            videoFrameData = getDecodedVideoFrames();
+        } catch (e) {
+            console.log("Failed to decode video frames:", e);
+            videoFrameData = [];
+        }
+    }
 }
 
 export function loop() {
@@ -93,6 +106,8 @@ export function loop() {
     const BUDGET = Math.floor(TOGGLE_CPU / COST_PER_TOGGLE);
 
     player.step(BUDGET);
+
+    debugBadAppleVideoFrame();
 }
 
 function updateTimeKeeperDisplay(tick: number): void {
@@ -132,4 +147,29 @@ function updateTimeKeeperDisplay(tick: number): void {
                 rampart.setPublic(false);
         }
     });
+}
+
+function debugBadAppleVideoFrame(): void {
+    if (!videoFrameData) return;
+
+    // Use room visual to render a preview of the current video frame.
+    const debugRoomName = badAppleRooms[0];
+    const room = Game.rooms[debugRoomName];
+    if (!room) return;
+
+    const frameData = videoFrameData[currentVideoFrameIndex];
+    if (!frameData) return;
+
+    const frame = decodeFrame(frameData);
+
+    const visual = room.visual;
+    const scale = 0.2;
+    for (let y = 0; y < frame.h; y++) {
+        for (let x = 0; x < frame.w; x++) {
+            if (frame.get(x, y) === 1) continue; // skip white pixels
+            visual.rect(x * scale, y * scale, scale, scale, { fill: 'white', opacity: 0.3 });
+        }
+    }
+
+    currentVideoFrameIndex = Game.time % videoFrameData.length;
 }
