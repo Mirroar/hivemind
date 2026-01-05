@@ -26,7 +26,7 @@ declare global {
 		isFullOnPower: () => boolean;
 		isFullOnMinerals: () => boolean;
 		isFullOn: (resourceType: string) => boolean;
-		getStorageLocation: () => RoomPosition;
+		getStorageLocation: () => RoomPosition | null;
 		prepareForTrading: (resourceType: ResourceConstant, amount?: number) => void;
 		stopTradePreparation: () => void;
 		getRemoteHarvestSourcePositions: () => RoomPosition[];

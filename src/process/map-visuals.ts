@@ -139,6 +139,8 @@ export default class MapVisualsProcess extends Process {
 
 		Game.map.visual.text(harvestPriority.toPrecision(3), new RoomPosition(7, 3, roomName), {fontSize: 5, align: 'left'});
 
+		if (!hivemind.segmentMemory.isReady()) return;
+
 		const remotePathManager = new RemotePathManager();
 		const intel = getRoomIntel(roomName);
 		for (const coords of intel.getSourcePositions()) {
@@ -176,16 +178,18 @@ export default class MapVisualsProcess extends Process {
 		if (!hivemind.settings.get('visualizeNavMesh')) return;
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
-			const roomIntel = getRoomIntel(roomName);
 			let color = '#ffffff';
-			if (roomIntel.isOwned()) {
-				color = '#ff0000';
-			}
-			else if (roomIntel.isClaimed()) {
-				color = '#ffff00';
-			}
-			else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
-				color = '#ff8000';
+			if (hivemind.segmentMemory.isReady()) {
+				const roomIntel = getRoomIntel(roomName);
+				if (roomIntel.isOwned()) {
+					color = '#ff0000';
+				}
+				else if (roomIntel.isClaimed()) {
+					color = '#ffff00';
+				}
+				else if (_.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) {
+					color = '#ff8000';
+				}
 			}
 
 			const style = {

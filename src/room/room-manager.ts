@@ -547,18 +547,23 @@ export default class RoomManager {
 	}
 
 	manageLinks() {
+		const limit = CONTROLLER_STRUCTURES[STRUCTURE_LINK][this.room.controller.level];
+		let count = 0;
 		// Make sure links are built in the right place, remove otherwise.
 		this.removeUnplannedStructures('link', STRUCTURE_LINK, 1);
 		if (!this.buildPlannedStructures('link.controller', STRUCTURE_LINK)) return;
+		if (++count >= limit) return;
 
 		// Build link to farthest locations first.
 		const farthestLinks = _.sortBy(this.roomPlanner.getLocations('link.source'), p => -p.getRangeTo(this.room.controller.pos));
 		for (const pos of farthestLinks) {
 			if (!this.tryBuild(pos, STRUCTURE_LINK)) return;
+			if (++count >= limit) return;
 		}
 
 		this.buildPlannedStructures('link.source', STRUCTURE_LINK);
 		this.buildPlannedStructures('link.storage', STRUCTURE_LINK);
+		if (++count >= limit) return;
 		this.buildPlannedStructures('link', STRUCTURE_LINK);
 	}
 

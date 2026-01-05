@@ -66,14 +66,16 @@ export default class OwnedRoomProcess extends Process {
 				if (this.room.roomPlanner) this.room.roomPlanner.runLogic();
 			});
 
-			const prioritizeRoomManager = this.room.roomManager.shouldRunImmediately();
-			hivemind.runSubProcess('rooms_manager', () => {
-				hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
-					interval: prioritizeRoomManager ? 0 : 100,
-					room: this.room,
-					priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
+			if (this.room.roomManager) {
+				const prioritizeRoomManager = this.room.roomManager.shouldRunImmediately();
+				hivemind.runSubProcess('rooms_manager', () => {
+					hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
+						interval: prioritizeRoomManager ? 0 : 100,
+						room: this.room,
+						priority: prioritizeRoomManager ? PROCESS_PRIORITY_ALWAYS : PROCESS_PRIORITY_DEFAULT,
+					});
 				});
-			});
+			}
 
 			// @todo Only run processes based on current room level or existing structures.
 			hivemind.runSubProcess('rooms_defense', () => {

@@ -62,15 +62,12 @@ export default class ContainerDestination extends StructureDestination<Container
 			amount: totalNeededEnergy,
 		};
 
-		let prioFactor = 1;
-		if (totalNeededEnergy / container.store.getCapacity() < 0.75) {
-			prioFactor = 3;
+		if (totalNeededEnergy / container.store.getCapacity() < 0.5) {
 			option.priority--;
 			option.priority--;
 		}
-		else if (totalNeededEnergy / container.store.getCapacity() < 0.5) {
+		else if (totalNeededEnergy / container.store.getCapacity() < 0.75) {
 			option.priority--;
-			prioFactor = 2;
 		}
 
 		options.push(option);
