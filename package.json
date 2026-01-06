@@ -1,10 +1,21 @@
 {
 	"name": "screeps-bot-hivemind",
-	"version": "2.0.1",
+	"version": "3.0.0",
 	"type": "module",
 	"description": "",
 	"main": "dist/main.js",
 	"screeps_bot": true,
+	"exports": {
+		".": {
+			"import": "./dist/main.js"
+		}
+	},
+	"files": [
+		"dist/",
+		"README.md",
+		"LICENSE",
+		"CHANGELOG.md"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/Mirroar/hivemind.git"

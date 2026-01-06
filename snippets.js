@@ -41,7 +41,13 @@ _.each(Game.creepsByRole, (g, n) => console.log(_.size(g), n));
 r = {roomName: 'E19N24', spawnRoom: 'E16N22'}; (new ExpandProcess()).startExpansion(r);
 
 // Force evacuation and abandonment of a certain room.
-const roomName = 'E43S53'; p = new ExpandProcess({}, {}); Game.rooms[roomName].setEvacuating(true); Memory.strategy.expand.evacuatingRoom = {name: roomName, cooldown: null};
+const roomName = 'E43S53'; Game.rooms[roomName].setEvacuating(true); Memory.strategy.expand.evacuatingRoom = {name: roomName, cooldown: null};
 
 // Send a squad to operate in a room.
 const s = container.get('SquadManager').getOrCreateSquad('squadName'); s.setSpawn('W25S18'); s.setTarget(new RoomPosition(24, 24, 'W28S19')); s.addUnit('ranger');
+
+// Force abandonment of a weak room.
+delete Memory.strategy.expand.evacuatingRoom; (new ExpandProcess()).abandonWeakRooms();
+
+// Show which rooms are evacuating, along with their evaluation scores.
+_.each(Game.myRooms, r => {console.log(r.name, !!r.isEvacuating(), container.get('RoomStatus').getExpansionScore(r.name))});
