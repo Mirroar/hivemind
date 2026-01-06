@@ -134,27 +134,36 @@ export default class TradeProcess extends Process {
 
 	manageEnergyTradeOrders(resources: ResourceStates) {
 		if (this.availableCredits > 0 && hivemind.settings.get('allowBuyingEnergy')) {
-			// Buy energy for rooms under attack so we can hold out longer.
 			for (const room of Game.myRooms) {
+				// Buy energy for rooms under attack so we can hold out longer.
 				if (room.getEffectiveAvailableEnergy() < 30_000 && room.defense.getEnemyStrength() >= ENEMY_STRENGTH_NORMAL) {
 					if (room.factory && room.terminal.store.getUsedCapacity(RESOURCE_ENERGY) > 500) {
+						// @todo We might still want to buy energy if there's no batteries.
 						this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
 					}
 					else {
 						this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
 					}
+
+					continue;
 				}
 
+				// Special handling for bad apple rooms since they're energy hungry.
 				if (isBadApplePlayerShard && badAppleRooms.includes(room.name)) {
 					if (room.getEffectiveAvailableEnergy() < 200_000) {
-						this.tryBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
+						this.tryBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true, 1.5);
 					}
 					if (room.getStoredEnergy() < 50_000) {
-						this.tryBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
+						if (room.factory && room.getEffectiveAvailableEnergy() < 100_000) {
+							this.instaBuyResources(RESOURCE_BATTERY, {[room.name]: resources.rooms[room.name]}, true);
+						}
+						this.tryBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true, 3);
 					}
 					if (room.getStoredEnergy() < 20_000) {
 						this.instaBuyResources(RESOURCE_ENERGY, {[room.name]: resources.rooms[room.name]}, true);
 					}
+
+					continue;
 				}
 			}
 
@@ -163,8 +172,9 @@ export default class TradeProcess extends Process {
 				if (!roomState.canTrade) return;
 				if (roomState.isEvacuating) return;
 				if ((roomState.totalResources[RESOURCE_ENERGY] || 0) > STORAGE_CAPACITY / 10) return;
+				if (isBadApplePlayerShard && badAppleRooms.includes(roomName)) return;
 
-				// @todo Force creating a buy order for every affected room.
+				// Force creating a buy order for every affected room.
 				const singleRoomState = {
 					[roomName]: roomState,
 				};
@@ -459,7 +469,7 @@ export default class TradeProcess extends Process {
 	 * @param {boolean} ignoreOtherRooms
 	 *   If set, only check agains orders from rooms given by `rooms` parameter.
 	 */
-	tryBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, ignoreOtherRooms?: boolean) {
+	tryBuyResources(resourceType: TradeResource, rooms?: Record<string, RoomResourceState>, ignoreOtherRooms?: boolean, priceFactor?: number) {
 		if (!hivemind.settings.get('enableCreatingTradeOrders')) return;
 
 		const isBuyingResourceInOtherRooms = _.some(Game.market.orders, order => {
@@ -500,9 +510,15 @@ export default class TradeProcess extends Process {
 		}
 
 		hivemind.log('trade', roomName).debug('Could offer to buy', resourceType, 'for', offerPrice, '- we want to spend at most', maxPrice);
-		if (offerPrice > maxPrice) return;
+		if (offerPrice > maxPrice * (priceFactor ?? 1)) return;
 
 		if (offerPrice < minTradeValue) offerPrice = minTradeValue;
+
+		if (priceFactor) {
+			// If we're forced to use a price factor, apply it now.
+			// This is useful for emergency buys, where we want to pay more than usual.
+			offerPrice = Math.min(offerPrice * priceFactor, maxPrice * priceFactor);
+		}
 
 		const amount = this.getMaxOrderAmount(resourceType);
 

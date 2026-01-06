@@ -58,6 +58,8 @@ export class FrameApplier {
   readonly screen: BigScreen;
   readonly w: number;
   readonly h: number;
+  private xOffset: number = 0;
+  private yOffset: number = 0;
 
   /** Current state of what's shown (0/1); same shape as frames. */
   private curr: Uint8Array;
@@ -125,21 +127,26 @@ export class FrameApplier {
     let i = this.ptr;
 
     while (i < total && toggled < maxToggles) {
-      if (this.curr[i] !== tgt.data[i]) {
-        // map index → big-screen coords
-        const x = i % this.w;
-        const y = (i / this.w) | 0;
+      const screenX = i % this.w;
+      const screenY = (i / this.w) | 0;
 
-        const id = this.screen.getRampartIdAt(x, y);
+      // Adjust with offsets to center on screen
+      const frameX = screenX - this.xOffset;
+      const frameY = screenY - this.yOffset;
+
+      const targetValue = (frameX < 0 || frameY < 0 || frameX >= tgt.w || frameY >= tgt.h) ? 1 : tgt.get(frameX, frameY);
+
+      if (this.curr[i] !== targetValue) {
+        const id = this.screen.getRampartIdAt(screenX, screenY);
         if (id) {
           const obj = Game.getObjectById<StructureRampart>(id);
           // Desired: 1 => public; 0 => private
-          obj?.setPublic(tgt.data[i] === 1);
-          this.curr[i] = tgt.data[i]; // keep curr in sync even if obj missing
+          obj?.setPublic(targetValue === 1);
+          this.curr[i] = targetValue; // keep curr in sync even if obj missing
           toggled++;
         } else {
           // no rampart: just sync buffer so we don't keep trying
-          this.curr[i] = tgt.data[i];
+          this.curr[i] = targetValue;
         }
       }
       i++;
@@ -152,7 +159,9 @@ export class FrameApplier {
 
   private ensureDims(frame: PixelFrame) {
     if (frame.w !== this.w || frame.h !== this.h) {
-      throw new Error(`FrameApplier: dim mismatch (${frame.w}x${frame.h} vs screen ${this.w}x${this.h})`);
+      // Set offsets to center the frame on the screen
+      this.xOffset = Math.floor((this.w - frame.w) / 2);
+      this.yOffset = Math.floor((this.h - frame.h) / 2);
     }
   }
 }

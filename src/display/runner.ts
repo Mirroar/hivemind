@@ -3,7 +3,7 @@ import { FrameApplier } from "display/frame";
 import { SpiralTestPattern } from "display/spiral";
 import { TextSprite, Marquee } from "display/marquee";
 import { badAppleRooms, isBadApplePlayerShard } from "warmind.local/settings";
-import { calculateScreepRepairProgress } from "./rampartManagement";
+import { calculateScreepRepairProgress, shouldRoomRepairScreenRamparts } from "./rampartManagement";
 import hivemind from "hivemind";
 import cache from "utils/cache";
 import { decodeFrame, getDecodedVideoFrames } from "warmind.local/video";
@@ -47,7 +47,7 @@ function initializeBadAppleDisplay(): void {
         spiral = new SpiralTestPattern(w, h, {
             arms: 5,
             tightness: 0.55,
-            degPerTick: 0.5,    // slow, smooth rotation; try 1.0 if you like
+            degPerTick: 0.3,
             bandBase: 0.25,
             bandGain: 0.9,
             invert: false
@@ -90,24 +90,88 @@ export function loop() {
     // Keep rampart cache fresh (cheap when not visible)
     if ((Game.time & 0x1FF) === 0) bigScreen.refreshAll();
 
-    updateTimeKeeperDisplay(Game.time);
+    const tickToDisplay = isPlayingVideo && currentVideoFrameIndex > 0 ? currentVideoFrameIndex : Game.time;
+    updateTimeKeeperDisplay(tickToDisplay);
 
-    // If last frame finished, generate the next spiral frame and start applying
-    if (player.isDone()) {
-        const frame = spiral.tick();
-        marquee.tick();
-        marquee.overlay(frame);
-        player.startFrame(frame);
+    const needsRepairs = cache.inHeap('baScreenNeedsRepairs', 1000, () => {
+        for (const roomName of badAppleRooms) {
+            if (!(roomName in Game.rooms)) {
+                continue;
+            }
+
+            if (shouldRoomRepairScreenRamparts(Game.rooms[roomName])) {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
+    // Check if we should start playing video
+    if (!isPlayingVideo) {
+        if (Game.time % 100 >= 80 && Game.time % 100 <= 90) {
+            const progress = calculateScreepRepairProgress();
+            if (progress > 0.6) {
+                isPlayingVideo = true;
+                currentVideoFrameIndex = 0;
+                if (videoFrameData && videoFrameData.length > 0) {
+                    const frame = decodeFrame(videoFrameData[0]);
+                    player.startFrame(frame);
+                }
+            }
+        }
     }
 
     // Spend your toggle budget this tick
-    const TOGGLE_CPU = 80;                    // reserve some CPU for the rest of empire
+    const TOGGLE_CPU = 125;                    // reserve some CPU for the rest of empire
     const COST_PER_TOGGLE = 0.2;
     const BUDGET = Math.floor(TOGGLE_CPU / COST_PER_TOGGLE);
 
+    if (isPlayingVideo) {
+        if (currentVideoFrameIndex === 0) {
+            if (Game.time % 100 === 0) {
+                currentVideoFrameIndex++;
+            } else {
+                player.step(BUDGET);
+                return;
+            }
+        }
+
+        if (currentVideoFrameIndex > 0) {
+            if (videoFrameData && currentVideoFrameIndex < videoFrameData.length) {
+                const frame = decodeFrame(videoFrameData[currentVideoFrameIndex]);
+                player.startFrame(frame);
+                currentVideoFrameIndex++;
+            } else {
+                isPlayingVideo = false;
+                currentVideoFrameIndex = 0;
+            }
+        }
+    } else {
+        // If last frame finished, generate the next spiral frame and start applying
+        if (player.isDone()) {
+            const frame = spiral.tick();
+            marquee.tick();
+            marquee.overlay(frame);
+            player.startFrame(frame);
+        }
+    }
+
     player.step(BUDGET);
 
-    debugBadAppleVideoFrame();
+    // debugBadAppleVideoFrame();
+
+    // Visual debug of corners of big screen
+    for (const coordinate of [[0, 0], [bigScreen.width - 1, 0], [0, bigScreen.height - 1], [bigScreen.width - 1, bigScreen.height - 1]]) {
+        const x = coordinate[0];
+        const y = coordinate[1];
+        const rampartId = bigScreen.getRampartIdAt(x, y);
+        const rampart = Game.getObjectById(rampartId);
+        const visual = rampart?.room?.visual;
+        if (visual) {
+            visual.text(`(${x},${y})`, rampart.pos.x, rampart.pos.y, { color: 'red', align: 'center', opacity: 0.7 });
+        }
+    }
 }
 
 function updateTimeKeeperDisplay(tick: number): void {
@@ -171,5 +235,5 @@ function debugBadAppleVideoFrame(): void {
         }
     }
 
-    currentVideoFrameIndex = Game.time % videoFrameData.length;
+    // currentVideoFrameIndex = Game.time % videoFrameData.length;
 }

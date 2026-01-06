@@ -198,7 +198,7 @@ export default class InterShardProcess extends Process {
 
 			if (playBadApple && shardName === badApplePlayerShard) {
 				// Bad Apple shard needs more CPU to handle all the extra logic.
-				this._shardData[shardName].neededCpu += 20;
+				this._shardData[shardName].neededCpu += 30;
 			}
 
 			if (shardMemory.info.interShardExpansion && this.isAdjacentShardFuntional(shardName)) {
