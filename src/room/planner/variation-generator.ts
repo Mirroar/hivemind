@@ -79,7 +79,10 @@ export default class VariationGenerator {
 		const roomIntel = getRoomIntel(this.roomName);
 		const controllerPosition = roomIntel.getControllerPosition();
 
-		if (!controllerPosition) return null;
+		if (!controllerPosition) {
+			hivemind.log('rooms', this.roomName).error(`Could not determine controller position! ${controllerPosition}`);
+			return null;
+		}
 
 		const exitCenters = getExitCenters(this.roomName);
 
