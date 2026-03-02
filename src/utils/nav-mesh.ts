@@ -30,6 +30,8 @@ interface NavMemory {
 			exits: number[];
 			center: number;
 		}>;
+		/** True if this entry was generated without room visibility and may lack portal data. */
+		provisional?: boolean;
 	}>;
 }
 
@@ -87,10 +89,18 @@ export default class NavMesh {
 	generateForRoom(roomName: string) {
 		// Mesh doesn't need to be updated very often.
 		// @todo Allow forcing update for when we dismantle a structure.
+		// Provisional entries (generated without vision) are always refreshed when we have vision.
 		if (
 			this.memory.rooms[roomName]?.paths
+			&& !this.memory.rooms[roomName].provisional
 			&& !hivemind.hasIntervalPassed(10_000, this.memory.rooms[roomName].gen)
 		) return;
+
+		// No need to update provisional data, ever.
+		if (this.memory.rooms[roomName]?.provisional && !Game.rooms[roomName]) return;
+
+		// No need to update specific data with provisional data.
+		if (!Game.rooms[roomName] && !this.memory.rooms[roomName]?.provisional) return;
 
 		this.terrain = new Room.Terrain(roomName);
 		this.costMatrix = getCostMatrix(roomName, {ignoreMilitary: true}).clone();
@@ -132,6 +142,7 @@ export default class NavMesh {
 			exits: exitMem,
 			paths,
 			portals,
+			provisional: !Game.rooms[roomName],
 		};
 
 		if (regions.length > 1) {
@@ -369,14 +380,15 @@ export default class NavMesh {
 	}
 
 	getPortals(roomName: string) {
+		const room = Game.rooms[roomName];
+		if (!room) return undefined;
+
 		const portals: Record<string, {
 			targetRoom: string;
 			positions: RoomPosition[];
 			totalX: number;
 			totalY: number;
 		}> = {};
-
-		const room = Game.rooms[roomName];
 		for (const portal of room.structuresByType[STRUCTURE_PORTAL] || []) {
 			if ('shard' in portal.destination) continue;
 			if (this.isPortalBlocked(room, portal.pos)) continue;
@@ -448,7 +460,12 @@ export default class NavMesh {
 		const openListLookup: Record<string, boolean> = {};
 		const closedList: Record<string, boolean> = {};
 		if (!this.memory.rooms[startRoom]) {
-			// Trying to find a path outside of nav mesh. We can't really decide.
+			// Generate a provisional nav mesh entry so future calls can route through this room.
+			this.generateForRoom(startRoom);
+		}
+
+		if (!this.memory.rooms[startRoom]) {
+			// Still no entry after generation attempt — cannot find a path.
 			return {
 				incomplete: true,
 			};
@@ -487,10 +504,14 @@ export default class NavMesh {
 				continue;
 			}
 
+			if (!this.memory.rooms[nextRoom]) {
+				// Generate a provisional nav mesh entry so we can route through this room.
+				this.generateForRoom(nextRoom);
+			}
+
 			const roomMemory = this.memory.rooms[nextRoom];
 			if (!roomMemory) {
-				// @todo Fallback to basic exit info? Or generate nav mesh on the fly
-				// without structure info?
+				// Still no entry after generation attempt — treat room as impassable.
 				continue;
 			}
 

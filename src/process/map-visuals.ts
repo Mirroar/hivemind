@@ -178,8 +178,18 @@ export default class MapVisualsProcess extends Process {
 		if (!hivemind.settings.get('visualizeNavMesh')) return;
 		if (!Memory.nav) return;
 		_.each(Memory.nav.rooms, (navInfo, roomName) => {
+			// Provisional entries (generated without vision) are shown in a distinct
+			// style so it's clear they are best-guess data only.
 			let color = '#ffffff';
-			if (hivemind.segmentMemory.isReady()) {
+			let opacity = 1;
+			let lineStyle: 'dotted' | 'dashed' | 'solid' = 'dotted';
+
+			if (navInfo.provisional) {
+				color = '#4080c0';
+				opacity = 0.6;
+				lineStyle = 'dashed';
+			}
+			else if (hivemind.segmentMemory.isReady()) {
 				const roomIntel = getRoomIntel(roomName);
 				if (roomIntel.isOwned()) {
 					color = '#ff0000';
@@ -194,9 +204,9 @@ export default class MapVisualsProcess extends Process {
 
 			const style = {
 				color,
-				opacity: 1,
+				opacity,
 				width: 2,
-				lineStyle: 'dotted' as const,
+				lineStyle,
 			};
 
 			for (const portal of navInfo.portals || []) {
