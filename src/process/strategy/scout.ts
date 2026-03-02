@@ -247,6 +247,14 @@ export default class ScoutProcess extends Process {
 			return result;
 		}
 
+		// Season 8: The further north a room, the better.
+		const roomNameParts = /([WE])(\d+)([NS])(\d+)/.exec(roomName);
+		if (roomNameParts) {
+			const verticalPos = parseInt(roomNameParts[4]);
+			// The further north a room, the better.
+			result.addScore(verticalPos * 0.3, 'northBonus');
+		}
+
 		// More sources is better.
 		result.addScore((roomIntel.getSourcePositions().length * 2) - 2, 'numSources');
 
@@ -539,8 +547,6 @@ export default class ScoutProcess extends Process {
 
 			this.observers.push(room.observer);
 		}
-
-		hivemind.log('strategy').debug('Found Observers:', this.observers);
 	}
 
 	/**

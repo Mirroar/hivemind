@@ -508,7 +508,8 @@ export default class RoomIntel {
 	}
 
 	isAvailableExitDirection(roomName: string, otherRoomName: string): boolean {
-		return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
+		//return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
+		return true;
 	}
 
 	/**

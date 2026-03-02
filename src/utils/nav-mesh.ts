@@ -195,7 +195,8 @@ export default class NavMesh {
 		const otherRoomName = Game.map.describeExits(roomName)[dir];
 		if (!otherRoomName) return false;
 
-		return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
+		//return Game.map.getRoomStatus(otherRoomName).status === Game.map.getRoomStatus(roomName).status;
+		return true;
 	}
 
 	getRegions(exits: ExitInfo[]): RegionInfo[] {
