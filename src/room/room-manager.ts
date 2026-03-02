@@ -360,6 +360,9 @@ export default class RoomManager {
 			this.manageExtensions();
 		}
 
+		// Always make sure the first spawn is created.
+		this.buildPlannedStructures('spawn.0', STRUCTURE_SPAWN);
+
 		if (!this.canCreateConstructionSites()) return;
 
 		this.manageTowers();
@@ -372,6 +375,9 @@ export default class RoomManager {
 
 			// Build road to sources asap to make getting energy easier.
 			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
+
+			// Build source containers for more efficient harvesting.
+			this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
 
 			// Build road to controller for easier upgrading.
 			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);

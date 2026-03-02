@@ -24,6 +24,7 @@ declare global {
 		sourceRoom?: string;
 		sourceTarget?: any;
 		squadUnitType?: string;
+		squadCivilianSpecialization?: CivilianSpecialization;
 		target?: any;
 		targetRoom?: string;
 		upgrading?: boolean;

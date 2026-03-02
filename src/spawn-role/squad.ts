@@ -25,6 +25,7 @@ declare global {
 interface SquadSpawnOption extends SpawnOption {
 	unitType: SquadUnitType;
 	squad: string;
+	civilianSpecialization?: CivilianSpecialization;
 }
 
 export default class SquadSpawnRole extends SpawnRole {
@@ -54,12 +55,17 @@ export default class SquadSpawnRole extends SpawnRole {
 				const spawnUnitType = this.needsSpawning(room, squad);
 				if (!spawnUnitType) return;
 
+				const civilianSpecialization = spawnUnitType === 'builder'
+					? this.getCivilianSpecializationToSpawn(squad)
+					: null;
+
 				const roomHasReserves = availableEnergy > 10_000;
 				options.push({
 					priority: roomHasReserves ? 4 : 2,
 					weight: 1.1,
 					unitType: spawnUnitType,
 					squad: squad.getName(),
+					civilianSpecialization,
 				});
 			});
 
@@ -144,11 +150,67 @@ export default class SquadSpawnRole extends SpawnRole {
 			.build();
 	}
 
-	getBuilderCreepBody(room: Room) {
+	getBuilderCreepBody(room: Room, option: SquadSpawnOption) {
+		const energyLimit = Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable));
+		if (option.civilianSpecialization === 'harvester') {
+			return (new BodyBuilder())
+				.setWeights({[WORK]: 4, [CARRY]: 1})
+				.setPartLimit(WORK, 10)
+				.setCarryContentLevel(0)
+				.setEnergyLimit(energyLimit)
+				.build();
+		}
+
+		if (option.civilianSpecialization === 'transporter') {
+			return (new BodyBuilder())
+				.setWeights({[CARRY]: 1})
+				.setPartLimit(CARRY, 10)
+				.setEnergyLimit(energyLimit)
+				.build();
+		}
+
+		if (option.civilianSpecialization === 'builder') {
+			return (new BodyBuilder())
+				.setWeights({[CARRY]: 4, [WORK]: 1})
+				.setPartLimit(WORK, 5)
+				.setCarryContentLevel(0.3)
+				.setEnergyLimit(energyLimit)
+				.build();
+		}
+
+		// Legacy: no specialization set - use original generalist body.
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 3, [WORK]: 2})
-			.setEnergyLimit(Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable)))
+			.setEnergyLimit(energyLimit)
 			.build();
+	}
+
+	/**
+	 * Determines which civilian specialization still needs to be spawned for
+	 * a given squad, based on the squad's civilianCounts and live creep
+	 * specializations.
+	 *
+	 * @param {Squad} squad
+	 *   The squad to check.
+	 *
+	 * @return {CivilianSpecialization | null}
+	 *   The next needed specialization, or null if all slots are filled.
+	 */
+	getCivilianSpecializationToSpawn(squad: Squad): CivilianSpecialization | null {
+		const spawnedCounts: Partial<Record<CivilianSpecialization, number>> = {};
+		const builderCreeps = Game.creepsBySquad[squad.getName()]?.['builder'] ?? {};
+		for (const creep of Object.values(builderCreeps)) {
+			const spec = creep.memory.squadCivilianSpecialization;
+			if (spec) spawnedCounts[spec] = (spawnedCounts[spec] ?? 0) + 1;
+		}
+
+		for (const type of ['harvester', 'builder', 'transporter'] as CivilianSpecialization[]) {
+			if ((squad.getCivilianCount(type) ?? 0) > (spawnedCounts[type] ?? 0)) {
+				return type;
+			}
+		}
+
+		return null;
 	}
 
 	getAttackerCreepBody(room: Room) {
@@ -204,6 +266,7 @@ export default class SquadSpawnRole extends SpawnRole {
 			role: 'brawler',
 			squadName: option.squad,
 			squadUnitType: option.unitType,
+			...(option.civilianSpecialization ? {squadCivilianSpecialization: option.civilianSpecialization} : {}),
 		};
 	}
 

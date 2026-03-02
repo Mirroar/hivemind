@@ -8,8 +8,11 @@ declare global {
 		}
 	}
 
+	type CivilianSpecialization = 'harvester' | 'transporter' | 'builder';
+
 	interface SquadMemory {
 		composition: Partial<Record<SquadUnitType, number>>;
+		civilianCounts?: Partial<Record<CivilianSpecialization, number>>;
 		spawnRoom?: string;
 		targetPos?: string;
 	}
@@ -100,15 +103,33 @@ export default class Squad implements SquadInterface {
 		return this.memory.composition[unitType] || 0;
 	}
 
-    getComposition(): Partial<Record<SquadUnitType, number>> {
-        return this.memory.composition;
-    }
+	getComposition(): Partial<Record<SquadUnitType, number>> {
+		return this.memory.composition;
+	}
+
+	/**
+	 * Sets the number of requested civilian creeps of a given specialization.
+	 *
+	 * @param {CivilianSpecialization} type
+	 *   The specialization to set the count for.
+	 * @param {number} count
+	 *   Number of civilians of this specialization that should be in this squad.
+	 */
+	setCivilianCount(type: CivilianSpecialization, count: number) {
+		if (!this.memory.civilianCounts) this.memory.civilianCounts = {};
+		this.memory.civilianCounts[type] = count;
+	}
+
+	getCivilianCount(type: CivilianSpecialization): number {
+		return this.memory.civilianCounts?.[type] ?? 0;
+	}
 
 	/**
 	 * Clears all registered units for this squad.
 	 */
 	clearUnits() {
 		this.memory.composition = {};
+		delete this.memory.civilianCounts;
 	}
 
 	/**

@@ -1,6 +1,6 @@
 /* global PathFinder RoomPosition StructureController ATTACK SYSTEM_USERNAME
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
-LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
+LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS FIND_SOURCES CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
@@ -114,7 +114,7 @@ export default class BrawlerRole extends Role {
 	initBrawlerState(creep: BrawlerCreep) {
 		creep.memory.initialized = true;
 
-		if (creep.memory.squadUnitType === 'builder') {
+		if (creep.memory.squadUnitType === 'builder' && !creep.memory.squadCivilianSpecialization) {
 			creep.memory.fillWithEnergy = true;
 		}
 
@@ -610,13 +610,47 @@ export default class BrawlerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	militaryRoomReached(creep: BrawlerCreep) {
-		if (creep.memory.squadUnitType === 'builder' && creep.room.controller) {
-			// Rebrand as remote builder to work in this room from now on.
-			const newCreep = creep as unknown as RemoteBuilderCreep;
-			newCreep.memory.role = 'builder.remote';
-			newCreep.memory.target = encodePosition(newCreep.pos);
+		if (creep.memory.squadUnitType !== 'builder' || !creep.room.controller) return;
+
+		const specialization = creep.memory.squadCivilianSpecialization;
+
+		if (specialization === 'harvester') {
+			// Assign to the source with the fewest harvesters already working it.
+			const roomCreeps = creep.room.creepsByRole.harvester || {};
+			const assignedCounts: Partial<Record<string, number>> = {};
+			for (const creepName in roomCreeps) {
+				const roomCreep = roomCreeps[creepName];
+				const src = (roomCreep.memory as HarvesterCreepMemory).fixedSource;
+				if (src) assignedCounts[src] = (assignedCounts[src] ?? 0) + 1;
+			}
+
+			const bestSource = _.min(creep.room.find(FIND_SOURCES), s => assignedCounts[s.id] ?? 0);
+			const newCreep = creep as unknown as HarvesterCreep;
+			newCreep.memory.role = 'harvester';
 			newCreep.memory.singleRoom = newCreep.pos.roomName;
+			if (bestSource) newCreep.memory.fixedSource = bestSource.id;
+			return;
 		}
+
+		if (specialization === 'transporter') {
+			const newCreep = creep as unknown as TransporterCreep;
+			newCreep.memory.role = 'transporter';
+			newCreep.memory.singleRoom = newCreep.pos.roomName;
+			return;
+		}
+
+		if (specialization === 'builder') {
+			const newCreep = creep as unknown as BuilderCreep;
+			newCreep.memory.role = 'builder';
+			newCreep.memory.singleRoom = newCreep.pos.roomName;
+			return;
+		}
+
+		// Legacy: no specialization — rebrand as remote builder.
+		const newCreep = creep as unknown as RemoteBuilderCreep;
+		newCreep.memory.role = 'builder.remote';
+		newCreep.memory.target = encodePosition(newCreep.pos);
+		newCreep.memory.singleRoom = newCreep.pos.roomName;
 	}
 
 	/**

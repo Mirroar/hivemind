@@ -244,7 +244,11 @@ export default class ExpandProcess extends Process {
 		squad.clearUnits();
 		squad.setUnitCount('brawler', 1);
 		squad.setUnitCount('singleClaim', 1);
-		squad.setUnitCount('builder', 2);
+		// Send 2 harvesters, 2 transporters, and 2 builders as specialized civilians.
+		squad.setUnitCount('builder', 6);
+		squad.setCivilianCount('harvester', 2);
+		squad.setCivilianCount('transporter', 2);
+		squad.setCivilianCount('builder', 2);
 		this.memory.started = Game.time;
 
 		hivemind.log('strategy').notify('🏴 Started expanding to ' + roomInfo.roomName);
@@ -398,7 +402,7 @@ export default class ExpandProcess extends Process {
 			supportSquad.setSpawn(room.name);
 			supportSquad.setTarget(new RoomPosition(25, 25, info.roomName));
 			supportSquad.clearUnits();
-			supportSquad.setUnitCount('builder', 1);
+			supportSquad.setUnitCount('brawler', 1);
 			// Sometimes add a claim creep if main squad has problems claiming the room.
 			if (Math.random() < 0.05 && !this.memory.claimed) {
 				supportSquad.setUnitCount('singleClaim', 1);

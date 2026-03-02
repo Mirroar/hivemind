@@ -19,6 +19,8 @@ export interface Squad {
 	setUnitCount(unitType: SquadUnitType, count: number): void;
 	getUnitCount(unitType: SquadUnitType): number;
 	getComposition(): Partial<Record<SquadUnitType, number>>;
+	setCivilianCount(type: CivilianSpecialization, count: number): void;
+	getCivilianCount(type: CivilianSpecialization): number;
 	clearUnits(): void;
 	disband(): void;
 	getOrders(): Array<{priority: number, weight: number, target: string}>;

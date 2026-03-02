@@ -48,6 +48,7 @@ export default class ResourcesProcess extends Process {
 			else if (manager.roomNeedsTerminalSpace(room) && terminal.store[best.resourceType] && terminal.store[best.resourceType] > 5000) {
 				let amount = Math.min(terminal.store[best.resourceType], 50_000);
 				if (best.resourceType === RESOURCE_ENERGY) {
+					// @todo Determine when it's better to send batteries instead of energy.
 					amount -= Game.market.calcTransactionCost(amount, best.source, best.target);
 				}
 				else {
