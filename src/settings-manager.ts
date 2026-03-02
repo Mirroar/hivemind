@@ -2,7 +2,7 @@ import defaultSettings from 'settings.default';
 import localSettings from 'settings.local';
 
 declare global {
-	type SettingsObject = {
+	interface SettingsObject {
 		allowBuyingEnergy: boolean;
 		allowBuyingPixels: boolean;
 		allowSellingOps: boolean;
@@ -76,7 +76,7 @@ declare global {
 		visualizeRemoteMines: boolean;
 		visualizeRoomPlan: boolean;
 		visualizeSpawnQueue: boolean;
-	};
+	}
 
 	interface KernelMemory {
 		settings?: Partial<SettingsObject>;
