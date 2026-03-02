@@ -5832,3 +5832,9 @@ interface Tombstone extends RoomObject {
 interface TombstoneConstructor extends _Constructor<Tombstone>, _ConstructorById<Tombstone> {}
 
 declare const Tombstone: TombstoneConstructor;
+
+interface Console {
+    logUnsafe(...args: any[]): void;
+}
+
+declare const console: Console;

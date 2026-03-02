@@ -155,7 +155,7 @@ export default class Logger {
 
 		const prefix = '<font color="#606060">' + this.prefix;
 
-		console.log(prefix, ...args, '</font>');
+		console.logUnsafe(prefix, ...args, '</font>');
 	}
 
 	/**
@@ -166,7 +166,7 @@ export default class Logger {
 
 		const prefix = this.prefix;
 
-		console.log(prefix, ...args);
+		console.logUnsafe(prefix, ...args);
 	}
 
 	/**
@@ -175,7 +175,7 @@ export default class Logger {
 	error(...args) {
 		const prefix = '<font color="#ff8080">' + this.prefix;
 
-		console.log(prefix, ...args, '</font>');
+		console.logUnsafe(prefix, ...args, '</font>');
 	}
 
 	/**
@@ -186,7 +186,7 @@ export default class Logger {
 
 		const prefix = this.prefix;
 
-		console.log(prefix, ...args);
+		console.logUnsafe(prefix, ...args);
 		Game.notify(prefix + ' ' + args.join(' '));
 	}
 }
