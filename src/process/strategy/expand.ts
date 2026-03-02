@@ -403,6 +403,12 @@ export default class ExpandProcess extends Process {
 			supportSquad.setTarget(new RoomPosition(25, 25, info.roomName));
 			supportSquad.clearUnits();
 			supportSquad.setUnitCount('brawler', 1);
+			// Add a remote harvester and relay hauler to extract energy from rooms
+			// neighboring the expansion target. The relay hauler brings energy back
+			// to this support room, boosting its spawn capacity.
+			supportSquad.setUnitCount('builder', 2);
+			supportSquad.setCivilianCount('remoteHarvester', 1);
+			supportSquad.setCivilianCount('relayHauler', 1);
 			// Sometimes add a claim creep if main squad has problems claiming the room.
 			if (Math.random() < 0.05 && !this.memory.claimed) {
 				supportSquad.setUnitCount('singleClaim', 1);

@@ -116,7 +116,13 @@ export default class RemoteMiningProcess extends Process {
 		// Stop operations for rooms that are no longer selected.
 		_.each(Game.operationsByType.mining, op => {
 			if (!memory.remoteHarvesting.rooms.includes(op.getRoom())) {
-				op.terminate();
+				// Preserve operations that have active harvesters assigned to them
+				// (e.g. expansion-support remote harvesters that created ad-hoc operations).
+				const hasActiveHarvesters = _.some(
+					Game.creepsByRole['harvester.remote'] ?? {},
+					c => c.memory.operation === op.name,
+				);
+				if (!hasActiveHarvesters) op.terminate();
 			}
 		});
 	}

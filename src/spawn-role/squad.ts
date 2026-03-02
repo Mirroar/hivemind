@@ -178,6 +178,26 @@ export default class SquadSpawnRole extends SpawnRole {
 				.build();
 		}
 
+		if (option.civilianSpecialization === 'remoteHarvester') {
+			// Plains movement: will travel to unroaded neighboring rooms.
+			// Work limit matches the 6-WORK saturation threshold.
+			return (new BodyBuilder())
+				.setWeights({[WORK]: 4, [CARRY]: 1})
+				.setPartLimit(WORK, 6)
+				.setCarryContentLevel(0)
+				.setEnergyLimit(energyLimit)
+				.build();
+		}
+
+		if (option.civilianSpecialization === 'relayHauler') {
+			// Plains movement: path to the source and back has no roads yet.
+			return (new BodyBuilder())
+				.setWeights({[CARRY]: 1})
+				.setPartLimit(CARRY, 10)
+				.setEnergyLimit(energyLimit)
+				.build();
+		}
+
 		// Legacy: no specialization set - use original generalist body.
 		return (new BodyBuilder())
 			.setWeights({[CARRY]: 3, [WORK]: 2})
@@ -204,7 +224,7 @@ export default class SquadSpawnRole extends SpawnRole {
 			if (spec) spawnedCounts[spec] = (spawnedCounts[spec] ?? 0) + 1;
 		}
 
-		for (const type of ['harvester', 'builder', 'transporter'] as CivilianSpecialization[]) {
+		for (const type of ['harvester', 'transporter', 'builder', 'remoteHarvester', 'relayHauler'] as CivilianSpecialization[]) {
 			if ((squad.getCivilianCount(type) ?? 0) > (spawnedCounts[type] ?? 0)) {
 				return type;
 			}

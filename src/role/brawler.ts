@@ -1,18 +1,20 @@
 /* global PathFinder RoomPosition StructureController ATTACK SYSTEM_USERNAME
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
-LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS FIND_SOURCES CREEP_LIFE_TIME CLAIM
+LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS FIND_SOURCES CREEP_LIFE_TIME CLAIM WORK
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import PathManager from 'empire/remote-path-manager';
+import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getUsername} from 'utils/account';
+import {getRoomIntel} from 'room-intel';
 import SquadManager from 'manager.squad';
 
 interface ControllerTargetOption extends WeightedOption {
@@ -646,11 +648,75 @@ export default class BrawlerRole extends Role {
 			return;
 		}
 
+		if (specialization === 'remoteHarvester') {
+			// Find a source in a neighboring room that is not yet saturated.
+			const sourcePos = this.findSuitableNeighborSource(creep.pos.roomName);
+			if (!sourcePos) return;
+
+			// Ensure a mining operation exists for this room so the harvester
+			// and relay haulers can use the standard remote harvesting infrastructure.
+			const operationName = 'mine:' + sourcePos.roomName;
+			if (!Game.operations[operationName]) {
+				const op = new RemoteMiningOperation(operationName);
+				op.setRoom(sourcePos.roomName);
+			}
+
+			const newCreep = creep as unknown as RemoteHarvesterCreep;
+			newCreep.memory.role = 'harvester.remote';
+			newCreep.memory.source = encodePosition(sourcePos);
+			newCreep.memory.operation = operationName;
+			return;
+		}
+
+		if (specialization === 'relayHauler') {
+			// Use the squad's spawn room as the source room so the hauler delivers
+			// energy back to the supporting home room. The relay path manager will
+			// automatically route the hauler to pick up from the new operation's
+			// source once a path to the supporting room's storage is established.
+			const spawnRoom = Memory.squads[creep.memory.squadName]?.spawnRoom;
+			const newCreep = creep as unknown as RelayHaulerCreep;
+			newCreep.memory.role = 'hauler.relay';
+			newCreep.memory.sourceRoom = spawnRoom ?? creep.pos.roomName;
+			newCreep.memory.delivering = true;
+			return;
+		}
+
 		// Legacy: no specialization — rebrand as remote builder.
 		const newCreep = creep as unknown as RemoteBuilderCreep;
 		newCreep.memory.role = 'builder.remote';
 		newCreep.memory.target = encodePosition(newCreep.pos);
 		newCreep.memory.singleRoom = newCreep.pos.roomName;
+	}
+
+	/**
+	 * Finds a source in a room neighboring the given room that has fewer than
+	 * 6 WORK parts of remote harvesters currently assigned to it.
+	 *
+	 * @param {string} expansionRoomName
+	 *   The expansion target room to search around.
+	 *
+	 * @return {RoomPosition | null}
+	 *   The position of a suitable source, or null if none found.
+	 */
+	findSuitableNeighborSource(expansionRoomName: string): RoomPosition | null {
+		const exits = Game.map.describeExits(expansionRoomName);
+		for (const neighborRoomName of Object.values(exits)) {
+			const intel = getRoomIntel(neighborRoomName);
+			if (intel.isOwned()) continue;
+			if (intel.isSourceKeeperRoom()) continue;
+
+			for (const sourceInfo of intel.getSourcePositions()) {
+				const sourcePos = new RoomPosition(sourceInfo.x, sourceInfo.y, neighborRoomName);
+				const encoded = encodePosition(sourcePos);
+				const assignedWork = _.sum(
+					_.filter(Game.creepsByRole['harvester.remote'] as Record<string, RemoteHarvesterCreep>, c => c.memory.source === encoded),
+					(c: Creep) => c.getActiveBodyparts(WORK),
+				);
+				if (assignedWork < 6) return sourcePos;
+			}
+		}
+
+		return null;
 	}
 
 	/**

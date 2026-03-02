@@ -8,7 +8,7 @@ declare global {
 		}
 	}
 
-	type CivilianSpecialization = 'harvester' | 'transporter' | 'builder';
+	type CivilianSpecialization = 'harvester' | 'transporter' | 'builder' | 'remoteHarvester' | 'relayHauler';
 
 	interface SquadMemory {
 		composition: Partial<Record<SquadUnitType, number>>;

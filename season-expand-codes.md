@@ -37,3 +37,10 @@ s.setCivilianCount('transporter', 2);
 s.setCivilianCount('builder', 2);
 s.setSpawn('W2N23');
 s.setTarget(new RoomPosition(34, 27, 'E1N32'));
+
+## actual jump squad, to spawn fresh workers with full TTL
+r = {roomName: 'E1N32', spawnRoom: 'W2N23'}; (new ExpandProcess()).startExpansion(r);
+
+const s = container.get('SquadManager').getOrCreateSquad('prepareJump');
+s.clearUnits();
+s.setSpawn(null);
