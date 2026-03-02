@@ -84,7 +84,7 @@ export default class HarvesterRole extends Role {
 	}
 
 	isStationaryHarvester(creep: HarvesterCreep) {
-		return (creep.memory.fixedSource || creep.memory.fixedMineralSource) && _.size(creep.room.creepsByRole.transporter) > 0;
+		return (creep.memory.fixedSource || creep.memory.fixedMineralSource) && (_.size(creep.room.creepsByRole.transporter) > 0 || (creep.room.structuresByType[STRUCTURE_SPAWN]?.length || 0) == 0);
 	}
 
 	/**
