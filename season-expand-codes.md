@@ -44,3 +44,14 @@ r = {roomName: 'E1N32', spawnRoom: 'W2N23'}; (new ExpandProcess()).startExpansio
 const s = container.get('SquadManager').getOrCreateSquad('prepareJump');
 s.clearUnits();
 s.setSpawn(null);
+
+# Third jump to E4N37
+
+## Go with normal expand squad right away, supplement later
+r = {roomName: 'E4N37', spawnRoom: 'E1N32'}; (new ExpandProcess()).startExpansion(r);
+const s = container.get('SquadManager').getOrCreateSquad('prepareJump');
+s.setUnitCount('builder', 4);
+s.setCivilianCount('remoteHarvester', 2);
+s.setCivilianCount('relayHauler', 2);
+s.setSpawn('E1N32');
+s.setTarget(new RoomPosition(34, 27, 'E4N37'));

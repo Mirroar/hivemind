@@ -54,6 +54,19 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				continue;
 			}
 
+			// Builders that are upgrading (or are refilling in order to upgrade) should
+			// strongly prefer the controller container, since it is right next to
+			// their work target.
+			const builderMemory = creep.memory as BuilderCreepMemory;
+			if (
+				container.id === this.room.memory.controllerContainer
+				&& creep.memory.role === 'builder'
+				&& (builderMemory.upgrading || builderMemory.upgradeIntent)
+			) {
+				option.priority = 5;
+				option.weight += 10;
+			}
+
 			for (const source of container.room.sources) {
 				if (source.getNearbyContainer()?.id !== container.id) continue;
 

@@ -41,6 +41,9 @@ declare global {
 	interface BuilderCreepMemory extends CreepMemory {
 		role: 'builder';
 		repairing?: boolean;
+		upgrading?: boolean;
+		/** Set when a builder ran out of energy while upgrading, so it can prefer the controller container while refilling. */
+		upgradeIntent?: boolean;
 		order?: RepairOrder | BuildOrder;
 	}
 
@@ -162,6 +165,16 @@ export default class BuilderRole extends Role {
 	 *   Whether to start building / repairing or not.
 	 */
 	setBuilderState(creep: BuilderCreep, repairing: boolean) {
+		if (repairing) {
+			// Transitioning back to active work – clear all upgrade-related flags.
+			delete creep.memory.upgradeIntent;
+		}
+		else if (creep.memory.upgrading) {
+			// Builder ran out of energy while upgrading; remember the intent so the
+			// dispatcher can prefer the controller container while refilling.
+			creep.memory.upgradeIntent = true;
+		}
+
 		creep.memory.repairing = repairing;
 		delete creep.memory.upgrading;
 		delete creep.memory.sourceTarget;
