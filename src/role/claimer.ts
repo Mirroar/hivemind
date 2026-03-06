@@ -125,8 +125,9 @@ export default class ClaimerRole extends Role {
 
 			creep.reserveController(target);
 
-			if (target.sign?.username) {
-				creep.signController(target, '');
+			const signManager = container.get('RoomSignManager');
+			if (signManager.shouldSign(creep.pos.roomName)) {
+				creep.signController(target, signManager.getExpectedSign(creep.pos.roomName) ?? '');
 			}
 		});
 	}
