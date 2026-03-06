@@ -244,10 +244,10 @@ export default class ExpandProcess extends Process {
 		squad.clearUnits();
 		squad.setUnitCount('brawler', 1);
 		squad.setUnitCount('singleClaim', 1);
-		// Send 2 harvesters, 2 transporters, and 2 builders as specialized civilians.
-		squad.setUnitCount('builder', 6);
+		// Send 2 harvesters, 1 transporter, and 2 builders as specialized civilians.
+		squad.setUnitCount('builder', 5);
 		squad.setCivilianCount('harvester', 2);
-		squad.setCivilianCount('transporter', 2);
+		squad.setCivilianCount('transporter', 1);
 		squad.setCivilianCount('builder', 2);
 		this.memory.started = Game.time;
 
@@ -289,6 +289,16 @@ export default class ExpandProcess extends Process {
 					this.memory.claimed = Game.time;
 					squad.setUnitCount('singleClaim', 0);
 					squad.setUnitCount('claimer', 0);
+				}
+
+				if (room.controller.level >= 3 && (room.structuresByType[STRUCTURE_EXTENSION] || []).length >= 10) {
+					// Room has enough extensions to generate its own energy; switch to
+					// remote harvesters and relay haulers for external energy import.
+					squad.setUnitCount('builder', 6);
+					squad.setCivilianCount('harvester', 0);
+					squad.setCivilianCount('transporter', 0);
+					squad.setCivilianCount('remoteHarvester', 2);
+					squad.setCivilianCount('relayHauler', 2);
 				}
 
 				if (room.controller.level > 3 && room.storage) {
@@ -570,7 +580,7 @@ export default class ExpandProcess extends Process {
 		let bestRoom = null;
 		let bestLength = 0;
 		for (const room of Game.myRooms) {
-			if (room.controller.level < 5) continue;
+			if (room.controller.level < 4) continue;
 			if (room.name === targetRoom) continue;
 			if ((room.structuresByType[STRUCTURE_SPAWN] || []).length === 0) continue;
 

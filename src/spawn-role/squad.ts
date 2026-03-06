@@ -1,6 +1,7 @@
-/* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK */
+/* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK MAX_CREEP_SIZE CREEP_SPAWN_TIME CREEP_LIFE_TIME */
 
 import BodyBuilder, {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
+import NavMesh from 'utils/nav-mesh';
 import container from 'utils/container';
 import SpawnRole from 'spawn-role/spawn-role';
 import SquadManager, {Squad} from 'manager.squad';
@@ -56,7 +57,7 @@ export default class SquadSpawnRole extends SpawnRole {
 				if (!spawnUnitType) return;
 
 				const civilianSpecialization = spawnUnitType === 'builder'
-					? this.getCivilianSpecializationToSpawn(squad)
+					? this.getCivilianSpecializationToSpawn(squad, room)
 					: null;
 
 				const roomHasReserves = availableEnergy > 10_000;
@@ -74,6 +75,41 @@ export default class SquadSpawnRole extends SpawnRole {
 	}
 
 	/**
+	 * Estimates the travel time in ticks from the given spawn room to the
+	 * squad's target position. Falls back to 200 ticks when the path cannot
+	 * be determined. NavMesh.estimateTravelTime already caches results in heap
+	 * for 1000 ticks, so this is cheap to call repeatedly.
+	 */
+	getTravelTimeForSquad(squad: Squad, spawnRoom: Room): number {
+		const target = squad.getTarget();
+		if (!target) return 200;
+		if (!spawnRoom.roomPlanner) return 200;
+
+		const spawnPos = spawnRoom.roomPlanner.getRoomCenter();
+		if (!spawnPos) return 200;
+
+		const navMesh = new NavMesh();
+		return navMesh.estimateTravelTime(spawnPos, target) ?? 200;
+	}
+
+	/**
+	 * Returns creeps of the given unit type belonging to a squad that still have
+	 * enough TTL to be counted as alive for spawning purposes. Creeps that are
+	 * still spawning always count. The minimum TTL threshold is:
+	 *   travelTime + max spawn time + 100 tick safety margin.
+	 */
+	getActiveSquadCreeps(squad: Squad, unitType: SquadUnitType, spawnRoom: Room): Creep[] {
+		const creepsOfType = Game.creepsBySquad[squad.getName()]?.[unitType] ?? {};
+		const travelTime = this.getTravelTimeForSquad(squad, spawnRoom);
+		const minTtl = travelTime + (MAX_CREEP_SIZE * CREEP_SPAWN_TIME) + 100;
+
+		return Object.values(creepsOfType).filter(creep => {
+			if (creep.spawning) return true;
+			return (creep.ticksToLive ?? CREEP_LIFE_TIME) > minTtl;
+		});
+	}
+
+	/**
 	 * Decides whether a squad needs additional units spawned.
 	 *
 	 * @param {Squad} squad
@@ -87,7 +123,8 @@ export default class SquadSpawnRole extends SpawnRole {
 		for (const unitType in squad.getComposition()) {
 			if (!availableUnitTypes.includes(unitType as SquadUnitType)) continue;
 
-			if (squad.getUnitCount(unitType as SquadUnitType) > _.size(Game.creepsBySquad[squad.getName()]?.[unitType as SquadUnitType])) {
+			const activeCount = this.getActiveSquadCreeps(squad, unitType as SquadUnitType, room).length;
+			if (squad.getUnitCount(unitType as SquadUnitType) > activeCount) {
 				neededUnits.push(unitType as SquadUnitType);
 			}
 		}
@@ -208,18 +245,21 @@ export default class SquadSpawnRole extends SpawnRole {
 	/**
 	 * Determines which civilian specialization still needs to be spawned for
 	 * a given squad, based on the squad's civilianCounts and live creep
-	 * specializations.
+	 * specializations. Only builder creeps with sufficient TTL are counted,
+	 * so pre-spawning happens before existing specialists expire.
 	 *
 	 * @param {Squad} squad
 	 *   The squad to check.
+	 * @param {Room} spawnRoom
+	 *   The room the squad spawns from, used to estimate travel time.
 	 *
 	 * @return {CivilianSpecialization | null}
 	 *   The next needed specialization, or null if all slots are filled.
 	 */
-	getCivilianSpecializationToSpawn(squad: Squad): CivilianSpecialization | null {
+	getCivilianSpecializationToSpawn(squad: Squad, spawnRoom: Room): CivilianSpecialization | null {
 		const spawnedCounts: Partial<Record<CivilianSpecialization, number>> = {};
-		const builderCreeps = Game.creepsBySquad[squad.getName()]?.['builder'] ?? {};
-		for (const creep of Object.values(builderCreeps)) {
+		const activeBuilderCreeps = this.getActiveSquadCreeps(squad, 'builder', spawnRoom);
+		for (const creep of activeBuilderCreeps) {
 			const spec = creep.memory.squadCivilianSpecialization;
 			if (spec) spawnedCounts[spec] = (spawnedCounts[spec] ?? 0) + 1;
 		}

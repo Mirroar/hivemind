@@ -617,13 +617,13 @@ export default class BrawlerRole extends Role {
 		const specialization = creep.memory.squadCivilianSpecialization;
 
 		if (specialization === 'harvester') {
-			// Assign to the source with the fewest harvesters already working it.
+			// Assign to the source with the fewest harvester-ticks already working it.
 			const roomCreeps = creep.room.creepsByRole.harvester || {};
 			const assignedCounts: Partial<Record<string, number>> = {};
 			for (const creepName in roomCreeps) {
 				const roomCreep = roomCreeps[creepName];
 				const src = (roomCreep.memory as HarvesterCreepMemory).fixedSource;
-				if (src) assignedCounts[src] = (assignedCounts[src] ?? 0) + 1;
+				if (src) assignedCounts[src] = (assignedCounts[src] ?? 0) + (roomCreep.getActiveBodyparts(WORK) ?? 0) * (roomCreep.ticksToLive / CREEP_LIFE_TIME);
 			}
 
 			const bestSource = _.min(creep.room.find(FIND_SOURCES), s => assignedCounts[s.id] ?? 0);
@@ -669,19 +669,14 @@ export default class BrawlerRole extends Role {
 		}
 
 		if (specialization === 'relayHauler') {
-			// Use the squad's spawn room as the source room so the hauler delivers
-			// energy back to the supporting home room. The relay path manager will
-			// automatically route the hauler to pick up from the new operation's
-			// source once a path to the supporting room's storage is established.
-			const spawnRoom = Memory.squads[creep.memory.squadName]?.spawnRoom;
 			const newCreep = creep as unknown as RelayHaulerCreep;
 			newCreep.memory.role = 'hauler.relay';
-			newCreep.memory.sourceRoom = spawnRoom ?? creep.pos.roomName;
+			newCreep.memory.sourceRoom = creep.pos.roomName;
 			newCreep.memory.delivering = true;
 			return;
 		}
 
-		// Legacy: no specialization — rebrand as remote builder.
+		// No specialization — rebrand as remote builder.
 		const newCreep = creep as unknown as RemoteBuilderCreep;
 		newCreep.memory.role = 'builder.remote';
 		newCreep.memory.target = encodePosition(newCreep.pos);
@@ -699,24 +694,31 @@ export default class BrawlerRole extends Role {
 	 *   The position of a suitable source, or null if none found.
 	 */
 	findSuitableNeighborSource(expansionRoomName: string): RoomPosition | null {
-		const exits = Game.map.describeExits(expansionRoomName);
-		for (const neighborRoomName of Object.values(exits)) {
-			const intel = getRoomIntel(neighborRoomName);
+		const assignment = container.get('RemoteMinePrioritizer').getRoomsToMine(Memory.strategy.remoteHarvesting.currentCount);
+		const roomStatus = container.get('RoomStatus');
+		let bestSource: RoomPosition | null = null;
+		let bestScore = Infinity;
+		for (const remoteRoomName of assignment.rooms) {
+			const intel = getRoomIntel(remoteRoomName);
+			if (roomStatus.getOrigin(remoteRoomName) !== expansionRoomName) continue;
 			if (intel.isOwned()) continue;
 			if (intel.isSourceKeeperRoom()) continue;
 
 			for (const sourceInfo of intel.getSourcePositions()) {
-				const sourcePos = new RoomPosition(sourceInfo.x, sourceInfo.y, neighborRoomName);
+				const sourcePos = new RoomPosition(sourceInfo.x, sourceInfo.y, remoteRoomName);
 				const encoded = encodePosition(sourcePos);
 				const assignedWork = _.sum(
 					_.filter(Game.creepsByRole['harvester.remote'] as Record<string, RemoteHarvesterCreep>, c => c.memory.source === encoded),
-					(c: Creep) => c.getActiveBodyparts(WORK),
+					(c: Creep) => c.getActiveBodyparts(WORK) * (c.ticksToLive / CREEP_LIFE_TIME),
 				);
-				if (assignedWork < 6) return sourcePos;
+				if (!bestSource || assignedWork < bestScore) {
+					bestSource = sourcePos;
+					bestScore = assignedWork;
+				}
 			}
 		}
 
-		return null;
+		return bestSource;
 	}
 
 	/**
@@ -762,14 +764,14 @@ export default class BrawlerRole extends Role {
 			),
 		});
 		// Find target with lowest HP to kill off (usually relevant while trying to break through walls).
-		let lowestStructure;
+		let lowestStructure: Structure | null = null;
 		for (const structure of structures) {
 			if (structure.hits && (!lowestStructure || structure.hits < lowestStructure.hits)) {
 				lowestStructure = structure;
 			}
 		}
 
-		if (creep.attack(lowestStructure) === OK) {
+		if (lowestStructure && creep.attack(lowestStructure) === OK) {
 			return true;
 		}
 

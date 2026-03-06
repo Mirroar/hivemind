@@ -217,6 +217,17 @@ export default class BuilderRole extends Role {
 				const amount = Math.min(creep.store[RESOURCE_ENERGY], creep.getActiveBodyparts(WORK) * UPGRADE_CONTROLLER_POWER);
 				balancer.recordGplEnergy(amount);
 			}
+
+			// Pull energy from nearby container if possible.
+			if (creep.store.getFreeCapacity(RESOURCE_ENERGY) > creep.store.getCapacity(RESOURCE_ENERGY) * 0.8) {
+				const containers = creep.pos.findInRange(FIND_STRUCTURES, 1, {
+					filter: structure => structure.structureType === STRUCTURE_CONTAINER && structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0,
+				}) as StructureContainer[];
+
+				if (containers.length > 0) {
+					creep.withdraw(containers[0], RESOURCE_ENERGY);
+				}
+			}
 		});
 	}
 
