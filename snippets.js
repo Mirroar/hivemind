@@ -51,3 +51,6 @@ delete Memory.strategy.expand.evacuatingRoom; (new ExpandProcess()).abandonWeakR
 
 // Show which rooms are evacuating, along with their evaluation scores.
 _.each(Game.myRooms, r => {console.log(r.name, !!r.isEvacuating(), container.get('RoomStatus').getExpansionScore(r.name))});
+
+// Repeatedly send resources between two rooms.
+const t = new TradeRoute('energy'); t.setOrigin('E4N37'); t.setTarget('E4N43'); t.setActive(true); t.setResourceType(RESOURCE_ENERGY);

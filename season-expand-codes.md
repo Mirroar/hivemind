@@ -55,3 +55,12 @@ s.setCivilianCount('remoteHarvester', 2);
 s.setCivilianCount('relayHauler', 2);
 s.setSpawn('E1N32');
 s.setTarget(new RoomPosition(34, 27, 'E4N37'));
+
+# Scout
+const s = container.get('SquadManager').getOrCreateSquad('prepareJump');
+s.setUnitCount('test', 1);
+s.setSpawn('E1N51');
+s.setTarget(new RoomPosition(25, 25, 'E1N62'));
+
+## Expand
+r = {roomName: 'E1N62', spawnRoom: 'E1N51'}; (new ExpandProcess()).startExpansion(r);

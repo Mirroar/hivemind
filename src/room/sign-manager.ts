@@ -30,12 +30,12 @@ export default class RoomSignManager {
         }
 
         if (currentSign && currentSign.text !== expectedSign) {
-            hivemind.log('rooms', roomName).debug(`Sign is not as expected. Expected: "${expectedSign}", current: "${currentSign.text}"`);
+            // hivemind.log('rooms', roomName).debug(`Sign is not as expected. Expected: "${expectedSign}", current: "${currentSign.text}"`);
             return true;
         }
 
         if (!currentSign && expectedSign) {
-            hivemind.log('rooms', roomName).debug(`Sign is missing. Expected: "${expectedSign}"`);
+            // hivemind.log('rooms', roomName).debug(`Sign is missing. Expected: "${expectedSign}"`);
             return true;
         }
 
