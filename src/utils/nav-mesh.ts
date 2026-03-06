@@ -100,7 +100,7 @@ export default class NavMesh {
 		if (this.memory.rooms[roomName]?.provisional && !Game.rooms[roomName]) return;
 
 		// No need to update specific data with provisional data.
-		if (!Game.rooms[roomName] && !this.memory.rooms[roomName]?.provisional) return;
+		if (!Game.rooms[roomName] && this.memory.rooms[roomName] && !this.memory.rooms[roomName]?.provisional) return;
 
 		this.terrain = new Room.Terrain(roomName);
 		this.costMatrix = getCostMatrix(roomName, {ignoreMilitary: true}).clone();
