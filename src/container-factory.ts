@@ -1,5 +1,26 @@
+import brawlerRole from './role/brawler';
+import builderRole from './role/builder';
+import claimerRole from './role/claimer';
 import CombatManager from './creep/combat-manager';
+import CreepManager from './creep-manager';
+import depositHarvesterRole from './role/harvester.deposit';
+import dismantlerRole from './role/dismantler';
+import guardianRole from './role/guardian';
+import harvesterRole from './role/harvester';
 import HelpReport from './report/help';
+import helperRole from './role/helper';
+import mineBuilderRole from './role/builder.mines';
+import muleRole from './role/mule';
+import powerHarvesterRole from './role/power/harvester';
+import powerHaulerRole from './role/power/hauler';
+import relayHaulerRole from './role/hauler.relay';
+import remoteBuilderRole from './role/builder.remote';
+import remoteHarvesterRole from './role/harvester.remote';
+import scoutRole from './role/scout';
+import skKillerRole from './role/sk-killer';
+import transporterRole from './role/transporter';
+import unassignedRole from './role/unassigned';
+import upgraderRole from './role/upgrader';
 import FunnelManager from './empire/funnel-manager';
 import LabManager from './empire/lab-manager';
 import NavMesh from './utils/nav-mesh';
@@ -44,6 +65,7 @@ import upgraderSpawnRole from 'spawn-role/upgrader';
 declare global {
 	interface DependencyInjectionContainer {
 		CombatManager: CombatManager;
+		CreepManager: CreepManager;
 		HelpReport: HelpReport;
 		FunnelManager: FunnelManager;
 		LabManager: LabManager;
@@ -90,6 +112,30 @@ const spawnClasses = {
 
 function containerFactory(container: Container) {
 	container.set('CombatManager', () => new CombatManager());
+	container.set('CreepManager', () => {
+		const creepManager = new CreepManager();
+		creepManager.registerCreepRole('brawler', new brawlerRole());
+		creepManager.registerCreepRole('builder', new builderRole());
+		creepManager.registerCreepRole('builder.mines', new mineBuilderRole());
+		creepManager.registerCreepRole('builder.remote', new remoteBuilderRole());
+		creepManager.registerCreepRole('claimer', new claimerRole());
+		creepManager.registerCreepRole('dismantler', new dismantlerRole());
+		creepManager.registerCreepRole('guardian', new guardianRole());
+		creepManager.registerCreepRole('harvester', new harvesterRole());
+		creepManager.registerCreepRole('harvester.deposit', new depositHarvesterRole());
+		creepManager.registerCreepRole('harvester.power', new powerHarvesterRole());
+		creepManager.registerCreepRole('harvester.remote', new remoteHarvesterRole());
+		creepManager.registerCreepRole('hauler.power', new powerHaulerRole());
+		creepManager.registerCreepRole('hauler.relay', new relayHaulerRole());
+		creepManager.registerCreepRole('helper', new helperRole());
+		creepManager.registerCreepRole('mule', new muleRole());
+		creepManager.registerCreepRole('scout', new scoutRole());
+		creepManager.registerCreepRole('skKiller', new skKillerRole());
+		creepManager.registerCreepRole('transporter', new transporterRole());
+		creepManager.registerCreepRole('unassigned', new unassignedRole());
+		creepManager.registerCreepRole('upgrader', new upgraderRole());
+		return creepManager;
+	});
 	container.set('HelpReport', () => new HelpReport());
 	container.set('FunnelManager', () => new FunnelManager());
 	container.set('LabManager', () => new LabManager());
