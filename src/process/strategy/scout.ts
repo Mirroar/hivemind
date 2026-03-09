@@ -252,7 +252,7 @@ export default class ScoutProcess extends Process {
 		if (roomNameParts) {
 			const verticalPos = parseInt(roomNameParts[4]);
 			// The further north a room, the better.
-			result.addScore(verticalPos * 0.3, 'northBonus');
+			result.addScore(verticalPos * 0.1, 'northBonus');
 		}
 
 		// More sources is better.
