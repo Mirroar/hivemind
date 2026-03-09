@@ -1,20 +1,19 @@
 /* global PathFinder RoomPosition StructureController ATTACK SYSTEM_USERNAME
 STRUCTURE_CONTROLLER STRUCTURE_STORAGE STRUCTURE_SPAWN STRUCTURE_TOWER HEAL
-LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS FIND_SOURCES CREEP_LIFE_TIME CLAIM WORK
+LOOK_STRUCTURES FIND_STRUCTURES FIND_MY_CREEPS CREEP_LIFE_TIME CLAIM
 FIND_HOSTILE_STRUCTURES OK STRUCTURE_TERMINAL STRUCTURE_INVADER_CORE
 ERR_BUSY ERR_NOT_OWNER ERR_TIRED RANGED_ATTACK FIND_HOSTILE_CREEPS */
 
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import PathManager from 'empire/remote-path-manager';
-import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
+import SquadCivilianEscort from 'role/squad-civilian-escort';
 import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
-import {encodePosition, decodePosition, serializePositionPath, deserializePositionPath} from 'utils/serialization';
+import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getUsername} from 'utils/account';
-import {getRoomIntel} from 'room-intel';
 import SquadManager from 'manager.squad';
 
 interface ControllerTargetOption extends WeightedOption {
@@ -57,8 +56,6 @@ declare global {
 			target: Id<Creep | AnyStructure>;
 		};
 		target: string;
-
-		patrolPoint: Id<StructureKeeperLair>;
 	}
 
 	interface BrawlerCreepHeapMemory extends CreepHeapMemory {
@@ -68,6 +65,7 @@ declare global {
 export default class BrawlerRole extends Role {
 	transporterRole: TransporterRole;
 	squadManager: SquadManager;
+	squadCivilianEscort: SquadCivilianEscort;
 
 	constructor() {
 		super();
@@ -77,8 +75,8 @@ export default class BrawlerRole extends Role {
 		this.throttleAt = 0;
 
 		this.transporterRole = new TransporterRole();
-
 		this.squadManager = container.get('SquadManager');
+		this.squadCivilianEscort = new SquadCivilianEscort();
 	}
 
 	/**
@@ -133,14 +131,24 @@ export default class BrawlerRole extends Role {
 	/**
 	 * Sets a good military target for this creep.
 	 *
+	 * Sets memory.order as the movement intent and controller claim/reserve target.
+	 * Per-tick reactive attacks (attack/rangedAttack/heal) are handled separately by
+	 * CombatManager.manageCombatActions(), which is called after movement is resolved.
+	 *
 	 * @param {Creep} creep
 	 *   The creep to run logic for.
 	 */
 	calculateMilitaryTarget(creep: BrawlerCreep) {
-		const best = utilities.getBestOption(this.getAvailableMilitaryTargets(creep));
+		const options = this.getAvailableMilitaryTargets(creep);
+		const best = utilities.getBestOption(options);
 
 		if (!best) {
 			delete creep.memory.order;
+			// @todo Run home for healing if no functional parts are left.
+			if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName?.startsWith('expand')) {
+				this.performRecycle(creep);
+			}
+
 			return;
 		}
 
@@ -183,7 +191,7 @@ export default class BrawlerRole extends Role {
 
 		// Find enemies to attack.
 		if (creep.getActiveBodyparts(ATTACK) || creep.getActiveBodyparts(RANGED_ATTACK)) {
-			this.addMilitaryAttackOptions(creep, options);
+			this.addMilitaryAttackOptions(creep, options, targetPosition);
 		}
 
 		// Find friendlies to heal.
@@ -210,12 +218,6 @@ export default class BrawlerRole extends Role {
 			});
 		}
 
-		// @todo Run home for healing if no functional parts are left.
-		// @todo This should not be in a get function, but have it's own option type.
-		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName.startsWith('expand')) {
-			this.performRecycle(creep);
-		}
-
 		return options;
 	}
 
@@ -227,11 +229,10 @@ export default class BrawlerRole extends Role {
 	 * @param {Array} options
 	 *   An array of target options for this creep.
 	 */
-	addMilitaryAttackOptions(creep: BrawlerCreep, options: MilitaryTargetOption[]) {
+	addMilitaryAttackOptions(creep: BrawlerCreep, options: MilitaryTargetOption[], targetPosition: RoomPosition) {
 		const enemies = creep.room.find(FIND_HOSTILE_CREEPS);
-		const targetPosition = decodePosition(creep.memory.target);
 
-		if (enemies && enemies.length > 0) {
+		if (enemies.length > 0) {
 			for (const enemy of enemies) {
 				if (hivemind.relations.isAlly(enemy.owner.username)) continue;
 
@@ -350,19 +351,7 @@ export default class BrawlerRole extends Role {
 	performMilitaryMove(creep: BrawlerCreep) {
 		if (creep.isPartOfTrain() && this.performTrainMove(creep) !== OK) return;
 
-		if (creep.memory.fillWithEnergy) {
-			if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
-				if (creep.room.getEffectiveAvailableEnergy() < 3000) {
-					creep.whenInRange(5, new RoomPosition(25, 25, creep.room.name), () => {});
-					return;
-				}
-
-				this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
-				return;
-			}
-
-			delete creep.memory.fillWithEnergy;
-		}
+		if (this.performEnergyFilling(creep)) return;
 
 		let allowDanger = true;
 		if (creep.memory.squadName) {
@@ -375,38 +364,87 @@ export default class BrawlerRole extends Role {
 		if (creep.memory.target) {
 			const targetPosition = decodePosition(creep.memory.target);
 			if (targetPosition && creep.pos.roomName === targetPosition.roomName) {
-				this.militaryRoomReached(creep);
+				this.squadCivilianEscort.attemptCivilianConversion(creep);
 			}
 
-			let enemiesNearby = false;
-			if (creep.getActiveBodyparts(ATTACK) || creep.getActiveBodyparts(RANGED_ATTACK) || creep.getActiveBodyparts(HEAL)) {
-				// Check for enemies and interrupt move accordingly.
-				_.each(creep.room.enemyCreeps, (hostiles, owner) => {
-					if (hivemind.relations.isAlly(owner)) return null;
-
-					_.each(hostiles, c => {
-						if (!c.isDangerous()) return null;
-						if (c.owner.username === SYSTEM_USERNAME || c.owner.username === 'Invader' || c.owner.username === 'Source Keeper') return null;
-
-						enemiesNearby = true;
-						return false;
-					});
-
-					if (enemiesNearby) return false;
-
-					return null;
-				});
-			}
-
-			if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return;
-
-			if (enemiesNearby) {
-				// @todo We want to ideally move to `targetPosition`, so use that as target if possible.
-				container.get('CombatManager').performKitingMovement(creep, container.get('CombatManager').getMostValuableTarget(creep));
-				return;
-			}
+			if (this.performInterRoomTravel(creep, targetPosition, allowDanger)) return;
 		}
 
+		this.performInRoomBehavior(creep);
+	}
+
+	/**
+	 * Handles energy filling for squad builder units before they depart.
+	 *
+	 * @param {BrawlerCreep} creep
+	 * @return {boolean} True if the creep is busy filling energy and should stop.
+	 */
+	performEnergyFilling(creep: BrawlerCreep): boolean {
+		if (!creep.memory.fillWithEnergy) return false;
+
+		if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
+			if (creep.room.getEffectiveAvailableEnergy() < 3000) {
+				creep.whenInRange(5, new RoomPosition(25, 25, creep.room.name), () => {});
+				return true;
+			}
+
+			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
+			return true;
+		}
+
+		delete creep.memory.fillWithEnergy;
+		return false;
+	}
+
+	/**
+	 * Handles inter-room travel toward the creep's target. Interrupts movement
+	 * when player-controlled enemies are detected so the combat manager can kite.
+	 * Invaders and Source Keepers are intentionally ignored to allow passing through
+	 * SK rooms and rooms with standard NPC invaders.
+	 *
+	 * @param {BrawlerCreep} creep
+	 * @param {RoomPosition} targetPosition
+	 * @param {boolean} allowDanger Whether to travel through unsafe rooms.
+	 * @return {boolean} True if movement was handled and no further action is needed.
+	 */
+	performInterRoomTravel(creep: BrawlerCreep, targetPosition: RoomPosition, allowDanger: boolean): boolean {
+		let enemiesNearby = false;
+		if (creep.getActiveBodyparts(ATTACK) || creep.getActiveBodyparts(RANGED_ATTACK) || creep.getActiveBodyparts(HEAL)) {
+			_.each(creep.room.enemyCreeps, (hostiles, owner) => {
+				if (hivemind.relations.isAlly(owner)) return null;
+
+				_.each(hostiles, c => {
+					if (!c.isDangerous()) return null;
+					if (c.owner.username === SYSTEM_USERNAME || c.owner.username === 'Invader' || c.owner.username === 'Source Keeper') return null;
+
+					enemiesNearby = true;
+					return false;
+				});
+
+				if (enemiesNearby) return false;
+
+				return null;
+			});
+		}
+
+		if (!enemiesNearby && creep.interRoomTravel(targetPosition, allowDanger)) return true;
+
+		if (enemiesNearby) {
+			// @todo We want to ideally move to `targetPosition`, so use that as target if possible.
+			container.get('CombatManager').performKitingMovement(creep, container.get('CombatManager').getMostValuableTarget(creep));
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Handles in-room behaviour: engaging ordered targets, following squad
+	 * positioning instructions, and falling back to room defence or idle movement.
+	 *
+	 * @param {BrawlerCreep} creep
+	 */
+	performInRoomBehavior(creep: BrawlerCreep) {
 		if (creep.memory.order) {
 			const target = Game.getObjectById(creep.memory.order.target);
 			this.moveToEngageTarget(creep, target);
@@ -431,7 +469,7 @@ export default class BrawlerRole extends Role {
 			}
 		}
 
-		// Simple Room defenders. Look for enemies and engage.
+		// Simple room defenders: look for enemies and engage.
 		for (const username in creep.room.enemyCreeps || {}) {
 			if (hivemind.relations.isAlly(username)) continue;
 
@@ -468,7 +506,6 @@ export default class BrawlerRole extends Role {
 
 		if (creep.getActiveBodyparts(ATTACK)) {
 			// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
-			const ignore = (!creep.room.controller?.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			creep.moveTo(target, {
 				reusePath: 0,
 				ignoreDestructibleStructures: false,
@@ -480,7 +517,6 @@ export default class BrawlerRole extends Role {
 
 		if (creep.getActiveBodyparts(RANGED_ATTACK)) {
 			// @todo Use custom cost matrix to determine which structures we may move through on our way to the target.
-			const ignore = (!creep.room.controller?.owner || (!creep.room.controller.my && !hivemind.relations.isAlly(creep.room.controller.owner.username)));
 			if (creep.pos.getRangeTo(target.pos) >= 3) {
 				creep.moveTo(target, {
 					reusePath: 0,
@@ -532,7 +568,8 @@ export default class BrawlerRole extends Role {
 		}
 
 		// Only the train head will schedule movement intents. The other creeps will
-		// move when the head moves.
+		// move when the head moves. ERR_NOT_OWNER is used non-semantically here —
+		// it signals to performMilitaryMove() that this creep should not act further.
 		if (!creep.isTrainHead()) return ERR_NOT_OWNER;
 
 		// Make sure train is joined.
@@ -603,179 +640,6 @@ export default class BrawlerRole extends Role {
 
 		// If there's nothing to do, move back to spawn room center.
 		creep.whenInRange(5, new RoomPosition(25, 25, creep.pos.roomName), () => {});
-	}
-
-	/**
-	 * Potentially modifies a creep when target room has been reached.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 */
-	militaryRoomReached(creep: BrawlerCreep) {
-		if (creep.memory.squadUnitType !== 'builder' || !creep.room.controller) return;
-
-		const specialization = creep.memory.squadCivilianSpecialization;
-
-		if (specialization === 'harvester') {
-			// Assign to the source with the fewest harvester-ticks already working it.
-			const roomCreeps = creep.room.creepsByRole.harvester || {};
-			const assignedCounts: Partial<Record<string, number>> = {};
-			for (const creepName in roomCreeps) {
-				const roomCreep = roomCreeps[creepName];
-				const src = (roomCreep.memory as HarvesterCreepMemory).fixedSource;
-				if (src) assignedCounts[src] = (assignedCounts[src] ?? 0) + (roomCreep.getActiveBodyparts(WORK) ?? 0) * (roomCreep.ticksToLive / CREEP_LIFE_TIME);
-			}
-
-			const bestSource = _.min(creep.room.find(FIND_SOURCES), s => assignedCounts[s.id] ?? 0);
-			const newCreep = creep as unknown as HarvesterCreep;
-			newCreep.memory.role = 'harvester';
-			newCreep.memory.singleRoom = newCreep.pos.roomName;
-			if (bestSource) newCreep.memory.fixedSource = bestSource.id;
-			return;
-		}
-
-		if (specialization === 'transporter') {
-			const newCreep = creep as unknown as TransporterCreep;
-			newCreep.memory.role = 'transporter';
-			newCreep.memory.singleRoom = newCreep.pos.roomName;
-			return;
-		}
-
-		if (specialization === 'builder') {
-			const newCreep = creep as unknown as BuilderCreep;
-			newCreep.memory.role = 'builder';
-			newCreep.memory.singleRoom = newCreep.pos.roomName;
-			return;
-		}
-
-		if (specialization === 'remoteHarvester') {
-			// Find a source in a neighboring room that is not yet saturated.
-			const sourcePos = this.findSuitableNeighborSource(creep.pos.roomName);
-			if (!sourcePos) return;
-
-			// Ensure a mining operation exists for this room so the harvester
-			// and relay haulers can use the standard remote harvesting infrastructure.
-			const operationName = 'mine:' + sourcePos.roomName;
-			if (!Game.operations[operationName]) {
-				const op = new RemoteMiningOperation(operationName);
-				op.setRoom(sourcePos.roomName);
-			}
-
-			const newCreep = creep as unknown as RemoteHarvesterCreep;
-			newCreep.memory.role = 'harvester.remote';
-			newCreep.memory.source = encodePosition(sourcePos);
-			newCreep.memory.operation = operationName;
-			return;
-		}
-
-		if (specialization === 'relayHauler') {
-			const newCreep = creep as unknown as RelayHaulerCreep;
-			newCreep.memory.role = 'hauler.relay';
-			newCreep.memory.sourceRoom = creep.pos.roomName;
-			newCreep.memory.delivering = true;
-			return;
-		}
-
-		// No specialization — rebrand as remote builder.
-		const newCreep = creep as unknown as RemoteBuilderCreep;
-		newCreep.memory.role = 'builder.remote';
-		newCreep.memory.target = encodePosition(newCreep.pos);
-		newCreep.memory.singleRoom = newCreep.pos.roomName;
-	}
-
-	/**
-	 * Finds a source in a room neighboring the given room that has fewer than
-	 * 6 WORK parts of remote harvesters currently assigned to it.
-	 *
-	 * @param {string} expansionRoomName
-	 *   The expansion target room to search around.
-	 *
-	 * @return {RoomPosition | null}
-	 *   The position of a suitable source, or null if none found.
-	 */
-	findSuitableNeighborSource(expansionRoomName: string): RoomPosition | null {
-		const assignment = container.get('RemoteMinePrioritizer').getRoomsToMine(Memory.strategy.remoteHarvesting.currentCount);
-		const roomStatus = container.get('RoomStatus');
-		let bestSource: RoomPosition | null = null;
-		let bestScore = Infinity;
-		for (const remoteRoomName of assignment.rooms) {
-			const intel = getRoomIntel(remoteRoomName);
-			if (roomStatus.getOrigin(remoteRoomName) !== expansionRoomName) continue;
-			if (intel.isOwned()) continue;
-			if (intel.isSourceKeeperRoom()) continue;
-
-			for (const sourceInfo of intel.getSourcePositions()) {
-				const sourcePos = new RoomPosition(sourceInfo.x, sourceInfo.y, remoteRoomName);
-				const encoded = encodePosition(sourcePos);
-				const assignedWork = _.sum(
-					_.filter(Game.creepsByRole['harvester.remote'] as Record<string, RemoteHarvesterCreep>, c => c.memory.source === encoded),
-					(c: Creep) => c.getActiveBodyparts(WORK) * (c.ticksToLive / CREEP_LIFE_TIME),
-				);
-				if (!bestSource || assignedWork < bestScore) {
-					bestSource = sourcePos;
-					bestScore = assignedWork;
-				}
-			}
-		}
-
-		return bestSource;
-	}
-
-	/**
-	 * Makes a creep try to attack its designated target or nearby enemies.
-	 *
-	 * @param {Creep} creep
-	 *   The creep to run logic for.
-	 * @return {boolean}
-	 *   True if an attack was made. Will be false even if a ranged attack was made.
-	 */
-	performMilitaryAttack(creep: BrawlerCreep) {
-		if (creep.memory.order) {
-			// Attack ordered target first.
-			const target = Game.getObjectById<Creep | AnyStructure>(creep.memory.order.target);
-
-			if (target && (!("my" in target) || !target.my) && this.attackMilitaryTarget(creep, target)) return (creep.getActiveBodyparts(ATTACK) || 0) > 0;
-		}
-
-		// See if enemies are nearby, attack one of those.
-		const hostiles = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
-		for (const hostile of hostiles) {
-			// Check if enemy is harmless, and ignore it.
-			if (!hostile.isDangerous()) continue;
-			if (hostile.owner && hivemind.relations.isAlly(hostile.owner.username)) continue;
-
-			if (creep.getActiveBodyparts(ATTACK) && creep.attack(hostile) === OK) {
-				creep.moveTo(hostile);
-				return true;
-			}
-
-			if (creep.getActiveBodyparts(RANGED_ATTACK) && creep.rangedAttack(hostile) === OK) {
-				return false;
-			}
-		}
-
-		// Don't attack structures in allied rooms.
-		if (creep.room.controller && creep.room.controller.owner && hivemind.relations.isAlly(creep.room.controller.owner.username)) return false;
-
-		// See if enemy structures are nearby, attack one of those.
-		const structures = creep.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1, {
-			filter: structure => structure.structureType !== STRUCTURE_CONTROLLER && structure.structureType !== STRUCTURE_STORAGE && structure.structureType !== STRUCTURE_TERMINAL && (
-				!structure.owner || !hivemind.relations.isAlly(structure.owner.username)
-			),
-		});
-		// Find target with lowest HP to kill off (usually relevant while trying to break through walls).
-		let lowestStructure: Structure | null = null;
-		for (const structure of structures) {
-			if (structure.hits && (!lowestStructure || structure.hits < lowestStructure.hits)) {
-				lowestStructure = structure;
-			}
-		}
-
-		if (lowestStructure && creep.attack(lowestStructure) === OK) {
-			return true;
-		}
-
-		return false;
 	}
 
 	/**
