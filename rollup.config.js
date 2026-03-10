@@ -2,6 +2,7 @@ import clear from 'rollup-plugin-clear';
 import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import screeps from 'rollup-plugin-screeps';
+import { terser } from 'rollup-plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
 
 let cfg;
@@ -26,6 +27,12 @@ export default {
 		resolve({rootDir: './src', preferBuiltins: false}),
 		commonjs(),
 		typescript({tsconfig: './tsconfig.json', filterRoot: './src'}),
+		terser({
+			format: {
+				comments: false
+			},
+			compress: false
+		}),
 		screeps({config: cfg, dryRun: cfg == null}),
 	],
 };
