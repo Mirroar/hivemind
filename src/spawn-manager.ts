@@ -35,6 +35,7 @@ const roleNameMap = {
 	claimer: 'C',
 	dismantler: 'D',
 	brawler: 'F',
+	'squad-brawler': 'SF',
 	gatherer: 'G',
 	guardian: 'FE',
 	harvester: 'H',

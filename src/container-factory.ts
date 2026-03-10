@@ -1,5 +1,6 @@
 import brawlerRole from './role/brawler';
 import builderRole from './role/builder';
+import squadBrawlerRole from './role/squad-brawler';
 import claimerRole from './role/claimer';
 import CombatManager from './creep/combat-manager';
 import CreepManager from './creep-manager';
@@ -118,6 +119,7 @@ function containerFactory(container: Container) {
 	container.set('CreepManager', () => {
 		const creepManager = new CreepManager();
 		creepManager.registerCreepRole('brawler', new brawlerRole());
+		creepManager.registerCreepRole('squad-brawler', new squadBrawlerRole());
 		creepManager.registerCreepRole('builder', new builderRole());
 		creepManager.registerCreepRole('builder.mines', new mineBuilderRole());
 		creepManager.registerCreepRole('builder.remote', new remoteBuilderRole());

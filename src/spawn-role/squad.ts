@@ -247,7 +247,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	 */
 	getCreepMemory(room: Room, option: SquadSpawnOption): CreepMemory {
 		return {
-			role: 'brawler',
+			role: 'squad-brawler',
 			squadName: option.squad,
 			squadUnitType: option.unitType,
 		};

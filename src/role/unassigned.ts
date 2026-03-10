@@ -20,14 +20,14 @@ export default class UnassignedRole extends Role {
 
 		// Creeps with claim parts are sent as part of intershard expansion.
 		if (creep.getActiveBodyparts(CLAIM) > 0 || creep.getActiveBodyparts(ATTACK) > 0 || creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
-			creep.memory.role = 'brawler';
+			creep.memory.role = 'squad-brawler';
 			creep.memory.squadUnitType = 'singleClaim';
 			creep.memory.squadName = 'interShardExpansion';
 		}
 
 		// Creeps with work parts are sent as part of intershard expansion.
 		if (creep.getActiveBodyparts(WORK) > 0) {
-			creep.memory.role = 'brawler';
+			creep.memory.role = 'squad-brawler';
 			creep.memory.squadUnitType = 'builder';
 			creep.memory.squadName = 'interShardExpansion';
 		}
