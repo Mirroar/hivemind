@@ -18,6 +18,7 @@ import remoteBuilderRole from './role/builder.remote';
 import remoteHarvesterRole from './role/harvester.remote';
 import scoutRole from './role/scout';
 import skKillerRole from './role/sk-killer';
+import squadCivilianRole from './role/squad-civilian';
 import transporterRole from './role/transporter';
 import unassignedRole from './role/unassigned';
 import upgraderRole from './role/upgrader';
@@ -59,6 +60,7 @@ import remoteMiningSpawnRole from 'spawn-role/remote-mining';
 import roomDefenseSpawnRole from 'spawn-role/room-defense';
 import scoutSpawnRole from 'spawn-role/scout';
 import squadSpawnRole from 'spawn-role/squad';
+import squadCivilianSpawnRole from 'spawn-role/squad-civilian';
 import transporterSpawnRole from 'spawn-role/transporter';
 import upgraderSpawnRole from 'spawn-role/upgrader';
 
@@ -106,6 +108,7 @@ const spawnClasses = {
 	'room-defense': roomDefenseSpawnRole,
 	scout: scoutSpawnRole,
 	squad: squadSpawnRole,
+	'squad-civilian': squadCivilianSpawnRole,
 	transporter: transporterSpawnRole,
 	upgrader: upgraderSpawnRole,
 };
@@ -131,6 +134,7 @@ function containerFactory(container: Container) {
 		creepManager.registerCreepRole('mule', new muleRole());
 		creepManager.registerCreepRole('scout', new scoutRole());
 		creepManager.registerCreepRole('skKiller', new skKillerRole());
+		creepManager.registerCreepRole('squad-civilian', new squadCivilianRole());
 		creepManager.registerCreepRole('transporter', new transporterRole());
 		creepManager.registerCreepRole('unassigned', new unassignedRole());
 		creepManager.registerCreepRole('upgrader', new upgraderRole());

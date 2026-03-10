@@ -8,8 +8,6 @@ import container from 'utils/container';
 import hivemind from 'hivemind';
 import PathManager from 'empire/remote-path-manager';
 import Role from 'role/role';
-import SquadCivilianEscort from 'role/squad-civilian-escort';
-import TransporterRole from 'role/transporter';
 import utilities from 'utilities';
 import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 import {getCostMatrix} from 'utils/cost-matrix';
@@ -49,7 +47,6 @@ declare global {
 		initialized?: boolean;
 		squadName: string;
 		squadUnitType: SquadUnitType;
-		fillWithEnergy?: boolean;
 		pathTarget?: string;
 		order: {
 			type: 'attack' | 'heal' | 'claim';
@@ -63,9 +60,7 @@ declare global {
 }
 
 export default class BrawlerRole extends Role {
-	transporterRole: TransporterRole;
 	squadManager: SquadManager;
-	squadCivilianEscort: SquadCivilianEscort;
 
 	constructor() {
 		super();
@@ -74,9 +69,7 @@ export default class BrawlerRole extends Role {
 		this.stopAt = 0;
 		this.throttleAt = 0;
 
-		this.transporterRole = new TransporterRole();
 		this.squadManager = container.get('SquadManager');
-		this.squadCivilianEscort = new SquadCivilianEscort();
 	}
 
 	/**
@@ -113,10 +106,6 @@ export default class BrawlerRole extends Role {
 	 */
 	initBrawlerState(creep: BrawlerCreep) {
 		creep.memory.initialized = true;
-
-		if (creep.memory.squadUnitType === 'builder' && !creep.memory.squadCivilianSpecialization) {
-			creep.memory.fillWithEnergy = true;
-		}
 
 		if (creep.memory.pathTarget) {
 			// Reuse remote harvesting path.
@@ -351,8 +340,6 @@ export default class BrawlerRole extends Role {
 	performMilitaryMove(creep: BrawlerCreep) {
 		if (creep.isPartOfTrain() && this.performTrainMove(creep) !== OK) return;
 
-		if (this.performEnergyFilling(creep)) return;
-
 		let allowDanger = true;
 		if (creep.memory.squadName) {
 			this.performSquadMove(creep);
@@ -363,37 +350,11 @@ export default class BrawlerRole extends Role {
 
 		if (creep.memory.target) {
 			const targetPosition = decodePosition(creep.memory.target);
-			if (targetPosition && creep.pos.roomName === targetPosition.roomName) {
-				this.squadCivilianEscort.attemptCivilianConversion(creep);
-			}
 
 			if (this.performInterRoomTravel(creep, targetPosition, allowDanger)) return;
 		}
 
 		this.performInRoomBehavior(creep);
-	}
-
-	/**
-	 * Handles energy filling for squad builder units before they depart.
-	 *
-	 * @param {BrawlerCreep} creep
-	 * @return {boolean} True if the creep is busy filling energy and should stop.
-	 */
-	performEnergyFilling(creep: BrawlerCreep): boolean {
-		if (!creep.memory.fillWithEnergy) return false;
-
-		if (creep.room.isMine() && creep.store.getFreeCapacity() > 0) {
-			if (creep.room.getEffectiveAvailableEnergy() < 3000) {
-				creep.whenInRange(5, new RoomPosition(25, 25, creep.room.name), () => {});
-				return true;
-			}
-
-			this.transporterRole.performGetEnergy(creep as unknown as TransporterCreep);
-			return true;
-		}
-
-		delete creep.memory.fillWithEnergy;
-		return false;
 	}
 
 	/**

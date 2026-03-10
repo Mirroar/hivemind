@@ -43,6 +43,7 @@ const roleNameMap = {
 	'harvester.power': 'HP',
 	mule: 'M',
 	scout: 'S',
+	'squad-civilian': 'SC',
 	transporter: 'T',
 	'hauler.power': 'TP',
 	'hauler.relay': 'TRR',

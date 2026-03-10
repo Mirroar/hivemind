@@ -1,4 +1,4 @@
-/* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM CARRY WORK MAX_CREEP_SIZE CREEP_SPAWN_TIME CREEP_LIFE_TIME */
+/* global MOVE ATTACK RANGED_ATTACK HEAL TOUGH CLAIM MAX_CREEP_SIZE CREEP_SPAWN_TIME CREEP_LIFE_TIME */
 
 import BodyBuilder, {MOVEMENT_MODE_SWAMP} from 'creep/body-builder';
 import NavMesh from 'utils/nav-mesh';
@@ -6,7 +6,7 @@ import container from 'utils/container';
 import SpawnRole from 'spawn-role/spawn-role';
 import SquadManager, {Squad} from 'manager.squad';
 
-const availableUnitTypes = [
+const allUnitTypes = [
 	'ranger',
 	'healer',
 	'claimer',
@@ -20,13 +20,28 @@ const availableUnitTypes = [
 ] as const;
 
 declare global {
-	type SquadUnitType = typeof availableUnitTypes[number];
+	type SquadUnitType = typeof allUnitTypes[number];
 }
+
+/**
+ * Military unit types handled by this spawn role. Civilian types like
+ * 'builder' are handled by the squad-civilian spawn role.
+ */
+const militaryUnitTypes: readonly SquadUnitType[] = [
+	'ranger',
+	'healer',
+	'claimer',
+	'singleClaim',
+	'attacker',
+	'brawler',
+	'blinky',
+	'test',
+	'boostedBlinky',
+];
 
 interface SquadSpawnOption extends SpawnOption {
 	unitType: SquadUnitType;
 	squad: string;
-	civilianSpecialization?: CivilianSpecialization;
 }
 
 export default class SquadSpawnRole extends SpawnRole {
@@ -56,17 +71,12 @@ export default class SquadSpawnRole extends SpawnRole {
 				const spawnUnitType = this.needsSpawning(room, squad);
 				if (!spawnUnitType) return;
 
-				const civilianSpecialization = spawnUnitType === 'builder'
-					? this.getCivilianSpecializationToSpawn(squad, room)
-					: null;
-
 				const roomHasReserves = availableEnergy > 10_000;
 				options.push({
 					priority: roomHasReserves ? 4 : 2,
 					weight: 1.1,
 					unitType: spawnUnitType,
 					squad: squad.getName(),
-					civilianSpecialization,
 				});
 			});
 
@@ -121,7 +131,7 @@ export default class SquadSpawnRole extends SpawnRole {
 	needsSpawning(room: Room, squad: Squad): SquadUnitType | null {
 		const neededUnits: SquadUnitType[] = [];
 		for (const unitType in squad.getComposition()) {
-			if (!availableUnitTypes.includes(unitType as SquadUnitType)) continue;
+			if (!militaryUnitTypes.includes(unitType as SquadUnitType)) continue;
 
 			const activeCount = this.getActiveSquadCreeps(squad, unitType as SquadUnitType, room).length;
 			if (squad.getUnitCount(unitType as SquadUnitType) > activeCount) {
@@ -187,92 +197,6 @@ export default class SquadSpawnRole extends SpawnRole {
 			.build();
 	}
 
-	getBuilderCreepBody(room: Room, option: SquadSpawnOption) {
-		const energyLimit = Math.min(room.energyCapacityAvailable, Math.max(room.energyCapacityAvailable * 0.9, room.energyAvailable));
-		if (option.civilianSpecialization === 'harvester') {
-			return (new BodyBuilder())
-				.setWeights({[WORK]: 4, [CARRY]: 1})
-				.setPartLimit(WORK, 10)
-				.setCarryContentLevel(0)
-				.setEnergyLimit(energyLimit)
-				.build();
-		}
-
-		if (option.civilianSpecialization === 'transporter') {
-			return (new BodyBuilder())
-				.setWeights({[CARRY]: 1})
-				.setPartLimit(CARRY, 10)
-				.setEnergyLimit(energyLimit)
-				.build();
-		}
-
-		if (option.civilianSpecialization === 'builder') {
-			return (new BodyBuilder())
-				.setWeights({[CARRY]: 4, [WORK]: 1})
-				.setPartLimit(WORK, 5)
-				.setCarryContentLevel(0.3)
-				.setEnergyLimit(energyLimit)
-				.build();
-		}
-
-		if (option.civilianSpecialization === 'remoteHarvester') {
-			// Plains movement: will travel to unroaded neighboring rooms.
-			// Work limit matches the 6-WORK saturation threshold.
-			return (new BodyBuilder())
-				.setWeights({[WORK]: 4, [CARRY]: 1})
-				.setPartLimit(WORK, 6)
-				.setCarryContentLevel(0)
-				.setEnergyLimit(energyLimit)
-				.build();
-		}
-
-		if (option.civilianSpecialization === 'relayHauler') {
-			// Plains movement: path to the source and back has no roads yet.
-			return (new BodyBuilder())
-				.setWeights({[CARRY]: 1})
-				.setPartLimit(CARRY, 10)
-				.setEnergyLimit(energyLimit)
-				.build();
-		}
-
-		// Legacy: no specialization set - use original generalist body.
-		return (new BodyBuilder())
-			.setWeights({[CARRY]: 3, [WORK]: 2})
-			.setEnergyLimit(energyLimit)
-			.build();
-	}
-
-	/**
-	 * Determines which civilian specialization still needs to be spawned for
-	 * a given squad, based on the squad's civilianCounts and live creep
-	 * specializations. Only builder creeps with sufficient TTL are counted,
-	 * so pre-spawning happens before existing specialists expire.
-	 *
-	 * @param {Squad} squad
-	 *   The squad to check.
-	 * @param {Room} spawnRoom
-	 *   The room the squad spawns from, used to estimate travel time.
-	 *
-	 * @return {CivilianSpecialization | null}
-	 *   The next needed specialization, or null if all slots are filled.
-	 */
-	getCivilianSpecializationToSpawn(squad: Squad, spawnRoom: Room): CivilianSpecialization | null {
-		const spawnedCounts: Partial<Record<CivilianSpecialization, number>> = {};
-		const activeBuilderCreeps = this.getActiveSquadCreeps(squad, 'builder', spawnRoom);
-		for (const creep of activeBuilderCreeps) {
-			const spec = creep.memory.squadCivilianSpecialization;
-			if (spec) spawnedCounts[spec] = (spawnedCounts[spec] ?? 0) + 1;
-		}
-
-		for (const type of ['harvester', 'transporter', 'builder', 'remoteHarvester', 'relayHauler'] as CivilianSpecialization[]) {
-			if ((squad.getCivilianCount(type) ?? 0) > (spawnedCounts[type] ?? 0)) {
-				return type;
-			}
-		}
-
-		return null;
-	}
-
 	getAttackerCreepBody(room: Room) {
 		return (new BodyBuilder())
 			.setWeights({[ATTACK]: 1})
@@ -326,7 +250,6 @@ export default class SquadSpawnRole extends SpawnRole {
 			role: 'brawler',
 			squadName: option.squad,
 			squadUnitType: option.unitType,
-			...(option.civilianSpecialization ? {squadCivilianSpecialization: option.civilianSpecialization} : {}),
 		};
 	}
 
@@ -358,7 +281,7 @@ export default class SquadSpawnRole extends SpawnRole {
 				...this.generateCreepBoosts(room, body, HEAL, 'heal'),
 				...this.generateCreepBoosts(room, body, TOUGH, 'damage'),
 				...this.generateCreepBoosts(room, body, MOVE, 'fatigue'),
-			}
+			};
 		}
 
 		return null;

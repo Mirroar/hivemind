@@ -8,8 +8,7 @@ import {getRoomIntel} from 'room-intel';
 /**
  * Handles conversion of squad 'builder' units into their assigned civilian role
  * upon reaching the target expansion room. This logic lives here rather than in
- * BrawlerRole because these creeps are civilians being escorted, not fighters —
- * the brawler role is merely their transport mechanism.
+ * the squad civilian role to keep conversion logic separate from travel logic.
  */
 export default class SquadCivilianEscort {
 	/**
@@ -17,10 +16,10 @@ export default class SquadCivilianEscort {
 	 * it to its intended civilian role. Safe to call every tick — returns
 	 * immediately for non-builder units or units that lack a controller target.
 	 *
-	 * @param {BrawlerCreep} creep
+	 * @param {SquadCivilianCreep} creep
 	 *   The creep to potentially convert.
 	 */
-	attemptCivilianConversion(creep: BrawlerCreep): void {
+	attemptCivilianConversion(creep: SquadCivilianCreep): void {
 		if (creep.memory.squadUnitType !== 'builder') return;
 		if (!creep.room.controller) return;
 
