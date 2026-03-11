@@ -69,6 +69,8 @@ export default class SquadBrawlerRole extends MilitaryRole {
 	 * Recycles expansion claimers that have completed their mission.
 	 */
 	onNoTargets(creep: SquadBrawlerCreep, options: MilitaryTargetOption[]) {
+		const squad = this.squadManager.getSquad(creep.memory.squadName);
+		if (!squad || creep.pos.roomName !== squad.getTarget()?.roomName) return;
 		if (options.length === 0 && creep.getActiveBodyparts(CLAIM) > 0 && creep.memory.squadName?.startsWith('expand')) {
 			this.performRecycle(creep);
 		}

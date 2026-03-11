@@ -87,6 +87,9 @@ export default class MuleSpawnRole extends SpawnRole {
 
 	getCreepBoosts(room: Room, option: MuleSpawnOption, body: BodyPartConstant[]) {
 		if (room.getEffectiveAvailableEnergy() < 20_000) return {};
+		const tradeRoute = new TradeRoute(option.routeName);
+		const resourceType = tradeRoute.getResourceType();
+		if (resourceType !== RESOURCE_ENERGY) return {};
 
 		return this.generateCreepBoosts(room, body, CARRY, 'capacity');
 	}

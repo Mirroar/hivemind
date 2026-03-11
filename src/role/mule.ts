@@ -222,17 +222,15 @@ export default class MuleRole extends Role {
 		const target = creep.room.getBestStorageTarget(amount, resourceType);
 		if (!target) return;
 
-		if (creep.pos.getRangeTo(target) > 1) {
-			creep.goTo(target, {range: 1, maxRooms: 1});
-			return;
-		}
+		creep.whenInRange(1, target, () => {
+			if (creep.transfer(target, resourceType) === OK) {
+				Game.notify(creep.memory.route + ': Transferred ' + (creep.store[resourceType] || 0) + ' ' + resourceType + ' to ' + creep.room.name);
 
-		creep.transfer(target, resourceType);
-		Game.notify(creep.memory.route + ': Transferred ' + (creep.store[resourceType] || 0) + ' ' + resourceType + ' to ' + creep.room.name);
-
-		if (creep.memory.recordTravelLength) {
-			this.tradeRoute.setTravelLength(Game.time - creep.memory.recordTravelLength);
-			delete creep.memory.recordTravelLength;
-		}
+				if (creep.memory.recordTravelLength) {
+					this.tradeRoute.setTravelLength(Game.time - creep.memory.recordTravelLength);
+					delete creep.memory.recordTravelLength;
+				}
+			}
+		});
 	}
 }

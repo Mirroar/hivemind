@@ -348,10 +348,13 @@ function markBuildings(
 	});
 
 	_.each(structures[STRUCTURE_RAMPART], (structure: StructureRampart) => {
-		if (!structure.my) {
-			// Enemy ramparts are blocking.
-			blockerCallback(structure);
-		}
+		if (structure.my) return;
+
+		// Enemy ramparts are blocking. Allied ramparts are not, we can walk through them.
+		// @todo Instead reduce caching time for cost matrix and intel when there are enemy ramparts in the room, so we can react faster to changes.
+		if (hivemind.relations.isAlly(structure.owner.username)) return;
+
+		blockerCallback(structure);
 	});
 
 	if (hivemind.segmentMemory.isReady()) {
