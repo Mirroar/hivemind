@@ -52,6 +52,7 @@ declare global {
 		notifyFactoryProduction: boolean;
 		onGlobalReset?: () => void;
 		onTick?: () => void;
+		onTickLate?: () => void;
 		operatorEachRoom: false | number;
 		operatorNames: string[];
 		powerBankMinAmount: number;

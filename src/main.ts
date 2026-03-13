@@ -137,6 +137,11 @@ class BotKernel {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 
+		const onTickLateCallback = hivemind.settings.get('onTickLate');
+		if (onTickLateCallback) {
+			onTickLateCallback();
+		}
+
 		hivemind.runProcess('rooms', RoomsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
