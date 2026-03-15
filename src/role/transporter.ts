@@ -7,6 +7,7 @@ LOOK_CONSTRUCTION_SITES OK ORDER_SELL FIND_TOMBSTONES FIND_RUINS */
 import Role from 'role/role';
 import utilities from 'utilities';
 import {getResourcesIn} from 'utils/store';
+import {mark} from 'utils/spot-profiler';
 
 type TransporterOrder = ResourceSourceTask | ResourceDestinationTask;
 
@@ -79,6 +80,7 @@ export default class TransporterRole extends Role {
 	 */
 	run(creep: TransporterCreep) {
 		this.creep = creep;
+		mark('guards');
 
 		// Make sure transporter doesn't have orders outside of its room.
 		if (creep.memory.singleRoom && creep.memory.order && isTargettedOrder(creep.memory.order)) {
@@ -113,6 +115,7 @@ export default class TransporterRole extends Role {
 		}
 
 		if (this.unblockBayIfNeeded(creep)) return;
+		mark('dispatch');
 
 		if (creep.memory.delivering) {
 			this.performDeliver();
