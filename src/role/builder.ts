@@ -12,6 +12,7 @@ import utilities from 'utilities';
 import {throttle} from 'utils/throttle';
 import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getResourcesIn} from 'utils/store';
+import {mark} from 'utils/spot-profiler';
 
 interface RepairOrder {
 	type: 'repair';
@@ -84,6 +85,7 @@ export default class BuilderRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	run(creep: BuilderCreep) {
+		mark('guards');
 		if (creep.heapMemory.suicideSpawn) {
 			this.performRecycle(creep);
 			return;
@@ -98,6 +100,7 @@ export default class BuilderRole extends Role {
 			this.setBuilderState(creep, true);
 		}
 
+		mark('work');
 		if (creep.memory.upgrading) {
 			this.performUpgrade(creep);
 			return;
@@ -137,6 +140,7 @@ export default class BuilderRole extends Role {
 			return;
 		}
 
+		mark('getEnergy');
 		if (!creep.room.storage || creep.room.getEffectiveAvailableEnergy() > 2500) {
 			// @todo Instead of completely circumventing TypeScript, find a way to
 			// make energy gathering reusable between multiple roles.
