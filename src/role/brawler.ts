@@ -5,6 +5,7 @@ import container from 'utils/container';
 import MilitaryRole from 'role/military';
 import PathManager from 'empire/remote-path-manager';
 import {decodePosition, serializePositionPath} from 'utils/serialization';
+import {mark} from 'utils/spot-profiler';
 
 declare global {
 	interface BrawlerCreep extends Creep {
@@ -36,15 +37,19 @@ export default class BrawlerRole extends MilitaryRole {
 	 *   The creep to run logic for.
 	 */
 	run(creep: BrawlerCreep) {
+		mark('init');
 		if (!creep.memory.initialized) {
 			this.initBrawlerState(creep);
 		}
 
 		// Target is recalculated every tick for best results.
+		mark('target');
 		this.calculateMilitaryTarget(creep);
 
+		mark('move');
 		this.performMilitaryMove(creep);
 
+		mark('combat');
 		if (creep.memory.order) {
 			const target = Game.getObjectById<Creep | AnyStructure>(creep.memory.order.target);
 			if (target instanceof StructureController && !target.my && this.handleControllerAction(creep, target)) return;
