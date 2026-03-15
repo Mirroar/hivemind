@@ -2,6 +2,7 @@ import hivemind from 'hivemind';
 import Role from 'role/role';
 import {getThrottleOffset, throttle} from 'utils/throttle';
 import {timeCall} from 'utils/cpu';
+import {resetSpotProfiler, flushSpotProfiler} from 'utils/spot-profiler';
 
 declare global {
 	interface CreepMemory {
@@ -143,6 +144,7 @@ export default class CreepManager {
 		this.performance.total.run++;
 		this.performance[roleId].run++;
 
+		resetSpotProfiler();
 		const totalTime = timeCall('creepRole:' + roleId, () => {
 			let shouldRun = true;
 			if (this.roles[roleId].preRun) {
@@ -155,7 +157,7 @@ export default class CreepManager {
 		});
 
 		if (totalTime >= 5) {
-			hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick!');
+			hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick! |', flushSpotProfiler());
 		}
 
 		this.recordCreepCpuStats(roleId, totalTime);
