@@ -7,6 +7,7 @@ import Role from 'role/role';
 import RoomStatus from 'room/room-status';
 import {encodePosition, decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
+import {mark} from 'utils/spot-profiler';
 
 declare global {
 	interface ScoutCreep extends Creep {
@@ -62,10 +63,12 @@ export default class ScoutRole extends Role {
 			delete creep.memory.disableNotifications;
 		}
 
+		mark('chooseTarget');
 		if (!creep.memory.scoutTarget && !creep.memory.portalTarget) {
 			this.chooseScoutTarget(creep);
 		}
 
+		mark('move');
 		this.performScout(creep);
 	}
 
