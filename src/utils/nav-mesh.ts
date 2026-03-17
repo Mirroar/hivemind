@@ -826,4 +826,61 @@ export default class NavMesh {
 
 		return Math.min(route.path.length - 1, roomLinearDistance);
 	}
+
+	/**
+	 * Returns all rooms reachable from a given start room within a maximum
+	 * number of room hops, along with each room's hop distance.
+	 *
+	 * @param {string} startRoom
+	 *   Name of the room to start from.
+	 * @param {number} maxRoomDistance
+	 *   Maximum number of room hops to explore.
+	 * @return {Map<string, number>}
+	 *   Map of reachable room names to their hop distances from startRoom.
+	 */
+	getReachableRooms(startRoom: string, maxRoomDistance: number, allowDanger: boolean = false): Map<string, number> {
+		mark('navMesh.getReachableRooms:' + startRoom + ':' + maxRoomDistance);
+		return cache.inHeap('reachableRooms:' + startRoom + ':' + maxRoomDistance, 500, () => {
+			const reachable = new Map<string, number>();
+			reachable.set(startRoom, 0);
+
+			const queue: Array<{roomName: string; distance: number}> = [{roomName: startRoom, distance: 0}];
+
+			while (queue.length > 0) {
+				const current = queue.shift();
+				if (current.distance >= maxRoomDistance) continue;
+
+				if (!this.memory.rooms[current.roomName]) {
+					this.generateForRoom(current.roomName);
+				}
+
+				const roomMemory = this.memory.rooms[current.roomName];
+				if (!roomMemory) continue;
+
+				for (const exit of roomMemory.exits) {
+					const nextRoom = this.getAdjacentRoom(current.roomName, exit.id);
+					if (reachable.has(nextRoom)) continue;
+
+					if (hivemind.segmentMemory.isReady()) {
+						const roomIntel = getRoomIntel(nextRoom);
+						if (roomIntel.isOwned()) {
+							if (!allowDanger && !hivemind.relations.isAlly(roomIntel.getOwner())) continue;
+						}
+					}
+
+					reachable.set(nextRoom, current.distance + 1);
+					queue.push({roomName: nextRoom, distance: current.distance + 1});
+				}
+
+				for (const portal of roomMemory.portals || []) {
+					if (reachable.has(portal.room)) continue;
+
+					reachable.set(portal.room, current.distance + 1);
+					queue.push({roomName: portal.room, distance: current.distance + 1});
+				}
+			}
+
+			return reachable;
+		});
+	}
 }

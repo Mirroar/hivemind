@@ -39,8 +39,6 @@ interface ScoutTarget {
 	range: number;
 }
 
-const accessibilityCache = {};
-
 export default class ScoutRole extends Role {
 	roomStatus: RoomStatus;
 
@@ -165,36 +163,30 @@ export default class ScoutRole extends Role {
 	}
 
 	getBestScoutOption(creep: ScoutCreep) {
-		const startTime = Game.cpu.getUsed();
-		const candidates = _.sortByAll(
-			this.getScoutableRoomsForCreep(creep),
-			(info: ScoutTarget) => -info.scoutPriority,
-			(info: ScoutTarget) => {
-				const roomIntel = getRoomIntel(info.roomName);
-				return roomIntel.getLastScoutAttempt() + info.range * 50;
-			},
-		);
+		const rooms = this.getScoutableRoomsForCreep(creep);
+		if (rooms.length === 0) return null;
 
-		for (const info of candidates) {
-			if ((Game.cpu.getUsed() - startTime > 10)) {
-				return null;
+		let bestInfo: ScoutTarget = null;
+		let bestPriority = -Infinity;
+		let bestAge = Infinity;
+		let bestLastScout = 0;
+
+		for (const info of rooms) {
+			const lastScout = getRoomIntel(info.roomName).getLastScoutAttempt();
+			const age = lastScout + info.range * 50;
+			if (
+				bestInfo === null
+				|| info.scoutPriority > bestPriority
+				|| (info.scoutPriority === bestPriority && age < bestAge)
+			) {
+				bestInfo = info;
+				bestPriority = info.scoutPriority;
+				bestAge = age;
+				bestLastScout = lastScout;
 			}
-
-			if (!this.hasRoomPath(creep, info.roomName)) {
-				if (!creep.memory.invalidScoutTargets) {
-					creep.memory.invalidScoutTargets = [];
-				}
-
-				creep.memory.invalidScoutTargets.push(info.roomName);
-				continue;
-			}
-
-			const roomIntel = getRoomIntel(info.roomName);
-			const lastScout = roomIntel.getLastScoutAttempt();
-			return {info, lastScout};
 		}
 
-		return null;
+		return {info: bestInfo, lastScout: bestLastScout};
 	}
 
 	getScoutableRoomsForCreep(creep: ScoutCreep): ScoutTarget[] {
@@ -206,10 +198,11 @@ export default class ScoutRole extends Role {
 	}
 
 	filterScoutableRooms(creep: ScoutCreep, rooms: ScoutTarget[]): ScoutTarget[] {
+		const reachableRooms = container.get('NavMesh').getReachableRooms(creep.pos.roomName, 5);
 		return _.filter(rooms, (info: ScoutTarget) => {
 			if (info.roomName === creep.pos.roomName) return false;
-			if (creep.memory.invalidScoutTargets && creep.memory.invalidScoutTargets.includes(info.roomName)) return false;
-			if (container.get('NavMesh').getRoomDistance(creep.pos.roomName, info.roomName) > 5) return false;
+			if (creep.memory.invalidScoutTargets?.includes(info.roomName)) return false;
+			if (!reachableRooms.has(info.roomName)) return false;
 
 			return true;
 		});
@@ -248,15 +241,6 @@ export default class ScoutRole extends Role {
 				return true;
 			},
 		));
-	}
-
-	hasRoomPath(creep: Creep, destination: string): boolean {
-		return cache.inObject(accessibilityCache, creep.pos.roomName + '/' + destination, 5000, () => {
-			const path = container.get('NavMesh').findPath(creep.pos, new RoomPosition(25, 25, destination));
-			if (!path.incomplete) return true;
-
-			return false;
-		});
 	}
 
 	isOscillating(creep: ScoutCreep) {
