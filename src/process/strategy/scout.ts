@@ -326,7 +326,14 @@ export default class ScoutProcess extends Process {
 
 			if (roomDistance > 1) continue;
 
-			if (_.values(exits).includes(otherRoom.name)) {
+			const isDirectNeighbor = (() => {
+				for (const dir in exits) {
+					if (exits[dir] === otherRoom.name) return true;
+				}
+
+				return false;
+			})();
+			if (isDirectNeighbor) {
 				// If we're direct neighbors, that also means we can't remote harvest
 				// after expanding if there is a connecting exit.
 				result.addScore(-this.getHarvestRoomScore(roomName), 'blockHarvest' + otherRoom.name);
@@ -349,9 +356,14 @@ export default class ScoutProcess extends Process {
 		result.addScore(0.25 - (roomIntel.countTiles('swamp') * 0.0001), 'swampTiles');
 
 		// Prefer rooms to be a certain range from each other.
-		const distancesToRoom = _.map(_.filter(Game.myRooms, room => room.name !== roomName), room => Game.map.getRoomLinearDistance(room.name, roomName));
-		if (distancesToRoom.length > 0) {
-			const distanceToNextRoom = _.min(distancesToRoom);
+		let distanceToNextRoom = Infinity;
+		for (const room of Game.myRooms) {
+			if (room.name === roomName) continue;
+			const d = Game.map.getRoomLinearDistance(room.name, roomName);
+			if (d < distanceToNextRoom) distanceToNextRoom = d;
+		}
+
+		if (distanceToNextRoom < Infinity) {
 			const minDist = hivemind.settings.get('expansionMinRoomDistance');
 			const maxDist = hivemind.settings.get('expansionMaxRoomDistance');
 			if (distanceToNextRoom < minDist) {
