@@ -132,27 +132,9 @@ export default class PowerHaulerRole extends Role {
 	 *   The creep to run logic for.
 	 */
 	pickupPower(creep: PowerHaulerCreep) {
-		const powerResources = creep.room.find(FIND_DROPPED_RESOURCES, {
-			filter: resource => resource.resourceType === RESOURCE_POWER,
-		});
-		if (powerResources.length > 0) {
-			creep.whenInRange(1, powerResources[0], () => {
-				creep.pickup(powerResources[0]);
-			});
-
-			return;
-		}
-
-		const powerRuins = creep.room.find(FIND_RUINS, {
-			filter: ruin => (ruin.store.power || 0) > 0,
-		});
-		if (powerRuins.length > 0) {
-			creep.whenInRange(1, powerRuins[0], () => {
-				creep.withdraw(powerRuins[0], RESOURCE_POWER);
-			});
-
-			return;
-		}
+		// pickupResources handles DROPPED_RESOURCES, RUINS, and TOMBSTONES
+		// filtered for RESOURCE_POWER — no need to duplicate those finds here.
+		if (this.pickupResources(creep, RESOURCE_POWER)) return;
 
 		// Mark operation as finished.
 		if (Memory.strategy && Memory.strategy.power && Memory.strategy.power.rooms && Memory.strategy.power.rooms[creep.memory.targetRoom]) {
