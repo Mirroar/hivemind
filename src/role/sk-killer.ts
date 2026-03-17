@@ -164,7 +164,24 @@ export default class RemoteHarvesterRole extends Role {
 
 			// Ignore lairs if we're not mining that resource.
 			const targetPos = encodePosition(closestResource.pos);
-			if (!_.find({...Game.creepsByRole['harvester.remote'], ...Game.creepsByRole['harvester.sk-mining']}, (c: RemoteHarvesterCreep) => c.memory.source === targetPos)) {
+			const remoteHarvesters = (Game.creepsByRole['harvester.remote'] ?? {}) as Record<string, RemoteHarvesterCreep>;
+			const skHarvesters = (Game.creepsByRole['harvester.sk-mining'] ?? {}) as Record<string, RemoteHarvesterCreep>;
+			let isAssigned = false;
+			for (const name in remoteHarvesters) {
+				if (remoteHarvesters[name].memory.source === targetPos) {
+					isAssigned = true;
+					break;
+				}
+			}
+			if (!isAssigned) {
+				for (const name in skHarvesters) {
+					if (skHarvesters[name].memory.source === targetPos) {
+						isAssigned = true;
+						break;
+					}
+				}
+			}
+			if (!isAssigned) {
 				creep.room.visual.text((CREEP_LIFE_TIME + creep.pos.getRangeTo(lair.pos)).toString(), lair.pos, {color: '#ff0000'});
 
 				return CREEP_LIFE_TIME + creep.pos.getRangeTo(lair.pos);

@@ -56,10 +56,7 @@ export default class TrafficManager {
 	}
 
 	manageTraffic() {
-		const powerCreeps = _.filter(Game.powerCreeps, creep => (creep.ticksToLive || 0) > 0 && creep.shard === Game.shard.name);
-
-		// Move blocking creeps if necessary.
-		_.each([..._.values<Creep>(Game.creeps), ...powerCreeps], creep => {
+		const handleBlockingCreep = (creep: Creep | PowerCreep) => {
 			if (!creep._blockingCreepMovement) return;
 			if (creep._hasMoveIntent) return;
 
@@ -86,7 +83,18 @@ export default class TrafficManager {
 			}
 
 			creep._hasMoveIntent = true;
-		});
+		};
+
+		// Move blocking creeps if necessary. Two separate iterations avoid
+		// allocating a merged spread array every tick.
+		for (const name in Game.creeps) handleBlockingCreep(Game.creeps[name]);
+
+		for (const name in Game.powerCreeps) {
+			const creep = Game.powerCreeps[name];
+			if ((creep.ticksToLive || 0) > 0 && creep.shard === Game.shard.name) {
+				handleBlockingCreep(creep);
+			}
+		}
 	}
 
 	getAlternateCreepPosition(creep: Creep | PowerCreep): RoomPosition | null {
