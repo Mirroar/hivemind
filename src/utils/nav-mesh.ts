@@ -7,6 +7,7 @@ import {encodePosition, deserializePosition, serializeCoords} from 'utils/serial
 import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
+import { mark } from './spot-profiler';
 
 declare global {
 	interface Memory {
@@ -87,6 +88,7 @@ export default class NavMesh {
 	 *   Name of the target room.
 	 */
 	generateForRoom(roomName: string) {
+		mark('navMesh.generateForRoom:' + roomName);
 		// Mesh doesn't need to be updated very often.
 		// @todo Allow forcing update for when we dismantle a structure.
 		// Provisional entries (generated without vision) are always refreshed when we have vision.
@@ -451,6 +453,7 @@ export default class NavMesh {
 		length?: number;
 		incomplete: boolean;
 	} {
+		mark('navMesh.findPath:' + encodePosition(startPos) + ':' + encodePosition(endPos));
 		if (!options) options = {};
 
 		const startTime = Game.cpu.getUsed();

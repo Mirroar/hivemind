@@ -157,7 +157,13 @@ export default class CreepManager {
 		});
 
 		if (totalTime >= 5) {
-			hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick! |', flushSpotProfiler());
+			const trace = flushSpotProfiler();
+			if (totalTime < 15) {
+				hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick! |', trace);
+			} else {
+				// Extreme cases get logged to email as well.
+				hivemind.log('creeps', creep.room.name).notify(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick! |', trace);
+			}
 		}
 
 		this.recordCreepCpuStats(roleId, totalTime);

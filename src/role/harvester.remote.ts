@@ -7,6 +7,7 @@ import container from 'utils/container';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
 import {decodePosition, serializePositionPath} from 'utils/serialization';
+import { mark } from 'utils/spot-profiler';
 
 declare global {
 	interface RemoteHarvesterCreep extends Creep {
@@ -64,6 +65,7 @@ export default class RemoteHarvesterRole extends Role {
 	 *   Whether the creep is in the process of moving.
 	 */
 	travelToSource(creep: RemoteHarvesterCreep) {
+		mark('travelToSource:' + creep.memory.source);
 		const sourcePosition = decodePosition(creep.memory.source);
 
 		if (this.combatManager.needsToFlee(creep)) {
@@ -113,6 +115,7 @@ export default class RemoteHarvesterRole extends Role {
 	 */
 	performRemoteHarvest(creep: RemoteHarvesterCreep) {
 		if (creep.pos.roomName !== creep.operation.getRoom()) return;
+		mark('performRemoteHarvest:' + creep.memory.source);
 
 		// Check if something blocks building the container.
 		const container = creep.operation.getContainer(creep.memory.source);
