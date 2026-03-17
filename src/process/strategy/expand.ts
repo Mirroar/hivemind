@@ -709,10 +709,9 @@ export default class ExpandProcess extends Process {
 		// Alright, this is it, flipping the switch!
 		if (room.controller.unclaim() === OK) {
 			room.setEvacuating(false);
-			_.each(
-				_.filter(room.find(FIND_MY_CREEPS), creep => creep.memory.singleRoom === room.name),
-				creep => creep.suicide(),
-			);
+			for (const creep of room.find(FIND_MY_CREEPS)) {
+				if (creep.memory.singleRoom === room.name) creep.suicide();
+			}
 		}
 	}
 
