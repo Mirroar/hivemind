@@ -245,50 +245,54 @@ export default class BuilderRole extends Role {
 	 *   True if an action was performed.
 	 */
 	performRepair(creep: BuilderCreep): boolean {
-		if (!creep.memory.order || !creep.memory.order.target || !Game.getObjectById(creep.memory.order.target)) {
+		if (!creep.memory.order?.target) {
 			this.calculateBuilderTarget(creep);
 		}
 
-		if (!creep.memory.order || !creep.memory.order.target || !Game.getObjectById(creep.memory.order.target)) {
-			return false;
+		if (!creep.memory.order?.target) return false;
+		let target = Game.getObjectById(creep.memory.order.target);
+		if (!target) {
+			// Target object no longer exists in the world — recalculate.
+			this.calculateBuilderTarget(creep);
+			if (!creep.memory.order?.target) return false;
+			target = Game.getObjectById(creep.memory.order.target);
+			if (!target) return false;
 		}
 
 		if (
 			creep.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL
 			&& !creep.room.controller?.safeMode
-			&& !([STRUCTURE_SPAWN, STRUCTURE_RAMPART, STRUCTURE_TOWER, STRUCTURE_WALL] as string[]).includes(Game.getObjectById(creep.memory.order.target).structureType)
+			&& !([STRUCTURE_SPAWN, STRUCTURE_RAMPART, STRUCTURE_TOWER, STRUCTURE_WALL] as string[]).includes((target as Structure).structureType)
 		) {
 			this.calculateBuilderTarget(creep);
 
-			if (!creep.memory.order || !creep.memory.order.target || !Game.getObjectById(creep.memory.order.target)) {
-				return false;
-			}
+			if (!creep.memory.order?.target) return false;
+			target = Game.getObjectById(creep.memory.order.target);
+			if (!target) return false;
 		}
 
 		if (creep.memory.order.type === 'repair') {
-			const target = Game.getObjectById(creep.memory.order.target);
-			let maxHealth = target.hitsMax;
+			let maxHealth = (target as Structure).hitsMax;
 			if (creep.memory.order.maxHealth) {
 				maxHealth = creep.memory.order.maxHealth;
 
 				// Repair ramparts past their maxHealth to counteract decaying.
-				if (target.structureType === STRUCTURE_RAMPART) {
-					maxHealth = Math.min(maxHealth + 10_000, target.hitsMax);
+				if ((target as Structure).structureType === STRUCTURE_RAMPART) {
+					maxHealth = Math.min(maxHealth + 10_000, (target as Structure).hitsMax);
 				}
 			}
 
-			if (!target.hits || target.hits >= maxHealth) {
+			if (!(target as Structure).hits || (target as Structure).hits >= maxHealth) {
 				this.calculateBuilderTarget(creep);
 				return true;
 			}
 
-			this.repairTarget(creep, target);
+			this.repairTarget(creep, target as Structure);
 			return true;
 		}
 
 		if (creep.memory.order.type === 'build') {
-			const target = Game.getObjectById(creep.memory.order.target);
-			this.buildTarget(creep, target);
+			this.buildTarget(creep, target as ConstructionSite);
 			return true;
 		}
 
