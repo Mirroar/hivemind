@@ -31,6 +31,7 @@ export default class SquadCivilianSpawnRole extends SpawnRole {
 			const options: SquadCivilianSpawnOption[] = [];
 
 			_.each(this.squadManager.getAllSquads(), (squad: Squad) => {
+				if (squad.isExternallyManaged()) return;
 				if (squad.getSpawn() !== room.name) return;
 
 				const availableEnergy = room.getEffectiveAvailableEnergy();

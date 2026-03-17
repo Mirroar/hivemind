@@ -15,6 +15,8 @@ declare global {
 		civilianCounts?: Partial<Record<CivilianSpecialization, number>>;
 		spawnRoom?: string;
 		targetPos?: string;
+		/** When true, an external system manages spawning for this squad and built-in spawn roles will skip it. */
+		externallyManaged?: boolean;
 	}
 }
 
@@ -194,6 +196,25 @@ export default class Squad implements SquadInterface {
 		else {
 			delete this.memory.targetPos;
 		}
+	}
+
+	/**
+	 * Marks this squad as externally managed, causing built-in spawn roles to skip it.
+	 */
+	setExternallyManaged(value: boolean) {
+		if (value) {
+			this.memory.externallyManaged = true;
+		}
+		else {
+			delete this.memory.externallyManaged;
+		}
+	}
+
+	/**
+	 * Returns whether this squad is managed by an external system.
+	 */
+	isExternallyManaged(): boolean {
+		return this.memory.externallyManaged === true;
 	}
 
 	/**

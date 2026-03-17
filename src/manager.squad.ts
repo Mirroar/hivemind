@@ -28,6 +28,8 @@ export interface Squad {
 	getSpawn(): string;
 	setTarget(targetPos: RoomPosition): void;
 	getTarget(): RoomPosition | null;
+	setExternallyManaged(value: boolean): void;
+	isExternallyManaged(): boolean;
 }
 
 export default class SquadManager {
