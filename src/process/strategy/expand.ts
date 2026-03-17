@@ -395,6 +395,7 @@ export default class ExpandProcess extends Process {
 		info.supportingRooms = [];
 
 		// @todo Start with closest rooms first.
+		const reachableFromExpansion = this.navMesh.getReachableRooms(info.roomName, 15);
 		for (const room of Game.myRooms) {
 			// 5 Support squads max.
 			if (_.size(activeSquads) >= 5) break;
@@ -403,9 +404,7 @@ export default class ExpandProcess extends Process {
 			if ((room.structuresByType[STRUCTURE_SPAWN] || []).length === 0) continue;
 			if (room.name === info.spawnRoom || room.name === info.roomName) continue;
 			if (room.getEffectiveAvailableEnergy() < 50_000) continue;
-
-			const path = cache.inHeap('spawnAssistPath:' + info.roomName + ':' + room.name, 2000, () => this.navMesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, info.roomName), {maxPathLength: 700}));
-			if (!path || path.incomplete) continue;
+			if (!reachableFromExpansion.has(room.name)) continue;
 
 			const squadName = 'expandSupport.' + info.roomName + '.' + room.name;
 			const supportSquad = this.squadManager.getOrCreateSquad(squadName);

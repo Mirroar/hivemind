@@ -217,11 +217,10 @@ export default class ScoutRole extends Role {
 	}
 
 	getScoutableRoomsInRange(roomName: string, range: number): ScoutTarget[] {
-		return cache.inHeap('scoutableRooms:' + roomName + ':' + range, 200, () => _.filter(this.getScoutableRooms(), (info: ScoutTarget) => {
-			if (container.get('NavMesh').getRoomDistance(roomName, info.roomName) > range) return false;
-
-			return true;
-		}));
+		return cache.inHeap('scoutableRooms:' + roomName + ':' + range, 200, () => {
+			const reachableRooms = container.get('NavMesh').getReachableRooms(roomName, range);
+			return _.filter(this.getScoutableRooms(), (info: ScoutTarget) => reachableRooms.has(info.roomName));
+		});
 	}
 
 	getScoutableRooms() {

@@ -840,7 +840,7 @@ export default class NavMesh {
 	 */
 	getReachableRooms(startRoom: string, maxRoomDistance: number, allowDanger: boolean = false): Map<string, number> {
 		mark('navMesh.getReachableRooms:' + startRoom + ':' + maxRoomDistance);
-		return cache.inHeap('reachableRooms:' + startRoom + ':' + maxRoomDistance, 500, () => {
+		return cache.inHeap('reachableRooms:' + startRoom + ':' + maxRoomDistance + ':' + (allowDanger ? '1' : '0'), 500, () => {
 			const reachable = new Map<string, number>();
 			reachable.set(startRoom, 0);
 

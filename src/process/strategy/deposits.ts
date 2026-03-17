@@ -97,6 +97,8 @@ export default class DepositMiningProcess extends Process {
 	}
 
 	getPotentialSpawns(targetRoom: string): Array<{room: string; distance: number}> {
+		const maxRange = hivemind.settings.get('maxRangeForDepositMining');
+		const reachableRooms = this.mesh.getReachableRooms(targetRoom, maxRange);
 		let potentialSpawns: Array<{room: string; distance: number}> = [];
 		for (const room of Game.myRooms) {
 			// @todo Allow spawning in rooms full of minerals, as long as there's
@@ -104,17 +106,14 @@ export default class DepositMiningProcess extends Process {
 			if (room.isFullOnMinerals()) continue;
 			if (room.getEffectiveAvailableEnergy() < hivemind.settings.get('minEnergyForDepositMining')) continue;
 			if (room.controller.level < hivemind.settings.get('minRclForDepositMining')) continue;
-			if (Game.map.getRoomLinearDistance(targetRoom, room.name) > hivemind.settings.get('maxRangeForDepositMining')) continue;
+			if (!reachableRooms.has(room.name)) continue;
 
-			// @todo Use actual position of power cache.
-			const roomRoute = this.mesh.findPath(new RoomPosition(25, 25, room.name), new RoomPosition(25, 25, targetRoom));
-			if (roomRoute.incomplete || roomRoute.path.length > 3 * hivemind.settings.get('maxRangeForDepositMining')) continue;
-
-			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', roomRoute.path.length);
+			const distance = reachableRooms.get(room.name);
+			hivemind.log('strategy').debug('Could spawn creeps in', room.name, 'with distance', distance);
 
 			potentialSpawns.push({
 				room: room.name,
-				distance: roomRoute.path.length,
+				distance,
 			});
 		}
 
