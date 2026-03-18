@@ -158,7 +158,7 @@ export default class CreepManager {
 
 		if (totalTime >= 5) {
 			const trace = flushSpotProfiler();
-			if (totalTime < 15) {
+			if (totalTime < 50) {
 				hivemind.log('creeps', creep.room.name).error(creep.name, 'took', totalTime.toPrecision(3), 'CPU this tick! |', trace);
 			} else {
 				// Extreme cases get logged to email as well.

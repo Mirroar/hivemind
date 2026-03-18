@@ -1,4 +1,5 @@
 let startCpu: number = 0;
+let startHeapUsed: number | undefined;
 let checkpoints: Array<[string, number]> = [];
 
 /**
@@ -8,6 +9,7 @@ let checkpoints: Array<[string, number]> = [];
  */
 export function resetSpotProfiler(): void {
 	startCpu = Game.cpu.getUsed();
+	startHeapUsed = Game.cpu.getHeapStatistics?.()?.used_heap_size;
 	checkpoints = [];
 }
 
@@ -36,9 +38,11 @@ export function mark(label: string): void {
  *
  * Example with marks "pathfinding" and "dispatcher":
  *   [start: 0.12] [pathfinding: 2.31] [dispatcher: 1.44] [tail: 0.18]
+ *   [start: 0.12] [pathfinding: 2.31] [dispatcher: 1.44] [tail: 0.18] [GC: -1.23MB]
  *
  * Example with no marks:
  *   [start: 3.05]
+ *   [start: 3.05] [GC: -0.456MB]
  *
  * @return {string}
  *   Formatted breakdown string. Never throws.
@@ -49,6 +53,16 @@ export function flushSpotProfiler(): string {
 
 	if (checkpoints.length === 0) {
 		parts.push('[start: ' + (endCpu - startCpu).toPrecision(3) + ']');
+
+		// GC detection: if used heap shrank since reset, a collection likely ran.
+		if (startHeapUsed !== undefined) {
+			const endHeapUsed = Game.cpu.getHeapStatistics?.()?.used_heap_size;
+			if (endHeapUsed !== undefined && endHeapUsed < startHeapUsed) {
+				const freedMb = ((startHeapUsed - endHeapUsed) / (1024 * 1024)).toPrecision(3);
+				parts.push('[GC: -' + freedMb + 'MB]');
+			}
+		}
+
 		return parts.join(' ');
 	}
 
@@ -67,6 +81,15 @@ export function flushSpotProfiler(): string {
 
 	// Tail span: always present, represents time after the last mark to flush.
 	parts.push('[tail: ' + (Game.cpu.getUsed() - endCpu).toPrecision(3) + ']');
+
+	// GC detection: if used heap shrank since reset, a collection likely ran.
+	if (startHeapUsed !== undefined) {
+		const endHeapUsed = Game.cpu.getHeapStatistics?.()?.used_heap_size;
+		if (endHeapUsed !== undefined && endHeapUsed < startHeapUsed) {
+			const freedMb = ((startHeapUsed - endHeapUsed) / (1024 * 1024)).toPrecision(3);
+			parts.push('[GC: -' + freedMb + 'MB]');
+		}
+	}
 
 	return parts.join(' ');
 }

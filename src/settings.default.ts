@@ -41,6 +41,7 @@ const settings: SettingsObject = {
 
 	disableRoomVisuals: false,
 	disableMapVisuals: false,
+	showHeapVisuals: false,
 
 	// Remote mining:
 	// The maximum distance for rooms to be mined.

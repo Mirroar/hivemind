@@ -136,6 +136,7 @@ export default class RemoteHarvesterRole extends Role {
 
 		// Check if a container nearby is in need of repairs, since we can handle
 		// it with less intents than haulers do.
+		mark('performRemoteHarvest:buildNearbyContainer');
 		const workParts = creep.getActiveBodyparts(CARRY) ? creep.getActiveBodyparts(WORK) : 0;
 		const needsBuild = creep.pos.findClosestByRange(FIND_MY_CONSTRUCTION_SITES, {
 			// It's important we build nearby roads as their sites may prevent the
@@ -157,8 +158,10 @@ export default class RemoteHarvesterRole extends Role {
 			}
 		}
 
+		mark('performRemoteHarvest:repairNearbyContainer');
 		if (this.repairNearbyContainer(creep)) return;
 
+		mark('performRemoteHarvest:checkDangerousSource');
 		const source = this.getSource(creep);
 
 		// Keep away from source keepers.
@@ -179,6 +182,7 @@ export default class RemoteHarvesterRole extends Role {
 		let moveTarget: RoomObject = source;
 		let moveRange = 1;
 		if ((creep.operation instanceof RemoteMiningOperation)) {
+			mark('performRemoteHarvest:checkOperationContainer');
 			const container = creep.operation.getContainer(creep.memory.source);
 			const creepsOnContainer = container && container.pos.lookFor(LOOK_CREEPS).length > 0;
 
@@ -199,6 +203,7 @@ export default class RemoteHarvesterRole extends Role {
 			}
 		}
 
+		mark('performRemoteHarvest:harvest');
 		creep.whenInRange(moveRange, moveTarget, () => {
 			// Wait if source is depleted.
 			if (source.energy <= 0) return;

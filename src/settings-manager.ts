@@ -67,6 +67,7 @@ declare global {
 		rampartWhitelistedUsers: string[];
 		recordRoomStats: boolean;
 		remoteMineRoomFilter?: (roomName: string) => boolean;
+		showHeapVisuals: boolean;
 		roomIntelCacheDuration: number;
 		roomScoutInterval: number;
 		scoutProcessInterval: number;

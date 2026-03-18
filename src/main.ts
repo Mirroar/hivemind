@@ -35,6 +35,7 @@ import interShard from 'intershard';
 import InterShardProcess from 'process/strategy/intershard';
 import ManagePowerCreepsProcess from 'process/power-creeps/manage';
 import MapVisualsProcess from 'process/map-visuals';
+import HeapVisualsProcess from 'process/heap-visuals';
 import PlayerIntelProcess from 'process/player-intel';
 import PowerMiningProcess from 'process/strategy/power';
 import ReclaimProcess from 'process/strategy/reclaim';
@@ -220,6 +221,9 @@ class BotKernel {
 			interval: 100,
 		});
 		hivemind.runProcess('map-visuals', MapVisualsProcess, {
+			priority: PROCESS_PRIORITY_ALWAYS,
+		});
+		hivemind.runProcess('heap-visuals', HeapVisualsProcess, {
 			priority: PROCESS_PRIORITY_ALWAYS,
 		});
 		hivemind.runProcess('allies', AlliesProcess, {

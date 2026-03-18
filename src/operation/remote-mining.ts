@@ -13,6 +13,7 @@ import {getCostMatrix} from 'utils/cost-matrix';
 import {getRoomIntel} from 'room-intel';
 import {getUsername} from 'utils/account';
 import {packPosList, unpackPosList} from 'utils/packrat';
+import { mark } from 'utils/spot-profiler';
 
 declare global {
 	interface RemoteMiningOperationMemory extends OperationMemory {
@@ -117,6 +118,7 @@ export default class RemoteMiningOperation extends Operation {
 	 * Gets the remote paths associated with this operation.
 	 */
 	getPaths() {
+		mark('remoteMiningOperation:getPaths:' + this.name);
 		return cache.inObject(this, 'getPaths', 0, () => {
 			if (!hivemind.segmentMemory.isReady()) return {};
 
