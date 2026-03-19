@@ -72,6 +72,7 @@ export default class RemoteMinePrioritizer {
 		const candidates = _.sortBy(this.getSourceCandidates(sourceRooms), c => c.pathLength);
 
 		let totalAvailableSources = 0;
+		let assignmentCount = 0;
 		for (const candidate of candidates) {
 			// Skip sources already assigned (from a closer own room earlier in the sorted list).
 			if (sourceAssignments[candidate.encodedSource]) continue;
@@ -89,12 +90,13 @@ export default class RemoteMinePrioritizer {
 			sourceRooms[candidate.ownRoomName].current++;
 			totalAvailableSources++;
 
-			if (Object.keys(sourceAssignments).length < maxAmount) {
+			if (assignmentCount < maxAmount) {
 				// Disregard sources the user doesn't want harvested.
 				const roomFilter = settings.get('remoteMineRoomFilter');
 				if (roomFilter && !roomFilter(candidate.remoteRoomName)) continue;
 
 				sourceAssignments[candidate.encodedSource] = candidate.ownRoomName;
+				assignmentCount++;
 			}
 		}
 
