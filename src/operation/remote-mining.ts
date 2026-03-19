@@ -140,14 +140,13 @@ export default class RemoteMiningOperation extends Operation {
 				// the heavy caching. We also want to be able to react in changes
 				// to room reservation somewhat quickly.
 				const info = cache.inHeap('rmPath:' + sourceLocation, 100, () => {
-					const path = this.pathManager.getPathFor(sourcePos);
-					if (!path) {
-						return {
-							accessible: false,
-						};
-					}
+					const assigned = Memory.strategy?.remoteHarvesting?.sourceAssignments?.[sourceLocation];
+					if (!assigned) return {accessible: false};
 
-					const sourceRoom = path[path.length - 1].roomName;
+					const path = this.pathManager.getPathTo(sourcePos, assigned);
+					if (!path) return {accessible: false};
+
+					const sourceRoom = assigned;
 					const travelTime = path.length;
 					const generatedEnergy = roomIntel.isSourceKeeperRoom()
 						? SOURCE_ENERGY_KEEPER_CAPACITY
