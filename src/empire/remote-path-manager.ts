@@ -15,10 +15,11 @@ declare global {
 }
 
 export default class RemotePathManager {
-	getPathFor(sourcePosition: RoomPosition): RoomPosition[] | null {
+	getPathTo(sourcePosition: RoomPosition, targetRoomName: string): RoomPosition[] | null {
 		if (!hivemind.segmentMemory.isReady()) return null;
 
-		const key = 'remotePath:' + encodePosition(sourcePosition);
+		const hasStorageOrTerminal = !!(Game.rooms[targetRoomName]?.storage || Game.rooms[targetRoomName]?.terminal);
+		const key = 'remotePath:' + encodePosition(sourcePosition) + ':' + targetRoomName + ':' + (hasStorageOrTerminal ? '1' : '0');
 		if (!hivemind.segmentMemory.has(key)) {
 			hivemind.segmentMemory.set(key, {});
 		}
@@ -30,37 +31,67 @@ export default class RemotePathManager {
 			return unpackPosList(memory.path);
 		}
 
-		const availableSourceRooms = _.filter(Game.myRooms, r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name) <= hivemind.settings.get('maxRemoteMineRoomDistance'));
-		const sortedByDist = _.sortBy(availableSourceRooms, r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name));
+		const room = Game.rooms[targetRoomName];
+		if (!room?.roomPlanner) {
+			memory.generated = Game.time;
+			memory.path = null;
+			return null;
+		}
 
-		let minPath;
-		let minPathLength = hivemind.settings.get('maxRemoteMinePathLength') + 50;
-		for (const room of sortedByDist) {
-			// Disregard rooms that are too far away to reach quickly.
-			const cannotFindShorterPath = Game.map.getRoomLinearDistance(sourcePosition.roomName, room.name) > Math.ceil(minPathLength / 50);
-			if (minPathLength < hivemind.settings.get('maxRemoteMinePathLength') && cannotFindShorterPath) continue;
-			if (!room.roomPlanner) continue;
+		const storagePos = room.roomPlanner.getLocations('storage')[0];
+		if (!storagePos) {
+			memory.generated = Game.time;
+			memory.path = null;
+			return null;
+		}
 
-			const storagePos = room.roomPlanner.getLocations('storage')[0];
-			if (!storagePos) continue;
+		const result = PathFinder.search(sourcePosition, {pos: storagePos, range: 1}, {
+			plainCost: 2,
+			swampCost: (room.storage || room.terminal) ? 3 : 10,
+			maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
+			roomCallback: roomName => this.getRemotePathCostMatrix(roomName, sourcePosition.roomName === roomName),
+			heuristicWeight: 1,
+		});
 
-			const result = PathFinder.search(sourcePosition, {pos: storagePos, range: 1}, {
-				plainCost: 2,
-				swampCost: (room.storage || room.terminal) ? 3 : 10,
-				maxOps: 10_000, // The default 2000 can be too little even at a distance of only 2 rooms.
-				roomCallback: roomName => this.getRemotePathCostMatrix(roomName, sourcePosition.roomName === roomName),
-				heuristicWeight: 1,
-			});
-
-			if (!result || result.incomplete || result.path.length >= minPathLength) continue;
-
-			minPath = result.path;
-			minPathLength = result.path.length;
+		if (!result || result.incomplete) {
+			memory.generated = Game.time;
+			memory.path = null;
+			return null;
 		}
 
 		// @todo Register this path so we know which rooms it touches.
 		memory.generated = Game.time;
-		memory.path = minPath ? packPosList(minPath) : null;
+		memory.path = packPosList(result.path);
+		return result.path;
+	}
+
+	getPathFor(sourcePosition: RoomPosition): RoomPosition[] | null {
+		if (!hivemind.segmentMemory.isReady()) return null;
+
+		// If this source has an active assignment, return its path.
+		const encoded = encodePosition(sourcePosition);
+		const assigned = (Memory.strategy?.remoteHarvesting as any)?.sourceAssignments?.[encoded] as string | undefined;
+		if (assigned) return this.getPathTo(sourcePosition, assigned);
+
+		// Otherwise find the shortest path to any eligible own room.
+		const availableSourceRooms = _.filter(
+			Game.myRooms,
+			r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name) <= hivemind.settings.get('maxRemoteMineRoomDistance'),
+		);
+		const sortedByDist = _.sortBy(availableSourceRooms, r => Game.map.getRoomLinearDistance(sourcePosition.roomName, r.name));
+
+		let minPath: RoomPosition[] | null = null;
+		let minPathLength: number = hivemind.settings.get('maxRemoteMinePathLength') + 50;
+		for (const room of sortedByDist) {
+			const cannotFindShorterPath = Game.map.getRoomLinearDistance(sourcePosition.roomName, room.name) > Math.ceil(minPathLength / 50);
+			if (minPathLength < hivemind.settings.get('maxRemoteMinePathLength') && cannotFindShorterPath) continue;
+
+			const path = this.getPathTo(sourcePosition, room.name);
+			if (!path || path.length >= minPathLength) continue;
+
+			minPath = path;
+			minPathLength = path.length;
+		}
 
 		return minPath;
 	}
