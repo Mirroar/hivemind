@@ -1,4 +1,4 @@
-/* global RoomPosition OBSERVER_RANGE SOURCE_ENERGY_CAPACITY */
+/* global OBSERVER_RANGE */
 
 import container from 'utils/container';
 import Process from 'process/process';
