@@ -13,6 +13,7 @@ declare global {
 			currentCount: number;
 			lastCheck: number;
 			rooms: string[];
+			sourceAssignments?: Record<string, string>;
 		};
 	}
 }

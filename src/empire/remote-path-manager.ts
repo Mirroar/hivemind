@@ -10,7 +10,7 @@ import {packPosList, unpackPosList} from 'utils/packrat';
 declare global {
 	type RemotePathMemory = {
 		generated: number;
-		path: string;
+		path: string | null;
 	};
 }
 
@@ -70,7 +70,7 @@ export default class RemotePathManager {
 
 		// If this source has an active assignment, return its path.
 		const encoded = encodePosition(sourcePosition);
-		const assigned = (Memory.strategy?.remoteHarvesting as any)?.sourceAssignments?.[encoded] as string | undefined;
+		const assigned = Memory.strategy?.remoteHarvesting?.sourceAssignments?.[encoded];
 		if (assigned) return this.getPathTo(sourcePosition, assigned);
 
 		// Otherwise find the shortest path to any eligible own room.
