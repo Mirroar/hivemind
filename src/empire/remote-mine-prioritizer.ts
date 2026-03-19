@@ -1,12 +1,17 @@
+/* global STRUCTURE_KEEPER_LAIR */
+import RemotePathManager from 'empire/remote-path-manager';
+import hivemind from 'hivemind';
 import RoomStatus from 'room/room-status';
 import settings from 'settings-manager';
 import SquadManager from 'manager.squad';
 import {getRoomIntel} from 'room-intel';
+import {decodePosition, encodePosition} from 'utils/serialization';
 
-interface HarvestRoomInfo {
-	roomName: string;
-	origin: string;
-	harvestPriority: number;
+interface SourceCandidateInfo {
+	encodedSource: string;
+	remoteRoomName: string;
+	ownRoomName: string;
+	pathLength: number;
 }
 
 type SourceRoomAvailability = {
@@ -15,58 +20,85 @@ type SourceRoomAvailability = {
 };
 
 export default class RemoteMinePrioritizer {
-	constructor(private roomStatus: RoomStatus, private squadManager: SquadManager) {
-	}
+	constructor(
+		private roomStatus: RoomStatus,
+		private squadManager: SquadManager,
+		private pathManager: RemotePathManager,
+	) {}
 
 	getRoomsToMine(maxAmount: number): {rooms: string[]; maxRooms: number} {
-		const result: string[] = [];
+		const {sourceAssignments, maxSources} = this.getSourcesToMine(maxAmount);
+		const rooms = [...new Set(Object.keys(sourceAssignments).map(k => decodePosition(k).roomName))];
+		return {rooms, maxRooms: maxSources};
+	}
+
+	getSourceCandidates(sourceRooms: Record<string, SourceRoomAvailability>): SourceCandidateInfo[] {
+		if (!hivemind.segmentMemory.isReady()) return [];
+
+		const candidates: SourceCandidateInfo[] = [];
+		for (const roomName of this.roomStatus.getAllKnownRooms()) {
+			if (Game.rooms[roomName]?.isMine()) continue;
+			if (Game.map.getRoomStatus(roomName).status === 'closed') continue;
+
+			const roomIntel = getRoomIntel(roomName);
+			const sourcePositions = roomIntel.getSourcePositions();
+			if (sourcePositions.length === 0) continue;
+
+			for (const sourceInfo of sourcePositions) {
+				const sourcePos = new RoomPosition(sourceInfo.x, sourceInfo.y, roomName);
+
+				for (const ownRoomName of Object.keys(sourceRooms)) {
+					if (Game.map.getRoomLinearDistance(roomName, ownRoomName) > hivemind.settings.get('maxRemoteMineRoomDistance')) continue;
+
+					const path = this.pathManager.getPathTo(sourcePos, ownRoomName);
+					if (!path || path.length >= hivemind.settings.get('maxRemoteMinePathLength')) continue;
+
+					candidates.push({
+						encodedSource: encodePosition(sourcePos),
+						remoteRoomName: roomName,
+						ownRoomName,
+						pathLength: path.length,
+					});
+				}
+			}
+		}
+
+		return candidates;
+	}
+
+	getSourcesToMine(maxAmount: number): {sourceAssignments: Record<string, string>; maxSources: number} {
+		const sourceAssignments: Record<string, string> = {};
 		const sourceRooms = this.getRemoteMiningSourceRooms();
+		const candidates = _.sortBy(this.getSourceCandidates(sourceRooms), c => c.pathLength);
 
-		// Create ordered list of best harvest rooms.
-		// @todo At this point we should carry duplicate for rooms that could have
-		// multiple origins.
-		const sortedHarvestRooms = _.sortBy(this.getRemoteHarvestRooms(sourceRooms), (info: HarvestRoomInfo) => {
-			// Rooms that don't have a terminal yet need remotes to get enough
-			// energy to upgrade and build one.
-			const originHasTerminal = Game.rooms[info.origin]?.terminal;
+		let totalAvailableSources = 0;
+		for (const candidate of candidates) {
+			// Skip sources already assigned (from a closer own room earlier in the sorted list).
+			if (sourceAssignments[candidate.encodedSource]) continue;
+			// Skip if this own room is at capacity.
+			if (sourceRooms[candidate.ownRoomName].current >= sourceRooms[candidate.ownRoomName].max) continue;
 
-			return -info.harvestPriority * (originHasTerminal ? 1 : 1.5);
-		});
-
-		// Decide which harvest rooms are active.
-		let availableHarvestRoomCount = 0;
-		for (const info of sortedHarvestRooms) {
-			if (sourceRooms[info.origin].current >= sourceRooms[info.origin].max) continue;
-
-			const roomIntel = getRoomIntel(info.roomName);
+			// SK room check: need RCL 7+ to harvest.
+			const roomIntel = getRoomIntel(candidate.remoteRoomName);
 			if (
 				roomIntel.isSourceKeeperRoom()
 				&& _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0
-				&& (Game.rooms[info.origin]?.controller?.level || 0) < 7
-			) {
-				// Can't harvest source keeper rooms if we can't spawn a strong
-				// enough SK killer.
-				continue;
-			}
+				&& (Game.rooms[candidate.ownRoomName]?.controller?.level || 0) < 7
+			) continue;
 
-			sourceRooms[info.origin].current++;
+			sourceRooms[candidate.ownRoomName].current++;
+			totalAvailableSources++;
 
-			if (availableHarvestRoomCount < maxAmount) {
-				// Disregard rooms the user doesn't want harvested.
+			if (Object.keys(sourceAssignments).length < maxAmount) {
+				// Disregard sources the user doesn't want harvested.
 				const roomFilter = settings.get('remoteMineRoomFilter');
-				if (roomFilter && !roomFilter(info.roomName)) continue;
+				if (roomFilter && !roomFilter(candidate.remoteRoomName)) continue;
 
-				// Harvest from this room.
-				result.push(info.roomName);
+				sourceAssignments[candidate.encodedSource] = candidate.ownRoomName;
 			}
-
-			availableHarvestRoomCount++;
 		}
 
-		return {
-			rooms: result,
-			maxRooms: availableHarvestRoomCount,
-		};
+		return {sourceAssignments, maxSources: totalAvailableSources};
 	}
 
 	getRemoteMiningSourceRooms(): Record<string, SourceRoomAvailability> {
@@ -117,25 +149,4 @@ export default class RemoteMinePrioritizer {
 		return sourceRooms;
 	}
 
-	getRemoteHarvestRooms(sourceRooms: Record<string, SourceRoomAvailability>): HarvestRoomInfo[] {
-		const harvestRooms: HarvestRoomInfo[] = [];
-		for (const roomName of this.roomStatus.getAllKnownRooms()) {
-			if (Game.rooms[roomName]?.isMine()) continue;
-
-			// Ignore rooms that are not profitable to harvest from.
-			const harvestPriority = this.roomStatus.getHarvestPriority(roomName);
-			if (harvestPriority <= 0.1) continue;
-
-			const origin = this.roomStatus.getOrigin(roomName);
-			if (!sourceRooms[origin]) continue;
-
-			// @TODO: Include SK room filter here.
-			// const roomIntel = getRoomIntel(roomName);
-			// if (roomIntel.isSourceKeeperRoom() && _.size(roomIntel.getStructures(STRUCTURE_KEEPER_LAIR)) > 0) return;
-
-			harvestRooms.push({roomName, origin, harvestPriority});
-		}
-
-		return harvestRooms;
-	}
 }

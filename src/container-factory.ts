@@ -30,6 +30,7 @@ import PlayerIntelManager from './player-intel-manager';
 import ProcessReport from './report/process';
 import ReclaimManager from './reclaim-manager';
 import RemoteMinePrioritizer from './empire/remote-mine-prioritizer';
+import RemotePathManager from './empire/remote-path-manager';
 import ReportManager from './report/report-manager';
 import ResourceInformation from 'utils/resource-information';
 import ResourceLevelManager from 'room/resource-level-manager';
@@ -152,6 +153,7 @@ function containerFactory(container: Container) {
 	container.set('RemoteMinePrioritizer', (c) => new RemoteMinePrioritizer(
 		c.get('RoomStatus'),
 		c.get('SquadManager'),
+		new RemotePathManager(),
 	));
 	container.set('ReportManager', () => new ReportManager());
 	container.set('ResourceInformation', () => new ResourceInformation());
