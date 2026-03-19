@@ -25,7 +25,7 @@ export default class RemotePathManager {
 		}
 
 		const memory: RemotePathMemory = hivemind.segmentMemory.get(key);
-		if (memory.generated && !hivemind.hasIntervalPassed(5000, memory.generated)) {
+		if (memory.generated && !hivemind.hasIntervalPassed(15000, memory.generated)) {
 			if (!memory.path) return null;
 
 			return unpackPosList(memory.path);
@@ -33,15 +33,13 @@ export default class RemotePathManager {
 
 		const room = Game.rooms[targetRoomName];
 		if (!room?.roomPlanner) {
-			memory.generated = Game.time;
-			memory.path = null;
+			// Return no path, but don't cache.
 			return null;
 		}
 
 		const storagePos = room.roomPlanner.getLocations('storage')[0];
 		if (!storagePos) {
-			memory.generated = Game.time;
-			memory.path = null;
+			// Return no path, but don't cache.
 			return null;
 		}
 
