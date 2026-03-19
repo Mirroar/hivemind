@@ -4,7 +4,6 @@ import container from 'utils/container';
 import Process from 'process/process';
 import hivemind from 'hivemind';
 import interShard from 'intershard';
-import PathManager from 'empire/remote-path-manager';
 import RoomStatus from 'room/room-status';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
@@ -43,7 +42,6 @@ interface ExpansionScore {
 const expansionScoreCache: Record<string, [number, number] | [number, number, Record<string, number>]> = {};
 
 export default class ScoutProcess extends Process {
-	pathManager: PathManager;
 	observers: StructureObserver[];
 	mineralCount: Record<string, number>;
 	roomStatus: RoomStatus;
@@ -64,7 +62,6 @@ export default class ScoutProcess extends Process {
 			};
 		}
 
-		this.pathManager = new PathManager();
 		this.roomStatus = container.get('RoomStatus');
 	}
 
@@ -136,8 +133,6 @@ export default class ScoutProcess extends Process {
 			}
 
 			if ((roomIntel.memory.lastScan || 0) > 0) {
-				this.roomStatus.setHarvestPriority(roomName, this.calculateHarvestScore(roomName));
-
 				// Check if we could reasonably expand to this room.
 				const expansionInfo = this.calculateExpansionScore(roomName);
 				this.roomStatus.setExpansionScore(roomName, expansionInfo.score, expansionInfo.reasons);
@@ -175,39 +170,6 @@ export default class ScoutProcess extends Process {
 				Memory.rooms[observer.pos.roomName].observeTargets.push(roomName);
 			}
 		}
-	}
-
-	/**
-	 * Determines how worthwile a room is for remote mining.
-	 *
-	 * @param {string} roomName
-	 *   Name of the room for which to calculate priorities.
-	 *
-	 * @return {number}
-	 *   Harvest score for this room.
-	 */
-	calculateHarvestScore(roomName: string) {
-		const range = this.roomStatus.getDistanceToOrigin(roomName);
-		if (range === 0 || range > hivemind.settings.get('maxRemoteMineRoomDistance')) return 0;
-		if (Game.map.getRoomStatus(roomName).status === 'closed') return 0;
-
-		const roomIntel = getRoomIntel(roomName);
-		let pathLength = 500;
-		const sourcePositions = roomIntel.getSourcePositions();
-		if (sourcePositions.length === 0) return 0;
-
-		for (const pos of sourcePositions) {
-			const path = this.pathManager.getPathFor(new RoomPosition(pos.x, pos.y, roomName));
-			if (!path) continue;
-
-			pathLength = Math.min(path.length, pathLength);
-		}
-
-		// @todo Add score if this is a safe room (that will be reserved
-		// anyways and can't be attacked).
-
-		if (pathLength <= 0) return 0;
-		return SOURCE_ENERGY_CAPACITY / pathLength;
 	}
 
 	/**

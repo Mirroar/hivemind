@@ -1,8 +1,7 @@
 /* global RoomPosition FIND_SOURCES CREEP_LIFE_TIME WORK */
 
-import container from 'utils/container';
 import RemoteMiningOperation from 'operation/remote-mining';
-import {encodePosition} from 'utils/serialization';
+import {decodePosition, encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
 /**
@@ -106,27 +105,26 @@ export default class SquadCivilianEscort {
 	findSuitableNeighborSource(expansionRoomName: string): RoomPosition | null {
 		if (!Memory.strategy?.remoteHarvesting) return null;
 
-		const assignment = container.get('RemoteMinePrioritizer').getRoomsToMine(Memory.strategy.remoteHarvesting.currentCount);
-		const roomStatus = container.get('RoomStatus');
+		const sourceAssignments = Memory.strategy.remoteHarvesting.sourceAssignments ?? {};
 		let bestSource: RoomPosition | null = null;
 		let bestScore = Infinity;
-		for (const remoteRoomName of assignment.rooms) {
+
+		for (const [encoded, ownRoomName] of Object.entries(sourceAssignments)) {
+			if (ownRoomName !== expansionRoomName) continue;
+
+			const sourcePos = decodePosition(encoded);
+			const remoteRoomName = sourcePos.roomName;
 			const intel = getRoomIntel(remoteRoomName);
-			if (roomStatus.getOrigin(remoteRoomName) !== expansionRoomName) continue;
 			if (intel.isOwned()) continue;
 			if (intel.isSourceKeeperRoom()) continue;
 
-			for (const sourceInfo of intel.getSourcePositions()) {
-				const sourcePos = new RoomPosition(sourceInfo.x, sourceInfo.y, remoteRoomName);
-				const encoded = encodePosition(sourcePos);
-				const assignedWork = _.sum(
-					_.filter(Game.creepsByRole['harvester.remote'] as Record<string, RemoteHarvesterCreep>, c => c.memory.source === encoded),
-					(c: Creep) => c.getActiveBodyparts(WORK) * (c.ticksToLive / CREEP_LIFE_TIME),
-				);
-				if (!bestSource || assignedWork < bestScore) {
-					bestSource = sourcePos;
-					bestScore = assignedWork;
-				}
+			const assignedWork = _.sum(
+				_.filter(Game.creepsByRole['harvester.remote'] as Record<string, RemoteHarvesterCreep>, c => c.memory.source === encoded),
+				(c: Creep) => c.getActiveBodyparts(WORK) * (c.ticksToLive / CREEP_LIFE_TIME),
+			);
+			if (!bestSource || assignedWork < bestScore) {
+				bestSource = sourcePos;
+				bestScore = assignedWork;
 			}
 		}
 

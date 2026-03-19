@@ -6,7 +6,7 @@ import hivemind from 'hivemind';
 import Process from 'process/process';
 import RemotePathManager from 'empire/remote-path-manager';
 import RoomStatus from 'room/room-status';
-import {deserializePosition} from 'utils/serialization';
+import {deserializePosition, encodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 
 // @todo Move constants to settings.
@@ -130,33 +130,38 @@ export default class MapVisualsProcess extends Process {
 	}
 
 	drawRemoteMinePaths(roomName: string) {
-		const harvestPriority = this.roomStatus.getHarvestPriority(roomName);
-		if (harvestPriority <= 0.1) return;
-
-		if (drawMiningStatus && (Memory.strategy.remoteHarvesting?.rooms || []).includes(roomName)) {
-			Game.map.visual.text('⛏', new RoomPosition(3, 3, roomName), {fontSize: 5});
-		}
-
-		Game.map.visual.text(harvestPriority.toPrecision(3), new RoomPosition(7, 3, roomName), {fontSize: 5, align: 'left'});
-
 		if (!hivemind.segmentMemory.isReady()) return;
+
+		const sourceAssignments = Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {};
 
 		const remotePathManager = new RemotePathManager();
 		const intel = getRoomIntel(roomName);
 		for (const coords of intel.getSourcePositions()) {
 			const position = new RoomPosition(coords.x, coords.y, roomName);
-			const path = remotePathManager.getPathFor(position);
+			const encoded = encodePosition(position);
+
+			const assignedRoom = sourceAssignments[encoded];
+			const isActive = Boolean(assignedRoom);
+
+			const path = isActive
+				? remotePathManager.getPathTo(position, assignedRoom)
+				: remotePathManager.getPathFor(position);
+
 			if (!path) {
 				Game.map.visual.text('🚫', position, {color: '#ff0000', fontSize: 5});
 				continue;
+			}
+
+			if (isActive && drawMiningStatus) {
+				Game.map.visual.text('⛏', position, {fontSize: 5});
 			}
 
 			const pathLength = path.length;
 			Game.map.visual.text(pathLength.toString(), position, {fontSize: 4, align: 'left'});
 
 			Game.map.visual.poly(this.getPathSegments(path), {
-				opacity: 0.3,
-				stroke: '#00ffff',
+				opacity: isActive ? 0.5 : 0.2,
+				stroke: isActive ? '#00ffff' : '#aaaaaa',
 			});
 		}
 	}
