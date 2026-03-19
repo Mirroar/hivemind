@@ -1,6 +1,6 @@
 import cache from 'utils/cache';
 import hivemind from 'hivemind';
-import {encodePosition} from 'utils/serialization';
+import {decodePosition, encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
@@ -362,7 +362,8 @@ function markBuildings(
 		// should not be marked inaccessible.
 		const roomIntel = getRoomIntel(roomName);
 		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
-			if (!(Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) {
+			const sourceAssignments = Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {};
+			if (!Object.keys(sourceAssignments).some(k => decodePosition(k).roomName === roomName)) {
 				// Add area around sources as obstacles.
 				_.each(roomIntel.getSourcePositions(), sourceInfo => {
 					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
@@ -399,7 +400,8 @@ function markBuildings(
 }
 
 function markSourceKeeperExits(roomName: string, dir: TOP | LEFT | BOTTOM | RIGHT, sourceKeeperCallback: (x: number, y: number) => void) {
-	if ((Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) return;
+	const sourceAssignments = Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {};
+	if (Object.keys(sourceAssignments).some(k => decodePosition(k).roomName === roomName)) return;
 
 	const otherRoomIntel = getRoomIntel(roomName);
 	if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) return;
