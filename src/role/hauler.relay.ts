@@ -12,7 +12,6 @@ import Role from 'role/role';
 import {encodePosition, decodePosition, serializePositionPath} from 'utils/serialization';
 import {getResourcesIn} from 'utils/store';
 import cache from 'utils/cache';
-import Operation from 'operation/operation';
 
 declare global {
 	interface RelayHaulerCreep extends Creep {

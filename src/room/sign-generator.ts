@@ -36,7 +36,8 @@ export default class RoomSignGenerator {
             return RoomSignType.Owned;
         }
 
-        if ((Memory.strategy?.remoteHarvesting?.rooms || []).includes(roomName)) {
+        const remoteMinePrioritizer = container.get('RemoteMinePrioritizer');
+        if (remoteMinePrioritizer.isMiningRoom(roomName)) {
             return RoomSignType.Remote;
         }
 

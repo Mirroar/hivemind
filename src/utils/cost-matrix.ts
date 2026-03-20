@@ -4,6 +4,7 @@ import {decodePosition, encodePosition} from 'utils/serialization';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {getRoomIntel} from 'room-intel';
 import {handleMapArea} from 'utils/map';
+import container from './container';
 
 interface CostMatrixOptions {
 	singleRoom?: boolean;
@@ -362,8 +363,8 @@ function markBuildings(
 		// should not be marked inaccessible.
 		const roomIntel = getRoomIntel(roomName);
 		if (_.size(structures[STRUCTURE_KEEPER_LAIR]) > 0) {
-			const sourceAssignments = Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {};
-			if (!Object.keys(sourceAssignments).some(k => decodePosition(k).roomName === roomName)) {
+			const remoteMinePrioritizer = container.get('RemoteMinePrioritizer');
+			if (!remoteMinePrioritizer.isMiningRoom(roomName)) {
 				// Add area around sources as obstacles.
 				_.each(roomIntel.getSourcePositions(), sourceInfo => {
 					handleMapArea(sourceInfo.x, sourceInfo.y, (x, y) => {
@@ -400,8 +401,8 @@ function markBuildings(
 }
 
 function markSourceKeeperExits(roomName: string, dir: TOP | LEFT | BOTTOM | RIGHT, sourceKeeperCallback: (x: number, y: number) => void) {
-	const sourceAssignments = Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {};
-	if (Object.keys(sourceAssignments).some(k => decodePosition(k).roomName === roomName)) return;
+	const remoteMinePrioritizer = container.get('RemoteMinePrioritizer');
+	if (remoteMinePrioritizer.isMiningRoom(roomName)) return;
 
 	const otherRoomIntel = getRoomIntel(roomName);
 	if (!otherRoomIntel || !otherRoomIntel.hasCostMatrixData()) return;

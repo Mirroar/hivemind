@@ -3,6 +3,7 @@ import hivemind from 'hivemind';
 import utilities from 'utilities';
 import {getResourcesIn} from 'utils/store';
 import {handleMapArea} from 'utils/map';
+import container from 'utils/container';
 
 type AttackTarget = Creep | Structure;
 
@@ -286,10 +287,11 @@ export default class CombatManager {
 		// @todo Add structures in range only if room is not owned by an ally.
 		// @todo Add power creeps
 		// @todo Use same filters here and in `getAllTargetsInRoom`.
+		const remoteMinePrioritizer = container.get('RemoteMinePrioritizer');
 		const isMyRoom = creep.room.isMine()
 			|| hivemind.relations.isAlly(creep.room.controller?.owner?.username)
 			|| hivemind.relations.isAlly(creep.room.controller?.reservation?.username)
-			|| (Memory.strategy?.remoteHarvesting?.rooms || []).includes(creep.room.name);
+			|| remoteMinePrioritizer.isMiningRoom(creep.room.name);
 		for (const structure of creep.pos.findInRange(FIND_STRUCTURES, maxRange)) {
 			if (!structure.hits) continue;
 			if ('owner' in structure && hivemind.relations.isAlly(structure.owner?.username)) continue;
@@ -475,10 +477,11 @@ export default class CombatManager {
 
 		// @todo Also consider rooms on the path of harvesting operations
 		// as my rooms.
+		const remoteMinePrioritizer = container.get('RemoteMinePrioritizer');
 		const isMyRoom = room.isMine()
 			|| hivemind.relations.isAlly(room.controller?.owner?.username)
 			|| hivemind.relations.isAlly(room.controller?.reservation?.username)
-			|| (Memory.strategy?.remoteHarvesting?.rooms || []).includes(room.name);
+			|| remoteMinePrioritizer.isMiningRoom(room.name);
 		// Attack containers, roads and other infrastructure.
 		for (const structure of room.structures) {
 			if (!structure.hits) continue;

@@ -32,6 +32,15 @@ export default class RemoteMinePrioritizer {
 		return {rooms, maxRooms: maxSources};
 	}
 
+	isMiningRoom(roomName: string): boolean {
+		for (const encodedPosition in Memory.strategy.remoteHarvesting.sourceAssignments) {
+			const position = decodePosition(encodedPosition);
+			if (position.roomName === roomName) return true;
+		}
+
+		return false;
+	}
+
 	getSourceCandidates(sourceRooms: Record<string, SourceRoomAvailability>): SourceCandidateInfo[] {
 		if (!hivemind.segmentMemory.isReady()) return [];
 
@@ -106,7 +115,6 @@ export default class RemoteMinePrioritizer {
 	getRemoteMiningSourceRooms(): Record<string, SourceRoomAvailability> {
 		const sourceRooms: Record<string, SourceRoomAvailability> = {};
 
-
 		// Determine how much remote mining each room can handle.
 		for (const room of Game.myRooms) {
 			let spawnCount = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
@@ -123,7 +131,7 @@ export default class RemoteMinePrioritizer {
 			}
 
 			// @todo Actually calculate spawn usage for each.
-			let spawnCapacity = spawnCount * 5;
+			let spawnCapacity = spawnCount * 7;
 			let roomNeeds = 0;
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;
