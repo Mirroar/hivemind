@@ -264,6 +264,33 @@ export default class ExpandProcess extends Process {
 	}
 
 	/**
+	 * Determines if the current expansion needs brawlers for protection.
+	 *
+	 * We don't need military support when safemode keeps the room safe:
+	 * either it is active for at least 1000 more ticks, or one is available
+	 * with no cooldown and no other room is currently safemoded.
+	 */
+	needsMilitarySupport(): boolean {
+		const info = this.memory.currentTarget;
+		if (!info) return false;
+
+		const room = Game.rooms[info.roomName];
+		if (!room) return true;
+
+		// Safemode is active and will last long enough.
+		if (room.controller?.safeMode >= 1000) return false;
+
+		// A safemode is available, can be activated, and no other room is blocking it.
+		if (
+			room.controller?.safeModeAvailable > 0
+			&& !room.defense.hasSafeModeCooldown()
+			&& !room.defense.isAnyRoomSafeModed()
+		) return false;
+
+		return true;
+	}
+
+	/**
 	 * Manages getting an expansion up and running.
 	 */
 	manageCurrentExpansion() {
@@ -273,6 +300,7 @@ export default class ExpandProcess extends Process {
 
 		const info = this.memory.currentTarget;
 		const squad = this.squadManager.getOrCreateSquad('expand');
+		squad.setUnitCount('brawler', this.needsMilitarySupport() ? 1 : 0);
 
 		this.checkAccessPath();
 
@@ -394,6 +422,9 @@ export default class ExpandProcess extends Process {
 		const activeSquads = {};
 		info.supportingRooms = [];
 
+		const needsMilitary = this.needsMilitarySupport();
+		let militarySupportSquads = 0;
+
 		// @todo Start with closest rooms first.
 		const reachableFromExpansion = this.navMesh.getReachableRooms(info.roomName, 15);
 		for (const room of Game.myRooms) {
@@ -411,7 +442,10 @@ export default class ExpandProcess extends Process {
 			supportSquad.setSpawn(room.name);
 			supportSquad.setTarget(new RoomPosition(25, 25, info.roomName));
 			supportSquad.clearUnits();
-			supportSquad.setUnitCount('brawler', 1);
+			// Only the first support squad sends a brawler, and only when military support is needed.
+			const sendBrawler = needsMilitary && militarySupportSquads === 0;
+			supportSquad.setUnitCount('brawler', sendBrawler ? 1 : 0);
+			if (sendBrawler) militarySupportSquads++;
 			// Add a remote harvester and relay hauler to extract energy from rooms
 			// neighboring the expansion target. The relay hauler brings energy back
 			// to this support room, boosting its spawn capacity.

@@ -374,13 +374,13 @@ export default class RoomManager {
 			const terrain = this.room.getTerrain();
 
 			// Build road to sources asap to make getting energy easier.
-			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
+			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => ([TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL] as number[]).includes(terrain.get(pos.x, pos.y)));
 
 			// Build source containers for more efficient harvesting.
 			this.buildPlannedStructures('container.source', STRUCTURE_CONTAINER);
 
 			// Build road to controller for easier upgrading.
-			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
+			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => ([TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL] as number[]).includes(terrain.get(pos.x, pos.y)));
 
 			// If we're waiting for a claim, busy ourselves by building roads.
 			this.buildPlannedStructures('road', STRUCTURE_ROAD);
@@ -406,10 +406,10 @@ export default class RoomManager {
 			const terrain = this.room.getTerrain();
 
 			// Build road to sources asap to make getting energy easier.
-			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
+			this.buildPlannedStructures('road.source', STRUCTURE_ROAD, pos => ([TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL] as number[]).includes(terrain.get(pos.x, pos.y)));
 
 			// Build road to controller for easier upgrading.
-			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => terrain.get(pos.x, pos.y) === TERRAIN_MASK_SWAMP);
+			this.buildPlannedStructures('road.controller', STRUCTURE_ROAD, pos => ([TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL] as number[]).includes(terrain.get(pos.x, pos.y)));
 		}
 
 		if (!this.canCreateConstructionSites()) return;

@@ -53,7 +53,12 @@ const utilities = {
 
 			let stackTrace = error.stack;
 			if (error instanceof Error) {
-				stackTrace = _.escape(ErrorMapper.sourceMappedStackTrace(error));
+				try {
+					stackTrace = _.escape(ErrorMapper.sourceMappedStackTrace(error));
+				}
+				catch (e) {
+					stackTrace = _.escape(error.stack);
+				}
 			}
 
 			Game.notify(error.name + ' in ' + errorLocation + ':<br>' + stackTrace);

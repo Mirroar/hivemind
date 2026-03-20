@@ -119,10 +119,10 @@ export default class RemoteMinePrioritizer {
 		for (const room of Game.myRooms) {
 			let spawnCount = _.filter(Game.spawns, spawn => spawn.pos.roomName === room.name && spawn.isOperational()).length;
 			if (spawnCount === 0) {
-				if (room.controller.level > 3 && room.controller.level < 7) {
+				if (room.controller.level < 7) {
 					// It's possible we're only moving the room's only spawn to a different
-					// location. Treat room as having one spawn so we can resume when it
-					// has been rebuilt.
+					// location, or building the first spawn. Treat room as having one spawn
+					// so we can resume mining when it has been (re-)built.
 					spawnCount = 1;
 				}
 				else {
