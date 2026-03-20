@@ -3,6 +3,7 @@ import container from 'utils/container';
 import TradeRoute from 'trade-route';
 import RoomStatus from 'room/room-status';
 import hivemind from 'hivemind';
+import NavMesh from 'utils/nav-mesh';
 
 interface TraderouteInfo {
 	source: string;
@@ -95,10 +96,12 @@ export default class FunnelManager {
 	}
 
 	getRequestedFunnelTradeRoutes(funnelTargets: Room[]): TraderouteInfo[] {
+		const navMesh = new NavMesh();
 		const tradeRoutes: TraderouteInfo[] = [];
 		for (const room of funnelTargets) {
-			const sourceRooms = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && sourceRoom.getEffectiveAvailableEnergy() > 30_000 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
+			const sourceRooms: Room[] = _.filter(Game.myRooms, sourceRoom => sourceRoom.controller.level >= 7 && sourceRoom.getEffectiveAvailableEnergy() > 30_000 && Game.map.getRoomLinearDistance(room.name, sourceRoom.name) <= 5);
 			for (const sourceRoom of sourceRooms) {
+				if (navMesh.estimateTravelTime(new RoomPosition(25, 25, sourceRoom.name), new RoomPosition(25, 25, room.name)) > 300) continue;
 				tradeRoutes.push({
 					source: sourceRoom.name,
 					destination: room.name,

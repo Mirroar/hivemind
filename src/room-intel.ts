@@ -163,6 +163,14 @@ export default class RoomIntel {
 			this.gatherStructureIntel(structures, STRUCTURE_CONTROLLER);
 		}
 
+		if (this.isOwned()) {
+			// For enemy rooms, gather info about structures that are relevenat for combat.
+			this.gatherStructureIntel(structures, STRUCTURE_SPAWN);
+			this.gatherStructureIntel(structures, STRUCTURE_TOWER);
+			this.gatherStructureIntel(structures, STRUCTURE_RAMPART);
+			this.gatherStructureIntel(structures, STRUCTURE_WALL);
+		}
+
 		this.gatherAbandonedResourcesIntel(room, structures);
 
 		// At the same time, create a PathFinder CostMatrix to use when pathfinding through this room.
