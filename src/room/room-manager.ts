@@ -32,6 +32,7 @@ declare global {
 		hasMisplacedSpawn: boolean;
 		isMovingMisplacedSpawn: boolean;
 		dismantle: Record<string, number>;
+		trackedSites?: Id<ConstructionSite>[];
 	}
 }
 
@@ -97,6 +98,24 @@ export default class RoomManager {
 	 */
 	shouldRunImmediately() {
 		return this.memory.runNextTick;
+	}
+
+	/**
+	 * Checks if any previously tracked construction sites have been completed.
+	 * If so, schedules an immediate re-run so new sites are placed without delay.
+	 */
+	checkForCompletedSites() {
+		if (this.memory.runNextTick) return;
+		if (!this.memory.trackedSites || this.memory.trackedSites.length === 0) {
+			// Track active construction sites so we can re-run immediately when one finishes.
+			this.memory.trackedSites = this.room.find(FIND_MY_CONSTRUCTION_SITES).map(s => s.id);
+		}
+
+		const remaining = this.memory.trackedSites.filter(id => Boolean(Game.getObjectById(id)));
+		if (remaining.length < this.memory.trackedSites.length) {
+			this.memory.runNextTick = true;
+			this.memory.trackedSites = this.room.find(FIND_MY_CONSTRUCTION_SITES).map(s => s.id);
+		}
 	}
 
 	/**

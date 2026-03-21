@@ -5,7 +5,6 @@ LOOK_CONSTRUCTION_SITES */
 
 // @todo Collect energy if it's lying on the path.
 
-import cache from 'utils/cache';
 import hivemind from 'hivemind';
 import RemoteMiningOperation from 'operation/remote-mining';
 import Role from 'role/role';
@@ -225,8 +224,9 @@ export default class MineBuilderRole extends Role {
 		}
 
 		if (creep.hasCachedPath()) {
+			if (this.performBuildRoad(creep) && creep.isInRoom()) return;
+
 			creep.followCachedPath();
-			this.performBuildRoad(creep);
 			if (creep.hasArrived()) {
 				creep.clearCachedPath();
 			}
@@ -508,7 +508,7 @@ export default class MineBuilderRole extends Role {
 			}
 
 			// Stay here if more building is needed.
-			if (needsBuilding.progressTotal - needsBuilding.progress > workParts * 10) {
+			if (needsBuilding.progressTotal - needsBuilding.progress > workParts * BUILD_POWER * 2) {
 				return true;
 			}
 		}

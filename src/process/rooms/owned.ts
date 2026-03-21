@@ -67,6 +67,7 @@ export default class OwnedRoomProcess extends Process {
 			});
 
 			if (this.room.roomManager) {
+				this.room.roomManager.checkForCompletedSites();
 				const prioritizeRoomManager = this.room.roomManager.shouldRunImmediately();
 				hivemind.runSubProcess('rooms_manager', () => {
 					hivemind.runProcess(this.room.name + '_manager', RoomManagerProcess, {
