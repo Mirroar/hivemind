@@ -49,6 +49,7 @@ import {Container} from './utils/container';
 
 import brawlerSpawnRole from 'spawn-role/brawler';
 import builderSpawnRole from 'spawn-role/builder';
+import remoteMineDefenseSpawnRole from 'spawn-role/remote-mine-defense';
 import depositHarvesterSpawnRole from 'spawn-role/harvester.deposit';
 import dismantlerSpawnRole from 'spawn-role/dismantler';
 import harvesterSpawnRole from 'spawn-role/harvester';
@@ -107,6 +108,7 @@ const spawnClasses = {
 	mule: muleSpawnRole,
 	reclaim: reclaimSpawnRole,
 	'remote-mine': remoteMiningSpawnRole,
+	'remote-mine-defense': remoteMineDefenseSpawnRole,
 	'room-defense': roomDefenseSpawnRole,
 	scout: scoutSpawnRole,
 	squad: squadSpawnRole,
