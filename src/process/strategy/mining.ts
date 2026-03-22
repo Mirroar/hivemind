@@ -4,7 +4,6 @@ import container from 'utils/container';
 import hivemind from 'hivemind';
 import Process from 'process/process';
 import RemoteMiningOperation from 'operation/remote-mining';
-import settings from 'settings-manager';
 import stats from 'utils/stats';
 import {decodePosition} from 'utils/serialization';
 
@@ -71,7 +70,7 @@ export default class RemoteMiningProcess extends Process {
 	adjustRemoteMiningCount(availableSourceCount: number) {
 		const memory = Memory.strategy;
 
-		if (!memory.remoteHarvesting.lastCheck || !hivemind.hasIntervalPassed(1000, memory.remoteHarvesting.lastCheck)) return;
+		if (memory.remoteHarvesting.lastCheck && !hivemind.hasIntervalPassed(1000, memory.remoteHarvesting.lastCheck)) return;
 
 		memory.remoteHarvesting.lastCheck = Game.time;
 

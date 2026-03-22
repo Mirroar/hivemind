@@ -292,19 +292,19 @@ export default class RemoteMiningOperation extends Operation {
 	}
 
 	getNeededWorkForPosition(position: RoomPosition, structureType: BuildableStructureConstant) {
+		// If we don't have visibility, we treat everything as built.
+		if (!position) return 0;
+		
 		const room = Game.rooms[position.roomName];
-		if (!room) {
-			// If we don't have visibility, we treat everything as built.
-			return 0;
-		}
+		if (!room) return 0;
 
 		const structures = position.lookFor(LOOK_STRUCTURES);
-		const structure = _.find(structures, structure => structure.structureType === structureType);
+		const structure: Structure | undefined = _.find(structures, structure => structure.structureType === structureType);
 		if (structure) return structure.hitsMax - structure.hits;
 
-		const sites = position.lookFor(LOOK_STRUCTURES);
-		const site = _.find(sites, site => site.structureType === structureType);
-		if (site) return site.hitsMax * REPAIR_POWER;
+		const sites = position.lookFor(LOOK_CONSTRUCTION_SITES);
+		const site: ConstructionSite | undefined = _.find(sites, site => site.structureType === structureType);
+		if (site) return site.progressTotal * REPAIR_POWER;
 
 		return CONSTRUCTION_COST[structureType] * REPAIR_POWER;
 	}
