@@ -143,6 +143,29 @@ export default class ExpandProcess extends Process {
 	chooseNewExpansionTarget() {
 		if (!hivemind.segmentMemory.isReady()) return;
 
+		// If the user has specified a prioritized list of expansion targets, use
+		// the next available and unclaimed room from that list.
+		const targetList = settings.get('expansionTargets');
+		if (targetList && targetList.length > 0) {
+			for (const roomName of targetList) {
+				const roomFilter = settings.get('expansionRoomFilter');
+				if (roomFilter && !roomFilter(roomName)) continue;
+
+				const roomIntel = getRoomIntel(roomName);
+				if (roomIntel.isOwned()) continue;
+				if (Game.rooms[roomName] && Game.rooms[roomName].isMine()) continue;
+
+				const bestSpawn = this.findClosestSpawn(roomName);
+				if (!bestSpawn) continue;
+
+				this.startExpansion({spawnRoom: bestSpawn, roomName, expansionScore: 1});
+				return;
+			}
+
+			// All listed targets are already claimed or unreachable; fall through
+			// to automatic scoring below.
+		}
+
 		// Choose a room to expand to.
 		let bestTarget: ExpansionTarget;
 		let modifiedBestExpansionScore: number;

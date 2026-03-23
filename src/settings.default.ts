@@ -115,6 +115,12 @@ const settings: SettingsObject = {
 	// Maximum amount of CPU that may be spent each tick on finding a suitable
 	// expansion target.
 	maxExpansionCpuPerTick: 30,
+	// An optional ordered list of room names to use as expansion targets.
+	// When set, the next available unclaimed room from this list is chosen
+	// instead of scoring all candidate rooms automatically. Falls back to
+	// automatic scoring once all listed rooms have been claimed or are
+	// otherwise unavailable.
+	expansionTargets: null,
 
 	// Expansion scoring:
 	expansionScoreBonusHighwayExit: 0,

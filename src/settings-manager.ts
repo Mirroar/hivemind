@@ -27,6 +27,7 @@ declare global {
 		expansionRoomFilter?: (roomName: string) => boolean;
 		expansionScoreBonusHighwayExit: number;
 		expansionScoreCacheDuration: number;
+		expansionTargets?: string[];
 		highwayScoutInterval: number;
 		maxDepositCooldown: number;
 		maxExpansionCpuPerTick: number;

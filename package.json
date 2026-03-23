@@ -31,6 +31,7 @@
 	"scripts": {
 		"prebuild": "node scripts/prebuild.cjs",
 		"build": "rollup -c",
+		"deploy": "rollup -c && grunt screeps --gruntfile Gruntfile.cjs",
 		"test": "xo"
 	},
 	"devDependencies": {
