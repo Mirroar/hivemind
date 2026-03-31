@@ -62,7 +62,7 @@ const utilities = {
 			}
 
 			Game.notify(error.name + ' in ' + errorLocation + ':<br>' + stackTrace);
-			console.log('<span style="color:red">' + error.name + ' in ' + errorLocation + ':<br>' + stackTrace + '</span>');
+			console.logUnsafe('<span style="color:red">' + error.name + ' in ' + errorLocation + ':<br>' + stackTrace + '</span>');
 		}
 
 		return null;
