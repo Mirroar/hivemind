@@ -79,6 +79,7 @@ declare global {
 		ProcessReport: ProcessReport;
 		ReclaimManager: ReclaimManager;
 		RemoteMinePrioritizer: RemoteMinePrioritizer;
+		RemotePathManager: RemotePathManager;
 		ReportManager: ReportManager;
 		ResourceInformation: ResourceInformation;
 		ResourceLevelManager: ResourceLevelManager;
@@ -155,8 +156,9 @@ function containerFactory(container: Container) {
 	container.set('RemoteMinePrioritizer', (c) => new RemoteMinePrioritizer(
 		c.get('RoomStatus'),
 		c.get('SquadManager'),
-		new RemotePathManager(),
+		c.get('RemotePathManager'),
 	));
+	container.set('RemotePathManager', () => new RemotePathManager());
 	container.set('ReportManager', () => new ReportManager());
 	container.set('ResourceInformation', () => new ResourceInformation());
 	container.set('ResourceLevelManager', (c) => new ResourceLevelManager(
