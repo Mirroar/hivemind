@@ -178,6 +178,9 @@ export default class MilitaryRole extends Role {
 			for (const enemy of enemies) {
 				if (hivemind.relations.isAlly(enemy.owner.username)) continue;
 
+				// Don't deliberately engage source keepers.
+				if (enemy.owner.username === 'Source Keeper') continue;
+
 				const option: HostileCreepTargetOption = {
 					priority: 4,
 					weight: 1 - (creep.pos.getRangeTo(enemy) / 50),
@@ -350,10 +353,12 @@ export default class MilitaryRole extends Role {
 	performIdleMovement(creep: MilitaryCreep) {
 		// Simple room defenders: look for enemies and engage.
 		for (const username in creep.room.enemyCreeps || {}) {
+			if (username === 'Source Keeper') continue;
 			if (hivemind.relations.isAlly(username)) continue;
 
 			const hostiles = creep.room.enemyCreeps[username];
 			creep.whenInRange(1, hostiles[0], () => {}, {allowDanger: true});
+			return;
 		}
 
 		creep.whenInRange(10, new RoomPosition(25, 25, creep.pos.roomName), () => {});

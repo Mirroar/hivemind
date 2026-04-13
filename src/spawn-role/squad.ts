@@ -107,12 +107,12 @@ export default class SquadSpawnRole extends SpawnRole {
 	 * Returns creeps of the given unit type belonging to a squad that still have
 	 * enough TTL to be counted as alive for spawning purposes. Creeps that are
 	 * still spawning always count. The minimum TTL threshold is:
-	 *   travelTime + max spawn time + 100 tick safety margin.
+	 *   travelTime + max spawn time.
 	 */
 	getActiveSquadCreeps(squad: Squad, unitType: SquadUnitType, spawnRoom: Room): Creep[] {
 		const creepsOfType = Game.creepsBySquad[squad.getName()]?.[unitType] ?? {};
 		const travelTime = this.getTravelTimeForSquad(squad, spawnRoom);
-		const minTtl = travelTime + (MAX_CREEP_SIZE * CREEP_SPAWN_TIME) + 100;
+		const minTtl = travelTime + (MAX_CREEP_SIZE * CREEP_SPAWN_TIME);
 
 		return Object.values(creepsOfType).filter(creep => {
 			if (creep.spawning) return true;
