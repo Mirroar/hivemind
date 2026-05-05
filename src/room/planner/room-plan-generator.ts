@@ -124,7 +124,7 @@ export default class RoomPlanGenerator {
 		}
 
 		output += '</table>';
-		console.log(output);
+		console.logUnsafe(output);
 	}
 
 	visualize() {
