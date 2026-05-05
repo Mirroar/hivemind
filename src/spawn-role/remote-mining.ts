@@ -3,11 +3,10 @@
 /**
  * General spawn order for remote mining creeps:
  * - For each source, in order of distance:
- *   - @todo Defenders (currently get spawned for any active source)
- *   - SK Killers @4.0 (or 1.0 for new rooms, to allow other creeps to spawn)
+ *   - SK Killers @4.0 (or 1.0 for new sources, to saturate active sources first)
  *   - Haulers    @3.0 to satisfy current demand
  *   - Builders   @3.0 to satisfy current demand
- *   - Harvesters @3.x (or 1.x for new sources, to allow other creeps to spawn)
+ *   - Harvesters @3.x (or 1.x for new sources, to saturate active sources first)
  *   - Claimers   @3.x
  */
 
@@ -134,7 +133,7 @@ export default class RemoteMiningSpawnRole extends SpawnRole {
 		const operation = Game.operationsByType.mining['mine:' + position.roomName];
 		const paths = operation.getPaths();
 		const targetPos = encodePosition(position);
-		if (!operation.hasContainer(targetPos)) return 0;
+		if (!operation.hasHaulableEnergy(targetPos)) return 0;
 
 		return paths[targetPos]?.requiredCarryParts || 0;
 	}

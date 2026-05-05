@@ -414,6 +414,45 @@ export default class RemoteMiningOperation extends Operation {
 		return paths[sourceLocation].path[0];
 	}
 
+	/**
+	 * Determines whether there will be energy available for haulers to pick up.
+	 */
+	hasHaulableEnergy(sourceLocation: string): boolean {
+		if (this.hasContainer(sourceLocation)) return true;
+
+		return cache.inHeap('hasHaulableEnergy:' + sourceLocation, 20, () => {
+			const position = decodePosition(sourceLocation);
+			const room = Game.rooms[position.roomName];
+			if (!room) return false;
+
+			// Energy already on the ground.
+			if (_.some(
+				position.findInRange(FIND_DROPPED_RESOURCES, 1),
+				(r: Resource) => r.resourceType === RESOURCE_ENERGY && r.amount > 0,
+			)) return true;
+
+			// If a container construction site is present, harvesters are building
+			// it rather than leaving energy on the ground, so no hauling needed.
+			const containerPosition = this.getContainerPosition(sourceLocation);
+			if (containerPosition) {
+				const hasContainerSite = _.some(
+					containerPosition.lookFor(LOOK_CONSTRUCTION_SITES),
+					(site: ConstructionSite) => site.structureType === STRUCTURE_CONTAINER,
+				);
+				if (hasContainerSite) return false;
+			}
+
+			// A harvester at the source with no container site means energy is
+			// being dropped on the ground and haulers should be spawned.
+			return _.some(
+				Game.creepsByRole['harvester.remote'] as unknown as RemoteHarvesterCreep[],
+				(creep: RemoteHarvesterCreep) =>
+					creep.memory.source === sourceLocation &&
+					creep.pos.inRangeTo(position, 1),
+			);
+		});
+	}
+
 	getEnergyForPickup(sourceLocation: string): number {
 		const container = this.getContainer(sourceLocation);
 		let total = container?.store?.energy || 0;
