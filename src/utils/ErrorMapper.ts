@@ -92,11 +92,11 @@ export class ErrorMapper {
 				if (error instanceof Error) {
 					if ('sim' in Game.rooms || !this.consumer) {
 						const message = 'Source maps don\'t work in the simulator - displaying original error';
-						console.log(`<span style='color:red'>${message}<br>${_.escape(error.stack)}</span>`);
+						console.logUnsafe(`<span style='color:red'>${message}<br>${_.escape(error.stack)}</span>`);
 					}
 					else {
 						const message = _.escape(this.sourceMappedStackTrace(error));
-						console.log(`<span style='color:red'>${message}</span>`);
+						console.logUnsafe(`<span style='color:red'>${message}</span>`);
 						Game.notify(message);
 					}
 				}
