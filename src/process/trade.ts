@@ -763,7 +763,7 @@ export default class TradeProcess extends Process {
 			let totalDev = 0;
 
 			// There needs to be a few days of price data before we consider dealing.
-			if (history.length > 3) {
+			if (history && history.length > 3) {
 				// Find days with highest and lowest deal values.
 				const minDay = _.min(history, 'avgPrice');
 				const maxDay = _.max(history, 'avgPrice');

@@ -437,6 +437,41 @@ export default class RelayHaulerRole extends Role {
 			return;
 		}
 
+		// No container yet - try to get energy directly from harvesters at the source.
+		const harvestersAtSource = _.filter(
+			creep.room.creepsByRole['harvester.remote'] as unknown as RemoteHarvesterCreep[],
+			(harvester: RemoteHarvesterCreep) => harvester.memory.source === creep.memory.source
+				&& harvester.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+				&& harvester.pos.getRangeTo(sourcePosition) <= 3,
+		) as RemoteHarvesterCreep[];
+		if (harvestersAtSource.length > 0) {
+			const bestHarvester = _.max(harvestersAtSource, (harvester: Creep) => harvester.store.getUsedCapacity(RESOURCE_ENERGY)) as RemoteHarvesterCreep;
+			creep.whenInRange(1, bestHarvester, () => {
+				// Nothing special to do.
+			});
+
+			const nearbyHarvesters = harvestersAtSource.filter((c: RemoteHarvesterCreep) => c.memory.source === creep.memory.source
+				&& c.store.getUsedCapacity(RESOURCE_ENERGY) > 0,
+			);
+
+			let totalTransferred = 0;
+			for (const harvester of nearbyHarvesters) {
+				const canReceive = creep.store.getFreeCapacity() - totalTransferred;
+				if (canReceive <= 0) break;
+
+				const amount = Math.min(harvester.store.getUsedCapacity(RESOURCE_ENERGY), canReceive);
+				if (harvester.transfer(creep, RESOURCE_ENERGY) === OK) {
+					totalTransferred += amount;
+				}
+			}
+
+			if (totalTransferred >= creep.store.getFreeCapacity()) {
+				this.startDelivering(creep);
+			}
+
+			return;
+		}
+
 		if (creep.pos.getRangeTo(sourcePosition) > 2) {
 			// If all else fails, make sure we're close enough to our source.
 			creep.whenInRange(2, sourcePosition, () => {
