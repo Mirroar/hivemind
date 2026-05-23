@@ -102,7 +102,7 @@ export default class BuilderSpawnRole extends SpawnRole {
 		if (!hasStorage) {
 			// Small rooms that don't have a storage yet should spawn builders
 			// depending on available energy - excess will be used for upgrading.
-			maxWorkParts *= 1 + availableEnergy / 3000;
+			maxWorkParts *= 1 + availableEnergy / 1500;
 		}
 		else if (availableEnergy > 400_000) {
 			maxWorkParts *= 2;

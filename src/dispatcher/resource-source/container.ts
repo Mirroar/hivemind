@@ -45,7 +45,7 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 				resourceType: RESOURCE_ENERGY,
 			};
 
-			// Don't use the controller container as a normal source if we're upgrading.
+			// Don't use the controller container as a normal source for transporters if we're upgrading.
 			if (
 				container.id === this.room.memory.controllerContainer
 				&& (this.room.creepsByRole.upgrader || this.room.creepsByRole.builder)
@@ -69,6 +69,14 @@ export default class ContainerSource extends StructureSource<ContainerSourceTask
 
 			for (const source of container.room.sources) {
 				if (source.getNearbyContainer()?.id !== container.id) continue;
+
+				// Builders shouldn't take energy from nearly empty containers early game - that could block transporters from supplying our spawns.
+				if (creep.memory.role === 'builder' && !this.room.storage && !this.room.terminal) {
+					if (container.store[RESOURCE_ENERGY] < container.store.getCapacity() / 4) {
+						option.priority = -1;
+						break;
+					}
+				}
 
 				option.priority++;
 				if (container.store.getUsedCapacity() >= creep.store.getFreeCapacity() // This container is filling up, prioritize emptying it when we aren't

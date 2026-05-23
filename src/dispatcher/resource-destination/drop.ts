@@ -22,6 +22,11 @@ export default class DropDestination extends TaskProvider<DropDestinationTask, R
 		return this.cacheEmptyTaskListFor(context.resourceType || '', 100, () => {
 			const options: DropDestinationTask[] = [];
 
+			if (['hauler.relay', 'harvester'].includes(context.creep?.memory?.role)) {
+				// These creeps should never drop energy.
+				return options;
+			}
+
 			this.addDropResourceTasks(context, options);
 
 			return options;

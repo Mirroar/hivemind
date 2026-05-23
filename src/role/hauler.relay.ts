@@ -86,7 +86,8 @@ export default class RelayHaulerRole extends Role {
 	}
 
 	determineTargetSource(creep: RelayHaulerCreep) {
-		const harvestPositions = Game.rooms[creep.memory.sourceRoom].getRemoteHarvestSourcePositions();
+		const allHarvestPositions = Game.rooms[creep.memory.sourceRoom].getRemoteHarvestSourcePositions();
+		const harvestPositions = allHarvestPositions.filter(position => this.sourceHasActivity(position));
 		const scoredPositions = [];
 		for (const position of harvestPositions) {
 			scoredPositions.push(this.scoreHarvestPosition(creep, position));
@@ -100,6 +101,22 @@ export default class RelayHaulerRole extends Role {
 			creep.memory.source = encodePosition(bestPosition.position);
 			creep.memory.operation = 'mine:' + bestPosition.position.roomName;
 		}
+	}
+
+	sourceHasActivity(position: RoomPosition) {
+		const targetPos = encodePosition(position);
+		const operation = Game.operationsByType.mining['mine:' + position.roomName];
+		if (!operation) return false;
+
+		// Accept if there's energy already available at the source.
+		if (operation.getEnergyForPickup(targetPos) > 0) return true;
+
+		// Accept if there's a harvester assigned to this source.
+		const hasHarvester = _.some(
+			Game.creepsByRole['harvester.remote'] as unknown as RemoteHarvesterCreep[],
+			(harvester: RemoteHarvesterCreep) => harvester.memory.source === targetPos,
+		);
+		return hasHarvester;
 	}
 
 	scoreHarvestPosition(creep: RelayHaulerCreep, position: RoomPosition) {
@@ -441,7 +458,6 @@ export default class RelayHaulerRole extends Role {
 		const harvestersAtSource = _.filter(
 			creep.room.creepsByRole['harvester.remote'] as unknown as RemoteHarvesterCreep[],
 			(harvester: RemoteHarvesterCreep) => harvester.memory.source === creep.memory.source
-				&& harvester.store.getUsedCapacity(RESOURCE_ENERGY) > 0
 				&& harvester.pos.getRangeTo(sourcePosition) <= 3,
 		) as RemoteHarvesterCreep[];
 		if (harvestersAtSource.length > 0) {

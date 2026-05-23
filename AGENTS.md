@@ -223,20 +223,25 @@ Runs on every push:
 
 **Operations:** High-level strategies (remote mining, expansion, power harvesting) are managed as "operations" with stat tracking.
 
+Avoid using FIND_ calls if at all possible. A lot of data is already aggregated globally or at the room level. Examples:
+- `room.creeps`
+- `room.structuresByType[STRUCTURE_WALL]`
+- `room.myStructuresByType[STRUCTURE_SPAWN]`
+
 ---
 
 ## Important Guidelines
 
-1. **Trust these instructions.** Only search for additional information if these instructions are incomplete or incorrect.
-2. **Always use Node 16** - the project will not build on newer versions.
-3. **Always create local config files** before building (see Required Local Configuration Files).
-4. **Test your changes** by building after each significant modification.
-5. **Do not fix pre-existing linting errors** unless they are in files you are actively modifying.
-6. **Follow the existing code style** - use existing files as templates.
-7. **Build time is ~15 seconds** - allow adequate time for builds to complete.
-8. **Circular dependencies are expected** - do not try to fix them.
-9. **The codebase is game-specific** - changes must work within Screeps' game engine constraints.
-10. **No unit tests exist** - validation requires running on a Screeps server (manual testing).
+1. **Always use Node 16** - the project will not build on newer versions.
+2. **Always create local config files** before building (see Required Local Configuration Files).
+3. **Test your changes** by building after each significant modification.
+4. **Do not fix pre-existing linting errors** unless they are in files you are actively modifying.
+5. **Follow the existing code style** - use existing files as templates.
+6. **Build time is ~15 seconds** - allow adequate time for builds to complete.
+7. **Circular dependencies during build are expected** - do not try to fix them.
+8. **The codebase is game-specific** - changes must work within Screeps' game engine constraints.
+9. **No unit tests exist** - validation requires running on a Screeps server (manual testing).
+10. **Don't commit** - the user will handle git operations.
 
 ---
 
@@ -256,5 +261,3 @@ npm test        # Lint code (~3-5 sec)
 # Clean build (if needed)
 rm -rf dist node_modules src/*.local.ts
 ```
-
-**End of Instructions**

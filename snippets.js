@@ -40,6 +40,9 @@ _.each(Game.creepsByRole, (g, n) => console.log(_.size(g), n));
 // Force expansion to a certain room.
 r = {roomName: 'E19N24', spawnRoom: 'E16N22'}; (new ExpandProcess()).startExpansion(r);
 
+// Stop expansion to current target.
+(new ExpandProcess()).recordFailedExpansion(); (new ExpandProcess()).stopExpansion();
+
 // Force evacuation and abandonment of a certain room.
 const roomName = 'E43S53'; Game.rooms[roomName].setEvacuating(true); Memory.strategy.expand.evacuatingRoom = {name: roomName, cooldown: null};
 

@@ -208,7 +208,14 @@ export default class RemoteHarvesterRole extends Role {
 			// Wait if source is depleted.
 			if (source.energy <= 0) return;
 
-			if (this.mayHarvest(creep, source)) creep.harvest(source);
+			if (this.mayHarvest(creep, source)) {
+				creep.harvest(source);
+			} else {
+				// Make sure we're next to the container if we can't harvest, so we can transfer immediately when the source has regenerated.
+				if (moveTarget !== container) {
+					creep.moveToRange(container || source, 1);
+				}
+			}
 
 			// Immediately deposit energy if a container is nearby.
 			if (!(creep.operation instanceof RemoteMiningOperation)) return;
