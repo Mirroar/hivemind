@@ -7,7 +7,6 @@ import Bay from 'manager.bay';
 import cache from 'utils/cache';
 import FactoryManager from 'factory-manager';
 import RoomDefense from 'room-defense';
-import RoomStatus from 'room/room-status';
 import {getUsername} from 'utils/account';
 
 declare global {
