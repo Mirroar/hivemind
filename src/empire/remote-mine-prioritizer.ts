@@ -131,7 +131,7 @@ export default class RemoteMinePrioritizer {
 			}
 
 			// @todo Actually calculate spawn usage for each.
-			let spawnCapacity = spawnCount * 7;
+			let spawnCapacity = spawnCount * 10;
 			let roomNeeds = 0;
 			if (room.controller.level >= 4) roomNeeds++;
 			if (room.controller.level >= 6) roomNeeds++;

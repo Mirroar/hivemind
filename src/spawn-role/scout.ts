@@ -19,7 +19,7 @@ declare global {
 }
 
 // Minimum time between spawning 2 scouts in the same room.
-const scoutSpawnThrottle = CREEP_LIFE_TIME / 3;
+const scoutSpawnThrottle = CREEP_LIFE_TIME / Math.max(3, (hivemind.settings.get('maxScoutsPerRoom') || 1) + 1);
 
 export default class ScoutSpawnRole extends SpawnRole {
 	roomStatus: RoomStatus;
@@ -73,7 +73,7 @@ export default class ScoutSpawnRole extends SpawnRole {
 		// Check if a portal requires a scout and has this room as origin.
 		const memory = interShard.getLocalMemory();
 
-		_.each(memory.scouting, (isActive, shardName) => {
+		_.each(memory.scouting, (_isActive, shardName) => {
 			_.each(memory.portals[shardName], (info, portalPos) => {
 				if (info.scouted && Game.time - info.scouted < 2000) return;
 

@@ -32,7 +32,7 @@ declare global {
 	}
 }
 
-interface ScoutTarget {
+export interface ScoutTarget {
 	roomName: string;
 	scoutPriority: number;
 	origin: string;

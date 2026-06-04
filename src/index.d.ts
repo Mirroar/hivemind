@@ -5837,4 +5837,12 @@ interface Console {
     logUnsafe(...args: any[]): void;
 }
 
-declare const console: Console;
+interface Score extends RoomObject {
+    id: Id<this>;
+    score: number;
+    ticksToDecay: number;
+}
+
+declare const Score: _Constructor<Score> & _ConstructorById<Score>;
+
+declare const FIND_SCORES: FindConstant;

@@ -345,6 +345,8 @@ Room.prototype.updateStorageLink = function (this: Room) {
  *   True if a scout is needed.
  */
 Room.prototype.needsScout = function (this: Room) {
+	if (typeof Score !== 'undefined') return true;
+
 	const roomStatus = container.get('RoomStatus');
 
 	return roomStatus.getPotentialScoutTargets().some(roomName => roomStatus.getOrigin(roomName) === this.name);
