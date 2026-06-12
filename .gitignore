@@ -2,8 +2,11 @@ src/*.local.ts
 src/*.local
 dist
 
+docs/superpowers
+
 node_modules
 gruntfile.js
 screeps.json
 .nyc_output
 .tscache
+.vscode
