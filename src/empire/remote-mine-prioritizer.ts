@@ -33,7 +33,7 @@ export default class RemoteMinePrioritizer {
 	}
 
 	isMiningRoom(roomName: string): boolean {
-		for (const encodedPosition in [Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {}]) {
+		for (const encodedPosition in Memory.strategy?.remoteHarvesting?.sourceAssignments ?? {}) {
 			const position = decodePosition(encodedPosition);
 			if (position?.roomName === roomName) return true;
 		}
