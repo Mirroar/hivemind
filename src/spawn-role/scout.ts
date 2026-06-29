@@ -19,7 +19,7 @@ declare global {
 }
 
 // Minimum time between spawning 2 scouts in the same room.
-const scoutSpawnThrottle = CREEP_LIFE_TIME / Math.max(3, (hivemind.settings.get('maxScoutsPerRoom') || 1) + 1);
+const scoutSpawnThrottle = CREEP_LIFE_TIME / Math.max(3, (hivemind.settings.get('maxScoutsPerRoom') || 1) * Game.cpu.bucket / 3_000);
 
 export default class ScoutSpawnRole extends SpawnRole {
 	roomStatus: RoomStatus;
