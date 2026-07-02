@@ -35,6 +35,7 @@ export function calculateScreepRepairProgress(): number {
             let roomMaxProgress = 0;
 
             const roomPlanner = Game.rooms[roomName].roomPlanner;
+            if (!roomPlanner) return { progress: 0, max: 1 };
             for (const location of roomPlanner.getLocations('screen')) {
                 const rampart = Game.rooms[roomName].lookForAt(LOOK_STRUCTURES, location.x, location.y).find(s => s.structureType === STRUCTURE_RAMPART);
 
@@ -120,6 +121,7 @@ function getRoomMinScreenRampartHits(roomName: string): number {
     return cache.inHeap(`baMinScreenRampartHits_${roomName}`, 1000, ()=> {
         let minHits = Infinity;
         const roomPlanner = Game.rooms[roomName].roomPlanner;
+        if (!roomPlanner) return 0;
         for (const location of roomPlanner.getLocations('screen')) {
             const rampart = Game.rooms[roomName].lookForAt(LOOK_STRUCTURES, location.x, location.y).find(s => s.structureType === STRUCTURE_RAMPART);
 
