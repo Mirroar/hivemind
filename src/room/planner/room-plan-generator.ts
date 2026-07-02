@@ -1,3 +1,5 @@
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
+import BadAppleRoomVariationBuilder from './badapple-variation-builder';
 import RoomPlan from 'room/planner/room-plan';
 import RoomPlanMatrixGenerator from 'room/planner/matrix-generator';
 import RoomPlanScorer from 'room/planner/room-plan-scorer';
@@ -53,7 +55,14 @@ export default class RoomPlanGenerator {
 		this.currentVariation = this.variationGenerator.getVariationList()[this.variationIndex++];
 		const variationInfo = this.variationGenerator.getVariationInfo(this.currentVariation);
 
-		this.variationBuilder = Memory.rooms[this.roomName]?.isStripmine ? new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix) : new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
+		if (isBadApplePlayerShard && badAppleRooms.includes(this.roomName)) {
+			this.variationBuilder = new BadAppleRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
+			return;
+		}
+
+		this.variationBuilder = Memory.rooms[this.roomName]?.isStripmine
+			? new StripmineRoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix)
+			: new RoomVariationBuilder(this.roomName, this.currentVariation, variationInfo, this.wallMatrix, this.exitMatrix);
 	}
 
 	generateVariation() {

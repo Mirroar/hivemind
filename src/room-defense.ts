@@ -6,6 +6,7 @@ import hivemind from 'hivemind';
 import Operation from 'operation/operation';
 import {getDangerMatrix} from 'utils/cost-matrix';
 import {getResourcesIn} from 'utils/store';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 declare global {
 	interface RoomMemory {
@@ -257,6 +258,11 @@ export default class RoomDefense {
 
 	// @todo This stuff probably should live in a separate process.
 	openRampartsToFriendlies() {
+		// Disable for bad apple rooms, since it interferes with the video display.
+		if (isBadApplePlayerShard && badAppleRooms.includes(this.roomName)) {
+			return;
+		}
+
 		if (_.size(this.room.enemyCreeps) === 0) {
 			if (this.memory.lastActivity && Game.time - this.memory.lastActivity > 10) {
 				// Close ramparts after last friendly leaves the room for a while.

@@ -16,7 +16,7 @@ export default class StorageDestination extends StructureDestination<StorageDest
 	}
 
 	getHighestPriority() {
-		return 0;
+		return 3;
 	}
 
 	getTasks(context: ResourceDestinationContext) {
@@ -35,10 +35,9 @@ export default class StorageDestination extends StructureDestination<StorageDest
 		for (const resourceType of getResourcesIn(creep.store)) {
 			const storageTarget = creep.room.getBestStorageTarget(creep.store[resourceType], resourceType);
 			if (!storageTarget) continue;
-			if (resourceType !== RESOURCE_ENERGY && terminalNeedsSpaceForEnergy) continue;
 
 			options.push({
-				priority: 0,
+				priority: resourceType === RESOURCE_ENERGY && terminalNeedsSpaceForEnergy ? 3 : 0,
 				weight: creep.store[resourceType] / 100,
 				type: 'storage',
 				target: storageTarget.id,

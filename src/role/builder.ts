@@ -13,6 +13,7 @@ import {throttle} from 'utils/throttle';
 import {ENEMY_STRENGTH_NONE, ENEMY_STRENGTH_NORMAL} from 'room-defense';
 import {getResourcesIn} from 'utils/store';
 import {mark} from 'utils/spot-profiler';
+import { MAX_SCREEN_RAMPART_HITS } from 'display/rampartManagement';
 
 interface RepairOrder {
 	type: 'repair';
@@ -420,6 +421,8 @@ export default class BuilderRole extends Role {
 					structure.structureType === STRUCTURE_RAMPART
 					&& creep.room.roomPlanner
 					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart')
+					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'screen')
+					&& !creep.room.roomPlanner.isPlannedLocation(structure.pos, 'timeKeeper')
 				) {
 					// Let old ramparts decay naturally.
 					return false;
@@ -464,6 +467,22 @@ export default class BuilderRole extends Role {
 			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'rampart.ramp')
 		) {
 			maxHealth /= 10;
+		}
+
+		if (
+			structure.structureType === STRUCTURE_RAMPART
+			&& structure.room.roomPlanner
+			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'screen')
+		) {
+			maxHealth = MAX_SCREEN_RAMPART_HITS;
+		}
+
+		if (
+			structure.structureType === STRUCTURE_RAMPART
+			&& structure.room.roomPlanner
+			&& structure.room.roomPlanner.isPlannedLocation(structure.pos, 'timeKeeper')
+		) {
+			maxHealth = MAX_SCREEN_RAMPART_HITS;
 		}
 
 		if (

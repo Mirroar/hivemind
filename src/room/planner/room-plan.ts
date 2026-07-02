@@ -137,6 +137,9 @@ export default class RoomPlan {
 		for (const pos of _.values<RoomPosition>(this.positionsByType.rampart || [])) {
 			visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, {fill: '#0f0', opacity: 0.2});
 		}
+		for (const pos of _.values<RoomPosition>(this.positionsByType.screen || [])) {
+			visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, {fill: '#0ff', opacity: 0.2});
+		}
 	}
 
 	/**

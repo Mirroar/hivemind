@@ -29,6 +29,7 @@ JSON.stringify(_.sortBy(_.map(Memory, (data, key) => {return {key, size: JSON.st
 JSON.stringify(_.reduce(_.map(Memory.rooms, (roomData) => {const result = {}; _.each(roomData, (data, key) => result[key] = JSON.stringify(data).length); return result}), (total, item) => {_.each(item, (value, key) => total[key] = (total[key] || 0) + value); return total}));
 
 // Calculate room value.
+// @todo update with roomStatus info
 const p = new (require('process.strategy.scout')); p.generateMineralStatus(); Memory.hivemind.canExpand = true; const r = []; _.each(Game.rooms, room => {if (!room.isMine()) return; const i = p.calculateExpansionScore(room.name);i.roomName = room.name; r.push(i)}); Memory.hivemind.canExpand = false; console.log(JSON.stringify(r));
 
 // Find energy source options for a transporter creep.
@@ -57,3 +58,7 @@ _.each(Game.myRooms, r => {console.log(r.name, !!r.isEvacuating(), container.get
 
 // Repeatedly send resources between two rooms.
 const t = new TradeRoute('energy'); t.setOrigin('E4N37'); t.setTarget('E4N43'); t.setActive(true); t.setResourceType(RESOURCE_ENERGY);
+
+// Check what resources are trying to be moved around
+JSON.stringify(container.get('TradeRouteManager').getAvailableTransportRoutes(), null, 2);
+JSON.stringify(Game.rooms.E45S51.getResourceState(), null, 2);

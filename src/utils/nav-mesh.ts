@@ -824,7 +824,7 @@ export default class NavMesh {
 		const roomLinearDistance = Game.map.getRoomLinearDistance(room1, room2);
 		if (route.incomplete) return roomLinearDistance;
 
-		return Math.min(route.path.length - 1, roomLinearDistance);
+		return Math.max(route.path.length - 1, roomLinearDistance);
 	}
 
 	/**

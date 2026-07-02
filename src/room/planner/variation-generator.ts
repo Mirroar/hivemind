@@ -1,6 +1,7 @@
 import hivemind from 'hivemind';
 import {getExitCenters} from 'utils/room-info';
 import {getRoomIntel} from 'room-intel';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 declare global {
 	type VariationInfo = {
@@ -62,6 +63,16 @@ export default class VariationGenerator {
 		for (let x = 0; x < 50; x++) {
 			for (let y = 0; y < 50; y++) {
 				if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
+				if (isBadApplePlayerShard && badAppleRooms.includes(this.roomName)) {
+					// In bad apple rooms, avoid the screen area.
+					const isTop = badAppleRooms.indexOf(this.roomName) % 2 === 0;
+					const screenHeight = 72 / 2;
+					const minY = isTop ? 49 - screenHeight : 0;
+					const maxY = isTop ? 49 : screenHeight;
+
+					if (y >= minY && y <= maxY) continue;
+				}
 
 				const wallDistance = this.wallDistanceMatrix.get(x, y);
 				const exitDistance = this.exitDistanceMatrix.get(x, y);

@@ -339,6 +339,7 @@ export default class TransporterRole extends Role {
 				else {
 					creep.room.visual.text('no source :(', creep.pos.x, creep.pos.y + 1.6);
 					creep.room.visual.text('for: ' + bestDestination.type + '@' + bestDestination.priority, creep.pos.x, creep.pos.y + 0.8);
+					creep.room.visual.text('fallback to: ' + (bestSource ? bestSource.type + '@' + bestSource.priority : 'none'), creep.pos.x, creep.pos.y + 2.4);
 				}
 			}
 		}

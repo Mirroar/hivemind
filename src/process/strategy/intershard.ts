@@ -5,10 +5,10 @@ import interShard from 'intershard';
 import NavMesh from 'utils/nav-mesh';
 import Process from 'process/process';
 import RoomStatus from 'room/room-status';
-import Squad from 'manager.squad';
 import {decodePosition} from 'utils/serialization';
 import {getRoomIntel} from 'room-intel';
 import SquadManager from 'manager.squad';
+import { badApplePlayerShard, playBadApple } from 'warmind.local/settings';
 
 declare global {
 	interface ShardMemory {
@@ -195,6 +195,11 @@ export default class InterShardProcess extends Process {
 			this._shardData[shardName].rooms = shardMemory.info.ownedRooms;
 			this._shardData[shardName].creeps = shardMemory.info.ownedCreeps;
 			this._shardData[shardName].neededCpu = 3 + this._shardData[shardName].rooms;
+
+			if (playBadApple && shardName === badApplePlayerShard) {
+				// Bad Apple shard needs more CPU to handle all the extra logic.
+				this._shardData[shardName].neededCpu += 30;
+			}
 
 			if (shardMemory.info.interShardExpansion && this.isAdjacentShardFuntional(shardName)) {
 				// Allow for more CPU while creating our first intershard room.

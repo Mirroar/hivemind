@@ -6,6 +6,8 @@ import BodyBuilder, {MOVEMENT_MODE_ROAD, MOVEMENT_MODE_SLOW} from 'creep/body-bu
 import container from 'utils/container';
 import hivemind from 'hivemind';
 import SpawnRole from 'spawn-role/spawn-role';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
+import { shouldRoomRepairScreenRamparts } from 'display/rampartManagement';
 
 interface UpgraderSpawnOption extends SpawnOption {
 	mini?: boolean;
@@ -55,7 +57,17 @@ export default class UpgraderSpawnRole extends SpawnRole {
 	 *   The requested number of upgraders.
 	 */
 	getUpgraderAmount(room: Room): number {
-		const maxUpgraders = this.getBaseUpgraderAmount(room);
+		let maxUpgraders = this.getBaseUpgraderAmount(room);
+
+		if (isBadApplePlayerShard && badAppleRooms.includes(room.name) && room.controller.level >= 7) {
+			// In bad apple rooms, we don't need upgraders most of the time.
+			maxUpgraders = Math.min(maxUpgraders, 1);
+
+			// When repairing, we will even stop upgrading altogether.
+			if (shouldRoomRepairScreenRamparts(room)) {
+				maxUpgraders = 0;
+			}
+		}
 
 		if (maxUpgraders === 0) {
 			// Even if no upgraders are needed, at least create one when the controller is getting close to being downgraded.

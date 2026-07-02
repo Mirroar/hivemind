@@ -13,6 +13,7 @@ import RemoteMiningOperation from 'operation/remote-mining';
 import RoomPlanner from 'room/planner/room-planner';
 import {ENEMY_STRENGTH_NONE} from 'room-defense';
 import {serializeCoords} from 'utils/serialization';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 declare global {
 	interface Structure {
@@ -189,6 +190,8 @@ export default class RoomManager {
 		if (this.room.controller.level < 4) return;
 		this.buildPlannedStructures('rampart', STRUCTURE_RAMPART);
 		this.buildPlannedStructures('road', STRUCTURE_ROAD);
+
+		this.checkBadAppleScreenRamparts();
 	}
 
 	initializeStructureInformation() {
@@ -461,6 +464,32 @@ export default class RoomManager {
 
 		this.buildEndgameStructures();
 		this.buildPlannedStructures('wall.deco', STRUCTURE_WALL);
+
+		this.checkBadAppleScreenRamparts();
+	}
+
+	checkBadAppleScreenRamparts() {
+		if (!isBadApplePlayerShard) return;
+		if (!badAppleRooms.includes(this.room.name)) return;
+		if (this.room.controller.level < 7) return;
+
+		// Only build these ramparts if no other construction sites are present, so those get priority.
+		if (this.roomConstructionSites.length > 0) return;
+
+		// Build timekeeper first.
+		this.buildPlannedStructures('timeKeeper', STRUCTURE_RAMPART);
+
+		// Build screen ramparts. Use a dithering pattern to get better early screen coverage.
+		const offsets = [[0, 0], [1, 1], [0, 1], [1, 0]];
+		for (const offset of offsets) {
+			if (!this.canCreateConstructionSites()) return;
+
+			this.buildPlannedStructures('screen', STRUCTURE_RAMPART, pos => {
+				const matchesX = pos.x % 2 === offset[0];
+				const matchesY = pos.y % 2 === offset[1];
+				return (matchesX && matchesY);
+			});
+		}
 	}
 
 	manageTowers() {

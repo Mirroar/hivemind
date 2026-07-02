@@ -115,6 +115,8 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		const roomIntel = getRoomIntel(this.roomName);
 		for (const source of roomIntel.getSourcePositions()) {
 			const harvestPosition = this.determineHarvestPositionForSource(source);
+			if (!harvestPosition) continue;
+
 			this.placementManager.planLocation(harvestPosition, 'harvester', null);
 			this.placementManager.planLocation(harvestPosition, 'harvester.' + source.id, null);
 			this.placementManager.planLocation(harvestPosition, 'bay_center', null);
@@ -166,6 +168,10 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 				bestPos = {x, y, freeTileCount};
 			}
 		});
+
+		if (!bestPos) {
+			return null;
+		}
 
 		return new RoomPosition(bestPos.x, bestPos.y, this.roomName);
 	}
@@ -317,7 +323,9 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 		const roomIntel = getRoomIntel(this.roomName);
 		for (const source of roomIntel.getSourcePositions()) {
 			const shouldAddSpawn = this.variationInfo.sourcesWithSpawn.includes(source.id);
-			const harvestPosition = this.sourceInfo[source.id].harvestPosition;
+			const harvestPosition = this.sourceInfo[source.id]?.harvestPosition;
+			if (!harvestPosition) continue;
+			
 			const sourceRoads = this.placementManager.findAccessRoad(harvestPosition, this.roomCenterEntrances);
 			for (const pos of sourceRoads) {
 				this.placementManager.planLocation(pos, 'road', 1);
@@ -338,7 +346,7 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	 * Places structures that are fixed to the room's center.
 	 */
 	placeRoomCore(): StepResult {
-		// Fill center cross with roads.
+		// Outline center diamond with roads.
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x - 2, this.roomCenter.y, this.roomName), 'road', 1);
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x + 2, this.roomCenter.y, this.roomName), 'road', 1);
 		this.placementManager.planLocation(new RoomPosition(this.roomCenter.x, this.roomCenter.y - 2, this.roomName), 'road', 1);
@@ -380,11 +388,14 @@ export default class RoomVariationBuilder extends RoomVariationBuilderBase {
 	 * Places extension bays.
 	 */
 	placeBays(): StepResult {
-		this.placementManager.startBuildingPlacement();
+		this.placementManager.startBuildingPlacement(this.roomCenter, this.roomCenterEntrances);
 		let count = 0;
 		while (this.roomPlan.canPlaceMore('extension')) {
 			const pos = this.findBayPosition();
-			if (!pos) return 'failed';
+			if (!pos) {
+				// It's OK if we can't place all extensions right now if space is too tight.
+				return 'ok';
+			}
 
 			this.placementManager.placeAccessRoad(pos);
 

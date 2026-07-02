@@ -1,5 +1,6 @@
 import TaskProvider from 'dispatcher/task-provider';
 import {ENEMY_STRENGTH_NORMAL} from 'room-defense';
+import { badAppleRooms, isBadApplePlayerShard } from 'warmind.local/settings';
 
 interface WorkerCreepDestinationTask extends ResourceDestinationTask {
 	type: 'workerCreep';
@@ -46,6 +47,7 @@ export default class WorkerCreepDestination extends TaskProvider<WorkerCreepDest
 	private shouldDeviverToCreeps() {
 		if (!this.room.storage && !this.room.terminal) return true;
 		if (this.room.defense.getEnemyStrength() > ENEMY_STRENGTH_NORMAL) return true;
+		if (isBadApplePlayerShard && badAppleRooms.includes(this.room.name)) return true;
 
 		return false;
 	}
